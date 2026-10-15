@@ -17,6 +17,7 @@ import java.util.Set;
 public final class ApiToken {
 
     private static final int TOKEN_BYTES = 32;
+    private static final SecureRandom RANDOM = new SecureRandom();
     private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
             PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
 
@@ -28,7 +29,7 @@ public final class ApiToken {
 
     public static ApiToken issuedInto(Path tokenFile) {
         byte[] random = new byte[TOKEN_BYTES];
-        new SecureRandom().nextBytes(random);
+        RANDOM.nextBytes(random);
         ApiToken token = new ApiToken(Base64.getUrlEncoder().withoutPadding().encode(random));
         token.writeTo(tokenFile);
         return token;
