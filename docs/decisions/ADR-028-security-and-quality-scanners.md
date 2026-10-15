@@ -10,7 +10,7 @@
 Only open-source, standard tools are allowed (ADR-029), and an ephemeral SonarQube server keeps no history to compare new code against.
 
 **Decision:** CI runs four scanners on every push and pull request:
-- OWASP Dependency-Check through `dependency-check-maven`, failing the build on any finding at CVSS 7 or above and keeping its report as an artefact; its vulnerability database is cached between runs, and a free NVD API key is read from the Actions secret `NVD_API_KEY`; the OSS Index analyser is off because it needs separate credentials, and the Node analysers are off because `npm audit` covers the console;
+- OWASP Dependency-Check through `dependency-check-maven`, failing the build on any finding at CVSS 7 or above and keeping its report as an artefact; its vulnerability database is restored before the scan and saved after it even when the scan fails, so a run that fails on a finding or a dropped download never forces the next one to start again from nothing; a free NVD API key is read from the Actions secret `NVD_API_KEY`, and requests to the NVD API are spaced 6 seconds apart with up to 20 retries, because the NVD answers a burst of requests with 403; the OSS Index analyser is off because it needs separate credentials, and the Node analysers are off because `npm audit` covers the console;
 - `npm audit --audit-level=high` over the console's build dependencies;
 - SonarQube Community Build as a service container (`sonarqube:<version>-community`), analysed through `sonar-maven-plugin` with JaCoCo coverage; `ops/sonar-setup.sh` replaces the default admin password, creates a token and makes the default quality gate one on overall code: reliability, security and maintainability rated A, and at most 3 % duplicated lines; the job fails when the gate fails;
 - gitleaks and the personal-material checks of the publish guard (ADR-032).
@@ -27,7 +27,7 @@ OWASP DockSec is not adopted: it analyses Dockerfiles and container images, EDI 
 
 **Consequences:**
 - Good: the captain sees security and quality as part of green.
-- Bad: the first Dependency-Check run downloads the full vulnerability database, which is slow without an API key.
+- Bad: the first Dependency-Check run, and the first run of every branch whose cache cannot see an earlier one, downloads the full vulnerability database of more than 400,000 records, which takes well over an hour even with an API key; the job's timeout of 150 minutes allows for it, and later runs only fetch the changes.
 - Bad: coverage is reported but not gated yet; the console's TypeScript has no coverage report.
 
 **Revisit when:** EDI or a project ships a container image (DockSec), or coverage becomes a gate condition.

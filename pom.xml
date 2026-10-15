@@ -138,6 +138,8 @@
                     <configuration>
                         <failBuildOnCVSS>7</failBuildOnCVSS>
                         <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+                        <nvdApiDelay>6000</nvdApiDelay>
+                        <nvdMaxRetryCount>20</nvdMaxRetryCount>
                         <formats>
                             <format>HTML</format>
                             <format>JSON</format>

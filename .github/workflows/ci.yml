@@ -76,7 +76,7 @@ jobs:
   dependency-check:
     name: Dependency-Check
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.1.2
@@ -85,10 +85,11 @@ jobs:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
           restore-keys: maven-
-      - uses: actions/cache@v6.1.0
+      - name: Restore the vulnerability database
+        uses: actions/cache/restore@v6.1.0
         with:
           path: ${{ runner.temp }}/dependency-check-data
-          key: dependency-check-${{ github.run_id }}
+          key: dependency-check-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: dependency-check-
       - name: Scan the Maven dependencies
         env:
@@ -96,6 +97,12 @@ jobs:
         run: >-
           ./mvnw -DskipTests package org.owasp:dependency-check-maven:aggregate
           -DdataDirectory="${{ runner.temp }}/dependency-check-data"
+      - name: Keep the vulnerability database
+        if: always()
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ${{ runner.temp }}/dependency-check-data
+          key: dependency-check-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Keep the report
         if: always()
         uses: actions/upload-artifact@v7.0.2
