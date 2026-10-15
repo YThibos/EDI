@@ -202,6 +202,18 @@ class CommandsTest {
     }
 
     @Test
+    void saysWhenTheTokenCannotBeRead() throws IOException {
+        Path tokenFile = home.resolve("state/core.token");
+        Files.delete(tokenFile);
+        Files.createDirectory(tokenFile);
+
+        int exitCode = edi("", "backlog");
+
+        assertThat(exitCode).isOne();
+        assertThat(err).hasToString("EDI core cannot be reached: " + tokenFile + " cannot be read.\n");
+    }
+
+    @Test
     void explainsEverySubcommand() {
         assertThat(edi("", "decision", "answer", "--help")).isZero();
 

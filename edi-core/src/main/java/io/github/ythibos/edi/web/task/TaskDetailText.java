@@ -62,8 +62,8 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
             lines.add("Base: " + intake.base());
         }
         lines.add("Since: " + Moments.day(task.created()));
-        if (task.isDone()) {
-            lines.add("Done: " + Moments.day(task.closed()));
+        if (task.isClosed()) {
+            lines.add(capitalised(task.state().word()) + ": " + Moments.day(task.closed()));
         }
         return lines;
     }

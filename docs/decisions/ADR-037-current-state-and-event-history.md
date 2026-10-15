@@ -18,6 +18,8 @@ The tables hold the current state, and the `event` table holds the history:
 - every event row carries its time, its actor, its type and a JSON payload written by `EventLog`, and `edi task show` reads a task's events back as its timeline.
 
 Columns are `strict` SQLite types; times are ISO-8601 instants in UTC and days are ISO dates, both stored as text; kinds and states are stored as the words the command uses (`in-flight`); the decision sequence is the row `decision_seq` of `meta`, incremented by `DecisionStore.nextNumber` inside the transaction that inserts the decision.
+A task's state is `queued`, `in-flight`, `done` or `dropped` (section 8.1), and a done or dropped task carries a closing time and no hold, in `Task` and in the `task` table's checks alike.
+Any state moves to `dropped` only on the captain's word: `Task.dropped` demands a `CaptainsWord`, and the `edi task drop` command that supplies it arrives with its later slice, so the baseline needs no migration then.
 The queue keeps the order in which tasks were added, which is the row order of `task`; reordering is a later feature of the work board.
 Slice S1 writes the event rows only; Spring's in-process publication after commit and the relay of ADR-011 arrive with the first listener that needs them, and the read-only `data/backlog.md` export of ADR-010 is a presenter over the same tables that arrives with the reports of slice S2.
 
@@ -35,4 +37,4 @@ Tables created before their slice would have to guess their columns.
 
 **Revisit when:** A presenter or listener needs a history that the event payloads cannot answer cheaply.
 
-**Sources:** EDI rewrite specification, sections 5.8, 8.1 and 8.2 (decisions E3, E20); `edi-core/src/main/resources/db/migration/V1__baseline.sql`, `adapter.store.TaskStore`, `DecisionStore`, `EventLog`, `Columns`.
+**Sources:** EDI rewrite specification, sections 5.8, 8.1 and 8.2 (decisions E3, E20); `edi-core/src/main/resources/db/migration/V1__baseline.sql`, `domain.task.Task`, `CaptainsWord`, `adapter.store.TaskStore`, `DecisionStore`, `EventLog`, `Columns`.

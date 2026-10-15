@@ -37,6 +37,7 @@ class TaskListText implements TextPresenter<TaskList> {
             case IN_FLIGHT -> "In flight";
             case QUEUED -> "Queued";
             case DONE -> "Done";
+            case DROPPED -> "Dropped";
         };
     }
 

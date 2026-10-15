@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.cli;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -25,7 +24,7 @@ record CoreConnection(CoreAddress address, String token) {
         } catch (NoSuchFileException absent) {
             throw new CoreUnavailable("EDI core is not running: " + tokenFile + " holds no token.");
         } catch (IOException unreadable) {
-            throw new UncheckedIOException(unreadable);
+            throw new CoreUnavailable("EDI core cannot be reached: " + tokenFile + " cannot be read.");
         }
     }
 }

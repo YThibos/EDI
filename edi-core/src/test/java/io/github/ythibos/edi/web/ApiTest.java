@@ -62,6 +62,13 @@ class ApiTest {
     }
 
     @Test
+    void refusesAnApiPathWrittenOtherwiseWithoutTheToken() throws Exception {
+        assertThat(send(HttpRequest.newBuilder(uri("/%61pi/backlog")).GET()).statusCode()).isEqualTo(401);
+        assertThat(send(HttpRequest.newBuilder(uri("//api/backlog")).GET()).statusCode()).isEqualTo(401);
+        assertThat(send(HttpRequest.newBuilder(uri("/api/health/liveness")).GET()).statusCode()).isEqualTo(401);
+    }
+
+    @Test
     void addsATaskAndShowsItAsTextOrJson() throws Exception {
         HttpResponse<String> added = post("/api/tasks", """
                 {"id":"api-lantern","kind":"ship","projects":["harness"],"title":"Rework the lantern","key":"HRN-3","base":"develop"}""", TEXT);
@@ -99,7 +106,7 @@ class ApiTest {
         assertRefusal(post("/api/tasks/api-horn/release", "{}", TEXT), 409, "api-horn is not held.");
         assertRefusal(post("/api/tasks", "{\"kind\":", TEXT), 400, "The request body is not the JSON this call expects.");
         assertRefusal(post("/api/tasks", "{\"kind\":\"ship\",\"projects\":[\"harness\"]}", TEXT), 400, "The call needs its title.");
-        assertRefusal(get("/api/tasks?state=flying", TEXT), 400, "A task state is queued, in-flight or done, not flying.");
+        assertRefusal(get("/api/tasks?state=flying", TEXT), 400, "A task state is queued, in-flight, done or dropped, not flying.");
         assertRefusal(post("/api/tasks/api-horn/hold", "{\"kind\":\"deferral\",\"reason\":\"later\",\"until\":\"soon\"}", TEXT),
                 400, "A hold lasts until a date such as 2026-11-01, not soon.");
         assertRefusal(get("/api/migrations/firstofficer/plan?from=relative", TEXT), 400, "Name the old home by its absolute path, not relative.");

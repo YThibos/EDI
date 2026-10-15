@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.web.access;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 final class ApiTokenFilter extends OncePerRequestFilter {
 
-    private static final String API = "/api/";
+    private static final String API = "/api";
     private static final String HEALTH = "/api/health";
     private static final String BEARER = "Bearer ";
     private static final String REFUSAL = "This call needs the EDI token from state/core.token in the EDI home.";
@@ -27,8 +28,8 @@ final class ApiTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !path.startsWith(API) || path.equals(HEALTH) || path.startsWith(HEALTH + "/");
+        String path = decodedPathOf(request);
+        return !isApi(path) || path.equals(HEALTH);
     }
 
     @Override
@@ -39,6 +40,14 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         } else {
             refuse(response);
         }
+    }
+
+    private static String decodedPathOf(HttpServletRequest request) {
+        return request.getServletPath() + Objects.requireNonNullElse(request.getPathInfo(), "");
+    }
+
+    private static boolean isApi(String path) {
+        return path.equals(API) || path.startsWith(API + "/");
     }
 
     private static String bearerTokenOf(HttpServletRequest request) {

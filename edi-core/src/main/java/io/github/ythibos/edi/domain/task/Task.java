@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.task;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
 
@@ -9,11 +10,11 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
     private static final String PARAGRAPH_BREAK = "\n\n";
 
     public Task {
-        if (isDone(state) != (closed != null)) {
-            throw new IllegalArgumentException(id + " carries a closing time exactly when it is done.");
+        if (state.isClosed() != (closed != null)) {
+            throw new IllegalArgumentException(id + " carries a closing time exactly when it is done or dropped.");
         }
-        if (isDone(state) && hold != null) {
-            throw new IllegalArgumentException(id + " is done, so it waits for nobody.");
+        if (state.isClosed() && hold != null) {
+            throw new IllegalArgumentException(id + " is " + state.word() + ", so it waits for nobody.");
         }
         if (intake.blockedBy().contains(id)) {
             throw new IllegalArgumentException(id + " cannot block itself.");
@@ -33,7 +34,7 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
     }
 
     public Task held(CaptainHold newHold) {
-        refuseWhenDone();
+        refuseWhenClosed();
         if (newHold.awaitsADecision()) {
             throw new Refusal("A decision holds " + id + " when it is raised with its card.");
         }
@@ -44,7 +45,7 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
     }
 
     public Task heldForDecision(CaptainHold decisionHold) {
-        refuseWhenDone();
+        refuseWhenClosed();
         return withHold(decisionHold);
     }
 
@@ -67,21 +68,29 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
                 : withHold(null);
     }
 
+    public Task dropped(CaptainsWord word, Instant at) {
+        Objects.requireNonNull(word, () -> id + " is dropped only on the captain's word.");
+        if (state == TaskState.DROPPED) {
+            throw new Refusal(id + " is already dropped.");
+        }
+        return new Task(id, intake, TaskState.DROPPED, notes, null, created, at);
+    }
+
     public boolean isHeld() {
         return hold != null;
     }
 
     public boolean isDone() {
-        return isDone(state);
-    }
-
-    private static boolean isDone(TaskState state) {
         return state == TaskState.DONE;
     }
 
-    private void refuseWhenDone() {
-        if (isDone()) {
-            throw new Refusal(id + " is done, so it waits for nobody.");
+    public boolean isClosed() {
+        return state.isClosed();
+    }
+
+    private void refuseWhenClosed() {
+        if (isClosed()) {
+            throw new Refusal(id + " is " + state.word() + ", so it waits for nobody.");
         }
     }
 

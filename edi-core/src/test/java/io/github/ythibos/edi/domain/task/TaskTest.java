@@ -18,6 +18,7 @@ class TaskTest {
     private static final Instant AT = Instant.parse("2026-10-15T09:00:00Z");
     private static final Instant LATER = Instant.parse("2026-10-16T09:00:00Z");
     private static final CaptainHold DEFERRAL = new CaptainHold(HoldKind.DEFERRAL, "after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT);
+    private static final CaptainsWord DROP = new CaptainsWord("Drop it, we fit no lamps this year.");
     private static final CaptainHold DECISION = new CaptainHold(HoldKind.DECISION, "D58 Which lamp?", HoldUntil.captainsWord(), AT);
 
     @Test
@@ -93,6 +94,36 @@ class TaskTest {
     }
 
     @Test
+    void dropsFromAnyStateOnTheCaptainsWord() {
+        Task done = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of()), "", AT)
+                .heldForDecision(DECISION)
+                .decisionAnswered(LATER);
+
+        for (Task task : List.of(ship(), ship().held(DEFERRAL), ship().heldForDecision(DECISION), done)) {
+            Task dropped = task.dropped(DROP, LATER);
+
+            assertThat(dropped.state()).isEqualTo(TaskState.DROPPED);
+            assertThat(dropped.closed()).isEqualTo(LATER);
+            assertThat(dropped.isHeld()).isFalse();
+        }
+    }
+
+    @Test
+    void dropsOnlyOnTheCaptainsWord() {
+        assertThatThrownBy(() -> ship().dropped(null, LATER)).isInstanceOf(NullPointerException.class).hasMessageContaining("captain's word");
+        assertThatIllegalArgumentException().isThrownBy(() -> new CaptainsWord("  "));
+    }
+
+    @Test
+    void waitsForNobodyOnceDropped() {
+        Task dropped = ship().dropped(DROP, LATER);
+
+        assertThatThrownBy(() -> dropped.dropped(DROP, LATER)).isInstanceOf(Refusal.class).hasMessageContaining("already dropped");
+        assertThatThrownBy(() -> dropped.held(DEFERRAL)).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
+        assertThatThrownBy(() -> dropped.heldForDecision(DECISION)).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
+    }
+
+    @Test
     void keepsItsStateConsistent() {
         Intake intake = ship().intake();
         TaskId id = new TaskId("fit-lamp");
@@ -100,6 +131,8 @@ class TaskTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.DONE, "", null, AT, null));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.QUEUED, "", null, AT, LATER));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.DONE, "", DEFERRAL, AT, LATER));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.DROPPED, "", null, AT, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.DROPPED, "", DEFERRAL, AT, LATER));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id,
                 new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id)), TaskState.QUEUED, "", null, AT, null));
     }

@@ -9,13 +9,13 @@ create table task (
     id         text not null primary key,
     kind       text not null check (kind in ('ship', 'scout', 'captain')),
     title      text not null,
-    state      text not null check (state in ('queued', 'in-flight', 'done')),
+    state      text not null check (state in ('queued', 'in-flight', 'done', 'dropped')),
     work_key   text,
     base       text,
     notes      text not null,
     created_at text not null,
     closed_at  text,
-    check ((state = 'done') = (closed_at is not null))
+    check ((state in ('done', 'dropped')) = (closed_at is not null))
 ) strict;
 
 create index task_by_state on task (state);

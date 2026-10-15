@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
@@ -78,6 +79,20 @@ class TaskStoreTest {
         assertThat(tasks.get(captainItem.id()).state()).isEqualTo(TaskState.DONE);
         assertThat(tasks.get(captainItem.id()).closed()).isEqualTo(AT.plusSeconds(60));
         assertThat(tasks.get(captainItem.id()).isHeld()).isFalse();
+    }
+
+    @Test
+    void keepsADroppedTaskWithItsClosingTime() {
+        Task held = task("lantern", List.of())
+                .held(new CaptainHold(HoldKind.DEFERRAL, "after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
+        tasks.insert(held);
+
+        tasks.update(held.dropped(new CaptainsWord("Drop the lantern."), AT.plusSeconds(60)));
+
+        assertThat(tasks.inState(TaskState.DROPPED)).singleElement().satisfies(dropped -> {
+            assertThat(dropped.closed()).isEqualTo(AT.plusSeconds(60));
+            assertThat(dropped.isHeld()).isFalse();
+        });
     }
 
     @Test

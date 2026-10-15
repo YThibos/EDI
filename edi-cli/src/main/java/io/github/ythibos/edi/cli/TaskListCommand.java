@@ -12,7 +12,7 @@ final class TaskListCommand implements Callable<Integer> {
     @Mixin
     private CoreExchange core;
 
-    @Option(names = "--state", paramLabel = "STATE", description = "queued, in-flight or done.")
+    @Option(names = "--state", paramLabel = "STATE", description = "queued, in-flight, done or dropped.")
     private String state;
 
     @Override
