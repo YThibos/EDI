@@ -14,7 +14,7 @@ ArchUnit can check package dependencies, method calls, field access and annotati
 - only `adapter.process` starts programs;
 - external programs are the constants of the closed enum `Program`, which is the only way to start one, and each constant may be used only by the adapter that owns it: `GIT` by `adapter.git`, `GITLEAKS` by `adapter.gitleaks`, `TMUX` and `CLAUDE_CODE` by `adapter.runtime`, `GLAB` and `GH` by `adapter.forge`; a constant without an owner fails the test;
 - every time read goes through the `Clock` port (no `now()` from `java.time`, no `System.currentTimeMillis` or `System.nanoTime`, no `new Date()` outside `adapter.clock`);
-- no adapter class or method names a merge operation, which is the method-name half of AT-03a (`NameAMergeOperation`);
+- no class or method anywhere in EDI names a merge operation, which is the method-name half of AT-03a (`NameAMergeOperation`): a name is refused when it starts or ends with the verb `merge`, when `merge` follows a verb that performs one (such as `acceptMergeRequest` or `squashAndMerge`), or when it names auto-merge or merge-when-pipeline-succeeds, while names that only observe a merge, such as `isMerged`, `mergedAt` or `mergeRequestState`, pass;
 - nothing loads classes at runtime, and nothing chooses machine differences at build time (ADR-005, ADR-006);
 - every interface in `application` is a port, only adapters implement ports, adapters reach the application only through ports, and nothing depends on the web layer.
 

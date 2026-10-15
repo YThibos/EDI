@@ -50,7 +50,7 @@ public class Git {
     }
 
     private List<String> paths(Path repository, String id) {
-        return Stream.of(git(repository, "diff-tree", "-r", "--root", "--no-commit-id", "--name-only", "-z", id).split(NUL))
+        return Stream.of(git(repository, "diff-tree", "-r", "--root", "--no-commit-id", "--name-only", "--diff-filter=d", "-z", id).split(NUL))
                 .filter(path -> !path.isEmpty())
                 .toList();
     }

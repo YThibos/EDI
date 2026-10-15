@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -16,6 +18,9 @@ final class NameAMergeOperation extends ArchCondition<JavaClass> {
 
     private static final List<String> AUTO_MERGE = List.of("auto", "merge");
     private static final List<String> MERGE_WHEN_PIPELINE_SUCCEEDS = List.of("merge", "when", "pipeline", "succeeds");
+    private static final String MERGE = "merge";
+    private static final Set<String> VERBS_THAT_PERFORM_A_MERGE =
+            Set.of("accept", "do", "execute", "force", "perform", "rebase", "run", "squash", "start", "trigger");
 
     NameAMergeOperation() {
         super("name a merge operation");
@@ -32,6 +37,8 @@ final class NameAMergeOperation extends ArchCondition<JavaClass> {
     static boolean namesAMergeOperation(String name) {
         List<String> words = wordsOf(name);
         return startsWithTheVerbMerge(words)
+                || endsWithTheVerbMerge(words)
+                || followsAVerbThatPerformsAMerge(words)
                 || words.contains("automerge")
                 || Collections.indexOfSubList(words, AUTO_MERGE) >= 0
                 || Collections.indexOfSubList(words, MERGE_WHEN_PIPELINE_SUCCEEDS) >= 0;
@@ -46,6 +53,15 @@ final class NameAMergeOperation extends ArchCondition<JavaClass> {
 
     private static boolean startsWithTheVerbMerge(List<String> words) {
         boolean namesAMergeRequest = words.size() > 1 && words.get(1).startsWith("request");
-        return !words.isEmpty() && words.getFirst().equals("merge") && !namesAMergeRequest;
+        return !words.isEmpty() && words.getFirst().equals(MERGE) && !namesAMergeRequest;
+    }
+
+    private static boolean endsWithTheVerbMerge(List<String> words) {
+        return !words.isEmpty() && words.getLast().equals(MERGE);
+    }
+
+    private static boolean followsAVerbThatPerformsAMerge(List<String> words) {
+        return IntStream.range(1, words.size())
+                .anyMatch(index -> words.get(index).equals(MERGE) && VERBS_THAT_PERFORM_A_MERGE.contains(words.get(index - 1)));
     }
 }

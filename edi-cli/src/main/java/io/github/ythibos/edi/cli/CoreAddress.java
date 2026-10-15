@@ -7,10 +7,12 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 record CoreAddress(int port) {
 
     private static final String LOOPBACK = "127.0.0.1";
+    private static final Pattern RECORDED_PORT = Pattern.compile("\\d{1,5}");
 
     static Path portFileIn(Path home) {
         return home.resolve("state").resolve("core.port");
@@ -18,12 +20,16 @@ record CoreAddress(int port) {
 
     static Optional<CoreAddress> recordedIn(Path portFile) {
         try {
-            return Optional.of(new CoreAddress(Integer.parseInt(Files.readString(portFile).strip())));
+            return portIn(Files.readString(portFile).strip()).map(CoreAddress::new);
         } catch (NoSuchFileException absent) {
             return Optional.empty();
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
+    }
+
+    private static Optional<Integer> portIn(String recorded) {
+        return RECORDED_PORT.matcher(recorded).matches() ? Optional.of(Integer.parseInt(recorded)) : Optional.empty();
     }
 
     URI endpoint(String path) {

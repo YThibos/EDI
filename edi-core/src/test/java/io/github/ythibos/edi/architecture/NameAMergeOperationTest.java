@@ -10,7 +10,9 @@ class NameAMergeOperationTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "merge", "mergePullRequest", "MergeDraft", "enableAutoMerge", "automerge", "auto_merge",
-        "mergeWhenPipelineSucceeds", "merge_when_pipeline_succeeds", "setMergeWhenPipelineSucceeds"})
+        "mergeWhenPipelineSucceeds", "merge_when_pipeline_succeeds", "setMergeWhenPipelineSucceeds",
+        "acceptMergeRequest", "squashAndMerge", "rebaseAndMerge", "performMerge", "triggerMerge", "doMerge",
+        "PullRequestMerge", "squashMergeRequest"})
     void recognisesANameThatPerformsAMerge(String name) {
         assertThat(NameAMergeOperation.namesAMergeOperation(name)).isTrue();
     }

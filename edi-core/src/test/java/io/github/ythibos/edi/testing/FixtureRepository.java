@@ -37,6 +37,11 @@ public final class FixtureRepository {
         return this;
     }
 
+    public FixtureRepository remove(String path) throws IOException {
+        git("rm", "--quiet", path);
+        return this;
+    }
+
     public FixtureRepository commit(String message) throws IOException {
         return commitAs(DEFAULT_IDENTITY, message);
     }

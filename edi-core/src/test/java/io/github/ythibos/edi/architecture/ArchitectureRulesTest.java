@@ -73,8 +73,7 @@ class ArchitectureRulesTest {
             .because("tests control time through the Clock port");
 
     @ArchTest
-    static final ArchRule noAdapterNamesAMergeOperation = noClasses()
-            .that().resideInAPackage(ADAPTERS)
+    static final ArchRule noClassNamesAMergeOperation = noClasses()
             .should(new NameAMergeOperation())
             .because("EDI has no merge capability of any kind (I-03, AT-03a)");
 

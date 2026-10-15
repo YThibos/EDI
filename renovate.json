@@ -1,7 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "enabledManagers": ["maven", "maven-wrapper", "npm", "github-actions", "mise", "custom.regex"],
+  "enabledManagers": ["maven", "maven-wrapper", "npm", "github-actions", "docker-compose", "mise", "custom.regex"],
+  "docker-compose": {
+    "managerFilePatterns": ["/(^|/)ops/sonar\\.yml$/"]
+  },
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "EDI-1 Dependencies and tooling upkeep",
   "semanticCommits": "disabled",

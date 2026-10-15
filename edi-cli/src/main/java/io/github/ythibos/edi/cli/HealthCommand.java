@@ -26,7 +26,7 @@ final class HealthCommand implements Callable<Integer> {
         Path portFile = CoreAddress.portFileIn(edi.home());
         Optional<CoreAddress> core = CoreAddress.recordedIn(portFile);
         if (core.isEmpty()) {
-            return unhealthy("EDI core is not running: " + portFile + " does not exist.");
+            return unhealthy("EDI core is not running: " + portFile + " records no port.");
         }
         return report(core.get(), new CoreClient().health(core.get()));
     }

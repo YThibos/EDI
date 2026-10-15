@@ -38,6 +38,7 @@ public record DenyList(List<DeniedTerm> terms) {
                         inCommitPart("author", commit.author(), commit),
                         inCommitPart("committer", commit.committer(), commit),
                         inCommitPart("message", commit.message(), commit),
+                        commit.paths().stream().flatMap(path -> inCommitPart("path", path, commit)),
                         commit.addedLines().stream().flatMap(line -> onAddedLine(line, commit)))
                 .flatMap(Function.identity());
     }

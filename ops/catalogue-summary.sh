@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 reports=(edi-core/target/surefire-reports/TEST-io.github.ythibos.edi.invariant.*.xml)
-pending="$(cat "${reports[@]}" | grep -oE 'pending until slice S[0-9]+[^:<]*' | sed -E 's/^pending until slice //; s/[[:space:]]+$//' || true)"
+pending="$(cat "${reports[@]}" | grep -oE 'CDATA\[[^<]*pending until slice S[0-9]+[^:<"]*' | sed -E 's/^.*pending until slice //; s/[[:space:]]+$//' || true)"
 
 echo "## Invariant catalogue"
 echo

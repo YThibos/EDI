@@ -145,15 +145,18 @@ jobs:
   publish-guard:
     name: Secret and personal-material scan
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
       - uses: jdx/mise-action@v5.1.2
+      - uses: actions/cache@v6.1.0
         with:
-          install_args: aqua:gitleaks/gitleaks
-      - name: Scan the outgoing commits
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+      - name: Scan the outgoing commits with the publish guard
         env:
           PUBLISH_DENYLIST: ${{ secrets.PUBLISH_DENYLIST }}
           EVENT: ${{ github.event_name }}
@@ -165,8 +168,9 @@ jobs:
             push) range="${PUSH_RANGE}" ;;
             *) range="origin/main..HEAD" ;;
           esac
-          deny_list="$(mktemp)"
+          edi_home="$(mktemp -d)"
           if [[ -n "${PUBLISH_DENYLIST}" ]]; then
-            printf '%s\n' "${PUBLISH_DENYLIST}" > "${deny_list}"
+            mkdir -p "${edi_home}/config"
+            printf '%s\n' "${PUBLISH_DENYLIST}" > "${edi_home}/config/publish-denylist"
           fi
-          ops/publish-scan.sh "${range}" "${deny_list}"
+          ./mvnw -Ppublish-guard -DskipTests -pl edi-core -am verify -Dpublish.range="${range}" -Dpublish.home="${edi_home}"

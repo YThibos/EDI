@@ -14,10 +14,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import io.github.ythibos.edi.EdiHome;
-import io.github.ythibos.edi.adapter.git.Git;
-import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
-import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.domain.publish.PublishFinding;
 import io.github.ythibos.edi.domain.publish.PublishRule;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
@@ -25,7 +21,6 @@ import io.github.ythibos.edi.domain.publish.RevisionRange;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
-import tools.jackson.databind.json.JsonMapper;
 
 @Tag("adapter")
 class PublishCheckTest {
@@ -99,6 +94,34 @@ class PublishCheckTest {
     }
 
     @Test
+    void refusesADeniedTermInTheNameOfAnAddedFileWithoutNamingTheFile() throws IOException {
+        repository.branch("denied-path")
+                .write("docs/hosts/" + DENIED_HOST + ".md", "Hosts we clone from.\n")
+                .commit("Describe the mirror");
+
+        PublishVerdict verdict = check("main..denied-path", elsewhereHome);
+
+        assertThat(verdict.allowsPush()).isFalse();
+        assertThat(verdict.findings())
+                .extracting(PublishFinding::rule, PublishFinding::location, PublishFinding::reason)
+                .containsExactly(tuple(PublishRule.DENIED_TERM, "path of commit " + shortHead(), "deny-list entry 4"));
+        assertThat(verdict.findings().toString()).doesNotContainIgnoringCase("acme-corp");
+    }
+
+    @Test
+    void allowsRemovingAFileWhoseNameIsDenied() throws IOException {
+        repository.write("docs/hosts/" + DENIED_HOST + ".md", "Hosts we clone from.\n")
+                .commit("Describe the mirror")
+                .branch("removal")
+                .remove("docs/hosts/" + DENIED_HOST + ".md")
+                .commit("Forget the mirror");
+
+        PublishVerdict verdict = check("main..removal", elsewhereHome);
+
+        assertThat(verdict.allowsPush()).isTrue();
+    }
+
+    @Test
     void refusesThePersonalLayerAndAForceAddedEdiHome() throws IOException {
         Path homeInsideRepository = repository.root().resolve(".edi");
         repository.branch("personal")
@@ -131,9 +154,7 @@ class PublishCheckTest {
     }
 
     private PublishVerdict check(String outgoing, Path ediHome) {
-        ExternalPrograms programs = new ExternalPrograms();
-        PublishCheck publishCheck = new PublishCheck(new EdiHome(ediHome), new Git(programs), new Gitleaks(programs, new JsonMapper()));
-        return publishCheck.check(repository.root(), new RevisionRange(outgoing));
+        return PublishGuard.publishCheck(ediHome).check(repository.root(), new RevisionRange(outgoing));
     }
 
     private String shortHead() throws IOException {

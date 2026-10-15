@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
@@ -43,7 +44,7 @@ class NativeSmokeIT {
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("SERVER_PORT", "0");
         core = launch.start();
-        port = Integer.parseInt(awaitFile(home.resolve("state/core.port")).strip());
+        port = awaitRecordedAddress(home.resolve("state/core.port")).port();
     }
 
     @AfterAll
@@ -118,19 +119,21 @@ class NativeSmokeIT {
         return binary;
     }
 
-    private static String awaitFile(Path file) throws IOException {
+    private static CoreAddress awaitRecordedAddress(Path portFile) throws IOException {
         long deadline = System.nanoTime() + PATIENCE.toNanos();
-        while (!Files.exists(file)) {
+        Optional<CoreAddress> recorded = CoreAddress.recordedIn(portFile);
+        while (recorded.isEmpty()) {
             assertThat(core.isAlive()).as("the native core is running; its log:%n%s", log()).isTrue();
             assertThat(System.nanoTime()).as("the native core recorded its port in time").isLessThan(deadline);
             try {
                 Thread.sleep(100);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                throw new IOException("interrupted while waiting for " + file, interrupted);
+                throw new IOException("interrupted while waiting for " + portFile, interrupted);
             }
+            recorded = CoreAddress.recordedIn(portFile);
         }
-        return Files.readString(file);
+        return recorded.get();
     }
 
     private static String log() throws IOException {

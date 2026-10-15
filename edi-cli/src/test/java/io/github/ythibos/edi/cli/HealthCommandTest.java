@@ -75,7 +75,18 @@ class HealthCommandTest {
         int exitCode = edi("health");
 
         assertThat(exitCode).isOne();
-        assertThat(err).hasToString("EDI core is not running: " + home.resolve("state/core.port") + " does not exist.\n");
+        assertThat(err).hasToString("EDI core is not running: " + home.resolve("state/core.port") + " records no port.\n");
+    }
+
+    @Test
+    void reportsACoreThatHasNotFinishedRecordingItsPort() throws IOException {
+        Files.createDirectories(home.resolve("state"));
+        Files.writeString(home.resolve("state/core.port"), "");
+
+        int exitCode = edi("health");
+
+        assertThat(exitCode).isOne();
+        assertThat(err).hasToString("EDI core is not running: " + home.resolve("state/core.port") + " records no port.\n");
     }
 
     @Test
