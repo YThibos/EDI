@@ -124,7 +124,7 @@
                             <format>HTML</format>
                             <format>JSON</format>
                         </formats>
-                        <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
+                        <ossIndexAnalyzerEnabled>false</ossIndexAnalyzerEnabled>
                         <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>
                         <nodeAuditAnalyzerEnabled>false</nodeAuditAnalyzerEnabled>
                         <retireJsAnalyzerEnabled>false</retireJsAnalyzerEnabled>
