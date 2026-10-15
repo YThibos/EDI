@@ -94,18 +94,23 @@ class PublishCheckTest {
     }
 
     @Test
-    void refusesADeniedTermInTheNameOfAnAddedFileWithoutNamingTheFile() throws IOException {
+    void refusesAFileWhoseNameIsDeniedByItsPositionInTheCommitWithoutNamingIt() throws IOException {
+        String token = SyntheticSecrets.githubToken();
         repository.branch("denied-path")
-                .write("docs/hosts/" + DENIED_HOST + ".md", "Hosts we clone from.\n")
+                .write("docs/hosts/README.md", "Hosts we clone from.\n")
+                .write("docs/hosts/" + DENIED_HOST + ".md", "url: https://" + DENIED_HOST + "\ntoken=" + token + "\n")
                 .commit("Describe the mirror");
 
         PublishVerdict verdict = check("main..denied-path", elsewhereHome);
 
         assertThat(verdict.allowsPush()).isFalse();
         assertThat(verdict.findings())
-                .extracting(PublishFinding::rule, PublishFinding::location, PublishFinding::reason)
-                .containsExactly(tuple(PublishRule.DENIED_TERM, "path of commit " + shortHead(), "deny-list entry 4"));
-        assertThat(verdict.findings().toString()).doesNotContainIgnoringCase("acme-corp");
+                .extracting(PublishFinding::rule, PublishFinding::location)
+                .containsExactlyInAnyOrder(
+                        tuple(PublishRule.SECRET, "line 2 of path 2 of commit " + shortHead()),
+                        tuple(PublishRule.DENIED_TERM, "path 2 of commit " + shortHead()),
+                        tuple(PublishRule.DENIED_TERM, "line 1 of path 2 of commit " + shortHead()));
+        assertThat(verdict.findings().toString()).doesNotContainIgnoringCase("acme-corp").doesNotContain(token);
     }
 
     @Test

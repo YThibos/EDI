@@ -14,7 +14,7 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 
-final class NameAMergeOperation extends ArchCondition<JavaClass> {
+public final class NameAMergeOperation extends ArchCondition<JavaClass> {
 
     private static final List<String> AUTO_MERGE = List.of("auto", "merge");
     private static final List<String> MERGE_WHEN_PIPELINE_SUCCEEDS = List.of("merge", "when", "pipeline", "succeeds");
@@ -22,7 +22,7 @@ final class NameAMergeOperation extends ArchCondition<JavaClass> {
     private static final Set<String> VERBS_THAT_PERFORM_A_MERGE =
             Set.of("accept", "do", "execute", "force", "perform", "rebase", "run", "squash", "start", "trigger");
 
-    NameAMergeOperation() {
+    public NameAMergeOperation() {
         super("name a merge operation");
     }
 

@@ -30,6 +30,12 @@
         <java.version>25</java.version>
         <argLine>--enable-preview --enable-native-access=ALL-UNNAMED</argLine>
         <test.excludedGroups>live</test.excludedGroups>
+        <test.junitConfiguration>
+            junit.jupiter.execution.timeout.default=30 s
+            junit.jupiter.execution.parallel.enabled=true
+            junit.jupiter.execution.parallel.mode.default=same_thread
+            junit.jupiter.execution.parallel.mode.classes.default=concurrent
+        </test.junitConfiguration>
         <archunit.version>1.5.1</archunit.version>
         <picocli.version>4.7.7</picocli.version>
         <dependency-check-maven.version>13.0.0</dependency-check-maven.version>
@@ -84,6 +90,9 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <excludedGroups>${test.excludedGroups}</excludedGroups>
+                        <properties>
+                            <configurationParameters>${test.junitConfiguration}</configurationParameters>
+                        </properties>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -91,6 +100,9 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <configuration>
                         <excludedGroups>${test.excludedGroups}</excludedGroups>
+                        <properties>
+                            <configurationParameters>${test.junitConfiguration}</configurationParameters>
+                        </properties>
                     </configuration>
                 </plugin>
                 <plugin>

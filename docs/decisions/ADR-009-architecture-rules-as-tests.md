@@ -14,7 +14,7 @@ ArchUnit can check package dependencies, method calls, field access and annotati
 - only `adapter.process` starts programs;
 - external programs are the constants of the closed enum `Program`, which is the only way to start one, and each constant may be used only by the adapter that owns it: `GIT` by `adapter.git`, `GITLEAKS` by `adapter.gitleaks`, `TMUX` and `CLAUDE_CODE` by `adapter.runtime`, `GLAB` and `GH` by `adapter.forge`; a constant without an owner fails the test;
 - every time read goes through the `Clock` port (no `now()` from `java.time`, no `System.currentTimeMillis` or `System.nanoTime`, no `new Date()` outside `adapter.clock`);
-- no class or method anywhere in EDI names a merge operation, which is the method-name half of AT-03a (`NameAMergeOperation`): a name is refused when it starts or ends with the verb `merge`, when `merge` follows a verb that performs one (such as `acceptMergeRequest` or `squashAndMerge`), or when it names auto-merge or merge-when-pipeline-succeeds, while names that only observe a merge, such as `isMerged`, `mergedAt` or `mergeRequestState`, pass;
+- no class or method anywhere in EDI names a merge operation, which is the method-name half of AT-03a (`NameAMergeOperation`): a name is refused when it starts or ends with the verb `merge`, when `merge` follows a verb that performs one (such as `acceptMergeRequest` or `squashAndMerge`), or when it names auto-merge or merge-when-pipeline-succeeds, while names that only observe a merge, such as `isMerged`, `mergedAt` or `mergeRequestState`, pass; `edi-core` shares the condition through its test jar, so `CommandArchitectureRulesTest` applies the same rule to every class of `edi-cli`;
 - nothing loads classes at runtime, and nothing chooses machine differences at build time (ADR-005, ADR-006);
 - every interface in `application` is a port, only adapters implement ports, adapters reach the application only through ports, and nothing depends on the web layer.
 
@@ -33,4 +33,4 @@ A closed enum of programs gives ArchUnit something it can see, so "who runs what
 
 **Revisit when:** A rule blocks a legitimate design; change it with a new record rather than an exception.
 
-**Sources:** EDI rewrite specification, sections 5.3, 5.5, 17.3 and AT-03a; `edi-core/src/test/java/io/github/ythibos/edi/architecture/`, `edi-core/src/main/java/io/github/ythibos/edi/adapter/process/Program.java`.
+**Sources:** EDI rewrite specification, sections 5.3, 5.5, 17.3 and AT-03a; `edi-core/src/test/java/io/github/ythibos/edi/architecture/`, `edi-cli/src/test/java/io/github/ythibos/edi/cli/CommandArchitectureRulesTest.java`, `edi-core/src/main/java/io/github/ythibos/edi/adapter/process/Program.java`.

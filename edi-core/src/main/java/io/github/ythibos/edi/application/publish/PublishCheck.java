@@ -32,10 +32,12 @@ public class PublishCheck {
 
     public PublishVerdict check(Path repository, RevisionRange outgoing) {
         OutgoingChanges changes = git.outgoingChanges(repository, outgoing);
+        DenyList denyList = denyList();
         return PublishVerdict.of(
-                gitleaks.secretsIn(repository, outgoing),
-                denyList().findIn(changes),
-                personalPathsOf(repository).findIn(changes));
+                        gitleaks.secretsIn(repository, outgoing),
+                        denyList.findIn(changes),
+                        personalPathsOf(repository).findIn(changes))
+                .hidingPathsDeniedBy(denyList, changes);
     }
 
     private DenyList denyList() {

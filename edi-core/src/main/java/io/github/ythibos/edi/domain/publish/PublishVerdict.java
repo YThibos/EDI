@@ -13,6 +13,10 @@ public record PublishVerdict(List<PublishFinding> findings) {
         return new PublishVerdict(Stream.of(secrets, deniedTerms, personalPaths).flatMap(List::stream).toList());
     }
 
+    public PublishVerdict hidingPathsDeniedBy(DenyList denyList, OutgoingChanges changes) {
+        return new PublishVerdict(findings.stream().map(finding -> finding.hidingPathsDeniedBy(denyList, changes)).toList());
+    }
+
     public boolean allowsPush() {
         return findings.isEmpty();
     }

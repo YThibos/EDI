@@ -14,4 +14,12 @@ public record OutgoingCommit(
         paths = List.copyOf(paths);
         addedLines = List.copyOf(addedLines);
     }
+
+    int positionOf(String path) {
+        int index = paths.indexOf(path);
+        if (index < 0) {
+            throw new IllegalStateException("A finding names a path that commit " + id + " does not publish.");
+        }
+        return index + 1;
+    }
 }

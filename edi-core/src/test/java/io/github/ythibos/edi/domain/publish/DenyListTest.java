@@ -39,7 +39,7 @@ class DenyListTest {
                 "author of commit 0123456",
                 "committer of commit 0123456",
                 "message of commit 0123456",
-                "path of commit 0123456",
+                "docs/intranet.example/mirror.md in commit 0123456",
                 "docs/readme.md:3 in commit 0123456");
         assertThat(findings).allSatisfy(finding -> {
             assertThat(finding.rule()).isEqualTo(PublishRule.DENIED_TERM);

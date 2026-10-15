@@ -29,6 +29,10 @@ public record DenyList(List<DeniedTerm> terms) {
         return changes.commits().stream().flatMap(this::findIn).toList();
     }
 
+    boolean appearsIn(String text) {
+        return termsIn(text).findAny().isPresent();
+    }
+
     private static boolean declaresATerm(String line) {
         return !line.isEmpty() && !line.startsWith(COMMENT);
     }
@@ -38,7 +42,7 @@ public record DenyList(List<DeniedTerm> terms) {
                         inCommitPart("author", commit.author(), commit),
                         inCommitPart("committer", commit.committer(), commit),
                         inCommitPart("message", commit.message(), commit),
-                        commit.paths().stream().flatMap(path -> inCommitPart("path", path, commit)),
+                        commit.paths().stream().flatMap(path -> onPath(path, commit)),
                         commit.addedLines().stream().flatMap(line -> onAddedLine(line, commit)))
                 .flatMap(Function.identity());
     }
@@ -46,6 +50,11 @@ public record DenyList(List<DeniedTerm> terms) {
     private Stream<PublishFinding> inCommitPart(String part, String text, OutgoingCommit commit) {
         return termsIn(text).map(term ->
                 PublishFinding.onCommit(PublishRule.DENIED_TERM, part, commit.id(), reasonFor(term)));
+    }
+
+    private Stream<PublishFinding> onPath(String path, OutgoingCommit commit) {
+        return termsIn(path).map(term ->
+                PublishFinding.onPath(PublishRule.DENIED_TERM, path, commit.id(), reasonFor(term)));
     }
 
     private Stream<PublishFinding> onAddedLine(AddedLine line, OutgoingCommit commit) {
