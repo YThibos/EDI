@@ -1,0 +1,7 @@
+services:
+  sonarqube:
+    image: sonarqube:26.10.0.133078-community
+    ports:
+      - "127.0.0.1:9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"

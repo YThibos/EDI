@@ -1,0 +1,76 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["maven", "maven-wrapper", "npm", "github-actions", "docker-compose", "mise", "custom.regex"],
+  "docker-compose": {
+    "managerFilePatterns": ["/(^|/)ops/sonar\\.yml$/"]
+  },
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "EDI-1 Dependencies and tooling upkeep",
+  "semanticCommits": "disabled",
+  "commitMessagePrefix": "EDI-1",
+  "draftPR": true,
+  "automerge": false,
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "prConcurrentLimit": 0,
+  "branchConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "packageRules": [
+    {
+      "description": "Minor, patch, pin and digest updates share one budget that a stalled major can never fill",
+      "matchUpdateTypes": ["minor", "patch", "pin", "pinDigest", "digest"],
+      "prConcurrentLimit": 10,
+      "branchConcurrentLimit": 10
+    },
+    {
+      "description": "Each major update is its own pull request with its own smaller budget",
+      "matchUpdateTypes": ["major"],
+      "prConcurrentLimit": 3,
+      "branchConcurrentLimit": 3
+    },
+    {
+      "description": "The Spring Boot parent, its plugin and its managed dependencies move together",
+      "matchPackageNames": ["org.springframework.boot:**"],
+      "groupName": "Spring Boot"
+    },
+    {
+      "description": "The Angular packages move together",
+      "matchPackageNames": ["@angular/**", "@angular-devkit/**", "@schematics/angular"],
+      "groupName": "Angular"
+    },
+    {
+      "description": "The Node that builds the console moves together in mise and in the console build",
+      "matchDepNames": ["node"],
+      "groupName": "Node for the console build"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The Node version the frontend Maven plugin downloads to build the console",
+      "managerFilePatterns": ["/(^|/)pom\\.xml$/"],
+      "matchStrings": ["<node\\.version>v(?<currentValue>[^<]+)</node\\.version>"],
+      "depNameTemplate": "node",
+      "datasourceTemplate": "node-version"
+    },
+    {
+      "customType": "regex",
+      "description": "The Tomcat version overriding the one Spring Boot manages, which only Spring Boot's BOM reads",
+      "managerFilePatterns": ["/(^|/)pom\\.xml$/"],
+      "matchStrings": ["<tomcat\\.version>(?<currentValue>[^<]+)</tomcat\\.version>"],
+      "depNameTemplate": "org.apache.tomcat.embed:tomcat-embed-core",
+      "datasourceTemplate": "maven"
+    },
+    {
+      "customType": "regex",
+      "description": "GraalVM Community Edition in mise, which the mise manager does not read",
+      "managerFilePatterns": ["/(^|/)mise\\.toml$/"],
+      "matchStrings": ["java = \"graalvm-community-(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "graalvm-community",
+      "packageNameTemplate": "graalvm/graalvm-ce-builds",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^jdk-(?<version>.+)$"
+    }
+  ]
+}

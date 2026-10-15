@@ -1,0 +1,4 @@
+[tools]
+java = "graalvm-community-25.0.2"
+node = "24.22.0"
+"aqua:gitleaks/gitleaks" = "8.30.1"

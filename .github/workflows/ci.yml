@@ -1,0 +1,183 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MAVEN_ARGS: --batch-mode --no-transfer-progress
+
+jobs:
+  verify:
+    name: Verify on the JVM
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.1.2
+      - uses: actions/cache@v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+      - name: Build and test
+        run: ./mvnw verify
+      - name: Report the invariant catalogue
+        if: always()
+        run: ops/catalogue-summary.sh >> "${GITHUB_STEP_SUMMARY}"
+      - name: Report the main code size
+        if: always()
+        run: ops/main-code-size.sh >> "${GITHUB_STEP_SUMMARY}"
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: test-reports
+          path: "**/target/surefire-reports/"
+
+  native:
+    name: Native build and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.1.2
+      - uses: actions/cache@v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+      - name: Build the native executables and run the smoke test
+        run: ./mvnw -Pnative verify
+      - name: Report the native smoke test
+        if: always()
+        run: |
+          if [[ -f edi-cli/target/native-smoke.md ]]; then
+            cat edi-cli/target/native-smoke.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: native-test-reports
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+
+  dependency-check:
+    name: Dependency-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.1.2
+      - uses: actions/cache@v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+      - name: Restore the vulnerability database
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: ${{ runner.temp }}/dependency-check-data
+          key: dependency-check-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: dependency-check-
+      - name: Scan the Maven dependencies
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: >-
+          ./mvnw -DskipTests package org.owasp:dependency-check-maven:aggregate
+          -DdataDirectory="${{ runner.temp }}/dependency-check-data"
+      - name: Keep the vulnerability database
+        if: always()
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ${{ runner.temp }}/dependency-check-data
+          key: dependency-check-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.*
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.1.2
+        with:
+          install_args: node
+      - name: Audit the console's build dependencies
+        working-directory: edi-console
+        run: npm audit --audit-level=high
+
+  sonarqube:
+    name: SonarQube quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      sonarqube:
+        image: sonarqube:26.10.0.133078-community
+        ports:
+          - 9000:9000
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@v5.1.2
+      - uses: actions/cache@v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+      - name: Prepare the SonarQube server
+        run: ops/sonar-setup.sh
+      - name: Analyse and wait for the quality gate
+        run: ./mvnw -Psonar verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+
+  publish-guard:
+    name: Secret and personal-material scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@v5.1.2
+      - uses: actions/cache@v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+      - name: Scan the outgoing commits with the publish guard
+        env:
+          PUBLISH_DENYLIST: ${{ secrets.PUBLISH_DENYLIST }}
+          EVENT: ${{ github.event_name }}
+          PULL_REQUEST_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+          PUSH_RANGE: ${{ github.event.before }}..${{ github.sha }}
+        run: |
+          case "${EVENT}" in
+            pull_request) range="${PULL_REQUEST_RANGE}" ;;
+            push) range="${PUSH_RANGE}" ;;
+            *) range="origin/main..HEAD" ;;
+          esac
+          edi_home="$(mktemp -d)"
+          if [[ -n "${PUBLISH_DENYLIST}" ]]; then
+            mkdir -p "${edi_home}/config"
+            printf '%s\n' "${PUBLISH_DENYLIST}" > "${edi_home}/config/publish-denylist"
+          fi
+          ./mvnw -Ppublish-guard -DskipTests -pl edi-core -am verify -Dpublish.range="${range}" -Dpublish.home="${edi_home}"
