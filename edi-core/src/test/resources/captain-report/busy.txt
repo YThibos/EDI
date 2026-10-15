@@ -1,0 +1,56 @@
+╔══ NEEDS YOUR DECISION ══ 4 open ══════════════════════════════════════════════
+║
+╟── HarbourMaster ───────────────────────────
+║
+║  D53   Restart the stopped workers
+║        Both stopped mid-task; nothing is lost.
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+║  D55   Book the research minutes
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+╟── Lighthouse-Lantern-Kit ──────────────────
+║
+║  D54   Merge the green pull request
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+╟── HarbourMaster + Gatehouse ───────────────
+║
+║  D56   Share one sign-in setup
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+╚═══════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (2)
+───────────────────
+  Fleet             • Took over monitoring for this session
+  deckhand          • Report-format investigation finished
+
+ONGOING  (2)
+────────────
+  deckhand          • Fix the relaunch of a stopped worker (running)
+  HarbourMaster     • Finish the decision-log backfill (running)
+
+NEXT
+────
+  HarbourMaster     • Start the recovery workers one at a time

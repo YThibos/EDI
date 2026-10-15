@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
+import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
 import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.BacklogQuery;
@@ -30,6 +32,9 @@ import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
+import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskState;
 import tools.jackson.databind.json.JsonMapper;
 
 public final class TestHome {
@@ -66,6 +71,21 @@ public final class TestHome {
         Files.createDirectories(home.projectRegistry().getParent());
         Files.writeString(home.projectRegistry(), projectsYaml);
         return this;
+    }
+
+    public TestHome storing(List<Task> fixtureTasks) {
+        transaction.executeWithoutResult(_ -> fixtureTasks.forEach(tasks::insert));
+        return this;
+    }
+
+    public void putInFlight(TaskId id) {
+        Task task = tasks.get(id);
+        tasks.update(new Task(task.id(), task.intake(), TaskState.IN_FLIGHT, task.notes(), task.hold(), task.created(), null));
+    }
+
+    public void markDone(TaskId id) {
+        Task task = tasks.get(id);
+        tasks.update(new Task(task.id(), task.intake(), TaskState.DONE, task.notes(), null, task.created(), clock.now()));
     }
 
     public TestHome continuingDecisionsFrom(int highestNumberSoFar) {
@@ -135,6 +155,10 @@ public final class TestHome {
 
     public DecisionListQuery decisionList() {
         return new DecisionListQuery(decisions, transaction);
+    }
+
+    public FleetSnapshotQuery fleetSnapshot() {
+        return new FleetSnapshotQuery(tasks, decisions, transaction);
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {

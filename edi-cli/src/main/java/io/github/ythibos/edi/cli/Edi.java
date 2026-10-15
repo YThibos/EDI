@@ -3,6 +3,7 @@ package io.github.ythibos.edi.cli;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.OptionalInt;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -20,6 +21,8 @@ import picocli.CommandLine.Spec;
         synopsisSubcommandLabel = "COMMAND",
         subcommands = {
             HealthCommand.class,
+            ReportCommand.class,
+            SitrepCommand.class,
             TaskCommand.class,
             BacklogCommand.class,
             HoldCommand.class,
@@ -57,5 +60,9 @@ public final class Edi implements Runnable {
     Path home() {
         String home = environment.get("EDI_HOME");
         return home == null ? Path.of(System.getProperty("user.home"), ".edi") : Path.of(home);
+    }
+
+    OptionalInt paneWidth() {
+        return TmuxPane.ofEnvironment(environment).map(TmuxPane::width).orElseGet(OptionalInt::empty);
     }
 }

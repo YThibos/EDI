@@ -121,6 +121,30 @@ class ApiTest {
     }
 
     @Test
+    void rendersTheCaptainReportForTheCallersPaneWithOrWithoutATurn() throws Exception {
+        HttpResponse<String> sitrep = get("/api/report?paneWidth=90", TEXT);
+        HttpResponse<String> report = post("/api/report", """
+                {"done":[{"projects":["harness"],"text":"Painted the buoy"}],"next":[],"tasks":{}}""", TEXT);
+        HttpResponse<String> asJson = get("/api/report", JSON);
+
+        assertThat(sitrep.statusCode()).isEqualTo(200);
+        assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(88);
+        assertThat(sitrep.body()).contains("\nDONE THIS TURN  (0)\n", "  Nothing finished this turn\n");
+        assertThat(report.statusCode()).isEqualTo(200);
+        assertThat(report.body().lines().findFirst().orElseThrow()).hasSize(120);
+        assertThat(report.body()).contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Painted the buoy\n");
+        assertThat(asJson.body()).contains("\"fleet\":{", "\"turn\":{\"done\":[]", "\"width\":{\"columns\":120}");
+    }
+
+    @Test
+    void refusesAMalformedTurnOrParameterInOnePlainSentence() throws Exception {
+        assertRefusal(post("/api/report", "{\"done\":[{\"text\":\"x\"}],\"extra\":1}", TEXT), 400, "The turn takes only done, next and tasks, not extra.");
+        assertRefusal(post("/api/report", "[]", TEXT), 400, "The turn is one JSON object with done, next and tasks.");
+        assertRefusal(get("/api/report?paneWidth=wide", TEXT), 400, "The call's paneWidth parameter cannot be wide.");
+        assertRefusal(get("/api/backlog?ready=maybe", TEXT), 400, "The call's ready parameter cannot be maybe.");
+    }
+
+    @Test
     void checksTheOutgoingCommitsOfARepositoryBeforeAPush() throws Exception {
         assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
         FixtureRepository repository = FixtureRepository.initialise(Files.createTempDirectory(HOME, "repository-"))

@@ -15,8 +15,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.migration.MigrationNote;
@@ -94,10 +96,12 @@ class BeyondTheInvariantsTest {
         assertThat(contentsOf(oldHome)).as("the old home after the dry run").containsExactlyInAnyOrderEntriesOf(before);
     }
 
-    @Test
+    @TestFactory
+    @Tag("adapter")
     @DisplayName("AT-42 the report presenter matches the old renderer on every ported golden case and the 2 MB backlog case")
-    void theReportMatchesTheGoldenCases() {
-        Pending.until(Slice.S2);
+    Stream<DynamicTest> theReportMatchesTheGoldenCases() {
+        return ReportGoldenCases.all().stream()
+                .map(golden -> DynamicTest.dynamicTest(golden.name(), () -> assertThat(golden.rendered(directory)).isEqualTo(golden.golden())));
     }
 
     @Test

@@ -181,6 +181,41 @@ class CommandsTest {
     }
 
     @Test
+    void sendsTheTurnFromStandardInputForTheCaptainReport() {
+        core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open\n");
+        String turn = "{\"done\":[{\"projects\":[],\"text\":\"Fitted the lamp\"}],\"next\":[],\"tasks\":{}}";
+
+        int exitCode = edi(turn, "report", "--turn", "-");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open\n");
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", turn));
+    }
+
+    @Test
+    void readsATurnFromAFile() throws IOException {
+        core.answering(200, "report\n");
+        Path turn = Files.writeString(home.resolve("turn.json"), "{\"next\":[{\"text\":\"Fit the lamp\"}]}");
+
+        edi("", "report", "--turn", turn.toString());
+
+        assertThat(core.received().body()).isEqualTo("{\"next\":[{\"text\":\"Fit the lamp\"}]}");
+    }
+
+    @Test
+    void readsTheReportWithoutATurnAndTheSitrepAlike() {
+        core.answering(200, "report\n");
+
+        edi("", "report");
+        StubCore.Request report = core.received();
+        edi("", "sitrep", "--json");
+        StubCore.Request sitrep = core.received();
+
+        assertThat(report).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "text/plain", ""));
+        assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", ""));
+    }
+
+    @Test
     void passesOnTheCoresRefusalAndFails() {
         core.answering(409, "fit-lamp is not held.\n");
 

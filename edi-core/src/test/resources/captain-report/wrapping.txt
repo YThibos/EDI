@@ -1,0 +1,52 @@
+╔══ NEEDS YOUR DECISION ══ 1 open ══════════════════════════════════════
+║
+╟── HarbourMaster + A-project-title-of-forty-one-characters-x ────
+║
+║  D58   Choose how the harbour master keeps its ledger of every vessel
+║        that has called at the quay this season
+║        The ledger grew past what one page can hold, and two ways of
+║        splitting it came up during the review of the season so far;
+║        see
+║        https://example.org/harbour/ledger/season-review-notes-with-a-very-long-address
+║        for the notes.
+║
+║        (A)  Split the ledger by month, so each page covers one
+║             calendar month of calls and the archive stays small enough
+║             to read in one sitting
+║
+║        (B)  Split by vessel
+║
+║        (C)  Keep one ledger and add an index page at the front that
+║             lists every vessel with the pages where it appears
+║
+║        » Recommended: A - months match how the captain reviews the
+║          season, and the archive of each month never changes once the
+║          month has closed, which keeps every earlier page stable
+║
+╚═══════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (1)
+───────────────────
+  A-project-title-of-forty-one-characters-x
+                    • Wrote down every reason the ledger needs splitting
+                      before the season closes, with the numbers from
+                      the last three seasons beside each one
+
+ONGOING  (1)
+────────────
+  HarbourMaster     • Survey the breakwater after the storm and list
+                      every block that moved more than a hand's width
+                      (surveying the outer blocks)
+
+NEXT
+────
+  HarbourMaster + Gatehouse + quayside
+                    • Walk the quay with the harbour master
+
+PARKED  (1)
+───────────
+  quayside          • D59 Rent the crane - blocked by Print the tide
+                      tables for the whole of next season, including the
+                      spring tides and the neap tides, Draw the mooring
+                      plan for the new pontoon on the east side of the
+                      harbour

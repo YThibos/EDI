@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.registry.UnreadableRegistry;
@@ -39,6 +40,11 @@ class ApiRefusals {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     ResponseEntity<String> incomplete(MissingServletRequestParameterException incomplete) {
         return sentence(HttpStatus.BAD_REQUEST, "The call needs its " + incomplete.getParameterName() + " parameter.");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<String> mistyped(MethodArgumentTypeMismatchException mistyped) {
+        return sentence(HttpStatus.BAD_REQUEST, "The call's " + mistyped.getName() + " parameter cannot be " + mistyped.getValue() + ".");
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
