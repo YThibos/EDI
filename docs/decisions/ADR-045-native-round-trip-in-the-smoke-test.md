@@ -11,7 +11,7 @@ The invariant catalogue runs on the JVM in `edi-core`'s tests, before the native
 
 **Decision:** AT-39 is a real test in `NativeSmokeIT`, like AT-44: it calls `edi backlog`, an authenticated read of the store rendered as text, 200 times against the native core, writes p50, p95 and the slowest call to the build summary, and fails when p95 reaches 50 ms.
 Its entry leaves the catalogue, which keeps only the acceptance tests that run on the JVM.
-The smoke test also drives the S1 commands against the native core: adding and showing a task, raising and answering a decision, the migration dry run and a refusal.
+The smoke test also drives the S1 commands against the native core: adding and showing a task, raising and answering a decision, the migration dry run, a refusal, and `edi publish-check --json` reporting a finding when gitleaks is installed.
 
 **Motivation:** The budget is a property of the native executables, so only a test of the native executables can prove it, and CI runs that test on every push.
 

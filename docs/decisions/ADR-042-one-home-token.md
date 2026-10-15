@@ -10,7 +10,8 @@
 In slice S1 only one kind of caller exists: the primary session or the captain's shell, through the `edi` command; workers arrive with slice S3 and hooks with slice S4.
 
 **Decision:** At start-up the core draws a token of 32 random bytes from `SecureRandom`, writes it base64url-encoded to `$EDI_HOME/state/core.token` with owner-only permissions (`rw-------`, written to a temporary file and moved into place), and keeps it in memory (`ApiToken`).
-`ApiTokenFilter` admits a call under `/api/` only with `Authorization: Bearer <token>`, compared in constant time; `/api/health` and the console stay open, and a refusal is a 401 with one plain sentence.
+`ApiTokenFilter` admits a call under `/api` only with `Authorization: Bearer <token>`, compared in constant time; it decides on the decoded servlet path, never the raw request URI, so a percent-encoded `/api` needs the token too.
+Only exactly `/api/health` and the console stay open, and a refusal is a 401 with one plain sentence.
 The command reads the port and the token from the home before each call (`CoreConnection`).
 Every event a token holder causes is recorded with the actor `primary`.
 Slice S3 adds the scoped tokens of workers and hooks, and the authority classes of section 9.1 then decide what each caller may do; until then every token holder may call every S1 command, including `edi decision answer`, whose captain-word evidence arrives with slices S4 and S8.
