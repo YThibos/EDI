@@ -76,7 +76,7 @@ class GitTest {
     }
 
     @Test
-    void listsADeletedFileAsAPathWithoutAddedLines() throws IOException {
+    void leavesADeletedFileOutOfTheOutgoingPaths() throws IOException {
         repository.branch("work")
                 .write("kept.txt", "kept\n").commit("Keep a file");
         Files.delete(repository.root().resolve("notes.txt"));
@@ -85,7 +85,7 @@ class GitTest {
         OutgoingChanges changes = git.outgoingChanges(repository.root(), new RevisionRange("HEAD~1..HEAD"));
 
         assertThat(changes.commits()).singleElement().satisfies(commit -> {
-            assertThat(commit.paths()).containsExactly("notes.txt");
+            assertThat(commit.paths()).isEmpty();
             assertThat(commit.addedLines()).isEmpty();
         });
     }
