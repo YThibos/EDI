@@ -54,6 +54,14 @@ class MemoryAndCraftTest {
         }
 
         @Test
+        @DisplayName("AT-35 the repository's CLAUDE.md, which every agent working on EDI loads, is at most 10,000 bytes")
+        void theRepositoryAnchorStaysWithinItsBudget() throws IOException {
+            Path anchor = RepositoryRoot.path().resolve("CLAUDE.md");
+
+            assertThat(Files.size(anchor)).as("bytes of the repository's CLAUDE.md").isLessThanOrEqualTo(ANCHOR_BUDGET_BYTES);
+        }
+
+        @Test
         @DisplayName("AT-35 a generated worker brief is at most 120 lines before the task's own intent and spec")
         void aGeneratedBriefStaysWithinItsBudget() {
             Pending.until(Slice.S3);

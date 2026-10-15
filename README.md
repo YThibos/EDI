@@ -36,5 +36,6 @@ The core keeps its store, configuration and state in `EDI_HOME`, default `~/.edi
 
 ## Documentation
 
+- [AGENTS.md](AGENTS.md): the rules for agents changing EDI.
 - [docs/decisions](docs/decisions/README.md): every architecture and design decision, with its why.
 - [docs/verification](docs/verification/): what was verified on the external tools EDI drives, and on which version.
