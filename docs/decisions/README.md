@@ -82,3 +82,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-033](ADR-033-no-explanatory-comments.md) | No explanatory comments in code | Design |
 | [ADR-034](ADR-034-invariant-catalogue.md) | The invariant catalogue reports pending acceptance tests | Design |
 | [ADR-035](ADR-035-scope-cuts.md) | What EDI deliberately does not build | Architecture |
+| [ADR-036](ADR-036-tomcat-security-override.md) | Spring Boot's managed Tomcat is overridden for a security fix | Design |

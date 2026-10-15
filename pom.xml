@@ -36,6 +36,7 @@
             junit.jupiter.execution.parallel.mode.default=same_thread
             junit.jupiter.execution.parallel.mode.classes.default=concurrent
         </test.junitConfiguration>
+        <tomcat.version>11.0.27</tomcat.version>
         <archunit.version>1.5.1</archunit.version>
         <picocli.version>4.7.7</picocli.version>
         <dependency-check-maven.version>13.0.0</dependency-check-maven.version>
