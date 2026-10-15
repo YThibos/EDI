@@ -10,7 +10,7 @@
 On another repository, five stalled major upgrades permanently filled a concurrency cap of five, so no patch or minor update was proposed for weeks.
 
 **Decision:** Renovate runs in this repository's GitHub Actions (`renovatebot/github-action`, nightly at 03:00 UTC and on demand) with the policy in `renovate.json`:
-- managers for Maven, the Maven wrapper, npm, GitHub Actions and mise, plus two regex managers: the Node version the frontend Maven plugin downloads, and GraalVM Community in `mise.toml`, which the mise manager cannot read and which follows GraalVM Community's `jdk-*` releases;
+- managers for Maven, the Maven wrapper, npm, GitHub Actions, mise and Docker Compose, the last limited to the local SonarQube file `ops/sonar.yml` so it follows the same image as CI's service container, plus two regex managers: the Node version the frontend Maven plugin downloads, and GraalVM Community in `mise.toml`, which the mise manager cannot read and which follows GraalVM Community's `jdk-*` releases;
 - minor, patch, pin and digest updates share a budget of ten pull requests, and each major is its own pull request with a separate budget of three, so a stalled major can never starve the others;
 - the Spring Boot parent, plugin and managed dependencies are one group, the Angular packages another, and the Node used to build the console a third;
 - `minimumReleaseAge` of three days with strict internal checks, so a broken release is usually withdrawn before it is proposed;
