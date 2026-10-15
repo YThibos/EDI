@@ -4,7 +4,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
@@ -61,9 +65,12 @@ public class Gitleaks {
 
     private record ScanWorkspace(Path directory) implements AutoCloseable {
 
+        private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
+
         static ScanWorkspace create(String rules) {
             try {
-                ScanWorkspace workspace = new ScanWorkspace(Files.createTempDirectory("edi-gitleaks-"));
+                ScanWorkspace workspace = new ScanWorkspace(Files.createTempDirectory("edi-gitleaks-", OWNER_ONLY));
                 Files.writeString(workspace.rules(), rules);
                 return workspace;
             } catch (IOException unwritable) {

@@ -212,6 +212,7 @@
                 <sonar.projectName>EDI</sonar.projectName>
                 <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
                 <sonar.java.enablePreview>true</sonar.java.enablePreview>
+                <sonar.coverage.jacoco.xmlReportPaths>${maven.multiModuleProjectDirectory}/edi-core/target/site/jacoco/jacoco.xml,${maven.multiModuleProjectDirectory}/edi-cli/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
             </properties>
             <build>
                 <plugins>

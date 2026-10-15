@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -57,8 +61,11 @@ public class ExternalPrograms {
 
     private record Capture(Path file) implements AutoCloseable {
 
+        private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+
         static Capture create() throws IOException {
-            return new Capture(Files.createTempFile("edi-program-", ".txt"));
+            return new Capture(Files.createTempFile("edi-program-", ".txt", OWNER_ONLY));
         }
 
         String read() throws IOException {
