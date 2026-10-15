@@ -1,0 +1,12 @@
+target/
+personal/
+
+node_modules/
+.angular/
+edi-console/dist/
+edi-console/node/
+
+.idea/
+*.iml
+.vscode/
+.DS_Store

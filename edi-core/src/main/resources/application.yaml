@@ -1,0 +1,19 @@
+edi:
+  home: ${EDI_HOME:${user.home}/.edi}
+
+server:
+  address: 127.0.0.1
+  port: 47318
+
+spring:
+  application:
+    name: edi-core
+  main:
+    banner-mode: off
+
+management:
+  endpoints:
+    web:
+      base-path: /api
+      exposure:
+        include: health

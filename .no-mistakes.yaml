@@ -1,0 +1,37 @@
+commands:
+  test: "./mvnw -B -ntp verify"
+
+commit:
+  branch_pattern: '([A-Z][A-Z0-9]*-[0-9]+)'
+  fix_message: "{{.Branch}} {{.Summary}}"
+  trailers: []
+
+pr:
+  title_format: "{{.Branch}} {{.Title}}"
+
+providers:
+  github:
+    draft_pull_requests: true
+
+ignore_patterns:
+  - "mvnw"
+  - "mvnw.cmd"
+  - ".mvn/wrapper/**"
+  - "edi-console/package-lock.json"
+
+document:
+  instructions: |
+    docs/decisions/ owns the why of every architecture and design decision, one record per file, append-only: a changed decision is a new record that supersedes the old one, and only the old record's status line changes.
+    docs/verification/ owns live evidence about the external tools EDI drives, each file stating the tool version it was verified on.
+    README.md owns what EDI is and how to build it.
+    Code carries no explanatory comments; a decision record names the classes it governs instead.
+    Tracked files never hold anything about a particular person, employer or machine.
+
+review:
+  path_instructions:
+    - path: "docs/decisions/**"
+      instructions: |
+        Records are append-only. Flag any edit to an accepted record other than its status line, a typo or a broken link.
+    - path: "*.java"
+      instructions: |
+        Code carries no explanatory comments; only licence headers, suppression justifications and TODO or FIXME lines that carry an EDI key are allowed.
