@@ -3,6 +3,7 @@ package io.github.ythibos.edi.cli;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -29,6 +30,12 @@ class NativeSmokeIT {
 
     private static final Duration PATIENCE = Duration.ofSeconds(20);
     private static final int ROUND_TRIPS = 200;
+    private static final long ROUND_TRIP_BUDGET_MILLISECONDS = 50;
+    private static final String REGISTRY = """
+            projects:
+              - name: harness
+                tracker: { kind: edi, projectKey: HRN }
+            """;
 
     @TempDir
     private static Path home;
@@ -38,6 +45,8 @@ class NativeSmokeIT {
 
     @BeforeAll
     static void startTheNativeCore() throws IOException {
+        Files.createDirectories(home.resolve("config"));
+        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY);
         ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString())
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
@@ -82,7 +91,7 @@ class NativeSmokeIT {
 
     @Test
     void theCommandReportsTheCoreHealthy() throws Exception {
-        CommandRun health = edi("health");
+        CommandRun health = edi("", "health");
 
         assertThat(health.exitCode()).isZero();
         assertThat(health.output()).isEqualTo("EDI core is up on 127.0.0.1:" + port + ".\n");
@@ -90,18 +99,59 @@ class NativeSmokeIT {
 
     @Test
     void theCommandNamesItsVersion() throws Exception {
-        CommandRun version = edi("--version");
+        CommandRun version = edi("", "--version");
 
         assertThat(version.exitCode()).isZero();
         assertThat(version.output()).matches("edi \\d+\\.\\d+\\.\\d+\\n");
     }
 
     @Test
-    void theCommandRoundTripIsMeasured() throws Exception {
+    void theCommandKeepsTheBacklog() throws Exception {
+        CommandRun added = edi("", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Native lantern", "--key", "HRN-3");
+        CommandRun backlog = edi("", "backlog");
+        CommandRun shown = edi("", "task", "show", "native-lantern", "--json");
+
+        assertThat(added.output()).isEqualTo("Queued native-lantern.\n");
+        assertThat(backlog.output()).contains("native-lantern", "Native lantern");
+        assertThat(shown.output()).contains("\"workKey\":\"HRN-3\"", "\"state\":\"queued\"");
+    }
+
+    @Test
+    void theCommandRaisesAndAnswersADecision() throws Exception {
+        edi("", "task", "add", "--kind", "captain", "--id", "native-choice", "--title", "Choose natively");
+        CommandRun raised = edi("{\"title\":\"Which?\",\"context\":\"\",\"options\":[{\"key\":\"A\",\"text\":\"This\"}],\"recommend\":{\"key\":\"A\",\"why\":\"only one\"}}",
+                "decision", "raise", "native-choice", "--card", "-");
+        String number = raised.output().strip();
+        CommandRun answered = edi("", "decision", "answer", number, "--option", "A", "--text", number + " A");
+
+        assertThat(number).matches("D\\d+");
+        assertThat(answered.output()).isEqualTo("Recorded the answer to " + number + " (option A); native-choice is done.\n");
+        assertThat(edi("", "decision", "list", "--open").output()).doesNotContain(number + "  native-choice");
+    }
+
+    @Test
+    void theCommandPlansTheMigrationOfAnOldHome() throws Exception {
+        CommandRun plan = edi("", "migrate", "firstofficer", "--from", System.getProperty("edi.old.home.fixture"), "--dry-run");
+
+        assertThat(plan.exitCode()).isZero();
+        assertThat(plan.output()).contains("Tasks to import (15)", "the first new decision is D58", "For the captain (8)");
+    }
+
+    @Test
+    void theCommandRefusesInOnePlainSentence() throws Exception {
+        CommandRun refused = edi("", "release", "no-such-task");
+
+        assertThat(refused.exitCode()).isOne();
+        assertThat(refused.output()).isEqualTo("No task is called no-such-task.\n");
+    }
+
+    @Test
+    @DisplayName("AT-39 the native CLI round trip has a p95 under 50 ms over 200 calls")
+    void theCommandAnswersQuickly() throws Exception {
         List<Long> millis = new ArrayList<>();
         for (int call = 0; call < ROUND_TRIPS; call++) {
             long started = System.nanoTime();
-            assertThat(edi("health").exitCode()).isZero();
+            assertThat(edi("", "backlog").exitCode()).isZero();
             millis.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
         }
         Collections.sort(millis);
@@ -109,8 +159,9 @@ class NativeSmokeIT {
         Files.writeString(Path.of(System.getProperty("edi.smoke.report")), """
                 ## Native smoke test
 
-                `edi health` against the native core, %d round trips: p50 %d ms, p95 %d ms, slowest %d ms.
+                `edi backlog` against the native core, %d round trips: p50 %d ms, p95 %d ms, slowest %d ms.
                 """.formatted(ROUND_TRIPS, percentile(millis, 50), percentile(millis, 95), millis.getLast()));
+        assertThat(percentile(millis, 95)).as("p95 of the round trip in milliseconds").isLessThan(ROUND_TRIP_BUDGET_MILLISECONDS);
     }
 
     private static Path binary(String property) {
@@ -146,12 +197,15 @@ class NativeSmokeIT {
         }
     }
 
-    private static CommandRun edi(String... arguments) throws Exception {
+    private static CommandRun edi(String input, String... arguments) throws Exception {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
         commandLine.addAll(List.of(arguments));
         ProcessBuilder launch = new ProcessBuilder(commandLine).redirectErrorStream(true);
         launch.environment().put("EDI_HOME", home.toString());
         Process command = launch.start();
+        try (OutputStream standardInput = command.getOutputStream()) {
+            standardInput.write(input.getBytes(StandardCharsets.UTF_8));
+        }
         String output = new String(command.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (!command.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
             command.destroyForcibly();

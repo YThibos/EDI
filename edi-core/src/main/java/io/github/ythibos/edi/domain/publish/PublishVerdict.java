@@ -20,4 +20,10 @@ public record PublishVerdict(List<PublishFinding> findings) {
     public boolean allowsPush() {
         return findings.isEmpty();
     }
+
+    public String conclusion(RevisionRange outgoing) {
+        return allowsPush()
+                ? "Clear: no secret and no personal material in " + outgoing
+                : "Refused: the outgoing commits carry a secret or personal material.";
+    }
 }

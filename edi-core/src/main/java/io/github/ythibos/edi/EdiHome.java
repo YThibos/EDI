@@ -26,6 +26,14 @@ public final class EdiHome {
         return root.resolve("state").resolve("core.port");
     }
 
+    public Path coreTokenFile() {
+        return root.resolve("state").resolve("core.token");
+    }
+
+    public Path projectRegistry() {
+        return root.resolve("config").resolve("projects.yaml");
+    }
+
     public Path publishDenyList() {
         return root.resolve("config").resolve("publish-denylist");
     }

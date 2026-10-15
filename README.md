@@ -3,7 +3,8 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S0, the foundations: the build, the module skeletons, the architecture rules, the publish guard, the invariant catalogue, CI and dependency upkeep.
+The repository is at slice S1, domain and store, on top of the foundations of slice S0.
+The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 Nothing launches workers yet.
 
 ## Parts
@@ -32,7 +33,27 @@ EDI_HOME=/tmp/edi-home edi-core/target/edi-core      # after the native build
 EDI_HOME=/tmp/edi-home edi-cli/target/edi health
 ```
 
-The core keeps its store, configuration and state in `EDI_HOME`, default `~/.edi`, listens on port 47318 unless `SERVER_PORT` says otherwise, and records the port it bound in `$EDI_HOME/state/core.port`.
+The core keeps its store, configuration and state in `EDI_HOME`, default `~/.edi`, listens on port 47318 unless `SERVER_PORT` says otherwise, records the port it bound in `$EDI_HOME/state/core.port`, and writes a fresh API token to `$EDI_HOME/state/core.token` at every start; the command reads both.
+
+## Use
+
+```sh
+edi project list                                    # the registry in $EDI_HOME/config/projects.yaml
+edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14
+edi backlog --ready                                 # the queue, or only what nothing holds or blocks
+edi task show fit-the-lamp                          # a task id, or the D number of its decision
+edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-11-01
+edi release fit-the-lamp
+edi decision raise fit-the-lamp --card - < card.json   # prints the decision's D number
+edi decision answer D58 --option A --text "D58, A"     # the captain's words, verbatim
+edi decision list --open
+edi publish-check --range origin/main..HEAD         # the publish guard over outgoing commits
+edi migrate firstofficer --from /path/to/old/home --dry-run
+```
+
+Every command prints text, or the core's JSON with `--json`; a refusal is one sentence on standard error with exit code 1.
+A card is `{"title", "context", "options": [{"key", "text"}], "recommend": {"key", "why"}}`.
+`examples/edi-home/config/projects.yaml` shows the registry's shape with placeholder values.
 
 ## Documentation
 
