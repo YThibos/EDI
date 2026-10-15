@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -146,6 +147,17 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandReportsAPublishFindingAsJson() throws Exception {
+        Path repository = repositoryWithAPersonalFileOn("share");
+        assumeTrue(answersIn(repository, "gitleaks", "version"), "gitleaks is not installed");
+
+        CommandRun check = ediIn(repository, "", "publish-check", "--range", "main..share", "--json");
+
+        assertThat(check.exitCode()).isOne();
+        assertThat(check.output()).contains("\"path\":\"personal/notes.md\"", "\"rule\":\"PERSONAL_PATH\"");
+    }
+
+    @Test
     @DisplayName("AT-39 the native CLI round trip has a p95 under 50 ms over 200 calls")
     void theCommandAnswersQuickly() throws Exception {
         List<Long> millis = new ArrayList<>();
@@ -197,11 +209,48 @@ class NativeSmokeIT {
         }
     }
 
+    private static Path repositoryWithAPersonalFileOn(String branch) throws Exception {
+        Path repository = Files.createDirectories(home.resolve("repository"));
+        git(repository, "init", "--quiet", "--initial-branch=main");
+        git(repository, "commit", "--quiet", "--allow-empty", "--message", "Start");
+        git(repository, "switch", "--quiet", "--create", branch);
+        Files.createDirectories(repository.resolve("personal"));
+        Files.writeString(repository.resolve("personal/notes.md"), "Private notes.\n");
+        git(repository, "add", "personal/notes.md");
+        git(repository, "commit", "--quiet", "--message", "Share the notes");
+        return repository;
+    }
+
+    private static void git(Path repository, String... arguments) throws Exception {
+        List<String> commandLine = new ArrayList<>(List.of("git", "-c", "user.name=Smoke", "-c", "user.email=smoke@example.org"));
+        commandLine.addAll(List.of(arguments));
+        ProcessBuilder launch = new ProcessBuilder(commandLine).directory(repository.toFile()).redirectErrorStream(true);
+        launch.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
+        launch.environment().put("GIT_CONFIG_NOSYSTEM", "1");
+        assertThat(run(launch, "").exitCode()).as("git %s", String.join(" ", arguments)).isZero();
+    }
+
+    private static boolean answersIn(Path directory, String... versionCommand) {
+        try {
+            return run(new ProcessBuilder(versionCommand).directory(directory.toFile()).redirectErrorStream(true), "").exitCode() == 0;
+        } catch (Exception missing) {
+            return false;
+        }
+    }
+
     private static CommandRun edi(String input, String... arguments) throws Exception {
+        return ediIn(Path.of(""), input, arguments);
+    }
+
+    private static CommandRun ediIn(Path directory, String input, String... arguments) throws Exception {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
         commandLine.addAll(List.of(arguments));
-        ProcessBuilder launch = new ProcessBuilder(commandLine).redirectErrorStream(true);
+        ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toAbsolutePath().toFile()).redirectErrorStream(true);
         launch.environment().put("EDI_HOME", home.toString());
+        return run(launch, input);
+    }
+
+    private static CommandRun run(ProcessBuilder launch, String input) throws Exception {
         Process command = launch.start();
         try (OutputStream standardInput = command.getOutputStream()) {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
