@@ -26,7 +26,7 @@ public class NoticeStore {
                 .param("worker", worker.toString())
                 .param("kind", notice.kind().word())
                 .param("since", Columns.text(notice.since()))
-                .query(Boolean.class)
+                .query((row, _) -> row.getBoolean(1))
                 .single();
     }
 
@@ -52,7 +52,7 @@ public class NoticeStore {
         return store.sql("select exists (select 1 from hold_notice where task_id = :task and set_at = :set)")
                 .param("task", task.value())
                 .param("set", Columns.text(hold.setAt()))
-                .query(Boolean.class)
+                .query((row, _) -> row.getBoolean(1))
                 .single();
     }
 

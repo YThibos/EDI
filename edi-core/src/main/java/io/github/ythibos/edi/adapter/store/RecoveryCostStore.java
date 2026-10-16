@@ -22,7 +22,7 @@ public class RecoveryCostStore {
     public boolean isCounted(WorkerId worker) {
         return store.sql("select exists (select 1 from recovery_cost where worker_id = :worker)")
                 .param("worker", worker.toString())
-                .query(Boolean.class)
+                .query((row, _) -> row.getBoolean(1))
                 .single();
     }
 

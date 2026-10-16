@@ -94,7 +94,10 @@ public class EventLog {
     }
 
     public boolean anyAfter(long sequence) {
-        return store.sql("select exists (select 1 from event where sequence > :sequence)").param("sequence", sequence).query(Boolean.class).single();
+        return store.sql("select exists (select 1 from event where sequence > :sequence)")
+                .param("sequence", sequence)
+                .query((row, _) -> row.getBoolean(1))
+                .single();
     }
 
     public List<RecordedEvent> timelineOf(TaskId task) {

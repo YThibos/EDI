@@ -30,9 +30,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import io.github.ythibos.edi.testing.TestProcesses;
 
+@Isolated
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
 class NativeSmokeIT {
 
