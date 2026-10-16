@@ -37,9 +37,9 @@ final class PipelineSpend {
             return Optional.empty();
         }
         try (Connection database = readOnly(stateDatabase).getConnection();
-                PreparedStatement query = spendQuery(database, projectClone, branch);
-                ResultSet spend = query.executeQuery()) {
-            return spend.next() && spend.getLong("invocations") == spend.getLong("counted") ? Optional.of(tokensOf(spend)) : Optional.empty();
+                PreparedStatement query = database.prepareStatement(SPEND_OF_A_BRANCH)) {
+            bindTheBranch(query, projectClone, branch);
+            return spendOf(query);
         } catch (SQLException unreadable) {
             return Optional.empty();
         }
@@ -53,11 +53,9 @@ final class PipelineSpend {
         return database;
     }
 
-    private static PreparedStatement spendQuery(Connection database, Path projectClone, BranchName branch) throws SQLException {
-        PreparedStatement query = database.prepareStatement(SPEND_OF_A_BRANCH);
+    private static void bindTheBranch(PreparedStatement query, Path projectClone, BranchName branch) throws SQLException {
         query.setString(1, realPathOf(projectClone).toString());
         query.setString(2, branch.toString());
-        return query;
     }
 
     private static Path realPathOf(Path directory) {
@@ -65,6 +63,12 @@ final class PipelineSpend {
             return directory.toRealPath();
         } catch (IOException absent) {
             return directory.toAbsolutePath().normalize();
+        }
+    }
+
+    private static Optional<TokenUsage> spendOf(PreparedStatement query) throws SQLException {
+        try (ResultSet spend = query.executeQuery()) {
+            return spend.next() && spend.getLong("invocations") == spend.getLong("counted") ? Optional.of(tokensOf(spend)) : Optional.empty();
         }
     }
 
