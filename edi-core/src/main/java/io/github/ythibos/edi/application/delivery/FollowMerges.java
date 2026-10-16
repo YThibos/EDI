@@ -63,7 +63,8 @@ public class FollowMerges {
     public MergedWork mergedSaysTheCaptain(String reference, Actor actor) {
         Optional<Delivery> delivery = transaction.execute(_ -> deliveryNamedBy(reference));
         if (delivery.isEmpty()) {
-            return new MergedWork(tasks.get(TaskReference.parse(reference)).id(), null, cleanedUpAfter(TaskReference.parse(reference), actor));
+            return new MergedWork(tasks.get(TaskReference.parse(reference)).id(), null,
+                    cleanedUpAfter(TaskReference.parse(reference), actor).triedAgainOnTheCaptainsWord());
         }
         if (delivery.get().state() == MergeRequestState.MERGED) {
             return followedBefore(delivery.get(), actor);
@@ -183,7 +184,7 @@ public class FollowMerges {
         if (outcome.countsAsTheAttempt()) {
             refreshes.cleanUpTried(refresh);
         }
-        return outcome;
+        return outcome.triedAgainInTheNextRound();
     }
 
     private CleanUp cleanedUpAfter(TaskReference task, Actor actor) {
@@ -212,7 +213,7 @@ public class FollowMerges {
         }
 
         static CleanUp stoppedBy(RuntimeException failure) {
-            return new CleanUp(false, "the clean-up stopped: " + failure.getMessage() + "; EDI tries again in the next round", true);
+            return new CleanUp(false, "the clean-up stopped: " + failure.getMessage(), true);
         }
 
         static CleanUp awaitingTheRefresh() {
@@ -221,6 +222,18 @@ public class FollowMerges {
 
         boolean countsAsTheAttempt() {
             return !stopped;
+        }
+
+        CleanUp triedAgainInTheNextRound() {
+            return continuedWith("EDI tries again in the next round");
+        }
+
+        CleanUp triedAgainOnTheCaptainsWord() {
+            return continuedWith("run edi merged or edi cleanup again once the failure clears");
+        }
+
+        private CleanUp continuedWith(String nextStep) {
+            return stopped ? new CleanUp(false, refusal + "; " + nextStep, true) : this;
         }
     }
 }

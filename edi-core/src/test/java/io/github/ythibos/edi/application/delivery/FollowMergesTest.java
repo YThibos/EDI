@@ -133,7 +133,8 @@ class FollowMergesTest {
         FixtureRepository clone = FixtureRepository.at(home.registry().entryOf(new ProjectName("harness")).projectClone());
         clone.run("worktree", "lock", copy.root().toString());
 
-        home.followMerges().watchTheOpenDrafts();
+        MergedWork stopped = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+        assertThat(stopped.cleanUp().refusal()).startsWith("the clean-up stopped: ").endsWith("; EDI tries again in the next round");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.cloneRefreshes().after(LAMP)).hasValueSatisfying(refresh -> assertThat(refresh.cleanUpTriedAt()).isNull());
 
@@ -238,6 +239,31 @@ class FollowMergesTest {
         assertThat(landed.delivery()).isNull();
         assertThat(landed.cleanUp().done()).isTrue();
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void asksTheCaptainToSayItAgainWhenAFailingProgramStopsALocalCleanUp() throws IOException {
+        FixtureRepository checkout = upstream.clonedInto(directory.resolve("checkouts/harness"));
+        home.registering("""
+                projects:
+                  - name: harness
+                    tracker: { kind: edi, projectKey: HRN }
+                    base: main
+                    captainCheckout: %s
+                """.formatted(checkout.root()));
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3", DeliveryMode.LOCAL_BRANCH));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Ready.");
+        upstream.run("fetch", "--quiet", copy.root().toString(), "feature/HRN-3");
+        upstream.run("merge", "--quiet", "--ff-only", "FETCH_HEAD");
+        FixtureRepository.at(home.registry().entryOf(new ProjectName("harness")).projectClone()).run("worktree", "lock", copy.root().toString());
+
+        MergedWork stopped = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(stopped.cleanUp().done()).isFalse();
+        assertThat(stopped.cleanUp().refusal()).startsWith("the clean-up stopped: ")
+                .endsWith("; run edi merged or edi cleanup again once the failure clears");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
     }
 
     private String squashedOntoMain(FixtureRepository copy) throws IOException {
