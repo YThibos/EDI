@@ -3,13 +3,17 @@ package io.github.ythibos.edi.cli;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 
 final class CoreClient {
 
     private static final Duration PATIENCE = Duration.ofSeconds(5);
+    private static final Duration ANSWER_PATIENCE = Duration.ofSeconds(60);
     private static final int OK = 200;
+    private static final String JSON = "application/json";
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(PATIENCE).build();
 
@@ -25,7 +29,34 @@ final class CoreClient {
         }
     }
 
+    CoreReply get(CoreConnection core, String path, String accepted) {
+        return exchange(core, request(core, path, accepted).GET());
+    }
+
+    CoreReply post(CoreConnection core, String path, String json, String accepted) {
+        return exchange(core, request(core, path, accepted).header("Content-Type", JSON).POST(BodyPublishers.ofString(json)));
+    }
+
     private static CoreHealth healthFrom(int status) {
         return status == OK ? CoreHealth.UP : CoreHealth.DOWN;
+    }
+
+    private static HttpRequest.Builder request(CoreConnection core, String path, String accepted) {
+        return HttpRequest.newBuilder(core.address().endpoint(path))
+                .timeout(ANSWER_PATIENCE)
+                .header("Authorization", "Bearer " + core.token())
+                .header("Accept", accepted);
+    }
+
+    private CoreReply exchange(CoreConnection core, HttpRequest.Builder request) {
+        try {
+            HttpResponse<String> response = http.send(request.build(), BodyHandlers.ofString());
+            return new CoreReply(response.statusCode(), response.body());
+        } catch (IOException unreachable) {
+            throw new CoreUnavailable("EDI core is not answering on " + core.address() + ".");
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new CoreUnavailable("The call to EDI core on " + core.address() + " was interrupted.");
+        }
     }
 }

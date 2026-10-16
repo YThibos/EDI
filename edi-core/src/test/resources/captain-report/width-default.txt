@@ -1,0 +1,26 @@
+╔══ NEEDS YOUR DECISION ══ 1 open ══════════════════════════════════════════════════════════════════════════════════════
+║
+╟── deckhand ────────────────────────────────
+║
+║  D1    Review the pull request
+║        https://github.com/example-organisation/example-repository-with-a-long-name/pull/12345
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (0)
+───────────────────
+  Nothing finished this turn
+
+ONGOING  (0)
+────────────
+  Nothing running
+
+NEXT
+────
+  Nothing planned

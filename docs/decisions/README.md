@@ -83,3 +83,15 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-034](ADR-034-invariant-catalogue.md) | The invariant catalogue reports pending acceptance tests | Design |
 | [ADR-035](ADR-035-scope-cuts.md) | What EDI deliberately does not build | Architecture |
 | [ADR-036](ADR-036-tomcat-security-override.md) | Spring Boot's managed Tomcat is overridden for a security fix | Design |
+| [ADR-037](ADR-037-current-state-and-event-history.md) | The store keeps current state in tables and history in the event log | Design |
+| [ADR-038](ADR-038-immediate-explicit-store-transactions.md) | Store transactions are explicit and take the write lock at once | Design |
+| [ADR-039](ADR-039-a-decision-holds-its-task.md) | A decision holds its task, and its number never changes | Design |
+| [ADR-040](ADR-040-task-intake.md) | How a task enters the queue | Design |
+| [ADR-041](ADR-041-project-registry-is-configuration.md) | The project registry is configuration, read on every use | Design |
+| [ADR-042](ADR-042-one-home-token.md) | One home token authenticates the API until callers are told apart | Design |
+| [ADR-043](ADR-043-the-core-renders-text.md) | The core renders text and JSON; the command is a pipe | Architecture |
+| [ADR-044](ADR-044-migration-reads-the-old-grammar.md) | The migration reads the old backlog with its own grammar and maps it through the domain | Design |
+| [ADR-045](ADR-045-native-round-trip-in-the-smoke-test.md) | The native round trip is measured by the native smoke test | Design |
+| [ADR-046](ADR-046-where-the-fleet-snapshot-puts-open-work.md) | Where the fleet snapshot puts open work | Design |
+| [ADR-047](ADR-047-the-captain-report-matches-the-old-renderer.md) | The captain report matches the old renderer byte for byte | Design |
+| [ADR-048](ADR-048-the-command-measures-its-pane.md) | The command measures its pane and the core sizes the report | Design |

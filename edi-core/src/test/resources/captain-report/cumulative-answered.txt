@@ -1,0 +1,25 @@
+╔══ NEEDS YOUR DECISION ══ 1 open ══════════════════════════════════════════════════════════════════════════════════════
+║
+╟── Gatehouse ───────────────────────────────
+║
+║  D2    Second open call
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (0)
+───────────────────
+  Nothing finished this turn
+
+ONGOING  (0)
+────────────
+  Nothing running
+
+NEXT
+────
+  Nothing planned

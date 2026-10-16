@@ -1,0 +1,22 @@
+projects:
+  - name: example-service
+    clone: ~/.edi/projects/example-service
+    captainCheckout: /path/to/checkouts/example-service
+    forge: { kind: gitlab, host: gitlab.example.org, path: team/example-service, account: example-user }
+    base: main
+    delivery: draft-review
+    tracker: { kind: jira, projectKey: EXAMPLE }
+    branchKinds: [feature, chore, research]
+    craftRules: true
+    aiScaffolding: committed
+  - name: EDI
+    forge: { kind: github, path: example-owner/EDI, account: example-owner }
+    base: main
+    delivery: draft-review
+    tracker: { kind: edi, projectKey: EDI }
+    craftRules: true
+    aiScaffolding: committed
+  - name: hobby-tool
+    clone: ~/.edi/projects/hobby-tool
+    delivery: local-branch
+    tracker: { kind: edi, projectKey: HOBBY }

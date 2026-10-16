@@ -62,7 +62,10 @@ class EdiCoreApplicationTest {
     @Test
     void keepsItsStoreInTheHomeWithMigrationsApplied() {
         assertThat(HOME.resolve("data/edi.db")).isRegularFile();
-        assertThat(store.sql("select count(*) from flyway_schema_history").query(Integer.class).single()).isZero();
+        assertThat(store.sql("select version from flyway_schema_history where success = 1").query(String.class).list()).containsExactly("1");
+        assertThat(store.sql("select name from sqlite_master where type = 'table' and name not like 'flyway%' and name not like 'sqlite%' order by name")
+                .query(String.class).list())
+                .containsExactly("captain_hold", "decision", "decision_option", "event", "meta", "task", "task_dependency", "task_project");
         assertThat(store.sql("pragma journal_mode").query(String.class).single()).isEqualToIgnoringCase("wal");
         assertThat(store.sql("pragma foreign_keys").query(Integer.class).single()).isOne();
         assertThat(store.sql("pragma busy_timeout").query(Integer.class).single()).isEqualTo(5_000);

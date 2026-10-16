@@ -1,0 +1,29 @@
+╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════════════════════════════════════════════════════
+║  Nothing waiting on you
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (0)
+───────────────────
+  Nothing finished this turn
+
+ONGOING  (0)
+────────────
+  Nothing running
+
+NEXT
+────
+  Nothing planned
+
+PARKED  (2)
+───────────
+  Gatehouse         • Paused work - on hold
+  HarbourMaster     • Questions for the next demo - deferred until 2026-10-20
+
+BACKLOG  (7)
+────────────
+  deckhand          • Queued work 1
+                    • Queued work 2
+                    • Queued work 3
+                    • Queued work 4
+                    • Queued work 5
+  (+2 more queued)

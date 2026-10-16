@@ -3,6 +3,7 @@ package io.github.ythibos.edi.cli;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
@@ -106,7 +107,7 @@ class HealthCommandTest {
     }
 
     private int edi(String... arguments) {
-        return new CommandLine(new Edi(Map.of("EDI_HOME", home.toString())))
+        return new CommandLine(new Edi(Map.of("EDI_HOME", home.toString()), InputStream.nullInputStream()))
                 .setOut(new PrintWriter(out, true))
                 .setErr(new PrintWriter(err, true))
                 .execute(arguments);

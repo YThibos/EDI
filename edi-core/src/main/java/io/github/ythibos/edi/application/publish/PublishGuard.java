@@ -34,8 +34,6 @@ public final class PublishGuard {
 
     private static void report(PublishVerdict verdict, RevisionRange outgoing) {
         verdict.findings().forEach(System.out::println);
-        System.out.println(verdict.allowsPush()
-                ? "Clear: no secret and no personal material in " + outgoing
-                : "Refused: the outgoing commits carry a secret or personal material.");
+        System.out.println(verdict.conclusion(outgoing));
     }
 }
