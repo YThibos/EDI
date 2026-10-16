@@ -25,15 +25,20 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
+import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.DoneCheck;
+import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.TestHome;
@@ -221,8 +226,33 @@ class WorkIsolationAndGitHygieneTest {
 
         @Test
         @DisplayName("AT-11 a branch adding a SNAPSHOT dependency makes edi status done refuse with the file and line")
-        void doneRefusesASnapshotDependency() {
-            Pending.until(Slice.S5);
+        @Tag("adapter")
+        void doneRefusesASnapshotDependency() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository.at(directory.resolve("upstream/harness")).write("pom.xml", BUILD_FILE.formatted("")).commit("Add the build file");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            DispatchOutcome dispatched = dispatch(home, "fit-lamp");
+            Worker worker = dispatched.launched().worker();
+            FixtureRepository worktree = FixtureRepository.at(dispatched.launched().worktree())
+                    .write("pom.xml", BUILD_FILE.formatted(LAMP_DEPENDENCY.formatted("1.2.0-SNAPSHOT")))
+                    .write("module/pom.xml", "<project>\n  <version>2.0.0-SNAPSHOT</version>\n</project>\n")
+                    .commit("HRN-3 Use the snapshot lamp");
+            WorkerFixtures.opensTheDraftOf(home, worker);
+
+            assertThatThrownBy(() -> home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "The lamp is fitted."))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessageEndingWith("push-bound work carries no -SNAPSHOT version, and the branch adds one at module/pom.xml:2, pom.xml:6.");
+            assertThat(home.workers().get(worker.id()).orElseThrow().lastStatus()).isNull();
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DeliveryRefused");
+
+            worktree.write("pom.xml", BUILD_FILE.formatted(LAMP_DEPENDENCY.formatted("1.2.0")))
+                    .write("module/pom.xml", "<project>\n  <version>2.0.0</version>\n</project>\n")
+                    .commit("HRN-3 Use the released lamp");
+            WorkerFixtures.opensTheDraftOf(home, worker);
+            home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "The lamp is fitted.");
+
+            assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("StatusReported", "DraftRecorded");
         }
     }
 
@@ -232,8 +262,40 @@ class WorkIsolationAndGitHygieneTest {
 
         @Test
         @DisplayName("AT-12 the landed-work test tells uncommitted, unpushed and unmerged work from squash-merged or rebuilt work")
-        void theLandedWorkTestRecognisesLandedAndUnlandedWork() {
-            Pending.until(Slice.S5);
+        @Tag("adapter")
+        void theLandedWorkTestRecognisesLandedAndUnlandedWork() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository upstream = FixtureRepository.at(directory.resolve("upstream/harness"));
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("tune-horn", "harness", "HRN-4")));
+            FixtureRepository lamp = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+            FixtureRepository horn = FixtureRepository.at(dispatch(home, "tune-horn").launched().worktree());
+            Workplace lampPlace = home.workerContext().of(new TaskId("fit-lamp"));
+            Workplace hornPlace = home.workerContext().of(new TaskId("tune-horn"));
+
+            lamp.write("lamp.txt", "brass\n");
+            assertThat(home.landedWork().of(lampPlace).findings()).containsExactly("lamp.txt is not committed");
+
+            lamp.commit("HRN-3 Fit the lamp");
+            String unpushed = "commit " + lamp.head().substring(0, 12) + " \"HRN-3 Fit the lamp\" is not in origin/main";
+            assertThat(home.landedWork().of(lampPlace).findings()).containsExactly(unpushed);
+
+            upstream.run("fetch", "--quiet", lamp.root().toString(), "feature/HRN-3:feature/HRN-3");
+            assertThat(home.landedWork().of(lampPlace).findings()).as("pushed but unmerged").containsExactly(unpushed);
+
+            upstream.run("merge", "--quiet", "--squash", "feature/HRN-3");
+            upstream.commit("Fit the lamp, squashed");
+            LandedWork squashed = home.landedWork().of(lampPlace);
+            assertThat(squashed.isLanded()).isTrue();
+            assertThat(squashed.contentInTheBase()).isTrue();
+
+            horn.write("horn.txt", "loud\n").commit("HRN-4 Tune the horn");
+            upstream.run("fetch", "--quiet", horn.root().toString(), "feature/HRN-4:feature/HRN-4");
+            upstream.run("cherry-pick", "feature/HRN-4");
+            upstream.write("horn.txt", "quiet\n").commit("Tone the horn down");
+            LandedWork rebuilt = home.landedWork().of(hornPlace);
+            assertThat(rebuilt.isLanded()).as("the pipeline rebuilt the commit on a newer base").isTrue();
+            assertThat(rebuilt.contentInTheBase()).isFalse();
+            assertThat(rebuilt.commitsBeyondTheBase()).singleElement().extracting(BranchCommit::sameChangeInTheBase).isEqualTo(true);
         }
     }
 
@@ -243,10 +305,36 @@ class WorkIsolationAndGitHygieneTest {
 
         @Test
         @DisplayName("AT-13 worktree creation fetches and starts at the origin ref so a stale local ref does not leak in")
-        void worktreesStartAtTheFreshOriginRef() {
-            Pending.until(Slice.S5);
+        @Tag("adapter")
+        void worktreesStartAtTheFreshOriginRef() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository clone = FixtureRepository.at(home.home().root().resolve("projects/harness"));
+            String staleLocalCommit = clone.write("stale.txt", "only here\n").commit("A commit only the clone's local main holds").head();
+            String freshOrigin = FixtureRepository.at(directory.resolve("upstream/harness")).write("lamp.txt", "brass\n").commit("Move main on").head();
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+
+            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+
+            assertThat(worktree.head()).isEqualTo(freshOrigin);
+            assertThat(clone.run("rev-parse", "refs/remotes/origin/main").strip()).isEqualTo(freshOrigin);
+            assertThat(worktree.run("rev-list", "HEAD")).doesNotContain(staleLocalCommit);
+            assertThat(worktree.root().resolve("stale.txt")).doesNotExist();
         }
     }
+
+    private static final String BUILD_FILE = """
+            <project>
+              <version>3.1.0-SNAPSHOT</version>
+              <dependencies>
+            %s  </dependencies>
+            </project>
+            """;
+    private static final String LAMP_DEPENDENCY = """
+                <dependency>
+                  <artifactId>lamp</artifactId>
+                  <version>%s</version>
+                </dependency>
+            """;
 
     private static DispatchOutcome dispatch(TestHome home, String task) {
         return home.dispatchTask().dispatch(TaskReference.parse(task),

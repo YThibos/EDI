@@ -81,8 +81,10 @@ class SupervisionRulesTest {
             Worker waiting = quiet.reported(report(waitingOnThePrimary, null), LAUNCHED);
             assertThat(noticeDue(waiting, LAUNCHED.plus(Duration.ofHours(5)))).as(waitingOnThePrimary.word()).isEmpty();
         }
-        assertThat(RULES.noticeDue(quiet, RULES.healthOf(quiet, WindowCheck.OPEN, BOOT, LAUNCHED.plus(Duration.ofHours(1))), true, LAUNCHED.plus(Duration.ofHours(1))))
+        assertThat(RULES.noticeDue(quiet, RULES.healthOf(quiet, WindowCheck.OPEN, BOOT, LAUNCHED.plus(Duration.ofHours(1))), new Awaited(true, false), LAUNCHED.plus(Duration.ofHours(1))))
                 .isEmpty();
+        assertThat(RULES.noticeDue(quiet, RULES.healthOf(quiet, WindowCheck.OPEN, BOOT, LAUNCHED.plus(Duration.ofHours(1))), new Awaited(false, true), LAUNCHED.plus(Duration.ofHours(1))))
+                .as("an idle worker whose pipeline runs").isEmpty();
     }
 
     @Test
@@ -91,7 +93,7 @@ class SupervisionRulesTest {
 
         assertThat(noticeDue(busy, LAUNCHED.plus(Duration.ofHours(3)).minusSeconds(1))).isEmpty();
         assertThat(noticeDue(busy, LAUNCHED.plus(Duration.ofHours(3)))).contains(new WorkerNotice(NoticeKind.BUSY_TOO_LONG, LAUNCHED));
-        assertThat(RULES.noticeDue(busy, new WorkerHealth.Dead(DeathCause.WINDOW_CLOSED), false, LAUNCHED)).contains(new WorkerNotice(NoticeKind.DIED, LAUNCHED));
+        assertThat(RULES.noticeDue(busy, new WorkerHealth.Dead(DeathCause.WINDOW_CLOSED), Awaited.NOTHING, LAUNCHED)).contains(new WorkerNotice(NoticeKind.DIED, LAUNCHED));
     }
 
     private static Worker launched() {
@@ -113,6 +115,6 @@ class SupervisionRulesTest {
     }
 
     private static Optional<WorkerNotice> noticeDue(Worker worker, Instant now) {
-        return RULES.noticeDue(worker, RULES.healthOf(worker, WindowCheck.OPEN, BOOT, now), false, now);
+        return RULES.noticeDue(worker, RULES.healthOf(worker, WindowCheck.OPEN, BOOT, now), Awaited.NOTHING, now);
     }
 }

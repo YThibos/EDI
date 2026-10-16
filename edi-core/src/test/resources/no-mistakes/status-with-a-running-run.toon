@@ -1,0 +1,23 @@
+run:
+  id: "01M527P0FFESZMZCVXFT9VHVW5"
+  branch: feature/HRN-3
+  status: running
+  head: aacda7bf
+  head_sha: aacda7bfd12398c1d7960f58d68177e003550ad7
+  verification_plan: none
+  pr: "https://github.com/example-owner/harness/pull/6"
+  findings: 1 info
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,14
+    rebase,completed,0,4494
+    review,completed,1,1551996
+    test,completed,0,3153124
+    document,completed,0,40196
+    lint,completed,0,1343
+    push,completed,0,7707
+    pr,completed,0,26901
+    ci,running,0,0
+  shared_work[1]{attributed_to,scope,duration_ms}:
+    document,document+lint housekeeping,40196
+  active_steps[1]{step,status,active_for,round_active_for,last_activity,agent_pid,round}:
+    ci,running,5h7m,5h7m,"quiet 2h18m ago: log: all CI checks passed - still monitoring until merged or closed","",starting

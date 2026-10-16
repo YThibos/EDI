@@ -1,0 +1,7 @@
+current_branch: feature/HRN-3
+runs_on_current_branch: 0
+count: 2 of 2 total
+runs[2]{id,branch,status,head,pr}:
+  "01M52JEVB21ZGGADQ2X3893BW7",feature/HRN-2,running,5895b638,"https://github.com/example-owner/harness/pull/7"
+  "01M50RH8JYDFBWVHQ9MBJTEYD7",feature/HRN-1,failed,97e9d0ab,""
+help[1]: "Run no-mistakes axi run --intent \"the user's goal\" --yes to validate the current branch"

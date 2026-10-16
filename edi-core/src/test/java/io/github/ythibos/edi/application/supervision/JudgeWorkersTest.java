@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
@@ -92,7 +93,7 @@ class JudgeWorkersTest {
     void neverCountsAFinishedOrStoppedWorkerAsDead() {
         Worker lamp = startedWorker("fit-lamp", "HRN-3");
         Worker horn = startedWorker("tune-horn", "HRN-4");
-        home.recordStatus().report(lamp.id(), StatusState.DONE, null, null, "The lamp is fitted.");
+        home.workers().update(lamp.reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), home.clock().now()));
         WorkerWindow hornWindow = horn.window();
 
         home.runtime().close(lamp.window());

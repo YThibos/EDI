@@ -46,6 +46,8 @@ class NativeSmokeIT {
               - name: harness
                 tracker: { kind: edi, projectKey: HRN }
                 base: main
+                delivery: local-branch
+                captainCheckout: %s
             """;
     private static final String MACHINE_PROFILE = """
             workers:
@@ -75,11 +77,12 @@ class NativeSmokeIT {
     @BeforeAll
     static void startTheNativeCore() throws Exception {
         Files.createDirectories(home.resolve("config"));
-        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY);
+        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY.formatted(home.resolve("checkouts/harness")));
         Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
         Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
                 home.resolve("config/dispatch-rules.json"));
         cloneAProjectInto(home.resolve("projects/harness"));
+        git(home, "clone", "--quiet", home.resolve("upstream/harness").toString(), home.resolve("checkouts/harness").toString());
         ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
@@ -221,6 +224,7 @@ class NativeSmokeIT {
         CommandRun dispatched = edi(STUB_SPEC, "dispatch", "native-worker", "--category", "implementation", "--spec", "-");
         workerServer().ifPresent(server -> processes.register(server.pid()));
         CommandRun done = awaitOutput(List.of("worker", "list"), "done: the stub worker finished");
+        awaitOutput(List.of("worker", "peek", "native-worker"), "shows idle-prompt");
         Path worktree = home.resolve("worktrees/harness/native-worker");
         CommandRun steered = edi("Look at the lamp again.", "steer", "native-worker");
         CommandRun acknowledged = awaitOutput(List.of("task", "show", "native-worker"), "steer acknowledged");
@@ -233,6 +237,12 @@ class NativeSmokeIT {
                 "steer received", "steer acknowledged");
         assertThat(edi("", "worker", "peek", "native-worker").output()).startsWith("native-worker#1 shows idle-prompt:\n");
         assertThat(edi("", "brief", "native-worker").output()).contains("# Brief: native-worker", "stub-run: edi status done");
+        assertThat(acknowledged.output()).contains("branch delivered to captain");
+        assertThat(gitOutput(home.resolve("checkouts/harness"), "rev-parse", "refs/heads/feature/HRN-7")).isEqualTo(gitOutput(worktree, "rev-parse", "HEAD"));
+        CommandRun cleanup = edi("", "cleanup", "native-worker");
+        assertThat(cleanup.exitCode()).isOne();
+        assertThat(cleanup.output()).contains("native-worker is not cleaned up, because its work is not landed", "\"HRN-7 Add the stub file\" is not in origin/main");
+        assertThat(worktree).isDirectory();
         stopTheWorkerServer();
     }
 

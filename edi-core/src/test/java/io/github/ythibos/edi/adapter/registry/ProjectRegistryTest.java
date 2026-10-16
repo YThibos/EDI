@@ -12,6 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -61,6 +65,37 @@ class ProjectRegistryTest {
         register("projects:\n  - name: two words\n");
 
         assertThatThrownBy(() -> registry().projects()).isInstanceOf(UnreadableRegistry.class).hasMessageContaining("two words");
+    }
+
+    @Test
+    void readsTheForgeEachProjectIsBoundTo() throws IOException {
+        register("""
+                projects:
+                  - name: service
+                    forge: { kind: gitlab, host: forge.example.org, path: team/service, account: example-user }
+                  - name: tool
+                    forge: { kind: github, path: example-owner/tool, account: example-owner }
+                  - name: notes
+                    delivery: local-branch
+                """);
+
+        assertThat(registry().entryOf(new ProjectName("service")).forge())
+                .isEqualTo(new RegisteredForge(new ForgeRepository(ForgeKind.GITLAB, "forge.example.org", "team/service"), "example-user"));
+        assertThat(registry().entryOf(new ProjectName("tool")).forge().repository().url()).isEqualTo("https://github.com/example-owner/tool");
+        assertThat(registry().entryOf(new ProjectName("notes")).forge()).isNull();
+        assertThatThrownBy(() -> registry().entryOf(new ProjectName("notes")).requireForge())
+                .isInstanceOf(Refusal.class).hasMessageContaining("notes registers no forge");
+    }
+
+    @Test
+    void refusesLocalApplyAsAProjectsDefaultAndAForgeWithoutItsAccount() throws IOException {
+        register("projects:\n  - name: service\n    delivery: local-apply\n");
+        assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
+                .hasMessageContaining("never a project's default");
+
+        register("projects:\n  - name: service\n    forge: { kind: github, path: example-owner/service }\n");
+        assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
+                .hasMessageContaining("registered with the account every forge call for it runs under");
     }
 
     private ProjectRegistry registry() {

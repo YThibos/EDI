@@ -18,6 +18,7 @@ import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.build.ProjectBuild;
 import io.github.ythibos.edi.adapter.fork.ForkBacklogReader;
 import io.github.ythibos.edi.adapter.git.Git;
+import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
@@ -25,15 +26,19 @@ import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
+import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.NoticeStore;
 import io.github.ythibos.edi.adapter.store.OutageStore;
+import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
 import io.github.ythibos.edi.adapter.store.StoreFile;
+import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
@@ -41,6 +46,17 @@ import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
+import io.github.ythibos.edi.application.delivery.CaptainCheckouts;
+import io.github.ythibos.edi.application.delivery.CleanUpTask;
+import io.github.ythibos.edi.application.delivery.CloneRefreshes;
+import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
+import io.github.ythibos.edi.application.delivery.DeliverDraft;
+import io.github.ythibos.edi.application.delivery.DoneClaims;
+import io.github.ythibos.edi.application.delivery.FollowMerges;
+import io.github.ythibos.edi.application.delivery.Forges;
+import io.github.ythibos.edi.application.delivery.LandedWorkCheck;
+import io.github.ythibos.edi.application.delivery.ObservePipelines;
+import io.github.ythibos.edi.application.delivery.TaskCosts;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.IsolatedCopies;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
@@ -53,6 +69,8 @@ import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
+import io.github.ythibos.edi.application.publish.PublicationTargets;
+import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
 import io.github.ythibos.edi.application.supervision.NoticeDueHolds;
@@ -68,7 +86,6 @@ import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
-import io.github.ythibos.edi.application.worker.CaptainCheckouts;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -113,6 +130,12 @@ public final class TestHome {
     private final NoticeStore notices;
     private final OutageStore outages;
     private final RecoveryCostStore recoveryCosts;
+    private final DeliveryStore deliveries;
+    private final PipelineRunStore pipelineRuns;
+    private final CloneRefreshStore cloneRefreshes;
+    private final TaskCostStore taskCosts;
+    private final FakeForge forge = new FakeForge();
+    private final FakePipeline pipeline = new FakePipeline();
 
     private TestHome(EdiHome home, DataSource store, FakeWorkerRuntime runtime, ManualClock clock) {
         this.home = home;
@@ -132,6 +155,10 @@ public final class TestHome {
         this.notices = new NoticeStore(jdbc);
         this.outages = new OutageStore(jdbc);
         this.recoveryCosts = new RecoveryCostStore(jdbc);
+        this.deliveries = new DeliveryStore(jdbc);
+        this.pipelineRuns = new PipelineRunStore(jdbc);
+        this.cloneRefreshes = new CloneRefreshStore(jdbc);
+        this.taskCosts = new TaskCostStore(jdbc);
     }
 
     public static TestHome in(Path directory) throws IOException {
@@ -250,7 +277,7 @@ public final class TestHome {
     }
 
     public TaskDetailQuery taskDetail() {
-        return new TaskDetailQuery(tasks, decisions, events, transaction);
+        return new TaskDetailQuery(tasks, decisions, deliveries, pipelineRuns, taskCosts, events, transaction);
     }
 
     public DecisionListQuery decisionList() {
@@ -298,7 +325,7 @@ public final class TestHome {
     }
 
     public IsolatedCopies isolatedCopies() {
-        return new IsolatedCopies(home, git, new WorktreeHooks(git));
+        return new IsolatedCopies(home, git, new WorktreeHooks(git), forges());
     }
 
     public WorkerPlaces workerPlaces() {
@@ -317,11 +344,11 @@ public final class TestHome {
 
     public DispatchTask dispatchTask() {
         return new DispatchTask(tasks, dispatches, events, registry, machineProfile(), dispatchRulesFile(), workerPlaces(), launchWorker(),
-                clock, transaction);
+                cloneRefreshes(), clock, transaction);
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), launchWorker(), events, clock, transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), launchWorker(), cloneRefreshes(), events, clock, transaction);
     }
 
     public WorkerContext workerContext() {
@@ -329,11 +356,76 @@ public final class TestHome {
     }
 
     public CaptainCheckouts captainCheckouts() {
-        return new CaptainCheckouts(workerContext(), git, events, clock, transaction);
+        return new CaptainCheckouts(git, events, clock, transaction);
     }
 
     public RecordStatus recordStatus() {
-        return new RecordStatus(workers, events, new PersonalConfiguration(home), captainCheckouts(), clock, transaction);
+        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), clock, transaction);
+    }
+
+    public Forges forges() {
+        return new Forges(List.of(forge));
+    }
+
+    public DoneClaims doneClaims() {
+        return new DoneClaims(workerContext(), git, forges(), events, clock, transaction);
+    }
+
+    public DeliverAcceptedWork deliverAcceptedWork() {
+        return new DeliverAcceptedWork(workerContext(), forges(), captainCheckouts(), deliveries, events, clock, transaction);
+    }
+
+    public PublishCheck publishCheck() {
+        return new PublishCheck(home, git, new Gitleaks(programs, json), new PublicationTargets(home, git, registry, forges()));
+    }
+
+    public DeliverDraft deliverDraft() {
+        return new DeliverDraft(tasks, deliveries, events, workerContext(), publishCheck(), forges(), git, clock, transaction);
+    }
+
+    public CloneRefreshes cloneRefreshes() {
+        return new CloneRefreshes(cloneRefreshes, registry, git, events, clock, transaction);
+    }
+
+    public LandedWorkCheck landedWork() {
+        return new LandedWorkCheck(git);
+    }
+
+    public CleanUpTask cleanUpTask() {
+        return new CleanUpTask(home, tasks, workers, taskCosts, events, workerContext(), landedWork(),
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), git, runtime, clock, transaction);
+    }
+
+    public FollowMerges followMerges() {
+        return new FollowMerges(tasks, deliveries, events, registry, forges(), cloneRefreshes(), cleanUpTask(), clock, transaction);
+    }
+
+    public ObservePipelines observePipelines() {
+        return new ObservePipelines(workers, pipelineRuns, events, workerContext(), pipeline, clock, transaction);
+    }
+
+    public FakeForge forge() {
+        return forge;
+    }
+
+    public FakePipeline pipeline() {
+        return pipeline;
+    }
+
+    public DeliveryStore deliveries() {
+        return deliveries;
+    }
+
+    public PipelineRunStore pipelineRuns() {
+        return pipelineRuns;
+    }
+
+    public CloneRefreshStore cloneRefreshStore() {
+        return cloneRefreshes;
+    }
+
+    public TaskCostStore taskCosts() {
+        return taskCosts;
     }
 
     public WorkerInbox workerInbox() {
@@ -418,7 +510,8 @@ public final class TestHome {
     }
 
     public JudgeWorkers judgeWorkers() {
-        return new JudgeWorkers(workerList(), inbox, notices, events, outageHoldList(), countRecoveryCost(), machineProfile(), clock, transaction);
+        return new JudgeWorkers(workerList(), inbox, pipelineRuns, notices, events, outageHoldList(), countRecoveryCost(), machineProfile(), clock,
+                transaction);
     }
 
     public RecoverFromOutage recoverFromOutage() {
@@ -443,7 +536,7 @@ public final class TestHome {
     }
 
     public CheckMechanicalChange checkMechanicalChange() {
-        return new CheckMechanicalChange(workers, workerContext(), git, new ProjectBuild(programs), runtime, launchWorker(), captainCheckouts(),
+        return new CheckMechanicalChange(workers, workerContext(), git, new ProjectBuild(programs), runtime, launchWorker(), deliverAcceptedWork(),
                 events, clock, transaction);
     }
 

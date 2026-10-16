@@ -41,7 +41,7 @@ class EventLogTest {
     @Test
     void keepsEveryEventOfATaskInOrderWithItsPayload() throws IOException {
         TestHome home = TestHome.in(directory);
-        Intake intake = new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of());
+        Intake intake = new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null);
         home.tasks().insert(Task.queued(LAMP, intake, "", AT));
         EventLog events = home.events();
 

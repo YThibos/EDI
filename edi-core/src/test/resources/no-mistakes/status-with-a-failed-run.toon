@@ -1,0 +1,20 @@
+run:
+  id: "01M50RH8JYDFBWVHQ9MBJTEYD7"
+  branch: feature/HRN-3
+  status: failed
+  head: 97e9d0ab
+  head_sha: 97e9d0abc5c773ccedce70da12c0f4a04fd2e6f4
+  verification_plan: none
+  findings: none
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,13
+    rebase,completed,0,2196
+    review,failed,0,97798
+    test,pending,0,0
+    document,pending,0,0
+    lint,pending,0,0
+    push,pending,0,0
+    pr,pending,0,0
+    ci,pending,0,0
+outcome: failed
+error: daemon shutting down

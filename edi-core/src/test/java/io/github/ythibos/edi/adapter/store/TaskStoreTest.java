@@ -67,7 +67,7 @@ class TaskStoreTest {
 
     @Test
     void keepsTheChangesToAState() {
-        Task captainItem = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of()), "", AT);
+        Task captainItem = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of(), null), "", AT);
         tasks.insert(captainItem);
         CaptainHold decisionHold = new CaptainHold(HoldKind.DECISION, "D1 Which lamp?", HoldUntil.captainsWord(), AT);
 
@@ -129,7 +129,7 @@ class TaskStoreTest {
 
     private static Task task(String id, List<TaskId> blockedBy) {
         Intake intake = new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName("harness"), new ProjectName("garden")),
-                WorkKey.parse("HRN-4"), new BaseBranch("develop"), blockedBy);
+                WorkKey.parse("HRN-4"), new BaseBranch("develop"), blockedBy, null);
         return Task.queued(new TaskId(id), intake, "Notes for " + id + ".", AT);
     }
 }

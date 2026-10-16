@@ -15,8 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
+import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BriefFixtures;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
 
@@ -43,8 +49,42 @@ class MemoryAndCraftTest {
 
         @Test
         @DisplayName("AT-34 the pipeline intent for a craftRules project holds the rules block verbatim and the acceptance criteria")
-        void theIntentCarriesTheCraftRules() {
-            Pending.until(Slice.S5);
+        @Tag("adapter")
+        void theIntentCarriesTheCraftRules() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            String intent = """
+                    Fit the brass lamp in the hall.
+                    Acceptance: AT-99 passes and the lamp lights; a draft pull request the captain merges.
+                    Offline verification is accepted for anything that needs no network.""";
+            home.registering("""
+                    projects:
+                      - name: harness
+                        tracker: { kind: edi, projectKey: HRN }
+                        forge: { kind: github, path: example-owner/harness, account: example-owner }
+                        base: main
+                        craftRules: true
+                      - name: EDI
+                        tracker: { kind: edi, projectKey: EDI }
+                        forge: { kind: github, path: example-owner/EDI, account: example-owner }
+                        base: main
+                    """);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3").noted(intent),
+                    WorkerFixtures.queuedShip("map-caves", "EDI", "EDI-9").noted(intent)));
+
+            dispatchShip(home, "fit-lamp");
+            dispatchShip(home, "map-caves");
+
+            Path flagged = home.home().taskDirectory(new TaskId("fit-lamp")).resolve("intent.md");
+            assertThat(Files.readString(flagged)).isEqualTo("Do the work on fit-lamp.\n\n" + intent + "\n\n" + WorkerFixtures.CRAFT_RULES.strip());
+            assertThat(Files.readString(flagged)).contains("Acceptance: AT-99 passes", "Offline verification is accepted", WorkerFixtures.CRAFT_RULES.strip());
+            assertThat(Files.readString(home.home().taskDirectory(new TaskId("fit-lamp")).resolve("brief.md")))
+                    .contains("no-mistakes axi run --base-branch main --intent \"$(cat '" + flagged + "')\"");
+            assertThat(Files.readString(home.home().taskDirectory(new TaskId("map-caves")).resolve("intent.md")))
+                    .isEqualTo("Do the work on map-caves.\n\n" + intent);
+        }
+
+        private static void dispatchShip(TestHome home, String task) {
+            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY);
         }
     }
 

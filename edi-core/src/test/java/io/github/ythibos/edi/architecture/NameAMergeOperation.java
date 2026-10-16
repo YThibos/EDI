@@ -34,7 +34,7 @@ public final class NameAMergeOperation extends ArchCondition<JavaClass> {
                         javaClass.getName() + " names a merge operation: " + name)));
     }
 
-    static boolean namesAMergeOperation(String name) {
+    public static boolean namesAMergeOperation(String name) {
         List<String> words = wordsOf(name);
         return startsWithTheVerbMerge(words)
                 || endsWithTheVerbMerge(words)

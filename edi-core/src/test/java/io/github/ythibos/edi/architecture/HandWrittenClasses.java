@@ -3,7 +3,7 @@ package io.github.ythibos.edi.architecture;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.core.importer.Location;
 
-final class HandWrittenClasses implements ImportOption {
+public final class HandWrittenClasses implements ImportOption {
 
     private static final String AHEAD_OF_TIME_GENERATED = "__";
     private static final String PROXY_GENERATED = "$$SpringCGLIB$$";

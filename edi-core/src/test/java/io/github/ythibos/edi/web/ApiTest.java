@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -220,6 +221,24 @@ class ApiTest {
         assertThat(send(as("not-a-token", "/api/inbox", TEXT).GET()).statusCode()).isEqualTo(401);
         assertThat(send(as(worker, "/api/inbox", TEXT).GET()).body()).isEqualTo("No message waits for you.\n");
         assertThat(get("/api/tasks/api-worker", TEXT).body()).contains("worker:api-worker#1");
+    }
+
+    @Test
+    void keepsDeliveryToThePrimaryAndAnswersItsRefusalsInPlainSentences() throws Exception {
+        String worker = workerTokenFor("api-deliver");
+        post("/api/tasks", "{\"id\":\"api-undispatched\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Paint the buoy\"}", TEXT);
+
+        for (String command : List.of("deliver", "cleanup")) {
+            assertRefusal(send(as(worker, "/api/tasks/api-deliver/" + command, TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}"))),
+                    403, "edi " + command + " is the primary's to run; a worker reports through edi status and reads edi inbox.");
+        }
+        assertRefusal(send(as(worker, "/api/merged", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{\"reference\":\"api-deliver\"}"))),
+                403, "edi merged is the primary's to run; a worker reports through edi status and reads edi inbox.");
+        assertRefusal(post("/api/tasks/api-undispatched/cleanup", "{}", TEXT), 409, "api-undispatched was never dispatched.");
+        assertRefusal(post("/api/tasks/api-nowhere/deliver", "{}", TEXT), 404, "No task is called api-nowhere.");
+        assertRefusal(post("/api/merged", "{}", TEXT), 400, "The call needs its reference.");
+        assertRefusal(post("/api/merged", "{\"reference\":\"https://github.com/example-owner/harness/pull/9\"}", TEXT), 409,
+                "EDI delivered nothing at https://github.com/example-owner/harness/pull/9.");
     }
 
     @Test

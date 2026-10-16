@@ -9,6 +9,9 @@ import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.brief.BriefFacts;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
@@ -30,6 +33,8 @@ public final class BriefFixtures {
 
     private static final Path HOME = Path.of("/home/developer/.edi");
     private static final TaskId TASK = new TaskId("fit-lamp");
+    private static final RegisteredForge FORGE = new RegisteredForge(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"),
+            "example-owner");
 
     private BriefFixtures() {
     }
@@ -55,12 +60,12 @@ public final class BriefFixtures {
     }
 
     private static Intake intake(TaskKind kind) {
-        return new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), WorkKey.parse("HRN-3"), null, List.of());
+        return new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), WorkKey.parse("HRN-3"), null, List.of(), null);
     }
 
     private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding) {
         return new ProjectEntry(new Project(new ProjectName("harness"), new ProjectKey("HRN")), HOME.resolve("projects/harness"),
-                Path.of("/checkouts/harness"), new BaseBranch("main"), delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
+                Path.of("/checkouts/harness"), new BaseBranch("main"), FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
                 "./mvnw -B verify", true, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS));
     }
 
