@@ -2,6 +2,12 @@ package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
+import static org.junit.platform.testkit.engine.EventConditions.event;
+import static org.junit.platform.testkit.engine.EventConditions.finishedWithFailure;
+import static org.junit.platform.testkit.engine.EventConditions.test;
+import static org.junit.platform.testkit.engine.TestExecutionResultConditions.instanceOf;
+import static org.junit.platform.testkit.engine.TestExecutionResultConditions.message;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,6 +16,7 @@ import java.time.LocalDate;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,7 +26,9 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.platform.testkit.engine.EngineTestKit;
 
 import io.github.ythibos.edi.application.migration.MigrationNote;
 import io.github.ythibos.edi.application.migration.MigrationPlan;
@@ -35,6 +44,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.web.migration.MigrationPlanText;
 
 @DisplayName("Acceptance tests beyond the invariants (12.7 and 17.4)")
@@ -46,9 +56,14 @@ class BeyondTheInvariantsTest {
     private Path directory;
 
     @Test
+    @Tag("adapter")
     @DisplayName("AT-40 a deliberately leaked child process in a test fails the build")
     void aLeakedChildProcessFailsTheBuild() {
-        Pending.until(Slice.S3);
+        EngineTestKit.engine("junit-jupiter").selectors(selectClass(LeakingTest.class)).execute().testEvents()
+                .assertThatEvents().haveExactly(1, event(test("leavesItsChildRunning"),
+                        finishedWithFailure(instanceOf(AssertionError.class), message(text -> text.contains("running; a test stops every process it starts")))));
+
+        assertThat(LeakingTest.leaked).isNotEmpty().noneMatch(ProcessHandle::isAlive);
     }
 
     @Test
@@ -108,6 +123,22 @@ class BeyondTheInvariantsTest {
     @DisplayName("AT-46 presence switches to quiet without input, stays silent on routine wakes, never turns silence into away, and demo holds present")
     void presenceFollowsTheCaptain() {
         Pending.until(Slice.S8);
+    }
+
+    static final class LeakingTest {
+
+        private static final List<ProcessHandle> leaked = new CopyOnWriteArrayList<>();
+
+        @RegisterExtension
+        private final TestProcesses processes = new TestProcesses();
+
+        @Test
+        void leavesItsChildRunning() throws IOException {
+            Process child = processes.register(new ProcessBuilder("sh", "-c", "sleep 60 & echo started; wait").start());
+            child.inputReader().readLine();
+            leaked.add(child.toHandle());
+            child.descendants().forEach(leaked::add);
+        }
     }
 
     private Path copyOf(Path fixture) throws IOException {

@@ -111,3 +111,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-062](ADR-062-ref-only-delivery-into-the-captains-checkout.md) | A ready local-branch ship is fetched into the captain's checkout by its ref only | Design |
 | [ADR-063](ADR-063-dispatches-workers-and-inboxes-in-the-store.md) | The store keeps each task's dispatch, its workers and its inbox | Design |
 | [ADR-064](ADR-064-the-stand-in-for-claude-code.md) | A stand-in for Claude Code runs a worker end to end in the native smoke test | Design |
+| [ADR-065](ADR-065-tests-stop-every-process-they-start.md) | Tests stop every process they start, and a leaked one fails the build | Design |

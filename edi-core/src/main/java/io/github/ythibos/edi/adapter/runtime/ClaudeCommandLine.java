@@ -14,12 +14,14 @@ final class ClaudeCommandLine {
 
     private static final String CLAUDE_CODE_SESSION_VARIABLES = "CLAUDE";
     private static final String CLAUDE_CODE_CONFIGURATION = "CLAUDE_CONFIG_DIR";
+    private static final List<String> GIT_COMMAND_SCOPE_SWITCHES = List.of("GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS");
+    private static final List<String> GIT_COMMAND_SCOPE_ENTRIES = List.of("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_");
 
     private ClaudeCommandLine() {
     }
 
     static List<String> of(String claudeCode, Launch launch, Path settings, String systemPrompt, Set<String> inheritedVariables) {
-        List<String> words = new ArrayList<>(withoutTheLaunchingSessionsVariables(inheritedVariables));
+        List<String> words = new ArrayList<>(withoutInheritedOverrides(inheritedVariables));
         words.add(claudeCode);
         if (!launch.disallowedTools().isEmpty()) {
             words.add("--disallowedTools");
@@ -36,13 +38,18 @@ final class ClaudeCommandLine {
         return words;
     }
 
-    private static List<String> withoutTheLaunchingSessionsVariables(Set<String> inheritedVariables) {
-        List<String> unset = inheritedVariables.stream()
-                .filter(variable -> variable.startsWith(CLAUDE_CODE_SESSION_VARIABLES) && !variable.equals(CLAUDE_CODE_CONFIGURATION))
-                .sorted()
-                .flatMap(variable -> Stream.of("-u", variable))
-                .toList();
-        return unset.isEmpty() ? List.of() : Stream.concat(Stream.of("env"), unset.stream()).toList();
+    private static List<String> withoutInheritedOverrides(Set<String> inheritedVariables) {
+        Stream<String> overrides = inheritedVariables.stream().filter(variable -> belongsToTheLaunchingSession(variable) || isAGitConfigurationEntry(variable));
+        Stream<String> unset = Stream.concat(GIT_COMMAND_SCOPE_SWITCHES.stream(), overrides).distinct().sorted();
+        return Stream.concat(Stream.of("env"), unset.flatMap(variable -> Stream.of("-u", variable))).toList();
+    }
+
+    private static boolean belongsToTheLaunchingSession(String variable) {
+        return variable.startsWith(CLAUDE_CODE_SESSION_VARIABLES) && !variable.equals(CLAUDE_CODE_CONFIGURATION);
+    }
+
+    private static boolean isAGitConfigurationEntry(String variable) {
+        return GIT_COMMAND_SCOPE_ENTRIES.stream().anyMatch(variable::startsWith);
     }
 
     private static List<String> modelAndEffort(Route route) {

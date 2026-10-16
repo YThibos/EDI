@@ -12,29 +12,41 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.TestProcesses;
 import tools.jackson.databind.json.JsonMapper;
 
 public final class PrivateTmuxServer implements AutoCloseable {
 
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration POLL = Duration.ofMillis(50);
+    private static final String STANDBY = "standby";
 
     private final Tmux tmux;
+    private final TestProcesses processes;
+    private ProcessHandle server;
 
-    private PrivateTmuxServer(Tmux tmux) {
+    private PrivateTmuxServer(Tmux tmux, TestProcesses processes) {
         this.tmux = tmux;
+        this.processes = processes;
     }
 
     public static boolean isInstalled() {
         return InstalledPrograms.answers("tmux", "-V");
     }
 
-    public static PrivateTmuxServer started() {
-        return new PrivateTmuxServer(new Tmux(new ExternalPrograms(), "edi-test-" + UUID.randomUUID()));
+    public static PrivateTmuxServer started(TestProcesses processes) throws IOException {
+        return startedWith(processes, Map.of());
+    }
+
+    public static PrivateTmuxServer startedWith(TestProcesses processes, Map<String, String> environment) throws IOException {
+        PrivateTmuxServer started = new PrivateTmuxServer(new Tmux(new ExternalPrograms(), "edi-test-" + UUID.randomUUID()), processes);
+        started.start(environment);
+        return started;
     }
 
     public String socket() {
@@ -76,8 +88,17 @@ public final class PrivateTmuxServer implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
-        tmuxOnThisSocket("kill-server");
+        List<ProcessHandle> serverAndPanes = Stream.concat(Stream.of(server), server.descendants()).toList();
+        tmuxOnThisSocket(Map.of(), "kill-server");
+        serverAndPanes.forEach(TestProcesses::awaitExit);
         Files.deleteIfExists(socketFile());
+    }
+
+    private void start(Map<String, String> environment) throws IOException {
+        tmuxOnThisSocket(environment, "new-session", "-d", "-s", STANDBY, "--", "cat");
+        String pid = tmuxOnThisSocket(Map.of(), "display-message", "-p", "-t", STANDBY + ":", "#{pid}").strip();
+        server = ProcessHandle.of(Long.parseLong(pid)).orElseThrow();
+        processes.register(server.pid());
     }
 
     private Path socketFile() throws IOException {
@@ -86,10 +107,12 @@ public final class PrivateTmuxServer implements AutoCloseable {
         return Path.of(socketDirectory, "tmux-" + uid, tmux.socket());
     }
 
-    private String tmuxOnThisSocket(String... arguments) throws IOException {
+    private String tmuxOnThisSocket(Map<String, String> environment, String... arguments) throws IOException {
         List<String> command = new ArrayList<>(List.of("tmux", "-L", tmux.socket()));
         command.addAll(List.of(arguments));
-        Process tmuxRun = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        ProcessBuilder launch = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
+        launch.environment().putAll(environment);
+        Process tmuxRun = processes.register(launch.start());
         String output = new String(tmuxRun.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         try {
             tmuxRun.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS);

@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
@@ -29,6 +30,8 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.testing.FixtureRepository;
+import io.github.ythibos.edi.testing.TestProcesses;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -43,6 +46,17 @@ class TmuxClaudeRuntimeTest {
             for word in "$@"; do printf '%s\\0' "$word"; done > "$record.arguments"
             exec sleep 30
             """;
+    private static final String COMMITTING_CLAUDE = """
+            #!/bin/sh
+            export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+            export GIT_AUTHOR_NAME=Worker GIT_AUTHOR_EMAIL=worker@example.org GIT_COMMITTER_NAME=Worker GIT_COMMITTER_EMAIL=worker@example.org
+            git commit --quiet --allow-empty --message 'HRN-3 Fit the lamp' --message 'Co-authored-by: Claude <noreply@anthropic.com>' 2>/dev/null
+            echo $? > "$EDI_HOME/commit-exit-code"
+            exec sleep 30
+            """;
+
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
 
     @TempDir
     private Path directory;
@@ -58,13 +72,12 @@ class TmuxClaudeRuntimeTest {
         worktree = Files.createDirectories(home.worktrees().resolve("harness/fit-lamp"));
         claudeConfiguration = Files.createDirectories(directory.resolve("claude-config"));
         Files.writeString(claudeConfiguration.resolve(".claude.json"), "{\"numStartups\": 3, \"projects\": {\"/elsewhere\": {\"allowedTools\": []}}}");
-        Path claude = Files.writeString(directory.resolve("claude"), RECORDING_CLAUDE);
-        Files.setPosixFilePermissions(claude, PosixFilePermissions.fromString("rwxr-xr-x"));
+        executable(directory.resolve("claude"), RECORDING_CLAUDE);
     }
 
     @Test
     void launchesClaudeCodeInTheWorktreeWithItsSessionRouteSettingsAndEnvironment() throws IOException {
-        try (PrivateTmuxServer server = PrivateTmuxServer.started()) {
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
             TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
             UUID session = UUID.randomUUID();
 
@@ -105,12 +118,39 @@ class TmuxClaudeRuntimeTest {
     void refusesAWorktreeWhoseLocalSettingsDefineHooks() throws IOException {
         Files.createDirectories(worktree.resolve(".claude"));
         Files.writeString(worktree.resolve(".claude/settings.local.json"), "{\"hooks\": {\"Stop\": [{\"hooks\": []}]}}");
-        try (PrivateTmuxServer server = PrivateTmuxServer.started()) {
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
             TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
 
             assertThatThrownBy(() -> runtime.launch(launch(UUID.randomUUID(), List.of())))
                     .isInstanceOf(Refusal.class).hasMessageContaining("defines hooks, which Claude Code would run beside EDI's own");
         }
+    }
+
+    @Test
+    void refusesACoAuthorCommitInTheWorkersCopyWhateverGitConfigurationTheCoreInherited() throws IOException {
+        FixtureRepository copy = FixtureRepository.initialise(worktree).configure("core.hooksPath", hooksWithTheCommitMessageCheck().toString());
+        executable(directory.resolve("committing-claude"), COMMITTING_CLAUDE);
+        Map<String, String> coreEnvironment = Map.of("GIT_CONFIG_COUNT", "1", "GIT_CONFIG_KEY_0", "core.hooksPath",
+                "GIT_CONFIG_VALUE_0", Files.createDirectories(directory.resolve("no-hooks")).toString());
+        try (PrivateTmuxServer server = PrivateTmuxServer.startedWith(processes, coreEnvironment)) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("committing-claude").toString());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+
+            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("commit-exit-code"), "\n").strip()).isEqualTo("1");
+            assertThat(copy.run("rev-list", "--all", "--count").strip()).isEqualTo("0");
+        }
+    }
+
+    private static void executable(Path file, String script) throws IOException {
+        Files.writeString(file, script);
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rwxr-xr-x"));
+    }
+
+    private Path hooksWithTheCommitMessageCheck() throws IOException {
+        Path hooks = Files.createDirectories(directory.resolve("hooks"));
+        executable(hooks.resolve("commit-msg"), resource("git-hooks/commit-msg").replace("@WORK_KEY@", "HRN-3"));
+        return hooks;
     }
 
     private Launch launch(UUID session, List<String> disallowedTools) {

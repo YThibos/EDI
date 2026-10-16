@@ -16,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.runtime.PrivateTmuxServer;
@@ -32,6 +33,7 @@ import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
 @DisplayName("4.5 Supervision and recovery")
@@ -118,12 +120,15 @@ class SupervisionAndRecoveryTest {
     @DisplayName("I-28 Never press a key into a dialog blind")
     class NeverPressAKeyBlind {
 
+        @RegisterExtension
+        private final TestProcesses processes = new TestProcesses();
+
         @Test
         @DisplayName("AT-28 the tmux adapter sends only literal text plus Enter after a positive idle probe, or Escape")
         @Tag("adapter")
         void theTmuxAdapterRefusesOtherKeys() throws IOException {
             assumeTrue(PrivateTmuxServer.isInstalled(), "tmux is not installed");
-            try (PrivateTmuxServer server = PrivateTmuxServer.started()) {
+            try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
                 TmuxClaudeRuntime runtime = server.runtime(directory, "");
                 Path typedIntoTheIdlePrompt = directory.resolve("typed-into-idle.txt");
                 WorkerWindow idle = server.windowShowing("idle-fresh-session.txt", directory, typedIntoTheIdlePrompt);

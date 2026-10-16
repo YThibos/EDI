@@ -28,7 +28,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+
+import io.github.ythibos.edi.testing.TestProcesses;
 
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
 class NativeSmokeIT {
@@ -58,6 +61,9 @@ class NativeSmokeIT {
             """;
     private static final String WORKER_SOCKET = "edi-smoke-" + UUID.randomUUID();
 
+    @RegisterExtension
+    private static final TestProcesses processes = new TestProcesses();
+
     @TempDir
     private static Path home;
 
@@ -82,7 +88,7 @@ class NativeSmokeIT {
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("SERVER_PORT", "0");
-        core = launch.start();
+        core = processes.register(launch.start());
         port = awaitRecordedAddress(home.resolve("state/core.port")).port();
     }
 
@@ -211,6 +217,7 @@ class NativeSmokeIT {
                 "--title", "Native stub worker", "--key", "HRN-7", "--body", "-");
 
         CommandRun dispatched = edi(STUB_SPEC, "dispatch", "native-worker", "--category", "implementation", "--spec", "-");
+        workerServer().ifPresent(server -> processes.register(server.pid()));
         CommandRun done = awaitOutput(List.of("worker", "list"), "done: the stub worker finished");
         Path worktree = home.resolve("worktrees/harness/native-worker");
         CommandRun steered = edi("Look at the lamp again.", "steer", "native-worker");
@@ -224,6 +231,7 @@ class NativeSmokeIT {
                 "steer received", "steer acknowledged");
         assertThat(edi("", "worker", "peek", "native-worker").output()).startsWith("native-worker#1 shows idle-prompt:\n");
         assertThat(edi("", "brief", "native-worker").output()).contains("# Brief: native-worker", "stub-run: edi status done");
+        stopTheWorkerServer();
     }
 
     @Test
@@ -282,10 +290,17 @@ class NativeSmokeIT {
 
     private static void stopTheWorkerServer() throws Exception {
         if (answersIn(home, "tmux", "-V")) {
+            Optional<ProcessHandle> server = workerServer();
             run(new ProcessBuilder("tmux", "-L", WORKER_SOCKET, "kill-server").redirectErrorStream(true), "");
+            server.ifPresent(TestProcesses::awaitExit);
             Files.deleteIfExists(Path.of(System.getenv().getOrDefault("TMUX_TMPDIR", "/tmp"),
                     "tmux-" + Files.getAttribute(Path.of("/proc/self"), "unix:uid"), WORKER_SOCKET));
         }
+    }
+
+    private static Optional<ProcessHandle> workerServer() throws Exception {
+        CommandRun pid = run(new ProcessBuilder("tmux", "-L", WORKER_SOCKET, "display-message", "-p", "-t", "workers:", "#{pid}"), "");
+        return pid.exitCode() == 0 ? ProcessHandle.of(Long.parseLong(pid.output().strip())) : Optional.empty();
     }
 
     private static Path binary(String property) {
@@ -373,7 +388,7 @@ class NativeSmokeIT {
     }
 
     private static CommandRun run(ProcessBuilder launch, String input) throws Exception {
-        Process command = launch.start();
+        Process command = processes.register(launch.start());
         try (OutputStream standardInput = command.getOutputStream()) {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
         }
