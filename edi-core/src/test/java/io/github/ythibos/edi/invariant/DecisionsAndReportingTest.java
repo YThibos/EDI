@@ -9,6 +9,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,7 +30,12 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
-import io.github.ythibos.edi.web.decision.DecisionListText;
+import io.github.ythibos.edi.web.report.CaptainReport;
+import io.github.ythibos.edi.web.report.CaptainReportPresenter;
+import io.github.ythibos.edi.web.report.ReportWidth;
+import io.github.ythibos.edi.web.report.TaskWording;
+import io.github.ythibos.edi.web.report.Turn;
+import io.github.ythibos.edi.web.report.TurnItem;
 
 @DisplayName("4.4 Decisions and reporting")
 class DecisionsAndReportingTest {
@@ -84,8 +91,15 @@ class DecisionsAndReportingTest {
 
             turnsThatNeverMentionTheDecision(home);
 
-            String report = new DecisionListText().text(home.decisionList().open());
-            assertThat(report).contains(open + "  lamp-choice  Which lamp?", "(A) The simple way", "Recommended: A - it is enough");
+            String report = captainReport(home, aTurnAboutOtherWork());
+            assertThat(report).contains("║  " + open + "   Which lamp?", "║        (A)  The simple way", "║        » Recommended: A - it is enough");
+        }
+
+        private static Turn aTurnAboutOtherWork() {
+            return new Turn(
+                    List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")),
+                    List.of(new TurnItem(List.of(), "Choose the paint colour")),
+                    Map.of("lamp-fitting", new TaskWording("Fit the brass lamp", "waiting for the ladder", null)));
         }
 
         private void turnsThatNeverMentionTheDecision(TestHome home) {
@@ -124,7 +138,7 @@ class DecisionsAndReportingTest {
             assertThat(recorded.interpretation()).isEqualTo("Fit the simple lamp; the oil lamp stays in the store.");
             assertThat(recorded.answeredAt()).isEqualTo(TestHome.START.plus(Duration.ofMinutes(5)));
             assertThat(home.decisionList().open().decisions()).isEmpty();
-            assertThat(new DecisionListText().text(home.decisionList().open())).doesNotContain(number.toString());
+            assertThat(captainReport(home, Turn.NONE)).doesNotContain(number.toString(), "Which lamp?").contains("nothing open");
         }
     }
 
@@ -148,6 +162,10 @@ class DecisionsAndReportingTest {
         void captainFacingStringsCarryNoInternalLabels() {
             Pending.until(Slice.S8);
         }
+    }
+
+    private static String captainReport(TestHome home, Turn turn) {
+        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard()));
     }
 
     private static DecisionNumber raise(TestHome home, String task, String title) {

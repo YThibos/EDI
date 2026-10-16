@@ -3,8 +3,9 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S1, domain and store, on top of the foundations of slice S0.
+The repository is at slice S2, reports, on top of the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
+One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 Nothing launches workers yet.
 
 ## Parts
@@ -47,12 +48,15 @@ edi release fit-the-lamp
 edi decision raise fit-the-lamp --card - < card.json   # prints the decision's D number
 edi decision answer D58 --option A --text "D58, A"     # the captain's words, verbatim
 edi decision list --open
+edi report --turn - < turn.json                     # the boxed captain report that ends a turn
+edi sitrep                                          # the same report, read-only and without a turn
 edi publish-check --range origin/main..HEAD         # the publish guard over outgoing commits
 edi migrate firstofficer --from /path/to/old/home --dry-run
 ```
 
 Every command prints text, or the core's JSON with `--json`; a refusal is one sentence on standard error with exit code 1.
 A card is `{"title", "context", "options": [{"key", "text"}], "recommend": {"key", "why"}}`.
+A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional; inside tmux the report fits the pane it runs in.
 `examples/edi-home/config/projects.yaml` shows the registry's shape with placeholder values.
 
 ## Documentation

@@ -1,0 +1,24 @@
+╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════════════════════════════════════════════════════
+║  Nothing waiting on you
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (0)
+───────────────────
+  Nothing finished this turn
+
+ONGOING  (0)
+────────────
+  Nothing running
+
+NEXT
+────
+  Nothing planned
+
+BACKLOG  (512)
+──────────────
+  sample            • Queued work item 1
+                    • Queued work item 2
+                    • Queued work item 3
+                    • Queued work item 4
+                    • Queued work item 5
+  (+507 more queued)

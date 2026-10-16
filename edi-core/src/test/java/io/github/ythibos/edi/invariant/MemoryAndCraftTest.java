@@ -9,10 +9,19 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.web.report.ReportWidth;
+import io.github.ythibos.edi.web.report.Turn;
 
 @DisplayName("4.7 Memory and craft")
 class MemoryAndCraftTest {
+
+    @TempDir
+    private Path directory;
 
     @Nested
     @DisplayName("I-33 Memory is curated, not appended, and fits a budget")
@@ -76,10 +85,44 @@ class MemoryAndCraftTest {
     @DisplayName("I-36 Fleet-sized data never travels as a command-line argument")
     class FleetSizedDataNeverTravelsAsAnArgument {
 
+        private static final long TWO_MEGABYTES = 2_000_000;
+        private static final int SITREP_PANE_COLUMNS = 90;
+
         @Test
-        @DisplayName("AT-36 the captain report and the sitrep board render from a 2 MB backlog fixture")
-        void reportsRenderFromALargeBacklog() {
-            Pending.until(Slice.S2);
+        @Tag("adapter")
+        @DisplayName("AT-36 the captain report renders from a 2 MB backlog fixture")
+        void theCaptainReportRendersFromALargeBacklog() throws IOException {
+            TestHome home = ReportGoldenCases.homeIn(directory);
+            ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
+
+            String report = ReportGoldenCases.rendered(home, Turn.NONE, ReportWidth.standard());
+
+            assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
+            assertThat(report).contains("BACKLOG  (512)", "Queued work item 1", "(+507 more queued)");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-36 the text sitrep renders from a 2 MB backlog fixture")
+        void theTextSitrepRendersFromALargeBacklog() throws IOException {
+            TestHome home = ReportGoldenCases.homeIn(directory);
+            ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
+
+            String sitrep = ReportGoldenCases.rendered(home, Turn.NONE, ReportWidth.forPane(SITREP_PANE_COLUMNS));
+
+            assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
+            assertThat(sitrep.lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(SITREP_PANE_COLUMNS - 2);
+            assertThat(sitrep).contains("DONE THIS TURN  (0)", "BACKLOG  (512)", "Queued work item 1", "(+507 more queued)");
+        }
+
+        @Test
+        @DisplayName("AT-36 the sitrep board renders from a 2 MB backlog fixture")
+        void theSitrepBoardRendersFromALargeBacklog() {
+            Pending.until(Slice.S7);
+        }
+
+        private static long charactersOfTheBacklog(TestHome home) {
+            return home.jdbc().sql("select sum(length(title) + length(notes)) from task").query(Long.class).single();
         }
     }
 }

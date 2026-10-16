@@ -1,0 +1,20 @@
+╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════════════════════════════════════════════════════
+║  Nothing waiting on you
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (5)
+───────────────────
+  Fleet             • Fleet item
+  Gatehouse         • Gatehouse item
+                    • Second Gatehouse item
+  Lighthouse-Lantern-Kit
+                    • Long title item
+  quayside          • Quayside item
+
+ONGOING  (0)
+────────────
+  Nothing running
+
+NEXT
+────
+  Nothing planned

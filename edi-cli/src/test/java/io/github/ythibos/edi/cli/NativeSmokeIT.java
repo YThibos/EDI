@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -131,6 +132,23 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandRendersTheCaptainReportInAnyLocale() throws Exception {
+        edi("", "task", "add", "--kind", "captain", "--id", "native-report-call", "--title", "Choose for the report");
+        String number = edi("{\"title\":\"Which lantern?\",\"options\":[{\"key\":\"A\",\"text\":\"Brass\"}],\"recommend\":{\"key\":\"A\",\"why\":\"it shines\"}}",
+                "decision", "raise", "native-report-call", "--card", "-").output().strip();
+
+        CommandRun report = ediInTheCLocale("{\"done\":[{\"projects\":[\"harness\"],\"text\":\"Rendered natively\"}]}", "report", "--turn", "-");
+        CommandRun sitrep = ediInTheCLocale("", "sitrep");
+        CommandRun asJson = edi("", "report", "--json");
+
+        assertThat(report.exitCode()).isZero();
+        assertThat(report.output()).startsWith("╔══ NEEDS YOUR DECISION ══ ")
+                .contains("║  %-6sWhich lantern?\n".formatted(number), "║        » Recommended: A - it shines\n", "  harness           • Rendered natively\n");
+        assertThat(sitrep.output()).contains("║  %-6sWhich lantern?\n".formatted(number)).doesNotContain("Rendered natively");
+        assertThat(asJson.output()).contains("\"fleet\":{", "\"width\":{\"columns\":120}");
+    }
+
+    @Test
     void theCommandPlansTheMigrationOfAnOldHome() throws Exception {
         CommandRun plan = edi("", "migrate", "firstofficer", "--from", System.getProperty("edi.old.home.fixture"), "--dry-run");
 
@@ -242,10 +260,20 @@ class NativeSmokeIT {
         return ediIn(Path.of(""), input, arguments);
     }
 
+    private static CommandRun ediInTheCLocale(String input, String... arguments) throws Exception {
+        return ediIn(Path.of(""), Map.of("LANG", "C", "LC_ALL", "C"), input, arguments);
+    }
+
     private static CommandRun ediIn(Path directory, String input, String... arguments) throws Exception {
+        return ediIn(directory, Map.of(), input, arguments);
+    }
+
+    private static CommandRun ediIn(Path directory, Map<String, String> environment, String input, String... arguments) throws Exception {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
         commandLine.addAll(List.of(arguments));
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toAbsolutePath().toFile()).redirectErrorStream(true);
+        launch.environment().keySet().removeAll(List.of("TMUX", "TMUX_PANE"));
+        launch.environment().putAll(environment);
         launch.environment().put("EDI_HOME", home.toString());
         return run(launch, input);
     }
