@@ -49,3 +49,30 @@ Every payload carried the four fields EDI relies on: `session_id`, `transcript_p
 ## Evidence
 
 The raw payloads contain machine paths, so they are kept outside the repository; this document records every field EDI uses.
+
+## Slice S3: the launch and the pane, on 2.1.301
+
+Verified on Claude Code 2.1.301 on WSL2 Ubuntu 24.04, 16/10/2026, for the worker launcher (ADR-054) and the pane probe (ADR-057).
+
+### Launch flags
+
+| Flag | Result on 2.1.301 |
+|---|---|
+| `--disallowedTools <tools...>` and `--add-dir <directories...>` | Verified. Both take several values and stop at the next flag, so EDI always follows them with another flag. |
+| `--` before the first prompt | Verified. Everything after it is the prompt, so a prompt that starts with a dash cannot be read as a flag. |
+| `--append-system-prompt <text>` | Verified with a multi-line text passed as one argument. |
+| `--dangerously-skip-permissions`, `--permission-mode <mode>` | Listed in `claude --help`; the captain's settings already skip the bypass warning. |
+
+### What the pane shows
+
+Each screen below was captured with `tmux capture-pane -p` in a 120 by 40 pane on a private socket; the fixtures in `edi-core/src/test/resources/pane-probe/` keep them, with workspace paths replaced.
+
+- A folder Claude Code has never seen opens on the workspace trust dialog, "No, exit" selected, before any hook fires.
+- For a linked git worktree, an entry with `hasTrustDialogAccepted` for the worktree's own path, or for its main checkout, suppresses the dialog; an entry for a directory above the worktrees does not.
+- The idle composer is a line holding `❯` and a no-break space between two lines of `─`; with `--name`, the upper line carries the session's name near its end.
+- While a turn runs, the composer stays on screen and the footer shows "esc to interrupt"; a finished turn leaves a summary line such as "✻ Cooked for 2s · done 08:48Z" above the composer, which is not a sign of work.
+- The idle footer changes: "? for shortcuts" normally, "1 shell · ← for agents · ↓ to manage" while a background shell runs.
+- `/exit` while a background shell runs opens a picker headed "Background work is running" with "Exit and stop tasks" selected.
+- A shell command the permission rules do not allow opens a dialog with "Do you want to proceed?", numbered options and "Esc to cancel".
+- A line typed with `send-keys -l` and submitted with Enter is sent at once, but a typed line that begins with the invisible separator U+2063 stays in the composer through any number of Enters; an argument prompt with that character is accepted.
+- The usage-limit and spend-limit dialogs could not be provoked; their texts ("Stop and wait for limit to reset", "You've hit your monthly spend limit", "Adjust monthly spend limit", " to continue after reset") were read from the executable itself.

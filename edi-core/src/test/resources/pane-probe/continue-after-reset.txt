@@ -1,0 +1,40 @@
+ ▐▛███▛█   Claude Code v2.1.301
+▝▜██████▀  Sonnet 5.5 with low effort · Claude Team
+ ▝▝   ▝▝   /…/.edi/worktrees/harness/probe-task
+
+❯ Run the full build and report the result
+
+  Running 1 shell command…
+
+● The build is half way through the integration tests.
+  ⎿  You've hit your session limit · resets 2:40pm (Europe/Brussels)
+     Press ⏎ to continue after reset
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

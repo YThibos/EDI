@@ -22,30 +22,44 @@ public class ExternalPrograms {
 
     public ProgramRun run(Program program, Path directory, List<String> arguments) {
         try (Capture output = Capture.create(); Capture errors = Capture.create()) {
-            Process process = start(program, directory, arguments, output, errors);
-            awaitCompletion(program, process);
+            Process process = start(program, directory, arguments, output.file(), errors.file());
+            awaitCompletion(program, process, PATIENCE);
             return new ProgramRun(program, process.exitValue(), output.read(), errors.read());
         } catch (IOException unstartable) {
             throw new ProgramFailure(program.executable() + " could not run: " + unstartable.getMessage(), unstartable);
         }
     }
 
-    private static Process start(Program program, Path directory, List<String> arguments, Capture output, Capture errors)
+    public int runInto(Path log, Program program, Path directory, List<String> arguments, Duration patience) {
+        try {
+            Files.createDirectories(log.getParent());
+            Process process = start(program, directory, arguments, log, log);
+            awaitCompletion(program, process, patience);
+            return process.exitValue();
+        } catch (IOException unstartable) {
+            throw new ProgramFailure(program.executable() + " could not run: " + unstartable.getMessage(), unstartable);
+        }
+    }
+
+    private static Process start(Program program, Path directory, List<String> arguments, Path output, Path errors)
             throws IOException {
-        Process process = new ProcessBuilder(Stream.concat(Stream.of(program.executable()), arguments.stream()).toList())
-                .directory(directory.toFile())
-                .redirectOutput(output.file().toFile())
-                .redirectError(errors.file().toFile())
-                .start();
+        ProcessBuilder launch = new ProcessBuilder(Stream.concat(Stream.of(program.executable()), arguments.stream()).toList())
+                .directory(directory.toFile());
+        if (output.equals(errors)) {
+            launch.redirectOutput(output.toFile()).redirectErrorStream(true);
+        } else {
+            launch.redirectOutput(output.toFile()).redirectError(errors.toFile());
+        }
+        Process process = launch.start();
         process.getOutputStream().close();
         return process;
     }
 
-    private static void awaitCompletion(Program program, Process process) {
+    private static void awaitCompletion(Program program, Process process, Duration patience) {
         try {
-            if (!process.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+            if (!process.waitFor(patience.toSeconds(), TimeUnit.SECONDS)) {
                 stop(process);
-                throw new ProgramFailure(program.executable() + " did not finish within " + PATIENCE.toMinutes() + " minutes.");
+                throw new ProgramFailure(program.executable() + " did not finish within " + patience.toMinutes() + " minutes.");
             }
         } catch (InterruptedException interrupted) {
             stop(process);

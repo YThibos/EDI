@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.ythibos.edi.application.task.HoldTask;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.domain.decision.TaskReference;
-import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.web.Confirmation;
+import io.github.ythibos.edi.web.access.Caller;
 
 @RestController
 @RequestMapping("/api/tasks/{reference}")
@@ -25,12 +25,14 @@ class HoldController {
     }
 
     @PostMapping("/hold")
-    Confirmation hold(@PathVariable String reference, @RequestBody HoldRequest request) {
-        return new Confirmation.Held(holdTask.hold(TaskReference.parse(reference), request.holdKind(), request.why(), request.holdUntil(), Actor.PRIMARY));
+    Confirmation hold(@PathVariable String reference, @RequestBody HoldRequest request, Caller caller) {
+        caller.requirePrimary("edi hold");
+        return new Confirmation.Held(holdTask.hold(TaskReference.parse(reference), request.holdKind(), request.why(), request.holdUntil(), caller.actor()));
     }
 
     @PostMapping("/release")
-    Confirmation release(@PathVariable String reference) {
-        return new Confirmation.Released(releaseTask.release(TaskReference.parse(reference), Actor.PRIMARY));
+    Confirmation release(@PathVariable String reference, Caller caller) {
+        caller.requirePrimary("edi release");
+        return new Confirmation.Released(releaseTask.release(TaskReference.parse(reference), caller.actor()));
     }
 }

@@ -7,11 +7,11 @@ import java.nio.file.Path;
 
 record CoreConnection(CoreAddress address, String token) {
 
-    static CoreConnection in(Path home) {
+    static CoreConnection in(Path home, Path tokenFile) {
         Path portFile = CoreAddress.portFileIn(home);
         CoreAddress address = CoreAddress.recordedIn(portFile)
                 .orElseThrow(() -> new CoreUnavailable("EDI core is not running: " + portFile + " records no port."));
-        return new CoreConnection(address, tokenIn(home.resolve("state").resolve("core.token")));
+        return new CoreConnection(address, tokenIn(tokenFile));
     }
 
     private static String tokenIn(Path tokenFile) {

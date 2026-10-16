@@ -130,6 +130,7 @@
                                 <edi.core.binary>${maven.multiModuleProjectDirectory}/edi-core/target/edi-core</edi.core.binary>
                                 <edi.smoke.report>${project.build.directory}/native-smoke.md</edi.smoke.report>
                                 <edi.old.home.fixture>${maven.multiModuleProjectDirectory}/edi-core/src/test/resources/fork-home</edi.old.home.fixture>
+                                <edi.repository.root>${maven.multiModuleProjectDirectory}</edi.repository.root>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>

@@ -20,6 +20,10 @@ public final class FixtureRepository {
         this.root = root;
     }
 
+    public static FixtureRepository at(Path root) {
+        return new FixtureRepository(root);
+    }
+
     public static FixtureRepository initialise(Path directory) throws IOException {
         FixtureRepository repository = new FixtureRepository(directory);
         repository.git("init", "--quiet", "--initial-branch=main");
@@ -67,6 +71,21 @@ public final class FixtureRepository {
         return this;
     }
 
+    public FixtureRepository clonedInto(Path directory) throws IOException {
+        Files.createDirectories(directory.getParent());
+        git("clone", "--quiet", root.toString(), directory.toString());
+        return new FixtureRepository(directory);
+    }
+
+    public FixtureRepository configure(String key, String value) throws IOException {
+        git("config", key, value);
+        return this;
+    }
+
+    public String run(String... arguments) throws IOException {
+        return git(arguments);
+    }
+
     public String head() throws IOException {
         return git("rev-parse", "HEAD").strip();
     }
@@ -79,12 +98,18 @@ public final class FixtureRepository {
         ProcessBuilder git = new ProcessBuilder(Stream.concat(Stream.of("git"), Stream.of(arguments)).toList())
                 .directory(root.toFile())
                 .redirectErrorStream(true);
+        git.environment().keySet().removeIf(FixtureRepository::injectsConfiguration);
         git.environment().putAll(isolatedEnvironment(identity));
         Process process = git.start();
         process.getOutputStream().close();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         awaitSuccess(process, arguments, output);
         return output;
+    }
+
+    private static boolean injectsConfiguration(String variable) {
+        return variable.equals("GIT_CONFIG_COUNT") || variable.equals("GIT_CONFIG_PARAMETERS")
+                || variable.startsWith("GIT_CONFIG_KEY_") || variable.startsWith("GIT_CONFIG_VALUE_");
     }
 
     private static Map<String, String> isolatedEnvironment(String identity) {

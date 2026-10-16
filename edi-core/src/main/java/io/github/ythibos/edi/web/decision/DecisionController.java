@@ -15,8 +15,8 @@ import io.github.ythibos.edi.application.decision.DecisionList;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
-import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.web.Confirmation;
+import io.github.ythibos.edi.web.access.Caller;
 
 @RestController
 class DecisionController {
@@ -38,13 +38,15 @@ class DecisionController {
 
     @PostMapping("/api/tasks/{reference}/decision")
     @ResponseStatus(HttpStatus.CREATED)
-    Confirmation raise(@PathVariable String reference, @RequestBody CardRequest card) {
-        return new Confirmation.Raised(raiseDecision.raise(TaskReference.parse(reference), card.card(), Actor.PRIMARY));
+    Confirmation raise(@PathVariable String reference, @RequestBody CardRequest card, Caller caller) {
+        caller.requirePrimary("edi decision raise");
+        return new Confirmation.Raised(raiseDecision.raise(TaskReference.parse(reference), card.card(), caller.actor()));
     }
 
     @PostMapping("/api/decisions/{reference}/answer")
-    Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request) {
-        AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenInChat(), Actor.PRIMARY);
+    Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
+        caller.requirePrimary("edi decision answer");
+        AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenInChat(), caller.actor());
         return new Confirmation.Answered(answered.decision(), answered.task());
     }
 }

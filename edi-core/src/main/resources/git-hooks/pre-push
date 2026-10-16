@@ -1,0 +1,19 @@
+#!/bin/sh
+base_ref='@BASE_REF@'
+
+if ! command -v edi >/dev/null 2>&1; then
+    printf 'EDI pre-push hook: the edi command is not on PATH, so the publish check cannot run.\n' >&2
+    exit 1
+fi
+while read -r _ local_sha _ remote_sha; do
+    case "$local_sha" in
+        *[!0]*) ;;
+        *) continue ;;
+    esac
+    case "$remote_sha" in
+        *[!0]*) range="$remote_sha..$local_sha" ;;
+        *) range="$base_ref..$local_sha" ;;
+    esac
+    edi publish-check --range "$range" || exit 1
+done
+exit 0

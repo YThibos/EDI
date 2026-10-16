@@ -1,0 +1,64 @@
+package io.github.ythibos.edi.cli;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Callable;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
+import picocli.CommandLine.Spec;
+
+@Command(name = "hook", description = "Answers a Claude Code hook: reads the hook's JSON on standard input and prints EDI's answer for Claude Code.")
+final class HookCommand implements Callable<Integer> {
+
+    private static final int ANSWERED = 0;
+    private static final int NOT_ANSWERED = 1;
+    private static final int BLOCKED = 2;
+    private static final String GUARD = "pre-tool-use";
+
+    @ParentCommand
+    private Edi edi;
+
+    @Spec
+    private CommandSpec spec;
+
+    @Parameters(paramLabel = "EVENT", description = "session-start, user-prompt-submit, pre-tool-use or stop.")
+    private String event;
+
+    @Override
+    public Integer call() {
+        try {
+            CoreReply reply = new CoreClient().post(CoreConnection.in(edi.home(), edi.tokenFile()), "/api/hooks/" + CoreExchange.encoded(event),
+                    payload(), "application/json");
+            return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip());
+        } catch (CoreUnavailable | IOException unavailable) {
+            return unanswered(unavailable.getMessage());
+        }
+    }
+
+    private String payload() throws IOException {
+        return new String(edi.input().readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private int answered(String answer) {
+        PrintWriter out = spec.commandLine().getOut();
+        out.print(answer);
+        out.flush();
+        return ANSWERED;
+    }
+
+    private int unanswered(String reason) {
+        PrintWriter err = spec.commandLine().getErr();
+        if (event.equals(GUARD)) {
+            err.println("EDI's guard could not check this tool call, so it is refused: " + reason);
+            err.flush();
+            return BLOCKED;
+        }
+        err.println("EDI could not take the " + event + " hook: " + reason);
+        err.flush();
+        return NOT_ANSWERED;
+    }
+}

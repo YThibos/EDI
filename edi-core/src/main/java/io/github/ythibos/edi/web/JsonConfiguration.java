@@ -7,19 +7,29 @@ import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomize
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.DoneCheck;
+import io.github.ythibos.edi.domain.worker.PaneState;
+import io.github.ythibos.edi.domain.worker.WorkerActivity;
+import io.github.ythibos.edi.domain.worker.WorkerId;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.module.SimpleModule;
@@ -45,6 +55,16 @@ class JsonConfiguration {
                 .addSerializer(OptionKey.class, ToStringSerializer.instance)
                 .addSerializer(Actor.class, ToStringSerializer.instance)
                 .addSerializer(Path.class, ToStringSerializer.instance)
+                .addSerializer(ModelId.class, ToStringSerializer.instance)
+                .addSerializer(CategoryId.class, ToStringSerializer.instance)
+                .addSerializer(BranchName.class, ToStringSerializer.instance)
+                .addSerializer(WorkerId.class, ToStringSerializer.instance)
+                .addSerializer(StatusKey.class, ToStringSerializer.instance)
+                .addSerializer(EffortLevel.class, new AsText<>(EffortLevel.class, EffortLevel::word))
+                .addSerializer(StatusState.class, new AsText<>(StatusState.class, StatusState::word))
+                .addSerializer(WorkerActivity.class, new AsText<>(WorkerActivity.class, WorkerActivity::word))
+                .addSerializer(DoneCheck.class, new AsText<>(DoneCheck.class, DoneCheck::word))
+                .addSerializer(PaneState.class, new AsText<>(PaneState.class, PaneState::word))
                 .addSerializer(TaskKind.class, new AsText<>(TaskKind.class, TaskKind::word))
                 .addSerializer(TaskState.class, new AsText<>(TaskState.class, TaskState::word))
                 .addSerializer(HoldKind.class, new AsText<>(HoldKind.class, HoldKind::word))

@@ -88,10 +88,26 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-039](ADR-039-a-decision-holds-its-task.md) | A decision holds its task, and its number never changes | Design |
 | [ADR-040](ADR-040-task-intake.md) | How a task enters the queue | Design |
 | [ADR-041](ADR-041-project-registry-is-configuration.md) | The project registry is configuration, read on every use | Design |
-| [ADR-042](ADR-042-one-home-token.md) | One home token authenticates the API until callers are told apart | Design |
+| [ADR-042](ADR-042-one-home-token.md) | One home token authenticates the API until callers are told apart (superseded by ADR-049) | Design |
 | [ADR-043](ADR-043-the-core-renders-text.md) | The core renders text and JSON; the command is a pipe | Architecture |
 | [ADR-044](ADR-044-migration-reads-the-old-grammar.md) | The migration reads the old backlog with its own grammar and maps it through the domain | Design |
 | [ADR-045](ADR-045-native-round-trip-in-the-smoke-test.md) | The native round trip is measured by the native smoke test | Design |
 | [ADR-046](ADR-046-where-the-fleet-snapshot-puts-open-work.md) | Where the fleet snapshot puts open work | Design |
 | [ADR-047](ADR-047-the-captain-report-matches-the-old-renderer.md) | The captain report matches the old renderer byte for byte | Design |
 | [ADR-048](ADR-048-the-command-measures-its-pane.md) | The command measures its pane and the core sizes the report | Design |
+| [ADR-049](ADR-049-callers-told-apart-by-token.md) | Each worker holds its own token, and every call is checked against its caller | Design |
+| [ADR-050](ADR-050-dispatch-rules-read-and-routed.md) | How the dispatch rules are read, checked and routed | Design |
+| [ADR-051](ADR-051-branch-names-from-the-work-key.md) | A branch name is built from the work's kind and its key, and nothing else | Design |
+| [ADR-052](ADR-052-isolated-copies.md) | EDI makes each isolated copy from a fresh origin base and checks it before every launch | Design |
+| [ADR-053](ADR-053-hooks-through-worktree-configuration.md) | The commit-msg and pre-push hooks are installed through each worktree's own configuration | Design |
+| [ADR-054](ADR-054-the-claude-launcher.md) | How EDI launches a Claude Code worker in tmux | Architecture |
+| [ADR-055](ADR-055-the-worker-brief.md) | The worker brief is one template filled in from the task, its dispatch and the registry | Design |
+| [ADR-056](ADR-056-steering-with-proof-of-delivery.md) | A steer waits in the worker's inbox until a hook proves it was received | Design |
+| [ADR-057](ADR-057-the-pane-probe.md) | The pane probe reads Claude Code's screen in one place, from captured fixtures | Design |
+| [ADR-058](ADR-058-the-pre-tool-guard.md) | The pre-tool guard reads each shell command in the domain and refuses before it runs | Design |
+| [ADR-059](ADR-059-the-mechanical-task-guard.md) | A mechanical task names its exact change, and its done is checked before it counts | Design |
+| [ADR-060](ADR-060-project-capacity-defers-dispatches.md) | A dispatch beyond a project's capacity waits as deferred | Design |
+| [ADR-061](ADR-061-the-supervision-round.md) | One supervision round every 30 seconds keeps the time-based rules of slice S3 | Design |
+| [ADR-062](ADR-062-ref-only-delivery-into-the-captains-checkout.md) | A ready local-branch ship is fetched into the captain's checkout by its ref only | Design |
+| [ADR-063](ADR-063-dispatches-workers-and-inboxes-in-the-store.md) | The store keeps each task's dispatch, its workers and its inbox | Design |
+| [ADR-064](ADR-064-the-stand-in-for-claude-code.md) | A stand-in for Claude Code runs a worker end to end in the native smoke test | Design |

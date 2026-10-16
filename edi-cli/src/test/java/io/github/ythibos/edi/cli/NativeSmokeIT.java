@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,12 +14,14 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
@@ -37,7 +40,23 @@ class NativeSmokeIT {
             projects:
               - name: harness
                 tracker: { kind: edi, projectKey: HRN }
+                base: main
             """;
+    private static final String MACHINE_PROFILE = """
+            workers:
+              models:
+                - id: claude-opus-5-5
+                - id: claude-sonnet-5-5
+                - id: claude-haiku-5-5
+                  ignoresEffort: true
+            """;
+    private static final String STUB_SPEC = """
+            stub-run: edi status working -- the stub worker started
+            stub-run: printf 'stub\\n' > stub.txt && git add stub.txt && git -c user.name=Stub -c user.email=stub@example.org commit -q -m 'HRN-7 Add the stub file'
+            stub-run: pkill -f a-pattern-the-guard-refuses
+            stub-run: edi status done -- the stub worker finished
+            """;
+    private static final String WORKER_SOCKET = "edi-smoke-" + UUID.randomUUID();
 
     @TempDir
     private static Path home;
@@ -46,12 +65,21 @@ class NativeSmokeIT {
     private static int port;
 
     @BeforeAll
-    static void startTheNativeCore() throws IOException {
+    static void startTheNativeCore() throws Exception {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/projects.yaml"), REGISTRY);
-        ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString())
+        Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
+        Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
+                home.resolve("config/dispatch-rules.json"));
+        cloneAProjectInto(home.resolve("projects/harness"));
+        ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString(),
+                "--edi.workers.socket=" + WORKER_SOCKET,
+                "--edi.workers.claude-code=" + stubClaudeCode(),
+                "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")))
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX"));
+        launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("SERVER_PORT", "0");
         core = launch.start();
@@ -59,7 +87,8 @@ class NativeSmokeIT {
     }
 
     @AfterAll
-    static void stopTheNativeCore() throws InterruptedException {
+    static void stopTheNativeCore() throws Exception {
+        stopTheWorkerServer();
         if (core == null) {
             return;
         }
@@ -176,6 +205,28 @@ class NativeSmokeIT {
     }
 
     @Test
+    void aStubWorkerRunsItsBriefThroughTheHooksAndTakesASteerAtItsIdlePrompt() throws Exception {
+        assumeTrue(answersIn(home, "tmux", "-V"), "tmux is not installed");
+        edi("Fit the stub lamp; offline verification is accepted.", "task", "add", "--kind", "ship", "--project", "harness", "--id", "native-worker",
+                "--title", "Native stub worker", "--key", "HRN-7", "--body", "-");
+
+        CommandRun dispatched = edi(STUB_SPEC, "dispatch", "native-worker", "--category", "implementation", "--spec", "-");
+        CommandRun done = awaitOutput(List.of("worker", "list"), "done: the stub worker finished");
+        Path worktree = home.resolve("worktrees/harness/native-worker");
+        CommandRun steered = edi("Look at the lamp again.", "steer", "native-worker");
+        CommandRun acknowledged = awaitOutput(List.of("task", "show", "native-worker"), "steer acknowledged");
+
+        assertThat(dispatched.output()).startsWith("Dispatched native-worker to native-worker#1 (implementation, claude-sonnet-5-5 at high) on feature/HRN-7");
+        assertThat(done.output()).contains("native-worker#1", "done: the stub worker finished");
+        assertThat(gitOutput(worktree, "log", "--format=%s", "-1")).isEqualTo("HRN-7 Add the stub file\n");
+        assertThat(steered.output()).isEqualTo("Message 1 waits for native-worker#1; its idle prompt was told to run edi inbox.\n");
+        assertThat(acknowledged.output()).contains("task dispatched", "worker started", "status reported", "tool call refused", "steer sent",
+                "steer received", "steer acknowledged");
+        assertThat(edi("", "worker", "peek", "native-worker").output()).startsWith("native-worker#1 shows idle-prompt:\n");
+        assertThat(edi("", "brief", "native-worker").output()).contains("# Brief: native-worker", "stub-run: edi status done");
+    }
+
+    @Test
     @DisplayName("AT-39 the native CLI round trip has a p95 under 50 ms over 200 calls")
     void theCommandAnswersQuickly() throws Exception {
         List<Long> millis = new ArrayList<>();
@@ -192,6 +243,49 @@ class NativeSmokeIT {
                 `edi backlog` against the native core, %d round trips: p50 %d ms, p95 %d ms, slowest %d ms.
                 """.formatted(ROUND_TRIPS, percentile(millis, 50), percentile(millis, 95), millis.getLast()));
         assertThat(percentile(millis, 95)).as("p95 of the round trip in milliseconds").isLessThan(ROUND_TRIP_BUDGET_MILLISECONDS);
+    }
+
+    private static String stubClaudeCode() throws IOException {
+        Path stub = home.resolve("edi-test-claude");
+        try (InputStream script = NativeSmokeIT.class.getResourceAsStream("/edi-test-claude")) {
+            Files.write(stub, script.readAllBytes());
+        }
+        Files.setPosixFilePermissions(stub, PosixFilePermissions.fromString("rwxr-xr-x"));
+        return stub.toString();
+    }
+
+    private static void cloneAProjectInto(Path clone) throws Exception {
+        Path upstream = Files.createDirectories(home.resolve("upstream/harness"));
+        git(upstream, "init", "--quiet", "--initial-branch=main");
+        Files.writeString(upstream.resolve("README.md"), "harness\n");
+        git(upstream, "add", "README.md");
+        git(upstream, "commit", "--quiet", "--message", "Start harness");
+        Files.createDirectories(clone.getParent());
+        git(clone.getParent(), "clone", "--quiet", upstream.toString(), clone.toString());
+    }
+
+    private static CommandRun awaitOutput(List<String> command, String expected) throws Exception {
+        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        CommandRun run = edi("", command.toArray(String[]::new));
+        while (!run.output().contains(expected) && System.nanoTime() < deadline) {
+            Thread.sleep(200);
+            run = edi("", command.toArray(String[]::new));
+        }
+        return run;
+    }
+
+    private static String gitOutput(Path repository, String... arguments) throws Exception {
+        List<String> commandLine = new ArrayList<>(List.of("git"));
+        commandLine.addAll(List.of(arguments));
+        return run(new ProcessBuilder(commandLine).directory(repository.toFile()).redirectErrorStream(true), "").output();
+    }
+
+    private static void stopTheWorkerServer() throws Exception {
+        if (answersIn(home, "tmux", "-V")) {
+            run(new ProcessBuilder("tmux", "-L", WORKER_SOCKET, "kill-server").redirectErrorStream(true), "");
+            Files.deleteIfExists(Path.of(System.getenv().getOrDefault("TMUX_TMPDIR", "/tmp"),
+                    "tmux-" + Files.getAttribute(Path.of("/proc/self"), "unix:uid"), WORKER_SOCKET));
+        }
     }
 
     private static Path binary(String property) {

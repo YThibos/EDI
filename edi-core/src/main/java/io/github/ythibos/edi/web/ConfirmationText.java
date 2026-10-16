@@ -2,12 +2,17 @@ package io.github.ythibos.edi.web;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Answered;
+import io.github.ythibos.edi.web.Confirmation.Deferred;
+import io.github.ythibos.edi.web.Confirmation.Dispatched;
 import io.github.ythibos.edi.web.Confirmation.Held;
 import io.github.ythibos.edi.web.Confirmation.Noted;
 import io.github.ythibos.edi.web.Confirmation.Queued;
 import io.github.ythibos.edi.web.Confirmation.Raised;
 import io.github.ythibos.edi.web.Confirmation.Released;
+import io.github.ythibos.edi.web.Confirmation.StatusRecorded;
+import io.github.ythibos.edi.web.Confirmation.Steered;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
@@ -33,6 +38,11 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Released released -> "Released " + released.task().id() + "; it is " + released.task().state().word() + " again.";
             case Raised raised -> raised.number().toString();
             case Answered answered -> answerRecorded(answered);
+            case Dispatched dispatched -> WorkerSentences.dispatched(dispatched.launched());
+            case Deferred deferred -> WorkerSentences.deferred(deferred.deferred());
+            case StatusRecorded recorded -> WorkerSentences.statusRecorded(recorded.worker());
+            case Acknowledged acknowledged -> "Acknowledged message " + acknowledged.message().number() + ".";
+            case Steered steered -> WorkerSentences.steered(steered.steered());
         };
     }
 

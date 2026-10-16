@@ -9,14 +9,30 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
+import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
+import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
+import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
+import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerLaunchFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
+import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -66,7 +82,37 @@ public class EventLog {
             case DecisionRaised raised -> payload.put("number", raised.number().toString()).put("title", raised.card().title());
             case DecisionAnswered answered -> withAnswer(payload.put("number", answered.number().toString()), answered.answer());
             case TaskReleased _, TaskDone _ -> payload;
+            case DispatchDeferred deferred -> payload.put("project", deferred.project().value())
+                    .put("category", deferred.category().value())
+                    .put("running", deferred.running())
+                    .put("capacity", deferred.capacity());
+            case TaskDispatched dispatched -> payload.put("worker", dispatched.worker().toString())
+                    .put("category", dispatched.category().value())
+                    .put("model", dispatched.route().model().value())
+                    .put("effort", dispatched.route().namesAnEffort() ? dispatched.route().effort().word() : null)
+                    .put("branch", dispatched.branch().toString())
+                    .put("because", dispatched.because());
+            case WorkerStarted started -> payload.put("worker", started.worker().toString());
+            case WorkerLaunchFailed failed -> payload.put("worker", failed.worker().toString()).put("pane", failed.pane().word());
+            case WorkerRetired retired -> payload.put("worker", retired.worker().toString()).put("because", retired.because());
+            case StatusReported reported -> withStatus(payload.put("worker", Columns.textOf(reported.worker())), reported.report());
+            case SteerSent sent -> payload.put("number", sent.number()).put("resolves", Columns.textOf(sent.resolves()));
+            case SteerReceived received -> payload.put("number", received.number()).put("proof", received.proof());
+            case SteerAcknowledged acknowledged -> payload.put("number", acknowledged.number());
+            case SteerNotReceived notReceived -> payload.put("number", notReceived.number());
+            case ToolCallRefused refused -> payload.put("worker", refused.worker().toString()).put("rule", refused.rule().word());
+            case MechanicalChangeAccepted accepted -> payload.put("worker", accepted.worker().toString());
+            case MechanicalChangeRefused refused -> payload.put("worker", refused.worker().toString()).put("because", refused.because());
+            case BranchDeliveredToCaptain delivered -> payload.put("branch", delivered.branch().toString());
+            case BranchDeliveryFailed failed -> payload.put("branch", failed.branch().toString()).put("because", failed.because());
         };
+    }
+
+    private static ObjectNode withStatus(ObjectNode payload, StatusReport report) {
+        return payload.put("state", report.state().word())
+                .put("key", Columns.textOf(report.key()))
+                .put("until", Columns.text(report.until()))
+                .put("text", report.text());
     }
 
     private static ObjectNode withIntake(ObjectNode payload, Intake intake) {

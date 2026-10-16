@@ -2,11 +2,14 @@ package io.github.ythibos.edi.web.access;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import io.github.ythibos.edi.application.worker.WorkerTokens;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,12 +21,14 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     private static final String API = "/api";
     private static final String HEALTH = "/api/health";
     private static final String BEARER = "Bearer ";
-    private static final String REFUSAL = "This call needs the EDI token from state/core.token in the EDI home.";
+    private static final String REFUSAL = "This call needs the EDI token from state/core.token in the EDI home, or the token EDI gave a worker at launch.";
 
     private final ApiToken token;
+    private final WorkerTokens workerTokens;
 
-    ApiTokenFilter(ApiToken token) {
+    ApiTokenFilter(ApiToken token, WorkerTokens workerTokens) {
         this.token = token;
+        this.workerTokens = workerTokens;
     }
 
     @Override
@@ -35,11 +40,23 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (token.admits(bearerTokenOf(request))) {
+        Optional<Caller> caller = callerHolding(bearerTokenOf(request));
+        if (caller.isPresent()) {
+            request.setAttribute(Caller.ATTRIBUTE, caller.get());
             chain.doFilter(request, response);
         } else {
             refuse(response);
         }
+    }
+
+    private Optional<Caller> callerHolding(String presented) {
+        if (presented == null) {
+            return Optional.empty();
+        }
+        if (token.admits(presented)) {
+            return Optional.of(new Caller.Primary());
+        }
+        return workerTokens.workerHolding(presented).map(worker -> new Caller.WorkerCaller(worker.id()));
     }
 
     private static String decodedPathOf(HttpServletRequest request) {

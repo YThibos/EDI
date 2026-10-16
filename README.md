@@ -3,10 +3,11 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S2, reports, on top of the domain and store of slice S1 and the foundations of slice S0.
+The repository is at slice S3, workers, on top of the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
-Nothing launches workers yet.
+`edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
+Workers report with `edi status` and read `edi inbox`; `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived; a pre-tool guard refuses pattern kills, tmux without a socket, forced or base-branch pushes and merges; each copy's `commit-msg` hook refuses agent trailers and subjects without the work key.
 
 ## Parts
 
@@ -58,6 +59,25 @@ Every command prints text, or the core's JSON with `--json`; a refusal is one se
 A card is `{"title", "context", "options": [{"key", "text"}], "recommend": {"key", "why"}}`.
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional; inside tmux the report fits the pane it runs in.
 `examples/edi-home/config/projects.yaml` shows the registry's shape with placeholder values.
+
+### Workers
+
+A dispatch reads three files of the EDI home besides the registry: `config/machine.yaml` lists the models workers may run, strongest first, the tools they never get and their permission mode; `config/dispatch-rules.json` holds the dispatch categories and the project overrides; and `memory/craft-rules.md` holds the craftsmanship rules for projects with `craftRules: true`.
+`examples/edi-home/config/` has an example of each, and a project's clone lives at `$EDI_HOME/projects/<name>` unless its registry entry names another.
+
+```sh
+edi brief fit-the-lamp --category implementation --spec - < spec.md   # the brief a dispatch would write
+edi dispatch fit-the-lamp --category implementation --spec - < spec.md # isolated copy, brief, worker
+edi dispatch rename-lamp --category mechanical --spec - --files src/Lamp.java < change.md
+edi worker list                                     # serving workers, their route and last status
+edi worker peek fit-the-lamp                        # the worker pane's last lines and what EDI reads in them
+edi steer fit-the-lamp --resolves lamp-choice < answer.md
+edi status working -- tests pass                    # a worker reporting, under the token EDI gave it
+edi inbox                                           # a worker reading its messages
+edi inbox ack 1
+```
+
+The worker's copy is `$EDI_HOME/worktrees/<project>/<task-id>`, its brief and report are in `$EDI_HOME/data/tasks/<task-id>/`, and its tmux window is `<task-id>` in session `workers` on `tmux -L edi`.
 
 ## Documentation
 

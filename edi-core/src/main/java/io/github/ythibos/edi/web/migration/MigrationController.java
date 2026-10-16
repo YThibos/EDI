@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
 import io.github.ythibos.edi.application.migration.MigrationPlan;
+import io.github.ythibos.edi.web.access.Caller;
 
 @RestController
 class MigrationController {
@@ -19,7 +20,8 @@ class MigrationController {
     }
 
     @GetMapping("/api/migrations/firstofficer/plan")
-    MigrationPlan plan(@RequestParam String from) {
+    MigrationPlan plan(@RequestParam String from, Caller caller) {
+        caller.requirePrimary("edi migrate firstofficer");
         Path home = Path.of(from);
         if (!home.isAbsolute()) {
             throw new IllegalArgumentException("Name the old home by its absolute path, not " + from + ".");

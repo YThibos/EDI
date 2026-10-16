@@ -16,6 +16,7 @@ import io.github.ythibos.edi.adapter.registry.UnreadableRegistry;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.task.UnknownTask;
+import io.github.ythibos.edi.web.access.NotPermitted;
 
 @RestControllerAdvice
 class ApiRefusals {
@@ -25,6 +26,11 @@ class ApiRefusals {
     @ExceptionHandler(Refusal.class)
     ResponseEntity<String> refused(Refusal refusal) {
         return sentence(HttpStatus.CONFLICT, refusal.getMessage());
+    }
+
+    @ExceptionHandler(NotPermitted.class)
+    ResponseEntity<String> notPermitted(NotPermitted notPermitted) {
+        return sentence(HttpStatus.FORBIDDEN, notPermitted.getMessage());
     }
 
     @ExceptionHandler({UnknownTask.class, UnknownDecision.class})

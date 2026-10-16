@@ -29,6 +29,13 @@ import picocli.CommandLine.Spec;
             ReleaseCommand.class,
             DecisionCommand.class,
             ProjectCommand.class,
+            DispatchCommand.class,
+            BriefCommand.class,
+            StatusCommand.class,
+            InboxCommand.class,
+            SteerCommand.class,
+            WorkerCommand.class,
+            HookCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})
 public final class Edi implements Runnable {
@@ -60,6 +67,11 @@ public final class Edi implements Runnable {
     Path home() {
         String home = environment.get("EDI_HOME");
         return home == null ? Path.of(System.getProperty("user.home"), ".edi") : Path.of(home);
+    }
+
+    Path tokenFile() {
+        String workerToken = environment.get("EDI_TOKEN_FILE");
+        return workerToken == null || workerToken.isBlank() ? home().resolve("state").resolve("core.token") : Path.of(workerToken);
     }
 
     OptionalInt paneWidth() {

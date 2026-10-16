@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.brief.WorkerBriefs;
+import io.github.ythibos.edi.testing.BriefFixtures;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
@@ -73,7 +76,26 @@ class MemoryAndCraftTest {
         @Test
         @DisplayName("AT-35 a generated worker brief is at most 120 lines before the task's own intent and spec")
         void aGeneratedBriefStaysWithinItsBudget() {
-            Pending.until(Slice.S3);
+            WorkerBriefs briefs = new WorkerBriefs();
+            String longIntent = "The captain's words, one per line.\n".repeat(400);
+            String longSpec = "Build instruction.\n".repeat(300);
+
+            String brief = briefs.briefFor(BriefFixtures.largestShip(longIntent, longSpec));
+
+            assertThat(linesOutsideTheTasksOwnSections(brief)).as("lines of the brief before the task's own intent and spec").isLessThanOrEqualTo(120);
+            assertThat(brief).contains(longIntent.strip(), longSpec.strip());
+            assertThat(BriefFixtures.everyKindOfBrief().map(briefs::briefFor).map(TheAnchorStaysSmall::linesOutsideTheTasksOwnSections))
+                    .allSatisfy(lines -> assertThat(lines).isLessThanOrEqualTo(120));
+        }
+
+        private static long linesOutsideTheTasksOwnSections(String brief) {
+            List<String> lines = brief.lines().toList();
+            int intentHeading = lines.indexOf("## Captain's intent");
+            int specHeading = lines.indexOf("## Spec");
+            int projectRulesHeading = lines.indexOf("## Project rules");
+            int intentLines = specHeading - intentHeading - 3;
+            int specLines = projectRulesHeading - specHeading - 3;
+            return lines.size() - intentLines - specLines;
         }
 
         private static long sizeWhenPresent(Path file) throws IOException {
