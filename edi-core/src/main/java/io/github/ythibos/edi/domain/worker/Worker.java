@@ -128,8 +128,11 @@ public record Worker(
     }
 
     public boolean missedItsLaunch(Instant now, Duration patience) {
-        boolean noHookYet = startedAt == null && briefedAt == null;
-        return noHookYet && launchFailedAt == null && !isRetired() && !now.isBefore(launchedAt().plus(patience));
+        return hasSentNoHook() && launchFailedAt == null && !isRetired() && !now.isBefore(launchedAt().plus(patience));
+    }
+
+    public boolean failedItsLaunch() {
+        return launchFailedAt != null && hasSentNoHook();
     }
 
     public boolean lastReported(StatusState state) {
@@ -157,6 +160,10 @@ public record Worker(
         if (isRetired()) {
             throw new Refusal(id + " was retired; its task has another worker now.");
         }
+    }
+
+    private boolean hasSentNoHook() {
+        return startedAt == null && briefedAt == null;
     }
 
     public record ReportedStatus(StatusReport report, Instant at) {

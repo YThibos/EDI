@@ -41,6 +41,8 @@ class SupervisionRulesTest {
         assertThat(health(busy.reported(report(StatusState.DONE, null), LAUNCHED), WindowCheck.OPEN, new BootId("boot-2"))).isEqualTo(new WorkerHealth.Finished());
         assertThat(health(launched().launchFailed(LAUNCHED.plusSeconds(120)), WindowCheck.WINDOW_CLOSED, new BootId("boot-2")))
                 .isEqualTo(new WorkerHealth.LaunchFailed(LAUNCHED.plusSeconds(120)));
+        assertThat(health(launched().launchFailed(LAUNCHED.plusSeconds(120)).started(null, null, LAUNCHED.plusSeconds(180)), WindowCheck.WINDOW_CLOSED, BOOT))
+                .isEqualTo(new WorkerHealth.Dead(DeathCause.WINDOW_CLOSED));
     }
 
     @Test

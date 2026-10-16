@@ -27,7 +27,7 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
         if (worker.stopRequestedAt() != null) {
             return new WorkerHealth.Stopped(worker.stopRequestedAt());
         }
-        if (worker.launchFailedAt() != null) {
+        if (worker.failedItsLaunch()) {
             return new WorkerHealth.LaunchFailed(worker.launchFailedAt());
         }
         if (worker.handedItsWorkOver()) {
