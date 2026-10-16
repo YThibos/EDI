@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -30,6 +32,7 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 class FollowMergesTest {
 
     private static final TaskId LAMP = new TaskId("fit-lamp");
+    private static final TaskId HORN = new TaskId("fit-horn");
 
     @TempDir
     private Path directory;
@@ -64,6 +67,60 @@ class FollowMergesTest {
     }
 
     @Test
+    void followsTheOtherDraftsWhenTheForgeCannotShowOne() throws IOException {
+        DispatchOutcome lamp = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(lamp, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, lamp);
+        home.clock().advance(Duration.ofMinutes(1));
+        DispatchOutcome horn = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"));
+        FixtureRepository hornCopy = DeliveryFixtures.committedIn(horn, "horn.txt", "loud\n", "HRN-4 Fit the horn");
+        DeliveryFixtures.deliveredAsADraft(home, horn);
+        home.forge().cannotShow(home.deliveries().of(LAMP).orElseThrow().address());
+        home.forge().merges(home.deliveries().of(HORN).orElseThrow().address(), squashedOntoMain(hornCopy));
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.deliveries().of(LAMP).orElseThrow().state()).isEqualTo(MergeRequestState.OPEN);
+        assertThat(home.eventTypesOf(HORN)).containsSubsequence("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
+        assertThat(home.tasks().get(HORN).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void answersTheCaptainsWordFromTheMergeEdiAlreadyFollowed() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        String landed = squashedOntoMain(copy);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), landed);
+        home.followMerges().watchTheOpenDrafts();
+
+        MergedWork merged = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(merged.delivery().landedCommit()).isEqualTo(landed);
+        assertThat(merged.cleanUp().done()).isTrue();
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsOnlyOnce(WakeKind.DRAFT_MERGED);
+        assertThat(home.cloneRefreshes().after(LAMP)).hasValueSatisfying(refresh -> assertThat(refresh.cleanUpTriedAt()).isNotNull());
+    }
+
+    @Test
+    void triesTheCleanUpAgainWhenTheCaptainSaysAFollowedMergeIsMerged() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(copy));
+        copy.write("notes.txt", "left behind\n");
+        home.followMerges().watchTheOpenDrafts();
+        Files.delete(copy.root().resolve("notes.txt"));
+
+        MergedWork merged = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(merged.cleanUp().done()).isTrue();
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftMerged", "CloneRefreshed", "CleanupRefused", "TaskCleanedUp");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
     void noticesADraftClosedWithoutAMergeOnce() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
@@ -94,7 +151,7 @@ class FollowMergesTest {
         home.forge().merges(delivery.address(), landed);
         MergedWork merged = home.followMerges().mergedSaysTheCaptain(delivery.address().url(), Actor.PRIMARY);
 
-        assertThat(merged.mergeRequest().landedCommit()).isEqualTo(landed);
+        assertThat(merged.delivery().landedCommit()).isEqualTo(landed);
         assertThat(merged.cleanUp().done()).isTrue();
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).doesNotContain(WakeKind.DRAFT_MERGED);
     }
@@ -138,7 +195,7 @@ class FollowMergesTest {
         upstream.run("merge", "--quiet", "--ff-only", "FETCH_HEAD");
         MergedWork landed = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
 
-        assertThat(landed.mergeRequest()).isNull();
+        assertThat(landed.delivery()).isNull();
         assertThat(landed.cleanUp().done()).isTrue();
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
     }

@@ -15,9 +15,9 @@ final class DeliverySentences {
     }
 
     static String followedUp(MergedWork work) {
-        String merge = work.mergeRequest() == null
+        String merge = work.delivery() == null
                 ? "The captain merged " + work.task() + " locally"
-                : "Recorded the merge of " + work.mergeRequest().address() + " as " + work.mergeRequest().landedCommit();
+                : "Recorded the merge of " + work.delivery().address() + " as " + work.delivery().landedCommit();
         String cleanUp = work.cleanUp().done()
                 ? work.task() + " is cleaned up and done."
                 : work.task() + " is not cleaned up yet: " + work.cleanUp().refusal();

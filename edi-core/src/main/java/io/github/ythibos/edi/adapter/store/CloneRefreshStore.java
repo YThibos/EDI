@@ -3,6 +3,7 @@ package io.github.ythibos.edi.adapter.store;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
@@ -39,6 +40,10 @@ public class CloneRefreshStore {
                 .param("verified", Columns.text(refresh.verifiedAt()))
                 .param("tried", Columns.text(refresh.cleanUpTriedAt()))
                 .update();
+    }
+
+    public Optional<CloneRefresh> after(TaskId task) {
+        return store.sql(SELECT_REFRESHES + "where task_id = :task").param("task", task.value()).query((row, _) -> refreshOf(row)).optional();
     }
 
     public List<CloneRefresh> pending() {

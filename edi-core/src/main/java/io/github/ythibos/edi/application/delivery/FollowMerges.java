@@ -1,13 +1,17 @@
 package io.github.ythibos.edi.application.delivery;
 
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
@@ -30,6 +34,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 @Service
 public class FollowMerges {
 
+    private static final Logger LOG = LoggerFactory.getLogger(FollowMerges.class);
     private static final String WEB_ADDRESS = "https://";
 
     private final TaskStore tasks;
@@ -60,6 +65,9 @@ public class FollowMerges {
         if (delivery.isEmpty()) {
             return new MergedWork(tasks.get(TaskReference.parse(reference)).id(), null, cleanedUpAfter(TaskReference.parse(reference), actor));
         }
+        if (delivery.get().state() == MergeRequestState.MERGED) {
+            return followedBefore(delivery.get(), actor);
+        }
         MergeRequestView view = viewOf(delivery.get());
         if (!view.isMerged()) {
             noticeAClosure(delivery.get(), view, actor);
@@ -72,7 +80,7 @@ public class FollowMerges {
     public void watchTheOpenDrafts() {
         transaction.execute(_ -> deliveries.inState(MergeRequestState.OPEN)).stream()
                 .filter(this::isInFlight)
-                .forEach(this::observed);
+                .forEach(this::observedOnItsOwn);
     }
 
     public void finishEarlierMerges() {
@@ -86,8 +94,30 @@ public class FollowMerges {
                 : deliveries.of(tasks.get(TaskReference.parse(reference)).id());
     }
 
+    private MergedWork followedBefore(Delivery delivery, Actor actor) {
+        refreshes.refreshEveryClone();
+        return new MergedWork(delivery.task(), delivery, cleanedUpOnceMore(delivery, actor));
+    }
+
+    private CleanUp cleanedUpOnceMore(Delivery delivery, Actor actor) {
+        if (!isInFlight(delivery)) {
+            return CleanUp.finished();
+        }
+        return refreshes.after(delivery.task()).filter(refresh -> !refresh.isPending())
+                .map(refresh -> cleanedUpOnce(refresh, actor))
+                .orElseGet(CleanUp::awaitingTheRefresh);
+    }
+
     private boolean isInFlight(Delivery delivery) {
         return transaction.execute(_ -> !tasks.get(delivery.task()).isClosed());
+    }
+
+    private void observedOnItsOwn(Delivery delivery) {
+        try {
+            observed(delivery);
+        } catch (Refusal | ProgramFailure unobservable) {
+            LOG.warn("EDI could not watch the draft of {}: {}", delivery.task(), unobservable.getMessage());
+        }
     }
 
     private void observed(Delivery delivery) {
@@ -126,19 +156,21 @@ public class FollowMerges {
     }
 
     private MergedWork followed(Delivery delivery, MergeRequestView view, Actor actor) {
-        recordItAsMerged(delivery, view, actor);
+        Delivery merged = recordedAsMerged(delivery, view, actor);
         refreshes.refreshEveryClone();
         CleanUp cleanUp = cleanUpWhatTheClonesHold(actor).getOrDefault(delivery.task(), CleanUp.awaitingTheRefresh());
-        return new MergedWork(delivery.task(), view, cleanUp);
+        return new MergedWork(delivery.task(), merged, cleanUp);
     }
 
-    private void recordItAsMerged(Delivery delivery, MergeRequestView view, Actor actor) {
-        transaction.executeWithoutResult(_ -> {
+    private Delivery recordedAsMerged(Delivery delivery, MergeRequestView view, Actor actor) {
+        return transaction.execute(_ -> {
             Instant now = clock.now();
             Task task = tasks.get(delivery.task());
-            deliveries.save(delivery.observed(view, now));
+            Delivery merged = delivery.observed(view, now);
+            deliveries.save(merged);
             events.record(new DraftMerged(task.id(), view.address(), view.landedCommit()), actor, now);
             refreshes.awaitTheMergeOf(task, view, now);
+            return merged;
         });
     }
 
@@ -158,10 +190,13 @@ public class FollowMerges {
             return CleanUp.finished();
         } catch (Refusal refused) {
             return CleanUp.refusedBecause(refused.getMessage());
+        } catch (ProgramFailure | UncheckedIOException failed) {
+            LOG.warn("The clean-up of {} stopped: {}", task, failed.getMessage());
+            return CleanUp.stoppedBy(failed);
         }
     }
 
-    public record MergedWork(TaskId task, MergeRequestView mergeRequest, CleanUp cleanUp) {
+    public record MergedWork(TaskId task, Delivery delivery, CleanUp cleanUp) {
     }
 
     public record CleanUp(boolean done, String refusal) {
@@ -172,6 +207,10 @@ public class FollowMerges {
 
         static CleanUp refusedBecause(String because) {
             return new CleanUp(false, because);
+        }
+
+        static CleanUp stoppedBy(RuntimeException failure) {
+            return new CleanUp(false, "the clean-up stopped: " + failure.getMessage());
         }
 
         static CleanUp awaitingTheRefresh() {

@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.delivery;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
 public class CloneRefreshes {
@@ -52,6 +54,10 @@ public class CloneRefreshes {
 
     public void refreshEveryClone() {
         transaction.execute(_ -> refreshes.pending()).stream().map(CloneRefresh::project).distinct().forEach(this::refreshAfterAFetch);
+    }
+
+    public Optional<CloneRefresh> after(TaskId task) {
+        return transaction.execute(_ -> refreshes.after(task));
     }
 
     public List<CloneRefresh> awaitingCleanUp() {

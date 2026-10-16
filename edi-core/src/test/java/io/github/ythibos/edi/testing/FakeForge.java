@@ -2,10 +2,13 @@ package io.github.ythibos.edi.testing;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
+import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.Forge;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
@@ -21,6 +24,7 @@ public final class FakeForge implements Forge {
     private final Map<Integer, MergeRequestView> mergeRequests = new HashMap<>();
     private final Map<String, String> pushedHeads = new HashMap<>();
     private final List<DraftProposal> openedDrafts = new ArrayList<>();
+    private final Set<MergeRequestAddress> unreachable = new HashSet<>();
     private boolean workflowScope = true;
     private int lastNumber;
 
@@ -39,6 +43,9 @@ public final class FakeForge implements Forge {
 
     @Override
     public synchronized MergeRequestView view(RegisteredForge forge, MergeRequestAddress address) {
+        if (unreachable.contains(address)) {
+            throw new ProgramFailure("gh pr view " + address.number() + " failed: the repository is unreachable");
+        }
         MergeRequestView request = mergeRequests.get(address.number());
         if (request == null || !request.address().equals(address)) {
             throw new IllegalStateException("The fake forge holds no " + address + ".");
@@ -80,6 +87,10 @@ public final class FakeForge implements Forge {
 
     public synchronized MergeRequestView closes(MergeRequestAddress address) {
         return changed(address, MergeRequestState.CLOSED, null);
+    }
+
+    public synchronized void cannotShow(MergeRequestAddress address) {
+        unreachable.add(address);
     }
 
     public synchronized void withoutTheWorkflowScope() {
