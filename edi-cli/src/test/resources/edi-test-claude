@@ -24,7 +24,7 @@ while [ "$#" -gt 0 ]; do
         *) shift 2 ;;
     esac
 done
-[ -z "$task_directory" ] || printf '%s\n' "$launched_with" >> "$task_directory/stub-launches.txt"
+[ -z "$task_directory" ] || { printf '%s' "$launched_with" | tr '\n' ' '; echo; } >> "$task_directory/stub-launches.txt"
 
 json_string() {
     printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk 'BEGIN { ORS = "" } NR > 1 { print "\\n" } { print }'

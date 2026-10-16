@@ -76,3 +76,31 @@ Each screen below was captured with `tmux capture-pane -p` in a 120 by 40 pane o
 - A shell command the permission rules do not allow opens a dialog with "Do you want to proceed?", numbered options and "Esc to cancel".
 - A line typed with `send-keys -l` and submitted with Enter is sent at once, but a typed line that begins with the invisible separator U+2063 stays in the composer through any number of Enters; an argument prompt with that character is accepted.
 - The usage-limit and spend-limit dialogs could not be provoked; their texts ("Stop and wait for limit to reset", "You've hit your monthly spend limit", "Adjust monthly spend limit", " to continue after reset") were read from the executable itself.
+
+## Slice S4: sessions, background jobs and stop failures, on 2.1.301
+
+Verified on Claude Code 2.1.301 on WSL2 Ubuntu 24.04, 16/10/2026, for the primary's hooks (ADR-066 to ADR-068), the relaunch (ADR-073) and usage limits (ADR-072).
+A settings file with one recording hook per event drove two headless runs in a throwaway directory on `claude-haiku-5-5`, the second resuming the first.
+
+### Sessions
+
+- Every hook and every Bash command of a session carries `CLAUDE_CODE_SESSION_ID`, equal to the payload's `session_id` and to `--session-id`, and `CLAUDE_PID`, the process id of the session's own `claude`; hooks also get `CLAUDE_ENV_FILE` and `CLAUDE_PROJECT_DIR`.
+- The executable sets `CLAUDE_CODE_SESSION_ID` from the current session for each command, and resets it when a conversation is cleared.
+- `--resume <id>` with `--name`, `--settings` and a prompt after `--` kept the session id, fired `SessionStart` with `source: "resume"` and the name as `session_title`, and wrote into the same transcript file.
+- When a background job finished, Claude Code submitted a prompt opening with `<task-notification>` and fired `UserPromptSubmit` for it, so every turn of the primary opens with `UserPromptSubmit`, whether the captain typed or a job ended.
+
+### Stop
+
+- `Stop` carries `background_tasks`, the session's in-flight background work: each entry has `id`, `type` (`shell` for a Bash job), `status` (`running` or `pending`), `description` and, for a shell job, `command`.
+- A job that has finished is no longer listed.
+
+### Stop failures and usage limits
+
+- The executable lists the `StopFailure` errors `rate_limit`, `overloaded`, `authentication_failed`, `oauth_org_not_allowed`, `account_on_hold`, `verification_required`, `billing_error`, `invalid_request`, `model_not_found`, `server_error`, `max_output_tokens`, `cloud_credential_error` and `unknown`; `last_assistant_message` holds the error's text.
+- Usage-limit messages open with "You've hit your" or "You've reached your", such as "You've hit your session limit · resets 2:10pm (Europe/Brussels)" or "You've hit your monthly spend limit.".
+- Transcripts written by usage-limit stops on 2.1.270 to 2.1.299 end with an assistant record holding `isApiErrorMessage: true`, `error: "rate_limit"`, that text, and the reset in epoch seconds as `quotaLimits.resetsAt`, and from 2.1.296 also as `apiErrorParams.rate_limit_info.resetsAt`; Claude Code then appends metadata records such as `last-prompt` and `cost-state`.
+- The 2.1.301 executable can also continue on its own after the reset ("Usage limit reached · continuing automatically"), so EDI types its resume line only into an idle prompt.
+
+### Usage records
+
+- Each assistant message's `usage` (`input_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `output_tokens`) is repeated unchanged on every record of that message, one per content block, so EDI counts a message once by its id.

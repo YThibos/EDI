@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.application.supervision;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -11,11 +10,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.OutageStore;
-import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
@@ -41,7 +40,7 @@ public class RecoverFromOutage {
     private final OutageStore outages;
     private final TaskStore tasks;
     private final DispatchStore dispatches;
-    private final PrimarySessionStore primarySessions;
+    private final PrimarySessions primarySessions;
     private final WorkerListQuery workers;
     private final CurrentRoutes routes;
     private final LaunchWorker launcher;
@@ -49,7 +48,7 @@ public class RecoverFromOutage {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public RecoverFromOutage(OutageStore outages, TaskStore tasks, DispatchStore dispatches, PrimarySessionStore primarySessions,
+    public RecoverFromOutage(OutageStore outages, TaskStore tasks, DispatchStore dispatches, PrimarySessions primarySessions,
             WorkerListQuery workers, CurrentRoutes routes, LaunchWorker launcher, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.outages = outages;
         this.tasks = tasks;
@@ -80,11 +79,7 @@ public class RecoverFromOutage {
                 .flatMap(entry -> entry.health() instanceof WorkerHealth.LimitParked parked ? Stream.of(parked.limit()) : Stream.empty())
                 .filter(limit -> limit.holdsAt(now))
                 .findFirst()
-                .or(() -> transaction.execute(_ -> primarySessions.running().stream()
-                        .map(PrimarySession::limit)
-                        .filter(Objects::nonNull)
-                        .filter(limit -> limit.holdsAt(now))
-                        .findFirst()));
+                .or(() -> primarySessions.holder().map(PrimarySession::limit).filter(limit -> limit.holdsAt(now)));
         inForce.ifPresent(limit -> {
             throw new Refusal("The " + limit.name() + " still holds" + (limit.resetsAt() == null ? "" : " until " + limit.resetsAt())
                     + ", so a relaunch now would stop on it again; answer the list once it has reset.");

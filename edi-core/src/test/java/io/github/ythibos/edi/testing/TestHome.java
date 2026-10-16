@@ -67,8 +67,8 @@ import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
-import io.github.ythibos.edi.application.worker.CaptainCheckouts;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
+import io.github.ythibos.edi.application.worker.CaptainCheckouts;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -422,7 +422,7 @@ public final class TestHome {
     }
 
     public RecoverFromOutage recoverFromOutage() {
-        return new RecoverFromOutage(outages, tasks, dispatches, primarySessions, workerList(),
+        return new RecoverFromOutage(outages, tasks, dispatches, primarySessions(), workerList(),
                 new CurrentRoutes(dispatchRulesFile(), machineProfile()), launchWorker(), events, clock, transaction);
     }
 

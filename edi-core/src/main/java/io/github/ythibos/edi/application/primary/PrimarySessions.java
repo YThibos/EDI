@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.primary;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -8,6 +9,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.domain.primary.PrimaryRole;
+import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
 
 @Component
@@ -25,6 +27,10 @@ public class PrimarySessions {
 
     public Standing standingOf(UUID session) {
         return transaction.execute(_ -> role().standingOf(session));
+    }
+
+    public Optional<PrimarySession> holder() {
+        return transaction.execute(_ -> role().holder());
     }
 
     PrimaryRole role() {
