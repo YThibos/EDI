@@ -15,7 +15,7 @@ On Claude Code 2.1.301 `--resume <id>` keeps the session id, opens the same tran
 **Decision:** A worker is launched as a `dispatch`, a `resume` or a `fresh` start, recorded as its `launch_kind`; `LaunchWorker.relaunch` takes the task's own dispatch, applies a captain's override when one is given, and launches the next incarnation in `EdiHome.worktreeOf` with the route the dispatch rules give now.
 A resume passes `--resume` with the latest incarnation's session id and, as its first prompt, `ResumeNotes`' line `resumed after <why>: your copy is on <branch> at <head>; your last status was ...; answered since you started: ...; run edi inbox first, then carry on with the task`; a fresh start draws a new session id and writes the brief again.
 `worker.session_id` is no longer unique, because a resume shares its session with the incarnation it resumes.
-`RelaunchWorker` refuses a worker that still runs, a held task, and a copy in which `ProcessTable.workingIn` finds a process.
+`RelaunchWorker` refuses a worker that still runs and a held task; `LaunchWorker.relaunch`, which `edi worker relaunch` and `edi recover` share, refuses a copy in which `ProcessTable.workingIn` finds a process.
 `StopWorker` checks that the pane's process is still a child of the recorded tmux server, then `ProcessTable.stopTree` sends SIGTERM to that process and its descendants and SIGKILL to whatever outlives ten seconds; the worker is marked stopped, so it is not counted as dead and can be relaunched.
 
 **Motivation:** The worker's context and its uncommitted work both survive a lost server, and nothing EDI did not start is ever signalled.

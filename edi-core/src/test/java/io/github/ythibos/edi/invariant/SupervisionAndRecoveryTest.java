@@ -159,6 +159,29 @@ class SupervisionAndRecoveryTest {
             assertThat(afterTheRestart.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsOnly(WakeKind.LOST_IN_OUTAGE);
         }
 
+        @Test
+        @DisplayName("A machine restart lists only the workers that were still working, not one whose done was accepted")
+        @Tag("adapter")
+        void aMachineRestartLeavesFinishedWorkOffTheList() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            for (Worker worker : List.of(lamp, WorkerFixtures.dispatchedShip(home, "tune-horn", "HRN-4"), WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5"))) {
+                home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
+                home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Working on " + worker.id().task() + ".");
+            }
+            home.recordStatus().report(lamp.id(), StatusState.DONE, null, null, "The lamp is fitted.");
+
+            home.restartTheMachine();
+            TestHome afterTheRestart = home.restarted();
+            afterTheRestart.judgeWorkers().judge();
+
+            assertThat(numbersAndTasks(afterTheRestart.outageList().list())).containsExactly("1 tune-horn", "2 ring-bell");
+            assertThat(afterTheRestart.workerList().judged(afterTheRestart.workers().get(lamp.id()).orElseThrow()).health())
+                    .isEqualTo(new WorkerHealth.Finished());
+            assertThat(afterTheRestart.tasks().get(new TaskId("fit-lamp")).isHeld()).isFalse();
+            assertThat(afterTheRestart.eventTypesOf(new TaskId("fit-lamp"))).doesNotContain("LostInOutage", "TaskHeld", "WorkerDied");
+        }
+
         private static List<String> numbersAndTasks(OutageList list) {
             return list.entries().stream().map(entry -> entry.entry().number() + " " + entry.task().id()).toList();
         }

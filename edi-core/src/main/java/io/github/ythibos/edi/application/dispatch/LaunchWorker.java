@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -18,10 +19,12 @@ import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.WorkerSettings;
 import io.github.ythibos.edi.adapter.machine.MachineBoot;
+import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.brief.BriefFacts;
@@ -40,8 +43,10 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
+import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -60,6 +65,7 @@ public class LaunchWorker {
     private final TaskStore tasks;
     private final DispatchStore dispatches;
     private final WorkerStore workers;
+    private final OutageStore outages;
     private final EventLog events;
     private final ProjectRegistry registry;
     private final MachineProfile machine;
@@ -70,18 +76,20 @@ public class LaunchWorker {
     private final ResumeNotes resumeNotes;
     private final WorkerTokens tokens;
     private final WorkerRuntime runtime;
+    private final ProcessTable processes;
     private final MachineBoot boot;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, EventLog events,
+    public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, OutageStore outages, EventLog events,
             ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies, WorkerPlaces places,
-            WorkerBriefs briefs, ResumeNotes resumeNotes, WorkerTokens tokens, WorkerRuntime runtime, MachineBoot boot, Clock clock,
-            TransactionTemplate transaction) {
+            WorkerBriefs briefs, ResumeNotes resumeNotes, WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot,
+            Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.workers = workers;
+        this.outages = outages;
         this.events = events;
         this.registry = registry;
         this.machine = machine;
@@ -92,28 +100,39 @@ public class LaunchWorker {
         this.resumeNotes = resumeNotes;
         this.tokens = tokens;
         this.runtime = runtime;
+        this.processes = processes;
         this.boot = boot;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public synchronized Launched launch(Dispatch dispatch, String because, Actor actor) {
-        return launched(dispatch, LaunchKind.DISPATCH, because, actor);
+        return launched(dispatch, LaunchKind.DISPATCH, null, because, actor);
     }
 
-    public synchronized Launched relaunch(TaskId task, LaunchKind kind, CaptainOverride captainsOverride, String because, Actor actor) {
+    public synchronized Launched relaunch(TaskId task, LaunchKind kind, CaptainOverride captainsOverride, OutageEntry answered, String because,
+            Actor actor) {
+        requireAnEmptyCopy(task);
         Dispatch dispatch = transaction.execute(_ -> dispatchToRelaunch(task, captainsOverride));
-        return launched(dispatch, kind, because, actor);
+        return launched(dispatch, kind, answered, because, actor);
     }
 
     public String briefFor(Dispatch dispatch) {
-        Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH));
+        Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null));
         Path worktree = home.worktreeOf(incarnation.project().project().name(), dispatch.task());
         return briefs.briefFor(briefFacts(incarnation, worktree, home.taskDirectory(dispatch.task())));
     }
 
-    private Launched launched(Dispatch dispatch, LaunchKind kind, String because, Actor actor) {
-        Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind));
+    private void requireAnEmptyCopy(TaskId task) {
+        Path worktree = home.worktreeOf(transaction.execute(_ -> tasks.get(task)).intake().projects().getFirst(), task);
+        List<Long> holders = processes.workingIn(worktree);
+        if (!holders.isEmpty()) {
+            throw new Refusal("Processes " + holders + " still work in " + worktree + "; EDI relaunches a worker only in a copy nothing else holds.");
+        }
+    }
+
+    private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
+        Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
         Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
@@ -136,8 +155,8 @@ public class LaunchWorker {
         return overridden;
     }
 
-    private Incarnation incarnationFor(Dispatch dispatch, LaunchKind kind) {
-        Task task = tasks.get(dispatch.task()).dispatched();
+    private Incarnation incarnationFor(Dispatch dispatch, LaunchKind kind, OutageEntry answered) {
+        Task task = withoutTheOutageHold(tasks.get(dispatch.task()), answered).dispatched();
         ProjectEntry project = registry.entryOf(task.intake().projects().getFirst());
         WorkerSettings settings = machine.workers();
         Route route = rulesFile.validatedAgainst(settings.models()).routeFor(task.intake().projects(), dispatch.category(), dispatch.captainsOverride());
@@ -146,7 +165,11 @@ public class LaunchWorker {
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
         BaseBranch base = task.intake().base() == null ? project.requireBase() : task.intake().base();
         return new Incarnation(task, project, dispatch, kind, worker, sessionFor(kind, task, earlier), earlier, route, base, settings,
-                craftRulesFor(project));
+                craftRulesFor(project), answered);
+    }
+
+    private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
+        return answered != null && task.isHeld() && answered.holds(task.hold()) ? task.released() : task;
     }
 
     private static UUID sessionFor(LaunchKind kind, Task task, Worker earlier) {
@@ -199,6 +222,7 @@ public class LaunchWorker {
                 incarnation.route(), window, new WorkerLaunch(incarnation.kind(), now, boot.current()));
         retireTheEarlierWorker(incarnation, now, actor);
         workers.insert(worker, token.digest());
+        settleTheOutageEntry(incarnation, now, actor);
         tasks.update(tasks.get(incarnation.task().id()).dispatched());
         dispatches.save(incarnation.dispatch().undeferred());
         events.record(launchEventOf(incarnation, worker, because), actor, now);
@@ -211,6 +235,20 @@ public class LaunchWorker {
             workers.update(earlier.retired(now));
             events.record(new WorkerRetired(earlier.id().task(), earlier.id(), retirementOf(incarnation.kind())), actor, now);
         }
+    }
+
+    private void settleTheOutageEntry(Incarnation incarnation, Instant now, Actor actor) {
+        OutageEntry answered = incarnation.answered();
+        if (answered == null) {
+            return;
+        }
+        Task task = tasks.get(answered.task());
+        Task released = withoutTheOutageHold(task, answered);
+        if (task.isHeld() && !released.isHeld()) {
+            tasks.update(released);
+            events.record(new TaskReleased(released.id()), actor, now);
+        }
+        outages.close(answered);
     }
 
     private static String retirementOf(LaunchKind kind) {
@@ -255,6 +293,7 @@ public class LaunchWorker {
             Route route,
             BaseBranch base,
             WorkerSettings settings,
-            String craftRules) {
+            String craftRules,
+            OutageEntry answered) {
     }
 }

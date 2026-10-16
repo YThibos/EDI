@@ -59,6 +59,12 @@ public class WakeStore {
                 .update());
     }
 
+    public void withdraw(List<QueuedWake> wakes) {
+        wakes.forEach(wake -> store.sql("update wake set delivered_to = null, delivered_at = null where number = :number and acknowledged_at is null")
+                .param("number", wake.number())
+                .update());
+    }
+
     private List<QueuedWake> wakes(StatementSpec query) {
         return query.query((row, _) -> queued(row)).list();
     }

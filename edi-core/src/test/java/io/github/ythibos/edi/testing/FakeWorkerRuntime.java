@@ -29,6 +29,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private Instant serverStartedAt = Instant.parse("2026-10-15T08:00:00Z");
     private UsageLimit limitInTheTranscript;
     private TokenUsage tokensInTheTranscript = TokenUsage.NONE;
+    private Runnable duringTheNextLaunch = () -> {
+    };
 
     @Override
     public String socket() {
@@ -38,6 +40,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     @Override
     public synchronized WorkerWindow launch(Launch launch) {
         launches.add(launch);
+        Runnable during = duringTheNextLaunch;
+        duringTheNextLaunch = () -> {
+        };
+        during.run();
         return openWindow();
     }
 
@@ -114,6 +120,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     public synchronized void loseTheServer() {
         openWindows.clear();
         serverRunning = false;
+    }
+
+    public synchronized void duringTheNextLaunch(Runnable meanwhile) {
+        duringTheNextLaunch = meanwhile;
     }
 
     public synchronized void transcriptEndsOn(UsageLimit limit) {

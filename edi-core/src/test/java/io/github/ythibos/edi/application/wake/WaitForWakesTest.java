@@ -61,6 +61,17 @@ class WaitForWakesTest {
     }
 
     @Test
+    void deliversAgainWhatAnExpiredWaitWithdrew() {
+        UUID primary = primarySession();
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        home.waitForWakes().withdraw(home.waitForWakes().deliverTo(primary).orElseThrow());
+
+        WakeDelivery redelivered = home.waitForWakes().deliverTo(primary).orElseThrow();
+
+        assertThat(redelivered.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
+    }
+
+    @Test
     void deliversAgainToANewPrimaryWhatTheLastOneNeverAcknowledged() {
         UUID crashed = primarySession();
         home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");

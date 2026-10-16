@@ -11,7 +11,7 @@ ADR-011 lets each follow-up of a command run after commit, with a relay re-deliv
 A wake is read by one consumer, the primary, which pulls it, so nothing has to be pushed outwards.
 
 **Decision:** `EventLog.record` asks `WakeRule.wakeFor` about every event and, for a wake, inserts a `wake` row in the same transaction, then publishes `WakeQueued`; `WakeSignal` hears it after commit and wakes every parked `edi wait`.
-`WakeRule` decides once per event type, in one exhaustive switch: a worker's `needs-decision`, `blocked`, `failed` or `done`, a dead worker, an outage entry, a stale, over-long or ended wait, a launch that failed, a steer not received, a usage limit and its held-back resume, a mechanical check's outcome, a local branch delivery, a failed recovery and a hold whose date arrived; nothing the primary itself caused wakes it.
+`WakeRule` decides once per event type, in one exhaustive switch, and wakes only for the list of section 12.3 and the health rules of section 12.2: a worker's `needs-decision`, `blocked`, `failed` or `done`, a dead worker or an outage entry, a stale worker, a busy worker past its ceiling, an ended wait, a launch that failed, a usage limit and its held-back resume, and a hold whose date arrived; every other event is routine, and nothing the primary itself caused wakes it.
 `POST /api/wait` answers only the session that holds the primary role: it first acknowledges every wake it delivered to that session before, then delivers every unacknowledged wake, or parks for up to 25 seconds and answers 204; `edi wait` asks again after a 204, retries for a minute while the core does not answer, and exits printing the digest.
 A wake delivered to a session that crashed stays unacknowledged, so the next primary receives it again.
 

@@ -66,7 +66,9 @@ class WaitController {
 
         private void delivered(WakeDelivery delivery) {
             signal.forget(this);
-            result.setResult(ResponseEntity.ok(delivery));
+            if (!result.setResult(ResponseEntity.ok(delivery))) {
+                waits.withdraw(delivery);
+            }
         }
     }
 }

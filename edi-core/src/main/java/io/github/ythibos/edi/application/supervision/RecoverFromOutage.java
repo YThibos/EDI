@@ -24,8 +24,6 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
-import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
-import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
@@ -65,10 +63,11 @@ public class RecoverFromOutage {
     public synchronized Launched answer(int number, RecoveryAction action, RouteChange change, Actor actor) {
         requireNoUsageLimitInForce();
         Choice choice = transaction.execute(_ -> chosen(number, action, change, actor));
+        OutageEntry entry = choice.entry();
         try {
-            return launcher.relaunch(choice.entry().task(), launchKindOf(action), choice.captainsOverride(), choice.entry().cause().sentence(), actor);
+            return launcher.relaunch(entry.task(), launchKindOf(action), choice.captainsOverride(), entry, entry.cause().sentence(), actor);
         } catch (RuntimeException failed) {
-            transaction.executeWithoutResult(_ -> restored(choice, failed.getMessage(), actor));
+            transaction.executeWithoutResult(_ -> events.record(new RecoveryFailed(entry.task(), number, failed.getMessage()), Actor.CORE, clock.now()));
             throw new Refusal("Number " + number + " on the outage hold list could not be relaunched, so it stays on the list: " + failed.getMessage());
         }
     }
@@ -87,19 +86,13 @@ public class RecoverFromOutage {
     }
 
     private Choice chosen(int number, RecoveryAction action, RouteChange change, Actor actor) {
-        Instant now = clock.now();
         OutageEntry entry = outages.numbered(number).orElseThrow(() -> new Refusal("The outage hold list has no number " + number + "."));
         Task task = tasks.get(entry.task());
         if (task.isHeld() && !entry.holds(task.hold())) {
             throw new Refusal(task.id() + " is also held: " + task.hold().reason() + ". Settle that first.");
         }
-        if (task.isHeld()) {
-            tasks.update(task.released());
-            events.record(new TaskReleased(task.id()), actor, now);
-        }
-        outages.close(entry);
-        events.record(new RecoveryChosen(task.id(), number, action), actor, now);
-        return new Choice(entry, task.isHeld(), captainsOverrideOf(task, number, change));
+        events.record(new RecoveryChosen(task.id(), number, action), actor, clock.now());
+        return new Choice(entry, captainsOverrideOf(task, number, change));
     }
 
     private CaptainOverride captainsOverrideOf(Task task, int number, RouteChange change) {
@@ -118,18 +111,6 @@ public class RecoverFromOutage {
         };
     }
 
-    private void restored(Choice choice, String because, Actor actor) {
-        Instant now = clock.now();
-        OutageEntry entry = choice.entry();
-        outages.list(entry);
-        if (choice.wasHeld()) {
-            Task held = tasks.get(entry.task()).held(entry.hold());
-            tasks.update(held);
-            events.record(new TaskHeld(held.id(), held.hold()), actor, now);
-        }
-        events.record(new RecoveryFailed(entry.task(), entry.number(), because), Actor.CORE, now);
-    }
-
     public record RouteChange(ModelId model, EffortLevel effort) {
 
         public boolean isEmpty() {
@@ -137,6 +118,6 @@ public class RecoverFromOutage {
         }
     }
 
-    private record Choice(OutageEntry entry, boolean wasHeld, CaptainOverride captainsOverride) {
+    private record Choice(OutageEntry entry, CaptainOverride captainsOverride) {
     }
 }

@@ -26,6 +26,9 @@ public sealed interface WorkerHealth {
     record Stopped(Instant at) implements WorkerHealth {
     }
 
+    record LaunchFailed(Instant at) implements WorkerHealth {
+    }
+
     record Finished() implements WorkerHealth {
     }
 

@@ -27,11 +27,17 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
         if (worker.stopRequestedAt() != null) {
             return new WorkerHealth.Stopped(worker.stopRequestedAt());
         }
+        if (worker.launchFailedAt() != null) {
+            return new WorkerHealth.LaunchFailed(worker.launchFailedAt());
+        }
+        if (worker.handedItsWorkOver()) {
+            return new WorkerHealth.Finished();
+        }
         if (worker.launch().happenedBefore(currentBoot)) {
             return new WorkerHealth.Dead(DeathCause.MACHINE_RESTARTED);
         }
         if (!window.isOpen()) {
-            return worker.handedItsWorkOver() ? new WorkerHealth.Finished() : new WorkerHealth.Dead(DeathCause.of(window));
+            return new WorkerHealth.Dead(DeathCause.of(window));
         }
         if (worker.limitPark() != null) {
             return new WorkerHealth.LimitParked(worker.limitPark().limit());
@@ -45,7 +51,7 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
             case WorkerHealth.Busy busy -> busyTooLong(busy, now);
             case WorkerHealth.Idle _ -> waitEnded(worker, now).or(() -> stale(worker, messageWaiting, now));
             case WorkerHealth.Starting _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _, WorkerHealth.Stopped _,
-                    WorkerHealth.Finished _ -> Optional.empty();
+                    WorkerHealth.LaunchFailed _, WorkerHealth.Finished _ -> Optional.empty();
         };
     }
 

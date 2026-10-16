@@ -59,4 +59,8 @@ public class WaitForWakes {
             return Optional.of(new WakeDelivery(pending, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(), outages.open().size()));
         });
     }
+
+    public void withdraw(WakeDelivery undelivered) {
+        transaction.executeWithoutResult(_ -> wakes.withdraw(undelivered.wakes()));
+    }
 }

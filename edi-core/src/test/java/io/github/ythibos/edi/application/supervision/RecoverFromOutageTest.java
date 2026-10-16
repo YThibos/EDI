@@ -11,6 +11,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
@@ -25,10 +26,14 @@ import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
 @Tag("adapter")
 class RecoverFromOutageTest {
+
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
 
     @TempDir
     private Path directory;
@@ -86,6 +91,37 @@ class RecoverFromOutageTest {
         assertThat(home.outages().numbered(2)).map(entry -> entry.task().value()).contains("tune-horn");
         assertThat(home.tasks().get(new TaskId("tune-horn")).isHeld()).isTrue();
         assertThat(home.eventTypesOf(new TaskId("tune-horn"))).contains("RecoveryChosen", "RecoveryFailed");
+    }
+
+    @Test
+    void keepsTheEntryAndItsHoldUntilTheRelaunchIsRecorded() {
+        home.runtime().duringTheNextLaunch(() -> {
+            home.judgeWorkers().judge();
+            assertThat(home.outages().open()).extracting(entry -> entry.number() + " " + entry.task()).containsExactly("1 fit-lamp", "2 tune-horn");
+            assertThat(home.tasks().get(new TaskId("tune-horn")).isHeld()).isTrue();
+        });
+
+        home.recoverFromOutage().answer(2, RecoveryAction.RESUME, null, Actor.PRIMARY);
+
+        assertThat(home.outages().open()).extracting(entry -> entry.number() + " " + entry.task()).containsExactly("1 fit-lamp");
+        assertThat(home.tasks().get(new TaskId("tune-horn")).isHeld()).isFalse();
+        assertThat(home.eventTypesOf(new TaskId("tune-horn"))).containsOnlyOnce("LostInOutage", "TaskReleased");
+    }
+
+    @Test
+    void refusesToRelaunchACopyAProcessStillWorksIn() throws IOException {
+        Path copy = home.home().root().resolve("worktrees/harness/tune-horn");
+        Process survivor = processes.register(new ProcessBuilder("sleep", "30").directory(copy.toFile()).start());
+        int launches = home.runtime().launches().size();
+
+        assertThatThrownBy(() -> home.recoverFromOutage().answer(2, RecoveryAction.RESUME, null, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessageContaining("Processes [" + survivor.pid() + "] still work in " + copy);
+
+        assertThat(home.runtime().launches()).hasSize(launches);
+        assertThat(home.outages().numbered(2)).isPresent();
+        assertThat(home.tasks().get(new TaskId("tune-horn")).isHeld()).isTrue();
+        survivor.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(survivor.toHandle())).isTrue();
     }
 
     @Test

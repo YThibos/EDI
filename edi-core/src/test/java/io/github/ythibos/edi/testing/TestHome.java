@@ -310,9 +310,9 @@ public final class TestHome {
     }
 
     public LaunchWorker launchWorker() {
-        return new LaunchWorker(home, tasks, dispatches, workers, events, registry, machineProfile(), dispatchRulesFile(), isolatedCopies(),
-                workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), workerTokens(), runtime, machineBoot(),
-                clock, transaction);
+        return new LaunchWorker(home, tasks, dispatches, workers, outages, events, registry, machineProfile(), dispatchRulesFile(), isolatedCopies(),
+                workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), workerTokens(), runtime, processes,
+                machineBoot(), clock, transaction);
     }
 
     public DispatchTask dispatchTask() {
@@ -427,7 +427,7 @@ public final class TestHome {
     }
 
     public RelaunchWorker relaunchWorker() {
-        return new RelaunchWorker(tasks, workers, workerList(), processes, launchWorker(), home, transaction);
+        return new RelaunchWorker(tasks, workers, workerList(), launchWorker(), transaction);
     }
 
     public StopWorker stopWorker() {

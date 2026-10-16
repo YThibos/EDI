@@ -17,6 +17,7 @@ public final class HealthWords {
             case WorkerHealth.Waiting waiting -> "waiting until " + Moments.minute(waiting.until());
             case WorkerHealth.LimitParked parked -> "parked on " + limit(parked.limit());
             case WorkerHealth.Stopped stopped -> "stopped by EDI at " + Moments.minute(stopped.at());
+            case WorkerHealth.LaunchFailed failed -> "launch failed at " + Moments.minute(failed.at());
             case WorkerHealth.Finished _ -> "finished";
             case WorkerHealth.Dead dead -> "dead: " + dead.cause().sentence();
         };

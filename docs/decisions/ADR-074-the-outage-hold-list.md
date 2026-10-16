@@ -13,7 +13,7 @@ Dropping a task needs the captain's word, which arrives with slice S8.
 **Decision:** When the supervision round finds two or more dead workers, `OutageHoldList` lists every one not yet listed in `outage_entry`, numbered after the highest open number, notices its death, holds its task for the captain's approval until his word unless something else already holds it, and records `LostInOutage`, which wakes the primary; one dead worker alone records `WorkerDied` instead.
 `edi recover` lists every dead worker, however many, and prints the list; `edi recover <n> resume|fresh [--model M] [--effort E]` answers one entry.
 `OutageListQuery` fills each entry from the store and verifies the copy with git: commits on no remote and uncommitted changes, or "not verified" when git cannot read it.
-`RecoverFromOutage` refuses while a live worker or the primary is parked on a usage limit that still holds, closes the entry and releases its hold, then relaunches; a relaunch that fails puts the entry back under its number and records `RecoveryFailed`.
+`RecoverFromOutage` refuses while a live worker or the primary is parked on a usage limit that still holds, then relaunches with the entry and its hold in place, so a supervision round meanwhile cannot list the task again; the transaction that records the relaunched worker releases the hold and closes the entry, and a relaunch that fails leaves both and records `RecoveryFailed`.
 A model or effort the captain names becomes the dispatch's captain override, with his answer as its reason.
 
 **Motivation:** An outage is answered by the captain entry by entry, with what he needs to choose on the list itself, so no restart storm can follow a lost machine.

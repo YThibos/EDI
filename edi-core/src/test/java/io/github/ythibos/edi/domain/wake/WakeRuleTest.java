@@ -6,9 +6,14 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
@@ -54,6 +59,10 @@ class WakeRuleTest {
     @Test
     void neverWakesThePrimaryForRoutineEventsOrForWhatThePrimaryDidItself() {
         assertThat(WakeRule.wakeFor(new SteerReceived(TASK, 1, "stop hook"), THE_WORKER)).isEmpty();
+        assertThat(WakeRule.wakeFor(new SteerNotReceived(TASK, 1), Actor.CORE)).isEmpty();
+        assertThat(WakeRule.wakeFor(new MechanicalChangeAccepted(TASK, WORKER), Actor.CORE)).isEmpty();
+        assertThat(WakeRule.wakeFor(new BranchDeliveredToCaptain(TASK, BranchName.parse("feature/HRN-14")), Actor.CORE)).isEmpty();
+        assertThat(WakeRule.wakeFor(new RecoveryFailed(TASK, 2, "the copy is missing"), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new TaskNoted(TASK, "A note."), Actor.PRIMARY)).isEmpty();
         assertThat(WakeRule.wakeFor(status(StatusState.DONE, null), Actor.PRIMARY)).isEmpty();
         assertThat(WakeRule.wakeFor(new WorkerDied(TASK, WORKER, DeathCause.WINDOW_CLOSED), Actor.PRIMARY)).isEmpty();
