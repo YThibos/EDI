@@ -42,7 +42,8 @@ class ArchitectureRulesTest {
             "TMUX", "io.github.ythibos.edi.adapter.runtime..",
             "CLAUDE_CODE", "io.github.ythibos.edi.adapter.runtime..",
             "GLAB", "io.github.ythibos.edi.adapter.forge..",
-            "GH", "io.github.ythibos.edi.adapter.forge..");
+            "GH", "io.github.ythibos.edi.adapter.forge..",
+            "SHELL", "io.github.ythibos.edi.adapter.build..");
 
     @ArchTest
     static final ArchRule theDomainDependsOnlyOnItselfAndTheCoreJavaLibrary = classes()

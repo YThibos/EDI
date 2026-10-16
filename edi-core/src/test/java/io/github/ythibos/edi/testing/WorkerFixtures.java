@@ -1,0 +1,95 @@
+package io.github.ythibos.edi.testing;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.UUID;
+
+import io.github.ythibos.edi.domain.branch.BranchKind;
+import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+
+public final class WorkerFixtures {
+
+    public static final String CRAFT_RULES = """
+            Craftsmanship rules this change must meet; review it against them as acceptance criteria:
+            - Methods are short and do one thing at one level of abstraction.
+            """;
+    public static final String MACHINE_PROFILE = """
+            workers:
+              models:
+                - id: claude-opus-5-5
+                - id: claude-sonnet-5-5
+                - id: claude-haiku-5-5
+                  ignoresEffort: true
+            """;
+    private static final String REGISTRY = """
+            projects:
+              - name: harness
+                tracker: { kind: edi, projectKey: HRN }
+                base: main
+                craftRules: true
+                aiScaffolding: committed
+                verify: "true"
+              - name: EDI
+                tracker: { kind: edi, projectKey: EDI }
+                base: main
+                craftRules: true
+            """;
+
+    private WorkerFixtures() {
+    }
+
+    public static TestHome homeWithProjects(Path directory) throws IOException {
+        TestHome home = TestHome.in(directory.resolve("home"));
+        cloneOf(directory, home, "harness");
+        cloneOf(directory, home, "EDI");
+        return home.registering(REGISTRY)
+                .writing("config/machine.yaml", MACHINE_PROFILE)
+                .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))
+                .writing("memory/craft-rules.md", CRAFT_RULES);
+    }
+
+    public static Task queuedShip(String id, String project, String key) {
+        return queued(id, TaskKind.SHIP, project, key);
+    }
+
+    public static Task queued(String id, TaskKind kind, String project, String key) {
+        Intake intake = new Intake(kind, "Work on " + id, List.of(new ProjectName(project)), key == null ? null : WorkKey.parse(key), null, List.of());
+        return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
+    }
+
+    public static Worker servingWorkerOn(TestHome home, Task task, CategoryId category) {
+        home.storing(List.of(task));
+        home.putInFlight(task.id());
+        ExpectedChange expected = category.isMechanical() ? new ExpectedChange("Rename lamp to lantern.", List.of("src/Lamp.java")) : null;
+        home.dispatches().save(Dispatch.requested(task.id(), category, BranchName.forWork(BranchKind.FEATURE, task.intake().workKey()), "",
+                expected, null, TestHome.START));
+        Worker worker = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), category,
+                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), home.runtime().openWindow(), TestHome.START);
+        home.workers().insert(worker, "digest-of-" + task.id());
+        return worker;
+    }
+
+    private static void cloneOf(Path directory, TestHome home, String project) throws IOException {
+        Path upstream = Files.createDirectories(directory.resolve("upstream").resolve(project));
+        FixtureRepository.initialise(upstream)
+                .write("README.md", project + "\n")
+                .commit("Start " + project)
+                .clonedInto(home.home().root().resolve("projects").resolve(project));
+    }
+}

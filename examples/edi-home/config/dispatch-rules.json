@@ -1,0 +1,63 @@
+{
+  "schema": "edi-dispatch.v2",
+  "projectOverrides": [
+    {
+      "project": "EDI",
+      "use": { "model": "claude-opus-5-5", "effort": "high" },
+      "why": "Every research and implementation task on EDI itself runs on Opus 5.5 at high effort: nothing more, nothing less."
+    }
+  ],
+  "categories": [
+    {
+      "id": "research",
+      "when": "Research, design, specification, plans and story breakdowns, investigation of an unknown cause, audits and reproduction.",
+      "use": { "model": "claude-opus-5-5", "effort": "high" },
+      "why": "A wrong plan or diagnosis costs a whole implementation round.",
+      "branch": "research"
+    },
+    {
+      "id": "implementation",
+      "when": "Features and stories, refactors and structural sweeps, backend and frontend, with a settled plan from a research task.",
+      "use": { "model": "claude-sonnet-5-5", "effort": "high" },
+      "why": "The hard reasoning is already written down in the plan; high effort because the change must be right first time."
+    },
+    {
+      "id": "implementation-unplanned",
+      "when": "The same work when no settled plan exists, such as full-stack stories and broad sweeps.",
+      "use": { "model": "claude-opus-5-5", "effort": "high" },
+      "why": "The worker holds domain rules, layers and acceptance criteria at once, with no plan to lean on."
+    },
+    {
+      "id": "bugfix",
+      "when": "A defect whose cause is established by a report, a stack trace naming the fault, or the captain; an unknown cause is research first.",
+      "use": { "model": "claude-sonnet-5-5", "effort": "high" },
+      "why": "The cause is known, and the regression test must be right first time."
+    },
+    {
+      "id": "documentation",
+      "when": "Prose documentation, decision records and story text in a repository.",
+      "use": { "model": "claude-sonnet-5-5", "effort": "low" },
+      "why": "Well-defined formats that a reviewer reads in full."
+    },
+    {
+      "id": "operations",
+      "when": "CI/CD and pipeline changes, builds and deployments, dependency upgrades, tracker operations, developer tooling and onboarding scripts.",
+      "use": { "model": "claude-sonnet-5-5", "effort": "medium" },
+      "why": "Failures here have been non-obvious, such as proxies, DNS and wrong remotes, so medium rather than low.",
+      "branch": "chore"
+    },
+    {
+      "id": "mechanical",
+      "when": "A single obvious outcome a reviewer verifies at a glance: a rename with a known target, a formatting sweep, a typo, a one-value configuration change.",
+      "use": { "model": "claude-haiku-5-5" },
+      "why": "The token saver, made foolproof: the brief names the exact change and files, and the done is checked before it is accepted.",
+      "branch": "chore"
+    },
+    {
+      "id": "review-fix",
+      "when": "A small change request on a branch already delivered, under about fifty lines, with the design settled.",
+      "use": { "model": "claude-sonnet-5-5", "effort": "medium" },
+      "why": "A fresh worker fixes the one thing without paying again for a long earlier context."
+    }
+  ]
+}

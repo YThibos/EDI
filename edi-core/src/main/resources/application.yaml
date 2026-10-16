@@ -1,5 +1,8 @@
 edi:
   home: ${EDI_HOME:${user.home}/.edi}
+  workers:
+    socket: edi
+    claude-config: ${CLAUDE_CONFIG_DIR:${user.home}}
 
 server:
   address: 127.0.0.1

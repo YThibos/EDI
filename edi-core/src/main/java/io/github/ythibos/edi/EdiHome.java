@@ -5,6 +5,10 @@ import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+
 @Component
 public final class EdiHome {
 
@@ -36,5 +40,37 @@ public final class EdiHome {
 
     public Path publishDenyList() {
         return root.resolve("config").resolve("publish-denylist");
+    }
+
+    public Path machineProfile() {
+        return root.resolve("config").resolve("machine.yaml");
+    }
+
+    public Path dispatchRules() {
+        return root.resolve("config").resolve("dispatch-rules.json");
+    }
+
+    public Path personalConfiguration() {
+        return root.resolve("config").resolve("personal.yaml");
+    }
+
+    public Path craftRules() {
+        return root.resolve("memory").resolve("craft-rules.md");
+    }
+
+    public Path worktrees() {
+        return root.resolve("worktrees");
+    }
+
+    public Path worktreeOf(ProjectName project, TaskId task) {
+        return worktrees().resolve(project.value()).resolve(task.value());
+    }
+
+    public Path taskDirectory(TaskId task) {
+        return root.resolve("data").resolve("tasks").resolve(task.value());
+    }
+
+    public Path workerState(WorkerId worker) {
+        return root.resolve("state").resolve("workers").resolve(worker.task().value() + "-" + worker.incarnation());
     }
 }

@@ -17,9 +17,9 @@ import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskList;
 import io.github.ythibos.edi.application.task.TaskListQuery;
 import io.github.ythibos.edi.domain.decision.TaskReference;
-import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.web.Confirmation;
+import io.github.ythibos.edi.web.access.Caller;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -44,8 +44,9 @@ class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    Confirmation add(@RequestBody AddTaskRequest request) {
-        return new Confirmation.Queued(addTask.add(request.newTask(), Actor.PRIMARY));
+    Confirmation add(@RequestBody AddTaskRequest request, Caller caller) {
+        caller.requirePrimary("edi task add");
+        return new Confirmation.Queued(addTask.add(request.newTask(), caller.actor()));
     }
 
     @GetMapping("/{reference}")
@@ -54,7 +55,8 @@ class TaskController {
     }
 
     @PostMapping("/{reference}/notes")
-    Confirmation note(@PathVariable String reference, @RequestBody NoteRequest request) {
-        return new Confirmation.Noted(noteTask.note(TaskReference.parse(reference), request.text(), Actor.PRIMARY));
+    Confirmation note(@PathVariable String reference, @RequestBody NoteRequest request, Caller caller) {
+        caller.requirePrimary("edi task note");
+        return new Confirmation.Noted(noteTask.note(TaskReference.parse(reference), request.text(), caller.actor()));
     }
 }

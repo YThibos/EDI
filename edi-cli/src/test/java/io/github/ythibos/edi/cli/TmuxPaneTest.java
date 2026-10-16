@@ -22,8 +22,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.TestProcesses;
 import picocli.CommandLine;
 
 @Tag("adapter")
@@ -32,12 +34,16 @@ class TmuxPaneTest {
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final int PANE_COLUMNS = 90;
 
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
+
     @TempDir
     private Path home;
 
     private StubCore core;
     private final String server = "edi-test-" + UUID.randomUUID();
     private String socket;
+    private ProcessHandle serverProcess;
 
     @BeforeEach
     void startTheStubCore() throws IOException {
@@ -49,6 +55,7 @@ class TmuxPaneTest {
         core.close();
         if (socket != null) {
             run(tmux("kill-server"));
+            TestProcesses.awaitExit(serverProcess);
             Files.deleteIfExists(Path.of(socket));
         }
     }
@@ -58,6 +65,8 @@ class TmuxPaneTest {
         assumeTrue(isInstalled(), "tmux is not installed");
         assertThat(run(tmux("-f", "/dev/null", "new-session", "-d", "-s", "probe", "-x", Integer.toString(PANE_COLUMNS), "-y", "24")).exitCode()).isZero();
         socket = run(tmux("display-message", "-p", "-t", "probe", "#{socket_path}")).output().strip();
+        serverProcess = ProcessHandle.of(Long.parseLong(run(tmux("display-message", "-p", "-t", "probe", "#{pid}")).output().strip())).orElseThrow();
+        processes.register(serverProcess.pid());
         String pane = run(tmux("display-message", "-p", "-t", "probe", "#{pane_id}")).output().strip();
 
         int exitCode = edi(Map.of("EDI_HOME", home.toString(), "TMUX", socket + ",0,0", "TMUX_PANE", pane), "sitrep");
@@ -74,7 +83,7 @@ class TmuxPaneTest {
         assertThat(core.received().target()).isEqualTo("/api/report");
     }
 
-    private static boolean isInstalled() {
+    private boolean isInstalled() {
         try {
             return run(List.of("tmux", "-V")).exitCode() == 0;
         } catch (Exception missing) {
@@ -93,8 +102,8 @@ class TmuxPaneTest {
                 .execute(arguments);
     }
 
-    private static ProgramRun run(List<String> commandLine) throws IOException, InterruptedException {
-        Process program = new ProcessBuilder(commandLine).redirectErrorStream(true).start();
+    private ProgramRun run(List<String> commandLine) throws IOException, InterruptedException {
+        Process program = processes.register(new ProcessBuilder(commandLine).redirectErrorStream(true).start());
         program.getOutputStream().close();
         if (!program.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
             program.destroyForcibly();

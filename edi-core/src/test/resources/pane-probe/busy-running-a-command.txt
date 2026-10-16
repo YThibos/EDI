@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.301
+▝▜██████▀  Sonnet 5.5 with low effort · Claude Team
+ ▝▝   ▝▝   /…/.edi/worktrees/harness/probe-task
+
+
+❯ Use the Bash tool to run exactly this command and nothing else: sleep 20 && echo finished
+
+  Ran 1 shell command
+
+● The command ran and printed finished after the 20-second sleep.
+
+✻ Crunched for 25s · done 08:47Z
+
+❯ Use the Bash tool to run exactly this command and nothing else: mkdir -p probe-dir && touch probe-dir/marker
+
+  Running 1 shell command…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+✶ Hullaballooing…
+  ⎿  Tip: Use git worktrees to run multiple Claude sessions in parallel.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

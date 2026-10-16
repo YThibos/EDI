@@ -68,6 +68,17 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
                 : withHold(null);
     }
 
+    public Task dispatched() {
+        refuseWhenClosed();
+        if (intake.kind() == TaskKind.CAPTAIN) {
+            throw new Refusal(id + " is a captain item; only ships and scouts get a worker.");
+        }
+        if (isHeld()) {
+            throw new Refusal(id + " is held: " + hold.reason() + ". Release it before dispatching it.");
+        }
+        return state == TaskState.IN_FLIGHT ? this : new Task(id, intake, TaskState.IN_FLIGHT, notes, hold, created, closed);
+    }
+
     public Task dropped(CaptainsWord word, Instant at) {
         Objects.requireNonNull(word, () -> id + " is dropped only on the captain's word.");
         if (state == TaskState.DROPPED) {

@@ -1,0 +1,75 @@
+#!/bin/sh
+set -u
+
+session=""
+prompt=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --session-id) session=$2; shift 2 ;;
+        --) prompt=$2; shift 2 ;;
+        --dangerously-skip-permissions) shift ;;
+        --disallowedTools | --add-dir)
+            shift
+            while [ "$#" -gt 0 ] && [ "${1#--}" = "$1" ]; do shift; done
+            ;;
+        *) shift 2 ;;
+    esac
+done
+
+json_string() {
+    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk 'BEGIN { ORS = "" } NR > 1 { print "\\n" } { print }'
+}
+
+hook() {
+    printf '{"session_id":"%s","hook_event_name":"%s","cwd":"%s"%s}' "$session" "$1" "$(json_string "$PWD")" "$2" | edi hook "$3"
+}
+
+read_the_inbox() {
+    edi inbox
+    edi inbox | sed -n 's/^Message \([0-9][0-9]*\).*/\1/p' | while read -r number; do edi inbox ack "$number"; done
+}
+
+run_tool() {
+    answer=$(hook PreToolUse ",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$(json_string "$1")\"}" pre-tool-use)
+    case "$answer" in
+        *'"deny"'*) printf 'EDI refused: %s\n' "$1" ;;
+        *) sh -c "$1" ;;
+    esac
+}
+
+run_the_brief() {
+    brief=${1#*brief waiting: read }
+    brief=${brief% and follow it}
+    commands=$(mktemp)
+    sed -n 's/^stub-run: //p' "$brief" > "$commands"
+    while IFS= read -r command; do run_tool "$command" < /dev/null; done < "$commands"
+    rm -f "$commands"
+}
+
+stop() {
+    answer=$(hook Stop ',"stop_hook_active":false' stop)
+    case "$answer" in
+        *'"block"'*) read_the_inbox; hook Stop ',"stop_hook_active":true' stop > /dev/null ;;
+    esac
+}
+
+turn() {
+    hook UserPromptSubmit ",\"prompt\":\"$(json_string "$1")\"" user-prompt-submit > /dev/null
+    case "$1" in
+        *"brief waiting: read "*) run_the_brief "$1" ;;
+        *"waiting: run edi inbox"*) read_the_inbox ;;
+    esac
+    stop
+}
+
+show_the_idle_prompt() {
+    printf '%s\n%s\n%s\n' "────────────────────" "❯" "────────────────────"
+}
+
+hook SessionStart ',"source":"startup"' session-start > /dev/null
+turn "$prompt"
+show_the_idle_prompt
+while IFS= read -r line; do
+    turn "$line"
+    show_the_idle_prompt
+done

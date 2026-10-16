@@ -2,12 +2,17 @@ package io.github.ythibos.edi.adapter.git;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.Program;
+import io.github.ythibos.edi.adapter.process.ProgramRun;
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.OutgoingCommit;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
@@ -26,6 +31,56 @@ public class Git {
 
     public Path topLevel(Path repository) {
         return Path.of(git(repository, "rev-parse", "--show-toplevel").strip());
+    }
+
+    public Path gitDirectory(Path repository) {
+        return Path.of(git(repository, "rev-parse", "--absolute-git-dir").strip());
+    }
+
+    public Path commonDirectory(Path repository) {
+        return Path.of(git(repository, "rev-parse", "--path-format=absolute", "--git-common-dir").strip());
+    }
+
+    public boolean isRepository(Path directory) {
+        return directory.toFile().isDirectory() && run(directory, "rev-parse", "--is-inside-work-tree").succeeded();
+    }
+
+    public void fetchOrigin(Path clone) {
+        git(clone, "fetch", "--quiet", "origin");
+    }
+
+    public boolean hasRef(Path repository, String ref) {
+        return run(repository, "rev-parse", "--verify", "--quiet", ref + "^{commit}").succeeded();
+    }
+
+    public void addWorktreeOnNewBranch(Path clone, Path worktree, BranchName branch, String startPoint) {
+        git(clone, "worktree", "add", "--quiet", "-b", branch.toString(), worktree.toString(), startPoint);
+    }
+
+    public void addWorktreeOnBranch(Path clone, Path worktree, BranchName branch) {
+        git(clone, "worktree", "add", "--quiet", worktree.toString(), branch.toString());
+    }
+
+    public String currentBranch(Path worktree) {
+        return git(worktree, "symbolic-ref", "--quiet", "--short", "HEAD").strip();
+    }
+
+    public void enableWorktreeConfiguration(Path clone) {
+        git(clone, "config", "extensions.worktreeConfig", "true");
+    }
+
+    public void configureWorktree(Path worktree, String key, String value) {
+        git(worktree, "config", "--worktree", key, value);
+    }
+
+    public Set<String> changedFiles(Path worktree, String base) {
+        Set<String> changed = new TreeSet<>(nulSeparated(git(worktree, "diff", "--name-only", "-z", "--no-renames", base + "...HEAD", "--")));
+        changed.addAll(nulSeparated(git(worktree, "ls-files", "-z", "--modified", "--others", "--deleted", "--exclude-standard")));
+        return changed;
+    }
+
+    public void fetchBranchInto(Path checkout, Path worktree, BranchName branch) {
+        git(checkout, "fetch", "--quiet", worktree.toString(), branch + ":" + branch);
     }
 
     public OutgoingChanges outgoingChanges(Path repository, RevisionRange outgoing) {
@@ -60,9 +115,17 @@ public class Git {
                 "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames", "--src-prefix=a/", "--dst-prefix=b/", id);
     }
 
+    private static Set<String> nulSeparated(String output) {
+        return Stream.of(output.split(NUL)).filter(path -> !path.isEmpty()).collect(Collectors.toSet());
+    }
+
     private String git(Path repository, String... arguments) {
+        return run(repository, arguments).outputOfSuccess();
+    }
+
+    private ProgramRun run(Path repository, String... arguments) {
         List<String> commandLine = Stream.concat(Stream.of("-c", "core.quotePath=false", "-c", "color.ui=never"), Stream.of(arguments))
                 .toList();
-        return programs.run(Program.GIT, repository, commandLine).outputOfSuccess();
+        return programs.run(Program.GIT, repository, commandLine);
     }
 }

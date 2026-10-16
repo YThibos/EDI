@@ -9,6 +9,10 @@ projects:
     branchKinds: [feature, chore, research]
     craftRules: true
     aiScaffolding: committed
+    capacity: 2
+    largeBuilds: true
+    verify: ./mvnw -B verify
+    shipBriefRules: [decision-log-adr, no-explanatory-comments]
   - name: EDI
     forge: { kind: github, path: example-owner/EDI, account: example-owner }
     base: main
@@ -18,5 +22,7 @@ projects:
     aiScaffolding: committed
   - name: hobby-tool
     clone: ~/.edi/projects/hobby-tool
+    captainCheckout: /path/to/checkouts/hobby-tool
+    base: main
     delivery: local-branch
     tracker: { kind: edi, projectKey: HOBBY }

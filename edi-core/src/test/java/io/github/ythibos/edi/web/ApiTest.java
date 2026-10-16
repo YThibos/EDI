@@ -13,17 +13,35 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Instant;
 import java.util.Comparator;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import io.github.ythibos.edi.adapter.store.DispatchStore;
+import io.github.ythibos.edi.adapter.store.WorkerStore;
+import io.github.ythibos.edi.application.worker.WorkerTokens;
+import io.github.ythibos.edi.domain.branch.BranchKind;
+import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Intakes;
@@ -37,9 +55,19 @@ class ApiTest {
     private static final String TEXT = "text/plain";
     private static final String JSON = "application/json";
 
+    @Autowired
+    private WorkerStore workers;
+
+    @Autowired
+    private DispatchStore dispatches;
+
+    @Autowired
+    private WorkerTokens workerTokens;
+
     @DynamicPropertySource
     static void useTheTemporaryHome(DynamicPropertyRegistry properties) {
         properties.add("edi.home", HOME::toString);
+        properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
     }
 
     @AfterAll
@@ -56,7 +84,7 @@ class ApiTest {
         HttpResponse<String> refused = send(HttpRequest.newBuilder(uri("/api/backlog")).GET());
 
         assertThat(refused.statusCode()).isEqualTo(401);
-        assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home.\n");
+        assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, or the token EDI gave a worker at launch.\n");
         assertThat(send(HttpRequest.newBuilder(uri("/api/health")).GET()).statusCode()).isEqualTo(200);
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(HOME.resolve("state/core.token")))).isEqualTo("rw-------");
     }
@@ -170,6 +198,64 @@ class ApiTest {
 
         assertThat(plan.statusCode()).isEqualTo(200);
         assertThat(plan.body()).contains("Tasks to import (15)", "the first new decision is D58");
+    }
+
+    @Test
+    void tellsAWorkerFromThePrimaryByItsTokenAndKeepsEachToItsCommands() throws Exception {
+        String worker = workerTokenFor("api-worker");
+
+        HttpResponse<String> status = send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"state\":\"working\",\"text\":\"Fitting the lamp.\"}")));
+
+        assertThat(status.statusCode()).isEqualTo(200);
+        assertThat(status.body()).isEqualTo("Recorded working for api-worker#1.\n");
+        assertRefusal(send(as(worker, "/api/tasks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Sneak in\"}"))),
+                403, "edi task add is the primary's to run; a worker reports through edi status and reads edi inbox.");
+        assertRefusal(post("/api/status", "{\"state\":\"working\",\"text\":\"x\"}", TEXT),
+                403, "edi status is a worker's command: it runs under the token EDI gives a worker at launch.");
+        assertThat(send(as("not-a-token", "/api/inbox", TEXT).GET()).statusCode()).isEqualTo(401);
+        assertThat(send(as(worker, "/api/inbox", TEXT).GET()).body()).isEqualTo("No message waits for you.\n");
+        assertThat(get("/api/tasks/api-worker", TEXT).body()).contains("worker:api-worker#1");
+    }
+
+    @Test
+    void answersClaudeCodesHooksInTheJsonClaudeCodeActsOn() throws Exception {
+        String worker = workerTokenFor("api-hooks");
+
+        HttpResponse<String> denied = hook(worker, "pre-tool-use", "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"pkill -f java\"},\"cwd\":\"/tmp\"}");
+        HttpResponse<String> allowed = hook(worker, "pre-tool-use", "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"},\"cwd\":\"/tmp\"}");
+        HttpResponse<String> stopped = hook(worker, "stop", "{\"hook_event_name\":\"Stop\"}");
+
+        assertThat(denied.statusCode()).isEqualTo(200);
+        assertThat(denied.body()).startsWith("{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\","
+                + "\"permissionDecisionReason\":\"EDI's guard refuses this: pkill signals every process");
+        assertThat(allowed.statusCode()).isEqualTo(204);
+        assertThat(stopped.statusCode()).isEqualTo(204);
+        assertRefusal(hook(worker, "teleport", "{}"), 400, "EDI answers the hooks session-start, user-prompt-submit, pre-tool-use and stop, not teleport.");
+        assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"tmux kill-server\"}}"))).body())
+                .contains("\"permissionDecision\":\"deny\"", "name the socket with -L or -S");
+    }
+
+    private String workerTokenFor(String task) throws Exception {
+        post("/api/tasks", "{\"id\":\"" + task + "\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Fit the lamp\",\"key\":\"HRN-3\",\"base\":\"develop\"}", TEXT);
+        TaskId id = new TaskId(task);
+        dispatches.save(Dispatch.requested(id, CategoryId.IMPLEMENTATION, BranchName.forWork(BranchKind.FEATURE, WorkKey.parse("HRN-3")), "", null, null,
+                Instant.parse("2026-10-15T09:00:00Z")));
+        WorkerTokens.IssuedToken token = workerTokens.issueInto(HOME.resolve("state/workers/" + task));
+        workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
+                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
+                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2), Instant.parse("2026-10-15T09:00:00Z")), token.digest());
+        return Files.readString(token.file());
+    }
+
+    private static HttpResponse<String> hook(String token, String event, String payload) throws Exception {
+        return send(as(token, "/api/hooks/" + event, JSON).header("Content-Type", JSON).POST(BodyPublishers.ofString(payload)));
+    }
+
+    private static HttpRequest.Builder as(String token, String path, String accepted) throws IOException {
+        return HttpRequest.newBuilder(uri(path)).header("Authorization", "Bearer " + token).header("Accept", accepted);
     }
 
     private static void assertRefusal(HttpResponse<String> response, int status, String sentence) {
