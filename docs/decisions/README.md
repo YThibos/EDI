@@ -108,7 +108,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-059](ADR-059-the-mechanical-task-guard.md) | A mechanical task names its exact change, and its done is checked before it counts | Design |
 | [ADR-060](ADR-060-project-capacity-defers-dispatches.md) | A dispatch beyond a project's capacity waits as deferred | Design |
 | [ADR-061](ADR-061-the-supervision-round.md) | One supervision round every 30 seconds keeps the time-based rules of slice S3 (superseded by ADR-077) | Design |
-| [ADR-062](ADR-062-ref-only-delivery-into-the-captains-checkout.md) | A ready local-branch ship is fetched into the captain's checkout by its ref only | Design |
+| [ADR-062](ADR-062-ref-only-delivery-into-the-captains-checkout.md) | A ready local-branch ship is fetched into the captain's checkout by its ref only (superseded by ADR-084) | Design |
 | [ADR-063](ADR-063-dispatches-workers-and-inboxes-in-the-store.md) | The store keeps each task's dispatch, its workers and its inbox | Design |
 | [ADR-064](ADR-064-the-stand-in-for-claude-code.md) | A stand-in for Claude Code runs a worker end to end in the native smoke test | Design |
 | [ADR-065](ADR-065-tests-stop-every-process-they-start.md) | Tests stop every process they start, and a leaked one fails the build | Design |
@@ -116,7 +116,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-067](ADR-067-the-captains-session-is-primary.md) | The session the captain typed in last is the primary, and any other EDI session stands by | Design |
 | [ADR-068](ADR-068-the-primarys-turn-end-rules.md) | The primary's stop waits for the captain report and for a live edi wait | Design |
 | [ADR-069](ADR-069-wakes-are-durable-rows.md) | Wakes are queued with the event that causes them, and edi wait long-polls for them | Design |
-| [ADR-070](ADR-070-worker-health-from-structured-state.md) | Worker health is read from hooks, the tmux server and the boot, and each condition is noticed once | Design |
+| [ADR-070](ADR-070-worker-health-from-structured-state.md) | Worker health is read from hooks, the tmux server and the boot, and each condition is noticed once (superseded by ADR-091) | Design |
 | [ADR-071](ADR-071-the-boot-id-marks-a-machine-restart.md) | Every worker launched in an earlier boot is dead | Design |
 | [ADR-072](ADR-072-usage-limits-from-the-stop-failure-and-the-transcript.md) | A usage limit is confirmed in the transcript, and its reset is met with one typed line | Design |
 | [ADR-073](ADR-073-relaunch-resumes-the-recorded-session.md) | A relaunch resumes the recorded session in the task's own copy, and a stop signals only what EDI recorded | Design |
@@ -125,3 +125,17 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-076](ADR-076-the-session-start-digest.md) | A session starts from a digest rebuilt from the store | Design |
 | [ADR-077](ADR-077-the-supervision-round-judges-the-fleet.md) | The supervision round also judges every worker, meets usage-limit resets and notices due holds | Design |
 | [ADR-078](ADR-078-the-store-keeps-supervision-state.md) | The store keeps primary sessions, wakes, notices, the outage list and recovery costs | Design |
+| [ADR-079](ADR-079-the-forge-adapters-run-an-allow-list.md) | The forge adapters run only an allow-list of gh and glab commands | Architecture |
+| [ADR-080](ADR-080-forge-calls-run-under-the-bound-account.md) | Every forge call for a project runs under the account its registry entry binds | Design |
+| [ADR-081](ADR-081-the-pipeline-adapter.md) | The pipeline adapter reads a branch's run from `axi status` and its spend from the pipeline's state, read-only | Design |
+| [ADR-082](ADR-082-edi-writes-the-pipeline-intent.md) | EDI writes the pipeline intent beside the brief, with the craft rules verbatim | Design |
+| [ADR-083](ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md) | A ship's done is accepted only once its claims hold, and a refused done is recorded | Design |
+| [ADR-084](ADR-084-accepted-work-reaches-the-captain-by-its-delivery-mode.md) | Accepted work reaches the captain by its delivery mode, and local-apply is asked for per task | Design |
+| [ADR-085](ADR-085-edi-deliver-opens-the-draft-the-pipeline-could-not.md) | `edi deliver` opens the draft the pipeline could not, behind the same guards | Design |
+| [ADR-086](ADR-086-publication-targets-are-the-registered-forge.md) | A push from an isolated copy goes only to the repository its project registers | Design |
+| [ADR-087](ADR-087-merges-are-followed-from-the-forge.md) | A merge is followed from the forge's word, whether EDI sees it or the captain says so | Design |
+| [ADR-088](ADR-088-follow-up-work-waits-for-the-refreshed-clone.md) | Follow-up work on a project waits until its clone holds the commit a merge landed | Design |
+| [ADR-089](ADR-089-the-landed-work-test.md) | Work is landed when nothing is uncommitted and every commit is in the base by ancestry, patch or content | Design |
+| [ADR-090](ADR-090-cleanup-retires-a-landed-task.md) | Cleanup retires a landed task's copy, branch and workers, and records what the task cost | Design |
+| [ADR-091](ADR-091-a-running-pipeline-keeps-an-idle-worker-healthy.md) | Worker health is read from hooks, the tmux server, the boot and the pipeline, and each condition is noticed once | Design |
+| [ADR-092](ADR-092-the-store-keeps-deliveries.md) | The store keeps deliveries, pipeline runs, clone refreshes and task costs | Design |

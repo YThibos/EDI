@@ -2,7 +2,7 @@
 
 **Date:** 16/10/2026
 
-**Status:** Accepted
+**Status:** Superseded by ADR-091
 
 **Kind:** Design
 
