@@ -9,6 +9,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 
 @Configuration(proxyBeanMethods = false)
@@ -20,8 +21,8 @@ class AccessConfiguration {
     }
 
     @Bean
-    FilterRegistrationBean<ApiTokenFilter> apiTokenFilter(ApiToken token, WorkerTokens workerTokens) {
-        return new FilterRegistrationBean<>(new ApiTokenFilter(token, workerTokens));
+    FilterRegistrationBean<ApiTokenFilter> apiTokenFilter(ApiToken token, WorkerTokens workerTokens, PrimarySessions primarySessions) {
+        return new FilterRegistrationBean<>(new ApiTokenFilter(token, workerTokens, primarySessions));
     }
 
     @Bean

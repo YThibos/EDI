@@ -7,11 +7,13 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S3, workers, on top of the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
+The repository is at slice S4, supervision and recovery, on top of the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
 Workers report with `edi status` and read `edi inbox`; `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived; a pre-tool guard refuses pattern kills, tmux without a socket, forced or base-branch pushes and merges; each copy's `commit-msg` hook refuses agent trailers and subjects without the work key.
+The primary and the workers answer every Claude Code hook: the session the captain typed in last is the primary and any other stands by, the primary's turn ends with the captain report when it changed state and with an `edi wait` running while work is in flight, and `edi wait` prints what needs the primary as soon as it happens.
+A supervision round judges each worker from its hooks, its tmux server and the machine's boot, parks one that stopped on a usage limit and resumes it after the reset, and puts two or more dead workers on a numbered outage hold list that `edi recover` answers one number at a time, resuming the recorded session in the task's own copy.
 
 ## Parts
 
@@ -82,6 +84,21 @@ edi inbox ack 1
 ```
 
 The worker's copy is `$EDI_HOME/worktrees/<project>/<task-id>`, its brief and report are in `$EDI_HOME/data/tasks/<task-id>/`, and its tmux window is `<task-id>` in session `workers` on `tmux -L edi`.
+
+### Supervision and recovery
+
+The primary session runs with `claude/primary/settings.json`, whose hooks call `edi hook <event>`; `config/machine.yaml` may set `supervision.staleAfter` and `supervision.pauseResurface`, PT20M and PT4H by default.
+
+```sh
+edi wait                                            # the primary, in the background: exits printing what needs it
+edi worker relaunch fit-lamp                        # resume a dead or stopped worker's session in its own copy
+edi worker stop fit-lamp                            # signal the processes EDI recorded for the worker
+edi recover                                         # put dead workers on the numbered outage hold list and show it
+edi recover 2 resume                                # answer one number, as the captain named it
+edi recover 4 fresh --effort medium
+```
+
+A call made inside a Claude Code session names it, so a standby session's changes are refused; `edi wait` serves only the primary.
 
 ## Documentation
 

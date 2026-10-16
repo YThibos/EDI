@@ -5,13 +5,13 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
-record CoreConnection(CoreAddress address, String token) {
+record CoreConnection(CoreAddress address, String token, ClaudeSession session) {
 
-    static CoreConnection in(Path home, Path tokenFile) {
+    static CoreConnection in(Path home, Path tokenFile, ClaudeSession session) {
         Path portFile = CoreAddress.portFileIn(home);
         CoreAddress address = CoreAddress.recordedIn(portFile)
                 .orElseThrow(() -> new CoreUnavailable("EDI core is not running: " + portFile + " records no port."));
-        return new CoreConnection(address, tokenIn(tokenFile));
+        return new CoreConnection(address, tokenIn(tokenFile), session);
     }
 
     private static String tokenIn(Path tokenFile) {

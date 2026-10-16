@@ -27,7 +27,9 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
+import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
@@ -115,6 +117,26 @@ class TmuxClaudeRuntimeTest {
     }
 
     @Test
+    void resumesTheRecordedSessionAndTellsAClosedWindowFromAChangedOrLostServer() throws IOException {
+        WorkerWindow window;
+        TmuxClaudeRuntime runtime;
+        UUID session = UUID.randomUUID();
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
+            runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
+            window = runtime.launch(launch(session, List.of(), LaunchKind.RESUME));
+            List<String> arguments = List.of(Files.readString(awaitFile(home.root().resolve("claude-was-started.arguments"))).split("\0"));
+            WorkerWindow onAnotherServer = new WorkerWindow(window.socket(), window.serverPid() + 1, window.serverStartedAt(), window.windowId(), window.panePid());
+
+            assertThat(arguments).containsSequence("--resume", session.toString()).doesNotContain("--session-id");
+            assertThat(runtime.check(window)).isEqualTo(WindowCheck.OPEN);
+            assertThat(runtime.check(onAnotherServer)).isEqualTo(WindowCheck.SERVER_CHANGED);
+            runtime.close(window);
+            assertThat(runtime.check(window)).isEqualTo(WindowCheck.WINDOW_CLOSED);
+        }
+        assertThat(runtime.check(window)).isEqualTo(WindowCheck.SERVER_GONE);
+    }
+
+    @Test
     void refusesAWorktreeWhoseLocalSettingsDefineHooks() throws IOException {
         Files.createDirectories(worktree.resolve(".claude"));
         Files.writeString(worktree.resolve(".claude/settings.local.json"), "{\"hooks\": {\"Stop\": [{\"hooks\": []}]}}");
@@ -154,8 +176,12 @@ class TmuxClaudeRuntimeTest {
     }
 
     private Launch launch(UUID session, List<String> disallowedTools) {
+        return launch(session, disallowedTools, LaunchKind.DISPATCH);
+    }
+
+    private Launch launch(UUID session, List<String> disallowedTools, LaunchKind kind) {
         WorkerId worker = WorkerId.first(new TaskId("fit-lamp"));
-        return new Launch(worker, session, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), worktree, projectClone(), home.taskDirectory(worker.task()),
+        return new Launch(worker, kind, session, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), worktree, projectClone(), home.taskDirectory(worker.task()),
                 home.workerState(worker), Map.of("EDI_HOME", home.root().toString(), "EDI_ROLE", "worker", "EDI_TASK_ID", "fit-lamp",
                         "EDI_WORKER", worker.toString(), "EDI_TOKEN_FILE", "/tokens/fit-lamp-1"),
                 disallowedTools, PermissionMode.BYPASS, "\u2063EDI_OP: brief waiting: read the brief and follow it");

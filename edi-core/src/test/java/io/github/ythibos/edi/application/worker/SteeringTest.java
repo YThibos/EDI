@@ -43,7 +43,7 @@ class SteeringTest {
 
     @Test
     void typesTheNoticeIntoAnIdlePromptAndTheTypedPromptProvesTheDelivery() {
-        home.workerHooks().sessionStarted(worker.id());
+        home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
 
         SteerWorker.Steered steered = steer("Use the brass lamp.", null);
         home.workerHooks().promptSubmitted(worker.id(), home.runtime().typedLines().getLast());

@@ -27,9 +27,9 @@ class WorkerTest {
         Worker worker = launched(CategoryId.IMPLEMENTATION);
 
         assertThat(worker.activity()).isEqualTo(WorkerActivity.STARTING);
-        assertThat(worker.started(LAUNCHED).activity()).isEqualTo(WorkerActivity.IDLE);
+        assertThat(worker.started(null, null, LAUNCHED).activity()).isEqualTo(WorkerActivity.IDLE);
         assertThat(worker.promptSubmitted(LAUNCHED.plusSeconds(3)).activity()).isEqualTo(WorkerActivity.BUSY);
-        assertThat(worker.promptSubmitted(LAUNCHED.plusSeconds(3)).stopped().isIdle()).isTrue();
+        assertThat(worker.promptSubmitted(LAUNCHED.plusSeconds(3)).turnEnded(LAUNCHED.plusSeconds(4)).isIdle()).isTrue();
         assertThat(worker.promptSubmitted(LAUNCHED.plusSeconds(3)).briefedAt()).isEqualTo(LAUNCHED.plusSeconds(3));
     }
 
@@ -51,7 +51,7 @@ class WorkerTest {
 
         assertThat(launched(CategoryId.IMPLEMENTATION).missedItsLaunch(LAUNCHED.plus(patience), patience)).isTrue();
         assertThat(launched(CategoryId.IMPLEMENTATION).missedItsLaunch(LAUNCHED.plus(patience).minusMillis(1), patience)).isFalse();
-        assertThat(launched(CategoryId.IMPLEMENTATION).started(LAUNCHED).missedItsLaunch(LAUNCHED.plus(patience), patience)).isFalse();
+        assertThat(launched(CategoryId.IMPLEMENTATION).started(null, null, LAUNCHED).missedItsLaunch(LAUNCHED.plus(patience), patience)).isFalse();
         assertThat(launched(CategoryId.IMPLEMENTATION).launchFailed(LAUNCHED).missedItsLaunch(LAUNCHED.plus(patience), patience)).isFalse();
         assertThatThrownBy(() -> launched(CategoryId.IMPLEMENTATION).retired(LAUNCHED).reported(new StatusReport(StatusState.DONE, null, null, "x"), LAUNCHED))
                 .isInstanceOf(Refusal.class).hasMessageContaining("was retired");
@@ -59,6 +59,6 @@ class WorkerTest {
 
     private static Worker launched(CategoryId category) {
         return Worker.launched(WorkerId.first(new TaskId("fit-lamp")), UUID.randomUUID(), category, new Route(new ModelId("claude-haiku-5-5"), null),
-                WINDOW, LAUNCHED);
+                WINDOW, new WorkerLaunch(LaunchKind.DISPATCH, LAUNCHED, new BootId("boot-1")));
     }
 }

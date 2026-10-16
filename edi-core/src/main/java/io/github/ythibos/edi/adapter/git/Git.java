@@ -79,6 +79,18 @@ public class Git {
         return changed;
     }
 
+    public String headSummary(Path worktree) {
+        return git(worktree, "log", "-1", "--format=%h %s").strip();
+    }
+
+    public int commitsOnNoRemote(Path worktree) {
+        return Integer.parseInt(git(worktree, "rev-list", "--count", "HEAD", "--not", "--remotes").strip());
+    }
+
+    public boolean hasUncommittedChanges(Path worktree) {
+        return !git(worktree, "status", "--porcelain", "--untracked-files=normal").isBlank();
+    }
+
     public void fetchBranchInto(Path checkout, Path worktree, BranchName branch) {
         git(checkout, "fetch", "--quiet", worktree.toString(), branch + ":" + branch);
     }

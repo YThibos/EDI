@@ -7,3 +7,6 @@ workers:
       ignoresEffort: true
   disallowedTools: []
   permissionMode: bypass
+supervision:
+  staleAfter: PT20M
+  pauseResurface: PT4H

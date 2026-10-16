@@ -139,6 +139,83 @@ class WorkerCommandsTest {
         assertThat(stopped).isOne();
     }
 
+    @Test
+    void waitsUntilTheCoreHasAWakeAndPrintsIt() {
+        environment.put("CLAUDE_CODE_SESSION_ID", "6d1f0c2e-0000-4000-8000-000000000001");
+        core.thenAnswering(204, "").thenAnswering(204, "").thenAnswering(200, "EDI wake: 1 waiting.\n1. fit-lamp#1 reports done: fitted\n");
+
+        int exitCode = edi("", "wait");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI wake: 1 waiting.\n1. fit-lamp#1 reports done: fitted\n");
+        assertThat(core.requests()).hasSize(3).allSatisfy(request -> {
+            assertThat(request.method()).isEqualTo("POST");
+            assertThat(request.target()).isEqualTo("/api/wait");
+            assertThat(request.session()).isEqualTo("6d1f0c2e-0000-4000-8000-000000000001");
+        });
+    }
+
+    @Test
+    void waitsOnlyInsideAClaudeCodeSessionAndStopsWhenTheCoreRefuses() {
+        int outside = edi("", "wait");
+        String outsideError = err.toString();
+        environment.put("CLAUDE_CODE_SESSION_ID", "6d1f0c2e-0000-4000-8000-000000000001");
+        core.answering(409, "edi wait serves the primary session, the one the captain typed in last; this session is not it.\n");
+        int refused = edi("", "wait");
+
+        assertThat(outside).isOne();
+        assertThat(outsideError).startsWith("edi wait runs inside the primary's Claude Code session");
+        assertThat(refused).isOne();
+        assertThat(err.toString()).endsWith("this session is not it.\n");
+    }
+
+    @Test
+    void namesTheClaudeCodeSessionAndProcessOnEveryCall() {
+        environment.put("CLAUDE_CODE_SESSION_ID", "6d1f0c2e-0000-4000-8000-000000000002");
+        environment.put("CLAUDE_PID", "4242");
+        core.answering(200, "Backlog (0)\n");
+
+        edi("", "backlog");
+
+        assertThat(core.received().session()).isEqualTo("6d1f0c2e-0000-4000-8000-000000000002");
+        assertThat(core.received().claudePid()).isEqualTo("4242");
+    }
+
+    @Test
+    void buildsTheOutageHoldListAndActsOnTheNumberTheCaptainNamed() {
+        core.answering(200, "ok\n");
+
+        edi("", "recover");
+        StubCore.Request listed = core.received();
+        edi("", "recover", "2", "resume");
+        StubCore.Request resumed = core.received();
+        edi("", "recover", "4", "fresh", "--effort", "medium");
+        StubCore.Request fresh = core.received();
+        int incomplete = edi("", "recover", "3");
+
+        assertThat(listed.target()).isEqualTo("/api/recovery");
+        assertThat(listed.method()).isEqualTo("POST");
+        assertThat(resumed.target()).isEqualTo("/api/recovery/2/resume");
+        assertThat(resumed.body()).isEqualTo("{}");
+        assertThat(fresh.target()).isEqualTo("/api/recovery/4/fresh");
+        assertThat(fresh.body()).isEqualTo("{\"effort\":\"medium\"}");
+        assertThat(incomplete).isEqualTo(2);
+        assertThat(err.toString()).contains("Name resume or fresh after number 3, as the captain did.");
+    }
+
+    @Test
+    void relaunchesAndStopsATasksWorker() {
+        core.answering(200, "ok\n");
+
+        edi("", "worker", "relaunch", "fit-lamp");
+        StubCore.Request relaunched = core.received();
+        edi("", "worker", "stop", "fit-lamp");
+
+        assertThat(relaunched.target()).isEqualTo("/api/tasks/fit-lamp/relaunch");
+        assertThat(core.received().target()).isEqualTo("/api/tasks/fit-lamp/stop");
+        assertThat(core.received().method()).isEqualTo("POST");
+    }
+
     private int edi(String input, String... arguments) {
         return new CommandLine(new Edi(Map.copyOf(environment), new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8))))
                 .setOut(new PrintWriter(out, true))

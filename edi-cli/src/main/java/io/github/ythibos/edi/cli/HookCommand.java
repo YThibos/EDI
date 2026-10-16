@@ -25,14 +25,13 @@ final class HookCommand implements Callable<Integer> {
     @Spec
     private CommandSpec spec;
 
-    @Parameters(paramLabel = "EVENT", description = "session-start, user-prompt-submit, pre-tool-use or stop.")
+    @Parameters(paramLabel = "EVENT", description = "session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification or session-end.")
     private String event;
 
     @Override
     public Integer call() {
         try {
-            CoreReply reply = new CoreClient().post(CoreConnection.in(edi.home(), edi.tokenFile()), "/api/hooks/" + CoreExchange.encoded(event),
-                    payload(), "application/json");
+            CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload(), "application/json");
             return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip());
         } catch (CoreUnavailable | IOException unavailable) {
             return unanswered(unavailable.getMessage());

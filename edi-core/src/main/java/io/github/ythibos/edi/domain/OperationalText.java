@@ -15,4 +15,8 @@ public final class OperationalText {
     public static String typed(String text) {
         return MARK + text;
     }
+
+    public static boolean isMarked(String text) {
+        return text.startsWith(INVISIBLE_SEPARATOR + MARK) || text.startsWith(MARK);
+    }
 }

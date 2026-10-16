@@ -43,4 +43,10 @@ public sealed interface Confirmation {
 
     record Steered(SteerWorker.Steered steered) implements Confirmation {
     }
+
+    record Relaunched(DispatchOutcome.Launched launched) implements Confirmation {
+    }
+
+    record StopRequested(Worker worker) implements Confirmation {
+    }
 }

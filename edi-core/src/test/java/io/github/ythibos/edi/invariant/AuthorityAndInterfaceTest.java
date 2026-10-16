@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -20,12 +21,15 @@ import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.BriefFixtures;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.access.Caller;
+import io.github.ythibos.edi.web.access.NotPermitted;
 
 @DisplayName("4.1 Authority and interface")
 class AuthorityAndInterfaceTest {
@@ -76,8 +80,35 @@ class AuthorityAndInterfaceTest {
 
         @Test
         @DisplayName("AT-02 a typed prompt in a second session moves the primary role and the first session's mutating calls are refused")
-        void aTypedPromptMovesThePrimaryRole() {
-            Pending.until(Slice.S4);
+        void aTypedPromptMovesThePrimaryRole() throws IOException {
+            TestHome home = TestHome.in(directory);
+            UUID first = UUID.randomUUID();
+            UUID second = UUID.randomUUID();
+            home.primaryHooks().sessionStarted(first, null);
+            home.primaryHooks().promptSubmitted(first, "What is waiting on me?");
+            home.primaryHooks().sessionStarted(second, null);
+
+            assertThat(standingOf(home, first)).isEqualTo(Standing.PRIMARY);
+            assertThat(standingOf(home, second)).isEqualTo(Standing.STANDBY);
+
+            home.primaryHooks().promptSubmitted(second, "Fit the brass lamp.");
+            home.primaryHooks().promptSubmitted(first, "<task-notification><status>completed</status></task-notification>");
+
+            assertThat(standingOf(home, second)).isEqualTo(Standing.PRIMARY);
+            assertThat(standingOf(home, first)).isEqualTo(Standing.STANDBY);
+            assertThatThrownBy(() -> callerOf(home, first).requirePrimary("edi task add"))
+                    .isInstanceOf(NotPermitted.class)
+                    .hasMessageStartingWith("This session is standby")
+                    .hasMessageContaining("edi task add is refused here");
+            callerOf(home, second).requirePrimary("edi task add");
+        }
+
+        private static Standing standingOf(TestHome home, UUID session) {
+            return home.primarySessions().standingOf(session);
+        }
+
+        private static Caller callerOf(TestHome home, UUID session) {
+            return Caller.holdingTheHomeToken(session, standingOf(home, session));
         }
     }
 

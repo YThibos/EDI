@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Tune the horn."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"rate_limit","message":{"id":"msg-3","role":"assistant","content":[{"type":"text","text":"You've hit your weekly limit · resets Oct 19, 12am (Europe/Brussels)"}]},"quotaLimits":{"status":"rejected","resetsAt":1792360800,"rateLimitType":"seven_day"},"timestamp":"2026-10-16T11:00:00.000Z"}

@@ -4,8 +4,8 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "worker",
-        description = "Lists workers and shows what a worker's pane shows.",
+        description = "Lists workers, shows what a worker's pane shows, and stops or relaunches a worker.",
         synopsisSubcommandLabel = "COMMAND",
-        subcommands = {WorkerListCommand.class, WorkerPeekCommand.class})
+        subcommands = {WorkerListCommand.class, WorkerPeekCommand.class, WorkerStopCommand.class, WorkerRelaunchCommand.class})
 final class WorkerCommand extends CommandGroup {
 }

@@ -1,0 +1,6 @@
+{"type":"user","message":{"role":"user","content":"Fit the lamp."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","message":{"id":"msg-1","role":"assistant","content":[{"type":"text","text":"Fitting the lamp now."}],"usage":{"input_tokens":3,"cache_creation_input_tokens":100,"cache_read_input_tokens":200,"output_tokens":20}},"timestamp":"2026-10-16T09:00:05.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"rate_limit","apiErrorStatus":429,"message":{"id":"msg-2","model":"<synthetic>","role":"assistant","content":[{"type":"text","text":"You've hit your session limit · resets 2:10pm (Europe/Brussels)"}],"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}},"quotaLimits":{"status":"rejected","resetsAt":1792160400,"rateLimitType":"five_hour"},"timestamp":"2026-10-16T10:15:00.000Z"}
+{"type":"last-prompt"}
+{"type":"cost-state","totalCostUSD":1.5}
+{"type":"ai-title","title":"a session"}

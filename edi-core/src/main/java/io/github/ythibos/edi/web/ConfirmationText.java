@@ -10,9 +10,11 @@ import io.github.ythibos.edi.web.Confirmation.Held;
 import io.github.ythibos.edi.web.Confirmation.Noted;
 import io.github.ythibos.edi.web.Confirmation.Queued;
 import io.github.ythibos.edi.web.Confirmation.Raised;
+import io.github.ythibos.edi.web.Confirmation.Relaunched;
 import io.github.ythibos.edi.web.Confirmation.Released;
 import io.github.ythibos.edi.web.Confirmation.StatusRecorded;
 import io.github.ythibos.edi.web.Confirmation.Steered;
+import io.github.ythibos.edi.web.Confirmation.StopRequested;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
@@ -43,6 +45,9 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case StatusRecorded recorded -> WorkerSentences.statusRecorded(recorded.worker());
             case Acknowledged acknowledged -> "Acknowledged message " + acknowledged.message().number() + ".";
             case Steered steered -> WorkerSentences.steered(steered.steered());
+            case Relaunched relaunched -> WorkerSentences.relaunched(relaunched.launched());
+            case StopRequested stopped -> "Stopping " + stopped.worker().id() + ": EDI signalled its processes, and those still running in "
+                    + "ten seconds are killed; edi worker relaunch " + stopped.worker().id().task() + " resumes its session.";
         };
     }
 

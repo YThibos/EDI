@@ -39,13 +39,16 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
+import tools.jackson.databind.json.JsonMapper;
 
 @Tag("adapter")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -232,10 +235,66 @@ class ApiTest {
                 + "\"permissionDecisionReason\":\"EDI's guard refuses this: pkill signals every process");
         assertThat(allowed.statusCode()).isEqualTo(204);
         assertThat(stopped.statusCode()).isEqualTo(204);
-        assertRefusal(hook(worker, "teleport", "{}"), 400, "EDI answers the hooks session-start, user-prompt-submit, pre-tool-use and stop, not teleport.");
+        assertRefusal(hook(worker, "teleport", "{}"), 400, "EDI answers the hooks session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification and session-end, not teleport.");
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"tmux kill-server\"}}"))).body())
                 .contains("\"permissionDecision\":\"deny\"", "name the socket with -L or -S");
+    }
+
+    @Test
+    void movesThePrimaryRoleToTheSessionTheCaptainTypedInAndRefusesTheStandbysChanges() throws Exception {
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+
+        HttpResponse<String> started = primaryHook(first, "session-start", "{\"source\":\"startup\"}");
+        primaryHook(second, "session-start", "{\"source\":\"startup\"}");
+        primaryHook(second, "user-prompt-submit", "{\"prompt\":\"Queue the anchor.\"}");
+        HttpResponse<String> refused = send(inSession(first, "/api/tasks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"id\":\"api-anchor\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Weigh the anchor\"}")));
+        HttpResponse<String> queued = send(inSession(second, "/api/tasks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"id\":\"api-anchor\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Weigh the anchor\"}")));
+        HttpResponse<String> unreported = primaryHook(second, "stop", "{\"stop_hook_active\":false,\"background_tasks\":[]}");
+        send(inSession(second, "/api/report", TEXT).GET());
+        HttpResponse<String> reported = primaryHook(second, "stop", "{\"stop_hook_active\":false,\"background_tasks\":"
+                + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}");
+
+        assertThat(started.statusCode()).isEqualTo(200);
+        assertThat(new JsonMapper().readTree(started.body()).path("hookSpecificOutput").path("additionalContext").asString())
+                .startsWith("EDI session-start digest\nThis session is the primary");
+        assertThat(refused.statusCode()).isEqualTo(403);
+        assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
+        assertThat(queued.statusCode()).isEqualTo(201);
+        assertThat(unreported.body()).isEqualTo("{\"decision\":\"block\",\"reason\":\"This turn changed EDI's state: render the captain report with "
+                + "edi report and paste it verbatim, then stop.\"}");
+        assertThat(reported.statusCode()).isEqualTo(204);
+    }
+
+    @Test
+    void wakesThePrimaryWithWhatNeedsItAndListsTheOutageHoldList() throws Exception {
+        String worker = workerTokenFor("api-wake");
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Watch the lamp.\"}");
+        send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"state\":\"needs-decision\",\"key\":\"lamp\",\"text\":\"Brass or oil?\"}")));
+
+        HttpResponse<String> woken = send(inSession(primary, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}")));
+        HttpResponse<String> sessionless = post("/api/wait", "{}", TEXT);
+
+        assertThat(woken.statusCode()).isEqualTo(200);
+        assertThat(woken.body()).startsWith("EDI wake: ").contains("api-wake#1 needs a decision: (lamp) Brass or oil?",
+                "Handle these, then start edi wait in the background again.");
+        assertRefusal(sessionless, 409, "edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID.");
+        assertThat(get("/api/recovery", TEXT).body()).startsWith("The outage hold list is empty.\nRecovery so far: 0 relaunches counted");
+    }
+
+    private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {
+        String payload = "{\"session_id\":\"" + session + "\"," + fields.substring(1);
+        return send(inSession(session, "/api/hooks/" + event, JSON).header("Content-Type", JSON).POST(BodyPublishers.ofString(payload)));
+    }
+
+    private static HttpRequest.Builder inSession(UUID session, String path, String accepted) throws IOException {
+        return authorised(path, accepted).header("EDI-Session", session.toString());
     }
 
     private String workerTokenFor(String task) throws Exception {
@@ -246,7 +305,8 @@ class ApiTest {
         WorkerTokens.IssuedToken token = workerTokens.issueInto(HOME.resolve("state/workers/" + task));
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
-                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2), Instant.parse("2026-10-15T09:00:00Z")), token.digest());
+                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2),
+                new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
         return Files.readString(token.file());
     }
 

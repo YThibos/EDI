@@ -1,6 +1,8 @@
 package io.github.ythibos.edi.adapter.home;
 
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 
@@ -14,14 +16,16 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.ModelRoster;
 import io.github.ythibos.edi.domain.dispatch.ModelRoster.AllowedModel;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
+import io.github.ythibos.edi.domain.worker.SupervisionRules;
 import tools.jackson.core.JacksonException;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 @Component
-@RegisterReflectionForBinding({MachineProfile.ProfileDocument.class, MachineProfile.WorkersSection.class, MachineProfile.ModelEntry.class})
+@RegisterReflectionForBinding({MachineProfile.ProfileDocument.class, MachineProfile.WorkersSection.class, MachineProfile.ModelEntry.class,
+    MachineProfile.SupervisionSection.class})
 public class MachineProfile {
 
-    private static final ProfileDocument EMPTY = new ProfileDocument(null);
+    private static final ProfileDocument EMPTY = new ProfileDocument(null, null);
 
     private final Path file;
     private final YAMLMapper yaml = new YAMLMapper();
@@ -36,6 +40,19 @@ public class MachineProfile {
             return new WorkerSettings(roster(workers), disallowedTools(workers), permissionMode(workers));
         } catch (IllegalArgumentException invalid) {
             throw new InvalidConfiguration(file, invalid.getMessage());
+        }
+    }
+
+    public SupervisionRules supervision() {
+        SupervisionSection supervision = Objects.requireNonNullElse(document().supervision(), SupervisionSection.NONE);
+        try {
+            return new SupervisionRules(
+                    durationOf(supervision.staleAfter(), SupervisionRules.STALE_AFTER),
+                    durationOf(supervision.pauseResurface(), SupervisionRules.PAUSE_RESURFACE),
+                    SupervisionRules.BUSY_CEILING);
+        } catch (DateTimeParseException invalid) {
+            throw new InvalidConfiguration(file, "supervision holds \"" + invalid.getParsedString()
+                    + "\", which is not a duration such as PT20M.");
         }
     }
 
@@ -66,8 +83,12 @@ public class MachineProfile {
         return workers.permissionMode() == null ? PermissionMode.BYPASS : PermissionMode.named(workers.permissionMode());
     }
 
+    private static Duration durationOf(String written, Duration absent) {
+        return written == null ? absent : Duration.parse(written);
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ProfileDocument(WorkersSection workers) {
+    record ProfileDocument(WorkersSection workers, SupervisionSection supervision) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -78,5 +99,11 @@ public class MachineProfile {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ModelEntry(String id, Boolean ignoresEffort) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record SupervisionSection(String staleAfter, String pauseResurface) {
+
+        static final SupervisionSection NONE = new SupervisionSection(null, null);
     }
 }

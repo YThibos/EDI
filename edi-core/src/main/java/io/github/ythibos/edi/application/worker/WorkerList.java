@@ -3,6 +3,7 @@ package io.github.ythibos.edi.application.worker;
 import java.util.List;
 
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerHealth;
 
 public record WorkerList(List<Entry> entries) {
 
@@ -10,6 +11,6 @@ public record WorkerList(List<Entry> entries) {
         entries = List.copyOf(entries);
     }
 
-    public record Entry(Worker worker, boolean windowOpen) {
+    public record Entry(Worker worker, WorkerHealth health) {
     }
 }

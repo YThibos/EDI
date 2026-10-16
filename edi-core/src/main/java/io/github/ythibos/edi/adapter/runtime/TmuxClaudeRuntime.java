@@ -2,7 +2,9 @@ package io.github.ythibos.edi.adapter.runtime;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportRuntimeHints;
@@ -15,6 +17,9 @@ import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.PaneState;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
+import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -29,6 +34,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final TmuxPaneProbe probe;
     private final ClaudeWorkspaceTrust trust;
     private final JsonMapper json;
+    private final ClaudeTranscript transcripts;
     private final String claudeCode;
 
     public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, JsonMapper json,
@@ -37,6 +43,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.probe = probe;
         this.trust = trust;
         this.json = json;
+        this.transcripts = new ClaudeTranscript(json);
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
     }
 
@@ -58,8 +65,15 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
-    public boolean isRunning(WorkerWindow window) {
-        return tmux.serves(new ServerIdentity(window.serverPid(), window.serverStartedAt())) && tmux.windowIds().contains(window.windowId());
+    public WindowCheck check(WorkerWindow window) {
+        Optional<ServerIdentity> server = tmux.runningServer();
+        if (server.isEmpty()) {
+            return WindowCheck.SERVER_GONE;
+        }
+        if (!server.get().equals(new ServerIdentity(window.serverPid(), window.serverStartedAt()))) {
+            return WindowCheck.SERVER_CHANGED;
+        }
+        return tmux.windowIds().contains(window.windowId()) ? WindowCheck.OPEN : WindowCheck.WINDOW_CLOSED;
     }
 
     @Override
@@ -82,6 +96,16 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         if (isRunning(window)) {
             tmux.closeWindow(window.windowId());
         }
+    }
+
+    @Override
+    public Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since) {
+        return transcript == null ? Optional.empty() : transcripts.usageLimitStop(Path.of(transcript), since);
+    }
+
+    @Override
+    public TokenUsage tokensSpentIn(String transcript, Instant since) {
+        return transcript == null ? TokenUsage.NONE : transcripts.tokensSpent(Path.of(transcript), since);
     }
 
     private void typeIntoTheIdlePrompt(WorkerWindow window, Keystroke.Line line) {

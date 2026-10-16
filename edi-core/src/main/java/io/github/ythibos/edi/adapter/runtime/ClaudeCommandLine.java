@@ -28,7 +28,7 @@ final class ClaudeCommandLine {
             words.addAll(launch.disallowedTools());
         }
         words.addAll(List.of("--add-dir", launch.taskDirectory().toString()));
-        words.addAll(List.of("--session-id", launch.session().toString()));
+        words.addAll(List.of(launch.resumesTheSession() ? "--resume" : "--session-id", launch.session().toString()));
         words.addAll(modelAndEffort(launch.route()));
         words.addAll(List.of("--name", launch.worker().task().value()));
         words.addAll(List.of("--settings", settings.toString()));

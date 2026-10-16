@@ -36,6 +36,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.testing.ExampleHome;
@@ -71,7 +72,7 @@ class DispatchAndEffortTest {
             assertRefused(home, category("research", "claude-opus-5-5", null, "a reason", false), "without an effort");
             assertRefused(home, category("research", "claude-opus-6", "high", "a reason", false), "which the machine profile does not allow");
             assertThatThrownBy(() -> EffortLevel.named("xhigh")).hasMessageContaining("high is EDI's ceiling");
-            assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), UUID.randomUUID(), null, directory, directory, directory, directory,
+            assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), LaunchKind.DISPATCH, UUID.randomUUID(), null, directory, directory, directory, directory,
                     Map.of(), List.of(), PermissionMode.BYPASS, "brief")).hasMessageContaining("explicit model and effort");
             assertThatThrownBy(() -> new Route(null, EffortLevel.HIGH)).hasMessageContaining("explicit model");
             assertThat(home.writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))
