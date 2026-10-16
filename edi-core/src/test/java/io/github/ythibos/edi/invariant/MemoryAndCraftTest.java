@@ -86,6 +86,7 @@ class MemoryAndCraftTest {
     class FleetSizedDataNeverTravelsAsAnArgument {
 
         private static final long TWO_MEGABYTES = 2_000_000;
+        private static final int SITREP_PANE_COLUMNS = 90;
 
         @Test
         @Tag("adapter")
@@ -98,6 +99,20 @@ class MemoryAndCraftTest {
 
             assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
             assertThat(report).contains("BACKLOG  (512)", "Queued work item 1", "(+507 more queued)");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-36 the text sitrep renders from a 2 MB backlog fixture")
+        void theTextSitrepRendersFromALargeBacklog() throws IOException {
+            TestHome home = ReportGoldenCases.homeIn(directory);
+            ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
+
+            String sitrep = ReportGoldenCases.rendered(home, Turn.NONE, ReportWidth.forPane(SITREP_PANE_COLUMNS));
+
+            assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
+            assertThat(sitrep.lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(SITREP_PANE_COLUMNS - 2);
+            assertThat(sitrep).contains("DONE THIS TURN  (0)", "BACKLOG  (512)", "Queued work item 1", "(+507 more queued)");
         }
 
         @Test
