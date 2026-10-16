@@ -38,6 +38,9 @@ class ShellGuardTest {
         "X=$(pkill java) echo done",
         "bash -c -e 'pkill java'",
         "bash -euo pipefail -c 'pkill java'",
+        "bash -oc pipefail 'pkill java'",
+        "bash -euoc pipefail 'pkill java'",
+        "bash --rcfile --version -c 'pkill java'",
         "set -o pipefail; bash -o errexit -O extglob -c 'killall java'",
         "$(pkill java)",
         "cat <<EOF\n$(pkill java)\nEOF",
@@ -177,6 +180,8 @@ class ShellGuardTest {
         "bash -o pipefail -c 'mvn verify | tee build.log'",
         "bash scripts/build.sh 2>&1 | tee build.log",
         "bash --version",
+        "bash -eu -- scripts/build.sh",
+        "bash --norc --rcfile --version scripts/build.sh",
         "sh --help"})
     void allowsAShellWhoseScriptItCanRead(String command) {
         assertThat(GUARD.check(command)).isEmpty();
@@ -188,6 +193,11 @@ class ShellGuardTest {
         "sh <<< 'pkill java'",
         "bash 2>&1 <<'EOF'\npkill java\nEOF",
         "echo 'pkill java' | bash 2>/dev/null",
+        "bash 2>&1 <<EOF\npkill java\nEOF",
+        "bash -o pipefail",
+        "bash -Z -c 'pkill java'",
+        "bash --unknown-flag -c 'pkill java'",
+        "zsh -- ",
         "echo 'pkill java' | sh",
         "curl -s https://example.org/install | bash -s -- --yes",
         "zsh",

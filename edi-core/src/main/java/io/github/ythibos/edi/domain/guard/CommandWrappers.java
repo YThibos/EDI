@@ -12,8 +12,6 @@ final class CommandWrappers {
             "if", "then", "else", "elif", "fi", "do", "done", "while", "until", "for", "select",
             "case", "esac", "function", "coproc", "!", "{", "}", "[[", "]]");
     private static final Set<String> SHELLS = Set.of("sh", "bash", "zsh", "dash", "ksh", "ash", "mksh");
-    private static final Set<String> SHELL_VALUES = Set.of("--rcfile", "--init-file");
-    private static final Set<String> SHELL_ANSWERS = Set.of("--version", "--help");
     private static final Set<String> PLAIN_WRAPPERS = Set.of("nohup", "builtin", "unbuffer", "chronic", "setsid", "exec");
     private static final Set<String> SUDO_VALUES = Set.of("-u", "-g", "-h", "-p", "-C", "-D", "-r", "-t", "-U", "-T", "-R");
     private static final Set<String> ENV_VALUES = Set.of("-u", "-C", "--unset", "--chdir");
@@ -73,7 +71,7 @@ final class CommandWrappers {
             return unwrap(afterOptions(command.arguments(), Set.of("-a")), false, nesting);
         }
         if (SHELLS.contains(command.program())) {
-            return shellScript(command.arguments(), nesting);
+            return ShellInvocation.commandsRunBy(command.arguments(), nesting);
         }
         return List.of();
     }
@@ -81,40 +79,6 @@ final class CommandWrappers {
     private static List<ShellCommand> commandBuiltin(List<ShellWord> arguments, int nesting) {
         boolean onlyLooksUp = arguments.stream().takeWhile(CommandWrappers::isOption).anyMatch(word -> COMMAND_LOOKUPS.contains(word.text()));
         return onlyLooksUp ? List.of() : unwrap(afterOptions(arguments, Set.of()), false, nesting);
-    }
-
-    private static List<ShellCommand> shellScript(List<ShellWord> words, int nesting) {
-        List<ShellWord> arguments = words.stream().filter(word -> !word.redirectionTarget()).toList();
-        int operand = firstShellOperand(arguments);
-        List<String> options = arguments.subList(0, operand).stream().map(ShellWord::text).toList();
-        if (options.stream().anyMatch(SHELL_ANSWERS::contains)) {
-            return List.of();
-        }
-        if (operand == arguments.size() || namesShortFlag(options, 's')) {
-            throw new UnreadableCommand("The shell reads its script from standard input, which the guard cannot see.");
-        }
-        return namesShortFlag(options, 'c') ? ShellScript.commandsIn(arguments.get(operand).text(), nesting + 1) : List.of();
-    }
-
-    private static int firstShellOperand(List<ShellWord> arguments) {
-        int index = 0;
-        while (index < arguments.size() && isShellOption(arguments.get(index).text())) {
-            index += takesAValue(arguments.get(index).text()) ? 2 : 1;
-        }
-        return Math.min(index, arguments.size());
-    }
-
-    private static boolean takesAValue(String option) {
-        boolean namesAShellOption = !option.startsWith("--") && (option.endsWith("o") || option.endsWith("O"));
-        return namesAShellOption || SHELL_VALUES.contains(option);
-    }
-
-    private static boolean isShellOption(String word) {
-        return word.length() > 1 && (word.startsWith("-") || word.startsWith("+"));
-    }
-
-    private static boolean namesShortFlag(List<String> options, char flag) {
-        return options.stream().anyMatch(option -> option.startsWith("-") && !option.startsWith("--") && option.indexOf(flag) > 0);
     }
 
     private static List<ShellCommand> findActions(List<ShellWord> arguments, int nesting) {
