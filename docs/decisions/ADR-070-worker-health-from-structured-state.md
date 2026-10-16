@@ -10,7 +10,7 @@
 I-26: workers are judged by structured state, never by shell liveness or the last status line; AT-26: a worker whose last status is `working` but whose server identity changed is dead.
 Section 8.1: a worker's state is derived, never stored twice.
 
-**Decision:** `SupervisionRules` derives `WorkerHealth` from the worker row, `WorkerRuntime.check` and the current `BootId`: stopped by EDI, failed to launch, finished once its done was accepted or refused, dead because the machine restarted, dead because its server is gone or changed or its window closed, parked on a usage limit, starting, busy, idle, or waiting until a declared pause ends.
+**Decision:** `SupervisionRules` derives `WorkerHealth` from the worker row, `WorkerRuntime.check` and the current `BootId`: stopped by EDI, failed to launch while it has sent no hook, finished once its done was accepted or refused, dead because the machine restarted, dead because its server is gone or changed or its window closed, parked on a usage limit, starting, busy, idle, or waiting until a declared pause ends.
 `TmuxClaudeRuntime.check` reads the server's pid and start time from `tmux list-sessions` and tells `SERVER_GONE`, `SERVER_CHANGED`, `WINDOW_CLOSED` and `OPEN` apart.
 `SupervisionRules.noticeDue` names the one condition worth a wake, keyed by the moment it began: `stale` since the later of the last activity change and the last status, `busy-too-long` since the turn began, `wait-ended` since the pause was reported, and `died`.
 A worker that waits on the primary, by `done`, `needs-decision`, `blocked`, `failed` or `paused`, is never stale, nor is one with a message it has not received.
