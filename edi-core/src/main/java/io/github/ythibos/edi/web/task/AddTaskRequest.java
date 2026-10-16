@@ -8,6 +8,7 @@ import static io.github.ythibos.edi.web.RequestValues.required;
 import java.util.List;
 
 import io.github.ythibos.edi.application.task.NewTask;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -23,6 +24,7 @@ record AddTaskRequest(
         String key,
         String base,
         List<String> blockedBy,
+        String delivery,
         String body) {
 
     NewTask newTask() {
@@ -36,6 +38,7 @@ record AddTaskRequest(
                 each(projects, ProjectName::new),
                 optional(key, WorkKey::parse),
                 optional(base, BaseBranch::new),
-                each(blockedBy, TaskId::new));
+                each(blockedBy, TaskId::new),
+                optional(delivery, DeliveryMode::named));
     }
 }

@@ -34,6 +34,10 @@ final class TaskAddCommand implements Callable<Integer> {
     @Option(names = "--blocked-by", split = ",", paramLabel = "TASK", description = "Tasks that must be done first.")
     private List<String> blockedBy;
 
+    @Option(names = "--delivery", paramLabel = "MODE",
+            description = "How this task's work reaches the captain when not the project's own way: draft-review, local-branch or local-apply.")
+    private String delivery;
+
     @Option(names = "--body", paramLabel = "-|FILE", description = "The task's notes, from standard input (-) or a file.")
     private String body;
 
@@ -47,6 +51,7 @@ final class TaskAddCommand implements Callable<Integer> {
                 .with("key", key)
                 .with("base", base)
                 .with("blockedBy", blockedBy)
+                .with("delivery", delivery)
                 .with("body", body == null ? null : core.contentOf(body)));
     }
 }

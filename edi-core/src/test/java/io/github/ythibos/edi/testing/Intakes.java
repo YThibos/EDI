@@ -21,14 +21,14 @@ public final class Intakes {
     }
 
     public static NewTask ship(String id, String title) {
-        return new NewTask(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of()), "");
+        return new NewTask(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(), null), "");
     }
 
     public static NewTask captainItem(String id, String title) {
-        return new NewTask(new TaskId(id), new Intake(TaskKind.CAPTAIN, title, List.of(), null, null, List.of()), "");
+        return new NewTask(new TaskId(id), new Intake(TaskKind.CAPTAIN, title, List.of(), null, null, List.of(), null), "");
     }
 
     public static NewTask shipBlockedBy(String id, String title, String blocker) {
-        return new NewTask(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(new TaskId(blocker))), "");
+        return new NewTask(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(new TaskId(blocker)), null), "");
     }
 }

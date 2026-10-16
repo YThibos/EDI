@@ -17,7 +17,11 @@ public enum WakeKind {
     WORKER_STALE,
     BUSY_TOO_LONG,
     WAIT_ENDED,
-    HOLD_DUE;
+    HOLD_DUE,
+    DRAFT_MERGED,
+    DRAFT_CLOSED,
+    DELIVERY_FAILED,
+    CLEANUP_REFUSED;
 
     public static WakeKind named(String word) {
         return Arrays.stream(values())

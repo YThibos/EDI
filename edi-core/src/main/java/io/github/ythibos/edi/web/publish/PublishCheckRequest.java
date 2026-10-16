@@ -6,7 +6,7 @@ import java.nio.file.Path;
 
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 
-record PublishCheckRequest(String repository, String range) {
+record PublishCheckRequest(String repository, String range, String remoteUrl) {
 
     Path repositoryPath() {
         Path path = Path.of(required(repository, "repository"));
@@ -18,5 +18,9 @@ record PublishCheckRequest(String repository, String range) {
 
     RevisionRange outgoing() {
         return new RevisionRange(required(range, "range"));
+    }
+
+    boolean namesThePushTarget() {
+        return remoteUrl != null && !remoteUrl.isBlank();
     }
 }

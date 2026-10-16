@@ -45,11 +45,11 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
         return activityHealthOf(worker, now);
     }
 
-    public Optional<WorkerNotice> noticeDue(Worker worker, WorkerHealth health, boolean messageWaiting, Instant now) {
+    public Optional<WorkerNotice> noticeDue(Worker worker, WorkerHealth health, Awaited awaited, Instant now) {
         return switch (health) {
             case WorkerHealth.Dead _ -> Optional.of(new WorkerNotice(NoticeKind.DIED, worker.launchedAt()));
             case WorkerHealth.Busy busy -> busyTooLong(busy, now);
-            case WorkerHealth.Idle _ -> waitEnded(worker, now).or(() -> stale(worker, messageWaiting, now));
+            case WorkerHealth.Idle _ -> waitEnded(worker, now).or(() -> stale(worker, awaited, now));
             case WorkerHealth.Starting _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _, WorkerHealth.Stopped _,
                     WorkerHealth.LaunchFailed _, WorkerHealth.Finished _ -> Optional.empty();
         };
@@ -84,10 +84,10 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
                 .map(_ -> new WorkerNotice(NoticeKind.WAIT_ENDED, worker.lastStatus().at()));
     }
 
-    private Optional<WorkerNotice> stale(Worker worker, boolean messageWaiting, Instant now) {
+    private Optional<WorkerNotice> stale(Worker worker, Awaited awaited, Instant now) {
         boolean awaitsThePrimary = worker.lastStatus() != null && AWAITING_THE_PRIMARY.contains(worker.lastStatus().report().state());
         Instant quietSince = worker.quietSince();
-        if (awaitsThePrimary || messageWaiting || now.isBefore(quietSince.plus(staleAfter))) {
+        if (awaitsThePrimary || awaited.isAnything() || now.isBefore(quietSince.plus(staleAfter))) {
             return Optional.empty();
         }
         return Optional.of(new WorkerNotice(NoticeKind.STALE, quietSince));

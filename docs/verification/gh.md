@@ -1,0 +1,15 @@
+# The GitHub command: the calls EDI makes
+
+Verified on gh 2.96.0 (`gh --version`) on WSL2 Ubuntu 24.04, 16/10/2026, with two accounts logged in to `github.com`.
+Every call was read-only; `gh pr create` is exercised against a recording stand-in in the tests, never against the forge.
+
+| Call | Result on 2.96.0 |
+|---|---|
+| `gh auth token --hostname github.com --user <account>` | Prints the named account's token whichever account is active. |
+| `gh auth status --hostname github.com --json hosts` | Prints `{"hosts":{"github.com":[...]}}` with one object per account, carrying `login`, `active`, `state` and `scopes` as one comma-separated string such as `gist, read:org, repo, workflow`. |
+| `gh pr view <n> --repo github.com/<owner>/<repo> --json number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit` | Prints one object; `state` is `OPEN`, `MERGED` or `CLOSED`, `isDraft` a boolean, and `mergeCommit` is `null` until the merge, then `{"oid": "<commit>"}`. |
+| `gh pr list --repo ... --head <branch> --state open --json ...` | Prints an array of the same objects, empty when no pull request is open from that branch. |
+| `--repo <host>/<owner>/<repo>` | Accepted with the host written out, so the registered host is named on every call. |
+| `GH_TOKEN` in the environment | Used for the call instead of the stored login. |
+
+EDI's adapter is `adapter.forge.GitHubForge` (ADR-079, ADR-080).

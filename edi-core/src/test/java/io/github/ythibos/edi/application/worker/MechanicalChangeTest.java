@@ -64,7 +64,7 @@ class MechanicalChangeTest {
         home.checkMechanicalChange().check(worker.id());
 
         assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
-        assertThat(home.eventTypesOf(TASK)).endsWith("MechanicalChangeAccepted");
+        assertThat(home.eventTypesOf(TASK)).endsWith("MechanicalChangeAccepted", "DraftRecorded");
         assertThat(home.runtime().launches()).hasSize(1);
     }
 
@@ -90,6 +90,7 @@ class MechanicalChangeTest {
                 projects:
                   - name: harness
                     tracker: { kind: edi, projectKey: HRN }
+                    forge: { kind: github, path: example-owner/harness, account: example-owner }
                     base: main
                     verify: "echo the build broke; exit 1"
                 """);
@@ -129,7 +130,8 @@ class MechanicalChangeTest {
         return dispatch("Rename Lamp to Lantern in src/Lamp.java.", List.of("src/Lamp.java"));
     }
 
-    private Worker doneReportedBy(DispatchOutcome dispatched) {
+    private Worker doneReportedBy(DispatchOutcome dispatched) throws IOException {
+        WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
         Worker reported = home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Renamed.");
         assertThat(reported.doneCheck()).isEqualTo(DoneCheck.CHECKING);
         return reported;

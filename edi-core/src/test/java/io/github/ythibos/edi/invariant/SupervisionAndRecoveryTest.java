@@ -22,6 +22,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.runtime.PrivateTmuxServer;
 import io.github.ythibos.edi.adapter.runtime.TmuxClaudeRuntime;
+import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
+import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.supervision.OutageList;
@@ -29,13 +31,16 @@ import io.github.ythibos.edi.application.worker.SteerDelivery;
 import io.github.ythibos.edi.application.worker.WorkerList;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.Keystroke;
@@ -44,6 +49,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerHealth;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -169,6 +175,7 @@ class SupervisionAndRecoveryTest {
                 home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
                 home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Working on " + worker.id().task() + ".");
             }
+            WorkerFixtures.opensTheDraftOf(home, lamp);
             home.recordStatus().report(lamp.id(), StatusState.DONE, null, null, "The lamp is fitted.");
 
             home.restartTheMachine();
@@ -313,8 +320,51 @@ class SupervisionAndRecoveryTest {
 
         @Test
         @DisplayName("AT-29 follow-up work on a project with a pending refresh waits until the fetch verified the merge commit")
-        void followUpWaitsForTheVerifiedRefresh() {
-            Pending.until(Slice.S5);
+        @Tag("adapter")
+        void followUpWaitsForTheVerifiedRefresh() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository upstream = FixtureRepository.at(directory.resolve("upstream/harness"));
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            FixtureRepository copy = FixtureRepository.at(home.home().worktreeOf(new ProjectName("harness"), new TaskId("fit-lamp")));
+            copy.write("lamp.txt", "brass\n").commit("HRN-3 Fit the lamp");
+            MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, lamp);
+            home.recordStatus().report(lamp.id(), StatusState.DONE, null, null, draft.address().url());
+            String landed = squashedOnASideBranchOf(upstream, copy, "feature/HRN-3");
+            home.forge().merges(draft.address(), landed);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
+
+            MergedWork merged = home.followMerges().mergedSaysTheCaptain(draft.address().url(), Actor.PRIMARY);
+
+            assertThat(merged.cleanUp().done()).isFalse();
+            assertThatThrownBy(() -> dispatch(home, "fit-horn"))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessageContaining("Follow-up work on harness waits until its clone holds commit " + landed + " on origin/main");
+            assertThat(home.runtime().launches()).hasSize(1);
+
+            upstream.run("merge", "--quiet", "--ff-only", "incoming");
+            dispatch(home, "fit-horn");
+
+            assertThat(home.runtime().launches()).hasSize(2);
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).contains("DraftMerged", "CloneRefreshed");
+
+            home.followMerges().finishEarlierMerges();
+
+            assertThat(home.tasks().get(new TaskId("fit-lamp")).state()).isEqualTo(TaskState.DONE);
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("TaskCostRecorded", "TaskCleanedUp");
+            assertThat(copy.root()).doesNotExist();
+        }
+
+        private static String squashedOnASideBranchOf(FixtureRepository upstream, FixtureRepository copy, String branch) throws IOException {
+            upstream.run("switch", "--quiet", "--create", "incoming");
+            upstream.run("fetch", "--quiet", copy.root().toString(), branch);
+            upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+            String landed = upstream.commit("Fit the lamp, squashed").head();
+            upstream.run("switch", "--quiet", "main");
+            return landed;
+        }
+
+        private static void dispatch(TestHome home, String task) {
+            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY);
         }
     }
 }

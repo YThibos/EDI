@@ -7,13 +7,15 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S4, supervision and recovery, on top of the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
+The repository is at slice S5, delivery, on top of the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
 Workers report with `edi status` and read `edi inbox`; `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived; a pre-tool guard refuses pattern kills, tmux without a socket, forced or base-branch pushes and merges; each copy's `commit-msg` hook refuses agent trailers and subjects without the work key.
 The primary and the workers answer every Claude Code hook: the session the captain typed in last is the primary and any other stands by, the primary's turn ends with the captain report when it changed state and with an `edi wait` running while work is in flight, and `edi wait` prints what needs the primary as soon as it happens.
 A supervision round judges each worker from its hooks, its tmux server and the machine's boot, parks one that stopped on a usage limit and resumes it after the reset, and puts two or more dead workers on a numbered outage hold list that `edi recover` answers one number at a time, resuming the recorded session in the task's own copy.
+A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included, and its done counts only once its draft is open, still a draft and at the copy's head, and its branch adds no SNAPSHOT version; work delivered to the captain's checkout arrives by a ref-only fetch or, on request, as an uncommitted patch.
+EDI watches every open draft, follows a merge the forge reports by refreshing the clone before any follow-up work and cleaning up the task once its work is landed, and refuses any push from an isolated copy to a repository its project does not register.
 
 ## Parts
 
@@ -99,6 +101,21 @@ edi recover 4 fresh --effort medium
 ```
 
 A call made inside a Claude Code session names it, so a standby session's changes are refused; `edi wait` serves only the primary.
+
+### Delivery
+
+A project's registry entry names its forge, `{ kind: github|gitlab, host, path, account }`, and every forge call for it runs under that account; its `delivery` is `draft-review` (the default) or `local-branch` with a `captainCheckout`, and one task may ask for `--delivery local-apply`.
+`gh` and `glab` must be logged in, the validation pipeline must be installed for draft reviews, and `edi.pipeline.home` names the pipeline's home when it is not `~/.no-mistakes`.
+
+```sh
+edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14 --delivery local-apply
+edi deliver fit-the-lamp                            # open the draft from the pushed branch when the pipeline could not
+edi merged fit-the-lamp                             # the captain merged it: check the forge, refresh the clone, clean up
+edi merged https://github.com/owner/repo/pull/7     # the same, by the draft's address
+edi cleanup fit-the-lamp                            # retire a landed task's copy, branch and workers
+```
+
+`edi task show` names a ship's draft, its latest pipeline run and, once cleaned up, what it cost; a cleanup that finds unlanded work lists every uncommitted path and unlanded commit and changes nothing.
 
 ## Documentation
 

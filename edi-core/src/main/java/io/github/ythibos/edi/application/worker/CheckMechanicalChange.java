@@ -13,6 +13,7 @@ import io.github.ythibos.edi.adapter.build.ProjectBuild;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
+import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -35,20 +36,20 @@ public class CheckMechanicalChange {
     private final ProjectBuild build;
     private final WorkerRuntime runtime;
     private final LaunchWorker launcher;
-    private final CaptainCheckouts checkouts;
+    private final DeliverAcceptedWork acceptedWork;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public CheckMechanicalChange(WorkerStore workers, WorkerContext context, Git git, ProjectBuild build, WorkerRuntime runtime,
-            LaunchWorker launcher, CaptainCheckouts checkouts, EventLog events, Clock clock, TransactionTemplate transaction) {
+            LaunchWorker launcher, DeliverAcceptedWork acceptedWork, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.context = context;
         this.git = git;
         this.build = build;
         this.runtime = runtime;
         this.launcher = launcher;
-        this.checkouts = checkouts;
+        this.acceptedWork = acceptedWork;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -63,7 +64,7 @@ public class CheckMechanicalChange {
         Optional<String> refusal = refusalOf(workplace);
         if (refusal.isEmpty()) {
             accept(id);
-            checkouts.deliverWhenLocal(id.task());
+            acceptedWork.deliver(id.task());
         } else {
             refuse(id, refusal.get());
             handToAnImplementationWorker(id, workplace, refusal.get());

@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
+import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -21,11 +23,13 @@ public class IsolatedCopies {
     private final EdiHome home;
     private final Git git;
     private final WorktreeHooks hooks;
+    private final Forges forges;
 
-    public IsolatedCopies(EdiHome home, Git git, WorktreeHooks hooks) {
+    public IsolatedCopies(EdiHome home, Git git, WorktreeHooks hooks, Forges forges) {
         this.home = home;
         this.git = git;
         this.hooks = hooks;
+        this.forges = forges;
     }
 
     public Path prepare(ProjectEntry project, TaskId task, BranchName branch, BaseBranch base) {
@@ -39,6 +43,7 @@ public class IsolatedCopies {
             create(project, worktree, branch, base);
         }
         hooks.installIn(project, worktree, branch, base);
+        bindTheForgeAccount(project);
         return worktree;
     }
 
@@ -79,6 +84,14 @@ public class IsolatedCopies {
             git.addWorktreeOnNewBranch(clone, worktree, branch, startPoint);
         }
         requireIsolated(worktree, project);
+    }
+
+    private void bindTheForgeAccount(ProjectEntry project) {
+        RegisteredForge forge = project.forge();
+        if (forge != null) {
+            forges.serving(forge).credentialHelperFor(forge)
+                    .ifPresent(helper -> git.bindCredentials(project.projectClone(), "https://" + forge.repository().host(), helper));
+        }
     }
 
     private void requireOnItsBranch(Path worktree, BranchName branch) {

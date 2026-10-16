@@ -45,6 +45,10 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case BUSY_TOO_LONG -> who + " has been busy since " + Moments.minute(wake.moment()) + ", past the three-hour ceiling.";
             case WAIT_ENDED -> who + "'s declared wait has ended; verify what it waited for: " + wake.detail();
             case HOLD_DUE -> wake.task() + ": its hold until " + wake.detail() + " has come due.";
+            case DRAFT_MERGED -> wake.task() + ": the captain merged " + wake.detail() + "; EDI refreshes the clone and cleans up.";
+            case DRAFT_CLOSED -> wake.task() + ": " + wake.detail() + " was closed without a merge; its work waits for the captain's word.";
+            case DELIVERY_FAILED -> wake.task() + ": its delivery to the captain's checkout failed: " + wake.detail();
+            case CLEANUP_REFUSED -> wake.task() + " was not cleaned up after its merge: " + wake.detail();
         };
     }
 

@@ -6,10 +6,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
+import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
@@ -17,6 +19,7 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Intake;
@@ -47,12 +50,14 @@ public final class WorkerFixtures {
             projects:
               - name: harness
                 tracker: { kind: edi, projectKey: HRN }
+                forge: { kind: github, path: example-owner/harness, account: example-owner }
                 base: main
                 craftRules: true
                 aiScaffolding: committed
                 verify: "true"
               - name: EDI
                 tracker: { kind: edi, projectKey: EDI }
+                forge: { kind: github, path: example-owner/EDI, account: example-owner }
                 base: main
                 craftRules: true
             """;
@@ -74,8 +79,13 @@ public final class WorkerFixtures {
         return queued(id, TaskKind.SHIP, project, key);
     }
 
+    public static Task queuedShip(String id, String project, String key, DeliveryMode delivery) {
+        Intake intake = new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), WorkKey.parse(key), null, List.of(), delivery);
+        return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
+    }
+
     public static Task queued(String id, TaskKind kind, String project, String key) {
-        Intake intake = new Intake(kind, "Work on " + id, List.of(new ProjectName(project)), key == null ? null : WorkKey.parse(key), null, List.of());
+        Intake intake = new Intake(kind, "Work on " + id, List.of(new ProjectName(project)), key == null ? null : WorkKey.parse(key), null, List.of(), null);
         return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
     }
 
@@ -102,6 +112,14 @@ public final class WorkerFixtures {
                 new WorkerLaunch(LaunchKind.DISPATCH, TestHome.START, home.machineBoot().current()));
         home.workers().insert(worker, "digest-of-" + task.id());
         return worker;
+    }
+
+    public static MergeRequestView opensTheDraftOf(TestHome home, Worker worker) throws IOException {
+        TaskId task = worker.id().task();
+        ProjectEntry project = home.registry().entryOf(home.tasks().get(task).intake().projects().getFirst());
+        BranchName branch = home.dispatches().of(task).orElseThrow().branch();
+        String head = FixtureRepository.at(home.home().worktreeOf(project.project().name(), task)).head();
+        return home.forge().opensADraft(project.requireForge(), branch, project.requireBase(), head);
     }
 
     private static void cloneOf(Path directory, TestHome home, String project) throws IOException {

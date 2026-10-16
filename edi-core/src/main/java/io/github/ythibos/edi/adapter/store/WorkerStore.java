@@ -125,6 +125,10 @@ public class WorkerStore {
                 .findFirst();
     }
 
+    public List<Worker> allOf(TaskId task) {
+        return workers(store.sql(SELECT_WORKERS + "where task_id = :task order by incarnation").param("task", task.value()));
+    }
+
     public List<Worker> serving() {
         return workers(store.sql(SELECT_WORKERS + "where retired_at is null order by launched_at, rowid"));
     }

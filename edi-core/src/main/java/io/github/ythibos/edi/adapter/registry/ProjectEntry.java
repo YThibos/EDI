@@ -8,6 +8,7 @@ import java.util.Set;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchKind;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.project.AiScaffolding;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.Project;
@@ -19,6 +20,7 @@ public record ProjectEntry(
         Path projectClone,
         Path captainCheckout,
         BaseBranch base,
+        RegisteredForge forge,
         DeliveryMode delivery,
         Set<BranchKind> branchKinds,
         boolean craftRules,
@@ -43,6 +45,13 @@ public record ProjectEntry(
             throw new Refusal(project.name() + " names no base branch in the project registry; add base: to its entry.");
         }
         return base;
+    }
+
+    public RegisteredForge requireForge() {
+        if (forge == null) {
+            throw new Refusal(project.name() + " registers no forge, so EDI has no repository to deliver its work to; add forge: to its entry.");
+        }
+        return forge;
     }
 
     public OptionalInt workerCapacity() {

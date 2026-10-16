@@ -84,7 +84,7 @@ class CaptainReportPresenterTest {
     }
 
     private static Task filed(String item, int daysLater) {
-        return Task.queued(new TaskId(item), new Intake(TaskKind.SHIP, "Stow the " + item, List.of(new ProjectName("harness")), null, null, List.of()),
+        return Task.queued(new TaskId(item), new Intake(TaskKind.SHIP, "Stow the " + item, List.of(new ProjectName("harness")), null, null, List.of(), null),
                 "", FIRST_DAY.plus(daysLater, ChronoUnit.DAYS));
     }
 }

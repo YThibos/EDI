@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.task;
 import java.util.HashSet;
 import java.util.List;
 
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 
@@ -12,7 +13,8 @@ public record Intake(
         List<ProjectName> projects,
         WorkKey workKey,
         BaseBranch base,
-        List<TaskId> blockedBy) {
+        List<TaskId> blockedBy,
+        DeliveryMode delivery) {
 
     public Intake {
         title = title.strip();
@@ -24,6 +26,10 @@ public record Intake(
         if (repeatsAny(projects) || repeatsAny(blockedBy)) {
             throw new IllegalArgumentException("A task names each project and each blocking task once.");
         }
+    }
+
+    public DeliveryMode deliveryOr(DeliveryMode projectsDelivery) {
+        return delivery == null ? projectsDelivery : delivery;
     }
 
     public boolean namesTheProjectItWorksOn() {

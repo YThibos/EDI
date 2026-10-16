@@ -11,6 +11,9 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
@@ -60,6 +63,9 @@ class JsonConfiguration {
                 .addSerializer(BranchName.class, ToStringSerializer.instance)
                 .addSerializer(WorkerId.class, ToStringSerializer.instance)
                 .addSerializer(StatusKey.class, ToStringSerializer.instance)
+                .addSerializer(MergeRequestAddress.class, ToStringSerializer.instance)
+                .addSerializer(ForgeRepository.class, ToStringSerializer.instance)
+                .addSerializer(MergeRequestState.class, new AsText<>(MergeRequestState.class, MergeRequestState::word))
                 .addSerializer(EffortLevel.class, new AsText<>(EffortLevel.class, EffortLevel::word))
                 .addSerializer(StatusState.class, new AsText<>(StatusState.class, StatusState::word))
                 .addSerializer(WorkerActivity.class, new AsText<>(WorkerActivity.class, WorkerActivity::word))

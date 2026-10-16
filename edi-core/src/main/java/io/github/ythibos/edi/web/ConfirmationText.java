@@ -4,9 +4,12 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Answered;
+import io.github.ythibos.edi.web.Confirmation.CleanedUp;
 import io.github.ythibos.edi.web.Confirmation.Deferred;
 import io.github.ythibos.edi.web.Confirmation.Dispatched;
+import io.github.ythibos.edi.web.Confirmation.DraftDelivered;
 import io.github.ythibos.edi.web.Confirmation.Held;
+import io.github.ythibos.edi.web.Confirmation.MergedWorkFollowedUp;
 import io.github.ythibos.edi.web.Confirmation.Noted;
 import io.github.ythibos.edi.web.Confirmation.Queued;
 import io.github.ythibos.edi.web.Confirmation.Raised;
@@ -48,6 +51,9 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Relaunched relaunched -> WorkerSentences.relaunched(relaunched.launched());
             case StopRequested stopped -> "Stopping " + stopped.worker().id() + ": EDI signalled its processes, and those still running in "
                     + "ten seconds are killed; edi worker relaunch " + stopped.worker().id().task() + " resumes its session.";
+            case DraftDelivered delivered -> DeliverySentences.delivered(delivered.delivered());
+            case MergedWorkFollowedUp followed -> DeliverySentences.followedUp(followed.work());
+            case CleanedUp cleanedUp -> DeliverySentences.cleanedUp(cleanedUp.task());
         };
     }
 

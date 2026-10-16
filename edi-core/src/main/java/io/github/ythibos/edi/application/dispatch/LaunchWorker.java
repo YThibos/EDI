@@ -46,10 +46,12 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -140,7 +142,7 @@ public class LaunchWorker {
         IssuedToken token = tokens.issueInto(stateDirectory);
         String firstPrompt = kind == LaunchKind.RESUME
                 ? resumeNotes.noteFor(incarnation.earlier(), worktree, dispatch.branch(), because)
-                : briefPrompt(written(taskDirectory.resolve(BRIEF_FILE), briefs.briefFor(briefFacts(incarnation, worktree, taskDirectory))));
+                : briefPrompt(writtenBriefAndIntent(briefFacts(incarnation, worktree, taskDirectory)));
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
     }
@@ -198,6 +200,13 @@ public class LaunchWorker {
     private BriefFacts briefFacts(Incarnation incarnation, Path worktree, Path taskDirectory) {
         return new BriefFacts(incarnation.task(), incarnation.worker(), incarnation.project(), incarnation.dispatch(), incarnation.base(),
                 worktree, taskDirectory, runtime.socket(), incarnation.craftRules());
+    }
+
+    private Path writtenBriefAndIntent(BriefFacts facts) {
+        if (facts.task().intake().kind() == TaskKind.SHIP && facts.delivery() == DeliveryMode.DRAFT_REVIEW) {
+            written(facts.intentPath(), briefs.pipelineIntentFor(facts).text());
+        }
+        return written(facts.taskDirectory().resolve(BRIEF_FILE), briefs.briefFor(facts));
     }
 
     private static String briefPrompt(Path brief) {

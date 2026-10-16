@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -30,7 +31,7 @@ import io.github.ythibos.edi.domain.task.UnknownTask;
 @Component
 public class TaskStore {
 
-    private static final String SELECT_TASKS = "select id, kind, title, state, work_key, base, notes, created_at, closed_at from task ";
+    private static final String SELECT_TASKS = "select id, kind, title, state, work_key, base, delivery, notes, created_at, closed_at from task ";
 
     private final JdbcClient store;
 
@@ -47,14 +48,15 @@ public class TaskStore {
 
     public void insert(Task task) {
         store.sql("""
-                        insert into task (id, kind, title, state, work_key, base, notes, created_at, closed_at)
-                        values (:id, :kind, :title, :state, :workKey, :base, :notes, :created, :closed)""")
+                        insert into task (id, kind, title, state, work_key, base, delivery, notes, created_at, closed_at)
+                        values (:id, :kind, :title, :state, :workKey, :base, :delivery, :notes, :created, :closed)""")
                 .param("id", task.id().value())
                 .param("kind", task.intake().kind().word())
                 .param("title", task.intake().title())
                 .param("state", task.state().word())
                 .param("workKey", Columns.textOf(task.intake().workKey()))
                 .param("base", Columns.textOf(task.intake().base()))
+                .param("delivery", task.intake().delivery() == null ? null : task.intake().delivery().word())
                 .param("notes", task.notes())
                 .param("created", Columns.text(task.created()))
                 .param("closed", Columns.text(task.closed()))
@@ -164,6 +166,7 @@ public class TaskStore {
                 row.getString("state"),
                 row.getString("work_key"),
                 row.getString("base"),
+                row.getString("delivery"),
                 row.getString("notes"),
                 row.getString("created_at"),
                 row.getString("closed_at"));
@@ -210,6 +213,7 @@ public class TaskStore {
             String state,
             String workKey,
             String base,
+            String delivery,
             String notes,
             String created,
             String closed) {
@@ -221,7 +225,8 @@ public class TaskStore {
                     parts.projects().getOrDefault(id, List.of()),
                     workKey == null ? null : WorkKey.parse(workKey),
                     base == null ? null : new BaseBranch(base),
-                    parts.blockers().getOrDefault(id, List.of()));
+                    parts.blockers().getOrDefault(id, List.of()),
+                    delivery == null ? null : DeliveryMode.named(delivery));
             return new Task(
                     new TaskId(id),
                     intake,

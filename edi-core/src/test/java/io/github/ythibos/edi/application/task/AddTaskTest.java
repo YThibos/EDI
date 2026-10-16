@@ -74,7 +74,7 @@ class AddTaskTest {
     @Test
     void takesWorkOnlyForARegisteredProject() {
         NewTask elsewhere = new NewTask(new TaskId("elsewhere"),
-                new Intake(TaskKind.SHIP, "Work elsewhere", List.of(new ProjectName("unknown-project")), null, null, List.of()), "");
+                new Intake(TaskKind.SHIP, "Work elsewhere", List.of(new ProjectName("unknown-project")), null, null, List.of(), null), "");
 
         assertThatThrownBy(() -> home.addTask().add(elsewhere, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class)
@@ -83,7 +83,7 @@ class AddTaskTest {
 
     @Test
     void needsTheProjectOfAShipOrScoutButNotOfACaptainItem() {
-        NewTask projectless = new NewTask(new TaskId("drift"), new Intake(TaskKind.SCOUT, "Look around", List.of(), null, null, List.of()), "");
+        NewTask projectless = new NewTask(new TaskId("drift"), new Intake(TaskKind.SCOUT, "Look around", List.of(), null, null, List.of(), null), "");
 
         assertThatThrownBy(() -> home.addTask().add(projectless, Actor.PRIMARY)).isInstanceOf(Refusal.class).hasMessage("A scout names the project it works on.");
         assertThat(home.addTask().add(captainItem("lamp-choice", "Choose the lamp"), Actor.PRIMARY)).isEqualTo(new TaskId("lamp-choice"));

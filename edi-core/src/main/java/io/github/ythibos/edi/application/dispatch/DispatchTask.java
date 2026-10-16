@@ -16,6 +16,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.application.delivery.CloneRefreshes;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchKind;
@@ -46,11 +47,13 @@ public class DispatchTask {
     private final DispatchRulesFile rulesFile;
     private final WorkerPlaces places;
     private final LaunchWorker launcher;
+    private final CloneRefreshes refreshes;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DispatchTask(TaskStore tasks, DispatchStore dispatches, EventLog events, ProjectRegistry registry, MachineProfile machine,
-            DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, Clock clock, TransactionTemplate transaction) {
+            DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes, Clock clock,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.events = events;
@@ -59,12 +62,14 @@ public class DispatchTask {
         this.rulesFile = rulesFile;
         this.places = places;
         this.launcher = launcher;
+        this.refreshes = refreshes;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, Actor actor) {
         Dispatching dispatching = transaction.execute(_ -> dispatching(reference, request));
+        refreshes.requireFresh(dispatching.project());
         if (dispatching.isBeyondCapacity()) {
             return transaction.execute(_ -> deferred(dispatching, actor));
         }

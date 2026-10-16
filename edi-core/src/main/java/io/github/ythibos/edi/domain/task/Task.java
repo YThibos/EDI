@@ -79,6 +79,20 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
         return state == TaskState.IN_FLIGHT ? this : new Task(id, intake, TaskState.IN_FLIGHT, notes, hold, created, closed);
     }
 
+    public Task cleanedUp(Instant at) {
+        requireReadyForCleanUp();
+        return new Task(id, intake, TaskState.DONE, notes, null, created, at);
+    }
+
+    public void requireReadyForCleanUp() {
+        if (state != TaskState.IN_FLIGHT) {
+            throw new Refusal(id + " is " + state.word() + ", and only work in flight is cleaned up.");
+        }
+        if (isHeld()) {
+            throw new Refusal(id + " is held: " + hold.reason() + ". Release it before cleaning it up.");
+        }
+    }
+
     public Task dropped(CaptainsWord word, Instant at) {
         Objects.requireNonNull(word, () -> id + " is dropped only on the captain's word.");
         if (state == TaskState.DROPPED) {

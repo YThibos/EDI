@@ -40,7 +40,7 @@ class OutageListTextTest {
     @Test
     void numbersEachLostTaskWithWhatTheCaptainNeedsToChoose() {
         OutageEntry entry = new OutageEntry(2, new TaskId("tune-horn"), WorkerId.first(new TaskId("tune-horn")), DeathCause.MACHINE_RESTARTED, AT);
-        Task task = Task.queued(new TaskId("tune-horn"), new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of()), "", AT)
+        Task task = Task.queued(new TaskId("tune-horn"), new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(), null), "", AT)
                 .held(entry.hold());
         Worker worker = Worker.launched(entry.worker(), SESSION, CategoryId.IMPLEMENTATION, new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
                 new WorkerWindow("edi", 7, AT, "@1", 8), new WorkerLaunch(LaunchKind.DISPATCH, AT, null))

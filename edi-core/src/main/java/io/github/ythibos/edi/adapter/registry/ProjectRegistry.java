@@ -17,7 +17,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 @Component
-@RegisterReflectionForBinding({RegisteredProjects.class, RegisteredProject.class, RegisteredTracker.class})
+@RegisterReflectionForBinding({RegisteredProjects.class, RegisteredProject.class, RegisteredTracker.class, RegisteredForgeEntry.class})
 public class ProjectRegistry {
 
     private final Path registry;

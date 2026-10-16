@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 
 class TaskTest {
@@ -71,7 +72,7 @@ class TaskTest {
 
     @Test
     void closesACaptainItemWithItsAnswer() {
-        Task item = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of()), "", AT)
+        Task item = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null), "", AT)
                 .heldForDecision(DECISION);
 
         Task decided = item.decisionAnswered(LATER);
@@ -83,7 +84,7 @@ class TaskTest {
 
     @Test
     void refusesToHoldOrReleaseWhatCannotWait() {
-        Task done = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of()), "", AT)
+        Task done = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null), "", AT)
                 .heldForDecision(DECISION)
                 .decisionAnswered(LATER);
 
@@ -95,7 +96,7 @@ class TaskTest {
 
     @Test
     void dropsFromAnyStateOnTheCaptainsWord() {
-        Task done = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of()), "", AT)
+        Task done = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null), "", AT)
                 .heldForDecision(DECISION)
                 .decisionAnswered(LATER);
 
@@ -124,6 +125,28 @@ class TaskTest {
     }
 
     @Test
+    void isDoneOnceItsLandedWorkIsCleanedUp() {
+        Task cleaned = ship().dispatched().cleanedUp(LATER);
+
+        assertThat(cleaned.state()).isEqualTo(TaskState.DONE);
+        assertThat(cleaned.closed()).isEqualTo(LATER);
+        assertThatThrownBy(() -> ship().cleanedUp(LATER)).isInstanceOf(Refusal.class).hasMessage("fit-lamp is queued, and only work in flight is cleaned up.");
+        assertThatThrownBy(() -> ship().dispatched().held(DEFERRAL).cleanedUp(LATER)).isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp is held: after the season. Release it before cleaning it up.");
+    }
+
+    @Test
+    void followsItsProjectsDeliveryUnlessTheCaptainAskedForAnotherOne() {
+        Intake ownWay = new Intake(TaskKind.SHIP, "Fit", List.of(new ProjectName("harness")), null, null, List.of(), DeliveryMode.LOCAL_APPLY);
+
+        assertThat(ship().intake().deliveryOr(DeliveryMode.DRAFT_REVIEW)).isEqualTo(DeliveryMode.DRAFT_REVIEW);
+        assertThat(ownWay.deliveryOr(DeliveryMode.DRAFT_REVIEW)).isEqualTo(DeliveryMode.LOCAL_APPLY);
+        assertThat(DeliveryMode.registryDefault("local-branch")).isEqualTo(DeliveryMode.LOCAL_BRANCH);
+        assertThatIllegalArgumentException().isThrownBy(() -> DeliveryMode.registryDefault("local-apply"))
+                .withMessageContaining("never a project's default");
+    }
+
+    @Test
     void keepsItsStateConsistent() {
         Intake intake = ship().intake();
         TaskId id = new TaskId("fit-lamp");
@@ -134,11 +157,11 @@ class TaskTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.DROPPED, "", null, AT, null));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskState.DROPPED, "", DEFERRAL, AT, LATER));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id,
-                new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id)), TaskState.QUEUED, "", null, AT, null));
+                new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id), null), TaskState.QUEUED, "", null, AT, null));
     }
 
     private static Task ship() {
         return Task.queued(new TaskId("fit-lamp"),
-                new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of()), "  Intake notes. ", AT);
+                new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null), "  Intake notes. ", AT);
     }
 }

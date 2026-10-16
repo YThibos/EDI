@@ -32,6 +32,7 @@ class CapacityTest {
                 projects:
                   - name: harness
                     tracker: { kind: edi, projectKey: HRN }
+                    forge: { kind: github, path: example-owner/harness, account: example-owner }
                     base: main
                     capacity: 1
                 """);
@@ -45,6 +46,7 @@ class CapacityTest {
         assertThat(home.tasks().get(new TaskId("fit-horn")).state()).isEqualTo(TaskState.QUEUED);
         assertThat(home.launchDeferredDispatches().launchWhereThereIsRoom()).isEmpty();
 
+        WorkerFixtures.opensTheDraftOf(home, first.launched().worker());
         home.recordStatus().report(first.launched().worker().id(), StatusState.DONE, null, null, "The lamp is fitted.");
         List<DispatchOutcome.Launched> launched = home.launchDeferredDispatches().launchWhereThereIsRoom();
 
@@ -60,11 +62,13 @@ class CapacityTest {
                 projects:
                   - name: harness
                     tracker: { kind: edi, projectKey: HRN }
+                    forge: { kind: github, path: example-owner/harness, account: example-owner }
                     base: main
                     capacity: 1
                     craftRules: true
                   - name: EDI
                     tracker: { kind: edi, projectKey: EDI }
+                    forge: { kind: github, path: example-owner/EDI, account: example-owner }
                     base: main
                     capacity: 1
                 """);
@@ -74,6 +78,8 @@ class CapacityTest {
         dispatch(home, "fit-horn");
         DispatchOutcome caves = dispatch(home, "map-caves");
         dispatch(home, "map-tunnels");
+        WorkerFixtures.opensTheDraftOf(home, lamp.launched().worker());
+        WorkerFixtures.opensTheDraftOf(home, caves.launched().worker());
         home.recordStatus().report(lamp.launched().worker().id(), StatusState.DONE, null, null, "The lamp is fitted.");
         home.recordStatus().report(caves.launched().worker().id(), StatusState.DONE, null, null, "The caves are mapped.");
         Files.delete(home.home().craftRules());

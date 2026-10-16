@@ -30,7 +30,9 @@ class PublishCheckController {
     @PostMapping("/api/publish-checks")
     ResponseEntity<PublishCheckResult> check(@RequestBody PublishCheckRequest request) {
         RevisionRange outgoing = request.outgoing();
-        PublishVerdict verdict = publishCheck.check(request.repositoryPath(), outgoing);
+        PublishVerdict verdict = request.namesThePushTarget()
+                ? publishCheck.checkPush(request.repositoryPath(), outgoing, request.remoteUrl())
+                : publishCheck.check(request.repositoryPath(), outgoing);
         return ResponseEntity.status(verdict.allowsPush() ? HttpStatus.OK : HttpStatus.CONFLICT)
                 .body(new PublishCheckResult(outgoing, verdict));
     }

@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.adapter.process;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
@@ -21,8 +23,13 @@ public class ExternalPrograms {
     private static final Duration PATIENCE = Duration.ofMinutes(2);
 
     public ProgramRun run(Program program, Path directory, List<String> arguments) {
+        return run(ProgramCall.of(program, null, directory, arguments));
+    }
+
+    public ProgramRun run(ProgramCall call) {
+        Program program = call.program();
         try (Capture output = Capture.create(); Capture errors = Capture.create()) {
-            Process process = start(program, directory, arguments, output.file(), errors.file());
+            Process process = start(call, output.file(), errors.file());
             awaitCompletion(program, process, PATIENCE);
             return new ProgramRun(program, process.exitValue(), output.read(), errors.read());
         } catch (IOException unstartable) {
@@ -33,7 +40,7 @@ public class ExternalPrograms {
     public int runInto(Path log, Program program, Path directory, List<String> arguments, Duration patience) {
         try {
             Files.createDirectories(log.getParent());
-            Process process = start(program, directory, arguments, log, log);
+            Process process = start(ProgramCall.of(program, null, directory, arguments), log, log);
             awaitCompletion(program, process, patience);
             return process.exitValue();
         } catch (IOException unstartable) {
@@ -41,17 +48,22 @@ public class ExternalPrograms {
         }
     }
 
-    private static Process start(Program program, Path directory, List<String> arguments, Path output, Path errors)
-            throws IOException {
-        ProcessBuilder launch = new ProcessBuilder(Stream.concat(Stream.of(program.executable()), arguments.stream()).toList())
-                .directory(directory.toFile());
+    private static Process start(ProgramCall call, Path output, Path errors) throws IOException {
+        ProcessBuilder launch = new ProcessBuilder(Stream.concat(Stream.of(call.executable()), call.arguments().stream()).toList())
+                .directory(call.directory().toFile());
+        launch.environment().keySet().removeAll(call.withheldVariables());
+        launch.environment().putAll(call.environment());
         if (output.equals(errors)) {
             launch.redirectOutput(output.toFile()).redirectErrorStream(true);
         } else {
             launch.redirectOutput(output.toFile()).redirectError(errors.toFile());
         }
         Process process = launch.start();
-        process.getOutputStream().close();
+        try (OutputStream input = process.getOutputStream()) {
+            if (call.input() != null) {
+                input.write(call.input().getBytes(StandardCharsets.UTF_8));
+            }
+        }
         return process;
     }
 

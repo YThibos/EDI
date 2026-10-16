@@ -11,9 +11,11 @@ import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
 
 @Component
 public class WorkerContext {
@@ -42,6 +44,14 @@ public class WorkerContext {
 
         public String baseRef() {
             return "origin/" + base;
+        }
+
+        public DeliveryMode delivery() {
+            return task.intake().deliveryOr(project.delivery());
+        }
+
+        public boolean isAShip() {
+            return task.intake().kind() == TaskKind.SHIP;
         }
     }
 }

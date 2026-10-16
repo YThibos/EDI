@@ -3,18 +3,30 @@ package io.github.ythibos.edi.domain.wake;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
+import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
+import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
@@ -54,6 +66,24 @@ class WakeRuleTest {
         assertThat(WakeRule.wakeFor(new UsageLimitReached(TASK, WORKER, new UsageLimit("session limit", RESET)), THE_WORKER))
                 .contains(new Wake(WakeKind.USAGE_LIMIT, TASK, WORKER, "session limit", RESET));
         assertThat(WakeRule.wakeFor(new WorkerStale(TASK, WORKER, RESET), Actor.CORE)).contains(new Wake(WakeKind.WORKER_STALE, TASK, WORKER, "", RESET));
+    }
+
+    @Test
+    void wakesThePrimaryForWhatHappensToADelivery() {
+        MergeRequestAddress draft = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
+
+        assertThat(WakeRule.wakeFor(new DraftMerged(TASK, draft, "3333"), Actor.CORE))
+                .contains(new Wake(WakeKind.DRAFT_MERGED, TASK, null, draft.url(), null));
+        assertThat(WakeRule.wakeFor(new DraftClosed(TASK, draft), Actor.CORE)).map(Wake::kind).contains(WakeKind.DRAFT_CLOSED);
+        assertThat(WakeRule.wakeFor(new BranchDeliveryFailed(TASK, BranchName.parse("feature/HRN-3"), "the fetch was refused"), Actor.CORE))
+                .contains(new Wake(WakeKind.DELIVERY_FAILED, TASK, null, "the fetch was refused", null));
+        assertThat(WakeRule.wakeFor(new ChangeNotApplied(TASK, "the checkout is dirty"), Actor.CORE)).map(Wake::kind).contains(WakeKind.DELIVERY_FAILED);
+        assertThat(WakeRule.wakeFor(new CleanupRefused(TASK, List.of("lamp.txt is not committed", "a commit is not in origin/main")), Actor.CORE))
+                .contains(new Wake(WakeKind.CLEANUP_REFUSED, TASK, null, "lamp.txt is not committed; a commit is not in origin/main", null));
+        assertThat(WakeRule.wakeFor(new CleanupRefused(TASK, List.of("lamp.txt is not committed")), Actor.PRIMARY)).isEmpty();
+        assertThat(WakeRule.wakeFor(new DeliveryRefused(TASK, WORKER, List.of("not a draft")), Actor.CORE)).isEmpty();
+        assertThat(WakeRule.wakeFor(new DraftRecorded(TASK, draft), Actor.CORE)).isEmpty();
+        assertThat(WakeRule.wakeFor(new TaskCleanedUp(TASK), Actor.CORE)).isEmpty();
     }
 
     @Test

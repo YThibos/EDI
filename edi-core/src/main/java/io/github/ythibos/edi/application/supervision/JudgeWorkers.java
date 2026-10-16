@@ -10,16 +10,19 @@ import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.NoticeStore;
+import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.WorkerList;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
+import io.github.ythibos.edi.domain.worker.Awaited;
 import io.github.ythibos.edi.domain.worker.NoticeKind;
 import io.github.ythibos.edi.domain.worker.SupervisionRules;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -33,6 +36,7 @@ public class JudgeWorkers {
 
     private final WorkerListQuery workers;
     private final InboxStore inbox;
+    private final PipelineRunStore pipelineRuns;
     private final NoticeStore notices;
     private final EventLog events;
     private final OutageHoldList outageHoldList;
@@ -41,10 +45,11 @@ public class JudgeWorkers {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public JudgeWorkers(WorkerListQuery workers, InboxStore inbox, NoticeStore notices, EventLog events, OutageHoldList outageHoldList,
-            CountRecoveryCost recoveryCost, MachineProfile machine, Clock clock, TransactionTemplate transaction) {
+    public JudgeWorkers(WorkerListQuery workers, InboxStore inbox, PipelineRunStore pipelineRuns, NoticeStore notices, EventLog events,
+            OutageHoldList outageHoldList, CountRecoveryCost recoveryCost, MachineProfile machine, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.inbox = inbox;
+        this.pipelineRuns = pipelineRuns;
         this.notices = notices;
         this.events = events;
         this.outageHoldList = outageHoldList;
@@ -67,7 +72,7 @@ public class JudgeWorkers {
             Instant now = clock.now();
             serving.entries().stream()
                     .filter(entry -> !entry.health().isDead())
-                    .forEach(entry -> rules.noticeDue(entry.worker(), entry.health(), hasAMessageWaiting(entry.worker()), now)
+                    .forEach(entry -> rules.noticeDue(entry.worker(), entry.health(), awaitedBy(entry.worker()), now)
                             .ifPresent(notice -> noticeOnce(entry.worker(), notice, now)));
         });
     }
@@ -84,8 +89,16 @@ public class JudgeWorkers {
         });
     }
 
+    private Awaited awaitedBy(Worker worker) {
+        return new Awaited(hasAMessageWaiting(worker), hasItsPipelineRunning(worker));
+    }
+
     private boolean hasAMessageWaiting(Worker worker) {
         return inbox.unacknowledgedOf(worker.id().task()).stream().anyMatch(message -> !message.isReceived());
+    }
+
+    private boolean hasItsPipelineRunning(Worker worker) {
+        return pipelineRuns.latestOf(worker.id().task()).filter(PipelineRun::isRunning).isPresent();
     }
 
     private void noticeOnce(Worker worker, WorkerNotice notice, Instant now) {

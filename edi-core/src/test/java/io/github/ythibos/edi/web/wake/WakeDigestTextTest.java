@@ -40,6 +40,22 @@ class WakeDigestTextTest {
     }
 
     @Test
+    void tellsThePrimaryWhatHappenedToADelivery() {
+        WakeDelivery delivery = new WakeDelivery(List.of(
+                queued(1, new Wake(WakeKind.DRAFT_MERGED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
+                queued(2, new Wake(WakeKind.DRAFT_CLOSED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
+                queued(3, new Wake(WakeKind.DELIVERY_FAILED, LAMP, null, "the captain's checkout has uncommitted work in lamp.txt", null)),
+                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0);
+
+        assertThat(new WakeDigestText().text(delivery)).contains("""
+                1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; EDI refreshes the clone and cleans up.
+                2. fit-lamp: https://github.com/example-owner/harness/pull/7 was closed without a merge; its work waits for the captain's word.
+                3. fit-lamp: its delivery to the captain's checkout failed: the captain's checkout has uncommitted work in lamp.txt
+                4. fit-lamp was not cleaned up after its merge: notes.txt is not committed
+                """);
+    }
+
+    @Test
     void namesEveryKindOfWake() {
         for (WakeKind kind : WakeKind.values()) {
             String text = new WakeDigestText().text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0));

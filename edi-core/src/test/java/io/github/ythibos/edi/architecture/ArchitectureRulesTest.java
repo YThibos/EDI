@@ -43,6 +43,7 @@ class ArchitectureRulesTest {
             "CLAUDE_CODE", "io.github.ythibos.edi.adapter.runtime..",
             "GLAB", "io.github.ythibos.edi.adapter.forge..",
             "GH", "io.github.ythibos.edi.adapter.forge..",
+            "NO_MISTAKES", "io.github.ythibos.edi.adapter.pipeline..",
             "SHELL", "io.github.ythibos.edi.adapter.build..");
 
     @ArchTest
