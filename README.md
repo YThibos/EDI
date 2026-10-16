@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/EDI-face.jpg" alt="EDI" width="640">
+</p>
+
 # EDI
 
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
