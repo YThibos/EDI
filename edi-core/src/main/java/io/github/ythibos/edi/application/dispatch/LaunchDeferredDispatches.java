@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.application.delivery.CloneRefreshes;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
@@ -26,17 +27,19 @@ public class LaunchDeferredDispatches {
     private final ProjectRegistry registry;
     private final WorkerPlaces places;
     private final LaunchWorker launcher;
+    private final CloneRefreshes refreshes;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public LaunchDeferredDispatches(DispatchStore dispatches, TaskStore tasks, ProjectRegistry registry, WorkerPlaces places,
-            LaunchWorker launcher, EventLog events, Clock clock, TransactionTemplate transaction) {
+            LaunchWorker launcher, CloneRefreshes refreshes, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.dispatches = dispatches;
         this.tasks = tasks;
         this.registry = registry;
         this.places = places;
         this.launcher = launcher;
+        this.refreshes = refreshes;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -45,6 +48,7 @@ public class LaunchDeferredDispatches {
     public List<Launched> launchWhereThereIsRoom() {
         return transaction.execute(_ -> dispatches.deferred()).stream()
                 .filter(this::hasRoom)
+                .filter(this::hasAFreshClone)
                 .flatMap(dispatch -> attemptedLaunchOf(dispatch).stream())
                 .toList();
     }
@@ -55,6 +59,10 @@ public class LaunchDeferredDispatches {
             OptionalInt capacity = project.workerCapacity();
             return capacity.isEmpty() || places.occupiedOn(project.project().name()) < capacity.getAsInt();
         });
+    }
+
+    private boolean hasAFreshClone(Dispatch dispatch) {
+        return refreshes.isFresh(transaction.execute(_ -> tasks.get(dispatch.task()).intake().projects().getFirst()));
     }
 
     private Optional<Launched> attemptedLaunchOf(Dispatch dispatch) {

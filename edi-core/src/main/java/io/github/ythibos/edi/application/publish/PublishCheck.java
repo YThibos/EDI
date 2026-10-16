@@ -23,15 +23,26 @@ public class PublishCheck {
     private final EdiHome home;
     private final Git git;
     private final Gitleaks gitleaks;
+    private final PublicationTargets targets;
 
-    public PublishCheck(EdiHome home, Git git, Gitleaks gitleaks) {
+    public PublishCheck(EdiHome home, Git git, Gitleaks gitleaks, PublicationTargets targets) {
         this.home = home;
         this.git = git;
         this.gitleaks = gitleaks;
+        this.targets = targets;
+    }
+
+    public PublishVerdict checkPush(Path repository, RevisionRange outgoing, String remoteUrl) {
+        OutgoingChanges changes = git.outgoingChanges(repository, outgoing);
+        targets.requireRegistered(repository, remoteUrl, changes);
+        return verdictOn(repository, outgoing, changes);
     }
 
     public PublishVerdict check(Path repository, RevisionRange outgoing) {
-        OutgoingChanges changes = git.outgoingChanges(repository, outgoing);
+        return verdictOn(repository, outgoing, git.outgoingChanges(repository, outgoing));
+    }
+
+    private PublishVerdict verdictOn(Path repository, RevisionRange outgoing, OutgoingChanges changes) {
         DenyList denyList = denyList();
         return PublishVerdict.of(
                         gitleaks.secretsIn(repository, outgoing),

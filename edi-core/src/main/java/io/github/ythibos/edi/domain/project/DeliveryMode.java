@@ -15,7 +15,17 @@ public enum DeliveryMode {
                 .orElseThrow(() -> new IllegalArgumentException("A delivery mode is draft-review, local-branch or local-apply, not " + word + "."));
     }
 
+    public static DeliveryMode registryDefault(String word) {
+        DeliveryMode mode = named(word);
+        if (mode == LOCAL_APPLY) {
+            throw new IllegalArgumentException("local-apply is a delivery the captain asks for on one task, never a project's default;"
+                    + " give the task --delivery local-apply instead.");
+        }
+        return mode;
+    }
+
     public String word() {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
+
 }

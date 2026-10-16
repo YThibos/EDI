@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -33,5 +34,13 @@ public record BriefFacts(
 
     public Path reportPath() {
         return taskDirectory.resolve("report.md");
+    }
+
+    public Path intentPath() {
+        return taskDirectory.resolve("intent.md");
+    }
+
+    public DeliveryMode delivery() {
+        return task.intake().deliveryOr(project.delivery());
     }
 }

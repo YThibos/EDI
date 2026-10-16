@@ -51,7 +51,7 @@ final class BriefSections {
             return "This is a scout: its deliverable is knowledge, so change no tracked file unless the spec asks for it.\n"
                     + "Write the report to `" + facts.reportPath() + "`; a report never authorises implementation.";
         }
-        return switch (facts.project().delivery()) {
+        return switch (facts.delivery()) {
             case DRAFT_REVIEW -> draftReview(facts);
             case LOCAL_BRANCH -> "Commit on `" + facts.dispatch().branch() + "` and push nothing, because the project has no remote.\n"
                     + "When you report done, EDI fetches the branch into the captain's checkout by a ref-only fetch.";
@@ -100,19 +100,21 @@ final class BriefSections {
     }
 
     private static String draftReview(BriefFacts facts) {
-        String craft = facts.project().craftRules() ? ", followed by the craftsmanship rules block above, verbatim" : "";
-        return "Commit on `" + facts.dispatch().branch() + "`, then validate and deliver through the no-mistakes pipeline with"
-                + " `no-mistakes axi run --base-branch " + facts.base() + " --intent \"<intent>\"`.\n"
-                + "The intent is the Captain's intent section above, word for word" + craft + ".\n"
+        String craft = facts.project().craftRules() ? ", followed by the craftsmanship rules block, verbatim" : "";
+        return "Commit on `" + facts.dispatch().branch() + "`, then validate and deliver through the no-mistakes pipeline from the isolated copy:\n\n"
+                + "```sh\nno-mistakes axi run --base-branch " + facts.base() + " --intent \"$(cat '" + facts.intentPath() + "')\"\n```\n\n"
+                + "EDI wrote that intent from the Captain's intent section above" + craft + "; pass it unchanged.\n"
                 + "Answer each gate yourself and never pass `--yes`; an ask-user finding is not yours to answer,"
                 + " so report it with `edi status needs-decision --key nm-<run>-<step>` and stop.\n"
                 + "The pipeline pushes the branch and opens a draft; leave it a draft.";
     }
 
     private static String shipDone(BriefFacts facts) {
-        return switch (facts.project().delivery()) {
+        return switch (facts.delivery()) {
             case DRAFT_REVIEW -> "CI is green on the draft for your last commit, and `" + facts.reportPath() + "` holds a short delivery note.\n"
-                    + "Then run `edi status done -- <the draft's full URL>`.";
+                    + "Then run `edi status done -- <the draft's full URL>`.\n"
+                    + "EDI accepts it only when the draft is open, still a draft, from `" + facts.dispatch().branch() + "` to `" + facts.base()
+                    + "` at your last commit, and the branch adds no `-SNAPSHOT` version.";
             case LOCAL_BRANCH, LOCAL_APPLY -> "Your last commit is on `" + facts.dispatch().branch() + "`, the project's tests pass, and `"
                     + facts.reportPath() + "` holds a short delivery note.\n"
                     + "Then run `edi status done -- <the head commit>`.";

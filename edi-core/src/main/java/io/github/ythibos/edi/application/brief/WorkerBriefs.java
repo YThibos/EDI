@@ -5,6 +5,8 @@ import java.util.Map;
 import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.domain.delivery.PipelineIntent;
+
 @Component
 @ImportRuntimeHints(BriefTemplate.class)
 public class WorkerBriefs {
@@ -18,7 +20,7 @@ public class WorkerBriefs {
                 Map.entry("key", facts.dispatch().branch().workKey().toString()),
                 Map.entry("branch", facts.dispatch().branch().toString()),
                 Map.entry("base", facts.base().name()),
-                Map.entry("deliveryMode", facts.project().delivery().word()),
+                Map.entry("deliveryMode", facts.delivery().word()),
                 Map.entry("worktree", facts.worktree().toString()),
                 Map.entry("taskDirectory", facts.taskDirectory().toString()),
                 Map.entry("socket", facts.ediSocket()),
@@ -28,5 +30,9 @@ public class WorkerBriefs {
                 Map.entry("largeBuilds", BriefSections.largeBuilds(facts)),
                 Map.entry("delivery", BriefSections.delivery(facts)),
                 Map.entry("definitionOfDone", BriefSections.definitionOfDone(facts))));
+    }
+
+    public PipelineIntent pipelineIntentFor(BriefFacts facts) {
+        return PipelineIntent.of(BriefSections.intent(facts), facts.project().craftRules() ? facts.craftRules() : null);
     }
 }

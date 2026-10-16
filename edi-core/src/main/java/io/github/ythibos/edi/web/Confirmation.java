@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.web;
 
+import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
+import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -48,5 +50,14 @@ public sealed interface Confirmation {
     }
 
     record StopRequested(Worker worker) implements Confirmation {
+    }
+
+    record DraftDelivered(DeliveredDraft delivered) implements Confirmation {
+    }
+
+    record MergedWorkFollowedUp(MergedWork work) implements Confirmation {
+    }
+
+    record CleanedUp(Task task) implements Confirmation {
     }
 }

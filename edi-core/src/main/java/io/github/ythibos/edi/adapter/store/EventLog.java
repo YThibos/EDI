@@ -8,21 +8,34 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
+import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
+import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeferredLaunchFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeTyped;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunFinished;
+import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
@@ -32,6 +45,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
@@ -169,12 +184,45 @@ public class EventLog {
             case RecoveryCostRecorded cost -> withTokens(payload.put("worker", cost.worker().toString()).put("launch", cost.launch().word()),
                     cost.tokens());
             case HoldDateArrived due -> payload.put("until", due.until().toString());
+            case DeliveryRefused refused -> withEach(payload.put("worker", refused.worker().toString()), "gaps", refused.gaps());
+            case DraftRecorded recorded -> payload.put("url", recorded.address().url());
+            case DraftOpened opened -> payload.put("url", opened.address().url());
+            case DraftMerged merged -> payload.put("url", merged.address().url()).put("landedCommit", merged.landedCommit());
+            case DraftClosed closed -> payload.put("url", closed.address().url());
+            case CloneRefreshed refreshed -> payload.put("project", refreshed.project().value()).put("commit", refreshed.commit());
+            case ChangeAppliedToCaptain applied -> withEach(payload, "files", applied.files());
+            case ChangeNotApplied notApplied -> payload.put("because", notApplied.because());
+            case CleanupRefused refused -> withEach(payload, "findings", refused.findings());
+            case TaskCleanedUp _ -> payload;
+            case TaskCostRecorded recorded -> withCost(payload, recorded.cost());
+            case PipelineRunSeen seen -> withRun(payload, seen.run());
+            case PipelineRunFinished finished -> withRun(payload, finished.run());
         };
     }
 
     private void queue(long sequence, Wake wake, Instant at) {
         wakes.enqueue(sequence, wake, at);
         publisher.publishEvent(new WakeQueued(sequence));
+    }
+
+    private static ObjectNode withEach(ObjectNode payload, String field, List<String> values) {
+        ArrayNode array = payload.putArray(field);
+        values.forEach(array::add);
+        return payload;
+    }
+
+    private ObjectNode withCost(ObjectNode payload, TaskCost cost) {
+        withTokens(payload.putObject("workers"), cost.workers());
+        cost.pipelineIfKnown().ifPresentOrElse(pipeline -> withTokens(payload.putObject("pipeline"), pipeline), () -> payload.putNull("pipeline"));
+        return payload;
+    }
+
+    private static ObjectNode withRun(ObjectNode payload, PipelineRun run) {
+        return payload.put("run", run.id())
+                .put("status", run.status())
+                .put("step", run.activeStep())
+                .put("head", run.headCommit())
+                .put("mergeRequest", run.mergeRequestUrl());
     }
 
     private static ObjectNode withTokens(ObjectNode payload, TokenUsage tokens) {

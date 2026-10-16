@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.task.BaseBranch;
 record RegisteredProject(
         String name,
         RegisteredTracker tracker,
+        RegisteredForgeEntry forge,
         @JsonProperty("clone") String clonePath,
         String captainCheckout,
         String base,
@@ -48,7 +49,8 @@ record RegisteredProject(
                 clonePath == null ? ediHome.resolve("projects").resolve(name) : expanded(clonePath),
                 captainCheckout == null ? null : expanded(captainCheckout),
                 base == null ? null : new BaseBranch(base),
-                delivery == null ? DeliveryMode.DRAFT_REVIEW : DeliveryMode.named(delivery),
+                forge == null ? null : forge.asRegisteredForge(),
+                delivery == null ? DeliveryMode.DRAFT_REVIEW : DeliveryMode.registryDefault(delivery),
                 branchKindsOrAll(),
                 Boolean.TRUE.equals(craftRules),
                 aiScaffolding == null ? AiScaffolding.ASK : AiScaffolding.named(aiScaffolding),

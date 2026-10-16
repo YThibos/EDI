@@ -18,9 +18,15 @@ final class PublishCheckCommand implements Callable<Integer> {
     @Option(names = "--range", paramLabel = "A..B", description = "The outgoing commits; by default those between the branch's upstream and HEAD.")
     private String range = UPSTREAM_TO_HEAD;
 
+    @Option(names = "--remote-url", paramLabel = "URL", description = "Where the push goes; EDI refuses a push from an isolated copy to any "
+            + "repository but its project's registered one.")
+    private String remoteUrl;
+
     @Override
     public Integer call() {
-        return core.post("/api/publish-checks",
-                new JsonBody().with("repository", Path.of("").toAbsolutePath().toString()).with("range", range));
+        return core.post("/api/publish-checks", new JsonBody()
+                .with("repository", Path.of("").toAbsolutePath().toString())
+                .with("range", range)
+                .with("remoteUrl", remoteUrl));
     }
 }

@@ -7,9 +7,11 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.task.TaskDetail;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.web.decision.DecisionLines;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.Table;
@@ -35,6 +37,7 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         if (detail.task().isHeld()) {
             lines.add(capitalised(BacklogText.holdOf(detail.task().hold())) + " (since " + Moments.minute(detail.task().hold().setAt()) + ")");
         }
+        lines.addAll(deliveryLinesOf(detail));
         if (detail.decision() != null) {
             lines.add("");
             lines.addAll(DecisionLines.of(detail.decision()));
@@ -61,11 +64,37 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         if (intake.base() != null) {
             lines.add("Base: " + intake.base());
         }
+        if (intake.delivery() != null) {
+            lines.add("Delivery: " + intake.delivery().word());
+        }
         lines.add("Since: " + Moments.day(task.created()));
         if (task.isClosed()) {
             lines.add(capitalised(task.state().word()) + ": " + Moments.day(task.closed()));
         }
         return lines;
+    }
+
+    private static List<String> deliveryLinesOf(TaskDetail detail) {
+        List<String> lines = new ArrayList<>();
+        if (detail.pipelineRun() != null) {
+            lines.add("Pipeline: run " + detail.pipelineRun().id() + " " + detail.pipelineRun().status()
+                    + (detail.pipelineRun().activeStep() == null ? "" : " at " + detail.pipelineRun().activeStep()));
+        }
+        if (detail.delivery() != null) {
+            Delivery delivery = detail.delivery();
+            lines.add("Draft: " + delivery.address() + " " + delivery.state().word() + (delivery.draft() ? ", a draft" : ", not a draft")
+                    + " (seen " + Moments.minute(delivery.observedAt()) + ")");
+        }
+        if (detail.cost() != null) {
+            lines.add("Cost: workers " + tokensOf(detail.cost().workers()) + "; pipeline "
+                    + detail.cost().pipelineIfKnown().map(TaskDetailText::tokensOf).orElse("unknown"));
+        }
+        return lines;
+    }
+
+    private static String tokensOf(TokenUsage tokens) {
+        return tokens.total() + " tokens (" + tokens.input() + " in, " + tokens.cacheRead() + " cache read, " + tokens.cacheWrite()
+                + " cache write, " + tokens.output() + " out)";
     }
 
     private static String capitalised(String text) {

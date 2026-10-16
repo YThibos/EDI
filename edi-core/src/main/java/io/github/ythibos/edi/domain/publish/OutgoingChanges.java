@@ -8,6 +8,10 @@ public record OutgoingChanges(List<OutgoingCommit> commits) {
         commits = List.copyOf(commits);
     }
 
+    public boolean touchAPathUnder(String directory) {
+        return commits.stream().flatMap(commit -> commit.paths().stream()).anyMatch(path -> path.startsWith(directory));
+    }
+
     int positionOf(String commitId, String path) {
         return commits.stream()
                 .filter(commit -> commit.id().equals(commitId))

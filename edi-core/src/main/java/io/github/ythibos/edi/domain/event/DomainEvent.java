@@ -2,11 +2,15 @@ package io.github.ythibos.edi.domain.event;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.guard.GuardRule;
@@ -146,5 +150,56 @@ public sealed interface DomainEvent {
     }
 
     record HoldDateArrived(TaskId task, LocalDate until) implements DomainEvent {
+    }
+
+    record DeliveryRefused(TaskId task, WorkerId worker, List<String> gaps) implements DomainEvent {
+
+        public DeliveryRefused {
+            gaps = List.copyOf(gaps);
+        }
+    }
+
+    record DraftRecorded(TaskId task, MergeRequestAddress address) implements DomainEvent {
+    }
+
+    record DraftOpened(TaskId task, MergeRequestAddress address) implements DomainEvent {
+    }
+
+    record DraftMerged(TaskId task, MergeRequestAddress address, String landedCommit) implements DomainEvent {
+    }
+
+    record DraftClosed(TaskId task, MergeRequestAddress address) implements DomainEvent {
+    }
+
+    record CloneRefreshed(TaskId task, ProjectName project, String commit) implements DomainEvent {
+    }
+
+    record ChangeAppliedToCaptain(TaskId task, List<String> files) implements DomainEvent {
+
+        public ChangeAppliedToCaptain {
+            files = List.copyOf(files);
+        }
+    }
+
+    record ChangeNotApplied(TaskId task, String because) implements DomainEvent {
+    }
+
+    record CleanupRefused(TaskId task, List<String> findings) implements DomainEvent {
+
+        public CleanupRefused {
+            findings = List.copyOf(findings);
+        }
+    }
+
+    record TaskCleanedUp(TaskId task) implements DomainEvent {
+    }
+
+    record TaskCostRecorded(TaskId task, TaskCost cost) implements DomainEvent {
+    }
+
+    record PipelineRunSeen(TaskId task, PipelineRun run) implements DomainEvent {
+    }
+
+    record PipelineRunFinished(TaskId task, PipelineRun run) implements DomainEvent {
     }
 }

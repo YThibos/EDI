@@ -6,17 +6,28 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
+import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
+import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeferredLaunchFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
+import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeTyped;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunFinished;
+import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
@@ -26,6 +37,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
@@ -70,11 +83,17 @@ public final class WakeRule {
             case DeclaredWaitEnded ended -> Optional.of(new Wake(WakeKind.WAIT_ENDED, ended.task(), ended.worker(),
                     ended.pause().text(), ended.pause().until()));
             case HoldDateArrived due -> wake(WakeKind.HOLD_DUE, due, null, due.until().toString());
+            case DraftMerged merged -> wake(WakeKind.DRAFT_MERGED, merged, null, merged.address().url());
+            case DraftClosed closed -> wake(WakeKind.DRAFT_CLOSED, closed, null, closed.address().url());
+            case BranchDeliveryFailed failed -> wake(WakeKind.DELIVERY_FAILED, failed, null, failed.because());
+            case ChangeNotApplied notApplied -> wake(WakeKind.DELIVERY_FAILED, notApplied, null, notApplied.because());
+            case CleanupRefused refused -> wake(WakeKind.CLEANUP_REFUSED, refused, null, String.join("; ", refused.findings()));
             case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, DecisionRaised _, DecisionAnswered _, TaskDone _, DispatchDeferred _,
                     TaskDispatched _, WorkerStarted _, WorkerRetired _, SteerSent _, SteerReceived _, SteerAcknowledged _, SteerNotReceived _,
-                    ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, BranchDeliveryFailed _,
-                    WorkerRelaunched _, WorkerNotified _, WorkerSessionEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _,
-                    RecoveryFailed _, WorkerStopRequested _, RecoveryCostRecorded _ -> Optional.empty();
+                    ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
+                    WorkerNotified _, WorkerSessionEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _, RecoveryFailed _,
+                    WorkerStopRequested _, RecoveryCostRecorded _, DeliveryRefused _, DraftRecorded _, DraftOpened _, CloneRefreshed _,
+                    ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, PipelineRunSeen _, PipelineRunFinished _ -> Optional.empty();
         };
     }
 

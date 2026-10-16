@@ -37,6 +37,9 @@ import picocli.CommandLine.Spec;
             WorkerCommand.class,
             WaitCommand.class,
             RecoverCommand.class,
+            DeliverCommand.class,
+            MergedCommand.class,
+            CleanupCommand.class,
             HookCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})
