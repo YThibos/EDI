@@ -11,12 +11,14 @@ final class ShellParser {
     private static final String COMMAND_SEPARATORS = ";&|()";
     private static final String REDIRECTION_CHARACTERS = "<>&|";
     private static final String WORD_BREAKS = " \t\n;&|()<>";
+    private static final String DOUBLE_QUOTE_ESCAPES = "\"\\$`\n";
+    private static final String HEREDOC_ESCAPES = "\\$`\n";
 
     private final String text;
     private final int nesting;
     private final boolean substitution;
     private final List<List<ShellWord>> commands = new ArrayList<>();
-    private final Deque<String> heredocDelimiters = new ArrayDeque<>();
+    private final Deque<Heredoc> heredocs = new ArrayDeque<>();
     private List<ShellWord> words = new ArrayList<>();
     private int position;
     private int openSubshells;
@@ -46,7 +48,7 @@ final class ShellParser {
             } else if (character == '\n') {
                 endCommand();
                 position++;
-                skipHeredocBodies();
+                readHeredocBodies();
             } else if (character == '#') {
                 skipComment();
             } else if (startsRedirection()) {
@@ -122,24 +124,43 @@ final class ShellParser {
         }
         skipBlanks();
         StringBuilder delimiter = new StringBuilder();
+        boolean quoted = false;
         while (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
             char character = current();
-            if (character != '\'' && character != '"' && character != '\\') {
+            if (character == '\'' || character == '"' || character == '\\') {
+                quoted = true;
+            } else {
                 delimiter.append(character);
             }
             position++;
         }
-        heredocDelimiters.add(delimiter.toString());
+        heredocs.add(new Heredoc(delimiter.toString(), !quoted));
     }
 
-    private void skipHeredocBodies() {
-        while (!heredocDelimiters.isEmpty() && !atEnd()) {
-            String delimiter = heredocDelimiters.peek();
+    private void readHeredocBodies() {
+        while (!heredocs.isEmpty() && !atEnd()) {
+            Heredoc heredoc = heredocs.peek();
             int lineEnd = lineEndFrom(position);
-            if (text.substring(position, lineEnd).strip().equals(delimiter)) {
-                heredocDelimiters.remove();
+            if (text.substring(position, lineEnd).strip().equals(heredoc.delimiter())) {
+                heredocs.remove();
+                position = Math.min(lineEnd + 1, text.length());
+            } else if (heredoc.expanded()) {
+                readExpandedBodyLine();
+            } else {
+                position = Math.min(lineEnd + 1, text.length());
             }
-            position = Math.min(lineEnd + 1, text.length());
+        }
+    }
+
+    private void readExpandedBodyLine() {
+        StringBuilder written = new StringBuilder();
+        List<ShellCommand> substitutions = new ArrayList<>();
+        while (!atEnd() && current() != '\n') {
+            readExpandedPart(written, substitutions, HEREDOC_ESCAPES);
+        }
+        position = Math.min(position + 1, text.length());
+        if (!substitutions.isEmpty()) {
+            commands.add(List.of(new ShellWord("", substitutions, false)));
         }
     }
 
@@ -153,7 +174,12 @@ final class ShellParser {
         while (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
             readWordPart(written, substitutions);
         }
-        words.add(new ShellWord(written.toString(), substitutions, redirectionTarget));
+        words.add(new ShellWord(written.toString(), substitutions, redirectionTarget || namesAFileDescriptor(written)));
+    }
+
+    private boolean namesAFileDescriptor(StringBuilder written) {
+        boolean redirectedNext = !atEnd() && (current() == '<' || current() == '>');
+        return redirectedNext && !written.isEmpty() && written.chars().allMatch(Character::isDigit);
     }
 
     private void readWordPart(StringBuilder written, List<ShellCommand> substitutions) {
@@ -212,26 +238,30 @@ final class ShellParser {
     private void readDoubleQuoted(StringBuilder written, List<ShellCommand> substitutions) {
         position++;
         while (!atEnd() && current() != '"') {
-            char character = current();
-            if (character == '\\' && position + 1 < text.length() && "\"\\$`\n".indexOf(peek(1)) >= 0) {
-                position++;
-                if (current() != '\n') {
-                    written.append(current());
-                }
-                position++;
-            } else if (character == '$' && peek(1) == '(' && peek(2) == '(') {
-                readArithmetic(written);
-            } else if (character == '$' && peek(1) == '(') {
-                position++;
-                readParenthesisedSubstitution(written, substitutions);
-            } else if (character == '`') {
-                readBacktickSubstitution(written, substitutions);
-            } else {
-                written.append(character);
-                position++;
-            }
+            readExpandedPart(written, substitutions, DOUBLE_QUOTE_ESCAPES);
         }
         position = Math.min(position + 1, text.length());
+    }
+
+    private void readExpandedPart(StringBuilder written, List<ShellCommand> substitutions, String escapable) {
+        char character = current();
+        if (character == '\\' && position + 1 < text.length() && escapable.indexOf(peek(1)) >= 0) {
+            position++;
+            if (current() != '\n') {
+                written.append(current());
+            }
+            position++;
+        } else if (character == '$' && peek(1) == '(' && peek(2) == '(') {
+            readArithmetic(written);
+        } else if (character == '$' && peek(1) == '(') {
+            position++;
+            readParenthesisedSubstitution(written, substitutions);
+        } else if (character == '`') {
+            readBacktickSubstitution(written, substitutions);
+        } else {
+            written.append(character);
+            position++;
+        }
     }
 
     private void readArithmetic(StringBuilder written) {
@@ -293,5 +323,8 @@ final class ShellParser {
     private char peek(int ahead) {
         int at = position + ahead;
         return at < text.length() ? text.charAt(at) : '\0';
+    }
+
+    private record Heredoc(String delimiter, boolean expanded) {
     }
 }

@@ -12,7 +12,8 @@ final class CommandWrappers {
             "if", "then", "else", "elif", "fi", "do", "done", "while", "until", "for", "select",
             "case", "esac", "function", "coproc", "!", "{", "}", "[[", "]]");
     private static final Set<String> SHELLS = Set.of("sh", "bash", "zsh", "dash", "ksh", "ash", "mksh");
-    private static final Set<String> SHELL_VALUES = Set.of("-o", "+o", "-O", "+O", "--rcfile", "--init-file");
+    private static final Set<String> SHELL_VALUES = Set.of("--rcfile", "--init-file");
+    private static final Set<String> SHELL_ANSWERS = Set.of("--version", "--help");
     private static final Set<String> PLAIN_WRAPPERS = Set.of("nohup", "builtin", "unbuffer", "chronic", "setsid", "exec");
     private static final Set<String> SUDO_VALUES = Set.of("-u", "-g", "-h", "-p", "-C", "-D", "-r", "-t", "-U", "-T", "-R");
     private static final Set<String> ENV_VALUES = Set.of("-u", "-C", "--unset", "--chdir");
@@ -37,12 +38,13 @@ final class CommandWrappers {
 
     private static List<ShellCommand> unwrap(List<ShellWord> words, boolean argumentsFromInput, int nesting) {
         int start = firstCommandWord(words);
-        List<ShellCommand> droppedSubstitutions = words.subList(0, start).stream().flatMap(word -> word.substitutions().stream()).toList();
+        List<ShellCommand> leadingSubstitutions = words.subList(0, Math.min(start + 1, words.size())).stream()
+                .flatMap(word -> word.substitutions().stream()).toList();
         if (start == words.size()) {
-            return droppedSubstitutions;
+            return leadingSubstitutions;
         }
         ShellCommand command = new ShellCommand(programName(words.get(start).text()), words.subList(start + 1, words.size()), argumentsFromInput);
-        return Stream.concat(droppedSubstitutions.stream(), withWhatItRuns(command, nesting).stream()).toList();
+        return Stream.concat(leadingSubstitutions.stream(), withWhatItRuns(command, nesting).stream()).toList();
     }
 
     private static List<ShellCommand> withWhatItRuns(ShellCommand command, int nesting) {
@@ -85,6 +87,9 @@ final class CommandWrappers {
         List<ShellWord> arguments = words.stream().filter(word -> !word.redirectionTarget()).toList();
         int operand = firstShellOperand(arguments);
         List<String> options = arguments.subList(0, operand).stream().map(ShellWord::text).toList();
+        if (options.stream().anyMatch(SHELL_ANSWERS::contains)) {
+            return List.of();
+        }
         if (operand == arguments.size() || namesShortFlag(options, 's')) {
             throw new UnreadableCommand("The shell reads its script from standard input, which the guard cannot see.");
         }
@@ -94,9 +99,14 @@ final class CommandWrappers {
     private static int firstShellOperand(List<ShellWord> arguments) {
         int index = 0;
         while (index < arguments.size() && isShellOption(arguments.get(index).text())) {
-            index += SHELL_VALUES.contains(arguments.get(index).text()) ? 2 : 1;
+            index += takesAValue(arguments.get(index).text()) ? 2 : 1;
         }
         return Math.min(index, arguments.size());
+    }
+
+    private static boolean takesAValue(String option) {
+        boolean namesAShellOption = !option.startsWith("--") && (option.endsWith("o") || option.endsWith("O"));
+        return namesAShellOption || SHELL_VALUES.contains(option);
     }
 
     private static boolean isShellOption(String word) {
