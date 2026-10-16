@@ -15,7 +15,8 @@ A view that shows the merge records `DraftMerged` with the commit the merge land
 `edi merged <id|url>` takes the task's delivery, or the delivery at that exact URL, and views it at once: a merge is followed the same way under the primary's name and answered in the same call, while an open or closed merge request is refused with what the forge shows.
 A merge EDI already followed is answered from the recorded delivery without a second `DraftMerged` or wake, and while its task is in flight and its refresh verified, the captain's word tries the clean-up once more.
 A task delivered to the captain's checkout has no forge to ask, so `edi merged` goes straight to its clean-up, whose landed-work test decides.
-Once a merge's refresh is verified, the watch tries its clean-up exactly once, either at once or in a later round; a refused clean-up wakes the primary with its findings, and one a failing program stops is logged.
+Once a merge's refresh is verified, the watch tries its clean-up exactly once, either at once or in a later round; a refused clean-up wakes the primary with its findings, while one a failing program stops is logged and does not count as the attempt, so the next round tries it again.
+Each project's clone is refreshed on its own: one that cannot fetch, or that the registry no longer names, is logged while the other clones are still refreshed.
 
 **Motivation:** Neither the captain's word nor a stale view can make EDI treat unmerged work as merged, because every merge EDI follows is one the forge reports.
 

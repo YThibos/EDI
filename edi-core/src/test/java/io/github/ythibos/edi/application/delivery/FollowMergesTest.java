@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -16,11 +17,14 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.delivery.CloneRefresh;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -117,6 +121,42 @@ class FollowMergesTest {
 
         assertThat(merged.cleanUp().done()).isTrue();
         assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftMerged", "CloneRefreshed", "CleanupRefused", "TaskCleanedUp");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void triesAgainInALaterRoundACleanUpAFailingProgramStopped() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(copy));
+        FixtureRepository clone = FixtureRepository.at(home.registry().entryOf(new ProjectName("harness")).projectClone());
+        clone.run("worktree", "lock", copy.root().toString());
+
+        home.followMerges().watchTheOpenDrafts();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+        assertThat(home.cloneRefreshes().after(LAMP)).hasValueSatisfying(refresh -> assertThat(refresh.cleanUpTriedAt()).isNull());
+
+        clone.run("worktree", "unlock", copy.root().toString());
+        home.followMerges().finishEarlierMerges();
+
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void refreshesTheOtherClonesWhenOneProjectIsNoLongerRegistered() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
+        home.cloneRefreshStore().save(CloneRefresh.awaiting(HORN, new ProjectName("retired"), new BaseBranch("main"), "1111", home.clock().now()));
+        home.clock().advance(Duration.ofMinutes(1));
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(copy));
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.eventTypesOf(LAMP)).containsSubsequence("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
     }
 

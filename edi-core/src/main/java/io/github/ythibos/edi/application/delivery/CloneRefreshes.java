@@ -93,7 +93,7 @@ public class CloneRefreshes {
         try {
             git.fetchOrigin(registry.entryOf(project).projectClone());
             transaction.execute(_ -> refreshes.pendingFor(project)).forEach(this::verified);
-        } catch (ProgramFailure unreachable) {
+        } catch (Refusal | ProgramFailure unreachable) {
             LOG.warn("The clone of {} could not fetch the merges it waits for: {}", project, unreachable.getMessage());
         }
     }

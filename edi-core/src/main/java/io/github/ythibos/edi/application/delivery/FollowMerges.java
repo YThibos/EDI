@@ -180,7 +180,9 @@ public class FollowMerges {
 
     private CleanUp cleanedUpOnce(CloneRefresh refresh, Actor actor) {
         CleanUp outcome = cleanedUpAfter(new TaskReference.ById(refresh.task()), actor);
-        refreshes.cleanUpTried(refresh);
+        if (outcome.countsAsTheAttempt()) {
+            refreshes.cleanUpTried(refresh);
+        }
         return outcome;
     }
 
@@ -199,22 +201,26 @@ public class FollowMerges {
     public record MergedWork(TaskId task, Delivery delivery, CleanUp cleanUp) {
     }
 
-    public record CleanUp(boolean done, String refusal) {
+    public record CleanUp(boolean done, String refusal, boolean stopped) {
 
         static CleanUp finished() {
-            return new CleanUp(true, null);
+            return new CleanUp(true, null, false);
         }
 
         static CleanUp refusedBecause(String because) {
-            return new CleanUp(false, because);
+            return new CleanUp(false, because, false);
         }
 
         static CleanUp stoppedBy(RuntimeException failure) {
-            return new CleanUp(false, "the clean-up stopped: " + failure.getMessage());
+            return new CleanUp(false, "the clean-up stopped: " + failure.getMessage() + "; EDI tries again in the next round", true);
         }
 
         static CleanUp awaitingTheRefresh() {
-            return new CleanUp(false, "the clone has not fetched the merge yet; EDI cleans up once it has");
+            return new CleanUp(false, "the clone has not fetched the merge yet; EDI cleans up once it has", false);
+        }
+
+        boolean countsAsTheAttempt() {
+            return !stopped;
         }
     }
 }
