@@ -5,7 +5,7 @@ import java.util.Set;
 
 final class ShellInvocation {
 
-    private static final String SHORT_OPTIONS = "abcefhiklmnoprstuvxBCDEHOPT";
+    private static final String SHORT_OPTIONS = "aCceilmnosuvx";
     private static final Set<String> OPTION_ENDS = Set.of("--", "-");
     private static final Set<String> LONG_OPTIONS_WITH_A_VALUE = Set.of("--rcfile", "--init-file");
     private static final Set<String> ANSWERING_OPTIONS = Set.of("--version", "--help");
@@ -74,7 +74,7 @@ final class ShellInvocation {
             }
             runsACommandString |= letter == 'c';
             readsStandardInput |= letter == 's';
-            if (letter == 'o' || letter == 'O') {
+            if (letter == 'o') {
                 position++;
             }
         }
