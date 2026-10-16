@@ -35,6 +35,8 @@ import picocli.CommandLine.Spec;
             InboxCommand.class,
             SteerCommand.class,
             WorkerCommand.class,
+            WaitCommand.class,
+            RecoverCommand.class,
             HookCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})
@@ -72,6 +74,14 @@ public final class Edi implements Runnable {
     Path tokenFile() {
         String workerToken = environment.get("EDI_TOKEN_FILE");
         return workerToken == null || workerToken.isBlank() ? home().resolve("state").resolve("core.token") : Path.of(workerToken);
+    }
+
+    ClaudeSession claudeSession() {
+        return ClaudeSession.ofEnvironment(environment);
+    }
+
+    CoreConnection core() {
+        return CoreConnection.in(home(), tokenFile(), claudeSession());
     }
 
     OptionalInt paneWidth() {

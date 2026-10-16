@@ -39,8 +39,10 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
@@ -232,7 +234,7 @@ class ApiTest {
                 + "\"permissionDecisionReason\":\"EDI's guard refuses this: pkill signals every process");
         assertThat(allowed.statusCode()).isEqualTo(204);
         assertThat(stopped.statusCode()).isEqualTo(204);
-        assertRefusal(hook(worker, "teleport", "{}"), 400, "EDI answers the hooks session-start, user-prompt-submit, pre-tool-use and stop, not teleport.");
+        assertRefusal(hook(worker, "teleport", "{}"), 400, "EDI answers the hooks session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification and session-end, not teleport.");
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"tmux kill-server\"}}"))).body())
                 .contains("\"permissionDecision\":\"deny\"", "name the socket with -L or -S");
@@ -246,7 +248,8 @@ class ApiTest {
         WorkerTokens.IssuedToken token = workerTokens.issueInto(HOME.resolve("state/workers/" + task));
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
-                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2), Instant.parse("2026-10-15T09:00:00Z")), token.digest());
+                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2),
+                new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
         return Files.readString(token.file());
     }
 

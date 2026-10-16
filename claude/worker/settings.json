@@ -25,6 +25,21 @@
       {
         "hooks": [{ "type": "command", "command": "edi hook stop" }]
       }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [{ "type": "command", "command": "edi hook stop-failure" }]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [{ "type": "command", "command": "edi hook notification" }]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [{ "type": "command", "command": "edi hook session-end" }]
+      }
     ]
   }
 }

@@ -6,13 +6,16 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
+import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -20,8 +23,10 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 
 public final class WorkerFixtures {
 
@@ -73,6 +78,14 @@ public final class WorkerFixtures {
         return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
     }
 
+    public static Worker dispatchedShip(TestHome home, String id, String key) {
+        home.storing(List.of(queuedShip(id, "harness", key)));
+        return home.dispatchTask()
+                .dispatch(new TaskReference.ById(new TaskId(id)), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY)
+                .launched()
+                .worker();
+    }
+
     public static Worker servingWorkerOn(TestHome home, Task task, CategoryId category) {
         home.storing(List.of(task));
         home.putInFlight(task.id());
@@ -80,7 +93,8 @@ public final class WorkerFixtures {
         home.dispatches().save(Dispatch.requested(task.id(), category, BranchName.forWork(BranchKind.FEATURE, task.intake().workKey()), "",
                 expected, null, TestHome.START));
         Worker worker = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), category,
-                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), home.runtime().openWindow(), TestHome.START);
+                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), home.runtime().openWindow(),
+                new WorkerLaunch(LaunchKind.DISPATCH, TestHome.START, home.machineBoot().current()));
         home.workers().insert(worker, "digest-of-" + task.id());
         return worker;
     }

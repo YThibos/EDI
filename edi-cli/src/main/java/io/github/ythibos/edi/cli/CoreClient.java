@@ -42,10 +42,13 @@ final class CoreClient {
     }
 
     private static HttpRequest.Builder request(CoreConnection core, String path, String accepted) {
-        return HttpRequest.newBuilder(core.address().endpoint(path))
+        HttpRequest.Builder request = HttpRequest.newBuilder(core.address().endpoint(path))
                 .timeout(ANSWER_PATIENCE)
                 .header("Authorization", "Bearer " + core.token())
                 .header("Accept", accepted);
+        core.session().idIfAny().ifPresent(session -> request.header("EDI-Session", session));
+        core.session().pidIfAny().ifPresent(pid -> request.header("EDI-Claude-Pid", pid));
+        return request;
     }
 
     private CoreReply exchange(CoreConnection core, HttpRequest.Builder request) {

@@ -66,6 +66,10 @@ public class InboxStore {
                 .param("task", task.value()));
     }
 
+    public List<InboxMessage> resolvingOf(TaskId task) {
+        return messages(store.sql(SELECT_MESSAGES + "where task_id = :task and resolves is not null order by number").param("task", task.value()));
+    }
+
     public List<InboxMessage> awaitingReceipt() {
         return messages(store.sql(SELECT_MESSAGES + "where received_at is null order by created_at, task_id, number"));
     }

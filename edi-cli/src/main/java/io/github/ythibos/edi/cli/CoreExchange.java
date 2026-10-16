@@ -55,7 +55,7 @@ final class CoreExchange {
 
     private int printed(Function<CoreConnection, CoreReply> call) {
         try {
-            CoreReply reply = call.apply(CoreConnection.in(edi().home(), edi().tokenFile()));
+            CoreReply reply = call.apply(edi().core());
             print(reply.succeeded() ? out() : err(), reply.body());
             return reply.succeeded() ? ANSWERED : REFUSED;
         } catch (CoreUnavailable unavailable) {

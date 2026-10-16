@@ -4,12 +4,16 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.PaneState;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
+import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 public final class FakeWorkerRuntime implements WorkerRuntime {
@@ -20,6 +24,11 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
     private PaneState pane = PaneState.IDLE_PROMPT;
+    private boolean serverRunning = true;
+    private long serverPid = 4242;
+    private Instant serverStartedAt = Instant.parse("2026-10-15T08:00:00Z");
+    private UsageLimit limitInTheTranscript;
+    private TokenUsage tokensInTheTranscript = TokenUsage.NONE;
 
     @Override
     public String socket() {
@@ -33,14 +42,21 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     public synchronized WorkerWindow openWindow() {
+        serverRunning = true;
         String window = "@" + (openWindows.size() + launches.size() + 1);
         openWindows.add(window);
-        return new WorkerWindow(SOCKET, 4242, Instant.parse("2026-10-15T08:00:00Z"), window, 5000L + openWindows.size());
+        return new WorkerWindow(SOCKET, serverPid, serverStartedAt, window, 5000L + openWindows.size());
     }
 
     @Override
-    public synchronized boolean isRunning(WorkerWindow window) {
-        return openWindows.contains(window.windowId());
+    public synchronized WindowCheck check(WorkerWindow window) {
+        if (!serverRunning) {
+            return WindowCheck.SERVER_GONE;
+        }
+        if (window.serverPid() != serverPid || !window.serverStartedAt().equals(serverStartedAt)) {
+            return WindowCheck.SERVER_CHANGED;
+        }
+        return openWindows.contains(window.windowId()) ? WindowCheck.OPEN : WindowCheck.WINDOW_CLOSED;
     }
 
     @Override
@@ -63,12 +79,41 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
         openWindows.remove(window.windowId());
     }
 
+    @Override
+    public synchronized Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since) {
+        return Optional.ofNullable(limitInTheTranscript);
+    }
+
+    @Override
+    public synchronized TokenUsage tokensSpentIn(String transcript, Instant since) {
+        return tokensInTheTranscript;
+    }
+
     public synchronized void showing(PaneState state) {
         pane = state;
     }
 
     public synchronized void closeEveryWindow() {
         openWindows.clear();
+    }
+
+    public synchronized void restartTheServer() {
+        openWindows.clear();
+        serverPid += 1;
+        serverStartedAt = serverStartedAt.plusSeconds(60);
+    }
+
+    public synchronized void loseTheServer() {
+        openWindows.clear();
+        serverRunning = false;
+    }
+
+    public synchronized void transcriptEndsOn(UsageLimit limit) {
+        limitInTheTranscript = limit;
+    }
+
+    public synchronized void transcriptSpent(TokenUsage tokens) {
+        tokensInTheTranscript = tokens;
     }
 
     public synchronized List<Launch> launches() {

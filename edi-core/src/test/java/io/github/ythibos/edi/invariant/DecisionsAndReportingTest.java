@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
+import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
@@ -148,8 +150,23 @@ class DecisionsAndReportingTest {
 
         @Test
         @DisplayName("AT-21 the primary's Stop hook blocks a state-changing turn until edi report ran in that turn")
-        void theStopHookWaitsForTheReport() {
-            Pending.until(Slice.S4);
+        void theStopHookWaitsForTheReport() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            UUID primary = UUID.randomUUID();
+            home.primaryHooks().sessionStarted(primary, null);
+            home.primaryHooks().promptSubmitted(primary, "What is waiting on me?");
+            HookAnswer quietTurn = home.primaryHooks().stopping(primary, List.of());
+
+            home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
+            home.addTask().add(ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+            HookAnswer unreported = home.primaryHooks().stopping(primary, List.of());
+            home.primaryHooks().reportRendered(primary);
+            HookAnswer reported = home.primaryHooks().stopping(primary, List.of());
+
+            assertThat(quietTurn).isEqualTo(HookAnswer.PROCEED);
+            assertThat(unreported.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
+            assertThat(unreported.reason()).isEqualTo("This turn changed EDI's state: render the captain report with edi report and paste it verbatim, then stop.");
+            assertThat(reported).isEqualTo(HookAnswer.PROCEED);
         }
     }
 

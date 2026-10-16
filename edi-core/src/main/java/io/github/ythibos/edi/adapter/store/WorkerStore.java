@@ -18,20 +18,26 @@ import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LimitPark;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.Worker.ReportedStatus;
 import io.github.ythibos.edi.domain.worker.WorkerActivity;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 @Component
 public class WorkerStore {
 
     private static final String SELECT_WORKERS = """
-            select task_id, incarnation, session_id, category, model, effort, tmux_socket, server_pid, server_started_at,
-                   window_id, pane_pid, activity, launched_at, started_at, briefed_at, launch_failed_at, retired_at,
-                   status_state, status_key, status_until, status_text, status_at, done_check
+            select task_id, incarnation, session_id, launch_kind, boot_id, category, model, effort, tmux_socket, server_pid,
+                   server_started_at, window_id, pane_pid, activity, activity_at, launched_at, started_at, briefed_at, transcript_path,
+                   ended_at, stop_requested_at, launch_failed_at, retired_at, status_state, status_key, status_until, status_text,
+                   status_at, done_check, limit_name, limit_resets_at, limit_parked_at
             from worker
             """;
 
@@ -44,14 +50,16 @@ public class WorkerStore {
     public void insert(Worker worker, String tokenDigest) {
         WorkerWindow window = worker.window();
         store.sql("""
-                        insert into worker (id, task_id, incarnation, session_id, category, model, effort, token_hash, tmux_socket,
-                                            server_pid, server_started_at, window_id, pane_pid, activity, launched_at)
-                        values (:id, :task, :incarnation, :session, :category, :model, :effort, :token, :socket,
-                                :serverPid, :serverStarted, :window, :panePid, :activity, :launched)""")
+                        insert into worker (id, task_id, incarnation, session_id, launch_kind, boot_id, category, model, effort, token_hash,
+                                            tmux_socket, server_pid, server_started_at, window_id, pane_pid, activity, activity_at, launched_at)
+                        values (:id, :task, :incarnation, :session, :launchKind, :boot, :category, :model, :effort, :token, :socket,
+                                :serverPid, :serverStarted, :window, :panePid, :activity, :activityAt, :launched)""")
                 .param("id", worker.id().toString())
                 .param("task", worker.id().task().value())
                 .param("incarnation", worker.id().incarnation())
                 .param("session", worker.session().toString())
+                .param("launchKind", worker.launch().kind().word())
+                .param("boot", Columns.textOf(worker.launch().boot()))
                 .param("category", worker.category().value())
                 .param("model", worker.route().model().value())
                 .param("effort", worker.route().namesAnEffort() ? worker.route().effort().word() : null)
@@ -62,6 +70,7 @@ public class WorkerStore {
                 .param("window", window.windowId())
                 .param("panePid", window.panePid())
                 .param("activity", worker.activity().word())
+                .param("activityAt", Columns.text(worker.activitySince()))
                 .param("launched", Columns.text(worker.launchedAt()))
                 .update();
     }
@@ -69,15 +78,23 @@ public class WorkerStore {
     public void update(Worker worker) {
         ReportedStatus status = worker.lastStatus();
         StatusReport report = status == null ? null : status.report();
+        LimitPark park = worker.limitPark();
         store.sql("""
-                        update worker set activity = :activity, started_at = :started, briefed_at = :briefed,
+                        update worker set session_id = :session, activity = :activity, activity_at = :activityAt, started_at = :started,
+                            briefed_at = :briefed, transcript_path = :transcript, ended_at = :ended, stop_requested_at = :stopRequested,
                             launch_failed_at = :launchFailed, retired_at = :retired, status_state = :state, status_key = :key,
-                            status_until = :until, status_text = :text, status_at = :statusAt, done_check = :doneCheck
+                            status_until = :until, status_text = :text, status_at = :statusAt, done_check = :doneCheck,
+                            limit_name = :limitName, limit_resets_at = :limitResets, limit_parked_at = :limitParked
                         where id = :id""")
                 .param("id", worker.id().toString())
+                .param("session", worker.session().toString())
                 .param("activity", worker.activity().word())
+                .param("activityAt", Columns.text(worker.activitySince()))
                 .param("started", Columns.text(worker.startedAt()))
                 .param("briefed", Columns.text(worker.briefedAt()))
+                .param("transcript", worker.transcript())
+                .param("ended", Columns.text(worker.endedAt()))
+                .param("stopRequested", Columns.text(worker.stopRequestedAt()))
                 .param("launchFailed", Columns.text(worker.launchFailedAt()))
                 .param("retired", Columns.text(worker.retiredAt()))
                 .param("state", report == null ? null : report.state().word())
@@ -86,6 +103,9 @@ public class WorkerStore {
                 .param("text", report == null ? null : report.text())
                 .param("statusAt", status == null ? null : Columns.text(status.at()))
                 .param("doneCheck", worker.doneCheck() == null ? null : worker.doneCheck().word())
+                .param("limitName", park == null ? null : park.limit().name())
+                .param("limitResets", park == null ? null : Columns.text(park.limit().resetsAt()))
+                .param("limitParked", park == null ? null : Columns.text(park.parkedAt()))
                 .update();
     }
 
@@ -127,14 +147,25 @@ public class WorkerStore {
                         Columns.instant(row.getString("server_started_at")),
                         row.getString("window_id"),
                         row.getLong("pane_pid")),
+                launch(row),
                 WorkerActivity.named(row.getString("activity")),
-                Columns.instant(row.getString("launched_at")),
+                Columns.instant(row.getString("activity_at")),
                 Columns.instant(row.getString("started_at")),
                 Columns.instant(row.getString("briefed_at")),
+                row.getString("transcript_path"),
+                Columns.instant(row.getString("ended_at")),
+                Columns.instant(row.getString("stop_requested_at")),
                 Columns.instant(row.getString("launch_failed_at")),
                 Columns.instant(row.getString("retired_at")),
                 reportedStatus(row),
-                doneCheck == null ? null : DoneCheck.named(doneCheck));
+                doneCheck == null ? null : DoneCheck.named(doneCheck),
+                limitPark(row));
+    }
+
+    private static WorkerLaunch launch(ResultSet row) throws SQLException {
+        String boot = row.getString("boot_id");
+        return new WorkerLaunch(LaunchKind.named(row.getString("launch_kind")), Columns.instant(row.getString("launched_at")),
+                boot == null ? null : new BootId(boot));
     }
 
     private static ReportedStatus reportedStatus(ResultSet row) throws SQLException {
@@ -149,5 +180,13 @@ public class WorkerStore {
                 Columns.instant(row.getString("status_until")),
                 row.getString("status_text"));
         return new ReportedStatus(report, Columns.instant(row.getString("status_at")));
+    }
+
+    private static LimitPark limitPark(ResultSet row) throws SQLException {
+        String name = row.getString("limit_name");
+        if (name == null) {
+            return null;
+        }
+        return new LimitPark(new UsageLimit(name, Columns.instant(row.getString("limit_resets_at"))), Columns.instant(row.getString("limit_parked_at")));
     }
 }

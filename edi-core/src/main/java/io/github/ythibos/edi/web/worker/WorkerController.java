@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.worker.PeekWorker;
 import io.github.ythibos.edi.application.worker.RecordStatus;
+import io.github.ythibos.edi.application.worker.RelaunchWorker;
 import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.application.worker.WorkerInbox;
 import io.github.ythibos.edi.application.worker.WorkerList;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
@@ -25,13 +27,18 @@ class WorkerController {
     private final SteerWorker steerWorker;
     private final WorkerListQuery list;
     private final PeekWorker peekWorker;
+    private final RelaunchWorker relaunchWorker;
+    private final StopWorker stopWorker;
 
-    WorkerController(RecordStatus recordStatus, WorkerInbox inbox, SteerWorker steerWorker, WorkerListQuery list, PeekWorker peekWorker) {
+    WorkerController(RecordStatus recordStatus, WorkerInbox inbox, SteerWorker steerWorker, WorkerListQuery list, PeekWorker peekWorker,
+            RelaunchWorker relaunchWorker, StopWorker stopWorker) {
         this.recordStatus = recordStatus;
         this.inbox = inbox;
         this.steerWorker = steerWorker;
         this.list = list;
         this.peekWorker = peekWorker;
+        this.relaunchWorker = relaunchWorker;
+        this.stopWorker = stopWorker;
     }
 
     @PostMapping("/api/status")
@@ -64,5 +71,17 @@ class WorkerController {
     @GetMapping("/api/tasks/{reference}/peek")
     PeekWorker.Peek peek(@PathVariable String reference) {
         return peekWorker.peek(TaskReference.parse(reference));
+    }
+
+    @PostMapping("/api/tasks/{reference}/relaunch")
+    Confirmation relaunch(@PathVariable String reference, Caller caller) {
+        caller.requirePrimary("edi worker relaunch");
+        return new Confirmation.Relaunched(relaunchWorker.relaunch(TaskReference.parse(reference), caller.actor()));
+    }
+
+    @PostMapping("/api/tasks/{reference}/stop")
+    Confirmation stop(@PathVariable String reference, Caller caller) {
+        caller.requirePrimary("edi worker stop");
+        return new Confirmation.StopRequested(stopWorker.stop(TaskReference.parse(reference), caller.actor()));
     }
 }

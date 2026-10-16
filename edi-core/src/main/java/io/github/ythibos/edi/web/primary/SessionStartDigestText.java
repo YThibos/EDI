@@ -1,0 +1,95 @@
+package io.github.ythibos.edi.web.primary;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+import io.github.ythibos.edi.application.fleet.FleetSnapshot;
+import io.github.ythibos.edi.application.fleet.OpenDecision;
+import io.github.ythibos.edi.application.fleet.ParkedTask;
+import io.github.ythibos.edi.application.primary.SessionStartDigest;
+import io.github.ythibos.edi.domain.primary.PrimarySession;
+import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.web.text.Moments;
+import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.Words;
+import io.github.ythibos.edi.web.worker.HealthWords;
+import io.github.ythibos.edi.web.worker.WorkerListText;
+
+@Component
+public class SessionStartDigestText implements TextPresenter<SessionStartDigest> {
+
+    private final WorkerListText workers;
+
+    public SessionStartDigestText(WorkerListText workers) {
+        this.workers = workers;
+    }
+
+    @Override
+    public Class<SessionStartDigest> presents() {
+        return SessionStartDigest.class;
+    }
+
+    @Override
+    public String text(SessionStartDigest digest) {
+        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing())));
+        lines.addAll(limitStop(digest.previousLimitStop()));
+        lines.addAll(decisions(digest.fleet()));
+        lines.add(workers.text(digest.workers()).stripTrailing());
+        lines.addAll(parked(digest.fleet()));
+        lines.add("Queued: " + digest.fleet().queued().size() + ".");
+        lines.addAll(outage(digest));
+        lines.add("Wakes waiting: " + digest.wakesWaiting() + "; edi wait prints them.");
+        lines.addAll(waitAdvice(digest));
+        return String.join("\n", lines) + "\n";
+    }
+
+    private static String standingOf(Standing standing) {
+        return switch (standing) {
+            case PRIMARY -> "This session is the primary: it supervises the fleet and answers the captain.";
+            case STANDBY -> "This session is standby: another session holds the primary role, so this one only reads until the captain types here.";
+            case UNCLAIMED -> "No session holds the primary role; the captain's next typed prompt makes this session the primary.";
+        };
+    }
+
+    private static List<String> limitStop(PrimarySession stopped) {
+        if (stopped == null) {
+            return List.of();
+        }
+        return List.of("The previous primary session stopped on " + HealthWords.limit(stopped.limit()) + " at "
+                + Moments.minute(stopped.limitReachedAt()) + "; the workers parked on a limit are listed below.");
+    }
+
+    private static List<String> decisions(FleetSnapshot fleet) {
+        List<String> lines = new ArrayList<>(List.of(Words.counted("Decisions waiting on the captain", fleet.decisions().size())));
+        fleet.decisions().forEach(open -> lines.add("  " + decisionLine(open)));
+        return lines;
+    }
+
+    private static String decisionLine(OpenDecision open) {
+        return open.decision().number() + "  " + open.task().id() + "  " + open.decision().card().title();
+    }
+
+    private static List<String> parked(FleetSnapshot fleet) {
+        List<String> lines = new ArrayList<>(List.of(Words.counted("Parked", fleet.parked().size())));
+        fleet.parked().forEach(parked -> lines.add("  " + parkedLine(parked)));
+        return lines;
+    }
+
+    private static String parkedLine(ParkedTask parked) {
+        return parked.task().id() + "  " + parked.task().hold().reason() + "  " + Moments.until(parked.task().hold().until());
+    }
+
+    private static List<String> outage(SessionStartDigest digest) {
+        if (digest.outage().isEmpty()) {
+            return List.of();
+        }
+        return List.of(Words.counted("Outage hold list", digest.outage().size()) + ": edi recover shows it; relaunch only the numbers the captain names.");
+    }
+
+    private static List<String> waitAdvice(SessionStartDigest digest) {
+        boolean workInFlight = !digest.fleet().ongoing().isEmpty() || !digest.workers().entries().isEmpty();
+        return digest.standing() == Standing.STANDBY || !workInFlight ? List.of() : List.of("Work is in flight: keep one edi wait running in the background.");
+    }
+}

@@ -1,5 +1,8 @@
 package io.github.ythibos.edi.domain.event;
 
+import java.time.Instant;
+import java.time.LocalDate;
+
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
@@ -8,12 +11,17 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.guard.GuardRule;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.DeathCause;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.PaneState;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public sealed interface DomainEvent {
@@ -87,5 +95,56 @@ public sealed interface DomainEvent {
     }
 
     record BranchDeliveryFailed(TaskId task, BranchName branch, String because) implements DomainEvent {
+    }
+
+    record WorkerRelaunched(TaskId task, WorkerId worker, LaunchKind launch, Route route, String because) implements DomainEvent {
+    }
+
+    record WorkerNotified(TaskId task, WorkerId worker, String kind) implements DomainEvent {
+    }
+
+    record WorkerSessionEnded(TaskId task, WorkerId worker, String reason) implements DomainEvent {
+    }
+
+    record WorkerStoppedOnAnError(TaskId task, WorkerId worker, String error) implements DomainEvent {
+    }
+
+    record UsageLimitReached(TaskId task, WorkerId worker, UsageLimit limit) implements DomainEvent {
+    }
+
+    record LimitResumeTyped(TaskId task, WorkerId worker) implements DomainEvent {
+    }
+
+    record LimitResumeHeldBack(TaskId task, WorkerId worker, PaneState pane) implements DomainEvent {
+    }
+
+    record WorkerDied(TaskId task, WorkerId worker, DeathCause cause) implements DomainEvent {
+    }
+
+    record WorkerStale(TaskId task, WorkerId worker, Instant quietSince) implements DomainEvent {
+    }
+
+    record WorkerBusyTooLong(TaskId task, WorkerId worker, Instant busySince) implements DomainEvent {
+    }
+
+    record DeclaredWaitEnded(TaskId task, WorkerId worker, StatusReport pause) implements DomainEvent {
+    }
+
+    record LostInOutage(TaskId task, WorkerId worker, int number, DeathCause cause) implements DomainEvent {
+    }
+
+    record RecoveryChosen(TaskId task, int number, RecoveryAction action) implements DomainEvent {
+    }
+
+    record RecoveryFailed(TaskId task, int number, String because) implements DomainEvent {
+    }
+
+    record WorkerStopRequested(TaskId task, WorkerId worker) implements DomainEvent {
+    }
+
+    record RecoveryCostRecorded(TaskId task, WorkerId worker, LaunchKind launch, TokenUsage tokens) implements DomainEvent {
+    }
+
+    record HoldDateArrived(TaskId task, LocalDate until) implements DomainEvent {
     }
 }

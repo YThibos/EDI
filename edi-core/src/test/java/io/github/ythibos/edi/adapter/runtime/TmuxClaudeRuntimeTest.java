@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
@@ -155,7 +156,7 @@ class TmuxClaudeRuntimeTest {
 
     private Launch launch(UUID session, List<String> disallowedTools) {
         WorkerId worker = WorkerId.first(new TaskId("fit-lamp"));
-        return new Launch(worker, session, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), worktree, projectClone(), home.taskDirectory(worker.task()),
+        return new Launch(worker, LaunchKind.DISPATCH, session, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), worktree, projectClone(), home.taskDirectory(worker.task()),
                 home.workerState(worker), Map.of("EDI_HOME", home.root().toString(), "EDI_ROLE", "worker", "EDI_TASK_ID", "fit-lamp",
                         "EDI_WORKER", worker.toString(), "EDI_TOKEN_FILE", "/tokens/fit-lamp-1"),
                 disallowedTools, PermissionMode.BYPASS, "\u2063EDI_OP: brief waiting: read the brief and follow it");

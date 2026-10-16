@@ -1,20 +1,30 @@
 #!/bin/sh
 set -u
 
+launched_with="$*"
 session=""
+source="startup"
+task_directory=""
 prompt=""
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --session-id) session=$2; shift 2 ;;
+        --resume) session=$2; source="resume"; shift 2 ;;
         --) prompt=$2; shift 2 ;;
         --dangerously-skip-permissions) shift ;;
-        --disallowedTools | --add-dir)
+        --add-dir)
+            task_directory=$2
+            shift
+            while [ "$#" -gt 0 ] && [ "${1#--}" = "$1" ]; do shift; done
+            ;;
+        --disallowedTools)
             shift
             while [ "$#" -gt 0 ] && [ "${1#--}" = "$1" ]; do shift; done
             ;;
         *) shift 2 ;;
     esac
 done
+[ -z "$task_directory" ] || printf '%s\n' "$launched_with" >> "$task_directory/stub-launches.txt"
 
 json_string() {
     printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk 'BEGIN { ORS = "" } NR > 1 { print "\\n" } { print }'
@@ -66,7 +76,7 @@ show_the_idle_prompt() {
     printf '%s\n%s\n%s\n' "────────────────────" "❯" "────────────────────"
 }
 
-hook SessionStart ',"source":"startup"' session-start > /dev/null
+hook SessionStart ",\"source\":\"$source\"" session-start > /dev/null
 turn "$prompt"
 show_the_idle_prompt
 while IFS= read -r line; do

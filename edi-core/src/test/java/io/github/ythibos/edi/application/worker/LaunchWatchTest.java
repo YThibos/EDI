@@ -26,7 +26,7 @@ class LaunchWatchTest {
         TestHome home = TestHome.in(directory).registering("projects:\n  - name: harness\n    base: main\n");
         Worker silent = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         Worker started = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"), CategoryId.IMPLEMENTATION);
-        home.workerHooks().sessionStarted(started.id());
+        home.workerHooks().sessionStarted(started.id(), started.session(), null);
         home.runtime().showing(PaneState.DIALOG_TRUST);
 
         home.clock().advance(Duration.ofMinutes(2).minusSeconds(1));

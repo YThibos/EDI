@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -51,12 +52,12 @@ class Tmux {
     }
 
     ServerIdentity server() {
-        String[] identity = tmux(List.of("display-message", "-p", "-t", SESSION + ":", SERVER_FORMAT)).strip().split(" ");
-        return new ServerIdentity(Long.parseLong(identity[0]), Instant.ofEpochSecond(Long.parseLong(identity[1])));
+        return identityIn(tmux(List.of("display-message", "-p", "-t", SESSION + ":", SERVER_FORMAT)));
     }
 
-    boolean serves(ServerIdentity identity) {
-        return hasTheWorkersSession() && server().equals(identity);
+    Optional<ServerIdentity> runningServer() {
+        ProgramRun sessions = run(List.of("list-sessions", "-F", SERVER_FORMAT));
+        return sessions.succeeded() ? sessions.output().lines().findFirst().map(Tmux::identityIn) : Optional.empty();
     }
 
     Set<String> windowIds() {
@@ -100,6 +101,11 @@ class Tmux {
         List<String> onTheWorkersSocket = new ArrayList<>(List.of("-L", socket));
         onTheWorkersSocket.addAll(arguments);
         return programs.run(Program.TMUX, Path.of(System.getProperty("java.io.tmpdir")), onTheWorkersSocket);
+    }
+
+    private static ServerIdentity identityIn(String formatted) {
+        String[] identity = formatted.strip().split(" ");
+        return new ServerIdentity(Long.parseLong(identity[0]), Instant.ofEpochSecond(Long.parseLong(identity[1])));
     }
 
     record OpenedWindow(String windowId, long panePid) {

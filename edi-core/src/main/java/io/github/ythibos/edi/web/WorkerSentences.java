@@ -3,6 +3,7 @@ package io.github.ythibos.edi.web;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 
 final class WorkerSentences {
@@ -14,6 +15,13 @@ final class WorkerSentences {
         Worker worker = launched.worker();
         return "Dispatched " + worker.id().task() + " to " + worker.id() + " (" + worker.category() + ", " + worker.route() + ") on "
                 + launched.branch() + " in " + launched.worktree() + ".";
+    }
+
+    static String relaunched(DispatchOutcome.Launched launched) {
+        Worker worker = launched.worker();
+        String how = worker.launch().kind() == LaunchKind.RESUME ? "resuming session " + worker.session() : "with a fresh session";
+        return "Relaunched " + worker.id().task() + " as " + worker.id() + " (" + worker.category() + ", " + worker.route() + "), " + how
+                + ", in " + launched.worktree() + ".";
     }
 
     static String deferred(DispatchOutcome.Deferred deferred) {

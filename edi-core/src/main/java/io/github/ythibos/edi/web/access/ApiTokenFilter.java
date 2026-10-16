@@ -3,13 +3,16 @@ package io.github.ythibos.edi.web.access;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
+import io.github.ythibos.edi.domain.primary.Standing;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,14 +24,17 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     private static final String API = "/api";
     private static final String HEALTH = "/api/health";
     private static final String BEARER = "Bearer ";
+    private static final String SESSION = "EDI-Session";
     private static final String REFUSAL = "This call needs the EDI token from state/core.token in the EDI home, or the token EDI gave a worker at launch.";
 
     private final ApiToken token;
     private final WorkerTokens workerTokens;
+    private final PrimarySessions primarySessions;
 
-    ApiTokenFilter(ApiToken token, WorkerTokens workerTokens) {
+    ApiTokenFilter(ApiToken token, WorkerTokens workerTokens, PrimarySessions primarySessions) {
         this.token = token;
         this.workerTokens = workerTokens;
+        this.primarySessions = primarySessions;
     }
 
     @Override
@@ -40,7 +46,7 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        Optional<Caller> caller = callerHolding(bearerTokenOf(request));
+        Optional<Caller> caller = callerHolding(bearerTokenOf(request), sessionOf(request));
         if (caller.isPresent()) {
             request.setAttribute(Caller.ATTRIBUTE, caller.get());
             chain.doFilter(request, response);
@@ -49,14 +55,18 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         }
     }
 
-    private Optional<Caller> callerHolding(String presented) {
+    private Optional<Caller> callerHolding(String presented, UUID session) {
         if (presented == null) {
             return Optional.empty();
         }
         if (token.admits(presented)) {
-            return Optional.of(new Caller.Primary());
+            return Optional.of(Caller.holdingTheHomeToken(session, standingOf(session)));
         }
         return workerTokens.workerHolding(presented).map(worker -> new Caller.WorkerCaller(worker.id()));
+    }
+
+    private Standing standingOf(UUID session) {
+        return session == null ? Standing.UNCLAIMED : primarySessions.standingOf(session);
     }
 
     private static String decodedPathOf(HttpServletRequest request) {
@@ -65,6 +75,15 @@ final class ApiTokenFilter extends OncePerRequestFilter {
 
     private static boolean isApi(String path) {
         return path.equals(API) || path.startsWith(API + "/");
+    }
+
+    private static UUID sessionOf(HttpServletRequest request) {
+        String session = request.getHeader(SESSION);
+        try {
+            return session == null || session.isBlank() ? null : UUID.fromString(session.strip());
+        } catch (IllegalArgumentException malformed) {
+            return null;
+        }
     }
 
     private static String bearerTokenOf(HttpServletRequest request) {

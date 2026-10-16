@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,19 +23,32 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.runtime.PrivateTmuxServer;
 import io.github.ythibos.edi.adapter.runtime.TmuxClaudeRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.supervision.OutageList;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
+import io.github.ythibos.edi.application.worker.WorkerList;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.recovery.RecoveryAction;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.wake.WakeKind;
+import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerHealth;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.primary.SessionStartDigestText;
+import io.github.ythibos.edi.web.worker.WorkerListText;
 
 @DisplayName("4.5 Supervision and recovery")
 class SupervisionAndRecoveryTest {
@@ -46,10 +60,38 @@ class SupervisionAndRecoveryTest {
     @DisplayName("I-23 A restart is a non-event")
     class ARestartIsANonEvent {
 
+        @RegisterExtension
+        private final TestProcesses processes = new TestProcesses();
+
         @Test
         @DisplayName("AT-23 after killing the core and the primary mid-task, the session-start digest equals the pre-crash snapshot")
-        void theDigestSurvivesARestart() {
-            Pending.until(Slice.S4);
+        @Tag("adapter")
+        void theDigestSurvivesARestart() throws Exception {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            home.workerHooks().sessionStarted(lamp.id(), lamp.session(), null);
+            home.recordStatus().report(lamp.id(), StatusState.WORKING, null, null, "Fitting the brass lamp.");
+            home.storing(List.of(WorkerFixtures.queued("choose-lamp", TaskKind.CAPTAIN, "harness", null), WorkerFixtures.queuedShip("tune-horn", "harness", "HRN-4")));
+            home.raiseDecision().raise(new TaskReference.ById(new TaskId("choose-lamp")), Cards.card("Which lamp?"), Actor.PRIMARY);
+            Process killedPrimary = processes.register(new ProcessBuilder("sleep", "30").start());
+            UUID beforeTheCrash = UUID.randomUUID();
+            home.primaryHooks().sessionStarted(beforeTheCrash, killedPrimary.pid());
+            String preCrashDigest = digestOf(home, beforeTheCrash);
+
+            killedPrimary.destroyForcibly();
+            assertThat(TestProcesses.awaitExit(killedPrimary.toHandle())).isTrue();
+            TestHome restarted = home.restarted();
+            UUID afterTheRestart = UUID.randomUUID();
+            restarted.primaryHooks().sessionStarted(afterTheRestart, null);
+
+            assertThat(restarted.primarySessions().standingOf(afterTheRestart)).isEqualTo(Standing.PRIMARY);
+            assertThat(digestOf(restarted, afterTheRestart)).isEqualTo(preCrashDigest)
+                    .contains("This session is the primary", "D1  choose-lamp  Which lamp?", "fit-lamp#1  idle since", "working: Fitting the brass lamp.",
+                            "Queued: 1.");
+        }
+
+        private static String digestOf(TestHome home, UUID session) {
+            return new SessionStartDigestText(new WorkerListText()).text(home.sessionStartDigest().digestFor(session));
         }
     }
 
@@ -59,8 +101,66 @@ class SupervisionAndRecoveryTest {
 
         @Test
         @DisplayName("AT-24 three dead workers give three holds in a stable numbered list and '2 resume' relaunches only task 2")
-        void deadWorkersBecomeANumberedHoldList() {
-            Pending.until(Slice.S4);
+        @Tag("adapter")
+        void deadWorkersBecomeANumberedHoldList() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            Worker horn = WorkerFixtures.dispatchedShip(home, "tune-horn", "HRN-4");
+            WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5");
+            int launchesBeforeTheOutage = home.runtime().launches().size();
+
+            home.runtime().restartTheServer();
+            home.judgeWorkers().judge();
+            OutageList listed = home.outageList().list();
+            home.judgeWorkers().judge();
+
+            assertThat(home.runtime().launches()).hasSize(launchesBeforeTheOutage);
+            assertThat(numbersAndTasks(listed)).containsExactly("1 fit-lamp", "2 tune-horn", "3 ring-bell");
+            assertThat(numbersAndTasks(home.outageList().list())).isEqualTo(numbersAndTasks(listed));
+            assertThat(listed.entries()).allSatisfy(entry -> {
+                assertThat(entry.task().isHeld()).isTrue();
+                assertThat(entry.worker().route()).hasToString("claude-sonnet-5-5 at high");
+                assertThat(entry.routeNow()).hasToString("claude-sonnet-5-5 at high");
+                assertThat(entry.entry().cause()).isEqualTo(DeathCause.SERVER_CHANGED);
+            });
+
+            home.recoverFromOutage().answer(2, RecoveryAction.RESUME, null, Actor.PRIMARY);
+
+            Launch resumed = home.runtime().lastLaunch();
+            assertThat(home.runtime().launches()).hasSize(launchesBeforeTheOutage + 1);
+            assertThat(resumed.worker()).isEqualTo(horn.id().next());
+            assertThat(resumed.resumesTheSession()).isTrue();
+            assertThat(resumed.session()).isEqualTo(horn.session());
+            assertThat(numbersAndTasks(home.outageList().list())).containsExactly("1 fit-lamp", "3 ring-bell");
+            assertThat(home.tasks().get(new TaskId("tune-horn")).isHeld()).isFalse();
+            assertThat(home.tasks().get(new TaskId("fit-lamp")).isHeld()).isTrue();
+            assertThat(home.tasks().get(new TaskId("ring-bell")).isHeld()).isTrue();
+        }
+
+        @Test
+        @DisplayName("A simulated machine restart puts every worker of the old boot on the numbered list")
+        @Tag("adapter")
+        void aMachineRestartProducesTheNumberedList() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            for (Worker worker : List.of(WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3"), WorkerFixtures.dispatchedShip(home, "tune-horn", "HRN-4"))) {
+                home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
+                home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Working on " + worker.id().task() + ".");
+            }
+
+            home.restartTheMachine();
+            TestHome afterTheRestart = home.restarted();
+            afterTheRestart.judgeWorkers().judge();
+            OutageList listed = afterTheRestart.outageList().list();
+
+            assertThat(numbersAndTasks(listed)).containsExactly("1 fit-lamp", "2 tune-horn");
+            assertThat(listed.entries()).extracting(entry -> entry.entry().cause()).containsOnly(DeathCause.MACHINE_RESTARTED);
+            assertThat(afterTheRestart.runtime().launches()).hasSize(2);
+            assertThat(afterTheRestart.eventTypesOf(new TaskId("fit-lamp"))).contains("TaskHeld", "LostInOutage").doesNotContain("WorkerDied");
+            assertThat(afterTheRestart.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsOnly(WakeKind.LOST_IN_OUTAGE);
+        }
+
+        private static List<String> numbersAndTasks(OutageList list) {
+            return list.entries().stream().map(entry -> entry.entry().number() + " " + entry.task().id()).toList();
         }
     }
 
@@ -70,8 +170,24 @@ class SupervisionAndRecoveryTest {
 
         @Test
         @DisplayName("AT-25 a relaunch after a lost server lands in the recorded path with the recorded session id")
-        void aRelaunchResumesTheRecordedSession() {
-            Pending.until(Slice.S4);
+        @Tag("adapter")
+        void aRelaunchResumesTheRecordedSession() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            Path recordedCopy = home.runtime().lastLaunch().worktree();
+            TaskReference task = new TaskReference.ById(new TaskId("fit-lamp"));
+
+            assertThatThrownBy(() -> home.relaunchWorker().relaunch(task, Actor.PRIMARY)).isInstanceOf(Refusal.class).hasMessageContaining("still running");
+            home.runtime().loseTheServer();
+            home.relaunchWorker().relaunch(task, Actor.PRIMARY);
+
+            Launch relaunch = home.runtime().lastLaunch();
+            assertThat(relaunch.worktree()).isEqualTo(recordedCopy).isEqualTo(home.home().root().resolve("worktrees/harness/fit-lamp"));
+            assertThat(relaunch.session()).isEqualTo(lamp.session());
+            assertThat(relaunch.resumesTheSession()).isTrue();
+            assertThat(relaunch.firstPrompt()).startsWith("\u2063EDI_OP: resumed after its tmux server is gone: your copy is on feature/HRN-3 at ");
+            assertThat(home.workers().get(lamp.id()).orElseThrow().isRetired()).isTrue();
+            assertThat(home.workers().latestOf(new TaskId("fit-lamp")).orElseThrow().session()).isEqualTo(lamp.session());
         }
     }
 
@@ -81,8 +197,21 @@ class SupervisionAndRecoveryTest {
 
         @Test
         @DisplayName("AT-26 a worker whose last status is working but whose tmux server identity changed is reported dead")
-        void aChangedServerIdentityMeansDead() {
-            Pending.until(Slice.S4);
+        void aChangedServerIdentityMeansDead() throws IOException {
+            TestHome home = TestHome.in(directory).registering("projects:\n  - name: harness\n    base: main\n");
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
+            home.workerHooks().promptSubmitted(worker.id(), "Fit the lamp.");
+            home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Fitting the lamp.");
+
+            home.runtime().restartTheServer();
+            WorkerList serving = home.workerList().serving();
+            home.judgeWorkers().judge();
+
+            assertThat(serving.entries().getFirst().health()).isEqualTo(new WorkerHealth.Dead(DeathCause.SERVER_CHANGED));
+            assertThat(new WorkerListText().text(serving)).contains("fit-lamp#1  dead: its tmux server changed", "working: Fitting the lamp.")
+                    .doesNotContain("busy");
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).containsOnlyOnce("WorkerDied");
         }
     }
 

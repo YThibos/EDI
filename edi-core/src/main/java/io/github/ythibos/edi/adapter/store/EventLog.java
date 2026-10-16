@@ -3,6 +3,7 @@ package io.github.ythibos.edi.adapter.store;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +14,23 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
+import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
+import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
+import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
+import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeTyped;
+import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerNotified;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeferredLaunchFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
@@ -37,6 +55,9 @@ import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.wake.Wake;
+import io.github.ythibos.edi.domain.wake.WakeRule;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -46,20 +67,34 @@ public class EventLog {
 
     private final JdbcClient store;
     private final JsonMapper json;
+    private final WakeStore wakes;
+    private final ApplicationEventPublisher publisher;
 
-    public EventLog(JdbcClient store, JsonMapper json) {
+    public EventLog(JdbcClient store, JsonMapper json, WakeStore wakes, ApplicationEventPublisher publisher) {
         this.store = store;
         this.json = json;
+        this.wakes = wakes;
+        this.publisher = publisher;
     }
 
     public void record(DomainEvent event, Actor actor, Instant at) {
-        store.sql("insert into event (at, actor, type, task_id, payload) values (:at, :actor, :type, :task, :payload)")
+        long sequence = store.sql("insert into event (at, actor, type, task_id, payload) values (:at, :actor, :type, :task, :payload) returning sequence")
                 .param("at", Columns.text(at))
                 .param("actor", actor.name())
                 .param("type", event.getClass().getSimpleName())
                 .param("task", event.task().value())
                 .param("payload", json.writeValueAsString(payloadOf(event)))
-                .update();
+                .query(Long.class)
+                .single();
+        WakeRule.wakeFor(event, actor).ifPresent(wake -> queue(sequence, wake, at));
+    }
+
+    public long latestSequence() {
+        return store.sql("select coalesce(max(sequence), 0) from event").query(Long.class).single();
+    }
+
+    public boolean anyAfter(long sequence) {
+        return store.sql("select exists (select 1 from event where sequence > :sequence)").param("sequence", sequence).query(Boolean.class).single();
     }
 
     public List<RecordedEvent> timelineOf(TaskId task) {
@@ -107,7 +142,43 @@ public class EventLog {
             case MechanicalChangeRefused refused -> payload.put("worker", refused.worker().toString()).put("because", refused.because());
             case BranchDeliveredToCaptain delivered -> payload.put("branch", delivered.branch().toString());
             case BranchDeliveryFailed failed -> payload.put("branch", failed.branch().toString()).put("because", failed.because());
+            case WorkerRelaunched relaunched -> payload.put("worker", relaunched.worker().toString())
+                    .put("launch", relaunched.launch().word())
+                    .put("model", relaunched.route().model().value())
+                    .put("effort", relaunched.route().namesAnEffort() ? relaunched.route().effort().word() : null)
+                    .put("because", relaunched.because());
+            case WorkerNotified notified -> payload.put("worker", notified.worker().toString()).put("kind", notified.kind());
+            case WorkerSessionEnded ended -> payload.put("worker", ended.worker().toString()).put("reason", ended.reason());
+            case WorkerStoppedOnAnError stopped -> payload.put("worker", stopped.worker().toString()).put("error", stopped.error());
+            case UsageLimitReached reached -> payload.put("worker", reached.worker().toString())
+                    .put("limit", reached.limit().name())
+                    .put("resetsAt", Columns.text(reached.limit().resetsAt()));
+            case LimitResumeTyped typed -> payload.put("worker", typed.worker().toString());
+            case LimitResumeHeldBack heldBack -> payload.put("worker", heldBack.worker().toString()).put("pane", heldBack.pane().word());
+            case WorkerDied died -> payload.put("worker", died.worker().toString()).put("cause", died.cause().word());
+            case WorkerStale stale -> payload.put("worker", stale.worker().toString()).put("quietSince", Columns.text(stale.quietSince()));
+            case WorkerBusyTooLong busy -> payload.put("worker", busy.worker().toString()).put("busySince", Columns.text(busy.busySince()));
+            case DeclaredWaitEnded ended -> withStatus(payload.put("worker", ended.worker().toString()), ended.pause());
+            case LostInOutage lost -> payload.put("worker", lost.worker().toString()).put("number", lost.number()).put("cause", lost.cause().word());
+            case RecoveryChosen chosen -> payload.put("number", chosen.number()).put("action", chosen.action().word());
+            case RecoveryFailed failed -> payload.put("number", failed.number()).put("because", failed.because());
+            case WorkerStopRequested stopped -> payload.put("worker", stopped.worker().toString());
+            case RecoveryCostRecorded cost -> withTokens(payload.put("worker", cost.worker().toString()).put("launch", cost.launch().word()),
+                    cost.tokens());
+            case HoldDateArrived due -> payload.put("until", due.until().toString());
         };
+    }
+
+    private void queue(long sequence, Wake wake, Instant at) {
+        wakes.enqueue(sequence, wake, at);
+        publisher.publishEvent(new WakeQueued(sequence));
+    }
+
+    private static ObjectNode withTokens(ObjectNode payload, TokenUsage tokens) {
+        return payload.put("input", tokens.input())
+                .put("cacheRead", tokens.cacheRead())
+                .put("cacheWrite", tokens.cacheWrite())
+                .put("output", tokens.output());
     }
 
     private static ObjectNode withStatus(ObjectNode payload, StatusReport report) {
