@@ -12,6 +12,7 @@ final class CommandWrappers {
             "if", "then", "else", "elif", "fi", "do", "done", "while", "until", "for", "select",
             "case", "esac", "function", "coproc", "!", "{", "}", "[[", "]]");
     private static final Set<String> SHELLS = Set.of("sh", "bash", "zsh", "dash", "ksh", "ash", "mksh");
+    private static final Set<String> SHELL_VALUES = Set.of("-o", "+o", "-O", "+O", "--rcfile", "--init-file");
     private static final Set<String> PLAIN_WRAPPERS = Set.of("nohup", "builtin", "unbuffer", "chronic", "setsid", "exec");
     private static final Set<String> SUDO_VALUES = Set.of("-u", "-g", "-h", "-p", "-C", "-D", "-r", "-t", "-U", "-T", "-R");
     private static final Set<String> ENV_VALUES = Set.of("-u", "-C", "--unset", "--chdir");
@@ -80,14 +81,30 @@ final class CommandWrappers {
         return onlyLooksUp ? List.of() : unwrap(afterOptions(arguments, Set.of()), false, nesting);
     }
 
-    private static List<ShellCommand> shellScript(List<ShellWord> arguments, int nesting) {
-        for (int index = 0; index < arguments.size() && isOption(arguments.get(index)); index++) {
-            String option = arguments.get(index).text();
-            if (!option.startsWith("--") && option.indexOf('c') > 0 && index + 1 < arguments.size()) {
-                return ShellScript.commandsIn(arguments.get(index + 1).text(), nesting + 1);
-            }
+    private static List<ShellCommand> shellScript(List<ShellWord> words, int nesting) {
+        List<ShellWord> arguments = words.stream().filter(word -> !word.redirectionTarget()).toList();
+        int operand = firstShellOperand(arguments);
+        List<String> options = arguments.subList(0, operand).stream().map(ShellWord::text).toList();
+        if (operand == arguments.size() || namesShortFlag(options, 's')) {
+            throw new UnreadableCommand("The shell reads its script from standard input, which the guard cannot see.");
         }
-        return List.of();
+        return namesShortFlag(options, 'c') ? ShellScript.commandsIn(arguments.get(operand).text(), nesting + 1) : List.of();
+    }
+
+    private static int firstShellOperand(List<ShellWord> arguments) {
+        int index = 0;
+        while (index < arguments.size() && isShellOption(arguments.get(index).text())) {
+            index += SHELL_VALUES.contains(arguments.get(index).text()) ? 2 : 1;
+        }
+        return Math.min(index, arguments.size());
+    }
+
+    private static boolean isShellOption(String word) {
+        return word.length() > 1 && (word.startsWith("-") || word.startsWith("+"));
+    }
+
+    private static boolean namesShortFlag(List<String> options, char flag) {
+        return options.stream().anyMatch(option -> option.startsWith("-") && !option.startsWith("--") && option.indexOf(flag) > 0);
     }
 
     private static List<ShellCommand> findActions(List<ShellWord> arguments, int nesting) {

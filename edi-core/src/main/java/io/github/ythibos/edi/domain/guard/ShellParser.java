@@ -7,30 +7,39 @@ import java.util.List;
 
 final class ShellParser {
 
+    private static final int DEEPEST_NESTING = 12;
     private static final String COMMAND_SEPARATORS = ";&|()";
     private static final String REDIRECTION_CHARACTERS = "<>&|";
     private static final String WORD_BREAKS = " \t\n;&|()<>";
 
     private final String text;
     private final int nesting;
+    private final boolean substitution;
     private final List<List<ShellWord>> commands = new ArrayList<>();
     private final Deque<String> heredocDelimiters = new ArrayDeque<>();
     private List<ShellWord> words = new ArrayList<>();
     private int position;
+    private int openSubshells;
+    private boolean closed;
 
-    private ShellParser(String text, int nesting) {
+    private ShellParser(String text, int start, int nesting, boolean substitution) {
+        if (nesting > DEEPEST_NESTING) {
+            throw new UnreadableCommand("The command nests more than " + DEEPEST_NESTING + " levels of commands inside commands.");
+        }
         this.text = text;
+        this.position = start;
         this.nesting = nesting;
+        this.substitution = substitution;
     }
 
     static List<List<ShellWord>> simpleCommandsIn(String text, int nesting) {
-        ShellParser parser = new ShellParser(text, nesting);
+        ShellParser parser = new ShellParser(text, 0, nesting, false);
         parser.parse();
         return parser.commands;
     }
 
     private void parse() {
-        while (!atEnd()) {
+        while (!atEnd() && !closed) {
             char character = current();
             if (character == ' ' || character == '\t') {
                 position++;
@@ -43,13 +52,30 @@ final class ShellParser {
             } else if (startsRedirection()) {
                 readRedirection();
             } else if (COMMAND_SEPARATORS.indexOf(character) >= 0) {
-                endCommand();
-                position++;
+                readSeparator(character);
             } else {
-                readWord();
+                readWord(false);
             }
         }
         endCommand();
+    }
+
+    private void readSeparator(char separator) {
+        endCommand();
+        if (separator == ')' && substitution && openSubshells == 0) {
+            closed = true;
+        } else {
+            openSubshells += subshellStepOf(separator);
+            position++;
+        }
+    }
+
+    private static int subshellStepOf(char separator) {
+        return switch (separator) {
+            case '(' -> 1;
+            case ')' -> -1;
+            default -> 0;
+        };
     }
 
     private boolean startsRedirection() {
@@ -63,6 +89,7 @@ final class ShellParser {
             words.add(processSubstitution());
         } else if (text.startsWith("<<<", position)) {
             position += 3;
+            readRedirectionTarget();
         } else if (text.startsWith("<<", position)) {
             position += 2;
             readHeredocDelimiter();
@@ -71,14 +98,22 @@ final class ShellParser {
             while (!atEnd() && REDIRECTION_CHARACTERS.indexOf(current()) >= 0) {
                 position++;
             }
+            readRedirectionTarget();
         }
     }
 
     private ShellWord processSubstitution() {
         StringBuilder written = new StringBuilder();
         List<ShellCommand> substitutions = new ArrayList<>();
-        readParenthesisedSubstitution(written, substitutions, 1);
-        return new ShellWord(written.toString(), substitutions);
+        readParenthesisedSubstitution(written, substitutions);
+        return new ShellWord(written.toString(), substitutions, false);
+    }
+
+    private void readRedirectionTarget() {
+        skipBlanks();
+        if (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
+            readWord(true);
+        }
     }
 
     private void readHeredocDelimiter() {
@@ -112,13 +147,13 @@ final class ShellParser {
         position = lineEndFrom(position);
     }
 
-    private void readWord() {
+    private void readWord(boolean redirectionTarget) {
         StringBuilder written = new StringBuilder();
         List<ShellCommand> substitutions = new ArrayList<>();
         while (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
             readWordPart(written, substitutions);
         }
-        words.add(new ShellWord(written.toString(), substitutions));
+        words.add(new ShellWord(written.toString(), substitutions, redirectionTarget));
     }
 
     private void readWordPart(StringBuilder written, List<ShellCommand> substitutions) {
@@ -136,7 +171,7 @@ final class ShellParser {
             readArithmetic(written);
         } else if (character == '$' && peek(1) == '(') {
             position++;
-            readParenthesisedSubstitution(written, substitutions, 1);
+            readParenthesisedSubstitution(written, substitutions);
         } else if (character == '`') {
             readBacktickSubstitution(written, substitutions);
         } else {
@@ -188,7 +223,7 @@ final class ShellParser {
                 readArithmetic(written);
             } else if (character == '$' && peek(1) == '(') {
                 position++;
-                readParenthesisedSubstitution(written, substitutions, 1);
+                readParenthesisedSubstitution(written, substitutions);
             } else if (character == '`') {
                 readBacktickSubstitution(written, substitutions);
             } else {
@@ -206,33 +241,12 @@ final class ShellParser {
         position = stop;
     }
 
-    private void readParenthesisedSubstitution(StringBuilder written, List<ShellCommand> substitutions, int depth) {
-        int start = position + 1;
-        int cursor = start;
-        int open = depth;
-        while (cursor < text.length() && open > 0) {
-            char character = text.charAt(cursor);
-            if (character == '\\') {
-                cursor += 2;
-                continue;
-            }
-            if (character == '\'') {
-                int closing = text.indexOf('\'', cursor + 1);
-                cursor = closing < 0 ? text.length() : closing + 1;
-                continue;
-            }
-            if (character == '(') {
-                open++;
-            } else if (character == ')') {
-                open--;
-            }
-            cursor++;
-        }
-        int innerEnd = open == 0 ? cursor - 1 : text.length();
-        String inner = text.substring(start, Math.min(innerEnd, text.length()));
-        written.append("$(").append(inner).append(')');
-        substitutions.addAll(ShellScript.commandsIn(inner, nesting + 1));
-        position = Math.min(cursor, text.length());
+    private void readParenthesisedSubstitution(StringBuilder written, List<ShellCommand> substitutions) {
+        ShellParser inner = new ShellParser(text, position + 1, nesting + 1, true);
+        inner.parse();
+        written.append("$(").append(text, position + 1, inner.position).append(')');
+        substitutions.addAll(ShellScript.commandsOf(inner.commands, nesting + 1));
+        position = Math.min(inner.position + 1, text.length());
     }
 
     private void readBacktickSubstitution(StringBuilder written, List<ShellCommand> substitutions) {

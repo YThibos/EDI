@@ -13,6 +13,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
+import io.github.ythibos.edi.domain.event.DomainEvent.DeferredLaunchFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
@@ -86,6 +87,7 @@ public class EventLog {
                     .put("category", deferred.category().value())
                     .put("running", deferred.running())
                     .put("capacity", deferred.capacity());
+            case DeferredLaunchFailed failed -> payload.put("because", failed.because());
             case TaskDispatched dispatched -> payload.put("worker", dispatched.worker().toString())
                     .put("category", dispatched.category().value())
                     .put("model", dispatched.route().model().value())

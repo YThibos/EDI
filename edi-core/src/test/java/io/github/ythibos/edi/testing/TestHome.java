@@ -263,7 +263,7 @@ public final class TestHome {
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), launchWorker(), transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), launchWorker(), events, clock, transaction);
     }
 
     public WorkerContext workerContext() {

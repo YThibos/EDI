@@ -102,13 +102,34 @@ class MechanicalChangeTest {
         assertThat(home.workers().get(new WorkerId(TASK, 2))).isPresent();
     }
 
+    @Test
+    void handsADoneWithoutTheNamedChangeToAnImplementationWorker() throws IOException {
+        Worker worker = doneReportedBy(mechanicalDispatch());
+
+        home.checkMechanicalChange().check(worker.id());
+
+        assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.REFUSED);
+        assertThat(home.workers().get(new WorkerId(TASK, 2)).orElseThrow().category()).isEqualTo(CategoryId.IMPLEMENTATION);
+        assertThat(home.eventTypesOf(TASK)).containsSubsequence("MechanicalChangeRefused", "WorkerRetired", "TaskDispatched");
+        assertThat(Files.readString(home.home().taskDirectory(TASK).resolve("brief.md")))
+                .contains("A mechanical worker's done was refused: the change touches none of [src/Lamp.java], the files the brief named.");
+    }
+
     private Worker mechanicalWorkerThatChanged(String... files) throws IOException {
-        DispatchOutcome dispatched = dispatch("Rename Lamp to Lantern in src/Lamp.java.", List.of("src/Lamp.java"));
+        DispatchOutcome dispatched = mechanicalDispatch();
         FixtureRepository worktree = FixtureRepository.at(dispatched.launched().worktree());
         for (String file : files) {
             worktree.write(file, "class Lantern {}\n");
         }
         worktree.commit("HRN-6 Rename Lamp to Lantern");
+        return doneReportedBy(dispatched);
+    }
+
+    private DispatchOutcome mechanicalDispatch() {
+        return dispatch("Rename Lamp to Lantern in src/Lamp.java.", List.of("src/Lamp.java"));
+    }
+
+    private Worker doneReportedBy(DispatchOutcome dispatched) {
         Worker reported = home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Renamed.");
         assertThat(reported.doneCheck()).isEqualTo(DoneCheck.CHECKING);
         return reported;

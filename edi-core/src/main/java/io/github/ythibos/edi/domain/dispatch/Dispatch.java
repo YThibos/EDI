@@ -38,7 +38,7 @@ public record Dispatch(
         return new Dispatch(task, category, branch, spec, expectedChange, captainsOverride, requestedAt, at);
     }
 
-    public Dispatch launched() {
+    public Dispatch undeferred() {
         return new Dispatch(task, category, branch, spec, expectedChange, captainsOverride, requestedAt, null);
     }
 

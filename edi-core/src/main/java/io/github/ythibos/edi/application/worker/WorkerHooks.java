@@ -62,10 +62,14 @@ public class WorkerHooks {
     public HookAnswer stopping(WorkerId id) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
-            workers.update(WorkerLookup.serving(workers, id).stopped());
+            Worker worker = WorkerLookup.serving(workers, id);
             List<InboxMessage> waiting = unreceived(id);
+            if (waiting.isEmpty()) {
+                workers.update(worker.stopped());
+                return HookAnswer.PROCEED;
+            }
             waiting.forEach(message -> received(message, id, STOP_HOOK, now));
-            return waiting.isEmpty() ? HookAnswer.PROCEED : HookAnswer.blockTheStop(MESSAGE_WAITING);
+            return HookAnswer.blockTheStop(MESSAGE_WAITING);
         });
     }
 

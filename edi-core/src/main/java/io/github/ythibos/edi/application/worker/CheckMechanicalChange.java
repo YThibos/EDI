@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -19,6 +20,7 @@ import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
+import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -69,10 +71,23 @@ public class CheckMechanicalChange {
     }
 
     private Optional<String> refusalOf(Workplace workplace) {
-        List<String> beyond = workplace.dispatch().expectedChange().filesBeyond(git.changedFiles(workplace.worktree(), workplace.baseRef()));
+        return refusalOfTheDiff(workplace).or(() -> refusalOfTheBuild(workplace));
+    }
+
+    private Optional<String> refusalOfTheDiff(Workplace workplace) {
+        ExpectedChange expected = workplace.dispatch().expectedChange();
+        Set<String> changed = git.changedFiles(workplace.worktree(), workplace.baseRef());
+        List<String> beyond = expected.filesBeyond(changed);
         if (!beyond.isEmpty()) {
             return Optional.of("the change touches " + beyond + ", which the brief did not name");
         }
+        if (expected.isAbsentFrom(changed)) {
+            return Optional.of("the change touches none of " + expected.files() + ", the files the brief named");
+        }
+        return Optional.empty();
+    }
+
+    private Optional<String> refusalOfTheBuild(Workplace workplace) {
         Path log = workplace.taskDirectory().resolve(VERIFY_LOG);
         if (!build.verifies(workplace.worktree(), workplace.project().verify(), log)) {
             return Optional.of("the verify command failed; its output is in " + log);

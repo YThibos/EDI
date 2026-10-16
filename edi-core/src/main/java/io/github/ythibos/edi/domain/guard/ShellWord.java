@@ -2,7 +2,7 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.List;
 
-public record ShellWord(String text, List<ShellCommand> substitutions) {
+public record ShellWord(String text, List<ShellCommand> substitutions, boolean redirectionTarget) {
 
     public ShellWord {
         substitutions = List.copyOf(substitutions);

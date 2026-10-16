@@ -12,6 +12,7 @@ It suits projects whose builds load the machine, such as Testcontainers suites.
 **Decision:** A project's occupied places are its serving workers whose window is open and whose done has not been accepted (`WorkerPlaces.occupiedOn`).
 `edi dispatch` on a full project records the dispatch with its deferral time, keeps the task queued, records `DispatchDeferred` with the counts and answers "Deferred <task>: <project> already runs <n> of its <capacity> workers".
 Each supervision round launches deferred dispatches, oldest first, while their project has room (`LaunchDeferredDispatches`), with the reason "a worker place on its project came free".
+Each deferred dispatch launches in its own attempt: a launch that fails withdraws that dispatch's deferral, leaves its task queued and records `DeferredLaunchFailed` with the reason, so the primary can dispatch it again once the cause is fixed and the dispatches behind it still launch.
 
 **Motivation:** Deferral is state in the store, so it survives a restart and needs no listener; a ready worker frees its place within one round.
 

@@ -28,6 +28,10 @@ public record ExpectedChange(String description, List<String> files) {
         return changedFiles.stream().filter(changed -> !files.contains(changed)).sorted().toList();
     }
 
+    public boolean isAbsentFrom(Set<String> changedFiles) {
+        return files.stream().noneMatch(changedFiles::contains);
+    }
+
     private static void requireRepositoryPath(String file) {
         boolean relative = !file.isBlank() && !file.startsWith("/") && !file.contains("\\");
         boolean contained = relative && List.of(file.split("/")).stream().noneMatch(PARENT_STEP::equals);

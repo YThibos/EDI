@@ -70,6 +70,19 @@ class SteeringTest {
     }
 
     @Test
+    void keepsAWorkerBusyWhileItsBlockedStopSendsItToTheInbox() {
+        home.workerHooks().promptSubmitted(worker.id(), "the brief");
+        steer("Use the brass lamp.", null);
+        home.workerHooks().stopping(worker.id());
+
+        SteerWorker.Steered second = steer("Then fit the horn.", null);
+
+        assertThat(home.workers().get(worker.id()).orElseThrow().activity()).isEqualTo(WorkerActivity.BUSY);
+        assertThat(second.delivery()).isEqualTo(SteerDelivery.AT_THE_NEXT_STOP);
+        assertThat(home.runtime().typedLines()).isEmpty();
+    }
+
+    @Test
     void typesNothingIntoAPaneThatShowsADialog() {
         home.workerHooks().stopping(worker.id());
         home.runtime().showing(PaneState.DIALOG_SPEND_CAP);

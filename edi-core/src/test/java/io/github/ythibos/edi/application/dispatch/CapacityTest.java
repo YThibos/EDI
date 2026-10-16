@@ -3,6 +3,7 @@ package io.github.ythibos.edi.application.dispatch;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -51,6 +52,38 @@ class CapacityTest {
         assertThat(home.tasks().get(new TaskId("fit-horn")).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.dispatches().deferred()).isEmpty();
         assertThat(home.eventTypesOf(new TaskId("fit-horn"))).containsExactly("DispatchDeferred", "TaskDispatched");
+    }
+
+    @Test
+    void withdrawsADeferredDispatchWhoseLaunchFailsAndLaunchesTheNextOne() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory).registering("""
+                projects:
+                  - name: harness
+                    tracker: { kind: edi, projectKey: HRN }
+                    base: main
+                    capacity: 1
+                    craftRules: true
+                  - name: EDI
+                    tracker: { kind: edi, projectKey: EDI }
+                    base: main
+                    capacity: 1
+                """);
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"),
+                WorkerFixtures.queuedShip("map-caves", "EDI", "EDI-7"), WorkerFixtures.queuedShip("map-tunnels", "EDI", "EDI-8")));
+        DispatchOutcome lamp = dispatch(home, "fit-lamp");
+        dispatch(home, "fit-horn");
+        DispatchOutcome caves = dispatch(home, "map-caves");
+        dispatch(home, "map-tunnels");
+        home.recordStatus().report(lamp.launched().worker().id(), StatusState.DONE, null, null, "The lamp is fitted.");
+        home.recordStatus().report(caves.launched().worker().id(), StatusState.DONE, null, null, "The caves are mapped.");
+        Files.delete(home.home().craftRules());
+
+        List<DispatchOutcome.Launched> launched = home.launchDeferredDispatches().launchWhereThereIsRoom();
+
+        assertThat(launched).extracting(started -> started.worker().id().task()).containsExactly(new TaskId("map-tunnels"));
+        assertThat(home.dispatches().deferred()).isEmpty();
+        assertThat(home.tasks().get(new TaskId("fit-horn")).state()).isEqualTo(TaskState.QUEUED);
+        assertThat(home.eventTypesOf(new TaskId("fit-horn"))).containsExactly("DispatchDeferred", "DeferredLaunchFailed");
     }
 
     private static DispatchOutcome dispatch(TestHome home, String task) {

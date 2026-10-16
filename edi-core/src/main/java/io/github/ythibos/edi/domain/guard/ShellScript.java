@@ -5,8 +5,6 @@ import java.util.stream.Stream;
 
 public final class ShellScript {
 
-    private static final int DEEPEST_NESTING = 12;
-
     private ShellScript() {
     }
 
@@ -15,10 +13,11 @@ public final class ShellScript {
     }
 
     static List<ShellCommand> commandsIn(String script, int nesting) {
-        if (nesting > DEEPEST_NESTING) {
-            throw new UnreadableCommand("The command nests more than " + DEEPEST_NESTING + " levels of commands inside commands.");
-        }
-        return ShellParser.simpleCommandsIn(script, nesting).stream()
+        return commandsOf(ShellParser.simpleCommandsIn(script, nesting), nesting);
+    }
+
+    static List<ShellCommand> commandsOf(List<List<ShellWord>> simpleCommands, int nesting) {
+        return simpleCommands.stream()
                 .flatMap(words -> CommandWrappers.unwrapped(words, nesting).stream())
                 .flatMap(ShellScript::withSubstitutions)
                 .toList();

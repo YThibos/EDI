@@ -153,7 +153,7 @@ public class LaunchWorker {
         retireTheEarlierWorker(incarnation, now, actor);
         workers.insert(worker, token.digest());
         tasks.update(tasks.get(incarnation.task().id()).dispatched());
-        dispatches.save(incarnation.dispatch().launched());
+        dispatches.save(incarnation.dispatch().undeferred());
         events.record(new TaskDispatched(incarnation.task().id(), worker.id(), worker.category(), worker.route(), incarnation.dispatch().branch(),
                 because), actor, now);
         return new Launched(worker, incarnation.dispatch().branch(), worktree);
