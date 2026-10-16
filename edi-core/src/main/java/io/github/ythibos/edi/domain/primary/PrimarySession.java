@@ -29,7 +29,7 @@ public record PrimarySession(
     }
 
     public PrimarySession restarted(SessionProcess restartedProcess) {
-        return new PrimarySession(id, startedAt, Objects.requireNonNullElse(restartedProcess, process), claimedAt, turn, typedAt,
+        return new PrimarySession(id, startedAt, restartedProcess == null ? process : restartedProcess, claimedAt, turn, typedAt,
                 notification, notifiedAt, limit, limitReachedAt, null);
     }
 

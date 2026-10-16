@@ -6,6 +6,10 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -15,9 +19,10 @@ final class StubCore implements AutoCloseable {
     static final String TOKEN = "stub-token";
 
     private final HttpServer server;
+    private final Deque<Reply> queued = new ArrayDeque<>();
+    private final List<Request> requests = new ArrayList<>();
     private int status = 200;
     private String reply = "";
-    private Request received;
 
     private StubCore(HttpServer server) {
         this.server = server;
@@ -39,8 +44,17 @@ final class StubCore implements AutoCloseable {
         return this;
     }
 
-    Request received() {
-        return received;
+    synchronized StubCore thenAnswering(int replyStatus, String replyBody) {
+        queued.add(new Reply(replyStatus, replyBody));
+        return this;
+    }
+
+    synchronized Request received() {
+        return requests.isEmpty() ? null : requests.getLast();
+    }
+
+    synchronized List<Request> requests() {
+        return List.copyOf(requests);
     }
 
     @Override
@@ -49,18 +63,29 @@ final class StubCore implements AutoCloseable {
     }
 
     private void answer(HttpExchange exchange) throws IOException {
-        received = new Request(
+        Request request = new Request(
                 exchange.getRequestMethod(),
                 exchange.getRequestURI().getRawPath() + (exchange.getRequestURI().getRawQuery() == null ? "" : "?" + exchange.getRequestURI().getRawQuery()),
                 exchange.getRequestHeaders().getFirst("Authorization"),
                 exchange.getRequestHeaders().getFirst("Accept"),
+                exchange.getRequestHeaders().getFirst("EDI-Session"),
+                exchange.getRequestHeaders().getFirst("EDI-Claude-Pid"),
                 new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-        byte[] body = reply.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(status, body.length == 0 ? -1 : body.length);
+        Reply answer = answerTo(request);
+        byte[] body = answer.body().getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(answer.status(), body.length == 0 ? -1 : body.length);
         exchange.getResponseBody().write(body);
         exchange.close();
     }
 
-    record Request(String method, String target, String authorization, String accepted, String body) {
+    private synchronized Reply answerTo(Request request) {
+        requests.add(request);
+        return queued.isEmpty() ? new Reply(status, reply) : queued.poll();
+    }
+
+    record Request(String method, String target, String authorization, String accepted, String session, String claudePid, String body) {
+    }
+
+    private record Reply(int status, String body) {
     }
 }

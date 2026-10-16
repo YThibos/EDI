@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Ring the bell."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"billing_error","message":{"id":"msg-4","role":"assistant","content":[{"type":"text","text":"You've hit your monthly spend limit."}]},"timestamp":"2026-10-16T11:00:00.000Z"}

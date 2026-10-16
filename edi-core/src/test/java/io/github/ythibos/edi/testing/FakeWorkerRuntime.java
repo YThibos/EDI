@@ -48,6 +48,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
         return new WorkerWindow(SOCKET, serverPid, serverStartedAt, window, 5000L + openWindows.size());
     }
 
+    public synchronized WorkerWindow openWindowOf(long panePid, long servedBy) {
+        serverRunning = true;
+        serverPid = servedBy;
+        String window = "@" + (openWindows.size() + launches.size() + 1);
+        openWindows.add(window);
+        return new WorkerWindow(SOCKET, serverPid, serverStartedAt, window, panePid);
+    }
+
     @Override
     public synchronized WindowCheck check(WorkerWindow window) {
         if (!serverRunning) {

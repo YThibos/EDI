@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Fit the lamp."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"rate_limit","message":{"id":"msg-7","role":"assistant","content":[{"type":"text","text":"You've hit your session limit · resets 2:10pm (Europe/Brussels)"}]}}

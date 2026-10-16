@@ -112,7 +112,7 @@ public class RecoverFromOutage {
             return null;
         }
         Route now = routes.of(task, dispatches.of(task.id()).orElseThrow());
-        Route changed = new Route(Objects.requireNonNullElse(change.model(), now.model()), Objects.requireNonNullElse(change.effort(), now.effort()));
+        Route changed = new Route(change.model() == null ? now.model() : change.model(), change.effort() == null ? now.effort() : change.effort());
         return new CaptainOverride(changed, "the captain's answer to number " + number + " on the outage hold list");
     }
 

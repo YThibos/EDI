@@ -89,7 +89,7 @@ public class WorkerHooks {
 
     public HookAnswer stopFailed(WorkerId id, String error, String transcript) {
         Worker stopped = transaction.execute(_ -> WorkerLookup.serving(workers, id));
-        Optional<UsageLimit> limit = runtime.usageLimitStopIn(Objects.requireNonNullElse(transcript, stopped.transcript()), stopped.launchedAt());
+        Optional<UsageLimit> limit = runtime.usageLimitStopIn(transcript == null ? stopped.transcript() : transcript, stopped.launchedAt());
         transaction.executeWithoutResult(_ -> {
             Instant now = clock.now();
             Worker worker = WorkerLookup.serving(workers, id);

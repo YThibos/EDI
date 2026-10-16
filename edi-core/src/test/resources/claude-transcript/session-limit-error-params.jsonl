@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":"Fit the lamp."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"rate_limit","apiError":"usage_limit_reached","apiErrorParams":{"rate_limit_info":{"status":"rejected","resetsAt":1792160400,"rateLimitType":"five_hour"}},"message":{"id":"msg-2","role":"assistant","content":[{"type":"text","text":"You've hit your session limit · resets 2:10pm (Europe/Brussels) · progress saved"}]},"timestamp":"2026-10-16T10:15:00.000Z"}
+{"type":"last-prompt"}

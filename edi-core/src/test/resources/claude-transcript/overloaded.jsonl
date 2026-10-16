@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Fit the lamp."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"server_error","message":{"id":"msg-6","role":"assistant","content":[{"type":"text","text":"API Error: 529 Overloaded. This is a server-side issue, usually temporary."}]},"timestamp":"2026-10-16T10:15:00.000Z"}

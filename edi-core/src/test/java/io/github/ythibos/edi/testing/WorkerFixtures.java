@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 public final class WorkerFixtures {
 
@@ -87,13 +88,17 @@ public final class WorkerFixtures {
     }
 
     public static Worker servingWorkerOn(TestHome home, Task task, CategoryId category) {
+        return servingWorkerIn(home.runtime().openWindow(), home, task, category);
+    }
+
+    public static Worker servingWorkerIn(WorkerWindow window, TestHome home, Task task, CategoryId category) {
         home.storing(List.of(task));
         home.putInFlight(task.id());
         ExpectedChange expected = category.isMechanical() ? new ExpectedChange("Rename lamp to lantern.", List.of("src/Lamp.java")) : null;
         home.dispatches().save(Dispatch.requested(task.id(), category, BranchName.forWork(BranchKind.FEATURE, task.intake().workKey()), "",
                 expected, null, TestHome.START));
         Worker worker = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), category,
-                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), home.runtime().openWindow(),
+                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), window,
                 new WorkerLaunch(LaunchKind.DISPATCH, TestHome.START, home.machineBoot().current()));
         home.workers().insert(worker, "digest-of-" + task.id());
         return worker;

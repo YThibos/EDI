@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Read the old log."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-1","content":"You've hit your session limit · resets 2:10pm (Europe/Brussels)"}]},"timestamp":"2026-10-16T10:15:00.000Z"}
