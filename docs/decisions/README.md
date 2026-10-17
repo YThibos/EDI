@@ -151,3 +151,13 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-102](ADR-102-the-suite-runs-under-both-machine-profiles.md) | The full suite runs under a laptop and a desktop fixture profile | Design |
 | [ADR-103](ADR-103-tracker-secrets-are-read-at-call-time-and-hidden.md) | The tracker's token is read at each call and hidden from every message | Design |
 | [ADR-104](ADR-104-the-store-keeps-keys-proposals-cursors-and-pilot-records.md) | The store keeps work key sequences, ticket proposals, follower cursors, unplanned ships and reviews | Design |
+| [ADR-105](ADR-105-the-console-signs-the-captain-in-with-a-one-time-link.md) | The console signs the captain in with a one-time link and keeps a cookie session | Design |
+| [ADR-106](ADR-106-edi-opens-the-console-in-the-captains-browser.md) | EDI opens the console in the captain's browser through the Windows start command | Design |
+| [ADR-107](ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md) | The sitrep page reads one document, edi-sitrep.v1, presented from the fleet snapshot | Design |
+| [ADR-108](ADR-108-a-console-answer-is-the-captains-word-and-reconcile-asks-for-a-recheck.md) | A console answer is the captain's word through the chat answer's use case, and Reconcile asks for a re-check | Design |
+| [ADR-109](ADR-109-the-console-stream-signals-each-commit.md) | The console stream signals each commit, and the page reads the sitrep again | Design |
+| [ADR-110](ADR-110-the-console-ports-the-approved-skin-with-its-fonts-bundled.md) | The console ports the approved skin into Angular components and bundles its fonts | Design |
+| [ADR-111](ADR-111-research-boards-are-armed-through-edi-and-listened-to-by-the-core.md) | Research boards are armed through EDI and listened to by the core | Architecture |
+| [ADR-112](ADR-112-the-lavish-result-reader-follows-toon.md) | The Lavish result reader follows TOON and reads both prompt forms | Design |
+| [ADR-113](ADR-113-a-board-round-reaches-its-worker-and-its-bound-decisions.md) | A board round reaches its worker's inbox and the decisions the board is bound to | Design |
+| [ADR-114](ADR-114-the-store-keeps-console-access-boards-and-board-answers.md) | The store keeps console sign-ins and sessions, boards and board answers | Design |
