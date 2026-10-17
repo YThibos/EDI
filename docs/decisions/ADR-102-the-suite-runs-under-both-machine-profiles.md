@@ -10,7 +10,7 @@
 
 **Decision:** The test resources hold two fixture profiles: `laptop`, with a JIRA tracker, evergreen tickets, a workflow, the fleet ledger and the worked line, and `desktop`, with no tracker, no ledger and no worked line; both allow the same models.
 Every test home is written with the profile the system property `edi.test.machine` names, and the core module's Surefire runs the whole suite twice in `./mvnw verify`, once per profile, the desktop run reporting to `target/surefire-reports-desktop`; a test about one machine's behaviour writes that machine's profile itself.
-AT-37 checks that the build runs both, that this run is under one of them, and that the profiles differ only in the tracker, the ledger and the worked line.
+AT-37 checks that this run is under one of them, that its test homes hold that profile, and that the profiles differ only in the tracker, the ledger and the worked line; the two Surefire runs and their reports are what show the build runs both.
 
 **Motivation:** A code path that assumed the laptop, or the desktop, fails the run of the other profile, which a single run under either could never show.
 
