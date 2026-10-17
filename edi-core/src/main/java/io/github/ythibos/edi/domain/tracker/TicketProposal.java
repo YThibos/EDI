@@ -10,7 +10,6 @@ import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
-import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candidates) {
@@ -35,11 +34,21 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
     }
 
     public TicketChoice choiceFor(CaptainAnswer answer) {
-        return choiceFor(answer.option(), answer.verbatim());
+        return choiceFor(answer.option());
     }
 
-    public TicketChoice choiceFor(OptionKey option, String verbatim) {
-        return option == null ? new TicketChoice.BookOn(theTicketNamedIn(verbatim)) : choiceFor(option);
+    public TicketChoice choiceFor(OptionKey option) {
+        if (option == null) {
+            throw new Refusal("The ticket decision for " + task + " is answered with one of its options.");
+        }
+        int position = option.letter() - 'A';
+        if (position < candidates.size()) {
+            return new TicketChoice.BookOn(candidates.get(position).key());
+        }
+        if (position == candidates.size()) {
+            return new TicketChoice.Create(draft);
+        }
+        throw new Refusal("The ticket decision for " + task + " offers no option " + option + ".");
     }
 
     private String title() {
@@ -50,8 +59,7 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
         String found = candidates.isEmpty()
                 ? "No open " + draft.project() + " ticket matches its words."
                 : "These open " + draft.project() + " tickets match its words.";
-        return task + " books its work on a ticket, and EDI creates a new ticket only on your answer.\n" + found
-                + "\nAnswer with an option, or with the key of another ticket to book it on.";
+        return task + " books its work on a ticket, and EDI creates a new ticket only on your answer.\n" + found;
     }
 
     private List<DecisionOption> options() {
@@ -75,25 +83,5 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
 
     private static OptionKey optionAt(int position) {
         return new OptionKey((char) ('A' + position));
-    }
-
-    private WorkKey theTicketNamedIn(String verbatim) {
-        List<WorkKey> named = WorkKey.allNamedIn(verbatim);
-        if (named.size() != 1) {
-            throw new Refusal("The ticket decision for " + task + " is answered with one of its options, or with the key of the one ticket"
-                    + " to book the work on.");
-        }
-        return named.getFirst();
-    }
-
-    private TicketChoice choiceFor(OptionKey option) {
-        int position = option.letter() - 'A';
-        if (position < candidates.size()) {
-            return new TicketChoice.BookOn(candidates.get(position).key());
-        }
-        if (position == candidates.size()) {
-            return new TicketChoice.Create(draft);
-        }
-        throw new Refusal("The ticket decision for " + task + " offers no option " + option + ".");
     }
 }

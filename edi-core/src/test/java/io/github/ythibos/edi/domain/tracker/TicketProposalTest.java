@@ -30,8 +30,7 @@ class TicketProposalTest {
         assertThat(card.title()).isEqualTo("Ticket for \"Fit the harbour lamp\"");
         assertThat(card.context()).isEqualTo("""
                 fit-lamp books its work on a ticket, and EDI creates a new ticket only on your answer.
-                These open SVC tickets match its words.
-                Answer with an option, or with the key of another ticket to book it on.""");
+                These open SVC tickets match its words.""");
         assertThat(card.options()).extracting(DecisionOption::text).containsExactly(
                 "Book it on SVC-40: Harbour lamps (In Progress)",
                 "Create a Story \"Fit the harbour lamp\" in epic SVC-9, labelled lighting, priority Major in SVC");
@@ -47,14 +46,13 @@ class TicketProposalTest {
     }
 
     @Test
-    void choosesByOptionOrByTheOneKeyTheAnswerNames() {
-        assertThat(PROPOSAL.choiceFor(new OptionKey('A'), "D58 A")).isEqualTo(new TicketChoice.BookOn(LAMPS.key()));
-        assertThat(PROPOSAL.choiceFor(new OptionKey('B'), "D58 B")).isEqualTo(new TicketChoice.Create(DRAFT));
-        assertThat(PROPOSAL.choiceFor(null, "D58: put it on SVC-12 instead")).isEqualTo(new TicketChoice.BookOn(WorkKey.parse("SVC-12")));
-        assertThatThrownBy(() -> PROPOSAL.choiceFor(new OptionKey('C'), "D58 C")).isInstanceOf(Refusal.class)
+    void choosesOnlyByAnOptionTheCardOffers() {
+        assertThat(PROPOSAL.choiceFor(new OptionKey('A'))).isEqualTo(new TicketChoice.BookOn(LAMPS.key()));
+        assertThat(PROPOSAL.choiceFor(new OptionKey('B'))).isEqualTo(new TicketChoice.Create(DRAFT));
+        assertThatThrownBy(() -> PROPOSAL.choiceFor(new OptionKey('C'))).isInstanceOf(Refusal.class)
                 .hasMessage("The ticket decision for fit-lamp offers no option C.");
-        assertThatThrownBy(() -> PROPOSAL.choiceFor(null, "D58: SVC-12 or SVC-13")).isInstanceOf(Refusal.class)
-                .hasMessage("The ticket decision for fit-lamp is answered with one of its options, or with the key of the one ticket to book the work on.");
+        assertThatThrownBy(() -> PROPOSAL.choiceFor((OptionKey) null)).isInstanceOf(Refusal.class)
+                .hasMessage("The ticket decision for fit-lamp is answered with one of its options.");
     }
 
     @Test

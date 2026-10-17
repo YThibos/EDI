@@ -9,6 +9,8 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 
 public record DispatchRules(List<ProjectOverride> projectOverrides, List<DispatchCategory> categories) {
 
+    private static final ProjectName EDI = new ProjectName("EDI");
+
     public DispatchRules {
         projectOverrides = List.copyOf(projectOverrides);
         categories = List.copyOf(categories);
@@ -43,7 +45,7 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
 
     public ResearchFirst researchFirstFor(List<ProjectName> projects, CategoryId category, boolean causeUnknown) {
         DispatchCategory chosen = category(category);
-        if (!chosen.id().worksWithoutAPlan(causeUnknown) || projectOverrideFor(projects).isPresent()) {
+        if (!chosen.id().worksWithoutAPlan(causeUnknown) || isEdiItself(projects)) {
             return ResearchFirst.NOT_APPLICABLE;
         }
         return chosen.researchFirst() ? ResearchFirst.QUEUES_RESEARCH : ResearchFirst.SWITCHED_OFF;
@@ -89,5 +91,9 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
 
     private Optional<ProjectOverride> projectOverrideFor(List<ProjectName> projects) {
         return projectOverrides.stream().filter(override -> override.covers(projects)).findFirst();
+    }
+
+    private static boolean isEdiItself(List<ProjectName> projects) {
+        return projects.contains(EDI);
     }
 }

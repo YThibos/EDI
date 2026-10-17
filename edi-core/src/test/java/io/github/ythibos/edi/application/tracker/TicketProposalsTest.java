@@ -74,32 +74,26 @@ class TicketProposalsTest {
     }
 
     @Test
-    void booksTheWorkOnAnotherTicketTheAnswerNames() {
-        home.jira().holding("SVC-55", "Harbour lighting", "In Progress");
-
-        assertThat(answered(null, "D58: put it on SVC-55 with the rest of the lighting").ticket())
-                .isEqualTo(new TicketSettlement.Keyed(WorkKey.parse("SVC-55"), false));
-    }
-
-    @Test
-    void refusesAnAnswerThatChoosesNoTicketTheProjectOwns() {
+    void refusesAnAnswerWithoutAnOptionTheCardOffers() {
         assertThatThrownBy(() -> answered(null, "D58: whichever you like")).isInstanceOf(Refusal.class)
-                .hasMessageStartingWith("The ticket decision for fix-lamps is answered with one of its options");
-        assertThatThrownBy(() -> answered(null, "D58: book it on HRN-3")).isInstanceOf(Refusal.class)
-                .hasMessage("HRN-3 is not a service key: its work is keyed SVC-<n> or on an evergreen ticket.");
+                .hasMessage("The ticket decision for fix-lamps is answered with one of its options.");
+        assertThatThrownBy(() -> answered(null, "D58: book it on SVC-55")).isInstanceOf(Refusal.class)
+                .hasMessage("The ticket decision for fix-lamps is answered with one of its options.");
         assertThatThrownBy(() -> answered("D", "D58 D")).isInstanceOf(Refusal.class).hasMessage("The ticket decision for fix-lamps offers no option D.");
         assertThat(home.decisions().ofTask(LAMPS).orElseThrow().isOpen()).isTrue();
     }
 
     @Test
     void raisesTheDecisionAgainWhenTheTrackerRefusesTheAnswer() {
-        AnsweredDecision answered = answered(null, "D58: book it on SVC-77");
+        home.jira().failsNextWith(new Refusal("JIRA found nothing for the ticket SVC-40 (HTTP 404)."));
 
-        assertThat(answered.ticket()).isEqualTo(new TicketSettlement.AskedAgain("JIRA found nothing for the ticket SVC-77 (HTTP 404)."));
+        AnsweredDecision answered = answered("A", "D58 A");
+
+        assertThat(answered.ticket()).isEqualTo(new TicketSettlement.AskedAgain("JIRA found nothing for the ticket SVC-40 (HTTP 404)."));
         Decision raisedAgain = home.decisions().ofTask(LAMPS).orElseThrow();
         assertThat(raisedAgain.isOpen()).isTrue();
         assertThat(raisedAgain.number()).isEqualTo(answered.decision().number());
-        assertThat(raisedAgain.card().context()).startsWith("EDI could not carry out the earlier answer: JIRA found nothing for the ticket SVC-77");
+        assertThat(raisedAgain.card().context()).startsWith("EDI could not carry out the earlier answer: JIRA found nothing for the ticket SVC-40");
         assertThat(home.tasks().get(LAMPS).isHeld()).isTrue();
         assertThat(home.eventTypesOf(LAMPS)).endsWith("DecisionAnswered", "TicketChoiceRefused", "DecisionRaised");
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.DECISION_RAISED);

@@ -35,7 +35,7 @@ class PilotComparisonTest {
                 findings at review: 2.0 against 5.0;
                 review fixes after delivery: 0.0 against 1.0.
                 A ship whose figure is unknown is left out of that average.""");
-        assertThat(card.options()).extracting(DecisionOption::key).containsExactly(new OptionKey('A'), new OptionKey('B'), new OptionKey('C'));
+        assertThat(card.options()).extracting(DecisionOption::key).containsExactly(new OptionKey('A'), new OptionKey('B'));
         assertThat(card.recommendation().key()).isEqualTo(new OptionKey('A'));
     }
 
@@ -47,10 +47,12 @@ class PilotComparisonTest {
     }
 
     @Test
-    void recommendsPilotingFurtherWithoutAnythingToCompareAgainst() {
+    void recommendsSwitchingItOffWithoutAnythingToCompareAgainst() {
         DecisionCard card = new PilotComparison(ships(10, null, null, null, 0), List.of()).card();
 
-        assertThat(card.recommendation().key()).isEqualTo(new OptionKey('C'));
+        assertThat(card.recommendation().key()).isEqualTo(new OptionKey('B'));
+        assertThat(card.recommendation().why())
+                .isEqualTo("no unplanned ship finished without research, so the pilot shows no measured gain to set against the extra research task");
         assertThat(card.context()).contains("total tokens, research included: unknown against unknown;");
     }
 

@@ -129,7 +129,6 @@ edi task add --kind ship --project hobby-tool --title "Fit the lamp"           #
 edi task add --kind ship --project example-service --title "Fit the lamp" \
     --issue-type Story --epic EXAMPLE-9 --labels lighting --priority Major     # a decision: an open ticket or the drafted one
 edi decision answer D59 --option B --text "D59 B"                              # the captain's answer creates and fills the ticket
-edi decision answer D59 --text "Book it on EXAMPLE-80"                         # or books the work on the ticket he names
 edi dispatch fix-horn --category bugfix --cause-unknown                         # research first, when the dispatch rules switch it on
 ```
 

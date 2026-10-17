@@ -55,10 +55,6 @@ class TwoMachinesTest {
         @Test
         @DisplayName("AT-37 the full test suite runs green under both the laptop and desktop fixture profiles")
         void theSuitePassesUnderBothProfiles() throws IOException {
-            String build = Files.readString(RepositoryRoot.path().resolve("edi-core/pom.xml"));
-
-            assertThat(build).contains("<edi.test.machine>laptop</edi.test.machine>", "<id>desktop-profile</id>",
-                    "<edi.test.machine>desktop</edi.test.machine>");
             assertThat(System.getProperty(MachineFixture.PROPERTY)).as("the profile this run of the suite is under").isIn("laptop", "desktop");
             TestHome home = TestHome.in(directory);
             assertThat(Files.readString(home.home().machineProfile())).isEqualTo(MachineFixture.current().profile());

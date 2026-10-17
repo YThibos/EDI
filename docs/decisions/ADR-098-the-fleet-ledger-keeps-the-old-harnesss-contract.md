@@ -18,6 +18,8 @@ Section 8.9 lists a `task.ready` event, while the old harness writes `task.pr_re
 `ts` is the time of the event, not of the writing, so a record written by a later round still books at the right moment; with the ledger off, followed events are passed over and never written later.
 
 **Motivation:** Section 8.9's purpose is that booking keeps working unchanged, so where its list and the contract it names differ, EDI follows the contract: the old harness's own event name and members.
+Section 8.9 says EDI emits "the event types the fork emits", and the old harness's own ledger writes `task.pr_ready` with a `pr` member, so the list's `task.ready` is a shorthand slip.
+The time-booking tool reads neither name: it reads only the `task.status` text, the done states, `task.merged` and `task.cleaned_up`.
 
 **Alternatives considered:**
 - `task.ready` as section 8.9 lists it - a reader of the documented contract would not know it, and nothing gains from the new name.

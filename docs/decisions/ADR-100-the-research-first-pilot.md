@@ -12,17 +12,19 @@ The cost record and the pipeline's state database already give each cleaned-up t
 **Decision:** Every ship dispatched with unplanned work in a category that can switch research first on, outside an exempt project, is recorded in `unplanned_ship`: with its research task when research came first, and without one when the switch was off, so the ships run while the switch is off are the comparison the pilot needs.
 Cleanup also records the ship's review as `ReviewCounted`: the pipeline's review rounds on the branch, and the findings of each run's first review round, read only, unknown when the pipeline never reviewed the branch.
 `ResearchFirstPilot` follows the event log (ADR-096) and, at each clean-up, measures the finished unplanned ships: tokens are the ship's total plus its research task's, the review figures are the recorded ones, and rework is the number of `review-fix` tasks keyed on the ship's ticket.
-Once ten planned ships have finished, it adds the captain item `research-first-pilot` and raises on it, once, a decision with the averages of both groups: make research first the rule, switch it off, or pilot ten more ships; it recommends the rule when planned ships needed no more review rounds, findings or review fixes, switching it off when they needed more, and piloting further when no unplanned ship finished.
+Once ten planned ships have finished, it adds the captain item `research-first-pilot` and raises on it, once, a decision with the averages of both groups and two options, make research first the rule or switch it off; it recommends the rule when planned ships needed no more review rounds, findings or review fixes, and switching it off when they needed more or when no unplanned ship finished, because then the pilot shows no measured gain to set against the extra research task.
+The comparison is presented once and never raised again: the captain's answer settles the default.
 
 **Motivation:** The captain decides the default with the numbers he asked for, and the comparison is built only from records EDI keeps anyway.
 
 **Alternatives considered:**
 - Alternating research first between eligible ships - the switch would no longer mean what it says.
 - Recommending by tokens - quality is never traded for cost (I-17), so review and rework decide and tokens are shown beside them.
+- Offering to pilot ten more ships - section 8.6a presents the comparison once, after ten piloted ships, for the captain to decide the default, so nothing would raise it again.
 
 **Consequences:**
 - Good: the switch can be turned on whenever the captain wants, and the unplanned ships run before that are its baseline.
-- Bad: the comparison is only as good as the baseline; with the switch on from the first day, it recommends piloting further.
+- Bad: the comparison is only as good as the baseline; with the switch on from the first day, it has nothing to compare against and recommends switching it off.
 
 **Revisit when:** The captain answers the pilot's decision.
 

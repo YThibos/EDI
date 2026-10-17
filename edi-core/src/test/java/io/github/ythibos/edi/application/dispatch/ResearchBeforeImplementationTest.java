@@ -105,7 +105,29 @@ class ResearchBeforeImplementationTest {
     }
 
     @Test
-    void leavesAProjectWhoseOverrideRoutesEveryCategoryOutOfThePilot() {
+    void leavesTheShipUntouchedWhenItsResearchScoutCannotBeDispatched() throws IOException {
+        home.registering("""
+                projects:
+                  - name: harness
+                    tracker: { kind: edi, projectKey: HRN }
+                    forge: { kind: github, path: example-owner/harness, account: example-owner }
+                    base: main
+                    branchKinds: [feature, chore]
+                """);
+
+        assertThatThrownBy(() -> dispatch("fit-lamp", "implementation-unplanned", "", false)).isInstanceOf(Refusal.class)
+                .hasMessage("harness takes no research branches; its registry entry allows [chore, feature].");
+
+        Task ship = home.tasks().get(LAMP);
+        assertThat(ship.intake().blockedBy()).isEmpty();
+        assertThat(home.tasks().contains(PLAN)).isFalse();
+        assertThat(home.dispatches().of(LAMP)).isEmpty();
+        assertThat(home.unplannedShips().of(LAMP)).isEmpty();
+        assertThat(home.eventTypesOf(LAMP)).isEmpty();
+    }
+
+    @Test
+    void leavesTheEdiProjectOutOfThePilot() {
         home.storing(List.of(WorkerFixtures.queuedShip("tune-core", "EDI", "EDI-20")));
 
         DispatchOutcome outcome = dispatch("tune-core", "implementation-unplanned", "", false);

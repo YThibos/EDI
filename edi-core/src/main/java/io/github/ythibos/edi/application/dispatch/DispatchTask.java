@@ -71,18 +71,7 @@ public class DispatchTask {
     }
 
     public DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, Actor actor) {
-        Dispatching dispatching = transaction.execute(_ -> dispatching(reference, request));
-        refreshes.requireFresh(dispatching.project());
-        if (dispatching.researchFirst().queuesResearch()) {
-            return researchFirst(dispatching.dispatch(), actor);
-        }
-        if (dispatching.researchFirst().countsInThePilot()) {
-            research.countWithoutResearch(dispatching.dispatch());
-        }
-        if (dispatching.isBeyondCapacity()) {
-            return transaction.execute(_ -> deferred(dispatching, actor));
-        }
-        return DispatchOutcome.of(launcher.launch(dispatching.dispatch(), null, actor));
+        return carriedOut(transaction.execute(_ -> dispatching(reference, request)), actor);
     }
 
     public String previewBrief(TaskReference reference, DispatchRequest request) {
@@ -196,9 +185,27 @@ public class DispatchTask {
         return key;
     }
 
+    private DispatchOutcome carriedOut(Dispatching dispatching, Actor actor) {
+        refreshes.requireFresh(dispatching.project());
+        if (dispatching.researchFirst().queuesResearch()) {
+            return researchFirst(dispatching.dispatch(), actor);
+        }
+        if (dispatching.researchFirst().countsInThePilot()) {
+            research.countWithoutResearch(dispatching.dispatch());
+        }
+        if (dispatching.isBeyondCapacity()) {
+            return transaction.execute(_ -> deferred(dispatching, actor));
+        }
+        return DispatchOutcome.of(launcher.launch(dispatching.dispatch(), null, actor));
+    }
+
     private DispatchOutcome researchFirst(Dispatch shipDispatch, Actor actor) {
-        TaskId plan = research.queueThePlanOf(shipDispatch, actor);
-        return dispatch(new TaskReference.ById(plan), research.researchRequestFor(shipDispatch), actor).planning(shipDispatch.task());
+        DispatchRequest planRequest = research.researchRequestFor(shipDispatch);
+        Dispatching planning = transaction.execute(_ -> {
+            TaskId plan = research.queueThePlanOf(shipDispatch, actor);
+            return dispatching(new TaskReference.ById(plan), planRequest);
+        });
+        return carriedOut(planning, actor).planning(shipDispatch.task());
     }
 
     private DispatchOutcome deferred(Dispatching dispatching, Actor actor) {

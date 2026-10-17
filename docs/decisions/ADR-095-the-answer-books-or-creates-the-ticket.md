@@ -14,7 +14,7 @@ A tracker can be unreachable for a while, can refuse a call, and a crash can fal
 - a new ticket is created after the attempt is recorded on the proposal, then filled; the task is keyed in the same transaction that records `TicketCreated`;
 - a creation interrupted after the attempt was recorded first adopts an open ticket with exactly the drafted summary, and creates one only when there is none;
 - a tracker that refuses the fields after creating the ticket keeps the task on the created ticket and records `TicketUpdateRefused`, so the captain fixes the fields in the tracker;
-- a tracker that refuses the choice itself, such as an unknown ticket, records `TicketChoiceRefused` and raises the same decision again under the same number with the refusal in its context, which wakes the primary;
+- a tracker that refuses the choice itself, such as a proposed ticket it no longer finds, records `TicketChoiceRefused` and raises the same decision again under the same number with the refusal in its context, which wakes the primary;
 - a tracker that cannot be reached leaves the answer unsettled, and the supervision round settles every answered proposal again every 30 seconds; a key settled there wakes the primary.
 The confirmation of the answer says which of these happened.
 

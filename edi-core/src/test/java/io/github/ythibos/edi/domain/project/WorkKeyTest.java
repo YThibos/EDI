@@ -24,13 +24,6 @@ class WorkKeyTest {
         assertThatIllegalArgumentException().isThrownBy(() -> WorkKey.parse(text));
     }
 
-    @Test
-    void findsTheKeysATextNamesOnceEach() {
-        assertThat(WorkKey.allNamedIn("D59: book it on SVC-80, not on SVC-80 or D-day, and see EDI-3."))
-                .containsExactly(WorkKey.parse("SVC-80"), WorkKey.parse("EDI-3"));
-        assertThat(WorkKey.allNamedIn("D59 A")).isEmpty();
-    }
-
     @ParameterizedTest
     @ValueSource(strings = {"HarbourMaster", "tide-tables", "lamp-ci", "Front.UI_2"})
     void acceptsRegistryProjectNames(String name) {

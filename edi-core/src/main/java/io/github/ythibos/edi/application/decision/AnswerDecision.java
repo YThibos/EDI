@@ -43,7 +43,7 @@ public class AnswerDecision {
         AnsweredDecision answered = transaction.execute(_ -> {
             Instant now = clock.now();
             Task task = tasks.get(reference);
-            proposals.requireAChoiceIn(task.id(), given.option(), given.verbatim());
+            proposals.requireAChoiceIn(task.id(), given.option());
             Decision decided = decisionOf(task).answered(given.recordedAt(now));
             Task released = task.decisionAnswered(now);
             decisions.save(decided);

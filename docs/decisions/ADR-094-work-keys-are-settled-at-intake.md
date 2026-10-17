@@ -15,7 +15,7 @@ Every block of work lands on a ticket, which section 14.3 calls the rule enforce
 - unkeyed work on an external tracker is recorded unkeyed, and `TicketProposals` raises a decision on it at once: up to three open tickets the tracker finds by the words of the title, then the drafted new ticket, with the first match recommended;
 - unkeyed work on a project without a tracker is queued unkeyed, and its dispatch refuses it until it carries a key, as for every task (ADR-051);
 - ticket details (`--issue-type`, `--epic`, `--labels`, `--priority`) describe the drafted ticket, so they are refused on any other task.
-The answer may choose an option or name the key of another ticket the project owns, because the captain often knows a better ticket than the search; any other answer to a ticket decision is refused before it is recorded.
+The answer chooses one of the card's options, a proposed existing ticket or the drafted new one, as the ask-first standing policy offers them; an answer without an option, or with an option the card does not offer, is refused before it is recorded.
 
 **Motivation:** Work cannot reach a worker without a key, and no ticket is created without the captain's answer (standing policy, section 14.2), while an EDI-native project never waits for anybody.
 
@@ -23,6 +23,7 @@ The answer may choose an option or name the key of another ticket the project ow
 - Creating the JIRA ticket at intake and asking afterwards - against the ask-first rule.
 - Refusing unkeyed work on a project without a tracker at intake - migrated and untracked work could not be queued at all.
 - Offering every matching ticket - a long card hides the recommendation; three matches and the draft fit one screen.
+- Accepting the key of another ticket in the answer's words - it books the work on a ticket EDI never proposed, outside the options the ask-first rule puts before the captain.
 
 **Consequences:**
 - Good: the decision card is the captain's whole view of the choice, and the task waits on it like on any other decision (ADR-039).

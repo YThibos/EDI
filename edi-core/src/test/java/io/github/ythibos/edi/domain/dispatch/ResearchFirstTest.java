@@ -37,9 +37,11 @@ class ResearchFirstTest {
     }
 
     @Test
-    void leavesAProjectWhoseOverrideRoutesEveryCategoryOutOfThePilot() {
+    void leavesOnlyTheEdiProjectOutOfThePilot() {
         assertThat(rules(true, true).researchFirstFor(List.of(new ProjectName("EDI")), CategoryId.IMPLEMENTATION_UNPLANNED, false))
                 .isEqualTo(ResearchFirst.NOT_APPLICABLE);
+        assertThat(rules(true, true).researchFirstFor(List.of(new ProjectName("lighthouse")), CategoryId.IMPLEMENTATION_UNPLANNED, false))
+                .isEqualTo(ResearchFirst.QUEUES_RESEARCH);
     }
 
     @Test
@@ -56,7 +58,9 @@ class ResearchFirstTest {
     }
 
     private static DispatchRules rules(boolean unplannedResearchFirst, boolean bugfixResearchFirst) {
-        return new DispatchRules(List.of(new ProjectOverride(new ProjectName("EDI"), OPUS_HIGH, "EDI runs on Opus.")), List.of(
+        return new DispatchRules(List.of(
+                new ProjectOverride(new ProjectName("EDI"), OPUS_HIGH, "EDI runs on Opus."),
+                new ProjectOverride(new ProjectName("lighthouse"), OPUS_HIGH, "The lighthouse runs on Opus.")), List.of(
                 new DispatchCategory(CategoryId.RESEARCH, "", OPUS_HIGH, "Plans.", null, false),
                 new DispatchCategory(CategoryId.IMPLEMENTATION, "", SONNET_HIGH, "Planned work.", null, false),
                 new DispatchCategory(CategoryId.IMPLEMENTATION_UNPLANNED, "", OPUS_HIGH, "Unplanned work.", null, unplannedResearchFirst),

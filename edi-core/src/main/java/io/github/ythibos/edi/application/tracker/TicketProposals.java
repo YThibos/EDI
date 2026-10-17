@@ -71,11 +71,10 @@ public class TicketProposals {
         return raiseDecision.raise(new TaskReference.ById(proposal.task()), proposal.card(), actor);
     }
 
-    public void requireAChoiceIn(TaskId task, OptionKey option, String verbatim) {
+    public void requireAChoiceIn(TaskId task, OptionKey option) {
         proposals.of(task)
                 .filter(proposed -> !proposed.isSettled())
-                .map(proposed -> proposed.proposal().choiceFor(option, verbatim))
-                .ifPresent(choice -> requireOwned(task, choice));
+                .ifPresent(proposed -> proposed.proposal().choiceFor(option));
     }
 
     public synchronized TicketSettlement settle(TaskId task, Actor actor) {
@@ -96,12 +95,6 @@ public class TicketProposals {
 
     public void settleEveryAnswered() {
         transaction.execute(_ -> proposals.answeredAndUnsettled()).forEach(task -> settle(task, Actor.CORE));
-    }
-
-    private void requireOwned(TaskId task, TicketChoice choice) {
-        if (choice instanceof TicketChoice.BookOn bookOn) {
-            trackers.tracked(projectOf(task)).requireOwns(bookOn.key());
-        }
     }
 
     private ProjectEntry projectOf(TaskId task) {

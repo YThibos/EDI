@@ -16,7 +16,6 @@ public record PilotComparison(List<ShipMeasure> piloted, List<ShipMeasure> compa
 
     private static final OptionKey MAKE_IT_THE_RULE = new OptionKey('A');
     private static final OptionKey SWITCH_IT_OFF = new OptionKey('B');
-    private static final OptionKey PILOT_FURTHER = new OptionKey('C');
     private static final String UNKNOWN = "unknown";
 
     public PilotComparison {
@@ -47,13 +46,13 @@ public record PilotComparison(List<ShipMeasure> piloted, List<ShipMeasure> compa
         return List.of(
                 new DecisionOption(MAKE_IT_THE_RULE, "Make research first the rule: keep researchFirst on for implementation-unplanned and for bugs"
                         + " whose cause is unknown"),
-                new DecisionOption(SWITCH_IT_OFF, "Switch research first off again: unplanned work goes straight to its implementation worker"),
-                new DecisionOption(PILOT_FURTHER, "Pilot " + PILOTED_SHIPS_TO_DECIDE + " more ships before deciding"));
+                new DecisionOption(SWITCH_IT_OFF, "Switch research first off again: unplanned work goes straight to its implementation worker"));
     }
 
     private Recommendation recommendation() {
         if (comparable.isEmpty()) {
-            return new Recommendation(PILOT_FURTHER, "no unplanned ship finished without research, so there is nothing to compare against yet");
+            return new Recommendation(SWITCH_IT_OFF, "no unplanned ship finished without research, so the pilot shows no measured gain to set against"
+                    + " the extra research task");
         }
         if (isNoWorse(ShipMeasure::reviewRoundsIfKnown) && isNoWorse(ShipMeasure::findingsIfKnown) && isNoWorse(ShipMeasure::reviewFixesCounted)) {
             return new Recommendation(MAKE_IT_THE_RULE, "the planned ships needed no more review rounds, findings or review fixes than the unplanned ones");
