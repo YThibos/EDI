@@ -46,6 +46,10 @@ public record Dispatch(
         return new Dispatch(task, category, branch, spec, expectedChange, captainsNewOverride, requestedAt, deferredAt);
     }
 
+    public Dispatch asImplementationOfItsPlan() {
+        return new Dispatch(task, CategoryId.IMPLEMENTATION, branch, spec, expectedChange, captainsOverride, requestedAt, null);
+    }
+
     public Dispatch asImplementationBecause(String because) {
         String handedOver = "A mechanical worker's done was refused: " + because + ".\nContinue from the isolated copy as it stands.";
         return new Dispatch(task, CategoryId.IMPLEMENTATION, branch, spec.isEmpty() ? handedOver : spec + "\n\n" + handedOver,

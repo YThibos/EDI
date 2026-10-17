@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 @Tag("adapter")
 class ProjectRegistryTest {
@@ -96,6 +97,27 @@ class ProjectRegistryTest {
         register("projects:\n  - name: service\n    forge: { kind: github, path: example-owner/service }\n");
         assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
                 .hasMessageContaining("registered with the account every forge call for it runs under");
+    }
+
+    @Test
+    void readsTheTrackerEachProjectBooksItsWorkOn() throws IOException {
+        register("""
+                projects:
+                  - name: service
+                    tracker: { kind: jira, projectKey: SVC }
+                  - name: harness
+                    tracker: { kind: edi, projectKey: HRN }
+                  - name: notes
+                    delivery: local-branch
+                """);
+
+        assertThat(registry().entryOf(new ProjectName("service")).tracker()).isEqualTo(TrackerKind.JIRA);
+        assertThat(registry().entryOf(new ProjectName("harness")).tracker()).isEqualTo(TrackerKind.EDI);
+        assertThat(registry().entryOf(new ProjectName("notes")).tracker()).isEqualTo(TrackerKind.NONE);
+
+        register("projects:\n  - name: service\n    tracker: { projectKey: SVC }\n");
+        assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
+                .hasMessageContaining("A project's tracker names its kind: jira, edi or none.");
     }
 
     private ProjectRegistry registry() {

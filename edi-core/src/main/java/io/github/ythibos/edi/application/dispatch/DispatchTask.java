@@ -1,6 +1,5 @@
 package io.github.ythibos.edi.application.dispatch;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -27,6 +26,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.dispatch.DispatchCategory;
 import io.github.ythibos.edi.domain.dispatch.DispatchRules;
+import io.github.ythibos.edi.domain.dispatch.ResearchFirst;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
@@ -34,6 +34,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 
 @Service
@@ -48,12 +49,13 @@ public class DispatchTask {
     private final WorkerPlaces places;
     private final LaunchWorker launcher;
     private final CloneRefreshes refreshes;
+    private final ResearchBeforeImplementation research;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DispatchTask(TaskStore tasks, DispatchStore dispatches, EventLog events, ProjectRegistry registry, MachineProfile machine,
-            DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes, Clock clock,
-            TransactionTemplate transaction) {
+            DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes, ResearchBeforeImplementation research,
+            Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.events = events;
@@ -63,17 +65,13 @@ public class DispatchTask {
         this.places = places;
         this.launcher = launcher;
         this.refreshes = refreshes;
+        this.research = research;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, Actor actor) {
-        Dispatching dispatching = transaction.execute(_ -> dispatching(reference, request));
-        refreshes.requireFresh(dispatching.project());
-        if (dispatching.isBeyondCapacity()) {
-            return transaction.execute(_ -> deferred(dispatching, actor));
-        }
-        return DispatchOutcome.of(launcher.launch(dispatching.dispatch(), null, actor));
+        return carriedOut(transaction.execute(_ -> dispatching(reference, request)), actor);
     }
 
     public String previewBrief(TaskReference reference, DispatchRequest request) {
@@ -88,12 +86,14 @@ public class DispatchTask {
         DispatchRules rules = rulesFile.validatedAgainst(settings.models());
         Optional<Dispatch> earlier = dispatches.of(task.id());
         DispatchCategory category = rules.category(categoryOf(request, earlier));
+        requireACauseOnlyForABugfix(request, category);
         CaptainOverride captainsOverride = captainsOverrideOf(request, earlier, settings);
         Dispatch dispatch = earlier
                 .map(redone -> redispatch(redone, project, category, request, captainsOverride))
                 .orElseGet(() -> firstDispatch(task, project, category, request, captainsOverride));
         places.requireNoLiveWorker(task.id());
-        return new Dispatching(dispatch, project.project().name(), places.occupiedOn(project.project().name()), project.workerCapacity());
+        return new Dispatching(dispatch, project.project().name(), places.occupiedOn(project.project().name()), project.workerCapacity(),
+                researchFirstFor(task, earlier.isPresent(), rules, category, request));
     }
 
     private void requireUnblocked(Task task) {
@@ -118,6 +118,12 @@ public class DispatchTask {
                 .orElseThrow(() -> new Refusal("A first dispatch names its category; the primary picks one from the dispatch rules."));
     }
 
+    private static void requireACauseOnlyForABugfix(DispatchRequest request, DispatchCategory category) {
+        if (request.causeUnknown() && !category.id().equals(CategoryId.BUGFIX)) {
+            throw new Refusal("Only a " + CategoryId.BUGFIX + " dispatch says its cause is unknown; " + category.id() + " work is planned or not.");
+        }
+    }
+
     private static CaptainOverride captainsOverrideOf(DispatchRequest request, Optional<Dispatch> earlier, WorkerSettings settings) {
         CaptainOverride captainsOverride = Optional.ofNullable(request.captainsOverride())
                 .or(() -> earlier.map(Dispatch::captainsOverride))
@@ -126,6 +132,14 @@ public class DispatchTask {
             settings.models().requireAllows(captainsOverride.route(), "The captain's override");
         }
         return captainsOverride;
+    }
+
+    private static ResearchFirst researchFirstFor(Task task, boolean dispatchedBefore, DispatchRules rules, DispatchCategory category,
+            DispatchRequest request) {
+        if (dispatchedBefore || task.intake().kind() != TaskKind.SHIP) {
+            return ResearchFirst.NOT_APPLICABLE;
+        }
+        return rules.researchFirstFor(task.intake().projects(), category.id(), request.causeUnknown());
     }
 
     private Dispatch redispatch(Dispatch earlier, ProjectEntry project, DispatchCategory category, DispatchRequest request,
@@ -171,6 +185,29 @@ public class DispatchTask {
         return key;
     }
 
+    private DispatchOutcome carriedOut(Dispatching dispatching, Actor actor) {
+        refreshes.requireFresh(dispatching.project());
+        if (dispatching.researchFirst().queuesResearch()) {
+            return researchFirst(dispatching.dispatch(), actor);
+        }
+        if (dispatching.researchFirst().countsInThePilot()) {
+            research.countWithoutResearch(dispatching.dispatch());
+        }
+        if (dispatching.isBeyondCapacity()) {
+            return transaction.execute(_ -> deferred(dispatching, actor));
+        }
+        return DispatchOutcome.of(launcher.launch(dispatching.dispatch(), null, actor));
+    }
+
+    private DispatchOutcome researchFirst(Dispatch shipDispatch, Actor actor) {
+        DispatchRequest planRequest = research.researchRequestFor(shipDispatch);
+        Dispatching planning = transaction.execute(_ -> {
+            TaskId plan = research.queueThePlanOf(shipDispatch, actor);
+            return dispatching(new TaskReference.ById(plan), planRequest);
+        });
+        return carriedOut(planning, actor).planning(shipDispatch.task());
+    }
+
     private DispatchOutcome deferred(Dispatching dispatching, Actor actor) {
         Dispatch deferred = dispatching.dispatch().deferred(clock.now());
         dispatches.save(deferred);
@@ -180,7 +217,7 @@ public class DispatchTask {
         return DispatchOutcome.of(new DispatchOutcome.Deferred(deferred.task(), dispatching.project(), dispatching.occupied(), capacity));
     }
 
-    private record Dispatching(Dispatch dispatch, ProjectName project, int occupied, OptionalInt capacity) {
+    private record Dispatching(Dispatch dispatch, ProjectName project, int occupied, OptionalInt capacity, ResearchFirst researchFirst) {
 
         boolean isBeyondCapacity() {
             return capacity.isPresent() && occupied >= capacity.getAsInt();

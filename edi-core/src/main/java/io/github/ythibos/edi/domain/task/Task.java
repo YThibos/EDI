@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.project.WorkKey;
 
 public record Task(TaskId id, Intake intake, TaskState state, String notes, CaptainHold hold, Instant created, Instant closed) {
 
@@ -66,6 +67,22 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
         return intake.kind() == TaskKind.CAPTAIN
                 ? new Task(id, intake, TaskState.DONE, notes, null, created, at)
                 : withHold(null);
+    }
+
+    public Task keyedOn(WorkKey key) {
+        refuseWhenClosed();
+        if (intake.workKey() != null) {
+            throw new Refusal(id + " already books its work on " + intake.workKey() + ".");
+        }
+        return new Task(id, intake.keyedOn(key), state, notes, hold, created, closed);
+    }
+
+    public Task waitingFor(TaskId blocker) {
+        refuseWhenClosed();
+        if (state != TaskState.QUEUED) {
+            throw new Refusal(id + " is " + state.word() + ", so it no longer waits for another task.");
+        }
+        return new Task(id, intake.blockedAlsoBy(blocker), state, notes, hold, created, closed);
     }
 
     public Task dispatched() {

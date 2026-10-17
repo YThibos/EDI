@@ -43,7 +43,7 @@ class AddTaskTest {
 
     @Test
     void queuesATaskAndRecordsWhoAddedIt() {
-        TaskId id = home.addTask().add(ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
+        TaskId id = home.addTask().add(ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY).id();
 
         assertThat(home.tasks().get(id).state()).isEqualTo(TaskState.QUEUED);
         assertThat(home.tasks().get(id).created()).isEqualTo(TestHome.START);
@@ -55,8 +55,8 @@ class AddTaskTest {
     void namesATaskAfterItsTitleWhenNoIdIsChosen() {
         Intake intake = ship("unused", "Fit the lamp!").intake();
 
-        TaskId first = home.addTask().add(new NewTask(null, intake, ""), Actor.PRIMARY);
-        TaskId second = home.addTask().add(new NewTask(null, intake, ""), Actor.PRIMARY);
+        TaskId first = home.addTask().add(new NewTask(null, intake, ""), Actor.PRIMARY).id();
+        TaskId second = home.addTask().add(new NewTask(null, intake, ""), Actor.PRIMARY).id();
 
         assertThat(first).isEqualTo(new TaskId("fit-the-lamp"));
         assertThat(second).isEqualTo(new TaskId("fit-the-lamp-2"));
@@ -86,7 +86,7 @@ class AddTaskTest {
         NewTask projectless = new NewTask(new TaskId("drift"), new Intake(TaskKind.SCOUT, "Look around", List.of(), null, null, List.of(), null), "");
 
         assertThatThrownBy(() -> home.addTask().add(projectless, Actor.PRIMARY)).isInstanceOf(Refusal.class).hasMessage("A scout names the project it works on.");
-        assertThat(home.addTask().add(captainItem("lamp-choice", "Choose the lamp"), Actor.PRIMARY)).isEqualTo(new TaskId("lamp-choice"));
+        assertThat(home.addTask().add(captainItem("lamp-choice", "Choose the lamp"), Actor.PRIMARY).id()).isEqualTo(new TaskId("lamp-choice"));
     }
 
     @Test

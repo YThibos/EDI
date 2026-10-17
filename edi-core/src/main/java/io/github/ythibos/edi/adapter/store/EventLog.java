@@ -39,6 +39,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
+import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
@@ -50,8 +52,15 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketAddedToSprint;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketChoiceRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketCreated;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketLinked;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketTransitioned;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
@@ -99,13 +108,28 @@ public class EventLog {
                 .param("type", event.getClass().getSimpleName())
                 .param("task", event.task().value())
                 .param("payload", json.writeValueAsString(payloadOf(event)))
-                .query(Long.class)
+                .query((row, _) -> row.getLong(1))
                 .single();
         WakeRule.wakeFor(event, actor).ifPresent(wake -> queue(sequence, wake, at));
+        publisher.publishEvent(new EventRecorded(sequence));
+    }
+
+    public List<LoggedEvent> after(long sequence, int most) {
+        return store.sql("select sequence, at, actor, type, task_id, payload from event where sequence > :sequence order by sequence limit :most")
+                .param("sequence", sequence)
+                .param("most", most)
+                .query((row, _) -> new LoggedEvent(
+                        row.getLong("sequence"),
+                        Columns.instant(row.getString("at")),
+                        new Actor(row.getString("actor")),
+                        row.getString("type"),
+                        new TaskId(row.getString("task_id")),
+                        json.readTree(row.getString("payload"))))
+                .list();
     }
 
     public long latestSequence() {
-        return store.sql("select coalesce(max(sequence), 0) from event").query(Long.class).single();
+        return store.sql("select coalesce(max(sequence), 0) from event").query((row, _) -> row.getLong(1)).single();
     }
 
     public boolean anyAfter(long sequence) {
@@ -197,6 +221,19 @@ public class EventLog {
             case TaskCostRecorded recorded -> withCost(payload, recorded.cost());
             case PipelineRunSeen seen -> withRun(payload, seen.run());
             case PipelineRunFinished finished -> withRun(payload, finished.run());
+            case TaskKeyed keyed -> payload.put("key", keyed.key().toString());
+            case TicketCreated created -> payload.put("key", created.key().toString());
+            case TicketChoiceRefused refused -> payload.put("because", refused.because());
+            case TicketAddedToSprint added -> payload.put("key", added.key().toString()).put("sprint", added.sprint());
+            case TicketLinked linked -> payload.put("key", linked.key().toString()).put("url", linked.url());
+            case TicketTransitioned transitioned -> payload.put("key", transitioned.key().toString())
+                    .put("from", transitioned.from())
+                    .put("to", transitioned.to());
+            case TicketUpdateRefused refused -> payload.put("key", refused.key().toString())
+                    .put("update", refused.update())
+                    .put("because", refused.because());
+            case ResearchQueuedFirst queued -> payload.put("research", queued.research().value()).put("category", queued.category().value());
+            case ReviewCounted counted -> payload.put("rounds", counted.review().rounds()).put("findings", counted.review().findings());
         };
     }
 

@@ -350,7 +350,7 @@ class SupervisionAndRecoveryTest {
             home.followMerges().finishEarlierMerges();
 
             assertThat(home.tasks().get(new TaskId("fit-lamp")).state()).isEqualTo(TaskState.DONE);
-            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("TaskCostRecorded", "TaskCleanedUp");
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("TaskCostRecorded", "ReviewCounted", "TaskCleanedUp");
             assertThat(copy.root()).doesNotExist();
         }
 

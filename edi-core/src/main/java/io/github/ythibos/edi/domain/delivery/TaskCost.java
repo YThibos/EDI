@@ -18,4 +18,8 @@ public record TaskCost(TaskId task, TokenUsage workers, TokenUsage pipeline, Ins
     public Optional<TokenUsage> pipelineIfKnown() {
         return Optional.ofNullable(pipeline);
     }
+
+    public Optional<Long> totalIfKnown() {
+        return pipelineIfKnown().map(spentByThePipeline -> workers.total() + spentByThePipeline.total());
+    }
 }

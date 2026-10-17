@@ -41,7 +41,7 @@ public class DecisionStore {
 
     public DecisionNumber nextNumber() {
         store.sql("update meta set value = value + 1 where name = 'decision_seq'").update();
-        return new DecisionNumber(store.sql("select value from meta where name = 'decision_seq'").query(Integer.class).single());
+        return new DecisionNumber(store.sql("select value from meta where name = 'decision_seq'").query((row, _) -> row.getInt(1)).single());
     }
 
     public void save(Decision decision) {

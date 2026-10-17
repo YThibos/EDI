@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
+import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
@@ -28,12 +29,13 @@ public class SupervisionRound implements AutoCloseable {
     private final JudgeWorkers judgeWorkers;
     private final ResumeAfterUsageLimits usageLimits;
     private final NoticeDueHolds dueHolds;
+    private final TicketProposals ticketProposals;
     private final ExecutorService checks = Executors.newVirtualThreadPerTaskExecutor();
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
     public SupervisionRound(NoticeOverdueSteers overdueSteers, NoticeMissedLaunches missedLaunches,
             LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, JudgeWorkers judgeWorkers,
-            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds) {
+            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
@@ -41,6 +43,7 @@ public class SupervisionRound implements AutoCloseable {
         this.judgeWorkers = judgeWorkers;
         this.usageLimits = usageLimits;
         this.dueHolds = dueHolds;
+        this.ticketProposals = ticketProposals;
     }
 
     @Scheduled(fixedDelayString = "${edi.supervision.round:PT30S}", initialDelayString = "${edi.supervision.round:PT30S}")
@@ -52,6 +55,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("notice holds whose date arrived", dueHolds::notice);
         attempt("launch deferred dispatches", deferredDispatches::launchWhereThereIsRoom);
         attempt("check mechanical changes", this::startTheMechanicalChecks);
+        attempt("settle the tickets the captain chose", ticketProposals::settleEveryAnswered);
     }
 
     @Override

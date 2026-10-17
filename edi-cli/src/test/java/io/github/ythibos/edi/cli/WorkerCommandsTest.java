@@ -56,6 +56,16 @@ class WorkerCommandsTest {
     }
 
     @Test
+    void dispatchesABugWhoseCauseIsUnknown() {
+        core.answering(200, "Research comes first.\n");
+
+        int exitCode = edi("", "dispatch", "fix-horn", "--category", "bugfix", "--cause-unknown");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().body()).isEqualTo("{\"category\":\"bugfix\",\"causeUnknown\":true}");
+    }
+
+    @Test
     void previewsABriefWithACategoryAndReadsTheWrittenOneWithout() {
         core.answering(200, "# Brief: fit-lamp\n");
 

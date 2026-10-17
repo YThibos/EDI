@@ -1,24 +1,45 @@
 package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.adapter.tracker.JiraCalls;
+import io.github.ythibos.edi.adapter.tracker.JiraTracker;
+import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.worker.ToolCall;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.tracker.TicketDetails;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.CapturedLogs;
+import io.github.ythibos.edi.testing.MachineFixture;
+import io.github.ythibos.edi.testing.StubJiraServer;
+import io.github.ythibos.edi.testing.SyntheticSecrets;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TrackerFixtures;
+import io.github.ythibos.edi.testing.WorkEvents;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import tools.jackson.databind.json.JsonMapper;
 
 @DisplayName("4.6 Process safety")
 class ProcessSafetyTest {
@@ -96,8 +117,54 @@ class ProcessSafetyTest {
 
         @Test
         @DisplayName("AT-32 a canary secret in a fixture keys file never appears in logs, events or stdout after a full adapter run")
-        void aCanarySecretNeverSurfaces() {
-            Pending.until(Slice.S6);
+        @Tag("adapter")
+        void aCanarySecretNeverSurfaces() throws IOException {
+            String canary = SyntheticSecrets.canary();
+            List<String> said = new ArrayList<>();
+            try (StubJiraServer jira = StubJiraServer.acceptingToken(canary).holding("SVC-40", "Harbour lamps", "To Do");
+                    JiraCalls calls = new JiraCalls(new JsonMapper());
+                    CapturedLogs logs = CapturedLogs.ofEveryLogger()) {
+                TestHome home = homeReachingThe(jira, canary);
+                home.trackingWith(new JiraTracker(home.machineProfile(), calls, new JsonMapper()));
+
+                runEveryTrackerCall(home, jira, canary, said);
+
+                assertThat(jira.exchanges()).allSatisfy(exchange -> assertThat(exchange.authorization()).isIn("Bearer " + canary, null));
+                assertThat(jira.exchanges()).hasSizeGreaterThan(10);
+                assertThat(logs.lines()).noneMatch(line -> line.contains(canary));
+                assertThat(said).noneMatch(line -> line.contains(canary)).anyMatch(line -> line.contains("[secret]"));
+                assertThat(home.jdbc().sql("select payload from event").query(String.class).list()).noneMatch(payload -> payload.contains(canary))
+                        .anyMatch(payload -> payload.contains("[secret]"));
+                for (Path written : List.of(home.home().store(), home.home().store().resolveSibling("edi.db-wal"), home.home().fleetLedger())) {
+                    assertThat(Files.exists(written) ? Files.readString(written, StandardCharsets.ISO_8859_1) : "").as(written.toString()).doesNotContain(canary);
+                }
+            }
+        }
+
+        private TestHome homeReachingThe(StubJiraServer jira, String canary) throws IOException {
+            TestHome home = TestHome.in(directory).registering(TrackerFixtures.REGISTRY).writing("keys/api-keys.yml", "TRACKER:\n  API-key: " + canary + "\n");
+            return home.writing("config/machine.yaml", MachineFixture.LAPTOP.profile()
+                    .replace("https://tracker.example.org", jira.address().toString())
+                    .replace("/nonexistent/tracker-keys.yml", home.home().root().resolve("keys/api-keys.yml").toString()));
+        }
+
+        private void runEveryTrackerCall(TestHome home, StubJiraServer jira, String canary, List<String> said) {
+            TicketDetails details = new TicketDetails(null, WorkKey.parse("SVC-9"), List.of("lighting"), "Major");
+            said.add(home.addTask().add(TrackerFixtures.ship("fix-lamps", "service", "Fix the harbour lamps", null, details), Actor.PRIMARY).toString());
+            said.add(home.addTask().add(TrackerFixtures.ship("fit-horn", "service", "Fit the horn", "SVC-40"), Actor.PRIMARY).toString());
+            said.add(home.answerDecision().answer(TaskReference.parse("fix-lamps"), new GivenAnswer("D58 B", OptionKey.parse("B"), "", AnswerChannel.CHAT),
+                    Actor.PRIMARY).ticket().toString());
+            WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/SVC-101").deliveredAsADraft().merged();
+            WorkEvents.of(home, "fit-horn").dispatchedTo(1, "feature/SVC-40");
+            jira.answersNextWith(400, "{\"errorMessages\":[\"Rejected the call that carried " + canary + "\"]}");
+            home.eventFollowers().followTheLog();
+            jira.answersNextWith(401, "");
+            said.add(catchThrowable(() -> home.addTask().add(TrackerFixtures.ship("fit-bell", "service", "Fit the bell", "SVC-40"), Actor.PRIMARY))
+                    .getMessage());
+            jira.answersNextWith(500, "{\"errorMessages\":[\"Failed on " + canary + "\"]}");
+            said.add(catchThrowable(() -> home.addTask().add(TrackerFixtures.ship("fit-buoy", "service", "Fit the buoy", "SVC-40"), Actor.PRIMARY))
+                    .getMessage());
+            said.addAll(home.jdbc().sql("select coalesce(detail, '') from wake").query(String.class).list());
         }
     }
 }

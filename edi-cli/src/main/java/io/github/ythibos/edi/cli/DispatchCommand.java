@@ -45,6 +45,9 @@ final class DispatchCommand implements Callable<Integer> {
         @Option(names = "--reason", paramLabel = "REASON", description = "The captain's reason for the override.")
         private String reason;
 
+        @Option(names = "--cause-unknown", description = "A bugfix whose cause is not established yet, which research may plan first.")
+        private boolean causeUnknown;
+
         boolean namesACategory() {
             return category != null;
         }
@@ -56,7 +59,8 @@ final class DispatchCommand implements Callable<Integer> {
                     .with("files", files)
                     .with("overrideModel", overrideModel)
                     .with("overrideEffort", overrideEffort)
-                    .with("reason", reason);
+                    .with("reason", reason)
+                    .with("causeUnknown", causeUnknown);
         }
     }
 }

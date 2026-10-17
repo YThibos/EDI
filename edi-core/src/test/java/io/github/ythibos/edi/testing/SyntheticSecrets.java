@@ -20,6 +20,10 @@ public final class SyntheticSecrets {
         return "gh" + "p_" + randomFrom(ALPHANUMERIC, 36);
     }
 
+    public static String canary() {
+        return "canary-" + randomFrom(ALPHANUMERIC, 32);
+    }
+
     private static String randomFrom(String alphabet, int length) {
         return RANDOM.ints(length, 0, alphabet.length())
                 .mapToObj(index -> String.valueOf(alphabet.charAt(index)))

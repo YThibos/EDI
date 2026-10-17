@@ -42,8 +42,16 @@ public class TaskStore {
     public boolean contains(TaskId id) {
         return store.sql("select count(*) from task where id = :id")
                 .param("id", id.value())
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single() > 0;
+    }
+
+    public TaskId firstFreeIdFrom(TaskId slug) {
+        TaskId candidate = slug;
+        for (int suffix = 2; contains(candidate); suffix++) {
+            candidate = slug.withSuffix(suffix);
+        }
+        return candidate;
     }
 
     public void insert(Task task) {
@@ -67,12 +75,14 @@ public class TaskStore {
     }
 
     public void update(Task task) {
-        store.sql("update task set state = :state, notes = :notes, closed_at = :closed where id = :id")
+        store.sql("update task set state = :state, work_key = :workKey, notes = :notes, closed_at = :closed where id = :id")
                 .param("id", task.id().value())
                 .param("state", task.state().word())
+                .param("workKey", Columns.textOf(task.intake().workKey()))
                 .param("notes", task.notes())
                 .param("closed", Columns.text(task.closed()))
                 .update();
+        replaceBlockers(task);
         replaceHold(task);
     }
 
@@ -115,6 +125,11 @@ public class TaskStore {
                         .param("position", position)
                         .param("project", projects.get(position).value())
                         .update());
+    }
+
+    private void replaceBlockers(Task task) {
+        store.sql("delete from task_dependency where task_id = :task").param("task", task.id().value()).update();
+        insertBlockers(task);
     }
 
     private void insertBlockers(Task task) {

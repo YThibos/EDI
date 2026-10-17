@@ -42,7 +42,9 @@ jobs:
         uses: actions/upload-artifact@v7.0.2
         with:
           name: test-reports
-          path: "**/target/surefire-reports/"
+          path: |
+            **/target/surefire-reports/
+            **/target/surefire-reports-desktop/
 
   native:
     name: Native build and smoke test

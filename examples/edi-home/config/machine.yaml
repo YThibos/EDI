@@ -10,3 +10,17 @@ workers:
 supervision:
   staleAfter: PT20M
   pauseResurface: PT4H
+tracker:
+  kind: jira
+  baseUrl: https://jira.example.org
+  credentials: { keysFile: /path/to/api-keys.yml, section: JIRA }
+  evergreen:
+    coordination: EXAMPLE-1
+    tooling: EXAMPLE-2
+  workflow: [To Do, In Progress, In Review, In Test, Done]
+  mergedStatus: In Test
+  issueType: Story
+  epicLinkField: customfield_10008
+time:
+  fleetLedger: true
+  requireWorkedLine: true

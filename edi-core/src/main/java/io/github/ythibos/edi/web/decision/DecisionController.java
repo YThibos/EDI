@@ -47,6 +47,6 @@ class DecisionController {
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
         caller.requirePrimary("edi decision answer");
         AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenInChat(), caller.actor());
-        return new Confirmation.Answered(answered.decision(), answered.task());
+        return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket());
     }
 }

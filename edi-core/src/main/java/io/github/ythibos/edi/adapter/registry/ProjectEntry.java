@@ -14,9 +14,11 @@ import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 public record ProjectEntry(
         Project project,
+        TrackerKind tracker,
         Path projectClone,
         Path captainCheckout,
         BaseBranch base,
@@ -32,6 +34,7 @@ public record ProjectEntry(
 
     public ProjectEntry {
         Objects.requireNonNull(project, "A registry entry is for a project.");
+        Objects.requireNonNull(tracker, () -> project.name() + " names the tracker it books work on.");
         Objects.requireNonNull(projectClone, () -> project.name() + " has a clone.");
         branchKinds = Set.copyOf(branchKinds);
         shipBriefRules = List.copyOf(shipBriefRules);

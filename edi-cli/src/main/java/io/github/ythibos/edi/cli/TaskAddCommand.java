@@ -41,6 +41,19 @@ final class TaskAddCommand implements Callable<Integer> {
     @Option(names = "--body", paramLabel = "-|FILE", description = "The task's notes, from standard input (-) or a file.")
     private String body;
 
+    @Option(names = "--issue-type", paramLabel = "TYPE",
+            description = "The issue type of the ticket EDI proposes to create, when not the machine profile's usual one.")
+    private String issueType;
+
+    @Option(names = "--epic", paramLabel = "KEY", description = "The epic the proposed ticket belongs to.")
+    private String epic;
+
+    @Option(names = "--labels", split = ",", paramLabel = "LABEL", description = "The labels of the proposed ticket.")
+    private List<String> labels;
+
+    @Option(names = "--priority", paramLabel = "PRIORITY", description = "The priority of the proposed ticket.")
+    private String priority;
+
     @Override
     public Integer call() {
         return core.post("/api/tasks", new JsonBody()
@@ -52,6 +65,10 @@ final class TaskAddCommand implements Callable<Integer> {
                 .with("base", base)
                 .with("blockedBy", blockedBy)
                 .with("delivery", delivery)
-                .with("body", body == null ? null : core.contentOf(body)));
+                .with("body", body == null ? null : core.contentOf(body))
+                .with("issueType", issueType)
+                .with("epic", epic)
+                .with("labels", labels)
+                .with("priority", priority));
     }
 }

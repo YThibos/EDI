@@ -7,7 +7,7 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S5, delivery, on top of the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
+The repository is at slice S6, tracker and time, on top of the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
@@ -16,6 +16,8 @@ The primary and the workers answer every Claude Code hook: the session the capta
 A supervision round judges each worker from its hooks, its tmux server and the machine's boot, parks one that stopped on a usage limit and resumes it after the reset, and puts two or more dead workers on a numbered outage hold list that `edi recover` answers one number at a time, resuming the recorded session in the task's own copy.
 A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included, and its done counts only once its draft is open, still a draft and at the copy's head, and its branch adds no SNAPSHOT version; work delivered to the captain's checkout arrives by a ref-only fetch or, on request, as an uncommitted patch.
 EDI watches every open draft, follows a merge the forge reports by refreshing the clone before any follow-up work and cleaning up the task once its work is landed, and refuses any push from an isolated copy to a repository its project does not register.
+Every task gets its work key at intake: the next EDI-native key of its project, a ticket the captain chooses or has created through a decision on a JIRA project, or the key it was given once its tracker confirms it; a JIRA ticket then joins the active sprint when work starts, links the draft, and moves to the after-merge status once the merge is followed.
+EDI writes the activity ledger the time-booking tool books from, asks workers for the time they worked while the machine profile says so, and can plan unplanned work in a research task before an implementation worker builds it, measuring that pilot against unplanned ships until the captain decides.
 
 ## Parts
 
@@ -116,6 +118,22 @@ edi cleanup fit-the-lamp                            # retire a landed task's cop
 ```
 
 `edi task show` names a ship's draft, its latest pipeline run and, once cleaned up, what it cost; a cleanup that finds unlanded work lists every uncommitted path and unlanded commit and changes nothing.
+
+### Trackers and time
+
+A project's registry entry names its tracker, `tracker: { kind: jira|edi|none, projectKey: KEY }`; the machine profile's `tracker` section says whether this machine reaches a JIRA instance (`kind: jira`, with its `baseUrl`, the keys file section holding the access token, the evergreen tickets, the workflow's statuses in their forward order, the `mergedStatus`, the `issueType` and the `epicLinkField`) or none (`kind: none`), and its `time` section switches the activity ledger (`fleetLedger`) and the brief's `worked:` line (`requireWorkedLine`).
+`examples/edi-home/config/machine.yaml` shows a profile with JIRA; a machine without JIRA or time booking sets `tracker.kind: none` and leaves `time` out.
+
+```sh
+edi task add --kind ship --project hobby-tool --title "Fit the lamp"           # the next EDI-native key, such as HOBBY-4
+edi task add --kind ship --project example-service --title "Fit the lamp" \
+    --issue-type Story --epic EXAMPLE-9 --labels lighting --priority Major     # a decision: an open ticket or the drafted one
+edi decision answer D59 --option B --text "D59 B"                              # the captain's answer creates and fills the ticket
+edi dispatch fix-horn --category bugfix --cause-unknown                         # research first, when the dispatch rules switch it on
+```
+
+With `"researchFirst": true` on `implementation-unplanned` or `bugfix` in `config/dispatch-rules.json`, a ship's first dispatch adds and launches a research scout that writes the plan, and the ship waits for it; dispatching the ship again once the scout is done runs it as `implementation` with the plan in its brief.
+The activity ledger is `$EDI_HOME/state/fleet-ledger.jsonl`.
 
 ## Documentation
 

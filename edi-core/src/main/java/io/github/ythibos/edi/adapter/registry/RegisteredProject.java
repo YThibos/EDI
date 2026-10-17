@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 record RegisteredProject(
@@ -46,6 +47,7 @@ record RegisteredProject(
         Project project = asProject();
         return new ProjectEntry(
                 project,
+                trackerKind(),
                 clonePath == null ? ediHome.resolve("projects").resolve(name) : expanded(clonePath),
                 captainCheckout == null ? null : expanded(captainCheckout),
                 base == null ? null : new BaseBranch(base),
@@ -58,6 +60,10 @@ record RegisteredProject(
                 verify == null || verify.isBlank() ? null : verify.strip(),
                 Boolean.TRUE.equals(largeBuilds),
                 Objects.requireNonNullElse(shipBriefRules, List.<String>of()).stream().map(ShipBriefRule::named).toList());
+    }
+
+    private TrackerKind trackerKind() {
+        return tracker == null ? TrackerKind.NONE : tracker.trackerKind();
     }
 
     private ProjectKey workKeys() {

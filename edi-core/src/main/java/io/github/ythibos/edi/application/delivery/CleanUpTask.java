@@ -15,18 +15,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.PipelineReview;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
@@ -45,25 +49,30 @@ public class CleanUpTask {
     private final TaskStore tasks;
     private final WorkerStore workers;
     private final TaskCostStore costs;
+    private final PipelineReviewStore reviews;
     private final EventLog events;
     private final WorkerContext context;
     private final LandedWorkCheck landedWork;
     private final TaskCosts taskCosts;
+    private final Pipeline pipeline;
     private final Git git;
     private final WorkerRuntime runtime;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public CleanUpTask(EdiHome home, TaskStore tasks, WorkerStore workers, TaskCostStore costs, EventLog events, WorkerContext context,
-            LandedWorkCheck landedWork, TaskCosts taskCosts, Git git, WorkerRuntime runtime, Clock clock, TransactionTemplate transaction) {
+    public CleanUpTask(EdiHome home, TaskStore tasks, WorkerStore workers, TaskCostStore costs, PipelineReviewStore reviews, EventLog events,
+            WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, Git git, WorkerRuntime runtime, Clock clock,
+            TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.workers = workers;
         this.costs = costs;
+        this.reviews = reviews;
         this.events = events;
         this.context = context;
         this.landedWork = landedWork;
         this.taskCosts = taskCosts;
+        this.pipeline = pipeline;
         this.git = git;
         this.runtime = runtime;
         this.clock = clock;
@@ -78,8 +87,9 @@ public class CleanUpTask {
         removeTheNestedRepositoriesOfAScout(workplace);
         requireLanded(workplace, landedWork.of(workplace), actor);
         TaskCost cost = taskCosts.countFor(workplace);
+        PipelineReview review = reviewOf(workplace);
         retireTheCopy(workplace);
-        return closed(workplace, cost, actor);
+        return closed(workplace, cost, review, actor);
     }
 
     private void requireNoWorkerAtWork(Workplace workplace) {
@@ -116,6 +126,10 @@ public class CleanUpTask {
                 + ". Nothing is discarded without the captain's word.");
     }
 
+    private PipelineReview reviewOf(Workplace workplace) {
+        return pipeline.reviewOf(workplace.project().projectClone(), workplace.dispatch().branch()).orElse(PipelineReview.unknown());
+    }
+
     private void retireTheCopy(Workplace workplace) {
         List<Worker> incarnations = transaction.execute(_ -> workers.allOf(workplace.task().id()));
         incarnations.stream().filter(worker -> !worker.isRetired()).forEach(worker -> runtime.close(worker.window()));
@@ -129,7 +143,7 @@ public class CleanUpTask {
         incarnations.forEach(worker -> deleted(home.workerState(worker.id())));
     }
 
-    private Task closed(Workplace workplace, TaskCost cost, Actor actor) {
+    private Task closed(Workplace workplace, TaskCost cost, PipelineReview review, Actor actor) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Task cleaned = tasks.get(workplace.task().id()).cleanedUp(now);
@@ -137,6 +151,8 @@ public class CleanUpTask {
             tasks.update(cleaned);
             costs.save(cost);
             events.record(new TaskCostRecorded(cleaned.id(), cost), actor, now);
+            reviews.save(cleaned.id(), review, now);
+            events.record(new ReviewCounted(cleaned.id(), review), actor, now);
             events.record(new TaskCleanedUp(cleaned.id()), actor, now);
             return cleaned;
         });

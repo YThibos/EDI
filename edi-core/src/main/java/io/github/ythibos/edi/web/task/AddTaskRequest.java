@@ -15,6 +15,7 @@ import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.tracker.TicketDetails;
 
 record AddTaskRequest(
         String id,
@@ -25,10 +26,14 @@ record AddTaskRequest(
         String base,
         List<String> blockedBy,
         String delivery,
-        String body) {
+        String body,
+        String issueType,
+        String epic,
+        List<String> labels,
+        String priority) {
 
     NewTask newTask() {
-        return new NewTask(optional(id, TaskId::new), intake(), orEmpty(body));
+        return new NewTask(optional(id, TaskId::new), intake(), orEmpty(body), new TicketDetails(issueType, optional(epic, WorkKey::parse), labels, priority));
     }
 
     private Intake intake() {

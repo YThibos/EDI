@@ -76,6 +76,7 @@ public class LaunchWorker {
     private final WorkerPlaces places;
     private final WorkerBriefs briefs;
     private final ResumeNotes resumeNotes;
+    private final ResearchBeforeImplementation research;
     private final WorkerTokens tokens;
     private final WorkerRuntime runtime;
     private final ProcessTable processes;
@@ -85,8 +86,8 @@ public class LaunchWorker {
 
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, OutageStore outages, EventLog events,
             ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies, WorkerPlaces places,
-            WorkerBriefs briefs, ResumeNotes resumeNotes, WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot,
-            Clock clock, TransactionTemplate transaction) {
+            WorkerBriefs briefs, ResumeNotes resumeNotes, ResearchBeforeImplementation research, WorkerTokens tokens, WorkerRuntime runtime,
+            ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
@@ -100,6 +101,7 @@ public class LaunchWorker {
         this.places = places;
         this.briefs = briefs;
         this.resumeNotes = resumeNotes;
+        this.research = research;
         this.tokens = tokens;
         this.runtime = runtime;
         this.processes = processes;
@@ -167,7 +169,7 @@ public class LaunchWorker {
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
         BaseBranch base = task.intake().base() == null ? project.requireBase() : task.intake().base();
         return new Incarnation(task, project, dispatch, kind, worker, sessionFor(kind, task, earlier), earlier, route, base, settings,
-                craftRulesFor(project), answered);
+                craftRulesFor(project), research.planFor(task.id()).orElse(null), machine.time().requireWorkedLine(), answered);
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
@@ -199,7 +201,7 @@ public class LaunchWorker {
 
     private BriefFacts briefFacts(Incarnation incarnation, Path worktree, Path taskDirectory) {
         return new BriefFacts(incarnation.task(), incarnation.worker(), incarnation.project(), incarnation.dispatch(), incarnation.base(),
-                worktree, taskDirectory, runtime.socket(), incarnation.craftRules());
+                worktree, taskDirectory, runtime.socket(), incarnation.craftRules(), incarnation.plan(), incarnation.asksForTheTimeWorked());
     }
 
     private Path writtenBriefAndIntent(BriefFacts facts) {
@@ -303,6 +305,8 @@ public class LaunchWorker {
             BaseBranch base,
             WorkerSettings settings,
             String craftRules,
+            String plan,
+            boolean asksForTheTimeWorked,
             OutageEntry answered) {
     }
 }
