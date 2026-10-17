@@ -153,7 +153,7 @@ class NativeSmokeIT {
         CommandRun backlog = edi("", "backlog");
         CommandRun shown = edi("", "task", "show", "native-lantern", "--json");
 
-        assertThat(added.output()).isEqualTo("Queued native-lantern.\n");
+        assertThat(added.output()).isEqualTo("Queued native-lantern on HRN-3.\n");
         assertThat(backlog.output()).contains("native-lantern", "Native lantern");
         assertThat(shown.output()).contains("\"workKey\":\"HRN-3\"", "\"state\":\"queued\"");
     }

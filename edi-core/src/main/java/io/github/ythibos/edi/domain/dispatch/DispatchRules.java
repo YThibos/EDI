@@ -20,6 +20,7 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
     public DispatchRules validatedAgainst(ModelRoster roster) {
         projectOverrides.forEach(override -> requireAllowedAndExplained(override, roster));
         categories.forEach(category -> requireAllowedAndExplained(category, roster));
+        requireResearchFirstOnlyWhereWorkIsUnplanned();
         requireResearchersNoWeakerThanImplementers(roster);
         return this;
     }
@@ -40,6 +41,14 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
         return projectOverrideFor(projects).map(ProjectOverride::route).orElse(categoryRoute);
     }
 
+    public ResearchFirst researchFirstFor(List<ProjectName> projects, CategoryId category, boolean causeUnknown) {
+        DispatchCategory chosen = category(category);
+        if (!chosen.id().worksWithoutAPlan(causeUnknown) || projectOverrideFor(projects).isPresent()) {
+            return ResearchFirst.NOT_APPLICABLE;
+        }
+        return chosen.researchFirst() ? ResearchFirst.QUEUES_RESEARCH : ResearchFirst.SWITCHED_OFF;
+    }
+
     private static void requireAllowedAndExplained(ProjectOverride override, ModelRoster roster) {
         String usedBy = "The override for " + override.project();
         if (!override.statesWhy()) {
@@ -54,6 +63,16 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
             throw new IllegalArgumentException(usedBy + " states no why.");
         }
         roster.requireAllows(category.route(), usedBy);
+    }
+
+    private void requireResearchFirstOnlyWhereWorkIsUnplanned() {
+        categories.stream()
+                .filter(category -> category.researchFirst() && !category.id().takesAResearchFirstSwitch())
+                .findFirst()
+                .ifPresent(category -> {
+                    throw new IllegalArgumentException("The category " + category.id() + " cannot switch research first on; only "
+                            + CategoryId.IMPLEMENTATION_UNPLANNED + " and " + CategoryId.BUGFIX + " work without a settled plan.");
+                });
     }
 
     private void requireResearchersNoWeakerThanImplementers(ModelRoster roster) {

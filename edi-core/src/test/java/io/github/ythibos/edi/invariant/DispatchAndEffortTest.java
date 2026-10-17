@@ -58,7 +58,7 @@ class DispatchAndEffortTest {
         @Test
         @DisplayName("AT-14 the loader rejects xhigh, max, ultra, a category without why, a weaker researcher and a launch without model and effort")
         void theLoaderRejectsInvalidDispatchRules() throws IOException {
-            TestHome home = TestHome.in(directory).writing("config/machine.yaml", WorkerFixtures.MACHINE_PROFILE);
+            TestHome home = TestHome.in(directory);
 
             for (String effort : List.of("xhigh", "max", "ultra")) {
                 assertRefused(home, category("research", "claude-opus-5-5", effort, "a reason", false), "high is EDI's ceiling, so not " + effort);
@@ -67,7 +67,8 @@ class DispatchAndEffortTest {
             assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false)
                     .replace("\"why\": \"a reason\"", "\"when\": \"always\""), "The category research states no why");
             assertRefused(home, rules(categoryEntry("research", "claude-sonnet-5-5", "high", "cheap", false),
-                    categoryEntry("implementation", "claude-opus-5-5", "high", "strong", true)),
+                    categoryEntry("implementation", "claude-opus-5-5", "high", "strong", false),
+                    categoryEntry("implementation-unplanned", "claude-opus-5-5", "high", "unplanned", true)),
                     "needs a researcher at least as strong as the implementer");
             assertRefused(home, category("research", "claude-opus-5-5", null, "a reason", false), "without an effort");
             assertRefused(home, category("research", "claude-opus-6", "high", "a reason", false), "which the machine profile does not allow");

@@ -31,6 +31,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
+import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
@@ -42,8 +44,15 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketAddedToSprint;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketChoiceRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketCreated;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketLinked;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketTransitioned;
+import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
@@ -88,12 +97,18 @@ public final class WakeRule {
             case BranchDeliveryFailed failed -> wake(WakeKind.DELIVERY_FAILED, failed, null, failed.because());
             case ChangeNotApplied notApplied -> wake(WakeKind.DELIVERY_FAILED, notApplied, null, notApplied.because());
             case CleanupRefused refused -> wake(WakeKind.CLEANUP_REFUSED, refused, null, String.join("; ", refused.findings()));
-            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, DecisionRaised _, DecisionAnswered _, TaskDone _, DispatchDeferred _,
+            case DecisionRaised raised -> wake(WakeKind.DECISION_RAISED, raised, null, raised.number() + " " + raised.card().title());
+            case TicketUpdateRefused refused -> wake(WakeKind.TICKET_REFUSED, refused, null,
+                    refused.update() + " of " + refused.key() + ": " + refused.because());
+            case TaskKeyed keyed -> wake(WakeKind.TASK_KEYED, keyed, null, keyed.key().toString());
+            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, DecisionAnswered _, TaskDone _, DispatchDeferred _,
                     TaskDispatched _, WorkerStarted _, WorkerRetired _, SteerSent _, SteerReceived _, SteerAcknowledged _, SteerNotReceived _,
                     ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
                     WorkerNotified _, WorkerSessionEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _, RecoveryFailed _,
                     WorkerStopRequested _, RecoveryCostRecorded _, DeliveryRefused _, DraftRecorded _, DraftOpened _, CloneRefreshed _,
-                    ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, PipelineRunSeen _, PipelineRunFinished _ -> Optional.empty();
+                    ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, PipelineRunSeen _, PipelineRunFinished _,
+                    TicketCreated _, TicketChoiceRefused _, TicketAddedToSprint _, TicketLinked _, TicketTransitioned _, ResearchQueuedFirst _,
+                    ReviewCounted _ -> Optional.empty();
         };
     }
 

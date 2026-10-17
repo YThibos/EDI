@@ -22,6 +22,7 @@ import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
+import io.github.ythibos.edi.adapter.ledger.FleetLedger;
 import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
@@ -30,18 +31,25 @@ import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
+import io.github.ythibos.edi.adapter.store.EventCursorStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.NoticeStore;
 import io.github.ythibos.edi.adapter.store.OutageStore;
+import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
 import io.github.ythibos.edi.adapter.store.StoreFile;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.adapter.store.TicketProposalStore;
+import io.github.ythibos.edi.adapter.store.UnplannedShipStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
+import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
+import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
+import io.github.ythibos.edi.adapter.tracker.NoTracker;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
@@ -61,11 +69,16 @@ import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.IsolatedCopies;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
+import io.github.ythibos.edi.application.dispatch.ResearchBeforeImplementation;
+import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.dispatch.ResumeNotes;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
+import io.github.ythibos.edi.application.follow.EventFollowers;
+import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
 import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
+import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
@@ -85,6 +98,10 @@ import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
+import io.github.ythibos.edi.application.tracker.FollowTickets;
+import io.github.ythibos.edi.application.tracker.TaskKeys;
+import io.github.ythibos.edi.application.tracker.TicketProposals;
+import io.github.ythibos.edi.application.tracker.Trackers;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
@@ -136,6 +153,13 @@ public final class TestHome {
     private final TaskCostStore taskCosts;
     private final FakeForge forge = new FakeForge();
     private final FakePipeline pipeline = new FakePipeline();
+    private final FakeJira jira = new FakeJira();
+    private Tracker jiraAdapter = jira;
+    private final WorkKeySequenceStore workKeySequences;
+    private final TicketProposalStore ticketProposals;
+    private final EventCursorStore eventCursors;
+    private final UnplannedShipStore unplannedShips;
+    private final PipelineReviewStore reviews;
 
     private TestHome(EdiHome home, DataSource store, FakeWorkerRuntime runtime, ManualClock clock) {
         this.home = home;
@@ -159,10 +183,19 @@ public final class TestHome {
         this.pipelineRuns = new PipelineRunStore(jdbc);
         this.cloneRefreshes = new CloneRefreshStore(jdbc);
         this.taskCosts = new TaskCostStore(jdbc);
+        this.workKeySequences = new WorkKeySequenceStore(jdbc);
+        this.ticketProposals = new TicketProposalStore(jdbc);
+        this.eventCursors = new EventCursorStore(jdbc);
+        this.unplannedShips = new UnplannedShipStore(jdbc);
+        this.reviews = new PipelineReviewStore(jdbc);
     }
 
     public static TestHome in(Path directory) throws IOException {
-        return openedIn(directory, new FakeWorkerRuntime(), new ManualClock(START));
+        return openedIn(directory, new FakeWorkerRuntime(), new ManualClock(START)).on(MachineFixture.current());
+    }
+
+    public TestHome on(MachineFixture machine) throws IOException {
+        return writing("config/machine.yaml", machine.profile());
     }
 
     public TestHome restarted() throws IOException {
@@ -245,7 +278,28 @@ public final class TestHome {
     }
 
     public AddTask addTask() {
-        return new AddTask(tasks, events, registry, clock, transaction);
+        return new AddTask(tasks, events, registry, taskKeys(), ticketProposals(), clock, transaction);
+    }
+
+    public Trackers trackers() {
+        return new Trackers(List.of(jiraAdapter, new EdiNativeTracker(workKeySequences), new NoTracker()), machineProfile());
+    }
+
+    public TaskKeys taskKeys() {
+        return new TaskKeys(registry, trackers());
+    }
+
+    public TicketProposals ticketProposals() {
+        return new TicketProposals(ticketProposals, tasks, decisions, raiseDecision(), events, registry, trackers(), clock, transaction);
+    }
+
+    public FakeJira jira() {
+        return jira;
+    }
+
+    public TestHome trackingWith(Tracker adapter) {
+        jiraAdapter = adapter;
+        return this;
     }
 
     public NoteTask noteTask() {
@@ -265,7 +319,7 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), clock, transaction);
     }
 
     public BacklogQuery backlog() {
@@ -338,13 +392,17 @@ public final class TestHome {
 
     public LaunchWorker launchWorker() {
         return new LaunchWorker(home, tasks, dispatches, workers, outages, events, registry, machineProfile(), dispatchRulesFile(), isolatedCopies(),
-                workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), workerTokens(), runtime, processes,
-                machineBoot(), clock, transaction);
+                workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), researchBeforeImplementation(), workerTokens(),
+                runtime, processes, machineBoot(), clock, transaction);
+    }
+
+    public ResearchBeforeImplementation researchBeforeImplementation() {
+        return new ResearchBeforeImplementation(home, tasks, dispatches, unplannedShips, events, clock, transaction);
     }
 
     public DispatchTask dispatchTask() {
         return new DispatchTask(tasks, dispatches, events, registry, machineProfile(), dispatchRulesFile(), workerPlaces(), launchWorker(),
-                cloneRefreshes(), clock, transaction);
+                cloneRefreshes(), researchBeforeImplementation(), clock, transaction);
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
@@ -392,8 +450,8 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(home, tasks, workers, taskCosts, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), git, runtime, clock, transaction);
+        return new CleanUpTask(home, tasks, workers, taskCosts, reviews, events, workerContext(), landedWork(),
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, git, runtime, clock, transaction);
     }
 
     public FollowMerges followMerges() {
@@ -406,6 +464,26 @@ public final class TestHome {
 
     public FakeForge forge() {
         return forge;
+    }
+
+    public EventFollowers eventFollowers() {
+        EmitFleetLedger fleetLedger = new EmitFleetLedger(machineProfile(), new FleetLedger(home, json), tasks, transaction);
+        FollowTickets tickets = new FollowTickets(tasks, registry, trackers(), events, clock, transaction);
+        ResearchFirstPilot pilot = new ResearchFirstPilot(unplannedShips, tasks, taskCosts, reviews, dispatches, raiseDecision(), events, clock,
+                transaction);
+        return new EventFollowers(fleetLedger, tickets, pilot, events, eventCursors, transaction);
+    }
+
+    public TicketProposalStore ticketProposalStore() {
+        return ticketProposals;
+    }
+
+    public UnplannedShipStore unplannedShips() {
+        return unplannedShips;
+    }
+
+    public PipelineReviewStore reviews() {
+        return reviews;
     }
 
     public FakePipeline pipeline() {

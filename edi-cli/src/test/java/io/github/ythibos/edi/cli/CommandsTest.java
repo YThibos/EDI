@@ -76,6 +76,18 @@ class CommandsTest {
     }
 
     @Test
+    void sendsTheDetailsOfTheTicketATaskWouldBeProposed() {
+        core.answering(201, "Queued fix-lamps; D59 asks which ticket it books on, and it waits for that answer.\n");
+
+        int exitCode = edi("", "task", "add", "--kind", "ship", "--project", "service", "--title", "Fix the lamps", "--issue-type", "Bug",
+                "--epic", "SVC-9", "--labels", "lighting,harbour", "--priority", "Major");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().body()).isEqualTo("{\"kind\":\"ship\",\"projects\":[\"service\"],\"title\":\"Fix the lamps\",\"issueType\":\"Bug\","
+                + "\"epic\":\"SVC-9\",\"labels\":[\"lighting\",\"harbour\"],\"priority\":\"Major\"}");
+    }
+
+    @Test
     void showsNotesHoldsAndReleasesATask() {
         core.answering(200, "ok\n");
 

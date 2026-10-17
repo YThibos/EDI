@@ -38,14 +38,6 @@ public final class WorkerFixtures {
             Craftsmanship rules this change must meet; review it against them as acceptance criteria:
             - Methods are short and do one thing at one level of abstraction.
             """;
-    public static final String MACHINE_PROFILE = """
-            workers:
-              models:
-                - id: claude-opus-5-5
-                - id: claude-sonnet-5-5
-                - id: claude-haiku-5-5
-                  ignoresEffort: true
-            """;
     private static final String REGISTRY = """
             projects:
               - name: harness
@@ -70,7 +62,6 @@ public final class WorkerFixtures {
         cloneOf(directory, home, "harness");
         cloneOf(directory, home, "EDI");
         return home.registering(REGISTRY)
-                .writing("config/machine.yaml", MACHINE_PROFILE)
                 .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))
                 .writing("memory/craft-rules.md", CRAFT_RULES);
     }

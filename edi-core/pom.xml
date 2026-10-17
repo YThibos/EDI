@@ -80,8 +80,23 @@
                 <configuration>
                     <systemPropertyVariables>
                         <edi.repository.root>${maven.multiModuleProjectDirectory}</edi.repository.root>
+                        <edi.test.machine>laptop</edi.test.machine>
                     </systemPropertyVariables>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>desktop-profile</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <edi.test.machine>desktop</edi.test.machine>
+                            </systemPropertyVariables>
+                            <reportsDirectory>${project.build.directory}/surefire-reports-desktop</reportsDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

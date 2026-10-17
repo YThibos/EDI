@@ -13,6 +13,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.registry.UnreadableRegistry;
+import io.github.ythibos.edi.adapter.tracker.TrackerUnavailable;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.task.UnknownTask;
@@ -56,6 +57,11 @@ class ApiRefusals {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<String> unreadable() {
         return sentence(HttpStatus.BAD_REQUEST, "The request body is not the JSON this call expects.");
+    }
+
+    @ExceptionHandler(TrackerUnavailable.class)
+    ResponseEntity<String> unreachable(TrackerUnavailable unavailable) {
+        return sentence(HttpStatus.SERVICE_UNAVAILABLE, unavailable.getMessage());
     }
 
     @ExceptionHandler({UnreadableRegistry.class, ProgramFailure.class})

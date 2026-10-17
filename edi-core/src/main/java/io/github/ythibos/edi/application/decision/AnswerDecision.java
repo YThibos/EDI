@@ -9,6 +9,7 @@ import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
@@ -16,6 +17,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 
 @Service
 public class AnswerDecision {
@@ -23,28 +25,33 @@ public class AnswerDecision {
     private final TaskStore tasks;
     private final DecisionStore decisions;
     private final EventLog events;
+    private final TicketProposals proposals;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, TicketProposals proposals, Clock clock,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
         this.decisions = decisions;
         this.events = events;
+        this.proposals = proposals;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public AnsweredDecision answer(TaskReference reference, GivenAnswer given, Actor actor) {
-        return transaction.execute(_ -> {
+        AnsweredDecision answered = transaction.execute(_ -> {
             Instant now = clock.now();
             Task task = tasks.get(reference);
-            Decision answered = decisionOf(task).answered(given.recordedAt(now));
+            proposals.requireAChoiceIn(task.id(), given.option(), given.verbatim());
+            Decision decided = decisionOf(task).answered(given.recordedAt(now));
             Task released = task.decisionAnswered(now);
-            decisions.save(answered);
+            decisions.save(decided);
             tasks.update(released);
-            recordEvents(answered, released, actor, now);
-            return new AnsweredDecision(answered, released);
+            recordEvents(decided, released, actor, now);
+            return new AnsweredDecision(decided, released, TicketSettlement.none());
         });
+        return answered.withTicket(proposals.settle(answered.task().id(), actor));
     }
 
     private Decision decisionOf(Task task) {

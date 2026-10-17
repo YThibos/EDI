@@ -138,8 +138,7 @@ class WorkIsolationAndGitHygieneTest {
                       - name: EDI
                         tracker: { kind: edi, projectKey: EDI }
                         base: main
-                    """).writing("config/machine.yaml", WorkerFixtures.MACHINE_PROFILE)
-                    .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"));
+                    """).writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"));
 
             for (ProjectEntry project : home.registry().entries()) {
                 String key = project.project().workKeys().value();

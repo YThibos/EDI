@@ -1,10 +1,14 @@
 package io.github.ythibos.edi.adapter.home;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.stereotype.Component;
@@ -12,9 +16,13 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.home.TrackerSettings.Credentials;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.ModelRoster;
 import io.github.ythibos.edi.domain.dispatch.ModelRoster.AllowedModel;
+import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.tracker.TrackerKind;
+import io.github.ythibos.edi.domain.tracker.Workflow;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.SupervisionRules;
 import tools.jackson.core.JacksonException;
@@ -22,10 +30,11 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 
 @Component
 @RegisterReflectionForBinding({MachineProfile.ProfileDocument.class, MachineProfile.WorkersSection.class, MachineProfile.ModelEntry.class,
-    MachineProfile.SupervisionSection.class})
+    MachineProfile.SupervisionSection.class, MachineProfile.TrackerSection.class, MachineProfile.CredentialsSection.class,
+    MachineProfile.TimeSection.class})
 public class MachineProfile {
 
-    private static final ProfileDocument EMPTY = new ProfileDocument(null, null);
+    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null);
 
     private final Path file;
     private final YAMLMapper yaml = new YAMLMapper();
@@ -54,6 +63,23 @@ public class MachineProfile {
             throw new InvalidConfiguration(file, "supervision holds \"" + invalid.getParsedString()
                     + "\", which is not a duration such as PT20M.");
         }
+    }
+
+    public TrackerSettings tracker() {
+        TrackerSection tracker = document().tracker();
+        if (tracker == null) {
+            return TrackerSettings.none();
+        }
+        try {
+            return tracker.settings();
+        } catch (IllegalArgumentException invalid) {
+            throw new InvalidConfiguration(file, invalid.getMessage());
+        }
+    }
+
+    public TimeSettings time() {
+        TimeSection time = document().time();
+        return time == null ? TimeSettings.NONE : new TimeSettings(Boolean.TRUE.equals(time.fleetLedger()), Boolean.TRUE.equals(time.requireWorkedLine()));
     }
 
     private ProfileDocument document() {
@@ -88,7 +114,7 @@ public class MachineProfile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ProfileDocument(WorkersSection workers, SupervisionSection supervision) {
+    record ProfileDocument(WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -105,5 +131,43 @@ public class MachineProfile {
     record SupervisionSection(String staleAfter, String pauseResurface) {
 
         static final SupervisionSection NONE = new SupervisionSection(null, null);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record TrackerSection(
+            String kind,
+            String baseUrl,
+            CredentialsSection credentials,
+            Map<String, String> evergreen,
+            List<String> workflow,
+            String mergedStatus,
+            String issueType,
+            String epicLinkField) {
+
+        TrackerSettings settings() {
+            TrackerKind trackerKind = TrackerKind.named(Objects.requireNonNullElse(kind, TrackerKind.NONE.word()));
+            if (trackerKind == TrackerKind.NONE) {
+                return TrackerSettings.none();
+            }
+            return new TrackerSettings(trackerKind, baseUrl == null ? null : URI.create(baseUrl.strip()),
+                    credentials == null ? null : credentials.asCredentials(), evergreenKeys(), workflow == null ? null : new Workflow(workflow),
+                    mergedStatus, issueType, epicLinkField);
+        }
+
+        private Set<WorkKey> evergreenKeys() {
+            return Objects.requireNonNullElse(evergreen, Map.<String, String>of()).values().stream().map(WorkKey::parse).collect(Collectors.toSet());
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record CredentialsSection(String keysFile, String section) {
+
+        Credentials asCredentials() {
+            return new Credentials(keysFile == null ? null : Path.of(keysFile), section);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record TimeSection(Boolean fleetLedger, Boolean requireWorkedLine) {
     }
 }

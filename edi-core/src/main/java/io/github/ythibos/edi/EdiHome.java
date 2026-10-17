@@ -34,6 +34,10 @@ public final class EdiHome {
         return root.resolve("state").resolve("core.token");
     }
 
+    public Path fleetLedger() {
+        return root.resolve("state").resolve("fleet-ledger.jsonl");
+    }
+
     public Path projectRegistry() {
         return root.resolve("config").resolve("projects.yaml");
     }

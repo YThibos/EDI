@@ -7,7 +7,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 
-public record DispatchOutcome(Launched launched, Deferred deferred) {
+public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plannedShip) {
 
     public DispatchOutcome {
         if ((launched == null) == (deferred == null)) {
@@ -16,15 +16,23 @@ public record DispatchOutcome(Launched launched, Deferred deferred) {
     }
 
     public static DispatchOutcome of(Launched launched) {
-        return new DispatchOutcome(launched, null);
+        return new DispatchOutcome(launched, null, null);
     }
 
     public static DispatchOutcome of(Deferred deferred) {
-        return new DispatchOutcome(null, deferred);
+        return new DispatchOutcome(null, deferred, null);
+    }
+
+    public DispatchOutcome planning(TaskId ship) {
+        return new DispatchOutcome(launched, deferred, ship);
     }
 
     public boolean wasDeferred() {
         return deferred != null;
+    }
+
+    public boolean plansAShip() {
+        return plannedShip != null;
     }
 
     public record Launched(Worker worker, BranchName branch, Path worktree) {

@@ -17,6 +17,11 @@ final class WorkerSentences {
                 + launched.branch() + " in " + launched.worktree() + ".";
     }
 
+    static String plannedFirst(DispatchOutcome research) {
+        String planned = "Research comes first: " + research.plannedShip() + " waits for its plan and then runs as implementation. ";
+        return planned + (research.wasDeferred() ? deferred(research.deferred()) : dispatched(research.launched()));
+    }
+
     static String relaunched(DispatchOutcome.Launched launched) {
         Worker worker = launched.worker();
         String how = worker.launch().kind() == LaunchKind.RESUME ? "resuming session " + worker.session() : "with a fresh session";

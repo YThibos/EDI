@@ -1,0 +1,21 @@
+machine: laptop
+workers:
+  models:
+    - id: claude-opus-5-5
+    - id: claude-sonnet-5-5
+    - id: claude-haiku-5-5
+      ignoresEffort: true
+tracker:
+  kind: jira
+  baseUrl: https://tracker.example.org
+  credentials: { keysFile: /nonexistent/tracker-keys.yml, section: TRACKER }
+  evergreen:
+    coordination: SVC-1
+    tooling: SVC-2
+  workflow: [To Do, In Progress, In Review, Testing, Done]
+  mergedStatus: Testing
+  issueType: Story
+  epicLinkField: customfield_10008
+time:
+  fleetLedger: true
+  requireWorkedLine: true

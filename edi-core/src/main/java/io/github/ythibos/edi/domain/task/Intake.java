@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.domain.task;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -26,6 +27,16 @@ public record Intake(
         if (repeatsAny(projects) || repeatsAny(blockedBy)) {
             throw new IllegalArgumentException("A task names each project and each blocking task once.");
         }
+    }
+
+    public Intake keyedOn(WorkKey key) {
+        return new Intake(kind, title, projects, key, base, blockedBy, delivery);
+    }
+
+    public Intake blockedAlsoBy(TaskId blocker) {
+        List<TaskId> blockers = new ArrayList<>(blockedBy);
+        blockers.add(blocker);
+        return new Intake(kind, title, projects, workKey, base, blockers, delivery);
     }
 
     public DeliveryMode deliveryOr(DeliveryMode projectsDelivery) {

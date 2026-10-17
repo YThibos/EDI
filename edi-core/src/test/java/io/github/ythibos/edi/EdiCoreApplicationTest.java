@@ -62,12 +62,13 @@ class EdiCoreApplicationTest {
     @Test
     void keepsItsStoreInTheHomeWithMigrationsApplied() {
         assertThat(HOME.resolve("data/edi.db")).isRegularFile();
-        assertThat(store.sql("select version from flyway_schema_history where success = 1").query(String.class).list()).containsExactly("1", "2", "3", "4");
+        assertThat(store.sql("select version from flyway_schema_history where success = 1").query(String.class).list()).containsExactly("1", "2", "3", "4", "5");
         assertThat(store.sql("select name from sqlite_master where type = 'table' and name not like 'flyway%' and name not like 'sqlite%' order by name")
                 .query(String.class).list())
                 .containsExactly("captain_hold", "clone_refresh", "decision", "decision_option", "delivery", "dispatch", "dispatch_file", "event",
-                        "hold_notice", "inbox_message", "meta", "outage_entry", "pipeline_run", "primary_session", "recovery_cost", "task", "task_cost",
-                        "task_dependency", "task_project", "typed_prompt", "wake", "worker", "worker_notice");
+                        "event_cursor", "hold_notice", "inbox_message", "meta", "outage_entry", "pipeline_run", "primary_session", "recovery_cost", "task",
+                        "task_cost", "task_dependency", "task_project", "task_review", "ticket_candidate", "ticket_proposal", "typed_prompt", "unplanned_ship",
+                        "wake", "work_key_sequence", "worker", "worker_notice");
         assertThat(store.sql("pragma journal_mode").query(String.class).single()).isEqualToIgnoringCase("wal");
         assertThat(store.sql("pragma foreign_keys").query(Integer.class).single()).isOne();
         assertThat(store.sql("pragma busy_timeout").query(Integer.class).single()).isEqualTo(5_000);

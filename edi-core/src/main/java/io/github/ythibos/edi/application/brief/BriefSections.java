@@ -21,7 +21,11 @@ final class BriefSections {
     }
 
     static String spec(BriefFacts facts) {
-        return facts.dispatch().spec().isBlank() ? "No build instructions beyond the intent." : facts.dispatch().spec();
+        String spec = facts.dispatch().spec();
+        if (facts.followsAPlan()) {
+            return spec.isBlank() ? facts.plan() : facts.plan() + "\n\n" + spec;
+        }
+        return spec.isBlank() ? "No build instructions beyond the intent." : spec;
     }
 
     static String projectRules(BriefFacts facts) {
@@ -62,11 +66,12 @@ final class BriefSections {
 
     static String definitionOfDone(BriefFacts facts) {
         String done = isAShip(facts) ? shipDone(facts) : scoutDone(facts);
+        String timed = facts.asksForTheTimeWorked() ? done + "\n" + workedLine(facts) : done;
         if (facts.dispatch().expectedChange() != null) {
-            return done + "\nEDI accepts the done only when the project's verify command passes and the change touches only the named files;"
+            return timed + "\nEDI accepts the done only when the project's verify command passes and the change touches only the named files;"
                     + " otherwise it hands the task to an implementation worker.";
         }
-        return done;
+        return timed;
     }
 
     private static boolean isAShip(BriefFacts facts) {
@@ -125,5 +130,10 @@ final class BriefSections {
         return "The report at `" + facts.reportPath() + "` is self-contained: one sentence per line, United Kingdom English, plain dashes,"
                 + " and evidence as commands and file references.\n"
                 + "Then run `edi status done -- <a one-line summary>`.";
+    }
+
+    private static String workedLine(BriefFacts facts) {
+        return "Before you report done, end `" + facts.reportPath() + "` with the line `worked: <start> -> <end> = <H>h<MM>m`, the local times"
+                + " you started and finished written as `YYYY-MM-DDTHH:MM`.";
     }
 }

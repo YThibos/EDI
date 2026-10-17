@@ -19,7 +19,9 @@ public record BriefFacts(
         Path worktree,
         Path taskDirectory,
         String ediSocket,
-        String craftRules) {
+        String craftRules,
+        String plan,
+        boolean asksForTheTimeWorked) {
 
     public BriefFacts {
         Objects.requireNonNull(task, "A brief is for a task.");
@@ -42,5 +44,9 @@ public record BriefFacts(
 
     public DeliveryMode delivery() {
         return task.intake().deliveryOr(project.delivery());
+    }
+
+    public boolean followsAPlan() {
+        return plan != null;
     }
 }

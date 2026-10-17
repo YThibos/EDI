@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public final class BriefFixtures {
@@ -50,13 +51,21 @@ public final class BriefFixtures {
     public static BriefFacts largestShip(String intent, String spec) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), intent, TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.LOCAL_ONLY),
-                dispatch(CategoryId.MECHANICAL, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES);
+                dispatch(CategoryId.MECHANICAL, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                true);
+    }
+
+    public static BriefFacts shipFollowing(String plan, String spec, boolean asksForTheTimeWorked) {
+        Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
+        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED),
+                dispatch(CategoryId.IMPLEMENTATION, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, plan,
+                asksForTheTimeWorked);
     }
 
     private static BriefFacts facts(TaskKind kind, DeliveryMode delivery, CategoryId category, String spec, AiScaffolding aiScaffolding) {
         Task task = Task.queued(TASK, intake(kind), "Fit the lamp in the hall; offline verification is accepted.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding), dispatch(category, spec), new BaseBranch("main"),
-                worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES);
+                worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null, false);
     }
 
     private static Intake intake(TaskKind kind) {
@@ -64,7 +73,7 @@ public final class BriefFixtures {
     }
 
     private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding) {
-        return new ProjectEntry(new Project(new ProjectName("harness"), new ProjectKey("HRN")), HOME.resolve("projects/harness"),
+        return new ProjectEntry(new Project(new ProjectName("harness"), new ProjectKey("HRN")), TrackerKind.EDI, HOME.resolve("projects/harness"),
                 Path.of("/checkouts/harness"), new BaseBranch("main"), FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
                 "./mvnw -B verify", true, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS));
     }

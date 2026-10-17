@@ -12,8 +12,10 @@ import io.github.ythibos.edi.adapter.process.Program;
 import io.github.ythibos.edi.adapter.process.ProgramCall;
 import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.delivery.PipelineReview;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class NoMistakesPipeline implements Pipeline {
@@ -21,12 +23,14 @@ public class NoMistakesPipeline implements Pipeline {
     private static final String STATE_DATABASE = "state.sqlite";
 
     private final ExternalPrograms programs;
+    private final JsonMapper json;
     private final String executable;
     private final Path stateDatabase;
 
-    public NoMistakesPipeline(ExternalPrograms programs, @Value("${edi.pipeline.no-mistakes:}") String executable,
+    public NoMistakesPipeline(ExternalPrograms programs, JsonMapper json, @Value("${edi.pipeline.no-mistakes:}") String executable,
             @Value("${edi.pipeline.home:${user.home}/.no-mistakes}") Path home) {
         this.programs = programs;
+        this.json = json;
         this.executable = executable;
         this.stateDatabase = home.resolve(STATE_DATABASE);
     }
@@ -40,5 +44,10 @@ public class NoMistakesPipeline implements Pipeline {
     @Override
     public Optional<TokenUsage> tokensSpentOn(Path projectClone, BranchName branch) {
         return PipelineSpend.recordedIn(stateDatabase, projectClone, branch);
+    }
+
+    @Override
+    public Optional<PipelineReview> reviewOf(Path projectClone, BranchName branch) {
+        return PipelineReviews.recordedIn(stateDatabase, projectClone, branch, json);
     }
 }

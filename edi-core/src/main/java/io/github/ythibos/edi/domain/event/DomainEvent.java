@@ -9,12 +9,14 @@ import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.PipelineReview;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.guard.GuardRule;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -201,5 +203,32 @@ public sealed interface DomainEvent {
     }
 
     record PipelineRunFinished(TaskId task, PipelineRun run) implements DomainEvent {
+    }
+
+    record TaskKeyed(TaskId task, WorkKey key) implements DomainEvent {
+    }
+
+    record TicketCreated(TaskId task, WorkKey key) implements DomainEvent {
+    }
+
+    record TicketChoiceRefused(TaskId task, String because) implements DomainEvent {
+    }
+
+    record TicketAddedToSprint(TaskId task, WorkKey key, String sprint) implements DomainEvent {
+    }
+
+    record TicketLinked(TaskId task, WorkKey key, String url) implements DomainEvent {
+    }
+
+    record TicketTransitioned(TaskId task, WorkKey key, String from, String to) implements DomainEvent {
+    }
+
+    record TicketUpdateRefused(TaskId task, WorkKey key, String update, String because) implements DomainEvent {
+    }
+
+    record ResearchQueuedFirst(TaskId task, TaskId research, CategoryId category) implements DomainEvent {
+    }
+
+    record ReviewCounted(TaskId task, PipelineReview review) implements DomainEvent {
     }
 }

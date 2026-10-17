@@ -92,7 +92,7 @@ class CleanUpTaskTest {
             assertThat(cost.workers()).isEqualTo(new TokenUsage(10, 200, 30, 4));
             assertThat(cost.pipelineIfKnown()).contains(new TokenUsage(1, 2, 3, 4));
         });
-        assertThat(home.eventTypesOf(LAMP)).endsWith("WorkerRetired", "TaskCostRecorded", "TaskCleanedUp");
+        assertThat(home.eventTypesOf(LAMP)).endsWith("WorkerRetired", "TaskCostRecorded", "ReviewCounted", "TaskCleanedUp");
     }
 
     @Test

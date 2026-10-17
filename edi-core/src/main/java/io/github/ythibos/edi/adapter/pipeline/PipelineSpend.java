@@ -1,6 +1,5 @@
 package io.github.ythibos.edi.adapter.pipeline;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -8,9 +7,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
-
-import org.sqlite.SQLiteConfig;
-import org.sqlite.SQLiteDataSource;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -36,33 +32,12 @@ final class PipelineSpend {
         if (!Files.isRegularFile(stateDatabase)) {
             return Optional.empty();
         }
-        try (Connection database = readOnly(stateDatabase).getConnection();
+        try (Connection database = PipelineState.readOnly(stateDatabase);
                 PreparedStatement query = database.prepareStatement(SPEND_OF_A_BRANCH)) {
-            bindTheBranch(query, projectClone, branch);
+            PipelineState.bindTheBranch(query, projectClone, branch);
             return spendOf(query);
         } catch (SQLException unreadable) {
             return Optional.empty();
-        }
-    }
-
-    private static SQLiteDataSource readOnly(Path stateDatabase) {
-        SQLiteConfig settings = new SQLiteConfig();
-        settings.setReadOnly(true);
-        SQLiteDataSource database = new SQLiteDataSource(settings);
-        database.setUrl("jdbc:sqlite:" + stateDatabase);
-        return database;
-    }
-
-    private static void bindTheBranch(PreparedStatement query, Path projectClone, BranchName branch) throws SQLException {
-        query.setString(1, realPathOf(projectClone).toString());
-        query.setString(2, branch.toString());
-    }
-
-    private static Path realPathOf(Path directory) {
-        try {
-            return directory.toRealPath();
-        } catch (IOException absent) {
-            return directory.toAbsolutePath().normalize();
         }
     }
 

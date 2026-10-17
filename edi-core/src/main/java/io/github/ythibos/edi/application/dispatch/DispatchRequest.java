@@ -6,10 +6,14 @@ import java.util.Objects;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 
-public record DispatchRequest(CategoryId category, String spec, List<String> expectedFiles, CaptainOverride captainsOverride) {
+public record DispatchRequest(CategoryId category, String spec, List<String> expectedFiles, CaptainOverride captainsOverride, boolean causeUnknown) {
 
     public DispatchRequest {
         spec = Objects.requireNonNullElse(spec, "");
         expectedFiles = List.copyOf(Objects.requireNonNullElse(expectedFiles, List.of()));
+    }
+
+    public DispatchRequest(CategoryId category, String spec, List<String> expectedFiles, CaptainOverride captainsOverride) {
+        this(category, spec, expectedFiles, captainsOverride, false);
     }
 }

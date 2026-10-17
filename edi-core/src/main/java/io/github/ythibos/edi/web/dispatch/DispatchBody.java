@@ -11,10 +11,11 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 
-record DispatchBody(String category, String spec, List<String> files, String overrideModel, String overrideEffort, String reason) {
+record DispatchBody(String category, String spec, List<String> files, String overrideModel, String overrideEffort, String reason,
+        Boolean causeUnknown) {
 
     DispatchRequest request() {
-        return new DispatchRequest(optional(category, CategoryId::new), spec, files, captainsOverride());
+        return new DispatchRequest(optional(category, CategoryId::new), spec, files, captainsOverride(), Boolean.TRUE.equals(causeUnknown));
     }
 
     private CaptainOverride captainsOverride() {

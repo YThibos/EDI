@@ -30,6 +30,9 @@ class DispatchController {
     Confirmation dispatch(@PathVariable String reference, @RequestBody DispatchBody body, Caller caller) {
         caller.requirePrimary("edi dispatch");
         DispatchOutcome outcome = dispatchTask.dispatch(TaskReference.parse(reference), body.request(), caller.actor());
+        if (outcome.plansAShip()) {
+            return new Confirmation.PlannedFirst(outcome);
+        }
         return outcome.wasDeferred() ? new Confirmation.Deferred(outcome.deferred()) : new Confirmation.Dispatched(outcome.launched());
     }
 

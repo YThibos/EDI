@@ -25,13 +25,15 @@
       "id": "implementation-unplanned",
       "when": "The same work when no settled plan exists, such as full-stack stories and broad sweeps.",
       "use": { "model": "claude-opus-5-5", "effort": "high" },
-      "why": "The worker holds domain rules, layers and acceptance criteria at once, with no plan to lean on."
+      "why": "The worker holds domain rules, layers and acceptance criteria at once, with no plan to lean on.",
+      "researchFirst": false
     },
     {
       "id": "bugfix",
       "when": "A defect whose cause is established by a report, a stack trace naming the fault, or the captain; an unknown cause is research first.",
       "use": { "model": "claude-sonnet-5-5", "effort": "high" },
-      "why": "The cause is known, and the regression test must be right first time."
+      "why": "The cause is known, and the regression test must be right first time.",
+      "researchFirst": false
     },
     {
       "id": "documentation",

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.adapter.home.TimeSettings;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.domain.Refusal;
@@ -26,8 +28,10 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.MachineFixture;
 import io.github.ythibos.edi.testing.PrePushHook;
 import io.github.ythibos.edi.testing.PrePushHook.HookRun;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
@@ -50,8 +54,27 @@ class TwoMachinesTest {
 
         @Test
         @DisplayName("AT-37 the full test suite runs green under both the laptop and desktop fixture profiles")
-        void theSuitePassesUnderBothProfiles() {
-            Pending.until(Slice.S6);
+        void theSuitePassesUnderBothProfiles() throws IOException {
+            String build = Files.readString(RepositoryRoot.path().resolve("edi-core/pom.xml"));
+
+            assertThat(build).contains("<edi.test.machine>laptop</edi.test.machine>", "<id>desktop-profile</id>",
+                    "<edi.test.machine>desktop</edi.test.machine>");
+            assertThat(System.getProperty(MachineFixture.PROPERTY)).as("the profile this run of the suite is under").isIn("laptop", "desktop");
+            TestHome home = TestHome.in(directory);
+            assertThat(Files.readString(home.home().machineProfile())).isEqualTo(MachineFixture.current().profile());
+        }
+
+        @Test
+        @DisplayName("AT-37 the two fixture profiles differ in the tracker, the ledger and the worked line, and nothing else decides by machine")
+        void theProfilesDifferOnlyInWhatTheMachineHolds() throws IOException {
+            TestHome laptop = TestHome.in(directory.resolve("laptop")).on(MachineFixture.LAPTOP);
+            TestHome desktop = TestHome.in(directory.resolve("desktop")).on(MachineFixture.DESKTOP);
+
+            assertThat(laptop.machineProfile().tracker().kind()).isEqualTo(TrackerKind.JIRA);
+            assertThat(laptop.machineProfile().time()).isEqualTo(new TimeSettings(true, true));
+            assertThat(desktop.machineProfile().tracker().kind()).isEqualTo(TrackerKind.NONE);
+            assertThat(desktop.machineProfile().time()).isEqualTo(new TimeSettings(false, false));
+            assertThat(laptop.machineProfile().workers()).isEqualTo(desktop.machineProfile().workers());
         }
     }
 

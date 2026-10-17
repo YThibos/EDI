@@ -1,0 +1,12 @@
+machine: desktop
+workers:
+  models:
+    - id: claude-opus-5-5
+    - id: claude-sonnet-5-5
+    - id: claude-haiku-5-5
+      ignoresEffort: true
+tracker:
+  kind: none
+time:
+  fleetLedger: false
+  requireWorkedLine: false

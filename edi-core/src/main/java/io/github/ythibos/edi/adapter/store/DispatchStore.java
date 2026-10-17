@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Component
@@ -61,6 +62,17 @@ public class DispatchStore {
 
     public Optional<Dispatch> of(TaskId task) {
         return dispatches(store.sql(SELECT_DISPATCHES + "where task_id = :task").param("task", task.value())).stream().findFirst();
+    }
+
+    public int countIn(CategoryId category, WorkKey key, TaskId besides) {
+        return store.sql("""
+                        select count(*) from dispatch join task on task.id = dispatch.task_id
+                        where dispatch.category = :category and task.work_key = :key and task.id != :besides""")
+                .param("category", category.value())
+                .param("key", key.toString())
+                .param("besides", besides.value())
+                .query(Integer.class)
+                .single();
     }
 
     public List<Dispatch> deferred() {
