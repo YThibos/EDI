@@ -15,6 +15,7 @@ import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.board.BoardPrompt;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.testing.Cards;
 import tools.jackson.databind.json.JsonMapper;
 
 class LavishResultTest {
@@ -46,7 +47,7 @@ class LavishResultTest {
         assertThat(choice.prompt()).isEqualTo("D58: option=A; note: LED, but keep one oil lamp on the bridge");
         assertThat(choice.context()).containsExactly(entry("decision", "D58"), entry("option", "A"), entry("note", "LED, but keep one oil lamp on the bridge"));
         assertThat(choice.decisionNamed()).contains(new DecisionNumber(58));
-        assertThat(choice.optionChosen()).contains(new OptionKey('A'));
+        assertThat(choice.optionChosen(Cards.card("Which lamp?"))).contains(new OptionKey('A'));
     }
 
     @Test

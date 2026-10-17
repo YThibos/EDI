@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.board;
 import java.time.Instant;
 import java.util.Objects;
 
+import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 
@@ -19,8 +20,9 @@ public record BoardAnswer(BoardId board, int round, DecisionNumber decision, Str
         }
     }
 
-    public static BoardAnswer received(BoardId board, int round, DecisionNumber decision, BoardPrompt prompt, Instant at) {
-        return new BoardAnswer(board, round, decision, prompt.verbatim(), prompt.optionChosen().orElse(null), at, null, null);
+    public static BoardAnswer received(BoardId board, int round, DecisionNumber decision, BoardPrompt prompt, DecisionCard card,
+            Instant at) {
+        return new BoardAnswer(board, round, decision, prompt.verbatim(), prompt.optionChosen(card).orElse(null), at, null, null);
     }
 
     public BoardAnswer settled(Instant at) {

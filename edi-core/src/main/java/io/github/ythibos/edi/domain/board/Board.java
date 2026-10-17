@@ -5,8 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -47,11 +49,11 @@ public record Board(BoardId id, TaskId task, String file, List<DecisionNumber> b
         return retiredAt == null ? new Board(id, task, file, bound, rounds, armedAt, endedAt, at) : this;
     }
 
-    public List<BoardAnswer> answersIn(BoardFeedback.Answered feedback, Instant at) {
+    public List<BoardAnswer> answersIn(BoardFeedback.Answered feedback, Function<DecisionNumber, DecisionCard> cardOf, Instant at) {
         Map<DecisionNumber, BoardAnswer> latestWordPerDecision = new LinkedHashMap<>();
         feedback.prompts().forEach(prompt -> prompt.decisionNamed()
                 .filter(bound::contains)
-                .ifPresent(decision -> latestWordPerDecision.put(decision, BoardAnswer.received(id, rounds, decision, prompt, at))));
+                .ifPresent(decision -> latestWordPerDecision.put(decision, BoardAnswer.received(id, rounds, decision, prompt, cardOf.apply(decision), at))));
         return List.copyOf(latestWordPerDecision.values());
     }
 

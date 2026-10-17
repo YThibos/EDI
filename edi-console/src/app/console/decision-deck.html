@@ -8,7 +8,9 @@
   >
     @if (current(); as card) {
       @if (card.open; as open) {
-        <app-decision-card [card]="open" (settled)="settled.emit()" />
+        @for (decision of [open]; track decision.number) {
+          <app-decision-card [card]="decision" (settled)="settled.emit()" />
+        }
       } @else if (card.answered; as answered) {
         <app-answered-card [answer]="answered" />
       }

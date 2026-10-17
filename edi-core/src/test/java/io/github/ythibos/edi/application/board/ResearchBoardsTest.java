@@ -173,7 +173,7 @@ class ResearchBoardsTest {
     void settlesABoardAnswerAfterACrashWithoutAnsweringTwice() {
         Board board = armQuietly(boardFile, decision);
         home.boards().save(board.answeredOnceMore().answersIn(new BoardFeedback.Answered(List.of(typed(decision + " B")), false),
-                TestHome.START).getFirst());
+                number -> home.decisions().get(number).card(), TestHome.START).getFirst());
         home.answerDecision().answer(new TaskReference.ByDecision(decision), new GivenAnswer(decision + " B", new OptionKey('B'), "", AnswerChannel.BOARD),
                 Actor.CAPTAIN);
 

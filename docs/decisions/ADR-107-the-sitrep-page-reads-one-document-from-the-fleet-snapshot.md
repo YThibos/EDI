@@ -12,7 +12,7 @@ An answered card must keep showing the captain's verbatim answer after a reload 
 
 **Decision:** `FleetSnapshot` gains three parts, read in the same transaction: each ongoing task as an `OngoingTask` with its latest worker, pipeline run and delivery; the ships and scouts done in the last seven days as `LandedTask` with their delivery, a captain item answered into done being one of the day's answers instead; and the decisions answered in the last 24 hours as `RecentAnswer`.
 `SitrepConsolePresenter` turns the snapshot into `ConsoleSitrep`: the open decision cards; the recent answers; each ongoing task with a state (its worker's last status, a resolved status shown as working, its activity before any status, or `waiting` without a worker) and what it is doing (the running pipeline step, else the status text); at most ten landed tasks and twenty charted tasks, each with the total, so a 2 MB backlog gives a document of a few kilobytes (AT-36).
-Charted next holds the queued and the parked tasks together, newest filed first, a parked one with the reason the text report gives (`ParkedTask.whyParked`, moved there so both presenters share it).
+Charted next holds the queued and the parked tasks together in the store's queue order, oldest filed first, the order dispatch takes them in, so the twenty shown are the ones charted next; a parked one carries the reason the text report gives (`ParkedTask.whyParked`, moved there so both presenters share it).
 The document also names the machine (`MachineProfile.name`) and the captain's address word (`PersonalConfiguration.address`), and carries the moment it was generated, which the page shows as a stardate.
 The captain report reads only the parts it read before, so its output is unchanged byte for byte.
 
@@ -21,6 +21,7 @@ The captain report reads only the parts it read before, so its output is unchang
 **Alternatives considered:**
 - A second query for the console - two views of the fleet could disagree, which ADR-012 rules out.
 - Showing the whole backlog on the page - the document would grow with the backlog, against I-36.
+- Newest filed first - once the backlog passes twenty, the page would list the latest filings instead of the work charted next, and disagree with the order dispatch follows.
 - Judging each worker's health live with tmux on every read - the page re-reads on every event, and the supervision round already records deaths in the store.
 
 **Consequences:**

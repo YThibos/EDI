@@ -94,7 +94,7 @@ class SitrepConsolePresenterTest {
     }
 
     @Test
-    void chartsQueuedAndParkedWorkNewestFirstAndCountsWhatItLeavesOut() {
+    void chartsQueuedAndParkedWorkInQueueOrderAndCountsWhatItLeavesOut() {
         List<Task> queued = IntStream.rangeClosed(1, 22).mapToObj(index -> ship("work-" + index, "Queued work " + index, PresenterFixtures.AT.plusSeconds(index)))
                 .toList();
         ParkedTask parked = new ParkedTask(PresenterFixtures.heldHorn(), null, List.of());
@@ -103,7 +103,7 @@ class SitrepConsolePresenterTest {
 
         assertThat(sitrep.chartedTotal()).isEqualTo(23);
         assertThat(sitrep.charted()).hasSize(SitrepConsolePresenter.CHARTED_SHOWN);
-        assertThat(sitrep.charted()).first().extracting(ConsoleSitrep.Charted::task).isEqualTo("work-22");
+        assertThat(sitrep.charted()).extracting(ConsoleSitrep.Charted::task).startsWith("fog-horn", "work-1", "work-2").endsWith("work-19");
         assertThat(presented(new FleetSnapshot(List.of(), List.of(), List.of(parked), List.of(), List.of(), List.of())).charted())
                 .singleElement()
                 .extracting(ConsoleSitrep.Charted::title, ConsoleSitrep.Charted::waiting)

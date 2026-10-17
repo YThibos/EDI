@@ -651,7 +651,7 @@ public final class TestHome {
     }
 
     public ReceiveBoardFeedback receiveBoardFeedback() {
-        return new ReceiveBoardFeedback(boards, inbox, workers, events, new InboxNotice(runtime), settleBoardAnswers(), clock, transaction);
+        return new ReceiveBoardFeedback(boards, decisions, inbox, workers, events, new InboxNotice(runtime), settleBoardAnswers(), clock, transaction);
     }
 
     public SettleBoardAnswers settleBoardAnswers() {

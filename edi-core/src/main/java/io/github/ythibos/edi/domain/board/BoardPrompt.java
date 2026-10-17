@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 
@@ -17,6 +18,7 @@ public record BoardPrompt(String uid, String tag, String text, String prompt, St
     private static final String DECISION_FIELD = "decision";
     private static final String OPTION_FIELD = "option";
     private static final String SEPARATORS = " \t\n:,;.-()";
+    private static final String OPTION_ENDINGS = ",.:)";
 
     public BoardPrompt {
         uid = Objects.requireNonNullElse(uid, "");
@@ -40,9 +42,8 @@ public record BoardPrompt(String uid, String tag, String text, String prompt, St
         return DecisionNumber.isWritten(named) ? Optional.of(DecisionNumber.parse(named)) : Optional.empty();
     }
 
-    public Optional<OptionKey> optionChosen() {
-        String chosen = context.containsKey(OPTION_FIELD) ? context.get(OPTION_FIELD).strip() : firstWord(afterFirstWord(verbatim()));
-        return chosen.length() == 1 && AsciiCharacters.isUpperCaseLetter(chosen.charAt(0)) ? Optional.of(OptionKey.parse(chosen)) : Optional.empty();
+    public Optional<OptionKey> optionChosen(DecisionCard card) {
+        return context.containsKey(OPTION_FIELD) ? optionIn(context.get(OPTION_FIELD).strip()) : optionTyped().filter(card::offers);
     }
 
     private static String firstWord(String words) {
@@ -52,6 +53,17 @@ public record BoardPrompt(String uid, String tag, String text, String prompt, St
             end++;
         }
         return words.substring(start, end);
+    }
+
+    private static Optional<OptionKey> optionIn(String chosen) {
+        return chosen.length() == 1 && AsciiCharacters.isUpperCaseLetter(chosen.charAt(0)) ? Optional.of(OptionKey.parse(chosen)) : Optional.empty();
+    }
+
+    private Optional<OptionKey> optionTyped() {
+        String afterNumber = afterFirstWord(verbatim());
+        String chosen = firstWord(afterNumber);
+        int end = skippedSeparators(afterNumber, 0) + chosen.length();
+        return end == afterNumber.length() || OPTION_ENDINGS.indexOf(afterNumber.charAt(end)) >= 0 ? optionIn(chosen) : Optional.empty();
     }
 
     private static String afterFirstWord(String words) {

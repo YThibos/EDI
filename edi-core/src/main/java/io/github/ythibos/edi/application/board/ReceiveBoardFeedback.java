@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
@@ -28,6 +29,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 public class ReceiveBoardFeedback {
 
     private final BoardStore boards;
+    private final DecisionStore decisions;
     private final InboxStore inbox;
     private final WorkerStore workers;
     private final EventLog events;
@@ -36,9 +38,10 @@ public class ReceiveBoardFeedback {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public ReceiveBoardFeedback(BoardStore boards, InboxStore inbox, WorkerStore workers, EventLog events, InboxNotice notice,
-            SettleBoardAnswers settlement, Clock clock, TransactionTemplate transaction) {
+    public ReceiveBoardFeedback(BoardStore boards, DecisionStore decisions, InboxStore inbox, WorkerStore workers, EventLog events,
+            InboxNotice notice, SettleBoardAnswers settlement, Clock clock, TransactionTemplate transaction) {
         this.boards = boards;
+        this.decisions = decisions;
         this.inbox = inbox;
         this.workers = workers;
         this.events = events;
@@ -72,7 +75,7 @@ public class ReceiveBoardFeedback {
         Board counted = board.answeredOnceMore();
         Board saved = answered.sessionEnded() ? counted.ended(now) : counted;
         boards.update(saved);
-        List<BoardAnswer> answers = saved.answersIn(answered, now);
+        List<BoardAnswer> answers = saved.answersIn(answered, decision -> decisions.get(decision).card(), now);
         answers.forEach(boards::save);
         InboxMessage message = InboxMessage.sent(saved.task(), inbox.nextNumber(saved.task()), BoardRoundMessage.of(saved, answered, answers), null, now);
         inbox.save(message);

@@ -57,7 +57,7 @@ public class SitrepConsolePresenter {
     private static List<Charted> chartedNext(FleetSnapshot fleet) {
         Stream<ChartedTask> queued = fleet.queued().stream().map(task -> new ChartedTask(task, queued(task)));
         Stream<ChartedTask> parked = fleet.parked().stream().map(parkedTask -> new ChartedTask(parkedTask.task(), parked(parkedTask)));
-        return Stream.concat(queued, parked).sorted(Comparator.comparing(ChartedTask::filed).reversed()).map(ChartedTask::row).toList();
+        return Stream.concat(queued, parked).sorted(Comparator.comparing(ChartedTask::filed)).map(ChartedTask::row).toList();
     }
 
     private static Card card(OpenDecision open) {

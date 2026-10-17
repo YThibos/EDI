@@ -1,8 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { DecisionDeck } from './decision-deck';
+import { DecisionCard } from './sitrep';
 import { sitrepFixture } from './sitrep.fixture';
 
 describe('DecisionDeck', () => {
@@ -36,6 +37,77 @@ describe('DecisionDeck', () => {
     expect(deck.querySelector('.sr-clear__title')?.textContent).toBe('Nothing needs your decision right now.');
     expect(deck.querySelector('.sr-stacknav')).toBeNull();
   });
+
+  it('starts the next decision empty once the captain answered the one before it', async () => {
+    const [lamp, horn] = twoDecisions();
+    await dealt(sitrepFixture({ decisions: [lamp, horn], answered: [] }));
+    await chooseB();
+    await type('go');
+    fixture.nativeElement.querySelector('.sr-btn').click();
+    TestBed.inject(HttpTestingController).expectOne('/api/decisions/D58/answer').flush('Recorded the answer to D58 (option B).\n');
+
+    await dealt(sitrepFixture({ decisions: [horn], answered: [] }));
+
+    expectEmpty('D59');
+  });
+
+  it('starts the next decision empty when the captain moves on from a half-filled card', async () => {
+    await dealt(sitrepFixture({ decisions: twoDecisions(), answered: [] }));
+    await chooseB();
+    await type('go');
+
+    fixture.nativeElement.querySelector('[aria-label="Next card"]').click();
+    await fixture.whenStable();
+
+    expectEmpty('D59');
+  });
+
+  it('keeps what the captain is typing when the sitrep refreshes the same decision', async () => {
+    const decisions = twoDecisions();
+    await dealt(sitrepFixture({ decisions, answered: [] }));
+    await chooseB();
+    await type('go');
+
+    await dealt(sitrepFixture({ decisions: decisions.map((decision) => ({ ...decision })), answered: [] }));
+
+    expect(freeform().value).toBe('go');
+    expect(checked()).toEqual(['B']);
+  });
+
+  function twoDecisions(): DecisionCard[] {
+    const [lamp] = sitrepFixture().decisions;
+    return [lamp, { ...lamp, number: 'D59', task: 'horn-choice', title: 'Which horn?' }];
+  }
+
+  async function chooseB(): Promise<void> {
+    const options = fixture.nativeElement.querySelectorAll('.sr-opt input');
+    options[1].click();
+    await fixture.whenStable();
+  }
+
+  async function type(words: string): Promise<void> {
+    freeform().value = words;
+    freeform().dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  }
+
+  function expectEmpty(decision: string): void {
+    expect(fixture.nativeElement.querySelector('.sr-decision__repo')?.textContent).toContain(decision);
+    expect(checked()).toEqual([]);
+    expect(freeform().value).toBe('');
+    expect(fixture.nativeElement.querySelector('.sr-queued')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.sr-limit')).toBeNull();
+  }
+
+  function freeform(): HTMLInputElement {
+    return fixture.nativeElement.querySelector('.sr-freeform');
+  }
+
+  function checked(): string[] {
+    return Array.from<HTMLInputElement>(fixture.nativeElement.querySelectorAll('.sr-opt input'))
+      .filter((option) => option.checked)
+      .map((option) => option.value);
+  }
 
   async function dealt(sitrep: ReturnType<typeof sitrepFixture>): Promise<void> {
     fixture.componentRef.setInput('cards', sitrep.decisions);
