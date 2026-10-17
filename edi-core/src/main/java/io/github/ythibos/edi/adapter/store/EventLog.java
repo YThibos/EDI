@@ -108,7 +108,7 @@ public class EventLog {
                 .param("type", event.getClass().getSimpleName())
                 .param("task", event.task().value())
                 .param("payload", json.writeValueAsString(payloadOf(event)))
-                .query(Long.class)
+                .query((row, _) -> row.getLong(1))
                 .single();
         WakeRule.wakeFor(event, actor).ifPresent(wake -> queue(sequence, wake, at));
         publisher.publishEvent(new EventRecorded(sequence));
@@ -129,7 +129,7 @@ public class EventLog {
     }
 
     public long latestSequence() {
-        return store.sql("select coalesce(max(sequence), 0) from event").query(Long.class).single();
+        return store.sql("select coalesce(max(sequence), 0) from event").query((row, _) -> row.getLong(1)).single();
     }
 
     public boolean anyAfter(long sequence) {

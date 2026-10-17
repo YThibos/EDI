@@ -15,7 +15,7 @@ public class EventCursorStore {
     public long positionOf(String follower) {
         return store.sql("select coalesce(max(sequence), 0) from event_cursor where follower = :follower")
                 .param("follower", follower)
-                .query(Long.class)
+                .query((row, _) -> row.getLong(1))
                 .single();
     }
 

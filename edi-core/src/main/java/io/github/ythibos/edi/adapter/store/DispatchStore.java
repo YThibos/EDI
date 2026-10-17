@@ -71,7 +71,7 @@ public class DispatchStore {
                 .param("category", category.value())
                 .param("key", key.toString())
                 .param("besides", besides.value())
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single();
     }
 

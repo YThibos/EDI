@@ -42,7 +42,7 @@ public class TaskStore {
     public boolean contains(TaskId id) {
         return store.sql("select count(*) from task where id = :id")
                 .param("id", id.value())
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single() > 0;
     }
 

@@ -29,7 +29,7 @@ public class WorkKeySequenceStore {
     private int lastIssued(ProjectKey prefix) {
         return store.sql("select coalesce(max(last_number), 0) from work_key_sequence where prefix = :prefix")
                 .param("prefix", prefix.value())
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single();
     }
 
@@ -37,7 +37,7 @@ public class WorkKeySequenceStore {
         return store.sql("select coalesce(max(cast(substr(work_key, :digits) as integer)), 0) from task where work_key like :pattern")
                 .param("digits", prefix.value().length() + 2)
                 .param("pattern", prefix.value() + "-%")
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single();
     }
 }

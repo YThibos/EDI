@@ -27,6 +27,7 @@ public final class StubJiraServer implements AutoCloseable {
     private static final Pattern ISSUE = Pattern.compile("/rest/api/2/issue/([A-Z][A-Z0-9]*-\\d+)(/transitions|/remotelink)?");
     private static final Pattern AGILE_ISSUE = Pattern.compile("/rest/agile/1.0/issue/([A-Z][A-Z0-9]*-\\d+)");
     private static final Pattern SPRINT_ISSUES = Pattern.compile("/rest/agile/1.0/sprint/(\\d+)/issue");
+    private static final Pattern PROJECT_CLAUSE = Pattern.compile("project = \"([A-Z0-9]+)\"");
     private static final List<String> WORKFLOW = FakeJira.WORKFLOW;
 
     private final HttpServer server;
@@ -150,7 +151,7 @@ public final class StubJiraServer implements AutoCloseable {
     }
 
     private Answer found(String query) {
-        String project = query.replaceAll(".*project = \"([A-Z0-9]+)\".*", "$1");
+        String project = PROJECT_CLAUSE.matcher(query).results().map(clause -> clause.group(1)).findFirst().orElseThrow();
         ArrayNode found = json.createArrayNode();
         issues.values().stream()
                 .filter(issue -> issue.key().startsWith(project + "-") && !issue.status().equals("Done"))
