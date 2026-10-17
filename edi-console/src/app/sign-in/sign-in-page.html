@@ -1,0 +1,13 @@
+<app-console-header />
+<main class="sr-main">
+  @if (refused()) {
+    <div class="sr-panel sr-notice">
+      <div class="sr-notice__pad">
+        <h2 class="sr-notice__title">This sign-in link no longer works</h2>
+        <p class="sr-notice__detail">Each link signs you in once, within two minutes. Run <code>edi console</code> in a terminal for a fresh one.</p>
+      </div>
+    </div>
+  } @else {
+    <p class="sr-empty">Signing you in…</p>
+  }
+</main>

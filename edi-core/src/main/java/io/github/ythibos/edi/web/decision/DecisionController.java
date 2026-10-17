@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.AnsweredDecision;
+import io.github.ythibos.edi.application.decision.AskForARecheck;
 import io.github.ythibos.edi.application.decision.DecisionList;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.web.Confirmation;
 import io.github.ythibos.edi.web.access.Caller;
@@ -24,11 +26,13 @@ class DecisionController {
     private final DecisionListQuery list;
     private final RaiseDecision raiseDecision;
     private final AnswerDecision answerDecision;
+    private final AskForARecheck askForARecheck;
 
-    DecisionController(DecisionListQuery list, RaiseDecision raiseDecision, AnswerDecision answerDecision) {
+    DecisionController(DecisionListQuery list, RaiseDecision raiseDecision, AnswerDecision answerDecision, AskForARecheck askForARecheck) {
         this.list = list;
         this.raiseDecision = raiseDecision;
         this.answerDecision = answerDecision;
+        this.askForARecheck = askForARecheck;
     }
 
     @GetMapping("/api/decisions")
@@ -45,8 +49,15 @@ class DecisionController {
 
     @PostMapping("/api/decisions/{reference}/answer")
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
-        caller.requirePrimary("edi decision answer");
-        AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenInChat(), caller.actor());
+        AnswerChannel channel = caller.answeringChannel("edi decision answer");
+        AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel), caller.actor());
         return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket());
+    }
+
+    @PostMapping("/api/decisions/{reference}/recheck")
+    Confirmation recheck(@PathVariable String reference, @RequestBody(required = false) RecheckRequest request, Caller caller) {
+        caller.requireTheCaptain("Asking for a re-check");
+        String note = request == null ? "" : request.noteOrNone();
+        return new Confirmation.RecheckAsked(askForARecheck.ask(TaskReference.parse(reference), note, caller.actor()).number());
     }
 }

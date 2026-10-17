@@ -1,0 +1,8 @@
+session:
+  file: /home/user/.edi/data/tasks/lantern-research/board.html
+  status: feedback
+prompts[2]{uid,prompt,selector,tag,text}:
+  "1","D58: option=B\n\nContext data:\n{\n  \"decision\": \"D58\",\n  \"option\": \"B\",\n  \"choice\": [\n    \"B-oil\",\n    \"C-candles\"\n  ]\n}",section#s2 > form,choice,"D58: option=B"
+  "2","Keep the brass, it matches the rail","section#s1 > p:nth-of-type(2)",p,"Fittings: brass, steel or bronze."
+next_step: "Apply the requested changes to /home/user/.edi/data/tasks/lantern-research/board.html. Do not respond to the user just yet. If you are continuing to wait for feedback, run `lavish-axi poll /home/user/.edi/data/tasks/lantern-research/board.html --agent-reply \"<message for the user>\"` without --timeout-ms to reply and keep polling."
+dom_snapshot: "uid=1 body \"Lantern research - round 1 Which lamp lights the deck?\"\n  uid=2 h1 \"Lantern research - round 1\"\n  uid=3 form \"D58 Which lamp? LED (recommended) Oil Queue answer\""

@@ -7,21 +7,32 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecheckAsked;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
@@ -45,6 +56,7 @@ class WakeRuleTest {
     private static final WorkerId WORKER = WorkerId.first(TASK);
     private static final Actor THE_WORKER = Actor.worker(WORKER);
     private static final Instant RESET = Instant.parse("2026-10-16T14:10:00Z");
+    private static final DecisionNumber D58 = new DecisionNumber(58);
 
     @Test
     void wakesThePrimaryForAStatusThatNeedsItsAction() {
@@ -84,6 +96,25 @@ class WakeRuleTest {
         assertThat(WakeRule.wakeFor(new DeliveryRefused(TASK, WORKER, List.of("not a draft")), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new DraftRecorded(TASK, draft), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new TaskCleanedUp(TASK), Actor.CORE)).isEmpty();
+    }
+
+    @Test
+    void wakesThePrimaryForWhatTheCaptainSaysInTheConsoleOrOnABoard() {
+        CaptainAnswer inTheConsole = new CaptainAnswer("A: LED, keep one oil lamp", new OptionKey('A'), "", RESET, AnswerChannel.CONSOLE);
+        BoardId board = new BoardId(3);
+
+        assertThat(WakeRule.wakeFor(new DecisionAnswered(TASK, D58, inTheConsole), Actor.CAPTAIN))
+                .contains(new Wake(WakeKind.DECISION_ANSWERED, TASK, null, "D58 in the console: A: LED, keep one oil lamp", null));
+        assertThat(WakeRule.wakeFor(new DecisionAnswered(TASK, D58, inTheConsole), Actor.PRIMARY)).isEmpty();
+        assertThat(WakeRule.wakeFor(new RecheckAsked(TASK, D58, ""), Actor.CAPTAIN)).contains(new Wake(WakeKind.RECHECK_ASKED, TASK, null, "D58", null));
+        assertThat(WakeRule.wakeFor(new RecheckAsked(TASK, D58, "the lamp came in"), Actor.CAPTAIN)).map(Wake::detail)
+                .contains("D58 (\"the lamp came in\")");
+        assertThat(WakeRule.wakeFor(new BoardAnswered(TASK, board, 2, 1, true), Actor.CAPTAIN))
+                .contains(new Wake(WakeKind.BOARD_ANSWERED, TASK, null, "board 3 round 2: 1 prompt, and the captain ended the session", null));
+        assertThat(WakeRule.wakeFor(new BoardAnswerRefused(TASK, D58, board, "D58 is already answered"), Actor.CORE))
+                .map(Wake::kind).contains(WakeKind.BOARD_ANSWER_REFUSED);
+        assertThat(WakeRule.wakeFor(new BoardClosed(TASK, board), Actor.CAPTAIN)).isEmpty();
+        assertThat(WakeRule.wakeFor(new BoardArmed(TASK, board, "/tmp/board.html", List.of(D58)), THE_WORKER)).isEmpty();
     }
 
     @Test

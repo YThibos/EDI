@@ -1,0 +1,29 @@
+session:
+  file: /home/user/.edi/data/tasks/lantern-research/board.html
+  status: feedback
+prompts[4]:
+  - uid: "1"
+    prompt: "The glow is too faint in the lower corner, see the two captures."
+    selector: "section#s1 > figure:nth-of-type(1) > img"
+    tag: img
+    text: "Deck lighting at 02:00, \"night\" setting"
+    attachments[2]{id,type,path,mime,bytes,width,height,name}:
+      11111111.png,image,/home/user/.lavish-axi/attachments/0a1b2c3d4e5f6a7b/11111111.png,image/png,11017,1287,48,image.png
+      22222222.png,image,/home/user/.lavish-axi/attachments/0a1b2c3d4e5f6a7b/22222222.png,image/png,11018,1287,49,image.png
+  - uid: "3"
+    prompt: "D58: option=A; note: LED, but keep one oil lamp on the bridge\n\nContext data:\n{\n  \"decision\": \"D58\",\n  \"option\": \"A\",\n  \"note\": \"LED, but keep one oil lamp on the bridge\"\n}"
+    selector: section#s2 > form
+    tag: choice
+    text: "D58: option=A; note: LED, but keep one oil lamp on the bridge"
+  - uid: "4"
+    prompt: "D59 B - and write down why\nthe old fittings stay"
+    selector: ""
+    tag: message
+    text: Freeform message
+  - uid: "5"
+    prompt: When checked
+    selector: "section#s3 > form > fieldset:nth-of-type(2)"
+    tag: fieldset
+    text: Spare bulbs? Two per lamp (recommended) - enough for a month. One per lamp - lighter.
+next_step: "Apply the requested changes to /home/user/.edi/data/tasks/lantern-research/board.html. Do not respond to the user just yet. If you are continuing to wait for feedback, run `lavish-axi poll /home/user/.edi/data/tasks/lantern-research/board.html --agent-reply \"<message for the user>\"` without --timeout-ms to reply and keep polling."
+dom_snapshot: "uid=1 body \"Lantern research - round 1 Which lamp lights the deck?\"\n  uid=2 h1 \"Lantern research - round 1\"\n  uid=3 form \"D58 Which lamp? LED (recommended) Oil Queue answer\""

@@ -1,0 +1,60 @@
+<app-console-header [generated]="sitrep()?.generated ?? null" [machine]="sitrep()?.machine ?? null" />
+<main class="sr-main">
+  @switch (access()) {
+    @case ('signed-out') {
+      <div class="sr-panel sr-notice">
+        <div class="sr-notice__pad">
+          <h2 class="sr-notice__title">Sign in to see the sitrep</h2>
+          <p class="sr-notice__detail">Run <code>edi console</code> in a terminal, or <code>/sitrep board</code> in the primary session, for a link that signs you in.</p>
+        </div>
+      </div>
+    }
+    @case ('unreachable') {
+      <div class="sr-panel sr-notice">
+        <div class="sr-notice__pad">
+          <h2 class="sr-notice__title">EDI's core is not answering</h2>
+          <p class="sr-notice__detail">The page reloads the sitrep as soon as the core is back; <code>edi health</code> tells whether it is running.</p>
+        </div>
+      </div>
+    }
+  }
+  @if (sitrep(); as sitrep) {
+    <app-hud-strip [needYou]="sitrep.decisions.length" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
+    <div class="sr-cols">
+      <div class="sr-col">
+        <section class="sr-section">
+          <div class="sr-section__head">
+            <h2 class="sr-sign sr-sign--amber"><span class="sr-sign__no">01</span>Needs your decision</h2>
+            <span class="sr-sub">{{ waitingOnTheCaptain() }}</span>
+          </div>
+          <app-decision-deck [cards]="sitrep.decisions" [answered]="sitrep.answered" (settled)="refresh()" />
+        </section>
+        <section class="sr-section">
+          <div class="sr-section__head">
+            <h2 class="sr-sign"><span class="sr-sign__no">03</span>Ongoing</h2>
+          </div>
+          <app-ongoing-list [tasks]="sitrep.ongoing" />
+        </section>
+        <section class="sr-section">
+          <div class="sr-section__head">
+            <h2 class="sr-sign"><span class="sr-sign__no">04</span>Recently landed</h2>
+          </div>
+          <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" />
+        </section>
+      </div>
+      <div class="sr-col">
+        <section class="sr-section">
+          <div class="sr-section__head">
+            <h2 class="sr-sign"><span class="sr-sign__no">02</span>Charted next</h2>
+            <span class="sr-sub">{{ chartedShown() }}</span>
+          </div>
+          <app-charted-list [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" />
+        </section>
+      </div>
+    </div>
+    <footer class="sr-foot">
+      <span class="sr-meta-mono">{{ sitrep.schema }} · {{ sitrep.generated }}</span>
+      <span class="sr-meta-mono">{{ live() ? 'live · answers go straight to EDI' : 'reconnecting · answers go straight to EDI' }}</span>
+    </footer>
+  }
+</main>

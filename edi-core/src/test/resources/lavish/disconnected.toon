@@ -1,0 +1,4 @@
+session:
+  file: /home/user/.edi/data/tasks/lantern-research/board.html
+  status: browser_disconnected
+next_step: The Lavish review window was closed or disconnected. The session remains open and resumable; ask the user whether they want to reopen it or end the session. Do not reopen or end it without their direction.

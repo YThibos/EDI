@@ -4,6 +4,7 @@ import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public record Actor(String name) {
 
+    public static final Actor CAPTAIN = new Actor("captain");
     public static final Actor PRIMARY = new Actor("primary");
     public static final Actor CORE = new Actor("core");
 

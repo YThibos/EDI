@@ -5,7 +5,6 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.TimeUnit;
 
 public final class PrePushHook {
@@ -51,8 +50,7 @@ public final class PrePushHook {
     private static Path ediCommandIn(Path directory) throws IOException {
         Path edi = Files.createDirectories(directory).resolve("edi");
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
-        Files.writeString(edi, EDI_ON_THE_JVM.formatted(java, System.getProperty("java.class.path")));
-        Files.setPosixFilePermissions(edi, PosixFilePermissions.fromString("rwx------"));
+        StandInScripts.installed(edi, EDI_ON_THE_JVM.formatted(java, System.getProperty("java.class.path")));
         return directory;
     }
 

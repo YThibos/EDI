@@ -39,7 +39,7 @@ class CaptainReportPresenterTest {
                 new Recommendation(new OptionKey('A'), "it lasts 永")), PresenterFixtures.AT);
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Shipped 🚀 today – Café €5")), List.of(), Map.of());
 
-        String report = rendered(new FleetSnapshot(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of()), turn);
+        String report = rendered(new FleetSnapshot(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of(), List.of(), List.of()), turn);
 
         assertThat(report).contains(
                 "║  D58   Which lamp ??\n",
@@ -54,7 +54,7 @@ class CaptainReportPresenterTest {
         List<Task> queueOrder = List.of(
                 filed("anchor", 0), filed("bell", 2), filed("chart", 1), filed("davit", 2), filed("ensign", 0), filed("fender", 1), filed("gangway", 0));
 
-        String report = rendered(new FleetSnapshot(List.of(), List.of(), List.of(), queueOrder), Turn.NONE);
+        String report = rendered(new FleetSnapshot(List.of(), List.of(), List.of(), queueOrder, List.of(), List.of()), Turn.NONE);
 
         assertThat(report).endsWith("""
 
@@ -74,7 +74,7 @@ class CaptainReportPresenterTest {
         Decision decision = PresenterFixtures.openDecision();
         Turn turn = new Turn(List.of(), List.of(), Map.of("lamp-choice", new TaskWording("Ignored for a decision", null, List.of("garden"))));
 
-        String report = rendered(new FleetSnapshot(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of()), turn);
+        String report = rendered(new FleetSnapshot(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of(), List.of(), List.of()), turn);
 
         assertThat(report).contains("╟── garden ───", "║  D58   Which lamp?\n").doesNotContain("Ignored for a decision", "╟── Fleet");
     }

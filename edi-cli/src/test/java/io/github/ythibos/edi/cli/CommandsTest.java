@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -225,6 +226,52 @@ class CommandsTest {
 
         assertThat(report).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "text/plain", null, null, ""));
         assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, ""));
+    }
+
+    @Test
+    void opensTheConsoleThroughTheCore() {
+        core.answering(200, "EDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+
+        int exitCode = edi("", "console");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/console/open", "Bearer stub-token", "text/plain", null, null, "{}"));
+    }
+
+    @Test
+    void printsTheSitrepAndThenOpensItsBoardInTheConsole() {
+        core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n").thenAnswering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n")
+                .thenAnswering(200, "EDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+
+        int exitCode = edi("", "sitrep", "--board");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\nEDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+        assertThat(core.requests()).extracting(StubCore.Request::method, StubCore.Request::target)
+                .containsExactly(tuple("GET", "/api/report"), tuple("POST", "/api/console/open"));
+    }
+
+    @Test
+    void opensNoBoardWhenTheSitrepItselfFailed() {
+        core.answering(503, "EDI core is starting.\n");
+
+        int exitCode = edi("", "sitrep", "--board");
+
+        assertThat(exitCode).isOne();
+        assertThat(core.requests()).extracting(StubCore.Request::target).containsExactly("/api/report");
+    }
+
+    @Test
+    void armsAResearchBoardByItsAbsolutePathWithTheDecisionsItAnswers() {
+        core.answering(201, "EDI listens to the research board.\n");
+
+        int exitCode = edi("", "board", "arm", home.resolve("tasks/scout/board.html").toString(), "--task", "scout", "--bind", "D58,D59");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().target()).isEqualTo("/api/boards");
+        assertThat(core.received().body()).isEqualTo("{\"file\":\"" + home.resolve("tasks/scout/board.html") + "\",\"task\":\"scout\","
+                + "\"bind\":[\"D58\",\"D59\"]}");
     }
 
     @Test

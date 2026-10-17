@@ -1,11 +1,16 @@
 package io.github.ythibos.edi.web;
 
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.task.AddedTask;
+import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Answered;
+import io.github.ythibos.edi.web.Confirmation.BoardArmed;
 import io.github.ythibos.edi.web.Confirmation.CleanedUp;
 import io.github.ythibos.edi.web.Confirmation.Deferred;
 import io.github.ythibos.edi.web.Confirmation.Dispatched;
@@ -16,6 +21,7 @@ import io.github.ythibos.edi.web.Confirmation.Noted;
 import io.github.ythibos.edi.web.Confirmation.PlannedFirst;
 import io.github.ythibos.edi.web.Confirmation.Queued;
 import io.github.ythibos.edi.web.Confirmation.Raised;
+import io.github.ythibos.edi.web.Confirmation.RecheckAsked;
 import io.github.ythibos.edi.web.Confirmation.Relaunched;
 import io.github.ythibos.edi.web.Confirmation.Released;
 import io.github.ythibos.edi.web.Confirmation.StatusRecorded;
@@ -58,7 +64,17 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case DraftDelivered delivered -> DeliverySentences.delivered(delivered.delivered());
             case MergedWorkFollowedUp followed -> DeliverySentences.followedUp(followed.work());
             case CleanedUp cleanedUp -> DeliverySentences.cleanedUp(cleanedUp.task());
+            case BoardArmed armed -> boardArmed(armed.board());
+            case RecheckAsked asked -> "Asked EDI to re-check " + asked.number() + " against reality; it stays open until it is answered.";
         };
+    }
+
+    private static String boardArmed(Board board) {
+        String bound = board.bound().isEmpty()
+                ? "; it answers no decision"
+                : "; its answers to " + board.bound().stream().map(DecisionNumber::toString).collect(Collectors.joining(", "))
+                        + " are recorded as the captain's";
+        return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox.";
     }
 
     private static String queued(AddedTask added) {

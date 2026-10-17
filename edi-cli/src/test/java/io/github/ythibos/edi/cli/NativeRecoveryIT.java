@@ -9,7 +9,6 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @DisplayName("The native core supervises the primary and recovers workers after a simulated machine restart")
@@ -205,12 +205,9 @@ class NativeRecoveryIT {
     }
 
     private static String stubClaudeCode() throws IOException {
-        Path stub = home.resolve("edi-test-claude");
         try (InputStream script = NativeRecoveryIT.class.getResourceAsStream("/edi-test-claude")) {
-            Files.write(stub, script.readAllBytes());
+            return StandInScripts.installed(home.resolve("edi-test-claude"), new String(script.readAllBytes(), StandardCharsets.UTF_8)).toString();
         }
-        Files.setPosixFilePermissions(stub, PosixFilePermissions.fromString("rwxr-xr-x"));
-        return stub.toString();
     }
 
     private static Path bootIdFile() {

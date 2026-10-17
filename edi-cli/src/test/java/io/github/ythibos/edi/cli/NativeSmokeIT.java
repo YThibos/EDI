@@ -14,7 +14,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 
+import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @Isolated
@@ -86,7 +88,9 @@ class NativeSmokeIT {
         ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
-                "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")))
+                "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
+                "--edi.console.browser=" + stubBrowser(),
+                "--edi.console.windows-directory=" + home)
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX"));
@@ -129,6 +133,22 @@ class NativeSmokeIT {
 
         assertThat(console.statusCode()).isEqualTo(200);
         assertThat(console.body()).contains("<app-root></app-root>");
+    }
+
+    @Test
+    void theCommandOpensTheConsoleThroughALinkThatSignsInOnce() throws Exception {
+        CommandRun opened = edi("", "console");
+        String link = Files.readString(home.resolve("opened-in-the-browser")).strip().split(" ")[2];
+        HttpResponse<String> signedIn = send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/console/session"))
+                .header("X-EDI-Console", "1").header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"token\":\"" + link.substring(link.indexOf('#') + 1) + "\"}")));
+        String cookie = signedIn.headers().firstValue("Set-Cookie").orElseThrow().split(";")[0];
+
+        assertThat(opened.output()).isEqualTo("EDI console: http://127.0.0.1:" + port + "/ is open in your browser.\n");
+        assertThat(signedIn.statusCode()).isEqualTo(204);
+        assertThat(send(withTheCookie("/api/sitrep", cookie).header("Accept", "application/json").GET()).body()).contains("\"schema\":\"edi-sitrep.v1\"");
+        assertThat(get("/login").body()).contains("<app-root></app-root>");
+        assertThat(openingLinesOfTheStream(cookie)).contains(":EDI fleet stream");
     }
 
     @Test
@@ -265,13 +285,15 @@ class NativeSmokeIT {
         assertThat(percentile(millis, 95)).as("p95 of the round trip in milliseconds").isLessThan(ROUND_TRIP_BUDGET_MILLISECONDS);
     }
 
+    private static String stubBrowser() throws IOException {
+        return StandInScripts.installed(home.resolve("browser"), "#!/bin/sh\nprintf '%s\\n' \"$*\" > '" + home.resolve("opened-in-the-browser") + "'\n")
+                .toString();
+    }
+
     private static String stubClaudeCode() throws IOException {
-        Path stub = home.resolve("edi-test-claude");
         try (InputStream script = NativeSmokeIT.class.getResourceAsStream("/edi-test-claude")) {
-            Files.write(stub, script.readAllBytes());
+            return StandInScripts.installed(home.resolve("edi-test-claude"), new String(script.readAllBytes(), StandardCharsets.UTF_8)).toString();
         }
-        Files.setPosixFilePermissions(stub, PosixFilePermissions.fromString("rwxr-xr-x"));
-        return stub.toString();
     }
 
     private static void cloneAProjectInto(Path clone) throws Exception {
@@ -343,8 +365,27 @@ class NativeSmokeIT {
     }
 
     private static HttpResponse<String> get(String path) throws Exception {
+        return send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)));
+    }
+
+    private static HttpRequest.Builder withTheCookie(String path, String cookie) {
+        return HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).header("Cookie", cookie);
+    }
+
+    private static HttpResponse<String> send(HttpRequest.Builder request) throws Exception {
         try (HttpClient http = HttpClient.newHttpClient()) {
-            return http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).build(), BodyHandlers.ofString());
+            return http.send(request.build(), BodyHandlers.ofString());
+        }
+    }
+
+    private static List<String> openingLinesOfTheStream(String cookie) throws Exception {
+        HttpClient http = HttpClient.newHttpClient();
+        try {
+            HttpResponse<Stream<String>> stream = http.sendAsync(withTheCookie("/api/stream", cookie).header("Accept", "text/event-stream")
+                    .GET().build(), BodyHandlers.ofLines()).get(PATIENCE.toSeconds(), TimeUnit.SECONDS);
+            return CompletableFuture.supplyAsync(() -> stream.body().limit(2).toList()).get(PATIENCE.toSeconds(), TimeUnit.SECONDS);
+        } finally {
+            http.shutdownNow();
         }
     }
 

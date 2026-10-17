@@ -23,6 +23,7 @@ import picocli.CommandLine.Spec;
             HealthCommand.class,
             ReportCommand.class,
             SitrepCommand.class,
+            ConsoleCommand.class,
             TaskCommand.class,
             BacklogCommand.class,
             HoldCommand.class,
@@ -40,6 +41,7 @@ import picocli.CommandLine.Spec;
             DeliverCommand.class,
             MergedCommand.class,
             CleanupCommand.class,
+            BoardCommand.class,
             HookCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})

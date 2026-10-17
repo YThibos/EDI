@@ -1,0 +1,19 @@
+<div class="sr-panel sr-decision sr-decision--answered">
+  <div class="sr-decision__pad">
+    <div class="sr-decision__top">
+      <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>answered</span>
+      <span class="sr-decision__repo">{{ answer().number }} · {{ projects() }}</span>
+    </div>
+    <h3 class="sr-decision__title">{{ answer().title }}</h3>
+    <div class="sr-ctx">
+      <div class="sr-ctx__row">
+        <span class="sr-ctx__k">answer</span>
+        <span class="sr-ctx__v">{{ answer().verbatim }}</span>
+      </div>
+      <div class="sr-ctx__row">
+        <span class="sr-ctx__k">given</span>
+        <span class="sr-ctx__v">{{ given() }}</span>
+      </div>
+    </div>
+  </div>
+</div>

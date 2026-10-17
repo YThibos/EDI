@@ -8,7 +8,9 @@ public enum Program {
     GH("gh"),
     GLAB("glab"),
     NO_MISTAKES("no-mistakes"),
-    SHELL("sh");
+    SHELL("sh"),
+    LAVISH("lavish-axi"),
+    CMD("cmd.exe");
 
     private final String executable;
 

@@ -4,7 +4,7 @@ public class NotPermitted extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    NotPermitted(String reason) {
+    public NotPermitted(String reason) {
         super(reason);
     }
 }

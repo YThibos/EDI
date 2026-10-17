@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
@@ -27,14 +28,11 @@ public class ExternalPrograms {
     }
 
     public ProgramRun run(ProgramCall call) {
-        Program program = call.program();
-        try (Capture output = Capture.create(); Capture errors = Capture.create()) {
-            Process process = start(call, output.file(), errors.file());
-            awaitCompletion(program, process, PATIENCE);
-            return new ProgramRun(program, process.exitValue(), output.read(), errors.read());
-        } catch (IOException unstartable) {
-            throw new ProgramFailure(program.executable() + " could not run: " + unstartable.getMessage(), unstartable);
-        }
+        return captured(call, process -> awaitCompletion(call.program(), process, PATIENCE));
+    }
+
+    public ProgramRun runUntilItEnds(ProgramCall call) {
+        return captured(call, process -> awaitTheEnd(call.program(), process));
     }
 
     public int runInto(Path log, Program program, Path directory, List<String> arguments, Duration patience) {
@@ -43,6 +41,17 @@ public class ExternalPrograms {
             Process process = start(ProgramCall.of(program, null, directory, arguments), log, log);
             awaitCompletion(program, process, patience);
             return process.exitValue();
+        } catch (IOException unstartable) {
+            throw new ProgramFailure(program.executable() + " could not run: " + unstartable.getMessage(), unstartable);
+        }
+    }
+
+    private static ProgramRun captured(ProgramCall call, Consumer<Process> awaiting) {
+        Program program = call.program();
+        try (Capture output = Capture.create(); Capture errors = Capture.create()) {
+            Process process = start(call, output.file(), errors.file());
+            awaiting.accept(process);
+            return new ProgramRun(program, process.exitValue(), output.read(), errors.read());
         } catch (IOException unstartable) {
             throw new ProgramFailure(program.executable() + " could not run: " + unstartable.getMessage(), unstartable);
         }
@@ -73,6 +82,16 @@ public class ExternalPrograms {
                 stop(process);
                 throw new ProgramFailure(program.executable() + " did not finish within " + patience.toMinutes() + " minutes.");
             }
+        } catch (InterruptedException interrupted) {
+            stop(process);
+            Thread.currentThread().interrupt();
+            throw new ProgramFailure(program.executable() + " was interrupted.", interrupted);
+        }
+    }
+
+    private static void awaitTheEnd(Program program, Process process) {
+        try {
+            process.waitFor();
         } catch (InterruptedException interrupted) {
             stop(process);
             Thread.currentThread().interrupt();

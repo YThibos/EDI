@@ -1,0 +1,23 @@
+<div class="sr-panel">
+  <div class="sr-rows">
+    @for (landed of tasks(); track landed.task) {
+      <div class="sr-row">
+        <span class="sr-row__check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        </span>
+        <div class="sr-row__main">
+          <div class="sr-row__title">{{ landed.title }}</div>
+          <div class="sr-row__sub">{{ projectsOf(landed.projects, landed.task) }} · {{ landed.kind }} · {{ stardate(landed.landedAt) }}</div>
+        </div>
+        @if (landed.draft; as draft) {
+          <a class="sr-row__pr" [href]="draft" [title]="draft" target="_blank" rel="noopener">#{{ draft.split('/').pop() }}</a>
+        }
+      </div>
+    } @empty {
+      <div class="sr-empty">Nothing landed in the last seven days.</div>
+    }
+    @if (total() > tasks().length) {
+      <span class="sr-morechip">+{{ total() - tasks().length }} more landed this week · edi task list --state done lists them all</span>
+    }
+  </div>
+</div>

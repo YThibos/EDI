@@ -8,11 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.Optional;
 import java.util.Set;
 
@@ -20,14 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.store.WorkerStore;
+import io.github.ythibos.edi.application.access.Tokens;
 import io.github.ythibos.edi.domain.worker.Worker;
 
 @Service
 public class WorkerTokens {
 
     private static final String TOKEN_FILE = "token";
-    private static final int TOKEN_BYTES = 32;
-    private static final SecureRandom RANDOM = new SecureRandom();
     private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
             PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
 
@@ -44,24 +38,14 @@ public class WorkerTokens {
     }
 
     public IssuedToken issueInto(Path stateDirectory) {
-        byte[] random = new byte[TOKEN_BYTES];
-        RANDOM.nextBytes(random);
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
+        String token = Tokens.drawn();
         Path file = fileIn(stateDirectory);
         write(file, token);
-        return new IssuedToken(file, digestOf(token));
+        return new IssuedToken(file, Tokens.digestOf(token));
     }
 
     public Optional<Worker> workerHolding(String presented) {
-        return transaction.execute(_ -> workers.holdingToken(digestOf(presented)));
-    }
-
-    private static String digestOf(String token) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.US_ASCII)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException(missing);
-        }
+        return transaction.execute(_ -> workers.holdingToken(Tokens.digestOf(presented)));
     }
 
     private static void write(Path file, String token) {

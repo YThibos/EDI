@@ -34,13 +34,19 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
     MachineProfile.TimeSection.class})
 public class MachineProfile {
 
-    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null);
+    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null);
+    private static final String UNNAMED = "this machine";
 
     private final Path file;
     private final YAMLMapper yaml = new YAMLMapper();
 
     public MachineProfile(EdiHome home) {
         this.file = home.machineProfile();
+    }
+
+    public String name() {
+        String machine = document().machine();
+        return machine == null || machine.isBlank() ? UNNAMED : machine.strip();
     }
 
     public WorkerSettings workers() {
@@ -114,7 +120,7 @@ public class MachineProfile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ProfileDocument(WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time) {
+    record ProfileDocument(String machine, WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

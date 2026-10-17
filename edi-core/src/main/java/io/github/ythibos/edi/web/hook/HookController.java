@@ -22,6 +22,7 @@ import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.web.access.Caller;
+import io.github.ythibos.edi.web.access.NotPermitted;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -54,6 +55,7 @@ class HookController {
         return switch (caller) {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
             case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, claudePid);
+            case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
 

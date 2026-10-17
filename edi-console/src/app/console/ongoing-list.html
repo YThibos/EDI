@@ -1,0 +1,18 @@
+<div class="sr-panel">
+  <div class="sr-rows">
+    @for (ongoing of tasks(); track ongoing.task) {
+      <div class="sr-row">
+        <div class="sr-row__main">
+          <div class="sr-row__title">{{ ongoing.title }}</div>
+          <div class="sr-row__sub">{{ ongoing.doing }} · {{ ongoing.kind }} · {{ projectsOf(ongoing.projects, ongoing.task) }}</div>
+        </div>
+        @if (ongoing.draft; as draft) {
+          <a class="sr-row__pr" [href]="draft" [title]="draft" target="_blank" rel="noopener">#{{ draft.split('/').pop() }}</a>
+        }
+        <span class="sr-badge" [class]="'sr-badge--' + toneOf(ongoing.state)"><span class="sr-badge__dot"></span>{{ ongoing.state }}</span>
+      </div>
+    } @empty {
+      <div class="sr-empty">Nothing is underway.</div>
+    }
+  </div>
+</div>

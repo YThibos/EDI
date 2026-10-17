@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
@@ -230,5 +231,31 @@ public sealed interface DomainEvent {
     }
 
     record ReviewCounted(TaskId task, PipelineReview review) implements DomainEvent {
+    }
+
+    record RecheckAsked(TaskId task, DecisionNumber number, String note) implements DomainEvent {
+
+        public RecheckAsked {
+            note = note == null ? "" : note.strip();
+        }
+    }
+
+    record BoardArmed(TaskId task, BoardId board, String file, List<DecisionNumber> bound) implements DomainEvent {
+
+        public BoardArmed {
+            bound = List.copyOf(bound);
+        }
+    }
+
+    record BoardAnswered(TaskId task, BoardId board, int round, int prompts, boolean sessionEnded) implements DomainEvent {
+    }
+
+    record BoardClosed(TaskId task, BoardId board) implements DomainEvent {
+    }
+
+    record BoardRetired(TaskId task, BoardId board) implements DomainEvent {
+    }
+
+    record BoardAnswerRefused(TaskId task, DecisionNumber number, BoardId board, String because) implements DomainEvent {
     }
 }

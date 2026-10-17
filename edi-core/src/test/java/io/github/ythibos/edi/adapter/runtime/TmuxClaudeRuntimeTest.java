@@ -33,6 +33,7 @@ import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
+import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -165,8 +166,7 @@ class TmuxClaudeRuntimeTest {
     }
 
     private static void executable(Path file, String script) throws IOException {
-        Files.writeString(file, script);
-        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rwxr-xr-x"));
+        StandInScripts.installed(file, script);
     }
 
     private Path hooksWithTheCommitMessageCheck() throws IOException {

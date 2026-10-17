@@ -10,9 +10,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
+import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.domain.decision.Decision;
-import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
@@ -61,7 +61,10 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     }
 
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
-        return fleet.ongoing().stream().map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task))).toList();
+        return fleet.ongoing().stream()
+                .map(OngoingTask::task)
+                .map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task)))
+                .toList();
     }
 
     private static List<String> section(String heading, List<String> body) {
@@ -103,7 +106,7 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     }
 
     private static ReportItem parkedItem(ParkedTask parked, TurnWording wording) {
-        return new ReportItem(wording.projectsOf(parked.task()), parkedTitleOf(parked, wording) + " - " + whyParked(parked));
+        return new ReportItem(wording.projectsOf(parked.task()), parkedTitleOf(parked, wording) + " - " + parked.whyParked());
     }
 
     private static ReportItem queuedItem(Task task, TurnWording wording) {
@@ -115,13 +118,4 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return decision == null ? wording.textOf(parked.task()) : decision.number() + " " + decision.card().title();
     }
 
-    private static String whyParked(ParkedTask parked) {
-        if (parked.isBlocked()) {
-            return "blocked by " + parked.blockers().stream().map(blocker -> blocker.intake().title()).collect(Collectors.joining(", "));
-        }
-        return switch (parked.task().hold().until()) {
-            case HoldUntil.Day day -> "deferred until " + day.date();
-            case HoldUntil.CaptainsWord _ -> "on hold";
-        };
-    }
 }
