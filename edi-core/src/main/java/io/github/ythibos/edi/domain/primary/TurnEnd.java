@@ -11,14 +11,14 @@ public final class TurnEnd {
     private TurnEnd() {
     }
 
-    public static Optional<String> blockingReason(PrimaryTurn turn, boolean stateChanged, boolean workInFlight, boolean waitIsLive) {
+    public static Optional<String> blockingReason(PrimaryTurn turn, TurnCircumstances circumstances) {
         if (turn == null || turn.stopsBlocked() >= MOST_BLOCKED_STOPS) {
             return Optional.empty();
         }
-        if (stateChanged && !turn.renderedTheReport()) {
+        if (circumstances.needsTheReport() && !turn.renderedTheReport()) {
             return Optional.of(RENDER_THE_REPORT);
         }
-        if (workInFlight && !waitIsLive) {
+        if (circumstances.needsAWait()) {
             return Optional.of(START_THE_WAIT);
         }
         return Optional.empty();

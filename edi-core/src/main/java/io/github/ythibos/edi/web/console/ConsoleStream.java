@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import io.github.ythibos.edi.adapter.store.EventRecorded;
+import io.github.ythibos.edi.adapter.store.PresenceChanged;
 
 @RestController
 class ConsoleStream implements AutoCloseable {
@@ -24,6 +25,7 @@ class ConsoleStream implements AutoCloseable {
     private static final Duration RECONNECT_AFTER = Duration.ofMinutes(10);
     private static final Duration RETRY_AFTER_A_DROP = Duration.ofSeconds(3);
     private static final String FLEET_CHANGED = "fleet";
+    private static final String PRESENCE_CHANGED = "presence";
 
     private final Set<SseEmitter> listening = ConcurrentHashMap.newKeySet();
     private final ExecutorService senders = Executors.newVirtualThreadPerTaskExecutor();
@@ -41,7 +43,12 @@ class ConsoleStream implements AutoCloseable {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void fleetChanged(EventRecorded recorded) {
-        listening.forEach(emitter -> senders.submit(() -> send(emitter, recorded.sequence())));
+        listening.forEach(emitter -> senders.submit(() -> announceTheFleetChange(emitter, recorded.sequence())));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void presenceChanged(PresenceChanged changed) {
+        listening.forEach(emitter -> senders.submit(() -> announceThePresenceChange(emitter)));
     }
 
     @EventListener(ContextClosedEvent.class)
@@ -54,9 +61,17 @@ class ConsoleStream implements AutoCloseable {
         senders.shutdownNow();
     }
 
-    private void send(SseEmitter emitter, long sequence) {
+    private void announceTheFleetChange(SseEmitter emitter, long sequence) {
+        sent(emitter, SseEmitter.event().name(FLEET_CHANGED).id(Long.toString(sequence)).data(Long.toString(sequence)));
+    }
+
+    private void announceThePresenceChange(SseEmitter emitter) {
+        sent(emitter, SseEmitter.event().name(FLEET_CHANGED).data(PRESENCE_CHANGED));
+    }
+
+    private void sent(SseEmitter emitter, SseEmitter.SseEventBuilder event) {
         try {
-            emitter.send(SseEmitter.event().name(FLEET_CHANGED).id(Long.toString(sequence)).data(Long.toString(sequence)));
+            emitter.send(event);
         } catch (IOException | IllegalStateException gone) {
             listening.remove(emitter);
         }

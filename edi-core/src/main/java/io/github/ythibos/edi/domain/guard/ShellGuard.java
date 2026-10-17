@@ -5,11 +5,16 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public record ShellGuard(String ediSocket, Set<String> baseBranches) {
+public record ShellGuard(String ediSocket, Set<String> baseBranches, Secrets secrets) {
 
     public ShellGuard {
         Objects.requireNonNull(ediSocket, "The guard knows the name of EDI's tmux socket.");
         baseBranches = Set.copyOf(baseBranches);
+        Objects.requireNonNull(secrets, "The guard knows which secrets it keeps from a shell.");
+    }
+
+    public ShellGuard(String ediSocket, Set<String> baseBranches) {
+        this(ediSocket, baseBranches, Secrets.NONE);
     }
 
     public Optional<GuardRefusal> check(String script) {
@@ -30,6 +35,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches) {
     private Optional<GuardRefusal> refusalFor(ShellCommand command) {
         return TmuxSockets.refusalFor(command, ediSocket)
                 .or(() -> GitPushes.refusalFor(command, baseBranches))
-                .or(() -> MergingCommands.refusalFor(command));
+                .or(() -> MergingCommands.refusalFor(command))
+                .or(() -> SecretReads.refusalFor(command, secrets));
     }
 }

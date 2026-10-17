@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.worker.HookAnswer;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
@@ -202,7 +203,7 @@ class DecisionsAndReportingTest {
     }
 
     private static String captainReport(TestHome home, Turn turn) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard()));
+        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
     }
 
     private static DecisionNumber raise(TestHome home, String task, String title) {

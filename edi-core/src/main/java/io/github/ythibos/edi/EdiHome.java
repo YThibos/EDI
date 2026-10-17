@@ -59,7 +59,11 @@ public final class EdiHome {
     }
 
     public Path craftRules() {
-        return root.resolve("memory").resolve("craft-rules.md");
+        return memory().resolve("craft-rules.md");
+    }
+
+    public Path memory() {
+        return root.resolve("memory");
     }
 
     public Path worktrees() {

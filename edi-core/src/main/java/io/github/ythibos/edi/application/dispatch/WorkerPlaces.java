@@ -35,6 +35,13 @@ public class WorkerPlaces {
         return workers.latestOf(task).filter(worker -> !worker.isRetired() && runtime.isRunning(worker.window()));
     }
 
+    public int occupied() {
+        return (int) workers.serving().stream()
+                .filter(Worker::countsAgainstCapacity)
+                .filter(worker -> runtime.isRunning(worker.window()))
+                .count();
+    }
+
     public int occupiedOn(ProjectName project) {
         return (int) workers.serving().stream()
                 .filter(Worker::countsAgainstCapacity)

@@ -2,6 +2,7 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -20,6 +21,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
@@ -48,6 +50,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
+import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
@@ -58,6 +61,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
@@ -70,6 +74,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TicketTransitioned;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkDiscarded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerLaunchFailed;
@@ -133,6 +138,22 @@ public class EventLog {
                         new TaskId(row.getString("task_id")),
                         json.readTree(row.getString("payload"))))
                 .list();
+    }
+
+    public List<LoggedEvent> ofTypesSince(Set<String> types, Instant since) {
+        return store.sql("select sequence, at, actor, type, task_id, payload from event where type in (:types) order by sequence")
+                .param("types", List.copyOf(types))
+                .query((row, _) -> new LoggedEvent(
+                        row.getLong("sequence"),
+                        Columns.instant(row.getString("at")),
+                        new Actor(row.getString("actor")),
+                        row.getString("type"),
+                        new TaskId(row.getString("task_id")),
+                        json.readTree(row.getString("payload"))))
+                .list()
+                .stream()
+                .filter(event -> !event.at().isBefore(since))
+                .toList();
     }
 
     public long latestSequence() {
@@ -253,6 +274,10 @@ public class EventLog {
             case BoardAnswerRefused refused -> payload.put("number", refused.number().toString())
                     .put("board", refused.board().value())
                     .put("because", refused.because());
+            case CaptainSaid said -> payload.put("verbatim", said.verbatim());
+            case ScoutPromoted promoted -> payload.put("ship", promoted.ship().value());
+            case TaskDropped dropped -> withEach(payload.put("captainsWord", dropped.captainsWord()), "discarded", dropped.discarded());
+            case WorkDiscarded discarded -> withEach(payload.put("captainsWord", discarded.captainsWord()), "discarded", discarded.discarded());
         };
     }
 

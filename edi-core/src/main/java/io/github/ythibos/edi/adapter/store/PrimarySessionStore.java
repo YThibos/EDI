@@ -1,12 +1,8 @@
 package io.github.ythibos.edi.adapter.store;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
-import io.github.ythibos.edi.domain.primary.Prompt;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 
@@ -84,14 +79,6 @@ public class PrimarySessionStore {
         return sessions(store.sql(SELECT_SESSIONS));
     }
 
-    public void recordTypedPrompt(UUID session, Prompt prompt, Instant at) {
-        store.sql("insert into typed_prompt (session_id, typed_at, digest) values (:session, :typed, :digest)")
-                .param("session", session.toString())
-                .param("typed", Columns.text(at))
-                .param("digest", digestOf(prompt.text()))
-                .update();
-    }
-
     private List<PrimarySession> sessions(StatementSpec query) {
         return query.query((row, _) -> session(row)).list();
     }
@@ -128,13 +115,5 @@ public class PrimarySessionStore {
     private static UsageLimit limit(ResultSet row) throws SQLException {
         String name = row.getString("limit_name");
         return name == null ? null : new UsageLimit(name, Columns.instant(row.getString("limit_resets_at")));
-    }
-
-    private static String digestOf(String prompt) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(prompt.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException(missing);
-        }
     }
 }

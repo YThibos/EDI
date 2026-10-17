@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.OutageHoldList;
 import io.github.ythibos.edi.application.supervision.OutageList;
 import io.github.ythibos.edi.application.supervision.OutageListQuery;
@@ -20,11 +21,13 @@ class RecoveryController {
     private final OutageHoldList holdList;
     private final OutageListQuery list;
     private final RecoverFromOutage recover;
+    private final DropFromOutage drop;
 
-    RecoveryController(OutageHoldList holdList, OutageListQuery list, RecoverFromOutage recover) {
+    RecoveryController(OutageHoldList holdList, OutageListQuery list, RecoverFromOutage recover, DropFromOutage drop) {
         this.holdList = holdList;
         this.list = list;
         this.recover = recover;
+        this.drop = drop;
     }
 
     @GetMapping("/api/recovery")
@@ -37,6 +40,12 @@ class RecoveryController {
         caller.requirePrimary("edi recover");
         holdList.holdTheDead();
         return list.list();
+    }
+
+    @PostMapping("/api/recovery/{number}/drop")
+    Confirmation drop(@PathVariable int number, @RequestBody DropAnswer answer, Caller caller) {
+        caller.requirePrimary("edi recover " + number + " drop");
+        return new Confirmation.Dropped(drop.drop(number, answer.discardingWork(), caller.callingSession(), caller.actor()));
     }
 
     @PostMapping("/api/recovery/{number}/{action}")

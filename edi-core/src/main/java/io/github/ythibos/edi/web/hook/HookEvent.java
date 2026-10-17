@@ -2,6 +2,7 @@ package io.github.ythibos.edi.web.hook;
 
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 enum HookEvent {
     SESSION_START,
@@ -22,5 +23,11 @@ enum HookEvent {
 
     String word() {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
+    }
+
+    String claudeCodeName() {
+        return Arrays.stream(name().split("_"))
+                .map(part -> part.charAt(0) + part.substring(1).toLowerCase(Locale.ROOT))
+                .collect(Collectors.joining());
     }
 }

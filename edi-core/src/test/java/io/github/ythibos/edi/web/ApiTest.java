@@ -121,8 +121,14 @@ class ApiTest {
                 {"title":"Which lamp?","context":"","options":[{"key":"A","text":"LED"},{"key":"B","text":"Oil"}],"recommend":{"key":"A","why":"it lasts"}}""", TEXT);
         String number = raised.body().strip();
         String heldAsJson = get("/api/tasks/" + number, JSON).body();
-        HttpResponse<String> answered = post("/api/decisions/" + number + "/answer", "{\"option\":\"A\",\"text\":\"" + number + " A\"}", TEXT);
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"" + number + " A\"}");
+        HttpResponse<String> untyped = answerInSession(primary, number, "{\"option\":\"A\",\"text\":\"" + number + " B\"}");
+        HttpResponse<String> answered = answerInSession(primary, number, "{\"option\":\"A\",\"text\":\"" + number + " A\"}");
 
+        assertRefusal(untyped, 409, "The captain did not type \"" + number + " B\" in this session; record his words exactly as he typed them,"
+                + " his whole message or one whole line of it.");
         assertThat(raised.statusCode()).isEqualTo(201);
         assertThat(number).matches("D\\d+");
         assertThat(heldAsJson).contains("\"kind\":\"decision\"", "\"until\":\"captain's word\"");
@@ -306,6 +312,10 @@ class ApiTest {
                 "Handle these, then start edi wait in the background again.");
         assertRefusal(sessionless, 409, "edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID.");
         assertThat(get("/api/recovery", TEXT).body()).startsWith("The outage hold list is empty.\nRecovery so far: 0 relaunches counted");
+    }
+
+    private static HttpResponse<String> answerInSession(UUID session, String number, String answer) throws Exception {
+        return send(inSession(session, "/api/decisions/" + number + "/answer", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(answer)));
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {

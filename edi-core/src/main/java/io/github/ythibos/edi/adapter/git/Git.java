@@ -176,6 +176,10 @@ public class Git {
         git(clone, "worktree", "remove", worktree.toString());
     }
 
+    public void discardWorktree(Path clone, Path worktree) {
+        git(clone, "worktree", "remove", "--force", worktree.toString());
+    }
+
     public void deleteBranch(Path clone, BranchName branch) {
         git(clone, "branch", "--quiet", "-D", branch.toString());
     }

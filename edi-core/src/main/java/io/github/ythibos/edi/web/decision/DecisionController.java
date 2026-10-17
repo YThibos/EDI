@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.AnsweredDecision;
 import io.github.ythibos.edi.application.decision.AskForARecheck;
@@ -27,12 +28,15 @@ class DecisionController {
     private final RaiseDecision raiseDecision;
     private final AnswerDecision answerDecision;
     private final AskForARecheck askForARecheck;
+    private final CaptainsWordEvidence captainsWord;
 
-    DecisionController(DecisionListQuery list, RaiseDecision raiseDecision, AnswerDecision answerDecision, AskForARecheck askForARecheck) {
+    DecisionController(DecisionListQuery list, RaiseDecision raiseDecision, AnswerDecision answerDecision, AskForARecheck askForARecheck,
+            CaptainsWordEvidence captainsWord) {
         this.list = list;
         this.raiseDecision = raiseDecision;
         this.answerDecision = answerDecision;
         this.askForARecheck = askForARecheck;
+        this.captainsWord = captainsWord;
     }
 
     @GetMapping("/api/decisions")
@@ -50,6 +54,9 @@ class DecisionController {
     @PostMapping("/api/decisions/{reference}/answer")
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
         AnswerChannel channel = caller.answeringChannel("edi decision answer");
+        if (channel == AnswerChannel.CHAT) {
+            captainsWord.requireTyped(caller.callingSession(), request.verbatim());
+        }
         AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel), caller.actor());
         return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket());
     }

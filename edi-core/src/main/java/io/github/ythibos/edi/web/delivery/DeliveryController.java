@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.delivery.CleanUpTask;
 import io.github.ythibos.edi.application.delivery.DeliverDraft;
+import io.github.ythibos.edi.application.delivery.DiscardWork;
 import io.github.ythibos.edi.application.delivery.FollowMerges;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.web.Confirmation;
@@ -18,11 +19,13 @@ class DeliveryController {
     private final DeliverDraft deliverDraft;
     private final FollowMerges followMerges;
     private final CleanUpTask cleanUpTask;
+    private final DiscardWork discardWork;
 
-    DeliveryController(DeliverDraft deliverDraft, FollowMerges followMerges, CleanUpTask cleanUpTask) {
+    DeliveryController(DeliverDraft deliverDraft, FollowMerges followMerges, CleanUpTask cleanUpTask, DiscardWork discardWork) {
         this.deliverDraft = deliverDraft;
         this.followMerges = followMerges;
         this.cleanUpTask = cleanUpTask;
+        this.discardWork = discardWork;
     }
 
     @PostMapping("/api/tasks/{reference}/deliver")
@@ -41,5 +44,11 @@ class DeliveryController {
     Confirmation cleanUp(@PathVariable String reference, Caller caller) {
         caller.requirePrimary("edi cleanup");
         return new Confirmation.CleanedUp(cleanUpTask.cleanUp(TaskReference.parse(reference), caller.actor()));
+    }
+
+    @PostMapping("/api/tasks/{reference}/discard-work")
+    Confirmation discardWork(@PathVariable String reference, Caller caller) {
+        caller.requirePrimary("edi worktree discard");
+        return new Confirmation.WorkDiscarded(discardWork.discard(TaskReference.parse(reference), caller.callingSession(), caller.actor()));
     }
 }

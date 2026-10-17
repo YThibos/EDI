@@ -10,6 +10,7 @@ public enum GuardRule {
     BASE_BRANCH_PUSH,
     MERGE,
     OUTSIDE_ISOLATED_COPY,
+    SECRET,
     UNREADABLE_COMMAND;
 
     public String word() {

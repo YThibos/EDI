@@ -42,6 +42,10 @@ import picocli.CommandLine.Spec;
             MergedCommand.class,
             CleanupCommand.class,
             BoardCommand.class,
+            CaptainCommand.class,
+            WorktreeCommand.class,
+            MemoryCommand.class,
+            PresenceCommand.class,
             HookCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})

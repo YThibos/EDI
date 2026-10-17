@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.task.NewTask;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
@@ -85,7 +86,7 @@ final class ReportGoldenCases {
     }
 
     static String rendered(TestHome home, Turn turn, ReportWidth width) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width));
+        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width, Presence.presentSince(TestHome.START)));
     }
 
     static Shown queuedBacklog(TestHome home, int tasks, int noteWords) {

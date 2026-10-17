@@ -26,18 +26,20 @@ public class LaunchDeferredDispatches {
     private final TaskStore tasks;
     private final ProjectRegistry registry;
     private final WorkerPlaces places;
+    private final AwayLimit awayLimit;
     private final LaunchWorker launcher;
     private final CloneRefreshes refreshes;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public LaunchDeferredDispatches(DispatchStore dispatches, TaskStore tasks, ProjectRegistry registry, WorkerPlaces places,
+    public LaunchDeferredDispatches(DispatchStore dispatches, TaskStore tasks, ProjectRegistry registry, WorkerPlaces places, AwayLimit awayLimit,
             LaunchWorker launcher, CloneRefreshes refreshes, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.dispatches = dispatches;
         this.tasks = tasks;
         this.registry = registry;
         this.places = places;
+        this.awayLimit = awayLimit;
         this.launcher = launcher;
         this.refreshes = refreshes;
         this.events = events;
@@ -57,7 +59,8 @@ public class LaunchDeferredDispatches {
         return transaction.execute(_ -> {
             ProjectEntry project = registry.entryOf(tasks.get(dispatch.task()).intake().projects().getFirst());
             OptionalInt capacity = project.workerCapacity();
-            return capacity.isEmpty() || places.occupiedOn(project.project().name()) < capacity.getAsInt();
+            boolean projectHasRoom = capacity.isEmpty() || places.occupiedOn(project.project().name()) < capacity.getAsInt();
+            return projectHasRoom && awayLimit.hasRoomForAnotherWorker();
         });
     }
 

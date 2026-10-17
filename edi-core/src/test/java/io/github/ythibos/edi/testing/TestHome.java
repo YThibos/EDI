@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.testing;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -20,7 +21,9 @@ import io.github.ythibos.edi.adapter.fork.ForkBacklogReader;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
+import io.github.ythibos.edi.adapter.home.HomeSetup;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.adapter.home.MemoryFiles;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
 import io.github.ythibos.edi.adapter.ledger.FleetLedger;
 import io.github.ythibos.edi.adapter.machine.MachineBoot;
@@ -28,6 +31,9 @@ import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.CaptainWordStore;
+import io.github.ythibos.edi.adapter.store.MemoryCheckStore;
+import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
 import io.github.ythibos.edi.adapter.store.ConsoleAccessStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
@@ -52,7 +58,10 @@ import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
 import io.github.ythibos.edi.adapter.tracker.NoTracker;
+import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
+import io.github.ythibos.edi.adapter.windows.WindowsToasts;
 import io.github.ythibos.edi.application.access.ConsoleAccess;
+import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
 import io.github.ythibos.edi.application.board.BoardListeners;
 import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
@@ -65,14 +74,18 @@ import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.delivery.CaptainCheckouts;
 import io.github.ythibos.edi.application.delivery.CleanUpTask;
 import io.github.ythibos.edi.application.delivery.CloneRefreshes;
+import io.github.ythibos.edi.application.delivery.CopyRetirement;
 import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
 import io.github.ythibos.edi.application.delivery.DeliverDraft;
+import io.github.ythibos.edi.application.delivery.DiscardWork;
 import io.github.ythibos.edi.application.delivery.DoneClaims;
+import io.github.ythibos.edi.application.delivery.DropTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges;
 import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.application.delivery.LandedWorkCheck;
 import io.github.ythibos.edi.application.delivery.ObservePipelines;
 import io.github.ythibos.edi.application.delivery.TaskCosts;
+import io.github.ythibos.edi.application.dispatch.AwayLimit;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.IsolatedCopies;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
@@ -85,14 +98,23 @@ import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.follow.EventFollowers;
 import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
+import io.github.ythibos.edi.application.memory.DailyMemoryCheck;
+import io.github.ythibos.edi.application.memory.MemoryQuery;
 import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
 import io.github.ythibos.edi.application.port.Tracker;
+import io.github.ythibos.edi.application.presence.ChangePresence;
+import io.github.ythibos.edi.application.presence.FollowThePresence;
+import io.github.ythibos.edi.application.presence.MeetingCalendar;
+import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
+import io.github.ythibos.edi.application.presence.PresenceQuery;
+import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
+import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
 import io.github.ythibos.edi.application.supervision.NoticeDueHolds;
 import io.github.ythibos.edi.application.supervision.OutageHoldList;
@@ -103,6 +125,7 @@ import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.BacklogQuery;
 import io.github.ythibos.edi.application.task.HoldTask;
 import io.github.ythibos.edi.application.task.NoteTask;
+import io.github.ythibos.edi.application.task.PromoteScout;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
@@ -170,7 +193,10 @@ public final class TestHome {
     private final UnplannedShipStore unplannedShips;
     private final PipelineReviewStore reviews;
     private final BoardStore boards;
+    private final CaptainWordStore captainWords;
+    private final PresenceStore presence;
     private final FakeBoardHost boardHost = new FakeBoardHost();
+    private WindowsStandIn windowsSide;
     private BoardListeners boardListeners;
 
     private TestHome(EdiHome home, DataSource store, FakeWorkerRuntime runtime, ManualClock clock) {
@@ -201,6 +227,8 @@ public final class TestHome {
         this.unplannedShips = new UnplannedShipStore(jdbc);
         this.reviews = new PipelineReviewStore(jdbc);
         this.boards = new BoardStore(jdbc);
+        this.captainWords = new CaptainWordStore(jdbc);
+        this.presence = new PresenceStore(jdbc, _ -> { });
     }
 
     public static TestHome in(Path directory) throws IOException {
@@ -387,6 +415,58 @@ public final class TestHome {
         return new MachineProfile(home);
     }
 
+    public PresenceStore presenceStore() {
+        return presence;
+    }
+
+    public PresenceQuery presenceQuery() {
+        return new PresenceQuery(presence, clock, transaction);
+    }
+
+    public ChangePresence changePresence() {
+        return new ChangePresence(presence, workerList(), meetingCalendar(), clock, transaction);
+    }
+
+    public FollowThePresence followThePresence() {
+        return new FollowThePresence(presence, primarySessions, meetingCalendar(), new PersonalConfiguration(home), clock, transaction);
+    }
+
+    public ReturnBriefQuery returnBriefs() {
+        return new ReturnBriefQuery(fleetSnapshot(), events, tasks, transaction);
+    }
+
+    public NotifyTheCaptain notifyTheCaptain() {
+        return new NotifyTheCaptain(presence, tasks, windowsToasts(), transaction);
+    }
+
+    public DailyMemoryCheck dailyMemoryCheck() {
+        return new DailyMemoryCheck(memory(), new MemoryCheckStore(jdbc), windowsToasts(), clock, transaction);
+    }
+
+    public MeetingCalendar meetingCalendar() {
+        return new MeetingCalendar(new OutlookCalendar(programs, machineProfile(), json, windowsSide().executable(), windowsSide().windowsDirectory()),
+                new PersonalConfiguration(home));
+    }
+
+    public WindowsToasts windowsToasts() {
+        return new WindowsToasts(programs, machineProfile(), windowsSide().executable(), windowsSide().windowsDirectory());
+    }
+
+    public synchronized WindowsStandIn windowsSide() {
+        if (windowsSide == null) {
+            try {
+                windowsSide = WindowsStandIn.in(home.root().resolve("windows-side"));
+            } catch (IOException unwritable) {
+                throw new UncheckedIOException(unwritable);
+            }
+        }
+        return windowsSide;
+    }
+
+    public MemoryQuery memory() {
+        return new MemoryQuery(new MemoryFiles(home), machineProfile(), clock);
+    }
+
     public DispatchRulesFile dispatchRulesFile() {
         return new DispatchRulesFile(home, json);
     }
@@ -415,11 +495,16 @@ public final class TestHome {
 
     public DispatchTask dispatchTask() {
         return new DispatchTask(tasks, dispatches, events, registry, machineProfile(), dispatchRulesFile(), workerPlaces(), launchWorker(),
-                cloneRefreshes(), researchBeforeImplementation(), clock, transaction);
+                cloneRefreshes(), researchBeforeImplementation(), awayLimit(), clock, transaction);
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), launchWorker(), cloneRefreshes(), events, clock, transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), awayLimit(), launchWorker(), cloneRefreshes(), events, clock,
+                transaction);
+    }
+
+    public AwayLimit awayLimit() {
+        return new AwayLimit(presence, workerPlaces());
     }
 
     public WorkerContext workerContext() {
@@ -463,8 +548,36 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(home, tasks, workers, taskCosts, reviews, boards, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, git, runtime, boardListeners(), clock, transaction);
+        return new CleanUpTask(tasks, workers, taskCosts, reviews, events, workerContext(), landedWork(),
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), clock, transaction);
+    }
+
+    public CopyRetirement copyRetirement() {
+        return new CopyRetirement(home, workers, boards, events, git, runtime, boardListeners(), transaction);
+    }
+
+    public DropTask dropTask() {
+        return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
+    }
+
+    public DiscardWork discardWork() {
+        return new DiscardWork(tasks, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
+    }
+
+    public DropFromOutage dropFromOutage() {
+        return new DropFromOutage(outages, dropTask(), transaction);
+    }
+
+    public PromoteScout promoteScout() {
+        return new PromoteScout(tasks, addTask(), events, captainsWord(), home, clock, transaction);
+    }
+
+    public CaptainWordStore captainWords() {
+        return captainWords;
+    }
+
+    public CaptainsWordEvidence captainsWord() {
+        return new CaptainsWordEvidence(captainWords, primarySessions, primarySessions(), tasks, decisions, events, clock, transaction);
     }
 
     public FollowMerges followMerges() {
@@ -484,7 +597,7 @@ public final class TestHome {
         FollowTickets tickets = new FollowTickets(tasks, registry, trackers(), events, clock, transaction);
         ResearchFirstPilot pilot = new ResearchFirstPilot(unplannedShips, tasks, taskCosts, reviews, dispatches, raiseDecision(), events, clock,
                 transaction);
-        return new EventFollowers(fleetLedger, tickets, pilot, events, eventCursors, transaction);
+        return new EventFollowers(fleetLedger, tickets, pilot, notifyTheCaptain(), events, eventCursors, transaction);
     }
 
     public TicketProposalStore ticketProposalStore() {
@@ -532,7 +645,7 @@ public final class TestHome {
     }
 
     public GuardToolCall guardToolCall() {
-        return new GuardToolCall(workerContext(), registry, runtime, events, clock, transaction);
+        return new GuardToolCall(home, workerContext(), registry, machineProfile(), captainsWord(), runtime, events, clock, transaction);
     }
 
     public NoticeOverdueSteers noticeOverdueSteers() {
@@ -572,7 +685,8 @@ public final class TestHome {
     }
 
     public PrimaryHooks primaryHooks() {
-        return new PrimaryHooks(primarySessions, primarySessions(), tasks, events, processes, runtime, clock, transaction);
+        return new PrimaryHooks(primarySessions, primarySessions(), captainWords, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
+                processes, runtime, clock, transaction);
     }
 
     public WorkerListQuery workerList() {
@@ -580,11 +694,12 @@ public final class TestHome {
     }
 
     public SessionStartDigestQuery sessionStartDigest() {
-        return new SessionStartDigestQuery(primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages, wakes, transaction);
+        return new SessionStartDigestQuery(primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages, wakes, presenceQuery(), memory(),
+                new HomeSetup(home), clock, transaction);
     }
 
     public WaitForWakes waitForWakes() {
-        return new WaitForWakes(wakes, primarySessions(), decisions, tasks, outages, clock, transaction);
+        return new WaitForWakes(wakes, primarySessions(), decisions, tasks, outages, presence, new PersonalConfiguration(home), clock, transaction);
     }
 
     public CountRecoveryCost countRecoveryCost() {

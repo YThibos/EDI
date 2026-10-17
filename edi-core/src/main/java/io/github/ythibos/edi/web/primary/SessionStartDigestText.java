@@ -2,15 +2,18 @@ package io.github.ythibos.edi.web.primary;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
+import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 import io.github.ythibos.edi.web.text.Words;
@@ -34,6 +37,9 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     @Override
     public String text(SessionStartDigest digest) {
         List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing())));
+        lines.add("Presence: " + PresenceWords.of(digest.presence()) + ".");
+        lines.addAll(memoryOf(digest.memory()));
+        lines.addAll(setupOf(digest.missingFromTheHome()));
         lines.addAll(limitStop(digest.previousLimitStop()));
         lines.addAll(decisions(digest.fleet()));
         lines.add(workers.text(digest.workers()).stripTrailing());
@@ -41,6 +47,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.add("Queued: " + digest.fleet().queued().size() + ".");
         lines.addAll(outage(digest));
         lines.add("Wakes waiting: " + digest.wakesWaiting() + "; edi wait prints them.");
+        lines.addAll(upkeepOf(digest));
         lines.addAll(waitAdvice(digest));
         return String.join("\n", lines) + "\n";
     }
@@ -51,6 +58,31 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
             case STANDBY -> "This session is standby: another session holds the primary role, so this one only reads until the captain types here.";
             case UNCLAIMED -> "No session holds the primary role; the captain's next typed prompt makes this session the primary.";
         };
+    }
+
+    private static List<String> memoryOf(MemoryCheck memory) {
+        String measured = memory.estimatedTokens() + " of " + memory.budgetTokens() + " tokens";
+        if (memory.passes()) {
+            return List.of("Startup memory: " + measured + "; it is part of this session's system prompt, and if it is not, read "
+                    + memoryFilesOf(memory) + " now.");
+        }
+        return List.of("Startup memory needs curating (" + measured + (memory.duplicatedHeadings().isEmpty() ? "" : ", repeated rule headings")
+                + "): run /stow; edi memory stow-list lists what to curate.");
+    }
+
+    private static String memoryFilesOf(MemoryCheck memory) {
+        return memory.files().stream().map(file -> file.path().toString()).collect(Collectors.joining(", "));
+    }
+
+    private static List<String> setupOf(List<String> missing) {
+        return missing.isEmpty() ? List.of() : List.of("The EDI home lacks " + String.join(", ", missing)
+                + "; examples/edi-home in the EDI repository shows each file's shape, and the captain decides their content.");
+    }
+
+    private static List<String> upkeepOf(SessionStartDigest digest) {
+        return digest.upkeepSuggested() && digest.standing() != Standing.STANDBY
+                ? List.of("It is the start of the week: offer the captain the weekly upkeep check, whether EDI and its tools are up to date (edi-upkeep).")
+                : List.of();
     }
 
     private static List<String> limitStop(PrimarySession stopped) {

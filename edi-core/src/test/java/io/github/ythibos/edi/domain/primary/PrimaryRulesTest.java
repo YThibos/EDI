@@ -39,14 +39,17 @@ class PrimaryRulesTest {
     void endsATurnOnlyAfterTheReportWhenStateChangedAndWithAWaitWhileWorkIsInFlight() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
 
-        assertThat(TurnEnd.blockingReason(turn, false, false, false)).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, true, false, false)).contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn.reported(START.plusSeconds(1)), true, false, false)).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.reported(START.minusSeconds(1)), true, false, false)).contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn, false, true, false)).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, false, true, true)).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), true, true, false)).isEmpty();
-        assertThat(TurnEnd.blockingReason(null, true, true, false)).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, false, false))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, false, false))).contains(TurnEnd.RENDER_THE_REPORT);
+        assertThat(TurnEnd.blockingReason(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, false, false, false))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false)))
+                .contains(TurnEnd.RENDER_THE_REPORT);
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, false, false))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, true, false))).contains(TurnEnd.START_THE_WAIT);
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, false))).contains(TurnEnd.START_THE_WAIT);
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, true))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, true, false))).isEmpty();
+        assertThat(TurnEnd.blockingReason(null, new TurnCircumstances(true, false, true, false))).isEmpty();
     }
 
     @Test

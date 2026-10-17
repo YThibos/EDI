@@ -24,6 +24,7 @@ import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -61,7 +62,7 @@ class ProcessSafetyTest {
     }
 
     private HookAnswer forThePrimary(String command) {
-        return home.guardToolCall().checkForPrimary(new ToolCall("Bash", command, null, home.home().root()));
+        return home.guardToolCall().checkForPrimary(new ToolCall("Bash", command, null, home.home().root()), CallingSession.UNNAMED);
     }
 
     private void assertDenied(HookAnswer answer, String reason) {

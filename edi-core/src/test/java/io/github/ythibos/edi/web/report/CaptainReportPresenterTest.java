@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
 class CaptainReportPresenterTest {
@@ -80,7 +82,7 @@ class CaptainReportPresenterTest {
     }
 
     private String rendered(FleetSnapshot fleet, Turn turn) {
-        return presenter.text(new CaptainReport(fleet, turn, ReportWidth.standard()));
+        return presenter.text(new CaptainReport(fleet, turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
     }
 
     private static Task filed(String item, int daysLater) {

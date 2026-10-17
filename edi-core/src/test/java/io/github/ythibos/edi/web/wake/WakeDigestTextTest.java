@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -19,6 +20,7 @@ class WakeDigestTextTest {
 
     private static final TaskId LAMP = new TaskId("fit-lamp");
     private static final Instant RAISED = Instant.parse("2026-10-16T09:00:00Z");
+    private static final Presence PRESENT = Presence.presentSince(RAISED);
 
     @Test
     void tellsThePrimaryWhatNeedsItOneNumberedLineAtATime() {
@@ -26,7 +28,7 @@ class WakeDigestTextTest {
                 queued(1, new Wake(WakeKind.NEEDS_DECISION, LAMP, WorkerId.first(LAMP), "(lamp) Brass or oil?", null)),
                 queued(2, new Wake(WakeKind.WORKER_DIED, LAMP, WorkerId.first(LAMP), "its tmux server changed", null)),
                 queued(3, new Wake(WakeKind.USAGE_LIMIT, LAMP, WorkerId.first(LAMP), "session limit", Instant.parse("2026-10-16T14:10:00Z"))),
-                queued(4, new Wake(WakeKind.LOST_IN_OUTAGE, new TaskId("tune-horn"), null, "2: the machine restarted", null))), 1, 3, 1);
+                queued(4, new Wake(WakeKind.LOST_IN_OUTAGE, new TaskId("tune-horn"), null, "2: the machine restarted", null))), 1, 3, 1, PRESENT);
 
         assertThat(new WakeDigestText().text(delivery)).isEqualTo("""
                 EDI wake: 4 waiting.
@@ -45,7 +47,7 @@ class WakeDigestTextTest {
                 queued(1, new Wake(WakeKind.DRAFT_MERGED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(2, new Wake(WakeKind.DRAFT_CLOSED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(3, new Wake(WakeKind.DELIVERY_FAILED, LAMP, null, "the captain's checkout has uncommitted work in lamp.txt", null)),
-                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0);
+                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0, PRESENT);
 
         assertThat(new WakeDigestText().text(delivery)).contains("""
                 1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; EDI refreshes the clone and cleans up.
@@ -58,9 +60,19 @@ class WakeDigestTextTest {
     @Test
     void namesEveryKindOfWake() {
         for (WakeKind kind : WakeKind.values()) {
-            String text = new WakeDigestText().text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0));
+            String text = new WakeDigestText().text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0, PRESENT));
             assertThat(text).as(kind.word()).contains("1. fit-lamp");
         }
+    }
+
+    @Test
+    void asksForSilenceWhileTheCaptainKeepsTheChatQuiet() {
+        Presence quiet = PRESENT.quiet(RAISED.plusSeconds(60));
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.DONE, LAMP, WorkerId.first(LAMP), "fitted", null))), 0, 1, 0, quiet);
+
+        assertThat(new WakeDigestText().text(delivery)).contains("The captain is quiet since 2026-10-16 09:01Z, on request: handle these and end"
+                + " the turn with no text for him; decisions, failures, blockers and ready drafts reach him as notifications and in his return brief.\n"
+                + "Handle these, then start edi wait in the background again.\n");
     }
 
     private static QueuedWake queued(long number, Wake wake) {

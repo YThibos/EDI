@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.web;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -11,14 +12,17 @@ import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Answered;
 import io.github.ythibos.edi.web.Confirmation.BoardArmed;
+import io.github.ythibos.edi.web.Confirmation.CaptainHeard;
 import io.github.ythibos.edi.web.Confirmation.CleanedUp;
 import io.github.ythibos.edi.web.Confirmation.Deferred;
 import io.github.ythibos.edi.web.Confirmation.Dispatched;
+import io.github.ythibos.edi.web.Confirmation.Dropped;
 import io.github.ythibos.edi.web.Confirmation.DraftDelivered;
 import io.github.ythibos.edi.web.Confirmation.Held;
 import io.github.ythibos.edi.web.Confirmation.MergedWorkFollowedUp;
 import io.github.ythibos.edi.web.Confirmation.Noted;
 import io.github.ythibos.edi.web.Confirmation.PlannedFirst;
+import io.github.ythibos.edi.web.Confirmation.Promoted;
 import io.github.ythibos.edi.web.Confirmation.Queued;
 import io.github.ythibos.edi.web.Confirmation.Raised;
 import io.github.ythibos.edi.web.Confirmation.RecheckAsked;
@@ -27,6 +31,7 @@ import io.github.ythibos.edi.web.Confirmation.Released;
 import io.github.ythibos.edi.web.Confirmation.StatusRecorded;
 import io.github.ythibos.edi.web.Confirmation.Steered;
 import io.github.ythibos.edi.web.Confirmation.StopRequested;
+import io.github.ythibos.edi.web.Confirmation.WorkDiscarded;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
@@ -66,7 +71,22 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case CleanedUp cleanedUp -> DeliverySentences.cleanedUp(cleanedUp.task());
             case BoardArmed armed -> boardArmed(armed.board());
             case RecheckAsked asked -> "Asked EDI to re-check " + asked.number() + " against reality; it stays open until it is answered.";
+            case CaptainHeard heard -> captainHeard(heard);
+            case Promoted promoted -> "Promoted the scout " + promoted.promoted().scout() + " to the ship " + promoted.promoted().ship().id()
+                    + ", queued on the captain's word.";
+            case Dropped dropped -> "Dropped " + dropped.dropped().task().id() + " on the captain's word" + discardedOf(dropped.dropped().discarded());
+            case WorkDiscarded discarded -> "Discarded the isolated copy and the branch of " + discarded.discarded().task()
+                    + " on the captain's word" + discardedOf(discarded.discarded().discarded());
         };
+    }
+
+    private static String captainHeard(CaptainHeard heard) {
+        String concerned = heard.word().concernsTheHome() ? "for this session" : "on " + heard.word().task() + " for this session";
+        return "Recorded the captain's word " + concerned + ": \"" + heard.word().verbatim() + "\"";
+    }
+
+    private static String discardedOf(List<String> discarded) {
+        return discarded.isEmpty() ? "; nothing unlanded was discarded." : "; discarded: " + String.join("; ", discarded) + ".";
     }
 
     private static String boardArmed(Board board) {

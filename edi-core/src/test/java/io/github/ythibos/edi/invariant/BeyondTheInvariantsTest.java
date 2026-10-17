@@ -12,10 +12,13 @@ import static org.junit.platform.testkit.engine.TestExecutionResultConditions.me
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -31,21 +34,31 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.testkit.engine.EngineTestKit;
 
 import io.github.ythibos.edi.application.migration.MigrationNote;
+import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.migration.MigrationPlan;
 import io.github.ythibos.edi.application.migration.SetAsideSection;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.presence.PresenceCause;
+import io.github.ythibos.edi.domain.presence.PresenceMode;
+import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.web.migration.MigrationPlanText;
+import io.github.ythibos.edi.web.presence.ReturnBriefText;
 
 @DisplayName("Acceptance tests beyond the invariants (12.7 and 17.4)")
 class BeyondTheInvariantsTest {
@@ -120,9 +133,70 @@ class BeyondTheInvariantsTest {
     }
 
     @Test
+    @Tag("adapter")
     @DisplayName("AT-46 presence switches to quiet without input, stays silent on routine wakes, never turns silence into away, and demo holds present")
-    void presenceFollowsTheCaptain() {
-        Pending.until(Slice.S8);
+    void presenceFollowsTheCaptain() throws IOException {
+        TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY)
+                .writing("config/machine.yaml", "notify:\n  windowsToast: true\npresence:\n  calendar: outlook\n")
+                .writing("config/personal.yaml", "presence:\n  calendarIgnore: [Example at the office]\n");
+        UUID session = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().promptSubmitted(session, "Fit the brass lamp.");
+        home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+
+        Presence beforeTheThreshold = followedAfter(home, Duration.ofMinutes(14));
+        Presence afterTheThreshold = followedAfter(home, Duration.ofMinutes(1));
+        home.primaryHooks().promptSubmitted(session, "<task-notification><status>completed</status></task-notification>");
+        home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Which lamp?"), Actor.PRIMARY);
+        HookAnswer quietStop = home.primaryHooks().stopping(session, List.of(new BackgroundJob("shell", "running", "edi wait")));
+        home.eventFollowers().followTheLog();
+        home.eventFollowers().followTheLog();
+        Presence afterAMonth = followedAfter(home, Duration.ofDays(30));
+        String returnBrief = new ReturnBriefText().text(home.primaryHooks().promptSubmitted(session, "I am back.").orElseThrow());
+
+        assertThat(beforeTheThreshold.mode()).isEqualTo(PresenceMode.PRESENT);
+        assertThat(afterTheThreshold).extracting(Presence::mode, Presence::cause, Presence::since)
+                .containsExactly(PresenceMode.QUIET, PresenceCause.SILENCE, TestHome.START.plus(Duration.ofMinutes(15)));
+        assertThat(quietStop).isEqualTo(HookAnswer.PROCEED);
+        assertThat(home.windowsSide().toasts()).containsExactly("Decision D1 waits on you | Which lamp?");
+        assertThat(afterAMonth.mode()).isEqualTo(PresenceMode.QUIET);
+        assertThat(returnBrief).contains("While you were away (quiet since 2026-10-15 09:15Z, after a stretch without a typed message):",
+                "Decisions waiting on you (1)", "  D1  Which lamp?");
+        assertThat(home.presenceQuery().current().mode()).isEqualTo(PresenceMode.PRESENT);
+
+        Instant meetingStart = home.clock().now().plus(Duration.ofMinutes(5));
+        home.windowsSide().showingTheCalendar(calendarOf(
+                calendarEntry("Example at the office", meetingStart.minus(Duration.ofHours(2)), meetingStart.plus(Duration.ofHours(1)), false, 3, 2),
+                calendarEntry("Holiday", meetingStart.minus(Duration.ofHours(10)), meetingStart.plus(Duration.ofHours(14)), true, 0, 2),
+                calendarEntry("Sprint review", meetingStart, meetingStart.plus(Duration.ofHours(1)), false, 3, 2)));
+        Presence underPresenceMarkers = followedAfter(home, Duration.ofMinutes(4));
+        Presence inTheMeeting = followedAfter(home, Duration.ofMinutes(2));
+        home.primaryHooks().promptSubmitted(session, "/demo");
+        Presence demo = home.changePresence().demo();
+        Presence demoThroughTheMeeting = followedAfter(home, Duration.ofMinutes(50));
+        Presence afterTheMeeting = followedAfter(home, Duration.ofMinutes(10));
+
+        assertThat(underPresenceMarkers.mode()).isEqualTo(PresenceMode.PRESENT);
+        assertThat(inTheMeeting).extracting(Presence::mode, Presence::cause).containsExactly(PresenceMode.QUIET, PresenceCause.MEETING);
+        assertThat(demo.demoUntil()).isEqualTo(meetingStart.plus(Duration.ofHours(1)));
+        assertThat(demoThroughTheMeeting.mode()).isEqualTo(PresenceMode.PRESENT);
+        assertThat(demoThroughTheMeeting.demoUntil()).isEqualTo(demo.demoUntil());
+        assertThat(afterTheMeeting).extracting(Presence::mode, Presence::cause).containsExactly(PresenceMode.QUIET, PresenceCause.SILENCE);
+    }
+
+    private static Presence followedAfter(TestHome home, Duration pause) {
+        home.clock().advance(pause);
+        home.followThePresence().follow();
+        return home.presenceQuery().current();
+    }
+
+    private static String calendarOf(String... entries) {
+        return "[" + String.join(",", entries) + "]";
+    }
+
+    private static String calendarEntry(String subject, Instant start, Instant end, boolean allDay, int response, int showing) {
+        return "{\"Subject\":\"" + subject + "\",\"Start\":\"" + start + "\",\"End\":\"" + end + "\",\"AllDay\":" + allDay
+                + ",\"ResponseStatus\":" + response + ",\"BusyStatus\":" + showing + "}";
     }
 
     static final class LeakingTest {

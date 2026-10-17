@@ -1,43 +1,29 @@
 package io.github.ythibos.edi.application.delivery;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import io.github.ythibos.edi.EdiHome;
-import io.github.ythibos.edi.adapter.git.Git;
-import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
-import io.github.ythibos.edi.application.board.BoardListeners;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Pipeline;
-import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.PipelineReview;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
-import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.event.Actor;
-import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
-import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -47,42 +33,34 @@ import io.github.ythibos.edi.domain.worker.Worker;
 public class CleanUpTask {
 
     private static final String REPORT_FILE = "report.md";
-    private static final String BRANCHES = "refs/heads/";
+    private static final String HANDED_OVER = "it is cleaned up once its work is handed over.";
 
-    private final EdiHome home;
     private final TaskStore tasks;
     private final WorkerStore workers;
     private final TaskCostStore costs;
     private final PipelineReviewStore reviews;
-    private final BoardStore boards;
     private final EventLog events;
     private final WorkerContext context;
     private final LandedWorkCheck landedWork;
     private final TaskCosts taskCosts;
     private final Pipeline pipeline;
-    private final Git git;
-    private final WorkerRuntime runtime;
-    private final BoardListeners boardListeners;
+    private final CopyRetirement retirement;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public CleanUpTask(EdiHome home, TaskStore tasks, WorkerStore workers, TaskCostStore costs, PipelineReviewStore reviews, BoardStore boards,
-            EventLog events, WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, Git git, WorkerRuntime runtime,
-            BoardListeners boardListeners, Clock clock, TransactionTemplate transaction) {
-        this.home = home;
+    public CleanUpTask(TaskStore tasks, WorkerStore workers, TaskCostStore costs, PipelineReviewStore reviews, EventLog events,
+            WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, CopyRetirement retirement, Clock clock,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
         this.workers = workers;
         this.costs = costs;
         this.reviews = reviews;
-        this.boards = boards;
         this.events = events;
         this.context = context;
         this.landedWork = landedWork;
         this.taskCosts = taskCosts;
         this.pipeline = pipeline;
-        this.git = git;
-        this.runtime = runtime;
-        this.boardListeners = boardListeners;
+        this.retirement = retirement;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -90,24 +68,16 @@ public class CleanUpTask {
     public Task cleanUp(TaskReference reference, Actor actor) {
         Workplace workplace = transaction.execute(_ -> context.of(tasks.get(reference).id()));
         workplace.task().requireReadyForCleanUp();
-        requireNoWorkerAtWork(workplace);
+        retirement.requireNoWorkerAtWork(workplace, HANDED_OVER);
         requireTheReportOfAScout(workplace);
         removeTheNestedRepositoriesOfAScout(workplace);
         requireLanded(workplace, landedWork.of(workplace), actor);
         TaskCost cost = taskCosts.countFor(workplace);
         PipelineReview review = reviewOf(workplace);
-        retireTheCopy(workplace);
+        retirement.retireLanded(workplace);
         Task closed = closed(workplace, cost, review, actor);
-        boardListeners.forget(closed.id());
+        retirement.stopListeningFor(closed.id());
         return closed;
-    }
-
-    private void requireNoWorkerAtWork(Workplace workplace) {
-        transaction.execute(_ -> workers.latestOf(workplace.task().id()))
-                .filter(worker -> !worker.isRetired() && !worker.handedItsWorkOver() && runtime.isRunning(worker.window()))
-                .ifPresent(working -> {
-                    throw new Refusal(working.id() + " still works on " + workplace.task().id() + "; it is cleaned up once its work is handed over.");
-                });
     }
 
     private void requireTheReportOfAScout(Workplace workplace) {
@@ -122,8 +92,8 @@ public class CleanUpTask {
     }
 
     private void removeTheNestedRepositoriesOfAScout(Workplace workplace) {
-        if (workplace.task().intake().kind() == TaskKind.SCOUT && Files.isDirectory(workplace.worktree())) {
-            git.nestedRepositories(workplace.worktree()).forEach(nested -> deleted(workplace.worktree().resolve(nested)));
+        if (workplace.task().intake().kind() == TaskKind.SCOUT) {
+            retirement.removeNestedRepositories(workplace);
         }
     }
 
@@ -140,25 +110,12 @@ public class CleanUpTask {
         return pipeline.reviewOf(workplace.project().projectClone(), workplace.dispatch().branch()).orElse(PipelineReview.unknown());
     }
 
-    private void retireTheCopy(Workplace workplace) {
-        List<Worker> incarnations = transaction.execute(_ -> workers.allOf(workplace.task().id()));
-        incarnations.stream().filter(worker -> !worker.isRetired()).forEach(worker -> runtime.close(worker.window()));
-        Path clone = workplace.project().projectClone();
-        if (Files.isDirectory(workplace.worktree())) {
-            git.removeWorktree(clone, workplace.worktree());
-        }
-        if (git.commitAt(clone, BRANCHES + workplace.dispatch().branch()).isPresent()) {
-            git.deleteBranch(clone, workplace.dispatch().branch());
-        }
-        incarnations.forEach(worker -> deleted(home.workerState(worker.id())));
-    }
-
     private Task closed(Workplace workplace, TaskCost cost, PipelineReview review, Actor actor) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Task cleaned = tasks.get(workplace.task().id()).cleanedUp(now);
-            workers.allOf(cleaned.id()).stream().filter(worker -> !worker.isRetired()).forEach(worker -> retired(worker, now, actor));
-            boards.listeningOf(cleaned.id()).forEach(board -> retired(board, now, actor));
+            retirement.retireWorkers(cleaned.id(), "its task was cleaned up", now, actor);
+            retirement.retireBoards(cleaned.id(), now, actor);
             tasks.update(cleaned);
             costs.save(cost);
             events.record(new TaskCostRecorded(cleaned.id(), cost), actor, now);
@@ -167,28 +124,5 @@ public class CleanUpTask {
             events.record(new TaskCleanedUp(cleaned.id()), actor, now);
             return cleaned;
         });
-    }
-
-    private void retired(Worker worker, Instant now, Actor actor) {
-        workers.update(worker.retired(now));
-        events.record(new WorkerRetired(worker.id().task(), worker.id(), "its task was cleaned up"), actor, now);
-    }
-
-    private void retired(Board board, Instant now, Actor actor) {
-        boards.update(board.retired(now));
-        events.record(new BoardRetired(board.task(), board.id()), actor, now);
-    }
-
-    private static void deleted(Path directory) {
-        if (!Files.exists(directory)) {
-            return;
-        }
-        try (Stream<Path> tree = Files.walk(directory)) {
-            for (Path path : tree.sorted(Comparator.reverseOrder()).toList()) {
-                Files.delete(path);
-            }
-        } catch (IOException undeletable) {
-            throw new UncheckedIOException(undeletable);
-        }
     }
 }

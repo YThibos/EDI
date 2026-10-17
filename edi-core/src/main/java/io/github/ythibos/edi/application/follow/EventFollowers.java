@@ -18,6 +18,7 @@ import io.github.ythibos.edi.adapter.store.EventRecorded;
 import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
+import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
 import io.github.ythibos.edi.application.tracker.FollowTickets;
 
 @Component
@@ -32,12 +33,13 @@ public class EventFollowers implements AutoCloseable {
     private final TransactionTemplate transaction;
     private final ExecutorService runs = Executors.newVirtualThreadPerTaskExecutor();
 
-    public EventFollowers(EmitFleetLedger fleetLedger, FollowTickets tickets, ResearchFirstPilot pilot, EventLog events, EventCursorStore cursors,
-            TransactionTemplate transaction) {
+    public EventFollowers(EmitFleetLedger fleetLedger, FollowTickets tickets, ResearchFirstPilot pilot, NotifyTheCaptain captain, EventLog events,
+            EventCursorStore cursors, TransactionTemplate transaction) {
         this.followers = List.of(
                 Follower.named(EmitFleetLedger.FOLLOWER, fleetLedger::follow),
                 Follower.named(FollowTickets.FOLLOWER, tickets::follow),
-                Follower.named(ResearchFirstPilot.FOLLOWER, pilot::follow));
+                Follower.named(ResearchFirstPilot.FOLLOWER, pilot::follow),
+                Follower.named(NotifyTheCaptain.FOLLOWER, captain::follow));
         this.events = events;
         this.cursors = cursors;
         this.transaction = transaction;
