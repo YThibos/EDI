@@ -139,3 +139,15 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-090](ADR-090-cleanup-retires-a-landed-task.md) | Cleanup retires a landed task's copy, branch and workers, and records what the task cost | Design |
 | [ADR-091](ADR-091-a-running-pipeline-keeps-an-idle-worker-healthy.md) | Worker health is read from hooks, the tmux server, the boot and the pipeline, and each condition is noticed once | Design |
 | [ADR-092](ADR-092-the-store-keeps-deliveries.md) | The store keeps deliveries, pipeline runs, clone refreshes and task costs | Design |
+| [ADR-093](ADR-093-the-tracker-port-and-its-three-adapters.md) | The tracker port has three adapters, chosen per project and reachable only where the machine names the tracker | Architecture |
+| [ADR-094](ADR-094-work-keys-are-settled-at-intake.md) | A task's work key is settled at intake, and an external tracker's ticket is chosen by the captain | Design |
+| [ADR-095](ADR-095-the-answer-books-or-creates-the-ticket.md) | The captain's answer books the work on a ticket or creates it, and a refused answer goes back to him | Design |
+| [ADR-096](ADR-096-followers-read-the-event-log-from-their-own-cursor.md) | Followers read the event log from their own cursor after each commit and every 30 seconds | Design |
+| [ADR-097](ADR-097-ticket-updates-follow-the-work.md) | Ticket updates follow the work: the sprint at the first dispatch, the draft's link, and the merged status after the merge | Design |
+| [ADR-098](ADR-098-the-fleet-ledger-keeps-the-old-harnesss-contract.md) | The fleet ledger keeps the old harness's record contract for the time-booking tool | Design |
+| [ADR-099](ADR-099-research-before-implementation-queues-a-plan.md) | Research before implementation queues a research scout and runs the ship as implementation with its plan | Design |
+| [ADR-100](ADR-100-the-research-first-pilot.md) | The research-first pilot compares planned ships with unplanned ones and asks the captain after ten | Design |
+| [ADR-101](ADR-101-the-worked-line-while-the-profile-requires-it.md) | The brief asks for the worked line only while the machine profile requires it | Design |
+| [ADR-102](ADR-102-the-suite-runs-under-both-machine-profiles.md) | The full suite runs under a laptop and a desktop fixture profile | Design |
+| [ADR-103](ADR-103-tracker-secrets-are-read-at-call-time-and-hidden.md) | The tracker's token is read at each call and hidden from every message | Design |
+| [ADR-104](ADR-104-the-store-keeps-keys-proposals-cursors-and-pilot-records.md) | The store keeps work key sequences, ticket proposals, follower cursors, unplanned ships and reviews | Design |
