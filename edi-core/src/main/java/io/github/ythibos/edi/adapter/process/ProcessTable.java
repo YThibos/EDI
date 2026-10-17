@@ -29,6 +29,10 @@ public class ProcessTable implements AutoCloseable {
 
     private final ExecutorService escalations = Executors.newVirtualThreadPerTaskExecutor();
 
+    public long ownId() {
+        return ProcessHandle.current().pid();
+    }
+
     public Optional<SessionProcess> identify(long pid) {
         return ProcessHandle.of(pid).map(process -> new SessionProcess(pid, process.info().startInstant().orElse(null)));
     }

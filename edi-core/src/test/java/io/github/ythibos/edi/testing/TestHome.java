@@ -695,7 +695,7 @@ public final class TestHome {
 
     public SessionStartDigestQuery sessionStartDigest() {
         return new SessionStartDigestQuery(primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages, wakes, presenceQuery(), memory(),
-                new HomeSetup(home), clock, transaction);
+                new HomeSetup(home), new PersonalConfiguration(home), clock, transaction);
     }
 
     public WaitForWakes waitForWakes() {

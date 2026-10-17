@@ -61,6 +61,26 @@ describe('SitrepPage', () => {
     expect(text(fixture.nativeElement, '.sr-foot .sr-meta-mono:last-child')).toBe('live · answers go straight to EDI');
   });
 
+  it('shows the presence and asks EDI for present or a demo from the header', async () => {
+    const fixture = await rendered();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page, '.sr-presence__mode')).toBe('quiet');
+    expect(page.querySelector('.sr-presence__mode')?.getAttribute('title')).toContain('after a stretch without a typed message');
+    expect(texts(page, '.sr-presence__button')).toEqual(['Present', 'Demo']);
+
+    (page.querySelectorAll('.sr-presence__button')[1] as HTMLButtonElement).click();
+    const chosen = http.expectOne('/api/presence');
+    expect(chosen.request.body).toEqual({ mode: 'demo' });
+    expect(chosen.request.headers.get('X-EDI-Console')).toBe('1');
+    chosen.flush('Presence: present for a demo until 2026-10-15 09:00Z.');
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'present', demo: true, words: 'present for a demo until 2026-10-15 09:00Z' } }));
+    await fixture.whenStable();
+
+    expect(text(page, '.sr-presence__mode')).toBe('demo');
+    expect(texts(page, '.sr-presence__button')).toEqual(['End demo']);
+  });
+
   it('asks the captain to sign in when the console has no session', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush('This call needs a console session.', { status: 401, statusText: 'Unauthorized' });

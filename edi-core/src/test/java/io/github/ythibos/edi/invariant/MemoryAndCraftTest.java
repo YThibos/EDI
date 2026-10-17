@@ -20,6 +20,7 @@ import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BriefFixtures;
@@ -214,7 +215,8 @@ class MemoryAndCraftTest {
             TestHome home = ReportGoldenCases.homeIn(directory);
             ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
 
-            ConsoleSitrep board = new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT);
+            ConsoleSitrep board = new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT,
+                    Presence.presentSince(TestHome.START));
 
             assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
             assertThat(board.chartedTotal()).isEqualTo(ReportGoldenCases.TWO_MEGABYTE_TASKS);

@@ -30,16 +30,26 @@ final class HookCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
+        String payload;
         try {
-            CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload(), "application/json");
+            payload = payload();
+        } catch (IOException unreadable) {
+            return unanswered(unreadable.getMessage());
+        }
+        try {
+            CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload, "application/json");
             return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip());
-        } catch (CoreUnavailable | IOException unavailable) {
-            return unanswered(unavailable.getMessage());
+        } catch (CoreUnavailable unavailable) {
+            return thePrimaryMayStillRunEdi(payload) ? ANSWERED : unanswered(unavailable.getMessage());
         }
     }
 
     private String payload() throws IOException {
         return new String(edi.input().readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private boolean thePrimaryMayStillRunEdi(String payload) {
+        return event.equals(GUARD) && !edi.runsForAWorker() && PlainEdiCall.isIn(payload);
     }
 
     private int answered(String answer) {

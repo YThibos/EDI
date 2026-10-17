@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.home.HomeSetup;
+import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
@@ -35,12 +36,13 @@ public class SessionStartDigestQuery {
     private final PresenceQuery presence;
     private final MemoryQuery memory;
     private final HomeSetup home;
+    private final PersonalConfiguration personal;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public SessionStartDigestQuery(PrimarySessions roles, PrimarySessionStore sessions, FleetSnapshotQuery fleet, WorkerListQuery workers,
-            OutageStore outages, WakeStore wakes, PresenceQuery presence, MemoryQuery memory, HomeSetup home, Clock clock,
-            TransactionTemplate transaction) {
+            OutageStore outages, WakeStore wakes, PresenceQuery presence, MemoryQuery memory, HomeSetup home, PersonalConfiguration personal,
+            Clock clock, TransactionTemplate transaction) {
         this.roles = roles;
         this.sessions = sessions;
         this.fleet = fleet;
@@ -50,13 +52,14 @@ public class SessionStartDigestQuery {
         this.presence = presence;
         this.memory = memory;
         this.home = home;
+        this.personal = personal;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public SessionStartDigest digestFor(UUID session) {
-        return new SessionStartDigest(roles.standingOf(session), transaction.execute(_ -> limitStopToTell(session)), fleet.snapshot(),
-                workers.serving(), transaction.execute(_ -> outages.open()), transaction.execute(_ -> wakes.unacknowledged().size()),
+        return new SessionStartDigest(roles.standingOf(session), personal.address(), transaction.execute(_ -> limitStopToTell(session)),
+                fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()), transaction.execute(_ -> wakes.unacknowledged().size()),
                 presence.current(), memory.check(), WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), ZoneId.systemDefault())),
                 home.missing());
     }

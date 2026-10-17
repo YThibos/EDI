@@ -9,6 +9,19 @@
       <span class="sr-brand__wm">EDI</span>
       <h1 class="sr-brand__sub">Sitrep</h1>
     </span>
+    @if (mode(); as mode) {
+      <span class="sr-presence">
+        <span class="sr-presence__mode sr-presence__mode--{{ mode }}" [attr.title]="presence()?.words">{{ mode }}</span>
+        @if (mode !== 'present' && mode !== 'demo') {
+          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('present')">Present</button>
+        }
+        @if (mode === 'demo') {
+          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo-off')">End demo</button>
+        } @else {
+          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo')">Demo</button>
+        }
+      </span>
+    }
     <span class="sr-clock">
       <span class="sr-clock__sd">{{ stamp() }}</span>
       <span class="sr-clock__home">{{ machine() ?? '-' }}</span>

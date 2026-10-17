@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -133,7 +134,7 @@ class SitrepConsolePresenterTest {
     }
 
     private ConsoleSitrep presented(FleetSnapshot fleet) {
-        return presenter.present(fleet, NOW, "laptop", CaptainAddress.DEFAULT);
+        return presenter.present(fleet, NOW, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW));
     }
 
     private static Task ship(String id, String title) {

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
+import io.github.ythibos.edi.domain.voice.CaptainVoice;
 import io.github.ythibos.edi.web.access.Caller;
 import tools.jackson.databind.JsonNode;
 
@@ -32,7 +33,9 @@ class ReportController {
 
     @PostMapping("/api/report")
     CaptainReport report(@RequestBody JsonNode turn, @RequestParam(required = false) Integer paneWidth, Caller caller) {
-        return reportOf(TurnDocument.read(turn), paneWidth, caller);
+        Turn read = TurnDocument.read(turn);
+        CaptainVoice.requireOutcomes("The turn's wording in the captain report", read.wording());
+        return reportOf(read, paneWidth, caller);
     }
 
     private CaptainReport reportOf(Turn turn, Integer paneWidth, Caller caller) {

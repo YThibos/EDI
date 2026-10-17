@@ -6,6 +6,7 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
     generated: '2026-10-15T06:17:35.120Z',
     machine: 'laptop',
     address: 'Commander',
+    presence: { mode: 'quiet', demo: false, words: 'quiet since 2026-10-15 06:00Z, after a stretch without a typed message' },
     decisions: [
       {
         number: 'D58',

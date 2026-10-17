@@ -2,6 +2,7 @@ package io.github.ythibos.edi.domain.guard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,6 +11,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ShellGuardTest {
 
     private static final ShellGuard GUARD = new ShellGuard("edi", Set.of("main", "feature/EDI-4"));
+    private static final ShellGuard SECRETS_KEPT = new ShellGuard("edi", Set.of("main"),
+            new Secrets(List.of("/state/core.token", "/api-keys.yml"), true));
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -206,5 +209,38 @@ class ShellGuardTest {
         "echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo x)))))))))))))"})
     void refusesWhatItCannotRead(String command) {
         assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.UNREADABLE_COMMAND);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "cat ~/.edi/state/core.token",
+        "curl -H \"Authorization: Bearer $(cat \"$EDI_HOME\"/state/core.token)\" http://127.0.0.1:47318/api/backlog",
+        "grep JIRA /path/to/api-keys.yml",
+        "less < /mnt/c/tmp/api-keys.yml",
+        "gh auth token --user example-owner",
+        "GH_TOKEN=$(gh auth token) gh pr list",
+        "glab auth status --show-token",
+        "glab auth status -t",
+        "glab config get token --host forge.example.org"})
+    void keepsSecretsFromAShell(String command) {
+        assertThat(SECRETS_KEPT.check(command)).map(GuardRefusal::rule).contains(GuardRule.SECRET);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "grep -rn core.token edi-core/src",
+        "edi health",
+        "gh auth status",
+        "glab auth status",
+        "cat state/core.port",
+        "less api-keys.yml.example"})
+    void letsThroughWhatOnlyMentionsASecret(String command) {
+        assertThat(SECRETS_KEPT.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"cat ~/.edi/state/core.token", "gh auth token"})
+    void keepsNoSecretWhenNoneIsNamed(String command) {
+        assertThat(GUARD.check(command)).isEmpty();
     }
 }

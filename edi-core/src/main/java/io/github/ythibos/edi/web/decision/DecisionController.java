@@ -17,7 +17,9 @@ import io.github.ythibos.edi.application.decision.DecisionList;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.voice.CaptainVoice;
 import io.github.ythibos.edi.web.Confirmation;
 import io.github.ythibos.edi.web.access.Caller;
 
@@ -48,7 +50,9 @@ class DecisionController {
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation raise(@PathVariable String reference, @RequestBody CardRequest card, Caller caller) {
         caller.requirePrimary("edi decision raise");
-        return new Confirmation.Raised(raiseDecision.raise(TaskReference.parse(reference), card.card(), caller.actor()));
+        DecisionCard raised = card.card();
+        CaptainVoice.requireOutcomes("A decision card", raised.wording());
+        return new Confirmation.Raised(raiseDecision.raise(TaskReference.parse(reference), raised, caller.actor()));
     }
 
     @PostMapping("/api/decisions/{reference}/answer")

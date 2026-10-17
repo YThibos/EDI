@@ -36,7 +36,8 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     @Override
     public String text(SessionStartDigest digest) {
-        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing())));
+        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing()),
+                "Address the captain as \"" + digest.address().word() + "\"."));
         lines.add("Presence: " + PresenceWords.of(digest.presence()) + ".");
         lines.addAll(memoryOf(digest.memory()));
         lines.addAll(setupOf(digest.missingFromTheHome()));

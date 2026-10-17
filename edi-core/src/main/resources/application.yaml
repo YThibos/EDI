@@ -1,5 +1,6 @@
 edi:
   home: ${EDI_HOME:${user.home}/.edi}
+  checkout: ${EDI_CHECKOUT:${user.home}/EDI}
   machine:
     boot-id: /proc/sys/kernel/random/boot_id
   workers:

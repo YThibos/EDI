@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.decision;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 public record DecisionCard(String title, String context, List<DecisionOption> options, Recommendation recommendation) {
 
@@ -24,6 +25,10 @@ public record DecisionCard(String title, String context, List<DecisionOption> op
 
     public boolean offers(OptionKey key) {
         return offers(options, key);
+    }
+
+    public String wording() {
+        return String.join("\n", Stream.concat(Stream.of(title, context, recommendation.why()), options.stream().map(DecisionOption::text)).toList());
     }
 
     private static boolean offers(List<DecisionOption> options, OptionKey key) {

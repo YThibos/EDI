@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.web;
 
+import java.util.List;
+
 import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
@@ -87,5 +89,12 @@ public sealed interface Confirmation {
     }
 
     record WorkDiscarded(DiscardedWork discarded) implements Confirmation {
+    }
+
+    record CoreStopping(List<Worker> stoppedWorkers) implements Confirmation {
+
+        public CoreStopping {
+            stoppedWorkers = List.copyOf(stoppedWorkers);
+        }
     }
 }

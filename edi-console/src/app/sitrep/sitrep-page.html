@@ -1,4 +1,9 @@
-<app-console-header [generated]="sitrep()?.generated ?? null" [machine]="sitrep()?.machine ?? null" />
+<app-console-header
+  [generated]="sitrep()?.generated ?? null"
+  [machine]="sitrep()?.machine ?? null"
+  [presence]="sitrep()?.presence ?? null"
+  (presenceChosen)="choosePresence($event)"
+/>
 <main class="sr-main">
   @switch (access()) {
     @case ('signed-out') {

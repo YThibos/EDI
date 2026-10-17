@@ -59,6 +59,60 @@
   text-overflow: ellipsis;
 }
 
+.sr-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.sr-presence__mode {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.sr-presence__mode--present {
+  color: var(--green);
+}
+
+.sr-presence__mode--quiet {
+  color: var(--blue);
+}
+
+.sr-presence__mode--away {
+  color: var(--amber);
+}
+
+.sr-presence__mode--demo {
+  color: var(--ion);
+}
+
+.sr-presence__button {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--ion);
+  background: var(--panel-sunk);
+  border: 1px solid var(--line-bright);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.sr-presence__button:hover,
+.sr-presence__button:focus-visible {
+  border-color: var(--ion);
+  outline: none;
+}
+
 .sr-clock {
   display: flex;
   flex-direction: column;
@@ -88,6 +142,10 @@
   }
 
   .sr-brand__sub {
+    display: none;
+  }
+
+  .sr-presence__mode {
     display: none;
   }
 }

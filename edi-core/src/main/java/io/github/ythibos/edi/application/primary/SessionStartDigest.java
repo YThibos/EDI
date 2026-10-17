@@ -9,8 +9,9 @@ import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
+import io.github.ythibos.edi.domain.status.CaptainAddress;
 
-public record SessionStartDigest(Standing standing, PrimarySession previousLimitStop, FleetSnapshot fleet, WorkerList workers,
+public record SessionStartDigest(Standing standing, CaptainAddress address, PrimarySession previousLimitStop, FleetSnapshot fleet, WorkerList workers,
         List<OutageEntry> outage, int wakesWaiting, Presence presence, MemoryCheck memory, boolean upkeepSuggested, List<String> missingFromTheHome) {
 
     public SessionStartDigest {

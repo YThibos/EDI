@@ -16,6 +16,7 @@ import io.github.ythibos.edi.application.fleet.RecentAnswer;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -29,7 +30,9 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Charted;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Landed;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Ongoing;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Option;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.PresenceShown;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Recommendation;
+import io.github.ythibos.edi.web.presence.PresenceWords;
 
 @Component
 public class SitrepConsolePresenter {
@@ -38,13 +41,14 @@ public class SitrepConsolePresenter {
     static final int CHARTED_SHOWN = 20;
     private static final String WITHOUT_A_WORKER = "waiting";
 
-    public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, String machine, CaptainAddress address) {
+    public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, String machine, CaptainAddress address, Presence presence) {
         List<Charted> charted = chartedNext(fleet);
         return new ConsoleSitrep(
                 ConsoleSitrep.EDI_SITREP_V1,
                 generated,
                 machine,
                 address.word(),
+                presenceShown(presence, generated),
                 fleet.decisions().stream().map(SitrepConsolePresenter::card).toList(),
                 fleet.answered().stream().map(SitrepConsolePresenter::answer).toList(),
                 fleet.ongoing().stream().map(SitrepConsolePresenter::ongoing).toList(),
@@ -52,6 +56,10 @@ public class SitrepConsolePresenter {
                 fleet.landed().size(),
                 charted.stream().limit(CHARTED_SHOWN).toList(),
                 charted.size());
+    }
+
+    private static PresenceShown presenceShown(Presence presence, Instant generated) {
+        return new PresenceShown(presence.mode().word(), presence.demoHoldsAt(generated), PresenceWords.of(presence));
     }
 
     private static List<Charted> chartedNext(FleetSnapshot fleet) {

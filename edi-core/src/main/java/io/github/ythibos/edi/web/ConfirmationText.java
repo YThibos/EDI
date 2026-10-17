@@ -13,6 +13,7 @@ import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Answered;
 import io.github.ythibos.edi.web.Confirmation.BoardArmed;
 import io.github.ythibos.edi.web.Confirmation.CaptainHeard;
+import io.github.ythibos.edi.web.Confirmation.CoreStopping;
 import io.github.ythibos.edi.web.Confirmation.CleanedUp;
 import io.github.ythibos.edi.web.Confirmation.Deferred;
 import io.github.ythibos.edi.web.Confirmation.Dispatched;
@@ -77,12 +78,20 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Dropped dropped -> "Dropped " + dropped.dropped().task().id() + " on the captain's word" + discardedOf(dropped.dropped().discarded());
             case WorkDiscarded discarded -> "Discarded the isolated copy and the branch of " + discarded.discarded().task()
                     + " on the captain's word" + discardedOf(discarded.discarded().discarded());
+            case CoreStopping stopping -> coreStopping(stopping);
         };
     }
 
     private static String captainHeard(CaptainHeard heard) {
         String concerned = heard.word().concernsTheHome() ? "for this session" : "on " + heard.word().task() + " for this session";
         return "Recorded the captain's word " + concerned + ": \"" + heard.word().verbatim() + "\"";
+    }
+
+    private static String coreStopping(CoreStopping stopping) {
+        String workers = stopping.stoppedWorkers().isEmpty()
+                ? ""
+                : " after signalling " + stopping.stoppedWorkers().stream().map(worker -> worker.id().toString()).collect(Collectors.joining(", "));
+        return "EDI core stops" + workers + ".";
     }
 
     private static String discardedOf(List<String> discarded) {
