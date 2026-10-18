@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 public record MemoryEntry(String firstLine, Optional<LocalDate> dated) {
 
-    private static final Pattern ITEM = Pattern.compile("^[-*]\\s+.*");
+    private static final Pattern ITEM = Pattern.compile("[-*]\\s.*");
     private static final Pattern ISO_DATE = Pattern.compile("\\b(\\d{4}-\\d{2}-\\d{2})\\b");
     private static final int SHOWN = 80;
 

@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 final class PlainEdiCall {
 
     private static final Pattern BASH_TOOL = Pattern.compile("\"tool_name\"\\s*:\\s*\"Bash\"");
-    private static final Pattern PLAIN_EDI_COMMAND = Pattern.compile("\"command\"\\s*:\\s*\"edi(?: [A-Za-z0-9=._-]+)*\"");
+    private static final Pattern PLAIN_EDI_COMMAND = Pattern.compile("\"command\"\\s*:\\s*\"edi(?: [A-Za-z0-9=._-]++)*+\"");
 
     private PlainEdiCall() {
     }

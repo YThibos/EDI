@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.memory;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public record StowList(int estimatedTokens, int budgetTokens, List<StowFinding> findings) {
 
@@ -27,11 +28,12 @@ public record StowList(int estimatedTokens, int budgetTokens, List<StowFinding> 
     private static List<StowFinding> findingsIn(MemoryFile file, LocalDate today) {
         List<StowFinding> findings = new ArrayList<>();
         for (MemoryEntry entry : file.entries()) {
-            if (entry.dated().isEmpty()) {
+            Optional<LocalDate> dated = entry.dated();
+            if (dated.isEmpty()) {
                 findings.add(new StowFinding(file.name(), entry.shown(), "it carries no date"));
-            } else if (file.name().equals(LEARNINGS) && entry.dated().get().isBefore(today.minusDays(LEARNING_SHELF_LIFE_DAYS))) {
+            } else if (file.name().equals(LEARNINGS) && dated.get().isBefore(today.minusDays(LEARNING_SHELF_LIFE_DAYS))) {
                 findings.add(new StowFinding(file.name(), entry.shown(),
-                        "it was last confirmed on " + entry.dated().get() + ": confirm it with today's date, or move it to archive.md"));
+                        "it was last confirmed on " + dated.get() + ": confirm it with today's date, or move it to archive.md"));
             }
         }
         return findings;

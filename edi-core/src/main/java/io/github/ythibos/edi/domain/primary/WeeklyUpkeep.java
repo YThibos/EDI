@@ -11,6 +11,6 @@ public final class WeeklyUpkeep {
     }
 
     public static boolean isSuggestedOn(LocalDate day) {
-        return day.getDayOfWeek() == UPKEEP_DAY;
+        return UPKEEP_DAY.equals(day.getDayOfWeek());
     }
 }
