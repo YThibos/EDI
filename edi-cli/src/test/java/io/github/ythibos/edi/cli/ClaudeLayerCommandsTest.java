@@ -107,14 +107,14 @@ class ClaudeLayerCommandsTest {
 
     @Test
     void staysUpWhenTheCoreRefusesToStop() {
-        core.answering(409, "1 workers are running (fit-lamp#1), so EDI stays up.\n");
+        core.answering(409, "1 worker is running (fit-lamp#1), so EDI stays up.\n");
 
         int refused = edi("", "down", "--force-stop-workers");
 
         assertThat(refused).isOne();
         assertThat(core.received().target()).isEqualTo("/api/core/stop");
         assertThat(core.received().body()).isEqualTo("{\"forceStopWorkers\":true}");
-        assertThat(err).hasToString("1 workers are running (fit-lamp#1), so EDI stays up.\n");
+        assertThat(err).hasToString("1 worker is running (fit-lamp#1), so EDI stays up.\n");
     }
 
     @Test

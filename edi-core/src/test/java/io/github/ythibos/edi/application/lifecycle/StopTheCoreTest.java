@@ -46,7 +46,7 @@ class StopTheCoreTest {
         CallingSession session = session("Stop everything, the workers too.");
 
         assertThatThrownBy(() -> home.stopTheCore().stopFor(CoreStop.WHEN_NO_WORKER_RUNS, session, Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessageContaining("1 workers are running (fit-lamp#1)");
+                .isInstanceOf(Refusal.class).hasMessageContaining("1 worker is running (fit-lamp#1)");
         assertThatThrownBy(() -> home.stopTheCore().stopFor(CoreStop.WITH_ITS_WORKERS, session, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("To stop the workers that are running, EDI needs the captain's word");
 
@@ -55,6 +55,20 @@ class StopTheCoreTest {
         assertThat(home.stopTheCore().stopFor(CoreStop.WITH_ITS_WORKERS, session, Actor.PRIMARY)).extracting(Worker::id).containsExactly(worker.id());
         assertThat(home.eventTypesOf(worker.id().task())).contains("WorkerStopRequested");
         assertThat(TestProcesses.awaitExit(pane.toHandle())).isTrue();
+    }
+
+    @Test
+    void namesEveryRunningWorkerWhenItStaysUp() throws IOException {
+        Process secondPane = processes.register(new ProcessBuilder("sleep", "30").start());
+        WorkerFixtures.servingWorkerIn(home.runtime().openWindowOf(secondPane.pid(), ProcessHandle.current().pid()), home,
+                WorkerFixtures.queuedShip("fit-door", "harness", "HRN-6"), CategoryId.IMPLEMENTATION);
+
+        assertThatThrownBy(() -> home.stopTheCore().stopFor(CoreStop.WHEN_NO_WORKER_RUNS, CallingSession.UNNAMED, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessageContaining("2 workers are running (");
+        pane.destroyForcibly();
+        secondPane.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(pane.toHandle())).isTrue();
+        assertThat(TestProcesses.awaitExit(secondPane.toHandle())).isTrue();
     }
 
     @Test

@@ -62,7 +62,7 @@ class EdiCoreApplicationTest {
                         "console_sign_in", "decision", "decision_option", "delivery", "dispatch", "dispatch_file", "event", "event_cursor", "hold_notice",
                         "inbox_message", "memory_check", "meta", "outage_entry", "pipeline_run", "presence", "primary_session", "recovery_cost", "task",
                         "task_cost", "task_dependency", "task_project", "task_review", "ticket_candidate", "ticket_proposal", "typed_passage",
-                        "unplanned_ship", "wake", "work_key_sequence", "worker", "worker_notice");
+                        "unbriefed_absence", "unplanned_ship", "wake", "work_key_sequence", "worker", "worker_notice");
         assertThat(store.sql("pragma journal_mode").query(String.class).single()).isEqualToIgnoringCase("wal");
         assertThat(store.sql("pragma foreign_keys").query(Integer.class).single()).isOne();
         assertThat(store.sql("pragma busy_timeout").query(Integer.class).single()).isEqualTo(5_000);
