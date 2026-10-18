@@ -1,6 +1,5 @@
 package io.github.ythibos.edi.application.authority;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -20,8 +19,6 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.authority.CaptainsAuthority;
 import io.github.ythibos.edi.domain.authority.Exchange;
 import io.github.ythibos.edi.domain.authority.Passage;
-import io.github.ythibos.edi.domain.decision.CaptainAnswer;
-import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
@@ -79,10 +76,12 @@ public class CaptainsWordEvidence {
 
     public CaptainsWord requireOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
-        return transaction.execute(_ -> CaptainsAuthority.onTask(task, exchange, words.heardIn(exchange.session()), answersOn(task)))
+        return transaction.execute(_ -> CaptainsAuthority.onTask(task, act, exchange, words.heardIn(exchange.session()),
+                        decisions.ofTask(task).stream().toList()))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
-                        + " --text \"<their words>\", or have the captain answer a decision on it, here or in the console."));
+                        + " --text \"<their words>\", or have the captain choose, here or in the console, the option of a decision on it"
+                        + " that authorises " + act.word() + "."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {
@@ -114,10 +113,6 @@ public class CaptainsWordEvidence {
 
     private boolean wasTyped(Exchange exchange, String verbatim) {
         return !verbatim.isBlank() && transaction.execute(_ -> words.wasTyped(exchange.session(), Passage.of(verbatim)));
-    }
-
-    private List<CaptainAnswer> answersOn(TaskId task) {
-        return decisions.ofTask(task).map(Decision::answer).stream().toList();
     }
 
     private Optional<CaptainsWord> onTheHome(Exchange exchange) {

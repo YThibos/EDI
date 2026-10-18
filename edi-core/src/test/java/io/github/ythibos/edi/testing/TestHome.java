@@ -423,7 +423,7 @@ public final class TestHome {
     }
 
     public StopTheCore stopTheCore() {
-        return new StopTheCore(workerList(), stopWorker(), captainsWord());
+        return new StopTheCore(workerPlaces(), stopWorker(), captainsWord());
     }
 
     public PresenceStore presenceStore() {
@@ -435,7 +435,7 @@ public final class TestHome {
     }
 
     public ChangePresence changePresence() {
-        return new ChangePresence(presence, workerList(), meetingCalendar(), clock, transaction);
+        return new ChangePresence(presence, workerPlaces(), meetingCalendar(), clock, transaction);
     }
 
     public FollowThePresence followThePresence() {
@@ -656,7 +656,7 @@ public final class TestHome {
     }
 
     public GuardToolCall guardToolCall() {
-        return new GuardToolCall(home, workerContext(), registry, machineProfile(), captainsWord(), runtime, events, clock, transaction);
+        return new GuardToolCall(home, workerContext(), registry, dispatches, machineProfile(), captainsWord(), runtime, events, clock, transaction);
     }
 
     public NoticeOverdueSteers noticeOverdueSteers() {

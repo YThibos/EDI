@@ -47,8 +47,10 @@ import io.github.ythibos.edi.architecture.HandWrittenClasses;
 import io.github.ythibos.edi.architecture.NameAMergeOperation;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
@@ -306,8 +308,8 @@ class AuthorityAndInterfaceTest {
 
         @Test
         @Tag("adapter")
-        @DisplayName("AT-06 discarding a worktree or work, deleting an unlanded branch and touching secrets need a decision answered this session")
-        void destructiveCommandsNeedAnAnswerFromThisSession() throws IOException {
+        @DisplayName("AT-06 discarding a worktree or work, deleting an unlanded branch and touching secrets need the captain's word for that act this session")
+        void destructiveCommandsNeedTheCaptainsWordForThatActFromThisSession() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             Path lampCopy = unlandedCopyOf(home, "fit-lamp", "HRN-3");
             Path doorCopy = unlandedCopyOf(home, "fit-door", "HRN-6");
@@ -316,35 +318,41 @@ class AuthorityAndInterfaceTest {
             home.git().removeWorktree(home.home().root().resolve("projects/harness"), hingeCopy);
             home.runtime().closeEveryWindow();
             CallingSession earlier = primarySessionIn(home, "D58 A");
-            answerOnTask(home, "fit-lamp", "D58 A");
+            answerOnTask(home, "fit-lamp", Cards.authorising("Discard the work on fit-lamp?", CaptainWordAct.DISCARD_WORK), "D58 A");
             home.clock().advance(Duration.ofHours(1));
             CallingSession current = primarySessionIn(home, "Read the API token to check it.");
+            answerOnTask(home, "fit-door", Cards.authorising("Drop fit-door?", CaptainWordAct.DROP), "D60 A");
+            answerOnTask(home, "fit-hinge", Cards.authorising("Discard the work on fit-hinge?", CaptainWordAct.DISCARD_WORK), "D61 B");
 
             assertThatThrownBy(() -> home.discardWork().discard(TaskReference.parse("fit-lamp"), current, Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("To discard work that has not landed, EDI needs the captain's word on fit-lamp");
             assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), true, current, Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("on fit-door in this session");
+            assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), false, current, Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("its work is not landed: door.txt is not committed");
             assertThatThrownBy(() -> home.discardWork().discard(TaskReference.parse("fit-hinge"), current, Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("on fit-hinge in this session");
             assertThat(guardedRead(home, current).verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
             assertThat(guardedRead(home, earlier).reason()).contains("touches a secret", "edi captain said");
+            assertThat(guarded(home, current, "git branch -D feature/HRN-3").reason()).contains("has not landed", "edi captain said");
+            assertThat(guarded(home, current, "git -C projects/harness push origin --delete feature/HRN-6").verdict())
+                    .isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
+            assertThat(guarded(home, current, "git branch -D feature/HRN-99")).isEqualTo(HookAnswer.PROCEED);
             assertThat(lampCopy).isDirectory();
             assertThat(doorCopy).isDirectory();
 
-            home.primaryHooks().promptSubmitted(current.id(), "D59 A");
-            answerOnTask(home, "fit-lamp", "D59 A");
-            answerOnTask(home, "fit-door", "D60 A");
-            answerOnTask(home, "fit-hinge", "D61 A");
+            answerOnTask(home, "fit-lamp", Cards.authorising("Discard the work on fit-lamp?", CaptainWordAct.DISCARD_WORK), "D59 A");
+            answerOnTask(home, "fit-door", Cards.authorising("Drop fit-door and its work?", CaptainWordAct.DISCARD_WORK), "D60 A");
+            answerOnTask(home, "fit-hinge", Cards.authorising("Discard the work on fit-hinge?", CaptainWordAct.DISCARD_WORK), "D61 A");
             home.captainsWord().record(current, "Read the API token to check it.", null, Actor.PRIMARY);
 
             assertThat(home.discardWork().discard(TaskReference.parse("fit-lamp"), current, Actor.PRIMARY).discarded())
                     .containsExactly("lamp.txt is not committed");
-            assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), false, current, Actor.PRIMARY))
-                    .isInstanceOf(Refusal.class).hasMessageContaining("its work is not landed: door.txt is not committed");
             assertThat(home.dropTask().drop(TaskReference.parse("fit-door"), true, current, Actor.PRIMARY).task().state()).isEqualTo(TaskState.DROPPED);
             assertThat(home.discardWork().discard(TaskReference.parse("fit-hinge"), current, Actor.PRIMARY).discarded())
                     .singleElement().asString().contains("HRN-7 Fit the hinge");
             assertThat(guardedRead(home, current)).isEqualTo(HookAnswer.PROCEED);
+            assertThat(guarded(home, current, "git branch -D feature/HRN-3")).isEqualTo(HookAnswer.PROCEED);
             assertThat(lampCopy).doesNotExist();
             assertThat(doorCopy).doesNotExist();
             assertThat(home.git().commitAt(home.home().root().resolve("projects/harness"), "refs/heads/feature/HRN-7")).isEmpty();
@@ -359,13 +367,18 @@ class AuthorityAndInterfaceTest {
             return copy;
         }
 
-        private static void answerOnTask(TestHome home, String task, String verbatim) {
-            home.raiseDecision().raise(TaskReference.parse(task), Cards.card("Discard the work on " + task + "?"), Actor.PRIMARY);
-            home.answerDecision().answer(TaskReference.parse(task), new GivenAnswer(verbatim, new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+        private static void answerOnTask(TestHome home, String task, DecisionCard card, String verbatim) {
+            home.raiseDecision().raise(TaskReference.parse(task), card, Actor.PRIMARY);
+            OptionKey chosen = new OptionKey(verbatim.charAt(verbatim.length() - 1));
+            home.answerDecision().answer(TaskReference.parse(task), new GivenAnswer(verbatim, chosen, "", AnswerChannel.CHAT), Actor.PRIMARY);
         }
 
         private static HookAnswer guardedRead(TestHome home, CallingSession session) {
-            return home.guardToolCall().checkForPrimary(new ToolCall("Bash", "cat ~/.edi/state/core.token", null, home.home().root()), session);
+            return guarded(home, session, "cat ~/.edi/state/core.token");
+        }
+
+        private static HookAnswer guarded(TestHome home, CallingSession session, String command) {
+            return home.guardToolCall().checkForPrimary(new ToolCall("Bash", command, null, home.home().root()), session);
         }
     }
 

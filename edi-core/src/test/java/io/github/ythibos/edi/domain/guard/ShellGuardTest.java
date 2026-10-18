@@ -11,8 +11,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ShellGuardTest {
 
     private static final ShellGuard GUARD = new ShellGuard("edi", Set.of("main", "feature/EDI-4"));
-    private static final ShellGuard SECRETS_KEPT = new ShellGuard("edi", Set.of("main"),
+    private static final ShellGuard SECRETS_KEPT = new ShellGuard("edi", Set.of("main"), Set.of(),
             new Secrets(List.of("/state/core.token", "/api-keys.yml"), true));
+    private static final ShellGuard UNLANDED_KEPT = new ShellGuard("edi", Set.of("main"), Set.of("feature/HRN-3"), Secrets.NONE);
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -242,5 +243,30 @@ class ShellGuardTest {
     @ValueSource(strings = {"cat ~/.edi/state/core.token", "gh auth token"})
     void keepsNoSecretWhenNoneIsNamed(String command) {
         assertThat(GUARD.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "git branch -D feature/HRN-3",
+        "git -C projects/harness branch --delete --force feature/HRN-3",
+        "git branch -df feature/HRN-3",
+        "git push origin --delete feature/HRN-3",
+        "git push -d origin feature/HRN-3",
+        "git push origin :feature/HRN-3",
+        "git push origin :refs/heads/feature/HRN-3"})
+    void keepsAnUnlandedTaskBranch(String command) {
+        assertThat(UNLANDED_KEPT.check(command)).map(GuardRefusal::rule).contains(GuardRule.UNLANDED_BRANCH_DELETION);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "git branch -D feature/HRN-4",
+        "git push origin --delete feature/HRN-4",
+        "git branch feature/HRN-3",
+        "git push origin feature/HRN-3",
+        "git checkout -b feature/HRN-5 feature/HRN-3",
+        "git log --decorate feature/HRN-3"})
+    void letsThroughWhatLeavesAnUnlandedTaskBranchStanding(String command) {
+        assertThat(UNLANDED_KEPT.check(command)).isEmpty();
     }
 }

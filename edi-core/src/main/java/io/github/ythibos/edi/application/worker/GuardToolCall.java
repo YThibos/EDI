@@ -19,6 +19,7 @@ import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.TrackerSettings.Credentials;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.port.Clock;
@@ -38,12 +39,14 @@ import io.github.ythibos.edi.domain.worker.WorkerId;
 public class GuardToolCall {
 
     private static final Set<String> USUAL_BASES = Set.of("main", "master");
-    private static final String SECRETS_AFTER_THE_CAPTAINS_WORD = " The captain's word in this session lets the primary run it: record it with"
+    private static final Set<GuardRule> ALLOWED_ON_THE_CAPTAINS_WORD = Set.of(GuardRule.SECRET, GuardRule.UNLANDED_BRANCH_DELETION);
+    private static final String AFTER_THE_CAPTAINS_WORD = " The captain's word in this session lets the primary run it: record it with"
             + " edi captain said --text \"<their words>\".";
 
     private final EdiHome home;
     private final WorkerContext context;
     private final ProjectRegistry registry;
+    private final DispatchStore dispatches;
     private final MachineProfile machine;
     private final CaptainsWordEvidence captainsWord;
     private final WorkerRuntime runtime;
@@ -51,11 +54,12 @@ public class GuardToolCall {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public GuardToolCall(EdiHome home, WorkerContext context, ProjectRegistry registry, MachineProfile machine, CaptainsWordEvidence captainsWord,
-            WorkerRuntime runtime, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public GuardToolCall(EdiHome home, WorkerContext context, ProjectRegistry registry, DispatchStore dispatches, MachineProfile machine,
+            CaptainsWordEvidence captainsWord, WorkerRuntime runtime, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.context = context;
         this.registry = registry;
+        this.dispatches = dispatches;
         this.machine = machine;
         this.captainsWord = captainsWord;
         this.runtime = runtime;
@@ -82,7 +86,11 @@ public class GuardToolCall {
     }
 
     private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets) {
-        return call.runsAShellCommand() ? new ShellGuard(runtime.socket(), bases, secrets).check(call.command()) : Optional.empty();
+        if (!call.runsAShellCommand()) {
+            return Optional.empty();
+        }
+        Set<String> unlandedBranches = transaction.execute(_ -> dispatches.branchesOfOpenTasks());
+        return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets).check(call.command());
     }
 
     private Secrets secretsKeptFromWorkers() {
@@ -107,7 +115,7 @@ public class GuardToolCall {
     }
 
     private boolean allowedOnTheCaptainsWord(GuardRefusal refusal, CallingSession calling) {
-        return refusal.rule() == GuardRule.SECRET && captainsWord.onTheHome(calling).isPresent();
+        return ALLOWED_ON_THE_CAPTAINS_WORD.contains(refusal.rule()) && captainsWord.onTheHome(calling).isPresent();
     }
 
     private static Set<String> basesOf(Workplace workplace) {
@@ -152,7 +160,7 @@ public class GuardToolCall {
     }
 
     private static HookAnswer denialToThePrimary(GuardRefusal refusal) {
-        String remedy = refusal.rule() == GuardRule.SECRET ? SECRETS_AFTER_THE_CAPTAINS_WORD : "";
+        String remedy = ALLOWED_ON_THE_CAPTAINS_WORD.contains(refusal.rule()) ? AFTER_THE_CAPTAINS_WORD : "";
         return HookAnswer.denyTheTool("EDI's guard refuses this: " + refusal.reason() + remedy);
     }
 }

@@ -3,6 +3,8 @@ package io.github.ythibos.edi.domain.decision;
 import java.util.List;
 import java.util.stream.Stream;
 
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+
 public record DecisionCard(String title, String context, List<DecisionOption> options, Recommendation recommendation) {
 
     public DecisionCard {
@@ -25,6 +27,10 @@ public record DecisionCard(String title, String context, List<DecisionOption> op
 
     public boolean offers(OptionKey key) {
         return offers(options, key);
+    }
+
+    public boolean authorises(OptionKey chosen, CaptainWordAct act) {
+        return options.stream().anyMatch(option -> option.key().equals(chosen) && option.authorises(act));
     }
 
     public String wording() {

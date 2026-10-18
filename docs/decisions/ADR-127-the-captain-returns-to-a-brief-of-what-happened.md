@@ -12,13 +12,15 @@ Claude Code adds a `UserPromptSubmit` hook's `additionalContext` to the turn, in
 **Decision:** When the captain's typed prompt returns the presence from quiet or away to present, `PrimaryHooks` answers the prompt hook with a return brief as `additionalContext`.
 `ReturnBriefQuery` builds it from the fleet snapshot and the event log since the presence left present: the decisions waiting, the tasks landed since, the setbacks since (a failed status, a worker that died or was lost in an outage, a launch that failed, a delivery, cleanup, relaunch or ticket update that was refused) and the work running now with any draft ready for review.
 `ReturnBriefText` opens with one line telling the primary to show the lines verbatim, in one fenced block, before it answers, then writes each section with its count and at most ten items.
-Only the prompt that ends the quiet carries a brief; the anchor repeats the rule.
+When the console's Present or Demo button ends quiet or away instead, `ChangePresence` keeps the presence that was left in `unbriefed_absence`, and the captain's next typed prompt carries the brief from the earliest absence not yet briefed.
+Only the prompt that ends the quiet, or the first one after the console ended it, carries a brief; the anchor repeats the rule.
 
 **Motivation:** The brief is built by the core from the store, so it is the same whatever the primary remembers, and the hook delivers it exactly with the message it belongs to.
 
 **Alternatives considered:**
 - Having the primary run `edi sitrep` on return - nothing guarantees it would, and the report shows the fleet, not what changed while the captain was gone.
 - Printing the brief from a wake - the primary is meant to stay silent until the captain is back.
+- Dropping the brief when the console ends the absence - section 12.7 makes leaving away for a demo a return like any other, with its brief.
 
 **Consequences:**
 - Good: AT-46's decision in quiet appears in the return brief.
@@ -26,4 +28,4 @@ Only the prompt that ends the quiet carries a brief; the anchor repeats the rule
 
 **Revisit when:** The captain wants the brief on the console too.
 
-**Sources:** EDI rewrite specification, section 12.7 (AT-46); ADR-122; [docs/verification/claude-code.md](../verification/claude-code.md); `application.presence.ReturnBriefQuery`, `ReturnBrief`, `Setback`, `application.primary.PrimaryHooks`, `web.presence.ReturnBriefText`, `PresenceWords`, `web.hook.HookController`, `adapter.store.EventLog`, `claude/primary/CLAUDE.md`.
+**Sources:** EDI rewrite specification, section 12.7 (AT-46); ADR-122; [docs/verification/claude-code.md](../verification/claude-code.md); `application.presence.ReturnBriefQuery`, `ChangePresence`, `adapter.store.PresenceStore`, `ReturnBrief`, `Setback`, `application.primary.PrimaryHooks`, `web.presence.ReturnBriefText`, `PresenceWords`, `web.hook.HookController`, `adapter.store.EventLog`, `claude/primary/CLAUDE.md`.

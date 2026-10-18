@@ -53,6 +53,19 @@ class PresenceFollowingTest {
     }
 
     @Test
+    void leavesWorkersWhoseWindowIsGoneOutOfTheCapWhileAway() {
+        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        Worker dead = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-door", "harness", "HRN-6"), CategoryId.IMPLEMENTATION);
+        home.runtime().close(dead.window());
+        typed("/afk Carry on with the lamp.");
+
+        Presence away = home.changePresence().away("Carry on with the lamp.");
+
+        assertThat(away.mandate().workerCap()).isOne();
+        assertThat(home.awayLimit().hasRoomForAnotherWorker()).isFalse();
+    }
+
+    @Test
     void notifiesTheCaptainOnceOfEachDecisionAndFailureSinceTheQuietBegan() throws IOException {
         Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         home.storing(List.of(WorkerFixtures.queued("choose-lamp", TaskKind.CAPTAIN, "harness", null)));
@@ -93,6 +106,22 @@ class PresenceFollowingTest {
         assertThat(brief.left().mode()).isEqualTo(PresenceMode.QUIET);
         assertThat(brief.setbacks()).extracting(Setback::title, Setback::detail).containsExactly(tuple("Work on fit-lamp", "The lamp broke."));
         assertThat(brief.running()).extracting(ongoing -> ongoing.task().id().value()).containsExactly("fit-lamp");
+        assertThat(briefedTwice).isFalse();
+    }
+
+    @Test
+    void briefsTheCaptainAtTheirNextMessageAfterTheConsoleEndedTheirAbsence() {
+        UUID session = typed("/afk Carry on with the lamp.");
+        Presence away = home.changePresence().away("Carry on with the lamp.");
+        home.clock().advance(Duration.ofMinutes(5));
+        home.changePresence().demo();
+        home.clock().advance(Duration.ofMinutes(5));
+        home.changePresence().present();
+
+        ReturnBrief brief = home.primaryHooks().promptSubmitted(session, "Back.").orElseThrow();
+        boolean briefedTwice = home.primaryHooks().promptSubmitted(session, "And again.").isPresent();
+
+        assertThat(brief.left()).isEqualTo(away);
         assertThat(briefedTwice).isFalse();
     }
 

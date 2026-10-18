@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -13,9 +14,12 @@ public final class CaptainsAuthority {
     private CaptainsAuthority() {
     }
 
-    public static Optional<CaptainsWord> onTask(TaskId task, Exchange exchange, List<Authorisation> words, List<CaptainAnswer> answers) {
+    public static Optional<CaptainsWord> onTask(TaskId task, CaptainWordAct act, Exchange exchange, List<Authorisation> words,
+            List<Decision> decisions) {
         Optional<CaptainsWord> said = latest(words.stream().filter(word -> word.concerns(task)).filter(exchange::holds).toList());
-        return said.or(() -> answers.stream()
+        return said.or(() -> decisions.stream()
+                .filter(decision -> decision.authorises(act))
+                .map(Decision::answer)
                 .filter(exchange::holds)
                 .max(Comparator.comparing(CaptainAnswer::answeredAt))
                 .map(CaptainAnswer::verbatim)

@@ -72,6 +72,10 @@ public record Presence(PresenceMode mode, Instant since, PresenceCause cause, Ma
         return demoUntil != null && now.isBefore(demoUntil);
     }
 
+    public boolean returnsFrom(Presence before) {
+        return isPresent() && !before.isPresent();
+    }
+
     public boolean isPresent() {
         return mode == PresenceMode.PRESENT;
     }

@@ -10,7 +10,12 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -29,17 +34,28 @@ class CaptainsAuthorityTest {
                 new Authorisation(UUID.randomUUID(), LAMP, "Discard everything.", OPENED.plusSeconds(180)),
                 new Authorisation(SESSION, new TaskId("fit-door"), "Drop the door.", OPENED.plusSeconds(240)));
 
-        assertThat(CaptainsAuthority.onTask(LAMP, EXCHANGE, words, List.of())).contains(new CaptainsWord("Discard its work too."));
-        assertThat(CaptainsAuthority.onTask(new TaskId("fit-hinge"), EXCHANGE, words, List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, words, List.of())).contains(new CaptainsWord("Discard its work too."));
+        assertThat(CaptainsAuthority.onTask(new TaskId("fit-hinge"), CaptainWordAct.DROP, EXCHANGE, words, List.of())).isEmpty();
     }
 
     @Test
     void countsADecisionAnsweredSinceTheSessionOpened() {
-        CaptainAnswer before = answeredAt(OPENED.minusSeconds(1));
-        CaptainAnswer during = answeredAt(OPENED.plusSeconds(1));
+        Decision before = discardAnsweredAt(OPENED.minusSeconds(1), 'A');
+        Decision during = discardAnsweredAt(OPENED.plusSeconds(1), 'A');
 
-        assertThat(CaptainsAuthority.onTask(LAMP, EXCHANGE, List.of(), List.of(before))).isEmpty();
-        assertThat(CaptainsAuthority.onTask(LAMP, EXCHANGE, List.of(), List.of(during))).contains(new CaptainsWord("D58 A"));
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, List.of(), List.of(before))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, List.of(), List.of(during)))
+                .contains(new CaptainsWord("D58 A"));
+    }
+
+    @Test
+    void countsADecisionOnlyForTheActItsChosenOptionNames() {
+        Decision discardChosen = discardAnsweredAt(OPENED.plusSeconds(1), 'A');
+        Decision discardDeclined = discardAnsweredAt(OPENED.plusSeconds(1), 'B');
+
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, List.of(), List.of(discardChosen))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.PROMOTE, EXCHANGE, List.of(), List.of(discardChosen))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, List.of(), List.of(discardDeclined))).isEmpty();
     }
 
     @Test
@@ -51,7 +67,11 @@ class CaptainsAuthorityTest {
                 .contains(new CaptainsWord("Read the token."));
     }
 
-    private static CaptainAnswer answeredAt(Instant at) {
-        return new CaptainAnswer("D58 A", new OptionKey('A'), "", at, AnswerChannel.CONSOLE);
+    private static Decision discardAnsweredAt(Instant at, char chosen) {
+        DecisionCard card = new DecisionCard("Discard the lamp's work?", "",
+                List.of(new DecisionOption(new OptionKey('A'), "Discard it", CaptainWordAct.DISCARD_WORK), new DecisionOption(new OptionKey('B'), "Keep it")),
+                new Recommendation(new OptionKey('B'), "it may still be needed"));
+        return Decision.raised(new DecisionNumber(58), LAMP, card, OPENED.minusSeconds(60))
+                .answered(new CaptainAnswer("D58 " + chosen, new OptionKey(chosen), "", at, AnswerChannel.CONSOLE));
     }
 }

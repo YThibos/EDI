@@ -34,3 +34,15 @@ create table memory_check (
     tokens     integer not null,
     budget     integer not null
 ) strict;
+
+alter table decision_option add column authorises text check (authorises in ('promote', 'drop', 'discard-work'));
+
+create table unbriefed_absence (
+    id         integer not null primary key check (id = 1),
+    mode       text    not null check (mode in ('quiet', 'away')),
+    since      text    not null,
+    cause      text    not null,
+    mandate    text,
+    worker_cap integer,
+    demo_until text
+) strict;

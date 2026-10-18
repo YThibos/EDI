@@ -6,9 +6,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
+import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.worker.StopWorker;
-import io.github.ythibos.edi.application.worker.WorkerList;
-import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
@@ -19,12 +18,12 @@ import io.github.ythibos.edi.domain.worker.Worker;
 @Service
 public class StopTheCore {
 
-    private final WorkerListQuery workers;
+    private final WorkerPlaces places;
     private final StopWorker stopWorker;
     private final CaptainsWordEvidence captainsWord;
 
-    public StopTheCore(WorkerListQuery workers, StopWorker stopWorker, CaptainsWordEvidence captainsWord) {
-        this.workers = workers;
+    public StopTheCore(WorkerPlaces places, StopWorker stopWorker, CaptainsWordEvidence captainsWord) {
+        this.places = places;
         this.stopWorker = stopWorker;
         this.captainsWord = captainsWord;
     }
@@ -33,7 +32,7 @@ public class StopTheCore {
         if (stop == CoreStop.RESTART) {
             return List.of();
         }
-        List<Worker> running = workers.serving().entries().stream().map(WorkerList.Entry::worker).toList();
+        List<Worker> running = places.running();
         if (running.isEmpty()) {
             return running;
         }

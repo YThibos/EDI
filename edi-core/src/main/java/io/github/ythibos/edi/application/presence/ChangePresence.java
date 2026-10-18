@@ -9,8 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.store.PresenceStore;
+import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.port.Clock;
-import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.domain.presence.CalendarEntry;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
@@ -21,14 +21,14 @@ public class ChangePresence {
     static final Duration LONGEST_DEMO = Duration.ofHours(3);
 
     private final PresenceStore presence;
-    private final WorkerListQuery workers;
+    private final WorkerPlaces places;
     private final MeetingCalendar calendar;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public ChangePresence(PresenceStore presence, WorkerListQuery workers, MeetingCalendar calendar, Clock clock, TransactionTemplate transaction) {
+    public ChangePresence(PresenceStore presence, WorkerPlaces places, MeetingCalendar calendar, Clock clock, TransactionTemplate transaction) {
         this.presence = presence;
-        this.workers = workers;
+        this.places = places;
         this.calendar = calendar;
         this.clock = clock;
         this.transaction = transaction;
@@ -43,7 +43,7 @@ public class ChangePresence {
     }
 
     public Presence away(String words) {
-        Mandate mandate = new Mandate(words, workers.serving().entries().size());
+        Mandate mandate = new Mandate(words, places.occupied());
         return changed(current -> current.away(mandate, clock.now()));
     }
 
@@ -60,16 +60,21 @@ public class ChangePresence {
 
     public Optional<Presence> captainTypedAt(Instant at) {
         Presence current = currentAt(at);
-        if (current.isPresent()) {
-            return Optional.empty();
+        Optional<Presence> left = presence.unbriefedAbsence().or(() -> Optional.of(current).filter(Presence::keepsTheChatQuiet));
+        if (!current.isPresent()) {
+            presence.save(current.captainTyped(at));
         }
-        presence.save(current.captainTyped(at));
-        return Optional.of(current);
+        presence.forgetUnbriefedAbsence();
+        return left;
     }
 
     private Presence changed(UnaryOperator<Presence> change) {
         return transaction.execute(_ -> {
-            Presence changed = change.apply(currentAt(clock.now()));
+            Presence current = currentAt(clock.now());
+            Presence changed = change.apply(current);
+            if (changed.returnsFrom(current)) {
+                presence.oweABriefFor(current);
+            }
             presence.save(changed);
             return changed;
         });

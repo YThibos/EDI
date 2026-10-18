@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.decision;
 import java.time.Instant;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
@@ -29,6 +30,10 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
             throw new Refusal(number + " is already answered: " + answer.verbatim());
         }
         return new Decision(number, task, card, raisedAt, captainsAnswer);
+    }
+
+    public boolean authorises(CaptainWordAct act) {
+        return answer != null && answer.choosesAnOption() && card.authorises(answer.option(), act);
     }
 
     public boolean isOpen() {

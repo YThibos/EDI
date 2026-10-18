@@ -13,6 +13,7 @@ final class GitPushes {
     private static final Set<String> PUSH_OPTION_FLAGS = Set.of("-o", "--push-option");
     private static final Set<String> FORCING_OPTIONS = Set.of("--force", "--force-if-includes", "--mirror");
     private static final Set<String> EVERY_BRANCH_OPTIONS = Set.of("--all", "--branches");
+    private static final Set<String> DELETING_OPTIONS = Set.of("-d", "--delete");
     private static final List<String> MERGING_PUSH_OPTIONS = List.of("merge_when_pipeline_succeeds", "auto_merge");
     private static final String BRANCH_REFS = "refs/heads/";
 
@@ -30,7 +31,11 @@ final class GitPushes {
         return Push.of(afterGlobalOptions.subList(1, afterGlobalOptions.size())).refusal(baseBranches);
     }
 
-    private static List<String> afterGlobalOptions(List<String> arguments) {
+    static List<String> deletedBranches(List<String> pushArguments) {
+        return Push.of(pushArguments).deletedBranches();
+    }
+
+    static List<String> afterGlobalOptions(List<String> arguments) {
         int index = 0;
         while (index < arguments.size() && arguments.get(index).startsWith("-")) {
             index += GLOBAL_OPTIONS_WITH_VALUES.contains(arguments.get(index)) ? 2 : 1;
@@ -38,11 +43,12 @@ final class GitPushes {
         return arguments.subList(Math.min(index, arguments.size()), arguments.size());
     }
 
-    private record Push(boolean forced, boolean everyBranch, List<String> pushOptions, List<String> refspecs) {
+    private record Push(boolean forced, boolean everyBranch, boolean deleting, List<String> pushOptions, List<String> refspecs) {
 
         static Push of(List<String> arguments) {
             boolean forced = false;
             boolean everyBranch = false;
+            boolean deleting = false;
             List<String> pushOptions = new ArrayList<>();
             List<String> positional = new ArrayList<>();
             int index = 0;
@@ -61,13 +67,19 @@ final class GitPushes {
                     forced = true;
                 } else if (EVERY_BRANCH_OPTIONS.contains(argument)) {
                     everyBranch = true;
+                } else if (DELETING_OPTIONS.contains(argument)) {
+                    deleting = true;
                 } else if (!argument.startsWith("-")) {
                     positional.add(argument);
                 }
                 index++;
             }
             List<String> refspecs = positional.isEmpty() ? List.of() : positional.subList(1, positional.size());
-            return new Push(forced, everyBranch, pushOptions, refspecs);
+            return new Push(forced, everyBranch, deleting, pushOptions, refspecs);
+        }
+
+        List<String> deletedBranches() {
+            return refspecs.stream().filter(refspec -> deleting || deletesItsDestination(refspec)).map(Push::destinationOf).toList();
         }
 
         Optional<GuardRefusal> refusal(Set<String> baseBranches) {
@@ -91,6 +103,10 @@ final class GitPushes {
         private static boolean isForcing(String argument) {
             boolean shortFlagsWithForce = !argument.startsWith("--") && argument.startsWith("-") && argument.indexOf('f') > 0;
             return FORCING_OPTIONS.contains(argument) || argument.startsWith("--force-with-lease") || shortFlagsWithForce;
+        }
+
+        private static boolean deletesItsDestination(String refspec) {
+            return refspec.startsWith(":") || refspec.startsWith("+:");
         }
 
         private static String destinationOf(String refspec) {

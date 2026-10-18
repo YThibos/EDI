@@ -58,6 +58,17 @@ class StopTheCoreTest {
     }
 
     @Test
+    void stopsWhenTheOnlyWorkersLeftHaveNoLiveWindow() {
+        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-door", "harness", "HRN-6"), CategoryId.IMPLEMENTATION);
+        home.runtime().closeEveryWindow();
+
+        assertThat(home.stopTheCore().stopFor(CoreStop.WHEN_NO_WORKER_RUNS, CallingSession.UNNAMED, Actor.PRIMARY)).isEmpty();
+        assertThat(home.eventTypesOf(worker.id().task())).doesNotContain("WorkerStopRequested");
+        pane.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(pane.toHandle())).isTrue();
+    }
+
+    @Test
     void restartsWithoutStoppingAnyWorker() {
         assertThat(home.stopTheCore().stopFor(CoreStop.RESTART, CallingSession.UNNAMED, Actor.PRIMARY)).isEmpty();
         assertThat(home.eventTypesOf(worker.id().task())).doesNotContain("WorkerStopRequested");
