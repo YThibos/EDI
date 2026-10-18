@@ -77,7 +77,8 @@ edi migrate firstofficer --from /path/to/old/home --dry-run
 ```
 
 Every command prints text, or the core's JSON with `--json`; a refusal is one sentence on standard error with exit code 1.
-A card is `{"title", "context", "options": [{"key", "text"}], "recommend": {"key", "why"}}`.
+A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}}`.
+An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional; inside tmux the report fits the pane it runs in.
 `examples/edi-home/config/projects.yaml` shows the registry's shape with placeholder values.
 
