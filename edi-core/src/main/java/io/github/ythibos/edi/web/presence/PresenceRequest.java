@@ -11,6 +11,6 @@ record PresenceRequest(String mode, String mandate) {
     }
 
     String mandateWords() {
-        return required(mandate, "mandate, the captain's own words for his time away");
+        return required(mandate, "mandate, the captain's own words for their time away");
     }
 }

@@ -82,37 +82,33 @@ public class CaptainsWordEvidence {
         return transaction.execute(_ -> CaptainsAuthority.onTask(task, exchange, words.heardIn(exchange.session()), answersOn(task)))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
-                        + " --text \"<his words>\", or have him answer a decision on it, here or in the console."));
+                        + " --text \"<their words>\", or have the captain answer a decision on it, here or in the console."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {
         return onTheHome(exchangeOf(calling)).orElseThrow(() -> new Refusal("To " + act.sentence()
-                + ", EDI needs the captain's word in this session: record it with edi captain said --text \"<his words>\"."));
+                + ", EDI needs the captain's word in this session: record it with edi captain said --text \"<their words>\"."));
     }
 
     public Optional<CaptainsWord> onTheHome(CallingSession calling) {
         return currentExchange(calling).flatMap(this::onTheHome);
     }
 
-    public Optional<Exchange> currentExchange(CallingSession calling) {
+    private Exchange exchangeOf(CallingSession calling) {
+        return currentExchange(calling).orElseThrow(() -> new Refusal(calling.namesItself()
+                ? "Session " + calling.id() + " is not a primary session EDI knows, so it cannot hear the captain's word there."
+                : "No session holds the primary role, so EDI cannot hear the captain's word; the captain gives it in the primary session or the console."));
+    }
+
+    private Optional<Exchange> currentExchange(CallingSession calling) {
         return transaction.execute(_ -> calling.namesItself() ? sessions.get(calling.id()) : roles.holder())
                 .map(session -> new Exchange(session.id(), session.startedAt()));
     }
 
-    private Exchange exchangeOf(CallingSession calling) {
-        return currentExchange(calling).orElseThrow(() -> new Refusal(calling.namesItself()
-                ? "Session " + calling.id() + " is not a primary session EDI knows, so it cannot hear the captain's word there."
-                : "No session holds the primary role, so EDI cannot hear the captain's word; he gives it in the primary session or the console."));
-    }
-
-    private Optional<CaptainsWord> onTheHome(Exchange exchange) {
-        return transaction.execute(_ -> CaptainsAuthority.onTheHome(exchange, words.heardIn(exchange.session())));
-    }
-
     private void requireTyped(Exchange exchange, String verbatim) {
         if (!wasTyped(exchange, verbatim)) {
-            throw new Refusal("The captain did not type \"" + verbatim.strip() + "\" in this session; record his words exactly as he typed"
-                    + " them, his whole message or one whole line of it.");
+            throw new Refusal("The captain did not type \"" + verbatim.strip() + "\" in this session; record their words exactly as typed,"
+                    + " the whole message or one whole line of it.");
         }
     }
 
@@ -122,5 +118,9 @@ public class CaptainsWordEvidence {
 
     private List<CaptainAnswer> answersOn(TaskId task) {
         return decisions.ofTask(task).map(Decision::answer).stream().toList();
+    }
+
+    private Optional<CaptainsWord> onTheHome(Exchange exchange) {
+        return transaction.execute(_ -> CaptainsAuthority.onTheHome(exchange, words.heardIn(exchange.session())));
     }
 }

@@ -17,10 +17,10 @@ description: >-
 
 1. Run `edi recover`: EDI holds every dead worker's task, relaunches none and prints one numbered list.
 2. Show the list to the captain with each entry's outcome so far, what it waits on, its recorded model and effort, those its category gives now, and unpushed work.
-3. Act only on the numbers he names, one at a time:
+3. Act only on the numbers the captain names, one at a time:
    - `edi recover <n> resume` resumes the recorded session;
    - `edi recover <n> fresh [--model <model>] [--effort <effort>]` starts a new one;
-   - `edi recover <n> drop [--discard-work]` drops the task, only on his word recorded first with `edi captain said --task <task> --text "<his words>"`.
+   - `edi recover <n> drop [--discard-work]` drops the task, only on the captain's word recorded first with `edi captain said --task <task> --text "<their words>"`.
 4. EDI refuses a relaunch while a usage limit still holds; answer the list once it has reset.
 
 ## After an outage

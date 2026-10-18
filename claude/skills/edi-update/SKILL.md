@@ -20,6 +20,6 @@ user-invocable: true
 
 ## Limits
 
-- EDI never edits Claude Code's settings for itself: the captain adds his own allow rules, such as `Bash(edi *)`.
+- EDI never edits Claude Code's settings for itself: the captain adds their own allow rules, such as `Bash(edi *)`.
 - Machine tools are the captain's own `/laptop-update`, not EDI's.
-- Report the new version in one line, with what changed for him in outcomes.
+- Report the new version in one line, with what changed for the captain in outcomes.

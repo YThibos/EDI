@@ -39,7 +39,7 @@ public class GuardToolCall {
 
     private static final Set<String> USUAL_BASES = Set.of("main", "master");
     private static final String SECRETS_AFTER_THE_CAPTAINS_WORD = " The captain's word in this session lets the primary run it: record it with"
-            + " edi captain said --text \"<his words>\".";
+            + " edi captain said --text \"<their words>\".";
 
     private final EdiHome home;
     private final WorkerContext context;

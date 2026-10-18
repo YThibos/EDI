@@ -104,3 +104,19 @@ A settings file with one recording hook per event drove two headless runs in a t
 ### Usage records
 
 - Each assistant message's `usage` (`input_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `output_tokens`) is repeated unchanged on every record of that message, one per content block, so EDI counts a message once by its id.
+
+## Slice S8: hook context, the primary's system prompt and skills, on 2.1.302
+
+Verified on Claude Code 2.1.302 on WSL2 Ubuntu 24.04, 17/10/2026, for the composed system prompt (ADR-121), the return brief (ADR-127) and the skills (ADR-131).
+Each check was a headless run on `claude-haiku-5-5` in a throwaway directory, asked to repeat codewords without using a tool.
+
+### Hook context has a size limit
+
+- A `SessionStart` hook answered `additionalContext` of 9,805 characters, and the model quoted codewords from its first and its last line.
+- With 10,205 characters, the model quoted the first codeword and could not see the last: Claude Code kept the hook's output in a file and gave the model a short preview, as it does with any hook output over 10,000 characters.
+- A larger context therefore reaches the model only as a preview, which is why EDI loads the captain's memory through the system prompt and keeps the digest and the return brief short.
+
+### The primary's system prompt and skills
+
+- `--append-system-prompt-file <file>` still works: the model quoted a codeword that only the appended file held.
+- A skill in `<working directory>/.claude/skills/<name>/SKILL.md` is offered to a session started in that directory, and so is one whose directory is a symbolic link to a skill elsewhere, which is how `ops/install.sh` links EDI's skills into the EDI home.

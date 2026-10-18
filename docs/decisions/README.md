@@ -161,3 +161,22 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-112](ADR-112-the-lavish-result-reader-follows-toon.md) | The Lavish result reader follows TOON and reads both prompt forms | Design |
 | [ADR-113](ADR-113-a-board-round-reaches-its-worker-and-its-bound-decisions.md) | A board round reaches its worker's inbox and the decisions the board is bound to | Design |
 | [ADR-114](ADR-114-the-store-keeps-console-access-boards-and-board-answers.md) | The store keeps console sign-ins and sessions, boards and board answers | Design |
+| [ADR-115](ADR-115-the-captains-word-is-typed-in-the-current-exchange.md) | The captain's word is what the captain typed in the current exchange, and the session the captain typed in last is the primary | Design |
+| [ADR-116](ADR-116-a-promoted-scout-queues-a-new-ship.md) | A scout is promoted by queueing a new ship on the captain's word | Design |
+| [ADR-117](ADR-117-dropping-and-discarding-work-on-the-captains-word.md) | A task is dropped, and unlanded work discarded, only on the captain's word | Design |
+| [ADR-118](ADR-118-the-outage-hold-list-also-drops-a-task-on-the-captains-word.md) | The outage hold list is answered one number at a time and can also drop a task on the captain's word | Design |
+| [ADR-119](ADR-119-the-guard-also-keeps-secrets-from-a-shell.md) | The pre-tool guard keeps secrets from a shell and lets the primary run edi while the core is down | Design |
+| [ADR-120](ADR-120-startup-memory-is-measured-against-its-budget.md) | Startup memory is measured against its budget, curated from a stow list, and checked daily | Design |
+| [ADR-121](ADR-121-the-primarys-system-prompt-is-composed-at-launch.md) | The primary's system prompt is composed at launch from the anchor, its personal addendum and the startup memory | Design |
+| [ADR-122](ADR-122-presence-is-held-by-the-core-and-followed-every-round.md) | Presence is held by the core, set by the captain and followed every supervision round | Design |
+| [ADR-123](ADR-123-the-primarys-stop-waits-for-the-report-only-while-the-captain-is-present.md) | The primary's stop waits for the captain report while the captain is present, and for a live edi wait always | Design |
+| [ADR-124](ADR-124-wakes-are-gathered-into-one-batch-while-the-chat-is-quiet.md) | Wakes are queued with their event, edi wait long-polls for them, and quiet gathers them into batches | Design |
+| [ADR-125](ADR-125-notifications-for-the-captain-come-from-an-event-follower.md) | While the chat is quiet, each event that concerns the captain raises one notification, from an event follower | Design |
+| [ADR-126](ADR-126-the-windows-side-runs-through-powershell.md) | Notifications and the calendar come from the Windows side of WSL through powershell.exe | Architecture |
+| [ADR-127](ADR-127-the-captain-returns-to-a-brief-of-what-happened.md) | The captain's first message after quiet or away arrives with a brief of what happened meanwhile | Design |
+| [ADR-128](ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md) | A voice lint keeps internal labels out of what the captain reads | Design |
+| [ADR-129](ADR-129-one-core-per-home-started-by-edi-up-and-stopped-by-edi-down.md) | One core per home, started by edi up and stopped by edi down | Design |
+| [ADR-130](ADR-130-edi-update-rebuilds-installs-and-restarts-the-core.md) | edi update pulls, builds and tests natively, installs, and restarts the core while workers keep running | Design |
+| [ADR-131](ADR-131-the-primarys-anchor-and-skills.md) | The primary's anchor holds only what must always be in mind, and eleven skills hold the procedures | Design |
+| [ADR-132](ADR-132-the-session-start-digest-adds-presence-memory-and-setup.md) | A session starts from a digest with the address word, presence, memory, setup and the weekly upkeep | Design |
+| [ADR-133](ADR-133-the-console-shows-the-presence.md) | The console shows the presence, with Present and Demo buttons | Design |

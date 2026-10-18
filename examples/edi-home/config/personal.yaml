@@ -1,2 +1,8 @@
 identity:
   address: Commander
+presence:
+  autoQuietAfter: PT15M
+  quietBatch: PT30M
+  calendarIgnore:
+    - Example at the office
+    - Example working from home

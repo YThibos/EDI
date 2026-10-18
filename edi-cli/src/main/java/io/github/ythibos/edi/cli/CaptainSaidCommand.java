@@ -6,7 +6,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
-@Command(name = "said", description = "Records the captain's word in this session, verbatim, as he typed it: on one task, or on matters that"
+@Command(name = "said", description = "Records the captain's word in this session, verbatim, as typed: on one task, or on matters that"
         + " concern no single task, such as touching a secret.")
 final class CaptainSaidCommand implements Callable<Integer> {
 
@@ -16,10 +16,10 @@ final class CaptainSaidCommand implements Callable<Integer> {
     private CoreExchange core;
 
     @Option(names = "--text", required = true, paramLabel = "WORDS",
-            description = "The captain's words exactly as he typed them, his whole message or one whole line of it; - reads them from standard input.")
+            description = "The captain's words exactly as typed, the whole message or one whole line of it; - reads them from standard input.")
     private String text;
 
-    @Option(names = "--task", paramLabel = "TASK", description = "The task his word is on: a task id, or the D number of its decision.")
+    @Option(names = "--task", paramLabel = "TASK", description = "The task the word is on: a task id, or the D number of its decision.")
     private String task;
 
     @Override

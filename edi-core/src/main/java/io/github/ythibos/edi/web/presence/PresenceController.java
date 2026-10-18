@@ -31,22 +31,15 @@ class PresenceController {
     }
 
     @GetMapping("/api/presence")
-    Presence current() {
-        return presence.current();
+    PresenceView current() {
+        return PresenceView.of(presence.current());
     }
 
     @PostMapping("/api/presence")
-    Presence change(@RequestBody PresenceRequest request, Caller caller) {
+    PresenceView change(@RequestBody PresenceRequest request, Caller caller) {
         String mode = request.chosenMode();
         requireAllowed(mode, caller);
-        return switch (mode) {
-            case "present" -> change.present();
-            case "quiet" -> change.quiet();
-            case "away" -> away(request.mandateWords(), caller);
-            case "demo" -> change.demo();
-            case PresenceRequest.DEMO_OFF -> change.demoOff();
-            default -> throw new IllegalArgumentException("Presence is present, quiet, away, demo or demo-off, not " + mode + ".");
-        };
+        return PresenceView.of(changed(mode, request, caller));
     }
 
     private static void requireAllowed(String mode, Caller caller) {
@@ -57,6 +50,17 @@ class PresenceController {
             return;
         }
         caller.requirePrimary("edi presence");
+    }
+
+    private Presence changed(String mode, PresenceRequest request, Caller caller) {
+        return switch (mode) {
+            case "present" -> change.present();
+            case "quiet" -> change.quiet();
+            case "away" -> away(request.mandateWords(), caller);
+            case "demo" -> change.demo();
+            case PresenceRequest.DEMO_OFF -> change.demoOff();
+            default -> throw new IllegalArgumentException("Presence is present, quiet, away, demo or demo-off, not " + mode + ".");
+        };
     }
 
     private Presence away(String mandate, Caller caller) {

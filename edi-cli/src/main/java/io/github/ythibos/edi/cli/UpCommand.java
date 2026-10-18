@@ -9,7 +9,8 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
-@Command(name = "up", description = "Starts EDI's core when it is not running, then opens the primary session in tmux with its anchor, memory and hooks.")
+@Command(name = "up", description = "Starts EDI's core when it is not running, then opens the primary session in tmux with its anchor, memory"
+        + " and hooks.")
 final class UpCommand implements Callable<Integer> {
 
     private static final int REFUSED = 1;

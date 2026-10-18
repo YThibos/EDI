@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -127,7 +126,6 @@ class MemoryAndCraftTest {
         @DisplayName("AT-35 the primary anchor, with its personal addendum, is at most 10,000 bytes")
         void thePrimaryAnchorStaysWithinItsBudget() throws IOException {
             Path anchor = RepositoryRoot.path().resolve("claude/primary/CLAUDE.md");
-            assumeTrue(Files.exists(anchor), "pending until slice " + Slice.S8 + ": the primary anchor does not exist yet");
 
             long loaded = Files.size(anchor) + sizeWhenPresent(RepositoryRoot.path().resolve("personal/anchor.local.md"));
 

@@ -14,8 +14,10 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 
-@Component
+@Component(CoreInstanceLock.BEAN)
 public class CoreInstanceLock implements AutoCloseable {
+
+    public static final String BEAN = "coreInstanceLock";
 
     private final FileChannel pidFile;
     private final FileLock lock;

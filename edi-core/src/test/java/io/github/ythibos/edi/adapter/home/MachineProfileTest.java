@@ -89,6 +89,18 @@ class MachineProfileTest {
         }
     }
 
+    @Test
+    void readsTheWindowsSideAndTheMemoryBudget() throws IOException {
+        MachineProfile example = profileOf(ExampleHome.file("config/machine.yaml"));
+        MachineProfile bare = new MachineProfile(new EdiHome(home.resolve("bare")));
+
+        assertThat(example.windowsSide()).isEqualTo(new WindowsSide(true, true));
+        assertThat(example.startupMemoryBudgetTokens()).isEqualTo(18_000);
+        assertThat(bare.windowsSide()).isEqualTo(new WindowsSide(false, false));
+        assertThat(bare.startupMemoryBudgetTokens()).isEqualTo(18_000);
+        assertThat(profileOf("memory:\n  startupBudgetTokens: 9000\npresence:\n  calendar: none\n").windowsSide().outlookCalendar()).isFalse();
+    }
+
     private MachineProfile profileOf(String yaml) throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/machine.yaml"), yaml);

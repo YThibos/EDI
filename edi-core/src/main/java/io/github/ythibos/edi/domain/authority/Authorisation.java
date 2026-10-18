@@ -10,9 +10,9 @@ public record Authorisation(UUID session, TaskId task, String verbatim, Instant 
 
     public Authorisation {
         Objects.requireNonNull(session, "The captain's word is heard in a primary session.");
-        Objects.requireNonNull(saidAt, "The captain's word records when he gave it.");
+        Objects.requireNonNull(saidAt, "The captain's word records when it was given.");
         if (verbatim.isBlank()) {
-            throw new IllegalArgumentException("The captain's word is his own words.");
+            throw new IllegalArgumentException("The captain's word is the captain's own words.");
         }
     }
 

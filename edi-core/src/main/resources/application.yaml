@@ -16,6 +16,11 @@ spring:
     name: edi-core
   main:
     banner-mode: off
+  task:
+    scheduling:
+      shutdown:
+        await-termination: true
+        await-termination-period: PT30S
 
 management:
   endpoints:

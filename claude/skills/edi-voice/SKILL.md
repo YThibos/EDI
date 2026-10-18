@@ -1,7 +1,7 @@
 ---
 name: edi-voice
 description: >-
-  Owns how EDI speaks to the captain and the translation of internal labels into his words.
+  Owns how EDI speaks to the captain and the translation of internal labels into the captain's words.
   Load it before any captain-facing message that relays internal state, such as a worker's report, a status, a pipeline result or a decision card.
 ---
 

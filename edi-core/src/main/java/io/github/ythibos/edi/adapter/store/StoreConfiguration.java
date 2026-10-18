@@ -6,13 +6,16 @@ import javax.sql.DataSource;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 
+import io.github.ythibos.edi.CoreInstanceLock;
 import io.github.ythibos.edi.EdiHome;
 
 @Configuration(proxyBeanMethods = false)
 class StoreConfiguration {
 
     @Bean
+    @DependsOn(CoreInstanceLock.BEAN)
     DataSource store(EdiHome home) throws IOException {
         return StoreFile.openedAt(home.store());
     }

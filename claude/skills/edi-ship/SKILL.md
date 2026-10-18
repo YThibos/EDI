@@ -11,10 +11,10 @@ description: >-
 
 1. Resolve the project from the captain's words, the registry (`edi project list`) and work in progress; ask one question when it is ambiguous.
 2. A ship needs implementation the captain authorised; when uncertainty could change whether or what to build, it is a scout first.
-3. Add it with `edi task add --kind ship --project <project> --title "<title>" --body -`, the captain's words verbatim in the body: his ask, its boundaries, the full acceptance criteria and whether offline verification is accepted.
-4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without his answer.
+3. Add it with `edi task add --kind ship --project <project> --title "<title>" --body -`, the captain's words verbatim in the body: the ask, its boundaries, the full acceptance criteria and whether offline verification is accepted.
+4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without the captain's answer.
 5. A task blocked by another waits in the queue (`--blocked-by`).
-6. An unregistered project cannot receive a ship: ask the captain to register it, and confirm delivery, tracker, base branch and AI scaffolding with him.
+6. An unregistered project cannot receive a ship: ask the captain to register it, and confirm delivery, tracker, base branch and AI scaffolding with the captain.
 
 ## Dispatch
 
@@ -37,9 +37,9 @@ description: >-
 ## Done, delivery and landing
 
 - A ship's done counts once its draft is open, still a draft, at the copy's head, and its branch adds no SNAPSHOT version.
-- `draft-review`: report the draft's full address as ready for the captain's review; he merges it himself.
+- `draft-review`: report the draft's full address as ready for the captain's review; the captain merges it.
 - `local-branch`: EDI fetches the ready branch into the captain's checkout by ref only.
-- `local-apply`: on his request only, EDI applies the change to his checkout without a commit.
+- `local-apply`: on the captain's request only, EDI applies the change to the captain's checkout without a commit.
 - When the pipeline could not open the draft, `edi deliver <task>` opens it under the project's bound account.
-- When he says he merged, run `edi merged <task>`; EDI also sees merges itself, refreshes the clone and cleans up.
-- `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work, and nothing is discarded without his word.
+- When the captain says they merged, run `edi merged <task>`; EDI also sees merges itself, refreshes the clone and cleans up.
+- `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work, and nothing is discarded without the captain's word.

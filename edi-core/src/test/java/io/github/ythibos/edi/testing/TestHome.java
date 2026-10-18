@@ -25,6 +25,7 @@ import io.github.ythibos.edi.adapter.home.HomeSetup;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.MemoryFiles;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
+import io.github.ythibos.edi.adapter.home.PersonalLayer;
 import io.github.ythibos.edi.adapter.ledger.FleetLedger;
 import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
@@ -32,8 +33,6 @@ import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
-import io.github.ythibos.edi.adapter.store.MemoryCheckStore;
-import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
 import io.github.ythibos.edi.adapter.store.ConsoleAccessStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
@@ -42,10 +41,12 @@ import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventCursorStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
+import io.github.ythibos.edi.adapter.store.MemoryCheckStore;
 import io.github.ythibos.edi.adapter.store.NoticeStore;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
+import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
 import io.github.ythibos.edi.adapter.store.StoreFile;
@@ -98,6 +99,7 @@ import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.follow.EventFollowers;
 import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
+import io.github.ythibos.edi.application.lifecycle.StopTheCore;
 import io.github.ythibos.edi.application.memory.DailyMemoryCheck;
 import io.github.ythibos.edi.application.memory.MemoryQuery;
 import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
@@ -108,6 +110,7 @@ import io.github.ythibos.edi.application.presence.MeetingCalendar;
 import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
+import io.github.ythibos.edi.application.primary.PrepareThePrimary;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
@@ -413,6 +416,14 @@ public final class TestHome {
 
     public MachineProfile machineProfile() {
         return new MachineProfile(home);
+    }
+
+    public PrepareThePrimary prepareThePrimary(Path checkout) {
+        return new PrepareThePrimary(home, new MemoryFiles(home), new PersonalLayer(checkout), clock);
+    }
+
+    public StopTheCore stopTheCore() {
+        return new StopTheCore(workerList(), stopWorker(), captainsWord());
     }
 
     public PresenceStore presenceStore() {

@@ -27,7 +27,7 @@ Its report, diagnosis or recommendation authorises nothing (I-05).
 ## Promotion to a ship
 
 1. Only the captain's go starts implementation.
-2. When his message says go, record his words first: `edi captain said --task <scout> --text "<his words>"`.
-3. A decision on the scout that he answers in this session also counts as his word.
+2. When the captain's message says go, record their words first: `edi captain said --task <scout> --text "<their words>"`.
+3. A decision on the scout that the captain answers in this session also counts as their word.
 4. Run `edi task promote <scout> [--title "<ship title>"]`: EDI queues a ship with the scout's projects, key, base and notes, and the captain's words.
 5. Dispatch the ship as usual (load `edi-ship`), with the report's plan in the spec.

@@ -32,7 +32,8 @@ final class WindowsScripts implements RuntimeHintsRegistrar {
     }
 
     static List<String> encodedCommand(String script) {
-        return List.of("-NoProfile", "-NonInteractive", "-EncodedCommand", Base64.getEncoder().encodeToString(script.getBytes(StandardCharsets.UTF_16LE)));
+        String encoded = Base64.getEncoder().encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
+        return List.of("-NoProfile", "-NonInteractive", "-EncodedCommand", encoded);
     }
 
     static String encodedText(String text) {

@@ -1,8 +1,8 @@
 package io.github.ythibos.edi.cli;
 
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -24,7 +24,8 @@ record EdiCheckout(Path root) {
     }
 
     void buildTestAndInstall(Path home) {
-        int installed = LocalPrograms.runAttached(List.of(root.resolve("ops").resolve("install.sh").toString()), root, Map.of("EDI_HOME", home.toString()));
+        int installed = LocalPrograms.runAttached(List.of(root.resolve("ops").resolve("install.sh").toString()), root,
+                Map.of("EDI_HOME", home.toString()));
         if (installed != 0) {
             throw new CommandFailure("ops/install.sh failed with " + installed + ", so the installed EDI is unchanged and the core keeps running.");
         }

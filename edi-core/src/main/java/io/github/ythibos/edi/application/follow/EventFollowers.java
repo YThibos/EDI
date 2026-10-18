@@ -57,7 +57,7 @@ public class EventFollowers implements AutoCloseable {
 
     @Override
     public void close() {
-        runs.shutdownNow();
+        runs.close();
     }
 
     private void caughtUp(Follower follower) {

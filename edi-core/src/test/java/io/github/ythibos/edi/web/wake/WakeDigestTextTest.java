@@ -71,7 +71,8 @@ class WakeDigestTextTest {
         WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.DONE, LAMP, WorkerId.first(LAMP), "fitted", null))), 0, 1, 0, quiet);
 
         assertThat(new WakeDigestText().text(delivery)).contains("The captain is quiet since 2026-10-16 09:01Z, on request: handle these and end"
-                + " the turn with no text for him; decisions, failures, blockers and ready drafts reach him as notifications and in his return brief.\n"
+                + " the turn with no text for the captain; decisions, failures, blockers and ready drafts reach the captain as notifications and in their"
+                + " return brief.\n"
                 + "Handle these, then start edi wait in the background again.\n");
     }
 

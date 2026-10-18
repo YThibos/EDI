@@ -31,4 +31,4 @@ All live in `$EDI_HOME/memory/`:
 ## Afterwards
 
 - Memory loads at session start, so changes reach the next session.
-- Tell the captain in one or two lines what changed in his memory and what moved to the archive.
+- Tell the captain in one or two lines what changed in their memory and what moved to the archive.

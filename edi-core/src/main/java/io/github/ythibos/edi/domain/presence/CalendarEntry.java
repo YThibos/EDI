@@ -10,14 +10,14 @@ import java.util.Set;
 public record CalendarEntry(String subject, Instant start, Instant end, boolean allDay, Response response, Showing showing) {
 
     static final Duration LONGEST_MEETING = Duration.ofHours(4);
-    private static final Set<Response> HIS_OWN = Set.of(Response.ORGANISED, Response.ACCEPTED, Response.OWN_APPOINTMENT);
+    private static final Set<Response> THE_CAPTAINS_OWN = Set.of(Response.ORGANISED, Response.ACCEPTED, Response.OWN_APPOINTMENT);
 
     public CalendarEntry {
         subject = Objects.requireNonNullElse(subject, "");
         Objects.requireNonNull(start, "A calendar entry starts at some time.");
         Objects.requireNonNull(end, "A calendar entry ends at some time.");
         Objects.requireNonNull(response, "A calendar entry records the captain's response.");
-        Objects.requireNonNull(showing, "A calendar entry shows him free, busy or otherwise.");
+        Objects.requireNonNull(showing, "A calendar entry shows the captain free, busy or otherwise.");
     }
 
     public boolean isAMeetingInProgressAt(Instant now, List<String> ignored) {
@@ -29,7 +29,7 @@ public record CalendarEntry(String subject, Instant start, Instant end, boolean 
                 && end.isAfter(start)
                 && Duration.between(start, end).compareTo(LONGEST_MEETING) < 0
                 && showing == Showing.BUSY
-                && HIS_OWN.contains(response)
+                && THE_CAPTAINS_OWN.contains(response)
                 && ignored.stream().noneMatch(this::isMarkedBy);
     }
 

@@ -26,7 +26,8 @@ final class RecoverCommand implements Callable<Integer> {
     private Integer number;
 
     @Parameters(index = "1", arity = "0..1", paramLabel = "ACTION",
-            description = "resume, which resumes the recorded session, fresh, which starts a new one, or drop, which drops the task on the captain's word.")
+            description = "resume, which resumes the recorded session, fresh, which starts a new one, or drop, which drops the task on the"
+                    + " captain's word.")
     private String action;
 
     @Option(names = "--model", paramLabel = "MODEL", description = "The model the captain named for this relaunch.")

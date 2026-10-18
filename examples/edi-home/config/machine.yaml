@@ -24,3 +24,9 @@ tracker:
 time:
   fleetLedger: true
   requireWorkedLine: true
+memory:
+  startupBudgetTokens: 18000
+notify:
+  windowsToast: true
+presence:
+  calendar: outlook

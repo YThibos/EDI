@@ -10,7 +10,8 @@ import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
-@Command(name = "presence", description = "Shows the captain's presence, or sets it: present, quiet, away with his mandate, or a demo that holds present.")
+@Command(name = "presence", description = "Shows the captain's presence, or sets it: present, quiet, away with the captain's mandate, or a demo"
+        + " that holds present.")
 final class PresenceCommand implements Callable<Integer> {
 
     private static final String STANDARD_INPUT = "-";
@@ -29,7 +30,8 @@ final class PresenceCommand implements Callable<Integer> {
     @Parameters(index = "1", arity = "0..1", paramLabel = "off", description = "With demo: ends the demo.")
     private String off;
 
-    @Option(names = "--mandate", paramLabel = "WORDS", description = "With away: the captain's words for his time away, verbatim; - reads them from standard input.")
+    @Option(names = "--mandate", paramLabel = "WORDS",
+            description = "With away: the captain's words for their time away, verbatim; - reads them from standard input.")
     private String mandate;
 
     @Override

@@ -17,7 +17,7 @@ import io.github.ythibos.edi.web.text.Words;
 @Component
 public class ReturnBriefText implements TextPresenter<ReturnBrief> {
 
-    static final String INSTRUCTION = "EDI return brief: show the captain the lines below verbatim, in one fenced block, before you answer his message.";
+    static final String INSTRUCTION = "EDI return brief: show the captain the lines below verbatim, in one fenced block, before you answer their message.";
     private static final int MOST_SHOWN = 10;
 
     @Override

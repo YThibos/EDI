@@ -17,9 +17,9 @@ class CalendarEntryTest {
     private static final List<String> MARKERS = List.of("Example at the office", "Telework example");
 
     @Test
-    void countsATimedBusyMeetingHeAcceptedOrOrganised() {
-        for (Response his : List.of(Response.ACCEPTED, Response.ORGANISED, Response.OWN_APPOINTMENT)) {
-            assertThat(entry("Sprint review", Duration.ofHours(1), false, his, Showing.BUSY).isAMeeting(MARKERS)).as(his.name()).isTrue();
+    void countsATimedBusyMeetingTheCaptainAcceptedOrOrganised() {
+        for (Response theCaptains : List.of(Response.ACCEPTED, Response.ORGANISED, Response.OWN_APPOINTMENT)) {
+            assertThat(entry("Sprint review", Duration.ofHours(1), false, theCaptains, Showing.BUSY).isAMeeting(MARKERS)).as(theCaptains.name()).isTrue();
         }
     }
 

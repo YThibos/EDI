@@ -16,7 +16,7 @@ final class PrimaryWindow {
     int open(PrimaryLaunch launch) {
         if (insideTmux) {
             int opened = LocalPrograms.runAttached(newSession(launch, true), launch.directory(), Map.of());
-            return opened == 0 ? LocalPrograms.runAttached(List.of("tmux", "switch-client", "-t", launch.session()), launch.directory(), Map.of()) : opened;
+            return opened == 0 ? switchTo(launch) : opened;
         }
         return LocalPrograms.runAttached(newSession(launch, false), launch.directory(), Map.of());
     }
@@ -29,5 +29,9 @@ final class PrimaryWindow {
         command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString()));
         command.addAll(launch.claude());
         return command;
+    }
+
+    private static int switchTo(PrimaryLaunch launch) {
+        return LocalPrograms.runAttached(List.of("tmux", "switch-client", "-t", launch.session()), launch.directory(), Map.of());
     }
 }

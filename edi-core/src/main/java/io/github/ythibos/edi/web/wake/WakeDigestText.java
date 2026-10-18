@@ -26,8 +26,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
         lines.add("Fleet: " + delivery.openDecisions() + " open decisions, " + delivery.ongoing() + " tasks in flight, "
                 + delivery.outageEntries() + " on the outage hold list.");
         if (delivery.presence().keepsTheChatQuiet()) {
-            lines.add("The captain is " + PresenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for him;"
-                    + " decisions, failures, blockers and ready drafts reach him as notifications and in his return brief.");
+            lines.add("The captain is " + PresenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for the captain;"
+                    + " decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.");
         }
         lines.add("Handle these, then start edi wait in the background again.");
         return String.join("\n", lines) + "\n";

@@ -32,4 +32,4 @@ Each record holds, in this order:
 - Records are append-only: a changed decision is a new record that supersedes the old one, and the old one says so.
 - One decision per record, numbered after the highest one in the log.
 - United Kingdom English, a plain "-" and never another dash, one sentence per line.
-- A decision the captain has not settled is not recorded; it becomes a decision for him first.
+- A decision the captain has not settled is not recorded; it becomes a decision for the captain first.

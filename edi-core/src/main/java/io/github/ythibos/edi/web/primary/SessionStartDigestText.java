@@ -80,12 +80,6 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
                 + "; examples/edi-home in the EDI repository shows each file's shape, and the captain decides their content.");
     }
 
-    private static List<String> upkeepOf(SessionStartDigest digest) {
-        return digest.upkeepSuggested() && digest.standing() != Standing.STANDBY
-                ? List.of("It is the start of the week: offer the captain the weekly upkeep check, whether EDI and its tools are up to date (edi-upkeep).")
-                : List.of();
-    }
-
     private static List<String> limitStop(PrimarySession stopped) {
         if (stopped == null) {
             return List.of();
@@ -119,6 +113,12 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
             return List.of();
         }
         return List.of(Words.counted("Outage hold list", digest.outage().size()) + ": edi recover shows it; relaunch only the numbers the captain names.");
+    }
+
+    private static List<String> upkeepOf(SessionStartDigest digest) {
+        return digest.upkeepSuggested() && digest.standing() != Standing.STANDBY
+                ? List.of("It is the start of the week: offer the captain the weekly upkeep check, whether EDI and its tools are up to date (edi-upkeep).")
+                : List.of();
     }
 
     private static List<String> waitAdvice(SessionStartDigest digest) {
