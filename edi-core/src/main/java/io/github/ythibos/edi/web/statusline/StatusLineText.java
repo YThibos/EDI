@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.statusline.StatusLine;
@@ -30,6 +31,7 @@ class StatusLineText implements TextPresenter<StatusLine> {
 
     private final ZoneId zone;
 
+    @Autowired
     StatusLineText() {
         this(ZoneId.systemDefault());
     }
