@@ -36,5 +36,10 @@
         "hooks": [{ "type": "command", "command": "edi hook session-end" }]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "edi statusline",
+    "refreshInterval": 60
   }
 }

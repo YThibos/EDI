@@ -177,6 +177,8 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-128](ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md) | A voice lint keeps internal labels out of what the captain reads | Design |
 | [ADR-129](ADR-129-one-core-per-home-started-by-edi-up-and-stopped-by-edi-down.md) | One core per home, started by edi up and stopped by edi down | Design |
 | [ADR-130](ADR-130-edi-update-rebuilds-installs-and-restarts-the-core.md) | edi update pulls, builds and tests natively, installs, and restarts the core while workers keep running | Design |
-| [ADR-131](ADR-131-the-primarys-anchor-and-skills.md) | The primary's anchor holds only what must always be in mind, and eleven skills hold the procedures | Design |
+| [ADR-131](ADR-131-the-primarys-anchor-and-skills.md) | The primary's anchor holds only what must always be in mind, and eleven skills hold the procedures (superseded by ADR-135) | Design |
 | [ADR-132](ADR-132-the-session-start-digest-adds-presence-memory-and-setup.md) | A session starts from a digest with the address word, presence, memory, setup and the weekly upkeep | Design |
 | [ADR-133](ADR-133-the-console-shows-the-presence.md) | The console shows the presence, with Present and Demo buttons | Design |
+| [ADR-134](ADR-134-the-core-writes-the-primarys-status-line.md) | The core writes the primary's status line, and edi statusline pipes it to Claude Code | Design |
+| [ADR-135](ADR-135-the-primarys-settings-hold-the-hooks-and-the-status-line.md) | The primary's anchor holds only what must always be in mind, eleven skills hold the procedures, and its settings hold the hooks and the status line | Design |

@@ -1,8 +1,10 @@
 package io.github.ythibos.edi.cli;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,21 +21,24 @@ final class StubCore implements AutoCloseable {
     static final String TOKEN = "stub-token";
 
     private final HttpServer server;
+    private final Path portFile;
+    private final Socket refusingPort = new Socket();
     private final Deque<Reply> queued = new ArrayDeque<>();
     private final List<Request> requests = new ArrayList<>();
     private int status = 200;
     private String reply = "";
 
-    private StubCore(HttpServer server) {
+    private StubCore(HttpServer server, Path portFile) {
         this.server = server;
+        this.portFile = portFile;
     }
 
     static StubCore recordedIn(Path home) throws IOException {
-        StubCore core = new StubCore(HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0));
+        StubCore core = new StubCore(HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0), home.resolve("state/core.port"));
         core.server.createContext("/", core::answer);
         core.server.start();
         Files.createDirectories(home.resolve("state"));
-        Files.writeString(home.resolve("state/core.port"), Integer.toString(core.server.getAddress().getPort()));
+        Files.writeString(core.portFile, Integer.toString(core.server.getAddress().getPort()));
         Files.writeString(home.resolve("state/core.token"), TOKEN + "\n");
         return core;
     }
@@ -57,9 +62,20 @@ final class StubCore implements AutoCloseable {
         return List.copyOf(requests);
     }
 
+    void stopAnswering() throws IOException {
+        server.stop(0);
+        refusingPort.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
+        Files.writeString(portFile, Integer.toString(refusingPort.getLocalPort()));
+    }
+
     @Override
     public void close() {
         server.stop(0);
+        try {
+            refusingPort.close();
+        } catch (IOException unclosable) {
+            throw new UncheckedIOException(unclosable);
+        }
     }
 
     private void answer(HttpExchange exchange) throws IOException {

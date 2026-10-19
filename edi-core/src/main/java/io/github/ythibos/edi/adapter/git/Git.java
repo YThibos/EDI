@@ -17,6 +17,7 @@ import io.github.ythibos.edi.adapter.process.ProgramCall;
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.process.ProgramRun;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
 import io.github.ythibos.edi.domain.delivery.ChangedPath;
 import io.github.ythibos.edi.domain.delivery.LocalChange;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
@@ -77,6 +78,14 @@ public class Git {
 
     public String currentBranch(Path worktree) {
         return git(worktree, "symbolic-ref", "--quiet", "--short", "HEAD").strip();
+    }
+
+    public Optional<CheckedOutBranch> checkedOutBranchAt(Path directory) {
+        if (!directory.toFile().isDirectory()) {
+            return Optional.empty();
+        }
+        ProgramRun status = run(directory, "--no-optional-locks", "status", "--porcelain=v2", "--branch", "--untracked-files=normal");
+        return status.succeeded() ? Optional.of(PorcelainStatus.checkedOutBranchIn(status.output())) : Optional.empty();
     }
 
     public void enableWorktreeConfiguration(Path clone) {

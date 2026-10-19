@@ -1,0 +1,49 @@
+{
+  "session_id": "5f0c1e9a-3b7d-4c2e-9a61-7d2f8e4b1c05",
+  "transcript_path": "/home/example/.claude/projects/-home-example-harness/5f0c1e9a-3b7d-4c2e-9a61-7d2f8e4b1c05.jsonl",
+  "cwd": "/home/example/harness",
+  "scratchpad_dir": "/tmp/claude/-home-example-harness/5f0c1e9a-3b7d-4c2e-9a61-7d2f8e4b1c05/scratchpad",
+  "prompt_id": "a3e8d2c4-6f1b-4e7a-8c95-2b4d6f8a0e13",
+  "session_name": "Fit the lamp",
+  "model": {
+    "id": "claude-opus-5-5",
+    "display_name": "Opus 5.5"
+  },
+  "workspace": {
+    "current_dir": "/home/example/harness",
+    "project_dir": "/home/example/harness",
+    "added_dirs": [],
+    "repo": {
+      "host": "github.com",
+      "owner": "example",
+      "name": "harness"
+    }
+  },
+  "version": "2.1.302",
+  "output_style": {
+    "name": "default"
+  },
+  "cost": {
+    "total_cost_usd": 0.17307779999999998,
+    "total_duration_ms": 18200,
+    "total_api_duration_ms": 3825,
+    "total_lines_added": 0,
+    "total_lines_removed": 0
+  },
+  "context_window": {
+    "total_input_tokens": 8812,
+    "total_output_tokens": 105,
+    "context_window_size": 1000000,
+    "current_usage": {
+      "input_tokens": 8812,
+      "output_tokens": 105
+    },
+    "used_percentage": 0.9,
+    "remaining_percentage": 99.1
+  },
+  "exceeds_200k_tokens": false,
+  "fast_mode": false,
+  "thinking": {
+    "enabled": true
+  }
+}

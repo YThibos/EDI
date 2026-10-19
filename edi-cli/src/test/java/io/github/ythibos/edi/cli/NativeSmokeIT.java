@@ -245,6 +245,25 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandWritesTheStatusLineInAnyLocale() throws Exception {
+        Path project = Files.createDirectories(home.resolve("statusline-project"));
+        git(project, "init", "--quiet", "--initial-branch=main");
+        Files.writeString(project.resolve("draft.txt"), "not yet added\n");
+        String payload = """
+                {"cwd":"%s","model":{"display_name":"Opus 5.5"},"effort":{"level":"high"},
+                 "context_window":{"used_percentage":6,"total_input_tokens":58309,"total_output_tokens":105,
+                  "current_usage":{"input_tokens":2,"cache_creation_input_tokens":33163,"cache_read_input_tokens":25144}},
+                 "rate_limits":{"five_hour":{"used_percentage":28,"resets_at":1792361400}}}""".formatted(project);
+
+        CommandRun line = ediInTheCLocale(payload, "statusline");
+
+        assertThat(line.exitCode()).isZero();
+        assertThat(line.output()).contains("\u001b[38;2;95;175;175mContext:\u001b[0m \u001b[38;2;54;129;40m6%\u001b[0m");
+        assertThat(line.output().replaceAll("\u001b\\[[0-9;]*m", "")).matches("Opus 5\\.5 · high -- Context: 6% -- Session tokens: 58k \\(C 25k/!C 33k\\)"
+                + " -- 5-hour: 28% \\([A-Z][a-z]{2} \\d{2}:\\d{2}\\) -- Week: -- -- Branch: main\\* -- Cache: 43%\n");
+    }
+
+    @Test
     void theCommandPlansTheMigrationOfAnOldHome() throws Exception {
         CommandRun plan = edi("", "migrate", "firstofficer", "--from", System.getProperty("edi.old.home.fixture"), "--dry-run");
 
