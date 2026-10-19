@@ -9,11 +9,4 @@ public record ForkBacklog(List<ForkEntry> entries, List<SetAsideEntry> setAside,
         setAside = List.copyOf(setAside);
         strayLines = List.copyOf(strayLines);
     }
-
-    public int highestWorkKeyNumber(String projectKey) {
-        return entries.stream()
-                .mapToInt(entry -> NumbersInText.highestAfter(projectKey + "-", entry.tags().title()))
-                .max()
-                .orElse(0);
-    }
 }

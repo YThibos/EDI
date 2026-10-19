@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.task;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
@@ -83,6 +84,10 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
             throw new Refusal(id + " is " + state.word() + ", so it no longer waits for another task.");
         }
         return new Task(id, intake.blockedAlsoBy(blocker), state, notes, hold, created, closed);
+    }
+
+    public Task blockedOnlyBy(List<TaskId> blockers) {
+        return new Task(id, intake.blockedOnlyBy(blockers), state, notes, hold, created, closed);
     }
 
     public Task dispatched() {

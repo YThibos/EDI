@@ -16,7 +16,7 @@ public class WorkKeySequenceStore {
     }
 
     public WorkKey next(ProjectKey prefix) {
-        WorkKey next = new WorkKey(prefix, Math.max(lastIssued(prefix), highestOnATask(prefix)) + 1);
+        WorkKey next = upcoming(prefix);
         store.sql("""
                         insert into work_key_sequence (prefix, last_number) values (:prefix, :number)
                         on conflict (prefix) do update set last_number = excluded.last_number""")
@@ -24,6 +24,19 @@ public class WorkKeySequenceStore {
                 .param("number", next.number())
                 .update();
         return next;
+    }
+
+    public WorkKey upcoming(ProjectKey prefix) {
+        return new WorkKey(prefix, Math.max(lastIssued(prefix), highestOnATask(prefix)) + 1);
+    }
+
+    public void continueAfter(WorkKey highestInUse) {
+        store.sql("""
+                        insert into work_key_sequence (prefix, last_number) values (:prefix, :number)
+                        on conflict (prefix) do update set last_number = max(last_number, excluded.last_number)""")
+                .param("prefix", highestInUse.project().value())
+                .param("number", highestInUse.number())
+                .update();
     }
 
     private int lastIssued(ProjectKey prefix) {

@@ -182,3 +182,9 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-133](ADR-133-the-console-shows-the-presence.md) | The console shows the presence, with Present and Demo buttons | Design |
 | [ADR-134](ADR-134-the-core-writes-the-primarys-status-line.md) | The core writes the primary's status line, and edi statusline pipes it to Claude Code | Design |
 | [ADR-135](ADR-135-the-primarys-settings-hold-the-hooks-and-the-status-line.md) | The primary's anchor holds only what must always be in mind, eleven skills hold the procedures, and its settings hold the hooks and the status line | Design |
+| [ADR-136](ADR-136-the-import-writes-what-its-dry-run-plans.md) | The import writes what its dry run plans, beside EDI's own work, and overwrites a home in use only when told | Design |
+| [ADR-137](ADR-137-the-backlog-import-sets-aside-the-old-harnesss-own-work.md) | The backlog import sets aside the old harness's own work, reads EDI keys from every line, and names each wait in plain words | Design |
+| [ADR-138](ADR-138-the-old-memory-is-routed-by-section-and-carried-unedited.md) | The old home's memory is routed by section and carried unedited, and the first stow edits it | Design |
+| [ADR-139](ADR-139-the-old-configuration-becomes-edis-without-guessing.md) | The old home's configuration becomes EDI's by adding what EDI lacks, and every gap is listed rather than guessed | Design |
+| [ADR-140](ADR-140-the-old-data-is-archived-read-only-and-open-tasks-link-their-folders.md) | The old home's data is archived read-only, and each open task links its old folder | Design |
+| [ADR-141](ADR-141-adopting-an-open-task-copies-its-branch-into-edis-own-clone.md) | Adopting an open task brings its branch into EDI's own clone, and its first dispatch resumes the carried session | Design |

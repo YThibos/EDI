@@ -5,11 +5,13 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
+import io.github.ythibos.edi.web.Confirmation.Adopted;
 import io.github.ythibos.edi.web.Confirmation.Answered;
 import io.github.ythibos.edi.web.Confirmation.BoardArmed;
 import io.github.ythibos.edi.web.Confirmation.CaptainHeard;
@@ -76,10 +78,19 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Promoted promoted -> "Promoted the scout " + promoted.promoted().scout() + " to the ship " + promoted.promoted().ship().id()
                     + ", queued on the captain's word.";
             case Dropped dropped -> "Dropped " + dropped.dropped().task().id() + " on the captain's word" + discardedOf(dropped.dropped().discarded());
+            case Adopted adopted -> adopted(adopted.adopted());
             case WorkDiscarded discarded -> "Discarded the isolated copy and the branch of " + discarded.discarded().task()
                     + " on the captain's word" + discardedOf(discarded.discarded().discarded());
             case CoreStopping stopping -> coreStopping(stopping);
         };
+    }
+
+    private static String adopted(AdoptedTask adopted) {
+        String next = adopted.resumesASession()
+                ? "its next dispatch resumes session " + adopted.session() + " there"
+                : "its next dispatch starts a fresh session there with its brief";
+        return "Took over " + adopted.task() + ": its isolated copy " + adopted.copy() + " is on " + adopted.branch() + " at " + adopted.head() + ", and "
+                + next + "; the old copy " + adopted.oldCopy() + " is left as it was.";
     }
 
     private static String captainHeard(CaptainHeard heard) {

@@ -2,6 +2,7 @@ package io.github.ythibos.edi.adapter.home;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
@@ -21,7 +22,9 @@ import io.github.ythibos.edi.domain.dispatch.ProjectOverride;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Component
 @RegisterReflectionForBinding({
@@ -32,6 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class DispatchRulesFile {
 
     private static final String SCHEMA = "edi-dispatch.v2";
+    private static final String CARRIED_REASONS = " The old harness's routing rules for this work said: ";
 
     private final Path file;
     private final JsonMapper json;
@@ -51,6 +55,16 @@ public class DispatchRulesFile {
         }
     }
 
+    public String withCarriedReasons(String rules, Map<CategoryId, List<String>> byCategory, Map<ProjectName, List<String>> byProject) {
+        if (byCategory.isEmpty() && byProject.isEmpty()) {
+            return rules;
+        }
+        JsonNode document = json.readTree(rules);
+        document.path("categories").forEach(category -> carryInto(category, byCategory.get(new CategoryId(category.path("id").asString("")))));
+        document.path("projectOverrides").forEach(override -> carryInto(override, byProject.get(new ProjectName(override.path("project").asString("")))));
+        return json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n";
+    }
+
     private RulesDocument document() {
         String content = ConfigurationFile.contentOf(file)
                 .orElseThrow(() -> new InvalidConfiguration(file, "it is missing, and EDI dispatches only by written categories."));
@@ -64,6 +78,12 @@ public class DispatchRulesFile {
     private static void requireSchema(RulesDocument document) {
         if (!SCHEMA.equals(document.schema())) {
             throw new IllegalArgumentException("its schema is " + document.schema() + ", and EDI reads " + SCHEMA + ".");
+        }
+    }
+
+    private static void carryInto(JsonNode reasoned, List<String> carried) {
+        if (carried != null && !carried.isEmpty()) {
+            ((ObjectNode) reasoned).put("why", reasoned.path("why").asString("") + CARRIED_REASONS + String.join(" ", carried));
         }
     }
 

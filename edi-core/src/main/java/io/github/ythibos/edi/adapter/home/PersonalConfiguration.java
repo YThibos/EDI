@@ -15,6 +15,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 @Component
@@ -49,6 +50,10 @@ public class PersonalConfiguration {
         }
     }
 
+    public String contentAddressing(CaptainAddress address) {
+        return ConfigurationFile.contentOf(file).orElseGet(() -> addressing(address));
+    }
+
     private PersonalDocument document() {
         try {
             return ConfigurationFile.contentOf(file).map(content -> yaml.readValue(content, PersonalDocument.class)).orElse(PersonalDocument.EMPTY);
@@ -59,6 +64,13 @@ public class PersonalConfiguration {
 
     private static Duration durationOf(String written, Duration absent) {
         return written == null ? absent : Duration.parse(written.strip());
+    }
+
+    private static String addressing(CaptainAddress address) {
+        YAMLMapper writer = ConfigurationYaml.writer();
+        ObjectNode configuration = writer.createObjectNode();
+        configuration.putObject("identity").put("address", address.word());
+        return writer.writeValueAsString(configuration);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

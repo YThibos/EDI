@@ -131,6 +131,11 @@ public class Git {
         return run(repository, "merge-base", "--is-ancestor", commit, ref).succeeded();
     }
 
+    public Optional<String> fetchUrlOf(Path repository, String remote) {
+        ProgramRun url = run(repository, "remote", "get-url", remote);
+        return url.succeeded() ? Optional.of(url.output().strip()) : Optional.empty();
+    }
+
     public String pushUrlOf(Path repository, String remote) {
         return git(repository, "remote", "get-url", "--push", remote).strip();
     }

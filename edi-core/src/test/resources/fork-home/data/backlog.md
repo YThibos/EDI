@@ -26,9 +26,13 @@
 - [ ] visit-day - Open day for visitors (repo: lighthouse) (kind: captain) (since 2026-08-06) (hold: Revisit after the season) (hold-kind: captain) (hold-until: 2026-11-01)
 - [ ] relay-mast - PERSISTENT SECONDMATE: keeps the relay mast (repo: harbour) (since 2026-08-07)
 - [ ] ferry-timetable - EDI-7 Publish the ferry timetable (repo: harbour) (kind: ship) (since 2026-08-08)
+  Its follow-up branch is feature/EDI-9, named only here.
 - [ ] boat-paint - Paint the boats (repo: harbour) (kind: ship) (since 2026-08-09) (hold: waiting on supplies) (hold-kind: external)
 - [ ] fog-horn - A second entry under a used id (repo: lighthouse) (kind: ship) (since 2026-08-10)
 - [ ] Gate-Repair - Repair the gate (repo: harbour) (kind: ship) (since 2026-08-11)
+- [ ] night-watch - Wait for a stormy night (repo: harbour) (kind: scout) (since 2026-08-12) (hold: waits for a stormy night to test the lamp) (hold-until: 2026-11-15)
+- [ ] old-harness-polish - Polish the old harness's own scripts blocked-by: lantern-rework (repo: firstofficer) (kind: ship) (since 2026-08-13)
+- [ ] polish-follow-up - Follow the old harness polish blocked-by: old-harness-polish (repo: lighthouse) (kind: ship) (since 2026-08-14)
 This line is not a task entry.
 ## Done
 - [x] flag-pole - Replace the flag pole (repo: lighthouse) (kind: ship) (done 2026-09-30)

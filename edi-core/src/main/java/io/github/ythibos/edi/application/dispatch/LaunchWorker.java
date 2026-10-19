@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.OutageStore;
@@ -48,6 +50,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
+import io.github.ythibos.edi.domain.task.Adoption;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -67,6 +70,7 @@ public class LaunchWorker {
     private final TaskStore tasks;
     private final DispatchStore dispatches;
     private final WorkerStore workers;
+    private final AdoptionStore adoptions;
     private final OutageStore outages;
     private final EventLog events;
     private final ProjectRegistry registry;
@@ -84,14 +88,15 @@ public class LaunchWorker {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, OutageStore outages, EventLog events,
-            ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies, WorkerPlaces places,
-            WorkerBriefs briefs, ResumeNotes resumeNotes, ResearchBeforeImplementation research, WorkerTokens tokens, WorkerRuntime runtime,
-            ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
+    public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
+            EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
+            WorkerPlaces places, WorkerBriefs briefs, ResumeNotes resumeNotes, ResearchBeforeImplementation research, WorkerTokens tokens,
+            WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.workers = workers;
+        this.adoptions = adoptions;
         this.outages = outages;
         this.events = events;
         this.registry = registry;
@@ -168,12 +173,18 @@ public class LaunchWorker {
         Worker earlier = workers.latestOf(task.id()).orElse(null);
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
         BaseBranch base = task.intake().base() == null ? project.requireBase() : task.intake().base();
-        return new Incarnation(task, project, dispatch, kind, worker, sessionFor(kind, task, earlier), earlier, route, base, settings,
-                craftRulesFor(project), research.planFor(task.id()).orElse(null), machine.time().requireWorkedLine(), answered);
+        Optional<UUID> adoptedSession = adoptedSessionToResume(task, earlier);
+        return new Incarnation(task, project, dispatch, kind, adoptedSession.isPresent() ? LaunchKind.RESUME : kind, worker,
+                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, base, settings, craftRulesFor(project),
+                research.planFor(task.id()).orElse(null), machine.time().requireWorkedLine(), answered);
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
         return answered != null && task.isHeld() && answered.holds(task.hold()) ? task.released() : task;
+    }
+
+    private Optional<UUID> adoptedSessionToResume(Task task, Worker earlier) {
+        return earlier == null ? adoptions.of(task.id()).filter(Adoption::resumesASession).map(Adoption::session) : Optional.empty();
     }
 
     private static UUID sessionFor(LaunchKind kind, Task task, Worker earlier) {
@@ -222,7 +233,7 @@ public class LaunchWorker {
                 "EDI_TASK_ID", incarnation.task().id().value(),
                 "EDI_WORKER", incarnation.worker().toString(),
                 "EDI_TOKEN_FILE", token.file().toString());
-        return new Launch(incarnation.worker(), incarnation.kind(), incarnation.session(), incarnation.route(), worktree,
+        return new Launch(incarnation.worker(), incarnation.launchedAs(), incarnation.session(), incarnation.route(), worktree,
                 incarnation.project().projectClone(), taskDirectory, stateDirectory, environment,
                 incarnation.settings().disallowedTools(), incarnation.settings().permissionMode(), firstPrompt);
     }
@@ -230,7 +241,7 @@ public class LaunchWorker {
     private Launched recorded(Incarnation incarnation, WorkerWindow window, IssuedToken token, Path worktree, String because, Actor actor) {
         Instant now = clock.now();
         Worker worker = Worker.launched(incarnation.worker(), incarnation.session(), incarnation.dispatch().category(),
-                incarnation.route(), window, new WorkerLaunch(incarnation.kind(), now, boot.current()));
+                incarnation.route(), window, new WorkerLaunch(incarnation.launchedAs(), now, boot.current()));
         retireTheEarlierWorker(incarnation, now, actor);
         workers.insert(worker, token.digest());
         settleTheOutageEntry(incarnation, now, actor);
@@ -298,6 +309,7 @@ public class LaunchWorker {
             ProjectEntry project,
             Dispatch dispatch,
             LaunchKind kind,
+            LaunchKind launchedAs,
             WorkerId worker,
             UUID session,
             Worker earlier,

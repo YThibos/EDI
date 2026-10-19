@@ -18,6 +18,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.build.ProjectBuild;
 import io.github.ythibos.edi.adapter.fork.ForkBacklogReader;
+import io.github.ythibos.edi.adapter.fork.ForkEnvironment;
+import io.github.ythibos.edi.adapter.fork.ForkRoutingRulesReader;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
@@ -31,6 +33,8 @@ import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
+import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
@@ -102,7 +106,13 @@ import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
 import io.github.ythibos.edi.application.lifecycle.StopTheCore;
 import io.github.ythibos.edi.application.memory.DailyMemoryCheck;
 import io.github.ythibos.edi.application.memory.MemoryQuery;
+import io.github.ythibos.edi.application.migration.AdoptForkTask;
+import io.github.ythibos.edi.application.migration.BacklogImport;
+import io.github.ythibos.edi.application.migration.ExampleConfiguration;
 import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
+import io.github.ythibos.edi.application.migration.HomeImportPlanner;
+import io.github.ythibos.edi.application.migration.HomeWriter;
+import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
@@ -198,6 +208,8 @@ public final class TestHome {
     private final BoardStore boards;
     private final CaptainWordStore captainWords;
     private final PresenceStore presence;
+    private final AdoptionStore adoptions;
+    private String oldPauseResurfaceSeconds = "";
     private final FakeBoardHost boardHost = new FakeBoardHost();
     private WindowsStandIn windowsSide;
     private BoardListeners boardListeners;
@@ -232,6 +244,7 @@ public final class TestHome {
         this.boards = new BoardStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
         this.presence = new PresenceStore(jdbc, _ -> { });
+        this.adoptions = new AdoptionStore(jdbc);
     }
 
     public static TestHome in(Path directory) throws IOException {
@@ -387,7 +400,42 @@ public final class TestHome {
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {
-        return new ForkMigrationPlanner(new ForkBacklogReader(json), clock);
+        return new ForkMigrationPlanner(new ForkBacklogReader(json), homeImportPlanner(), clock);
+    }
+
+    public HomeImportPlanner homeImportPlanner() {
+        return new HomeImportPlanner(home, registry, machineProfile(), new PersonalConfiguration(home), dispatchRulesFile(), new ExampleConfiguration(),
+                new ForkRoutingRulesReader(json), new ForkEnvironment(oldPauseResurfaceSeconds), git);
+    }
+
+    public MigrateFirstofficer migrateFirstofficer() {
+        return new MigrateFirstofficer(home, forkMigrationPlanner(), backlogImport(), new HomeWriter(home));
+    }
+
+    public BacklogImport backlogImport() {
+        return new BacklogImport(tasks, decisions, workKeySequences, events, clock, transaction);
+    }
+
+    public AdoptForkTask adoptForkTask() {
+        return new AdoptForkTask(home, forkMigrationPlanner(), backlogImport(), registry, isolatedCopies(), adoptions, claudeSessions(), events, git,
+                processes, clock, transaction);
+    }
+
+    public ClaudeSessions claudeSessions() {
+        return new ClaudeSessions(claudeSessionFolders());
+    }
+
+    public Path claudeSessionFolders() {
+        return home.root().resolve(".claude").resolve("projects");
+    }
+
+    public AdoptionStore adoptions() {
+        return adoptions;
+    }
+
+    public TestHome rememberingTheOldPauseResurface(String seconds) {
+        oldPauseResurfaceSeconds = seconds;
+        return this;
     }
 
     public EdiHome home() {
@@ -474,6 +522,14 @@ public final class TestHome {
         return windowsSide;
     }
 
+    public WorkKeySequenceStore workKeySequences() {
+        return workKeySequences;
+    }
+
+    public HomeSetup homeSetup() {
+        return new HomeSetup(home);
+    }
+
     public MemoryQuery memory() {
         return new MemoryQuery(new MemoryFiles(home), machineProfile(), clock);
     }
@@ -495,8 +551,8 @@ public final class TestHome {
     }
 
     public LaunchWorker launchWorker() {
-        return new LaunchWorker(home, tasks, dispatches, workers, outages, events, registry, machineProfile(), dispatchRulesFile(), isolatedCopies(),
-                workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), researchBeforeImplementation(), workerTokens(),
+        return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
+                isolatedCopies(), workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), researchBeforeImplementation(), workerTokens(),
                 runtime, processes, machineBoot(), clock, transaction);
     }
 
@@ -505,7 +561,7 @@ public final class TestHome {
     }
 
     public DispatchTask dispatchTask() {
-        return new DispatchTask(tasks, dispatches, events, registry, machineProfile(), dispatchRulesFile(), workerPlaces(), launchWorker(),
+        return new DispatchTask(tasks, dispatches, adoptions, events, registry, machineProfile(), dispatchRulesFile(), workerPlaces(), launchWorker(),
                 cloneRefreshes(), researchBeforeImplementation(), awayLimit(), clock, transaction);
     }
 

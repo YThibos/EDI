@@ -107,17 +107,4 @@ class ForkBacklogReaderTest {
         assertThat(decision.card()).isNull();
         assertThat(decision.unreadableCard()).isNotBlank();
     }
-
-    @Test
-    void findsTheHighestWorkKeyOfAProjectInTheTitles() {
-        ForkBacklog backlog = reader.read("""
-                ## Queued
-                - [ ] a - EDI-4 one
-                - [ ] b - fix (EDI-12) and EDI-9
-                - [ ] c - NOTEDI-99 and EDI-x
-                """);
-
-        assertThat(backlog.highestWorkKeyNumber("EDI")).isEqualTo(12);
-        assertThat(backlog.highestWorkKeyNumber("HRN")).isZero();
-    }
 }

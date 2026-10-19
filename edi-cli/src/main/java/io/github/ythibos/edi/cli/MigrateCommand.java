@@ -4,7 +4,7 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "migrate",
-        description = "Plans the import of another harness's state.",
+        description = "Imports another harness's state into EDI.",
         synopsisSubcommandLabel = "SOURCE",
         subcommands = MigrateFirstofficerCommand.class)
 final class MigrateCommand extends CommandGroup {

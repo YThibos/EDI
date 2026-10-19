@@ -212,7 +212,7 @@ class ApiTest {
         HttpResponse<String> plan = get("/api/migrations/firstofficer/plan?from=" + Path.of("src/test/resources/fork-home").toAbsolutePath(), TEXT);
 
         assertThat(plan.statusCode()).isEqualTo(200);
-        assertThat(plan.body()).contains("Tasks to import (15)", "the first new decision is D58");
+        assertThat(plan.body()).contains("Tasks to import (17)", "the first new decision is D58");
     }
 
     @Test

@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import io.github.ythibos.edi.adapter.fork.ForkDependency;
 import io.github.ythibos.edi.adapter.fork.ForkEntry;
 import io.github.ythibos.edi.adapter.fork.ForkHold;
+import io.github.ythibos.edi.adapter.fork.ForkHome;
 import io.github.ythibos.edi.adapter.fork.ForkSection;
 import io.github.ythibos.edi.adapter.fork.ForkTags;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -36,6 +37,7 @@ final class ForkEntryMapping {
             "scout", TaskKind.SCOUT,
             "captain", TaskKind.CAPTAIN);
     private static final String NO_PROJECT = "-";
+    private static final int LONGEST_QUOTED_REASON = 80;
 
     private final Set<String> backlogIds;
     private final Set<String> importableIds;
@@ -55,7 +57,16 @@ final class ForkEntryMapping {
         return TaskId.isWritten(entry.id()) && KINDS.containsKey(kindWordOf(entry.tags().kind()));
     }
 
+    static boolean improvesTheOldHarness(ForkEntry entry) {
+        List<String> projects = projectNamesOf(entry);
+        return !projects.isEmpty() && projects.stream().allMatch(ForkHome.HARNESS_PROJECT::equals);
+    }
+
     Optional<MigratedEntry> migrated(ForkEntry entry) {
+        if (!TaskId.isWritten(entry.id())) {
+            notes.add(entry.id(), "is not imported: EDI names a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout");
+            return Optional.empty();
+        }
         try {
             TaskId id = new TaskId(entry.id());
             Decision decision = decisionOf(entry, id).orElse(null);
@@ -129,7 +140,8 @@ final class ForkEntryMapping {
             return decision.holdOnItsTask();
         }
         if (!hold.isForTheCaptain()) {
-            notes.add(id.value(), "has a hold of kind " + hold.kind() + ", which is not a hold for the captain; it is not carried");
+            notes.add(id.value(), "waits" + untilWords(hold) + " on something outside EDI (\"" + shortened(hold.reason())
+                    + "\"); EDI holds a task only for the captain, so the wait is not carried");
             return null;
         }
         return new CaptainHold(HoldKind.DEFERRAL, hold.reason(), untilOf(hold), heldSince(entry));
@@ -161,7 +173,10 @@ final class ForkEntryMapping {
         if (named.isEmpty()) {
             notes.add(id.value(), "names no project; the captain sets one");
         }
-        return named.stream().flatMap(name -> projectNamed(name, id)).distinct().toList();
+        if (named.contains(ForkHome.HARNESS_PROJECT)) {
+            notes.add(id.value(), "also names the old harness itself; EDI keeps only its other projects");
+        }
+        return named.stream().filter(name -> !name.equals(ForkHome.HARNESS_PROJECT)).flatMap(name -> projectNamed(name, id)).distinct().toList();
     }
 
     private static WorkKey workKeyOpening(String title) {
@@ -180,11 +195,20 @@ final class ForkEntryMapping {
                 .toList();
     }
 
+    private static String untilWords(ForkHold hold) {
+        return hold.until() == null ? "" : " until " + hold.until();
+    }
+
+    private static String shortened(String reason) {
+        String text = reason.strip();
+        return text.length() <= LONGEST_QUOTED_REASON ? text : text.substring(0, LONGEST_QUOTED_REASON) + "...";
+    }
+
     private static HoldUntil untilOf(ForkHold hold) {
         return hold.until() == null ? HoldUntil.captainsWord() : HoldUntil.day(hold.until());
     }
 
-    private static List<String> projectNamesOf(ForkEntry entry) {
+    static List<String> projectNamesOf(ForkEntry entry) {
         List<String> cardProjects = entry.decision() == null || entry.decision().card() == null
                 ? List.of()
                 : entry.decision().card().projects();

@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.event;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.branch.BranchName;
@@ -277,5 +278,11 @@ public sealed interface DomainEvent {
         public WorkDiscarded {
             discarded = List.copyOf(discarded);
         }
+    }
+
+    record TaskImported(TaskId task, String oldHome) implements DomainEvent {
+    }
+
+    record TaskAdopted(TaskId task, BranchName branch, String oldCopy, UUID session) implements DomainEvent {
     }
 }

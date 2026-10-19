@@ -2,10 +2,12 @@ package io.github.ythibos.edi.adapter.home;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.Tag;
@@ -99,6 +101,25 @@ class MachineProfileTest {
         assertThat(bare.windowsSide()).isEqualTo(new WindowsSide(false, false));
         assertThat(bare.startupMemoryBudgetTokens()).isEqualTo(18_000);
         assertThat(profileOf("memory:\n  startupBudgetTokens: 9000\npresence:\n  calendar: none\n").windowsSide().outlookCalendar()).isFalse();
+    }
+
+    @Test
+    void addsOnlyTheCarriedSettingsTheProfileLacks() throws IOException {
+        CarriedMachineSettings carried = new CarriedMachineSettings(MachineProfile.workerRosterIn(ExampleHome.file("config/machine.yaml")), true, 18_000,
+                Duration.ofHours(4));
+        String partial = "machine: laptop\ntime:\n  fleetLedger: false\n";
+
+        String added = profileOf(partial).contentWith(carried);
+        Files.writeString(home.resolve("config/machine.yaml"), added);
+
+        assertThat(profileOf(added).time().fleetLedger()).as("the profile's own setting").isFalse();
+        assertThat(profileOf(added).startupMemoryBudgetTokens()).isEqualTo(18_000);
+        assertThat(profileOf(added).supervision().pauseResurface()).isEqualTo(Duration.ofHours(4));
+        assertThat(profileOf(added).workers().models().strongestFirst()).extracting(model -> model.id().value(), model -> model.takesEffort())
+                .containsExactly(tuple("claude-opus-5-5", true), tuple("claude-sonnet-5-5", true), tuple("claude-haiku-5-5", false));
+        assertThat(profileOf(added).name()).isEqualTo("laptop");
+        assertThat(profileOf(added).contentWith(carried)).as("a profile that already holds every setting").isEqualTo(added);
+        assertThat(new MachineProfile(new EdiHome(home.resolve("bare"))).contentWith(carried)).contains("fleetLedger: true", "startupBudgetTokens: 18000");
     }
 
     private MachineProfile profileOf(String yaml) throws IOException {
