@@ -188,3 +188,5 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-139](ADR-139-the-old-configuration-becomes-edis-without-guessing.md) | The old home's configuration becomes EDI's by adding what EDI lacks, and every gap is listed rather than guessed | Design |
 | [ADR-140](ADR-140-the-old-data-is-archived-read-only-and-open-tasks-link-their-folders.md) | The old home's data is archived read-only, and each open task links its old folder | Design |
 | [ADR-141](ADR-141-adopting-an-open-task-registers-its-copy-and-moves-it-when-free.md) | Adopting an open task registers its copy in place and moves it under EDI's worktrees once nothing works there | Design |
+| [ADR-147](ADR-147-a-fixture-repositorys-git-runs-no-background-maintenance.md) | A fixture repository's git runs no background maintenance | Design |
+| [ADR-148](ADR-148-the-old-home-is-compared-entry-by-entry.md) | AT-41 and AT-47 compare every entry of the old home but its access times, and name each one that changed | Design |

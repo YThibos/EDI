@@ -13,6 +13,7 @@ public final class FixtureRepository {
 
     private static final String DEFAULT_IDENTITY = "Fixture Author <fixture@example.org>";
     private static final long PATIENCE_SECONDS = 20;
+    private static final String WITHOUT_BACKGROUND_MAINTENANCE = "maintenance.auto=false";
 
     private final Path root;
 
@@ -95,7 +96,7 @@ public final class FixtureRepository {
     }
 
     private String gitAs(String identity, String... arguments) throws IOException {
-        ProcessBuilder git = new ProcessBuilder(Stream.concat(Stream.of("git"), Stream.of(arguments)).toList())
+        ProcessBuilder git = new ProcessBuilder(Stream.concat(Stream.of("git", "-c", WITHOUT_BACKGROUND_MAINTENANCE), Stream.of(arguments)).toList())
                 .directory(root.toFile())
                 .redirectErrorStream(true);
         git.environment().keySet().removeIf(FixtureRepository::injectsConfiguration);
