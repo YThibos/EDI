@@ -23,7 +23,7 @@ On the way, `CaptainMemoryEdits` makes the edits of table 18.1, each keyed on th
 - applying changes locally names the checkout root from the machine profile instead of a path;
 - the reporting format points at `edi report` instead of the old harness's script.
 `LearningsFilter` applies table 18.2 to every entry of the learnings, preamble included when it holds entries:
-- an entry whose title names the old harness's own mechanics, such as its command guard, tasks-axi, its own tests, its self-restarting monitoring, its quietening of parked workers or one of its `fm-` scripts, is dropped;
+- an entry whose title names the old harness's own mechanics, such as its command guard, tasks-axi, its own tests, its self-restarting monitoring, its quietening of parked workers, rejoining an existing copy, its fleet lock or one of its `fm-` scripts, is dropped;
 - the `gh-axi` entry is generalised to always passing `--repo`, and the top-level `cd` entry keeps only its `cmd.exe` fact;
 - every other entry is carried as written.
 The old archive is carried verbatim.
