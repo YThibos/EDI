@@ -211,6 +211,26 @@ class ConsoleApiTest {
         }
     }
 
+    @Test
+    void choosesPresentOrADemoFromTheConsoleAndNothingElse() throws Exception {
+        String cookie = signedInCookie();
+
+        HttpResponse<String> demo = send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"mode\":\"demo\"}")));
+        String sitrep = send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body();
+        HttpResponse<String> quiet = send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"mode\":\"quiet\"}")));
+        HttpResponse<String> demoOff = send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"mode\":\"demo-off\"}")));
+
+        assertThat(demo.statusCode()).isEqualTo(200);
+        assertThat(demo.body()).startsWith("Presence: present for a demo until ");
+        assertThat(sitrep).contains("\"presence\":{\"mode\":\"present\",\"demo\":true,\"words\":\"present for a demo until ");
+        assertThat(quiet.statusCode()).isEqualTo(403);
+        assertThat(quiet.body()).isEqualTo("The console sets presence to present or to a demo; quiet and away are set in the chat.\n");
+        assertThat(demoOff.body()).isEqualTo("Presence: present.\n");
+    }
+
     private String raisedDecision(String task) throws Exception {
         post(withTheHomeToken("/api/tasks", TEXT), "{\"id\":\"" + task + "\",\"kind\":\"captain\",\"title\":\"Choose the lamp\"}");
         return post(withTheHomeToken("/api/tasks/" + task + "/decision", TEXT), """

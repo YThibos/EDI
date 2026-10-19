@@ -10,9 +10,13 @@ import io.github.ythibos.edi.domain.decision.OptionKey;
 record AnswerRequest(String option, String text, String interpretation) {
 
     GivenAnswer givenThrough(AnswerChannel channel) {
+        return new GivenAnswer(verbatim(), optional(option, OptionKey::parse), orEmpty(interpretation), channel);
+    }
+
+    String verbatim() {
         if (text == null) {
             throw new IllegalArgumentException("An answer records the captain's own words.");
         }
-        return new GivenAnswer(text, optional(option, OptionKey::parse), orEmpty(interpretation), channel);
+        return text;
     }
 }

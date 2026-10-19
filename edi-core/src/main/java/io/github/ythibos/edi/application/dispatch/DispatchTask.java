@@ -50,12 +50,13 @@ public class DispatchTask {
     private final LaunchWorker launcher;
     private final CloneRefreshes refreshes;
     private final ResearchBeforeImplementation research;
+    private final AwayLimit awayLimit;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DispatchTask(TaskStore tasks, DispatchStore dispatches, EventLog events, ProjectRegistry registry, MachineProfile machine,
             DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes, ResearchBeforeImplementation research,
-            Clock clock, TransactionTemplate transaction) {
+            AwayLimit awayLimit, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.events = events;
@@ -66,6 +67,7 @@ public class DispatchTask {
         this.launcher = launcher;
         this.refreshes = refreshes;
         this.research = research;
+        this.awayLimit = awayLimit;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -196,6 +198,7 @@ public class DispatchTask {
         if (dispatching.isBeyondCapacity()) {
             return transaction.execute(_ -> deferred(dispatching, actor));
         }
+        transaction.executeWithoutResult(_ -> awayLimit.requireRoomForAnotherWorker());
         return DispatchOutcome.of(launcher.launch(dispatching.dispatch(), null, actor));
     }
 

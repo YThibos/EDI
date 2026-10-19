@@ -3,6 +3,7 @@ package io.github.ythibos.edi.web.access;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.Standing;
@@ -71,6 +72,10 @@ public sealed interface Caller {
             case Standby standby -> Optional.of(standby.session());
             case WorkerCaller _, Captain _ -> Optional.empty();
         };
+    }
+
+    default CallingSession callingSession() {
+        return claudeSession().map(CallingSession::new).orElse(CallingSession.UNNAMED);
     }
 
     record Primary(UUID session) implements Caller {

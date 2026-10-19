@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.dispatch;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -33,6 +34,17 @@ public class WorkerPlaces {
 
     public Optional<Worker> liveWorkerOf(TaskId task) {
         return workers.latestOf(task).filter(worker -> !worker.isRetired() && runtime.isRunning(worker.window()));
+    }
+
+    public int occupied() {
+        return running().size();
+    }
+
+    public List<Worker> running() {
+        return workers.serving().stream()
+                .filter(Worker::countsAgainstCapacity)
+                .filter(worker -> runtime.isRunning(worker.window()))
+                .toList();
     }
 
     public int occupiedOn(ProjectName project) {

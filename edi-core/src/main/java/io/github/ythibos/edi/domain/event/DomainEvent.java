@@ -258,4 +258,24 @@ public sealed interface DomainEvent {
 
     record BoardAnswerRefused(TaskId task, DecisionNumber number, BoardId board, String because) implements DomainEvent {
     }
+
+    record CaptainSaid(TaskId task, String verbatim) implements DomainEvent {
+    }
+
+    record ScoutPromoted(TaskId task, TaskId ship) implements DomainEvent {
+    }
+
+    record TaskDropped(TaskId task, String captainsWord, List<String> discarded) implements DomainEvent {
+
+        public TaskDropped {
+            discarded = List.copyOf(discarded);
+        }
+    }
+
+    record WorkDiscarded(TaskId task, String captainsWord, List<String> discarded) implements DomainEvent {
+
+        public WorkDiscarded {
+            discarded = List.copyOf(discarded);
+        }
+    }
 }

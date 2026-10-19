@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -35,13 +36,22 @@ import io.github.ythibos.edi.adapter.forge.GitLabForge;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProgramCall;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
+import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.port.Forge;
+import io.github.ythibos.edi.application.task.PromotedScout;
+import io.github.ythibos.edi.application.worker.HookAnswer;
+import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.architecture.HandWrittenClasses;
 import io.github.ythibos.edi.architecture.NameAMergeOperation;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
+import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -55,9 +65,13 @@ import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.BriefFixtures;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.ForgeStandIns;
 import io.github.ythibos.edi.testing.TestHome;
@@ -256,8 +270,35 @@ class AuthorityAndInterfaceTest {
 
         @Test
         @DisplayName("AT-05 edi task promote refuses a scout without a recorded captain authorisation")
-        void promotionNeedsTheCaptainsAuthorisation() {
-            Pending.until(Slice.S8);
+        void promotionNeedsTheCaptainsAuthorisation() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-4"),
+                    WorkerFixtures.queued("survey-doors", TaskKind.SCOUT, "harness", "HRN-5")));
+            CallingSession session = primarySessionIn(home, "Ship the lamp survey's plan.");
+
+            assertThatThrownBy(() -> promote(home, "survey-lamps", session))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("needs the captain's word on survey-lamps in this session");
+            assertThatThrownBy(() -> home.captainsWord().record(session, "Ship it all.", TaskReference.parse("survey-lamps"), Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("did not type");
+            home.captainsWord().record(session, "ship the lamp survey\u2019s   plan.", TaskReference.parse("survey-doors"), Actor.PRIMARY);
+            assertThatThrownBy(() -> promote(home, "survey-lamps", session)).isInstanceOf(Refusal.class);
+            assertThat(home.tasks().inState(TaskState.QUEUED)).extracting(task -> task.intake().kind()).containsOnly(TaskKind.SCOUT);
+
+            home.captainsWord().record(session, "Ship the lamp survey's plan.", TaskReference.parse("survey-lamps"), Actor.PRIMARY);
+            PromotedScout promoted = promote(home, "survey-lamps", session);
+
+            Task ship = home.tasks().get(promoted.ship().id());
+            assertThat(ship.intake().kind()).isEqualTo(TaskKind.SHIP);
+            assertThat(ship.intake().workKey()).hasToString("HRN-4");
+            assertThat(ship.intake().projects()).containsExactly(new ProjectName("harness"));
+            assertThat(ship.notes()).contains("Do the work on survey-lamps.", "on the captain's word: \"Ship the lamp survey's plan.\"");
+            assertThat(home.eventTypesOf(new TaskId("survey-lamps"))).containsSubsequence("CaptainSaid", "ScoutPromoted");
+            assertThatThrownBy(() -> promote(home, promoted.ship().id().value(), session))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("only a scout is promoted");
+        }
+
+        private static PromotedScout promote(TestHome home, String scout, CallingSession session) {
+            return home.promoteScout().promote(TaskReference.parse(scout), null, session, Actor.PRIMARY);
         }
     }
 
@@ -266,10 +307,86 @@ class AuthorityAndInterfaceTest {
     class DestructiveActionsNeedTheCaptainsWord {
 
         @Test
-        @DisplayName("AT-06 discarding a worktree or work, deleting an unlanded branch and touching secrets need a decision answered this session")
-        void destructiveCommandsNeedAnAnswerFromThisSession() {
-            Pending.until(Slice.S8);
+        @Tag("adapter")
+        @DisplayName("AT-06 discarding a worktree or work, deleting an unlanded branch and touching secrets need the captain's word for that act this session")
+        void destructiveCommandsNeedTheCaptainsWordForThatActFromThisSession() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Path lampCopy = unlandedCopyOf(home, "fit-lamp", "HRN-3");
+            Path doorCopy = unlandedCopyOf(home, "fit-door", "HRN-6");
+            Path hingeCopy = unlandedCopyOf(home, "fit-hinge", "HRN-7");
+            FixtureRepository.at(hingeCopy).commit("HRN-7 Fit the hinge");
+            home.git().removeWorktree(home.home().root().resolve("projects/harness"), hingeCopy);
+            home.runtime().closeEveryWindow();
+            CallingSession earlier = primarySessionIn(home, "D58 A");
+            answerOnTask(home, "fit-lamp", Cards.authorising("Discard the work on fit-lamp?", CaptainWordAct.DISCARD_WORK), "D58 A");
+            home.clock().advance(Duration.ofHours(1));
+            CallingSession current = primarySessionIn(home, "Read the API token to check it.");
+            answerOnTask(home, "fit-door", Cards.authorising("Drop fit-door?", CaptainWordAct.DROP), "D60 A");
+            answerOnTask(home, "fit-hinge", Cards.authorising("Discard the work on fit-hinge?", CaptainWordAct.DISCARD_WORK), "D61 B");
+
+            assertThatThrownBy(() -> home.discardWork().discard(TaskReference.parse("fit-lamp"), current, Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("To discard work that has not landed, EDI needs the captain's word on fit-lamp");
+            assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), true, current, Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("on fit-door in this session");
+            assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), false, current, Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("its work is not landed: door.txt is not committed");
+            assertThatThrownBy(() -> home.discardWork().discard(TaskReference.parse("fit-hinge"), current, Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("on fit-hinge in this session");
+            assertThat(guardedRead(home, current).verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
+            assertThat(guardedRead(home, earlier).reason()).contains("touches a secret", "edi captain said");
+            assertThat(guarded(home, current, "git branch -D feature/HRN-3").reason()).contains("has not landed", "edi captain said");
+            assertThat(guarded(home, current, "git -C projects/harness push origin --delete feature/HRN-6").verdict())
+                    .isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
+            assertThat(guarded(home, current, "git branch -D feature/HRN-99")).isEqualTo(HookAnswer.PROCEED);
+            assertThat(lampCopy).isDirectory();
+            assertThat(doorCopy).isDirectory();
+
+            answerOnTask(home, "fit-lamp", Cards.authorising("Discard the work on fit-lamp?", CaptainWordAct.DISCARD_WORK), "D59 A");
+            answerOnTask(home, "fit-door", Cards.authorising("Drop fit-door and its work?", CaptainWordAct.DISCARD_WORK), "D60 A");
+            answerOnTask(home, "fit-hinge", Cards.authorising("Discard the work on fit-hinge?", CaptainWordAct.DISCARD_WORK), "D61 A");
+            home.captainsWord().record(current, "Read the API token to check it.", null, Actor.PRIMARY);
+
+            assertThat(home.discardWork().discard(TaskReference.parse("fit-lamp"), current, Actor.PRIMARY).discarded())
+                    .containsExactly("lamp.txt is not committed");
+            assertThat(home.dropTask().drop(TaskReference.parse("fit-door"), true, current, Actor.PRIMARY).task().state()).isEqualTo(TaskState.DROPPED);
+            assertThat(home.discardWork().discard(TaskReference.parse("fit-hinge"), current, Actor.PRIMARY).discarded())
+                    .singleElement().asString().contains("HRN-7 Fit the hinge");
+            assertThat(guardedRead(home, current)).isEqualTo(HookAnswer.PROCEED);
+            assertThat(guarded(home, current, "git branch -D feature/HRN-3")).isEqualTo(HookAnswer.PROCEED);
+            assertThat(lampCopy).doesNotExist();
+            assertThat(doorCopy).doesNotExist();
+            assertThat(home.git().commitAt(home.home().root().resolve("projects/harness"), "refs/heads/feature/HRN-7")).isEmpty();
+            assertThat(home.eventTypesOf(new TaskId("fit-door"))).endsWith("TaskDropped");
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("WorkDiscarded");
         }
+
+        private static Path unlandedCopyOf(TestHome home, String task, String key) throws IOException {
+            Worker worker = WorkerFixtures.dispatchedShip(home, task, key);
+            Path copy = home.home().worktreeOf(new ProjectName("harness"), worker.id().task());
+            FixtureRepository.at(copy).write(task.substring("fit-".length()) + ".txt", "brass\n");
+            return copy;
+        }
+
+        private static void answerOnTask(TestHome home, String task, DecisionCard card, String verbatim) {
+            home.raiseDecision().raise(TaskReference.parse(task), card, Actor.PRIMARY);
+            OptionKey chosen = new OptionKey(verbatim.charAt(verbatim.length() - 1));
+            home.answerDecision().answer(TaskReference.parse(task), new GivenAnswer(verbatim, chosen, "", AnswerChannel.CHAT), Actor.PRIMARY);
+        }
+
+        private static HookAnswer guardedRead(TestHome home, CallingSession session) {
+            return guarded(home, session, "cat ~/.edi/state/core.token");
+        }
+
+        private static HookAnswer guarded(TestHome home, CallingSession session, String command) {
+            return home.guardToolCall().checkForPrimary(new ToolCall("Bash", command, null, home.home().root()), session);
+        }
+    }
+
+    private static CallingSession primarySessionIn(TestHome home, String typed) {
+        UUID session = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().promptSubmitted(session, typed);
+        return new CallingSession(session);
     }
 
     private static final RegisteredForge GITHUB_PROJECT = new RegisteredForge(

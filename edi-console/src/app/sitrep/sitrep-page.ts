@@ -10,7 +10,7 @@ import { FleetStream, FleetStreamEvent } from '../console/fleet-stream';
 import { HudStrip } from '../console/hud-strip';
 import { LandedList } from '../console/landed-list';
 import { OngoingList } from '../console/ongoing-list';
-import { Sitrep } from '../console/sitrep';
+import { PresenceChoice, Sitrep } from '../console/sitrep';
 
 type Access = 'loading' | 'signed-in' | 'signed-out' | 'unreachable';
 
@@ -57,6 +57,10 @@ export class SitrepPage {
       next: (sitrep) => this.shown(sitrep),
       error: (failed: HttpErrorResponse) => this.access.set(failed.status === SIGNED_OUT ? 'signed-out' : 'unreachable'),
     });
+  }
+
+  protected choosePresence(mode: PresenceChoice): void {
+    this.api.choosePresence(mode).subscribe({ next: () => this.refresh(), error: () => this.refresh() });
   }
 
   private follow(event: FleetStreamEvent): void {

@@ -1,0 +1,13 @@
+[Unit]
+Description=EDI core
+After=network.target
+
+[Service]
+Type=simple
+Environment=EDI_HOME=%h/.edi
+ExecStart=%h/.local/bin/edi-core
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

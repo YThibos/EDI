@@ -17,7 +17,7 @@ final class DecisionRaiseCommand implements Callable<Integer> {
     private String task;
 
     @Option(names = "--card", required = true, paramLabel = "-|FILE",
-            description = "The card as JSON, {title, context, options: [{key, text}], recommend: {key, why}}, from standard input (-) or a file.")
+            description = "The card as JSON, {title, context, options: [{key, text, authorises}], recommend: {key, why}}; authorises names promote, drop or discard-work when choosing that option is the captain's word for it, from standard input (-) or a file.")
     private String card;
 
     @Override

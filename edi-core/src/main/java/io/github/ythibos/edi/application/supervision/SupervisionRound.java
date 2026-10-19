@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
+import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
@@ -30,12 +31,13 @@ public class SupervisionRound implements AutoCloseable {
     private final ResumeAfterUsageLimits usageLimits;
     private final NoticeDueHolds dueHolds;
     private final TicketProposals ticketProposals;
+    private final FollowThePresence presence;
     private final ExecutorService checks = Executors.newVirtualThreadPerTaskExecutor();
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
     public SupervisionRound(NoticeOverdueSteers overdueSteers, NoticeMissedLaunches missedLaunches,
             LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, JudgeWorkers judgeWorkers,
-            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals) {
+            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals, FollowThePresence presence) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
@@ -44,6 +46,7 @@ public class SupervisionRound implements AutoCloseable {
         this.usageLimits = usageLimits;
         this.dueHolds = dueHolds;
         this.ticketProposals = ticketProposals;
+        this.presence = presence;
     }
 
     @Scheduled(fixedDelayString = "${edi.supervision.round:PT30S}", initialDelayString = "${edi.supervision.round:PT30S}")
@@ -56,6 +59,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("launch deferred dispatches", deferredDispatches::launchWhereThereIsRoom);
         attempt("check mechanical changes", this::startTheMechanicalChecks);
         attempt("settle the tickets the captain chose", ticketProposals::settleEveryAnswered);
+        attempt("follow the captain's presence", presence::follow);
     }
 
     @Override

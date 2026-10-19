@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -97,13 +98,18 @@ public class DecisionStore {
         List<DecisionOption> options = decision.card().options();
         IntStream.range(0, options.size()).forEach(position ->
                 store.sql("""
-                                insert into decision_option (decision_number, position, option_key, option_text)
-                                values (:number, :position, :key, :text)""")
+                                insert into decision_option (decision_number, position, option_key, option_text, authorises)
+                                values (:number, :position, :key, :text, :authorises)""")
                         .param("number", decision.number().value())
                         .param("position", position)
                         .param("key", options.get(position).key().toString())
                         .param("text", options.get(position).text())
+                        .param("authorises", authorisedBy(options.get(position)))
                         .update());
+    }
+
+    private static String authorisedBy(DecisionOption option) {
+        return option.authorises() == null ? null : option.authorises().word();
     }
 
     private List<Decision> decisions(StatementSpec query) {
@@ -134,14 +140,19 @@ public class DecisionStore {
 
     private Map<Integer, List<DecisionOption>> optionsOf(List<Integer> numbers) {
         return store.sql("""
-                        select decision_number, option_key, option_text from decision_option
+                        select decision_number, option_key, option_text, authorises from decision_option
                         where decision_number in (:numbers) order by decision_number, position""")
                 .param("numbers", numbers)
-                .query((row, _) -> Map.entry(row.getInt("decision_number"),
-                        new DecisionOption(OptionKey.parse(row.getString("option_key")), row.getString("option_text"))))
+                .query((row, _) -> Map.entry(row.getInt("decision_number"), option(row)))
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+    }
+
+    private static DecisionOption option(ResultSet row) throws SQLException {
+        String authorises = row.getString("authorises");
+        return new DecisionOption(OptionKey.parse(row.getString("option_key")), row.getString("option_text"),
+                authorises == null ? null : CaptainWordAct.onATaskNamed(authorises));
     }
 
     private record DecisionRow(

@@ -36,17 +36,18 @@ class ArchitectureRulesTest {
     private static final String PROCESS_ADAPTER = "io.github.ythibos.edi.adapter.process..";
     private static final String CLOCK_ADAPTER = "io.github.ythibos.edi.adapter.clock..";
 
-    private static final Map<String, String> OWNING_ADAPTER_OF_PROGRAM = Map.of(
-            "GIT", "io.github.ythibos.edi.adapter.git..",
-            "GITLEAKS", "io.github.ythibos.edi.adapter.gitleaks..",
-            "TMUX", "io.github.ythibos.edi.adapter.runtime..",
-            "CLAUDE_CODE", "io.github.ythibos.edi.adapter.runtime..",
-            "GLAB", "io.github.ythibos.edi.adapter.forge..",
-            "GH", "io.github.ythibos.edi.adapter.forge..",
-            "NO_MISTAKES", "io.github.ythibos.edi.adapter.pipeline..",
-            "SHELL", "io.github.ythibos.edi.adapter.build..",
-            "LAVISH", "io.github.ythibos.edi.adapter.board..",
-            "CMD", "io.github.ythibos.edi.adapter.browser..");
+    private static final Map<String, String> OWNING_ADAPTER_OF_PROGRAM = Map.ofEntries(
+            Map.entry("GIT", "io.github.ythibos.edi.adapter.git.."),
+            Map.entry("GITLEAKS", "io.github.ythibos.edi.adapter.gitleaks.."),
+            Map.entry("TMUX", "io.github.ythibos.edi.adapter.runtime.."),
+            Map.entry("CLAUDE_CODE", "io.github.ythibos.edi.adapter.runtime.."),
+            Map.entry("GLAB", "io.github.ythibos.edi.adapter.forge.."),
+            Map.entry("GH", "io.github.ythibos.edi.adapter.forge.."),
+            Map.entry("NO_MISTAKES", "io.github.ythibos.edi.adapter.pipeline.."),
+            Map.entry("SHELL", "io.github.ythibos.edi.adapter.build.."),
+            Map.entry("LAVISH", "io.github.ythibos.edi.adapter.board.."),
+            Map.entry("CMD", "io.github.ythibos.edi.adapter.browser.."),
+            Map.entry("POWERSHELL", "io.github.ythibos.edi.adapter.windows.."));
 
     @ArchTest
     static final ArchRule theDomainDependsOnlyOnItselfAndTheCoreJavaLibrary = classes()

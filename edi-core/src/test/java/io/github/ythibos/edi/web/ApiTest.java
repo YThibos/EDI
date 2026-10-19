@@ -14,17 +14,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -53,11 +54,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Tag("adapter")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 class ApiTest {
 
-    private static final Path HOME = registeredHome();
     private static final String TEXT = "text/plain";
     private static final String JSON = "application/json";
+
+    @TempDir
+    private static Path home;
 
     @Autowired
     private WorkerStore workers;
@@ -68,19 +72,17 @@ class ApiTest {
     @Autowired
     private WorkerTokens workerTokens;
 
-    @DynamicPropertySource
-    static void useTheTemporaryHome(DynamicPropertyRegistry properties) {
-        properties.add("edi.home", HOME::toString);
-        properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
+    @BeforeAll
+    static void registerTheProjects() throws IOException {
+        Files.createDirectories(home.resolve("config"));
+        Files.writeString(home.resolve("config/projects.yaml"), Intakes.REGISTRY);
     }
 
-    @AfterAll
-    static void removeTheTemporaryHome() throws IOException {
-        try (Stream<Path> files = Files.walk(HOME)) {
-            for (Path file : files.sorted(Comparator.reverseOrder()).toList()) {
-                Files.deleteIfExists(file);
-            }
-        }
+    @DynamicPropertySource
+    static void useTheTemporaryHome(DynamicPropertyRegistry properties) {
+        properties.add("edi.home", () -> home.toString());
+        properties.add("edi.checkout", () -> home.resolve("checkout").toString());
+        properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
     }
 
     @Test
@@ -91,7 +93,7 @@ class ApiTest {
         assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, the token EDI gave a worker at launch, "
                 + "or a console session opened through edi console.\n");
         assertThat(send(HttpRequest.newBuilder(uri("/api/health")).GET()).statusCode()).isEqualTo(200);
-        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(HOME.resolve("state/core.token")))).isEqualTo("rw-------");
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("state/core.token")))).isEqualTo("rw-------");
     }
 
     @Test
@@ -121,8 +123,14 @@ class ApiTest {
                 {"title":"Which lamp?","context":"","options":[{"key":"A","text":"LED"},{"key":"B","text":"Oil"}],"recommend":{"key":"A","why":"it lasts"}}""", TEXT);
         String number = raised.body().strip();
         String heldAsJson = get("/api/tasks/" + number, JSON).body();
-        HttpResponse<String> answered = post("/api/decisions/" + number + "/answer", "{\"option\":\"A\",\"text\":\"" + number + " A\"}", TEXT);
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"" + number + " A\"}");
+        HttpResponse<String> untyped = answerInSession(primary, number, "{\"option\":\"A\",\"text\":\"" + number + " B\"}");
+        HttpResponse<String> answered = answerInSession(primary, number, "{\"option\":\"A\",\"text\":\"" + number + " A\"}");
 
+        assertRefusal(untyped, 409, "The captain did not type \"" + number + " B\" in this session; record their words exactly as typed,"
+                + " the whole message or one whole line of it.");
         assertThat(raised.statusCode()).isEqualTo(201);
         assertThat(number).matches("D\\d+");
         assertThat(heldAsJson).contains("\"kind\":\"decision\"", "\"until\":\"captain's word\"");
@@ -180,7 +188,7 @@ class ApiTest {
     @Test
     void checksTheOutgoingCommitsOfARepositoryBeforeAPush() throws Exception {
         assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
-        FixtureRepository repository = FixtureRepository.initialise(Files.createTempDirectory(HOME, "repository-"))
+        FixtureRepository repository = FixtureRepository.initialise(Files.createTempDirectory(home, "repository-"))
                 .write("README.md", "A project.\n")
                 .commit("Start the project")
                 .branch("secrets")
@@ -308,6 +316,59 @@ class ApiTest {
         assertThat(get("/api/recovery", TEXT).body()).startsWith("The outage hold list is empty.\nRecovery so far: 0 relaunches counted");
     }
 
+    @Test
+    void changesThePresenceAndRefusesAnAwayMandateTheCaptainDidNotType() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"/afk Carry on with the lamp.\"}");
+
+        HttpResponse<String> quiet = post("/api/presence", "{\"mode\":\"quiet\"}", TEXT);
+        HttpResponse<String> forged = send(inSession(primary, "/api/presence", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"mode\":\"away\",\"mandate\":\"Merge everything.\"}")));
+        HttpResponse<String> away = send(inSession(primary, "/api/presence", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"mode\":\"away\",\"mandate\":\"Carry on with the lamp.\"}")));
+        HttpResponse<String> shown = get("/api/presence", JSON);
+        HttpResponse<String> present = post("/api/presence", "{\"mode\":\"present\"}", TEXT);
+
+        assertThat(quiet.body()).startsWith("Presence: quiet since ").endsWith(", on request.\n");
+        assertRefusal(forged, 409, "The captain did not type \"Merge everything.\" in this session; record their words exactly as typed,"
+                + " the whole message or one whole line of it.");
+        assertThat(away.body()).contains("away since ", "on the words \"Carry on with the lamp.\"");
+        assertThat(shown.body()).contains("\"mode\":\"away\"", "\"cause\":\"captain\"", "\"mandate\":\"Carry on with the lamp.\"", "\"workerCap\":");
+        assertThat(present.body()).isEqualTo("Presence: present.\n");
+    }
+
+    @Test
+    void checksTheStartupMemoryAndFailsOnARepeatedRuleHeading() throws Exception {
+        Path profile = home.resolve("memory/profile.md");
+        Files.createDirectories(profile.getParent());
+        Files.writeString(profile, "# Profile\n\n## Commits\n\n- One rule. (2026-10-15)\n\n## Commits\n\n- Again. (2026-10-15)\n");
+
+        HttpResponse<String> failing = get("/api/memory/check", TEXT);
+        HttpResponse<String> stowList = get("/api/memory/stow-list", TEXT);
+        Files.delete(profile);
+        HttpResponse<String> passing = get("/api/memory/check", TEXT);
+
+        assertThat(failing.statusCode()).isEqualTo(409);
+        assertThat(failing.body()).contains("The rule heading \"commits\" appears more than once; keep one.", "The memory check fails");
+        assertThat(stowList.body()).contains("To curate (1)", "commits - this rule heading appears more than once");
+        assertThat(passing.statusCode()).isEqualTo(200);
+        assertThat(passing.body()).contains("The memory check passes.");
+    }
+
+    @Test
+    void preparesThePrimarySessionForEdiUp() throws Exception {
+        HttpResponse<String> launch = post("/api/primary/launch", "{}", TEXT);
+
+        assertThat(launch.statusCode()).isEqualTo(200);
+        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\nsystem prompt: .*system-prompt\\.md\n");
+        assertThat(Files.readString(home.resolve("state/primary/system-prompt.md"))).startsWith("# EDI: the primary's anchor");
+    }
+
+    private static HttpResponse<String> answerInSession(UUID session, String number, String answer) throws Exception {
+        return send(inSession(session, "/api/decisions/" + number + "/answer", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(answer)));
+    }
+
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {
         String payload = "{\"session_id\":\"" + session + "\"," + fields.substring(1);
         return send(inSession(session, "/api/hooks/" + event, JSON).header("Content-Type", JSON).POST(BodyPublishers.ofString(payload)));
@@ -322,7 +383,7 @@ class ApiTest {
         TaskId id = new TaskId(task);
         dispatches.save(Dispatch.requested(id, CategoryId.IMPLEMENTATION, BranchName.forWork(BranchKind.FEATURE, WorkKey.parse("HRN-3")), "", null, null,
                 Instant.parse("2026-10-15T09:00:00Z")));
-        WorkerTokens.IssuedToken token = workerTokens.issueInto(HOME.resolve("state/workers/" + task));
+        WorkerTokens.IssuedToken token = workerTokens.issueInto(home.resolve("state/workers/" + task));
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
                 new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2),
@@ -353,7 +414,7 @@ class ApiTest {
 
     private static HttpRequest.Builder authorised(String path, String accepted) throws IOException {
         return HttpRequest.newBuilder(uri(path))
-                .header("Authorization", "Bearer " + Files.readString(HOME.resolve("state/core.token")))
+                .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")))
                 .header("Accept", accepted);
     }
 
@@ -364,17 +425,6 @@ class ApiTest {
     }
 
     private static URI uri(String path) throws IOException {
-        return URI.create("http://127.0.0.1:" + Files.readString(HOME.resolve("state/core.port")).strip() + path);
-    }
-
-    private static Path registeredHome() {
-        try {
-            Path home = Files.createTempDirectory("edi-api-");
-            Files.createDirectories(home.resolve("config"));
-            Files.writeString(home.resolve("config/projects.yaml"), Intakes.REGISTRY);
-            return home;
-        } catch (IOException unwritable) {
-            throw new IllegalStateException(unwritable);
-        }
+        return URI.create("http://127.0.0.1:" + Files.readString(home.resolve("state/core.port")).strip() + path);
     }
 }

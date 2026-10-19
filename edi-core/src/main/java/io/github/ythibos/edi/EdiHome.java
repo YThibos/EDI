@@ -34,6 +34,14 @@ public final class EdiHome {
         return root.resolve("state").resolve("core.token");
     }
 
+    public Path corePidFile() {
+        return root.resolve("state").resolve("core.pid");
+    }
+
+    public Path primaryState() {
+        return root.resolve("state").resolve("primary");
+    }
+
     public Path fleetLedger() {
         return root.resolve("state").resolve("fleet-ledger.jsonl");
     }
@@ -59,7 +67,11 @@ public final class EdiHome {
     }
 
     public Path craftRules() {
-        return root.resolve("memory").resolve("craft-rules.md");
+        return memory().resolve("craft-rules.md");
+    }
+
+    public Path memory() {
+        return root.resolve("memory");
     }
 
     public Path worktrees() {

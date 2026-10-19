@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.cli;
 
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -20,7 +21,10 @@ import picocli.CommandLine.Spec;
         description = "Talks to EDI's core for the captain, the primary session, workers and hooks.",
         synopsisSubcommandLabel = "COMMAND",
         subcommands = {
+            UpCommand.class,
+            DownCommand.class,
             HealthCommand.class,
+            UpdateCommand.class,
             ReportCommand.class,
             SitrepCommand.class,
             ConsoleCommand.class,
@@ -42,6 +46,10 @@ import picocli.CommandLine.Spec;
             MergedCommand.class,
             CleanupCommand.class,
             BoardCommand.class,
+            CaptainCommand.class,
+            WorktreeCommand.class,
+            MemoryCommand.class,
+            PresenceCommand.class,
             HookCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})
@@ -71,14 +79,36 @@ public final class Edi implements Runnable {
         return input;
     }
 
+    Map<String, String> environment() {
+        return environment;
+    }
+
+    String coreExecutable() {
+        String named = environment.get("EDI_CORE");
+        if (named != null && !named.isBlank()) {
+            return named;
+        }
+        return ProcessHandle.current().info().command().map(Path::of).map(Path::getParent).map(directory -> directory.resolve("edi-core"))
+                .filter(Files::isExecutable).map(Path::toString).orElse("edi-core");
+    }
+
+    Path checkout() {
+        String checkout = environment.get("EDI_CHECKOUT");
+        return checkout == null || checkout.isBlank() ? Path.of(System.getProperty("user.home"), "EDI") : Path.of(checkout);
+    }
+
     Path home() {
         String home = environment.get("EDI_HOME");
         return home == null ? Path.of(System.getProperty("user.home"), ".edi") : Path.of(home);
     }
 
-    Path tokenFile() {
+    boolean runsForAWorker() {
         String workerToken = environment.get("EDI_TOKEN_FILE");
-        return workerToken == null || workerToken.isBlank() ? home().resolve("state").resolve("core.token") : Path.of(workerToken);
+        return workerToken != null && !workerToken.isBlank();
+    }
+
+    Path tokenFile() {
+        return runsForAWorker() ? Path.of(environment.get("EDI_TOKEN_FILE")) : home().resolve("state").resolve("core.token");
     }
 
     ClaudeSession claudeSession() {

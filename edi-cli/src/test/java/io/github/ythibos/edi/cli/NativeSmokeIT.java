@@ -184,11 +184,47 @@ class NativeSmokeIT {
         CommandRun raised = edi("{\"title\":\"Which?\",\"context\":\"\",\"options\":[{\"key\":\"A\",\"text\":\"This\"}],\"recommend\":{\"key\":\"A\",\"why\":\"only one\"}}",
                 "decision", "raise", "native-choice", "--card", "-");
         String number = raised.output().strip();
-        CommandRun answered = edi("", "decision", "answer", number, "--option", "A", "--text", number + " A");
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+        ediIn(Path.of(""), primary, "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"}", "hook", "session-start");
+        ediIn(Path.of(""), primary, "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\",\"prompt\":\"" + number + " A\"}",
+                "hook", "user-prompt-submit");
+        CommandRun answered = ediIn(Path.of(""), primary, "", "decision", "answer", number, "--option", "A", "--text", number + " A");
 
         assertThat(number).matches("D\\d+");
         assertThat(answered.output()).isEqualTo("Recorded the answer to " + number + " (option A); native-choice is done.\n");
         assertThat(edi("", "decision", "list", "--open").output()).doesNotContain(number + "  native-choice");
+    }
+
+    @Test
+    void theCommandChecksTheMemoryAndFollowsThePresence() throws Exception {
+        CommandRun memory = edi("", "memory", "check");
+        CommandRun quiet = edi("", "presence", "quiet");
+        CommandRun shown = edi("", "presence", "--json");
+        CommandRun present = edi("", "presence", "present");
+
+        assertThat(memory.exitCode()).isZero();
+        assertThat(memory.output()).contains("Startup memory: 0 of 18000 tokens", "The memory check passes.");
+        assertThat(quiet.output()).startsWith("Presence: quiet since ").endsWith(", on request.\n");
+        assertThat(shown.output()).contains("\"mode\":\"quiet\"", "\"cause\":\"captain\"");
+        assertThat(present.output()).isEqualTo("Presence: present.\n");
+    }
+
+    @Test
+    void theCommandPromotesAScoutOnlyOnTheCaptainsWord() throws Exception {
+        edi("", "task", "add", "--kind", "scout", "--id", "native-survey", "--project", "harness", "--title", "Survey natively", "--key", "HRN-9");
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+        ediIn(Path.of(""), primary, "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"}", "hook", "session-start");
+        ediIn(Path.of(""), primary, "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\",\"prompt\":\"Ship the native survey.\"}",
+                "hook", "user-prompt-submit");
+
+        CommandRun refused = ediIn(Path.of(""), primary, "", "task", "promote", "native-survey");
+        CommandRun heard = ediIn(Path.of(""), primary, "", "captain", "said", "--task", "native-survey", "--text", "Ship the native survey.");
+        CommandRun promoted = ediIn(Path.of(""), primary, "", "task", "promote", "native-survey", "--title", "Ship natively");
+
+        assertThat(refused.exitCode()).isOne();
+        assertThat(refused.output()).contains("needs the captain's word on native-survey in this session");
+        assertThat(heard.output()).isEqualTo("Recorded the captain's word on native-survey for this session: \"Ship the native survey.\"\n");
+        assertThat(promoted.output()).isEqualTo("Promoted the scout native-survey to the ship ship-natively, queued on the captain's word.\n");
     }
 
     @Test
@@ -434,7 +470,7 @@ class NativeSmokeIT {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
         commandLine.addAll(List.of(arguments));
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toAbsolutePath().toFile()).redirectErrorStream(true);
-        launch.environment().keySet().removeAll(List.of("TMUX", "TMUX_PANE"));
+        launch.environment().keySet().removeAll(List.of("TMUX", "TMUX_PANE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_PID"));
         launch.environment().putAll(environment);
         launch.environment().put("EDI_HOME", home.toString());
         return run(launch, input);

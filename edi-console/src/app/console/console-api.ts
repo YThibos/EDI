@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { GivenAnswer, Sitrep } from './sitrep';
+import { GivenAnswer, PresenceChoice, Sitrep } from './sitrep';
 
 const CONSOLE_REQUEST = new HttpHeaders({ 'X-EDI-Console': '1' });
 
@@ -20,6 +20,10 @@ export class ConsoleApi {
 
   askForARecheck(decision: string, note: string): Observable<string> {
     return this.http.post(`/api/decisions/${decision}/recheck`, { note }, { headers: CONSOLE_REQUEST, responseType: 'text' });
+  }
+
+  choosePresence(mode: PresenceChoice): Observable<string> {
+    return this.http.post('/api/presence', { mode }, { headers: CONSOLE_REQUEST, responseType: 'text' });
   }
 
   signIn(token: string): Observable<unknown> {

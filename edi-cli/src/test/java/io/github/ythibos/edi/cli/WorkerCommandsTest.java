@@ -201,6 +201,8 @@ class WorkerCommandsTest {
         StubCore.Request resumed = core.received();
         edi("", "recover", "4", "fresh", "--effort", "medium");
         StubCore.Request fresh = core.received();
+        edi("", "recover", "5", "drop", "--discard-work");
+        StubCore.Request dropped = core.received();
         int incomplete = edi("", "recover", "3");
 
         assertThat(listed.target()).isEqualTo("/api/recovery");
@@ -209,8 +211,10 @@ class WorkerCommandsTest {
         assertThat(resumed.body()).isEqualTo("{}");
         assertThat(fresh.target()).isEqualTo("/api/recovery/4/fresh");
         assertThat(fresh.body()).isEqualTo("{\"effort\":\"medium\"}");
+        assertThat(dropped.target()).isEqualTo("/api/recovery/5/drop");
+        assertThat(dropped.body()).isEqualTo("{\"discardWork\":true}");
         assertThat(incomplete).isEqualTo(2);
-        assertThat(err.toString()).contains("Name resume or fresh after number 3, as the captain did.");
+        assertThat(err.toString()).contains("Name resume, fresh or drop after number 3, as the captain did.");
     }
 
     @Test

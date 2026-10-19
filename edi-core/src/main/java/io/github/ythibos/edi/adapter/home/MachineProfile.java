@@ -14,6 +14,7 @@ import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.home.TrackerSettings.Credentials;
@@ -31,10 +32,13 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 @Component
 @RegisterReflectionForBinding({MachineProfile.ProfileDocument.class, MachineProfile.WorkersSection.class, MachineProfile.ModelEntry.class,
     MachineProfile.SupervisionSection.class, MachineProfile.TrackerSection.class, MachineProfile.CredentialsSection.class,
-    MachineProfile.TimeSection.class})
+    MachineProfile.TimeSection.class, MachineProfile.MemorySection.class, MachineProfile.NotifySection.class,
+    MachineProfile.PresenceSection.class})
 public class MachineProfile {
 
-    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null);
+    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null, null, null, null);
+    private static final String OUTLOOK = "outlook";
+    private static final int STARTUP_MEMORY_BUDGET_TOKENS = 18_000;
     private static final String UNNAMED = "this machine";
 
     private final Path file;
@@ -88,6 +92,18 @@ public class MachineProfile {
         return time == null ? TimeSettings.NONE : new TimeSettings(Boolean.TRUE.equals(time.fleetLedger()), Boolean.TRUE.equals(time.requireWorkedLine()));
     }
 
+    public WindowsSide windowsSide() {
+        ProfileDocument profile = document();
+        boolean toasts = profile.notifications() != null && Boolean.TRUE.equals(profile.notifications().windowsToast());
+        boolean outlook = profile.presence() != null && OUTLOOK.equals(profile.presence().calendar());
+        return toasts || outlook ? new WindowsSide(toasts, outlook) : WindowsSide.NONE;
+    }
+
+    public int startupMemoryBudgetTokens() {
+        MemorySection memory = document().memory();
+        return memory == null || memory.startupBudgetTokens() == null ? STARTUP_MEMORY_BUDGET_TOKENS : memory.startupBudgetTokens();
+    }
+
     private ProfileDocument document() {
         try {
             return ConfigurationFile.contentOf(file).map(content -> yaml.readValue(content, ProfileDocument.class)).orElse(EMPTY);
@@ -120,7 +136,8 @@ public class MachineProfile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ProfileDocument(String machine, WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time) {
+    record ProfileDocument(String machine, WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time,
+            MemorySection memory, @JsonProperty("notify") NotifySection notifications, PresenceSection presence) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -175,5 +192,17 @@ public class MachineProfile {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record TimeSection(Boolean fleetLedger, Boolean requireWorkedLine) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record MemorySection(Integer startupBudgetTokens) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record NotifySection(Boolean windowsToast) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record PresenceSection(String calendar) {
     }
 }

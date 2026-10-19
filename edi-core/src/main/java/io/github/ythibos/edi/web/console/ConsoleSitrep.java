@@ -8,6 +8,7 @@ public record ConsoleSitrep(
         Instant generated,
         String machine,
         String address,
+        PresenceShown presence,
         List<Card> decisions,
         List<Answer> answered,
         List<Ongoing> ongoing,
@@ -24,6 +25,9 @@ public record ConsoleSitrep(
         ongoing = List.copyOf(ongoing);
         landed = List.copyOf(landed);
         charted = List.copyOf(charted);
+    }
+
+    public record PresenceShown(String mode, boolean demo, String words) {
     }
 
     public record Card(String number, String task, List<String> projects, String title, String context, List<Option> options,

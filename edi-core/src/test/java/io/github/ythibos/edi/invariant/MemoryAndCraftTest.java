@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,9 +15,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BriefFixtures;
@@ -26,6 +27,7 @@ import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.console.ConsoleSitrep;
 import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
+import io.github.ythibos.edi.web.memory.MemoryCheckText;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
 import tools.jackson.databind.json.JsonMapper;
@@ -42,8 +44,30 @@ class MemoryAndCraftTest {
 
         @Test
         @DisplayName("AT-33 edi memory check fails above the budget and on a duplicated rule heading")
-        void theMemoryCheckEnforcesTheBudget() {
-            Pending.until(Slice.S8);
+        void theMemoryCheckEnforcesTheBudget() throws IOException {
+            String profile = "# Profile\n\n## Commits\n\n- Every commit carries its key. (2026-10-15)\n";
+            String machine = "# Machine\n\n## Tracker\n\n- Tickets live in the tracker. (2026-10-15)\n";
+            TestHome home = TestHome.in(directory).writing("config/machine.yaml", "memory:\n  startupBudgetTokens: 100\n")
+                    .writing("memory/profile.md", profile)
+                    .writing("memory/machine.md", machine)
+                    .writing("memory/archive.md", "# Archive\n\n" + "Retired words. ".repeat(500));
+
+            MemoryCheck fitting = home.memory().check();
+            home.writing("memory/learnings.md", "# Learnings\n\n- " + "A long-winded learning. ".repeat(20) + "(2026-10-15)\n");
+            MemoryCheck overBudget = home.memory().check();
+            home.writing("memory/learnings.md", "# Learnings\n\n## Commits\n\n- A rule written twice. (2026-10-15)\n");
+            MemoryCheck duplicated = home.memory().check();
+
+            assertThat(fitting.passes()).isTrue();
+            assertThat(fitting.estimatedTokens()).isEqualTo(Math.ceilDiv(profile.length(), 4) + Math.ceilDiv(machine.length(), 4));
+            assertThat(fitting.files()).extracting(MemoryCheck.FileEstimate::name).containsExactly("profile.md", "machine.md", "learnings.md");
+            assertThat(overBudget.passes()).isFalse();
+            assertThat(overBudget.estimatedTokens()).isGreaterThan(overBudget.budgetTokens());
+            assertThat(overBudget.duplicatedHeadings()).isEmpty();
+            assertThat(duplicated.passes()).isFalse();
+            assertThat(duplicated.fitsItsBudget()).isTrue();
+            assertThat(duplicated.duplicatedHeadings()).containsExactly("commits");
+            assertThat(new MemoryCheckText().text(duplicated)).contains("The rule heading \"commits\" appears more than once", "The memory check fails");
         }
     }
 
@@ -102,7 +126,6 @@ class MemoryAndCraftTest {
         @DisplayName("AT-35 the primary anchor, with its personal addendum, is at most 10,000 bytes")
         void thePrimaryAnchorStaysWithinItsBudget() throws IOException {
             Path anchor = RepositoryRoot.path().resolve("claude/primary/CLAUDE.md");
-            assumeTrue(Files.exists(anchor), "pending until slice " + Slice.S8 + ": the primary anchor does not exist yet");
 
             long loaded = Files.size(anchor) + sizeWhenPresent(RepositoryRoot.path().resolve("personal/anchor.local.md"));
 
@@ -190,7 +213,8 @@ class MemoryAndCraftTest {
             TestHome home = ReportGoldenCases.homeIn(directory);
             ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
 
-            ConsoleSitrep board = new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT);
+            ConsoleSitrep board = new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT,
+                    Presence.presentSince(TestHome.START));
 
             assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
             assertThat(board.chartedTotal()).isEqualTo(ReportGoldenCases.TWO_MEGABYTE_TASKS);

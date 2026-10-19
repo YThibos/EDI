@@ -14,6 +14,7 @@ import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
 @Component
@@ -33,13 +34,23 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         TurnWording wording = new TurnWording(report.turn());
         FleetSnapshot fleet = report.fleet();
         int width = report.width().columns();
-        List<String> lines = new ArrayList<>(DecisionZone.lines(decisionsOf(fleet, wording), width));
+        List<String> lines = new ArrayList<>(presenceOf(report, width));
+        lines.addAll(DecisionZone.lines(decisionsOf(fleet, wording), width));
         lines.addAll(countedSection("DONE THIS TURN", turnItems(report.turn().done()), "Nothing finished this turn", width));
         lines.addAll(countedSection("ONGOING", ongoingItems(fleet, wording), "Nothing running", width));
         lines.addAll(section("NEXT", ProjectColumn.lines(turnItems(report.turn().next()), "Nothing planned", width)));
         lines.addAll(parkedSection(fleet, wording, width));
         lines.addAll(backlogSection(fleet, wording, width));
         return lines.stream().map(CaptainReportPresenter::withoutTrailingSpaces).collect(Collectors.joining("\n", "", "\n"));
+    }
+
+    private static List<String> presenceOf(CaptainReport report, int width) {
+        if (!report.showsThePresence()) {
+            return List.of();
+        }
+        List<String> lines = new ArrayList<>(WordWrap.hanging(Glyphs.safe("Presence: " + PresenceWords.of(report.presence())), width, "", "  "));
+        lines.add("");
+        return lines;
     }
 
     private static LocalDate filedOn(Task task) {

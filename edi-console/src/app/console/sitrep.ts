@@ -3,6 +3,7 @@ export interface Sitrep {
   generated: string;
   machine: string;
   address: string;
+  presence: PresenceShown;
   decisions: DecisionCard[];
   answered: AnsweredDecision[];
   ongoing: OngoingTask[];
@@ -11,6 +12,14 @@ export interface Sitrep {
   charted: ChartedTask[];
   chartedTotal: number;
 }
+
+export interface PresenceShown {
+  mode: 'present' | 'quiet' | 'away';
+  demo: boolean;
+  words: string;
+}
+
+export type PresenceChoice = 'present' | 'demo' | 'demo-off';
 
 export interface DecisionCard {
   number: string;

@@ -10,7 +10,8 @@ public enum Program {
     NO_MISTAKES("no-mistakes"),
     SHELL("sh"),
     LAVISH("lavish-axi"),
-    CMD("cmd.exe");
+    CMD("cmd.exe"),
+    POWERSHELL("powershell.exe");
 
     private final String executable;
 

@@ -1,10 +1,16 @@
 package io.github.ythibos.edi.web;
 
+import java.util.List;
+
 import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
+import io.github.ythibos.edi.application.delivery.DiscardedWork;
+import io.github.ythibos.edi.application.delivery.DroppedTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.task.AddedTask;
+import io.github.ythibos.edi.application.task.PromotedScout;
 import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.domain.authority.Authorisation;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -71,5 +77,24 @@ public sealed interface Confirmation {
     }
 
     record RecheckAsked(DecisionNumber number) implements Confirmation {
+    }
+
+    record CaptainHeard(Authorisation word) implements Confirmation {
+    }
+
+    record Promoted(PromotedScout promoted) implements Confirmation {
+    }
+
+    record Dropped(DroppedTask dropped) implements Confirmation {
+    }
+
+    record WorkDiscarded(DiscardedWork discarded) implements Confirmation {
+    }
+
+    record CoreStopping(List<Worker> stoppedWorkers) implements Confirmation {
+
+        public CoreStopping {
+            stoppedWorkers = List.copyOf(stoppedWorkers);
+        }
     }
 }

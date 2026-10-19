@@ -4,6 +4,7 @@ import static io.github.ythibos.edi.web.RequestValues.orEmpty;
 
 import java.util.List;
 
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
@@ -26,10 +27,11 @@ record CardRequest(String title, String context, List<Option> options, Recommend
         return value;
     }
 
-    record Option(String key, String text) {
+    record Option(String key, String text, String authorises) {
 
         DecisionOption option() {
-            return new DecisionOption(OptionKey.parse(required(key, "option key")), required(text, "option text"));
+            return new DecisionOption(OptionKey.parse(required(key, "option key")), required(text, "option text"),
+                    authorises == null ? null : CaptainWordAct.onATaskNamed(authorises));
         }
     }
 

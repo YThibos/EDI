@@ -11,6 +11,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
@@ -39,6 +40,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
+import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
@@ -49,6 +51,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
@@ -61,6 +64,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TicketTransitioned;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkDiscarded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerLaunchFailed;
@@ -119,7 +123,8 @@ public final class WakeRule {
                     WorkerStopRequested _, RecoveryCostRecorded _, DeliveryRefused _, DraftRecorded _, DraftOpened _, CloneRefreshed _,
                     ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, PipelineRunSeen _, PipelineRunFinished _,
                     TicketCreated _, TicketChoiceRefused _, TicketAddedToSprint _, TicketLinked _, TicketTransitioned _, ResearchQueuedFirst _,
-                    ReviewCounted _, BoardArmed _, BoardClosed _, BoardRetired _ -> Optional.empty();
+                    ReviewCounted _, BoardArmed _, BoardClosed _, BoardRetired _, CaptainSaid _, ScoutPromoted _, TaskDropped _,
+                    WorkDiscarded _ -> Optional.empty();
         };
     }
 

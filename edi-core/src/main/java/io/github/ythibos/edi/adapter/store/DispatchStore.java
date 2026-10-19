@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -73,6 +74,14 @@ public class DispatchStore {
                 .param("besides", besides.value())
                 .query((row, _) -> row.getInt(1))
                 .single();
+    }
+
+    public Set<String> branchesOfOpenTasks() {
+        return Set.copyOf(store.sql("""
+                        select dispatch.branch from dispatch join task on task.id = dispatch.task_id
+                        where task.state in ('queued', 'in-flight')""")
+                .query(String.class)
+                .list());
     }
 
     public List<Dispatch> deferred() {

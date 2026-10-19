@@ -19,10 +19,12 @@ import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerHooks;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.web.access.Caller;
 import io.github.ythibos.edi.web.access.NotPermitted;
+import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -36,15 +38,17 @@ class HookController {
     private final GuardToolCall guard;
     private final SessionStartDigestQuery digests;
     private final SessionStartDigestText digestText;
+    private final ReturnBriefText returnBriefText;
     private final JsonMapper json;
 
     HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, SessionStartDigestQuery digests,
-            SessionStartDigestText digestText, JsonMapper json) {
+            SessionStartDigestText digestText, ReturnBriefText returnBriefText, JsonMapper json) {
         this.workerHooks = workerHooks;
         this.primaryHooks = primaryHooks;
         this.guard = guard;
         this.digests = digests;
         this.digestText = digestText;
+        this.returnBriefText = returnBriefText;
         this.json = json;
     }
 
@@ -74,8 +78,8 @@ class HookController {
     private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid) {
         return switch (hook) {
             case SESSION_START -> sessionStarted(sessionIn(payload), claudePid);
-            case USER_PROMPT_SUBMIT -> rendered(primaryHooks.promptSubmitted(sessionIn(payload), payload.path("prompt").asString("")));
-            case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload)));
+            case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
+            case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case STOP -> rendered(primaryHooks.stopping(sessionIn(payload), backgroundJobsIn(payload)));
             case STOP_FAILURE -> rendered(primaryHooks.stopFailed(sessionIn(payload), textIn(payload, "transcript_path")));
             case NOTIFICATION -> rendered(primaryHooks.notified(sessionIn(payload), textIn(payload, "notification_type")));
@@ -85,7 +89,18 @@ class HookController {
 
     private ResponseEntity<String> sessionStarted(UUID session, Long claudePid) {
         primaryHooks.sessionStarted(session, claudePid);
-        return asJson(sessionContext(digestText.text(digests.digestFor(session))));
+        return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(digests.digestFor(session))));
+    }
+
+    private ResponseEntity<String> promptSubmitted(UUID session, String prompt) {
+        return primaryHooks.promptSubmitted(session, prompt)
+                .map(brief -> asJson(additionalContext(HookEvent.USER_PROMPT_SUBMIT, returnBriefText.text(brief))))
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    private static CallingSession callingSessionIn(JsonNode payload) {
+        UUID session = optionalSessionIn(payload);
+        return session == null ? CallingSession.UNNAMED : new CallingSession(session);
     }
 
     private static UUID optionalSessionIn(JsonNode payload) {
@@ -120,9 +135,9 @@ class HookController {
         }
     }
 
-    private ObjectNode sessionContext(String digest) {
+    private ObjectNode additionalContext(HookEvent hook, String context) {
         ObjectNode output = json.createObjectNode();
-        output.putObject("hookSpecificOutput").put("hookEventName", "SessionStart").put("additionalContext", digest);
+        output.putObject("hookSpecificOutput").put("hookEventName", hook.claudeCodeName()).put("additionalContext", context);
         return output;
     }
 

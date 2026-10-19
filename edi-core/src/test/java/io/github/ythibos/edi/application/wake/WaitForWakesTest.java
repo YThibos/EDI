@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -94,6 +95,23 @@ class WaitForWakesTest {
         home.waitForWakes().requireThePrimary(primary);
         assertThatThrownBy(() -> home.waitForWakes().requireThePrimary(standby)).isInstanceOf(Refusal.class).hasMessageContaining("serves the primary session");
         assertThatThrownBy(() -> home.waitForWakes().requireThePrimary(null)).isInstanceOf(Refusal.class);
+    }
+
+    @Test
+    void gathersWakesIntoOneBatchWhileTheCaptainKeepsTheChatQuiet() {
+        UUID primary = primarySession();
+        home.changePresence().quiet();
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, null, null, "The lamp is missing.");
+
+        assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
+        home.clock().advance(Duration.ofMinutes(29));
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+        assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
+        home.clock().advance(Duration.ofMinutes(1));
+        WakeDelivery batch = home.waitForWakes().deliverTo(primary).orElseThrow();
+
+        assertThat(batch.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.BLOCKED, WakeKind.FAILED);
+        assertThat(batch.presence().keepsTheChatQuiet()).isTrue();
     }
 
     private UUID primarySession() {

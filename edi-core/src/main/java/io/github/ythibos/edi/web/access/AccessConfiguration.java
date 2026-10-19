@@ -5,9 +5,11 @@ import java.util.List;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import io.github.ythibos.edi.CoreInstanceLock;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.application.access.ConsoleAccess;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
@@ -17,6 +19,7 @@ import io.github.ythibos.edi.application.worker.WorkerTokens;
 class AccessConfiguration {
 
     @Bean
+    @DependsOn(CoreInstanceLock.BEAN)
     ApiToken apiToken(EdiHome home) {
         return ApiToken.issuedInto(home.coreTokenFile());
     }

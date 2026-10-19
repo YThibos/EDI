@@ -28,8 +28,10 @@ import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.voice.CaptainVoice;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
@@ -195,14 +197,26 @@ class DecisionsAndReportingTest {
     class TalkInOutcomes {
 
         @Test
+        @Tag("adapter")
         @DisplayName("AT-22 a lint over captain-facing strings rejects the internal-label list")
-        void captainFacingStringsCarryNoInternalLabels() {
-            Pending.until(Slice.S8);
+        void captainFacingStringsCarryNoInternalLabels() throws IOException {
+            List<String> generated = CaptainFacingStrings.everyKindEdiGenerates(directory);
+
+            assertThat(CaptainVoice.INTERNAL_LABELS).allSatisfy(label -> assertThat(CaptainVoice.internalLabelsIn("The " + label.label() + " is ready."))
+                    .as(label.label()).contains(label));
+            assertThat(CaptainVoice.internalLabelsIn("The `worktree` at /home/example/worktrees/lamp, \"Fix the worktree\" and https://example.org/wake"))
+                    .isEmpty();
+            assertThatThrownBy(() -> CaptainVoice.requireOutcomes("A decision card", "Discard the worktree of the lamp?"))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessage("A decision card speaks to the captain in outcomes: say \"isolated copy\" instead of \"worktree\", or quote a name in"
+                            + " double quotes when it is one (I-22).");
+            assertThat(generated).hasSizeGreaterThan(40)
+                    .allSatisfy(text -> assertThat(CaptainVoice.internalLabelsIn(text)).as(text).isEmpty());
         }
     }
 
     private static String captainReport(TestHome home, Turn turn) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard()));
+        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
     }
 
     private static DecisionNumber raise(TestHome home, String task, String title) {

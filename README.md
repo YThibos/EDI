@@ -7,7 +7,7 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S7, console and boards, on top of the tracker and time of slice S6, the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
+The repository is at slice S8, the Claude layer, memory and presence, on top of the console and boards of slice S7, the tracker and time of slice S6, the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
@@ -19,6 +19,9 @@ EDI watches every open draft, follows a merge the forge reports by refreshing th
 Every task gets its work key at intake: the next EDI-native key of its project, a ticket the captain chooses or has created through a decision on a JIRA project, or the key it was given once its tracker confirms it; a JIRA ticket then joins the active sprint when work starts, links the draft, and moves to the after-merge status once the merge is followed.
 EDI writes the activity ledger the time-booking tool books from, asks workers for the time they worked while the machine profile says so, and can plan unplanned work in a research task before an implementation worker builds it, measuring that pilot against unplanned ships until the captain decides.
 The EDI console shows the same fleet as a live sitrep page in the approved dark skin, where the captain signs in through a one-time link and answers decisions as their own word; a scout arms its Lavish research board through EDI, and the core listens to it, passing each round to the scout's inbox and each answer to the decisions the board is bound to.
+`edi up` starts the core and opens the primary session with its anchor, its hooks and the captain's memory in its system prompt, and `edi update` rebuilds, tests and installs EDI from its repository and restarts the core while workers keep running.
+Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own typed words from the current session, and every captain-facing card and report is linted for internal labels.
+`edi memory check` holds the captain's memory to its budget; presence follows the captain, turning quiet after a stretch without typing or when a meeting begins, gathering wakes, raising a Windows notification for what needs the captain and briefing the captain on their return.
 
 ## Parts
 
@@ -37,16 +40,23 @@ mise install
 ./mvnw -Pnative verify      # both native executables, then the native smoke test
 ```
 
-`./mvnw verify` reports the invariant catalogue's acceptance tests that later slices make pass as skipped.
+`./mvnw verify` runs the whole invariant catalogue; an acceptance test a later slice owns would be reported as skipped.
 
 ## Run
 
 ```sh
-EDI_HOME=/tmp/edi-home edi-core/target/edi-core      # after the native build
-EDI_HOME=/tmp/edi-home edi-cli/target/edi health
+ops/install.sh             # native build and tests, then edi and edi-core in ~/.local/bin and the skills linked into the EDI home
+edi up                     # start the core unless it runs, then open the primary session in tmux
+edi up --core-only         # start only the core
+edi health
+edi down                   # stop the core when no worker runs; --force-stop-workers on the captain's word
+edi update                 # pull the repository, build, test and install it, restart the core, re-read the anchor
 ```
 
 The core keeps its store, configuration and state in `EDI_HOME`, default `~/.edi`, listens on port 47318 unless `SERVER_PORT` says otherwise, records the port it bound in `$EDI_HOME/state/core.port`, and writes a fresh API token to `$EDI_HOME/state/core.token` at every start; the command reads both.
+Only one core runs per home: it locks `$EDI_HOME/state/core.pid`, and `edi up` starts it detached, logging to `$EDI_HOME/state/logs/core.log`.
+`edi up` and `edi update` find the EDI repository in `EDI_CHECKOUT`, default `~/EDI`, and the core executable next to `edi` or in `EDI_CORE`; `ops/edi-core.service` is an optional systemd user unit for a core that restarts on failure.
+The captain adds the allow rule `Bash(edi *)` to their own Claude Code settings; EDI's settings carry hooks only.
 
 ## Use
 
@@ -67,7 +77,8 @@ edi migrate firstofficer --from /path/to/old/home --dry-run
 ```
 
 Every command prints text, or the core's JSON with `--json`; a refusal is one sentence on standard error with exit code 1.
-A card is `{"title", "context", "options": [{"key", "text"}], "recommend": {"key", "why"}}`.
+A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}}`.
+An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional; inside tmux the report fits the pane it runs in.
 `examples/edi-home/config/projects.yaml` shows the registry's shape with placeholder values.
 
@@ -160,8 +171,33 @@ edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --bin
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops; each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` (with `option`) or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word.
 A board stops listening when the captain ends its session or its task is cleaned up.
 
+### Claude layer, memory and presence
+
+The primary session starts in the EDI home with `claude/primary/settings.json` and a system prompt the core composes at each `edi up`: the anchor `claude/primary/CLAUDE.md`, the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
+The anchor holds the hard rules, the turn end and one line per skill; the procedures live in the skills under `claude/skills/`, which `ops/install.sh` links into `$EDI_HOME/.claude/skills/` together with any in `personal/skills/`.
+
+```sh
+edi captain said --task fit-the-lamp --text "Drop it, and discard its work."   # the captain's words, as typed this session
+edi captain said --text "Read the token to check it."                          # the captain's word on what concerns no single task
+edi task promote survey-the-lamps --title "Fit the lamps"                      # a scout's ship, queued on the captain's word
+edi task drop fit-the-lamp --discard-work                                      # on the captain's word; unlanded work only with --discard-work
+edi worktree discard fit-the-lamp                                              # the copy and branch, on the captain's word; the task stays
+edi recover 5 drop                                                             # drop an outage entry's task, on the captain's word
+edi memory check                                                               # startup memory against its budget; exits 1 when it fails
+edi memory stow-list                                                           # what /stow should curate
+edi presence                                                                   # present, quiet or away
+edi presence quiet
+edi presence away --mandate - < words.txt                                      # the captain's /afk words, as typed
+edi presence demo                                                              # hold present for a demo; edi presence demo off ends it
+```
+
+`config/machine.yaml` may set `memory.startupBudgetTokens` (18,000 by default), `notify.windowsToast: true` for Windows notifications while the captain is quiet or away, and `presence.calendar: outlook` to turn quiet during a meeting in the classic Outlook calendar.
+`config/personal.yaml` may set `presence.autoQuietAfter` (PT15M), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
+`examples/edi-home/` shows each file, the memory files included.
+
 ## Documentation
 
 - [AGENTS.md](AGENTS.md): the rules for agents changing EDI.
 - [docs/decisions](docs/decisions/README.md): every architecture and design decision, with its why.
 - [docs/verification](docs/verification/): what was verified on the external tools EDI drives, and on which version.
+- [claude/](claude/): the primary's anchor and settings, the worker's brief, settings and system prompt, and the skills.
