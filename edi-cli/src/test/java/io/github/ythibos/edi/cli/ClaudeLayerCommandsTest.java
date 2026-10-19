@@ -132,8 +132,8 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
-    void letsThePrimaryRunPlainEdiCommandsWhileTheCoreIsDown() {
-        core.close();
+    void letsThePrimaryRunPlainEdiCommandsWhileTheCoreIsDown() throws IOException {
+        core.stopAnswering();
 
         int plain = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi up --core-only\"}}", "hook", "pre-tool-use");
         int other = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi up; rm -rf /tmp/x\"}}", "hook", "pre-tool-use");
@@ -144,6 +144,36 @@ class ClaudeLayerCommandsTest {
         assertThat(plain).isZero();
         assertThat(other).isEqualTo(2);
         assertThat(forAWorker).isEqualTo(2);
+    }
+
+    @Test
+    void passesTheStatusLinePayloadThroughAndPrintsTheCoresLine() {
+        core.answering(200, "\u001b[38;2;200;200;200mOpus 5.5\u001b[0m\n");
+
+        int shown = edi("{\"model\":{\"display_name\":\"Opus 5.5\"}}", "statusline");
+        StubCore.Request request = core.received();
+        core.answering(400, "A status line names its working directory in workspace.current_dir or cwd.\n");
+        int refused = edi("{}", "statusline");
+
+        assertThat(shown).isZero();
+        assertThat(request.method()).isEqualTo("POST");
+        assertThat(request.target()).isEqualTo("/api/statusline");
+        assertThat(request.accepted()).isEqualTo("text/plain");
+        assertThat(request.body()).isEqualTo("{\"model\":{\"display_name\":\"Opus 5.5\"}}");
+        assertThat(out).hasToString("\u001b[38;2;200;200;200mOpus 5.5\u001b[0m\n");
+        assertThat(refused).isOne();
+        assertThat(err).hasToString("EDI could not write the status line: A status line names its working directory in workspace.current_dir or cwd.\n");
+    }
+
+    @Test
+    void showsWhyTheCoreIsNotAnsweringInTheStatusLine() throws IOException {
+        core.stopAnswering();
+
+        int shown = edi("{}", "statusline");
+
+        assertThat(shown).isZero();
+        assertThat(out.toString()).startsWith("EDI core is not answering on ");
+        assertThat(err.toString()).isEmpty();
     }
 
     private int edi(String input, String... arguments) {

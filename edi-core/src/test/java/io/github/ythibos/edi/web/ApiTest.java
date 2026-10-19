@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -365,6 +367,22 @@ class ApiTest {
         assertThat(Files.readString(home.resolve("state/primary/system-prompt.md"))).startsWith("# EDI: the primary's anchor");
     }
 
+    @Test
+    void writesThePrimarysStatusLineWithTheBranchOfItsWorkingDirectory(@TempDir Path project) throws Exception {
+        FixtureRepository.initialise(project).write("lamp.txt", "brass\n").commit("Fit the lamp").write("draft.txt", "not yet added\n");
+        String payload = statusLinePayload().replace("/home/example/harness", project.toString());
+
+        HttpResponse<String> line = post("/api/statusline", payload, TEXT);
+        HttpResponse<String> forAWorker = send(as(workerTokenFor("api-statusline"), "/api/statusline", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString(payload)));
+
+        assertThat(line.statusCode()).isEqualTo(200);
+        assertThat(line.body().replaceAll("\u001b\\[[0-9;]*m", ""))
+                .startsWith("Opus 5.5 · medium -- Context: 6% -- Session tokens: 58k (C 25k/!C 33k) -- 5-hour: 28% (")
+                .endsWith(") -- Branch: main* -- Cache: 43%\n");
+        assertRefusal(forAWorker, 403, "edi statusline runs under the EDI home's own token, in the captain's terminal or the primary session.");
+    }
+
     private static HttpResponse<String> answerInSession(UUID session, String number, String answer) throws Exception {
         return send(inSession(session, "/api/decisions/" + number + "/answer", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(answer)));
     }
@@ -389,6 +407,12 @@ class ApiTest {
                 new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2),
                 new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
         return Files.readString(token.file());
+    }
+
+    private static String statusLinePayload() throws IOException {
+        try (InputStream fixture = ApiTest.class.getResourceAsStream("/statusline/first-answer.json")) {
+            return new String(fixture.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     private static HttpResponse<String> hook(String token, String event, String payload) throws Exception {

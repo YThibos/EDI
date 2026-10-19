@@ -1,0 +1,57 @@
+{
+  "session_id": "5f0c1e9a-3b7d-4c2e-9a61-7d2f8e4b1c05",
+  "transcript_path": "/home/example/.claude/projects/-home-example-harness/5f0c1e9a-3b7d-4c2e-9a61-7d2f8e4b1c05.jsonl",
+  "cwd": "/home/example/harness",
+  "scratchpad_dir": "/tmp/claude/-home-example-harness/5f0c1e9a-3b7d-4c2e-9a61-7d2f8e4b1c05/scratchpad",
+  "effort": {
+    "level": "medium"
+  },
+  "model": {
+    "id": "claude-opus-5-5",
+    "display_name": "Opus 5.5"
+  },
+  "workspace": {
+    "current_dir": "/home/example/harness",
+    "project_dir": "/home/example/harness",
+    "added_dirs": [],
+    "repo": {
+      "host": "github.com",
+      "owner": "example",
+      "name": "harness"
+    }
+  },
+  "version": "2.1.302",
+  "output_style": {
+    "name": "default"
+  },
+  "cost": {
+    "total_cost_usd": 0,
+    "total_duration_ms": 6046,
+    "total_api_duration_ms": 0,
+    "total_lines_added": 0,
+    "total_lines_removed": 0
+  },
+  "context_window": {
+    "total_input_tokens": 0,
+    "total_output_tokens": 0,
+    "context_window_size": 1000000,
+    "current_usage": null,
+    "used_percentage": null,
+    "remaining_percentage": null
+  },
+  "exceeds_200k_tokens": false,
+  "fast_mode": false,
+  "thinking": {
+    "enabled": true
+  },
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 28,
+      "resets_at": 1792361400
+    },
+    "seven_day": {
+      "used_percentage": 72,
+      "resets_at": 1792396800
+    }
+  }
+}

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
+import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.OutgoingCommit;
@@ -95,6 +97,25 @@ class GitTest {
         repository.write("deep/er/file.txt", "x\n").commit("Nest a file");
 
         assertThat(git.topLevel(repository.root().resolve("deep/er"))).isEqualTo(repository.root().toRealPath());
+    }
+
+    @Test
+    void readsTheCheckedOutBranchAndWhetherItHoldsUncommittedChanges() throws IOException {
+        Optional<CheckedOutBranch> clean = git.checkedOutBranchAt(repository.root());
+        repository.write("deep/draft.txt", "not yet added\n");
+        Optional<CheckedOutBranch> changed = git.checkedOutBranchAt(repository.root().resolve("deep"));
+
+        assertThat(clean).contains(new CheckedOutBranch("main", false));
+        assertThat(changed).contains(new CheckedOutBranch("main", true));
+    }
+
+    @Test
+    void namesTheCommitOfADetachedHeadAndNoBranchOutsideARepository(@TempDir Path elsewhere) throws IOException {
+        repository.run("switch", "--quiet", "--detach");
+
+        assertThat(git.checkedOutBranchAt(repository.root())).contains(new CheckedOutBranch(repository.head().substring(0, 7), false));
+        assertThat(git.checkedOutBranchAt(elsewhere)).isEmpty();
+        assertThat(git.checkedOutBranchAt(elsewhere.resolve("missing"))).isEmpty();
     }
 
     private OutgoingCommit onlyOutgoingCommit() {

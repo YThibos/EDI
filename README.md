@@ -175,6 +175,7 @@ A board stops listening when the captain ends its session or its task is cleaned
 
 The primary session starts in the EDI home with `claude/primary/settings.json` and a system prompt the core composes at each `edi up`: the anchor `claude/primary/CLAUDE.md`, the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
 The anchor holds the hard rules, the turn end and one line per skill; the procedures live in the skills under `claude/skills/`, which `ops/install.sh` links into `$EDI_HOME/.claude/skills/` together with any in `personal/skills/`.
+`claude/primary/settings.json` also runs `edi statusline` as the session's status line, after every update and once a minute: model and effort, context used, session tokens with the cached and uncached split, the 5-hour and weekly limits with their resets, the branch of the working directory and the cache hit ratio.
 
 ```sh
 edi captain said --task fit-the-lamp --text "Drop it, and discard its work."   # the captain's words, as typed this session

@@ -120,3 +120,15 @@ Each check was a headless run on `claude-haiku-5-5` in a throwaway directory, as
 
 - `--append-system-prompt-file <file>` still works: the model quoted a codeword that only the appended file held.
 - A skill in `<working directory>/.claude/skills/<name>/SKILL.md` is offered to a session started in that directory, and so is one whose directory is a symbolic link to a skill elsewhere, which is how `ops/install.sh` links EDI's skills into the EDI home.
+
+## The status line, on 2.1.302 and 2.1.303
+
+Recorded on Claude Code 2.1.302 on WSL2 Ubuntu 24.04, 18/10/2026, and run live on 2.1.303, 19/10/2026, for the status line (ADR-134).
+On 2.1.302 a `statusLine` command saved each JSON document it received; on 2.1.303 a settings file passed with `--settings` wired `edi statusline` with a `refreshInterval` of 60 seconds, against a running core, in a session on a private tmux server.
+The fixtures in `edi-core/src/test/resources/statusline/` keep the recorded payloads, with paths and names replaced.
+
+- The command ran once at session start, before any prompt, and again as the answer arrived; each run received one JSON document on standard input.
+- At session start `context_window.current_usage` and `used_percentage` were `null` and both token totals 0; `rate_limits` was already there in the 2.1.302 session and absent until the first answer in the 2.1.303 one.
+- After the first answer `current_usage` held `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, `prompt_cache` appeared, and `rate_limits.five_hour` and `seven_day` each held `used_percentage` and `resets_at` in epoch seconds.
+- `model.display_name` and `effort.level` were in every payload, and `workspace.current_dir` equalled `cwd` in every recorded one.
+- The bar kept the command's colours, and with the refresh it changed within a minute of the core stopping, with no event in the session.

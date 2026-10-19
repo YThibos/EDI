@@ -51,6 +51,7 @@ import picocli.CommandLine.Spec;
             MemoryCommand.class,
             PresenceCommand.class,
             HookCommand.class,
+            StatusLineCommand.class,
             PublishCheckCommand.class,
             MigrateCommand.class})
 public final class Edi implements Runnable {

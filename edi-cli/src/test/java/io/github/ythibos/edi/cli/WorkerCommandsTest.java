@@ -137,8 +137,8 @@ class WorkerCommandsTest {
     }
 
     @Test
-    void blocksAToolCallWhenTheGuardCannotBeAskedAndLetsOtherHooksPass() {
-        core.close();
+    void blocksAToolCallWhenTheGuardCannotBeAskedAndLetsOtherHooksPass() throws IOException {
+        core.stopAnswering();
 
         int guarded = edi("{\"tool_name\":\"Bash\"}", "hook", "pre-tool-use");
         String guardError = err.toString();
