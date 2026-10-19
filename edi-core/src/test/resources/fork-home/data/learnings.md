@@ -13,3 +13,6 @@ Curated operational facts for this home.
 
 - **Monitoring restarts itself in a background-job session; no manual repair needed.**
   The turn-end guard re-arms it.
+
+- **When another live session holds the fleet lock, the captain stops it (2026-09-28).**
+  Writing the lock file by hand is refused.

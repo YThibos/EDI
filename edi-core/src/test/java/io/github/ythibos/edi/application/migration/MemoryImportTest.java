@@ -106,6 +106,9 @@ class MemoryImportTest {
                 - **A dead worker is reclaimed by `fm-control.sh <id> relaunch` (2026-10-14).**
                   It restarts in the same copy.
 
+                - **When another live session holds the fleet lock, the captain stops it (2026-09-28).**
+                  Writing the lock file by hand is refused.
+
                 - **Docker can drop its WSL integration (2026-10-14).**
                   Re-enable it in the settings.
                 """);
@@ -128,7 +131,7 @@ class MemoryImportTest {
                 - **Docker can drop its WSL integration (2026-10-14).**
                   Re-enable it in the settings.
                 """);
-        assertThat(learnings.holds()).isEqualTo("1 section without 2 old-harness learnings");
+        assertThat(learnings.holds()).isEqualTo("1 section without 3 old-harness learnings");
     }
 
     @Test

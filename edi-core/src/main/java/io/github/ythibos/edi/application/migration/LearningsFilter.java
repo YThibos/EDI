@@ -7,7 +7,8 @@ import java.util.Optional;
 final class LearningsFilter {
 
     private static final List<String> OLD_HARNESS_MECHANICS = List.of(
-            "command guard", "tasks-axi", "fork tests", "monitoring restarts itself", "cannot be quietened", "`fm-");
+            "command guard", "tasks-axi", "fork tests", "monitoring restarts itself", "cannot be quietened", "rejoining an existing copy",
+            "fleet lock", "`fm-");
     private static final String UPSTREAM_PULL_REQUESTS = "`gh-axi` resolves pull requests";
     private static final String ALWAYS_NAME_THE_REPOSITORY = """
             - **`gh-axi` can resolve pull requests against an upstream repository instead of the fork it runs in (2026-10-01).**

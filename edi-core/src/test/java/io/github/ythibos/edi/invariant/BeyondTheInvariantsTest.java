@@ -207,7 +207,7 @@ class BeyondTheInvariantsTest {
         assertThat(home.home().root().resolve("memory/machine.md")).content().contains("## Credentials and access", "## Release notes in harbour");
         assertThat(home.home().root().resolve("memory/archive.md")).content().contains("## 2026-09-16 stow", "## firstofficer charts its own course");
         assertThat(home.home().root().resolve("memory/profile.md")).content().contains("Render the report with `edi report`").doesNotContain("fm-captain-report");
-        assertThat(home.home().root().resolve("memory/learnings.md")).content().contains("The lamp needs oil").doesNotContain("Monitoring restarts itself");
+        assertThat(home.home().root().resolve("memory/learnings.md")).content().contains("The lamp needs oil").doesNotContain("Monitoring restarts itself").doesNotContain("fleet lock");
 
         assertThat(again.backlog().alreadyInEdi()).hasSameSizeAs(planned.plan().tasks());
         assertThat(again.home().files()).extracting(FileChange::change).containsOnly(HomeChange.UNCHANGED);
