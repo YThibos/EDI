@@ -8,7 +8,7 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 record AdoptRequest(String from, String branch, String worktree, String session) {
 
     Path oldHome() {
-        return absolute(from, "the old home");
+        return from == null || from.isBlank() ? null : absolute(from, "the old home");
     }
 
     BranchName branchName() {

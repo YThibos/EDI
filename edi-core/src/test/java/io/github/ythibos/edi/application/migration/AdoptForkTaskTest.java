@@ -21,6 +21,8 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.RecordedEvent;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.testing.ExampleHome;
@@ -84,6 +86,30 @@ class AdoptForkTaskTest {
         Launch launch = home.runtime().launches().getLast();
         assertThat(launch.kind()).isEqualTo(LaunchKind.DISPATCH);
         assertThat(launch.worktree()).isEqualTo(home.home().worktreeOf(home.tasks().get(lantern).intake().projects().getFirst(), lantern));
+    }
+
+    @Test
+    void keysATaskTheMigrationImportedUnkeyedOnTheAdoptedBranch() throws IOException {
+        Path oldHome = copyOfTheOldHome();
+        TestHome home = TestHome.in(directory.resolve("edi-home")).registering(REGISTRY)
+                .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"));
+        FixtureRepository upstream = FixtureRepository.initialise(Files.createDirectories(directory.resolve("upstream/lighthouse")))
+                .write("README.md", "lamp\n").commit("Start");
+        upstream.clonedInto(home.home().root().resolve("projects/lighthouse"));
+        Path oldCopy = directory.resolve("pool/1/lighthouse");
+        upstream.clonedInto(oldHome.resolve("projects/lighthouse")).run("worktree", "add", "--quiet", "-b", "feature/LHT-3", oldCopy.toString());
+        TaskId lantern = new TaskId("lantern-rework");
+        home.migrateFirstofficer().run(oldHome, true, Actor.PRIMARY);
+        assertThat(home.tasks().get(lantern).intake().workKey()).isNull();
+
+        assertThatThrownBy(() -> home.adoptForkTask().adopt(lantern, oldHome, BranchName.parse("feature/LHT-9"), oldCopy, null, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessageContaining("has feature/LHT-3 checked out, not feature/LHT-9");
+        home.adoptForkTask().adopt(lantern, oldHome, BranchName.parse("feature/LHT-3"), oldCopy, null, Actor.PRIMARY);
+
+        assertThat(home.tasks().get(lantern).intake().workKey()).isEqualTo(WorkKey.parse("LHT-3"));
+        assertThat(home.events().timelineOf(lantern)).extracting(RecordedEvent::type).containsExactly("TaskImported", "TaskKeyed", "TaskAdopted");
+        assertThatThrownBy(() -> home.adoptForkTask().adopt(lantern, oldHome, BranchName.parse("feature/LHT-9"), oldCopy, null, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessage("lantern-rework books its work on LHT-3, but feature/LHT-9 carries LHT-9.");
     }
 
     private Path copyOfTheOldHome() throws IOException {

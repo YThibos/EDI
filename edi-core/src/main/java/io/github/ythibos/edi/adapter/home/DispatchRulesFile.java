@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 @Component
@@ -36,6 +38,11 @@ public class DispatchRulesFile {
 
     private static final String SCHEMA = "edi-dispatch.v2";
     private static final String CARRIED_REASONS = " The old harness's routing rules for this work said: ";
+    private static final String CATEGORIES = "categories";
+    private static final String PROJECT_OVERRIDES = "projectOverrides";
+    private static final String ID = "id";
+    private static final String PROJECT = "project";
+    private static final String WHY = "why";
 
     private final Path file;
     private final JsonMapper json;
@@ -55,14 +62,14 @@ public class DispatchRulesFile {
         }
     }
 
-    public String withCarriedReasons(String rules, Map<CategoryId, List<String>> byCategory, Map<ProjectName, List<String>> byProject) {
-        if (byCategory.isEmpty() && byProject.isEmpty()) {
-            return rules;
-        }
+    public String withWhatItLacks(String rules, String example, Map<CategoryId, List<String>> byCategory,
+            Map<ProjectName, List<String>> byProject) {
         JsonNode document = json.readTree(rules);
-        document.path("categories").forEach(category -> carryInto(category, byCategory.get(new CategoryId(category.path("id").asString("")))));
-        document.path("projectOverrides").forEach(override -> carryInto(override, byProject.get(new ProjectName(override.path("project").asString("")))));
-        return json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n";
+        JsonNode examples = json.readTree(example);
+        boolean added = addLacking(document, examples, CATEGORIES, ID) | addLacking(document, examples, PROJECT_OVERRIDES, PROJECT);
+        boolean carried = carryAll(document, CATEGORIES, ID, entry -> byCategory.get(new CategoryId(entry)))
+                | carryAll(document, PROJECT_OVERRIDES, PROJECT, entry -> byProject.get(new ProjectName(entry)));
+        return added || carried ? json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n" : rules;
     }
 
     private RulesDocument document() {
@@ -81,10 +88,33 @@ public class DispatchRulesFile {
         }
     }
 
-    private static void carryInto(JsonNode reasoned, List<String> carried) {
-        if (carried != null && !carried.isEmpty()) {
-            ((ObjectNode) reasoned).put("why", reasoned.path("why").asString("") + CARRIED_REASONS + String.join(" ", carried));
+    private static boolean addLacking(JsonNode document, JsonNode examples, String list, String key) {
+        List<String> held = document.path(list).valueStream().map(entry -> entry.path(key).asString("")).toList();
+        List<JsonNode> lacking = examples.path(list).valueStream().filter(entry -> !held.contains(entry.path(key).asString(""))).toList();
+        if (!lacking.isEmpty()) {
+            ArrayNode entries = document.has(list) ? (ArrayNode) document.get(list) : ((ObjectNode) document).putArray(list);
+            lacking.forEach(entry -> entries.add(entry.deepCopy()));
         }
+        return !lacking.isEmpty();
+    }
+
+    private static boolean carryAll(JsonNode document, String list, String key, Function<String, List<String>> reasonsOf) {
+        boolean carried = false;
+        for (JsonNode entry : document.path(list)) {
+            carried |= carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
+        }
+        return carried;
+    }
+
+    private static boolean carryInto(JsonNode reasoned, List<String> reasons) {
+        String why = reasoned.path(WHY).asString("");
+        List<String> uncarried = reasons == null ? List.of() : reasons.stream().filter(reason -> !why.contains(reason)).distinct().toList();
+        if (uncarried.isEmpty()) {
+            return false;
+        }
+        String opening = why.contains(CARRIED_REASONS) ? why + " " : why + CARRIED_REASONS;
+        ((ObjectNode) reasoned).put(WHY, opening + String.join(" ", uncarried));
+        return true;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

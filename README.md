@@ -22,7 +22,7 @@ The EDI console shows the same fleet as a live sitrep page in the approved dark 
 `edi up` starts the core and opens the primary session with its anchor, its hooks and the captain's memory in its system prompt, and `edi update` rebuilds, tests and installs EDI from its repository and restarts the core while workers keep running.
 Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own typed words from the current session, and every captain-facing card and report is linted for internal labels.
 `edi memory check` holds the captain's memory to its budget; presence follows the captain, turning quiet after a stretch without typing or when a meeting begins, gathering wakes, raising a Windows notification for what needs the captain and briefing the captain on their return.
-`edi migrate firstofficer` imports the old harness's home into EDI, its backlog, holds and decisions, its memory and configuration and an archive of its data, exactly as its dry run plans, and `edi task adopt` takes over a task still open there, on its branch and in its Claude Code session.
+`edi migrate firstofficer` imports the old harness's home into EDI, its backlog, holds and decisions, its memory and configuration and an archive of its data, exactly as its dry run plans, and `edi task adopt` takes over a task still open there, with its copy, its branch and its Claude Code session.
 
 ## Parts
 
@@ -202,14 +202,16 @@ edi presence demo                                                              #
 edi migrate firstofficer --from /path/to/old/home --dry-run    # the plan, and what it would add or replace in this EDI home
 edi migrate firstofficer --from /path/to/old/home              # the import; running it again changes nothing
 edi migrate firstofficer --from /path/to/old/home --overwrite  # into a home that already holds work or files of its own
-edi task adopt fit-the-lamp --from /path/to/old/home --branch feature/EDI-14 \
+edi task adopt fit-the-lamp --branch feature/EDI-14 \
     --worktree /path/to/old/copy --session <uuid>              # an open task, on its branch and in its session
 ```
 
 The import only reads the old home.
-It adds the old tasks, holds and decisions beside EDI's own, continues the decision and `EDI` key sequences after the highest either side uses, and sets aside the old harness's own work; it writes the project registry, the dispatch rules, the machine profile's missing settings, the personal configuration, the publish deny-list and the memory files, adding only what the EDI home lacks, and copies the old data read-only into `$EDI_HOME/data/archive/firstofficer/`, linking each open task's old folder from `data/tasks/<task>/firstofficer`.
+It adds the old tasks, holds and decisions beside EDI's own, continues the decision and `EDI` key sequences after the highest either side uses, and sets aside the old harness's own work; it writes the project registry, the dispatch rules, the machine profile's missing settings, the personal configuration, the publish deny-list and the memory files, adding only what the EDI home lacks and leaving the old harness's own mechanics out of the memory, and copies the old data read-only into `$EDI_HOME/data/archive/firstofficer/`, linking each open task's old folder from `data/tasks/<task>/firstofficer`.
 A file that differs from the EDI home's is replaced only with `--overwrite`, and the replaced one is kept as `<file>.before-migration`; the dry run lists every such file, every section of the old memory with the file it goes to, and every gap left for the captain, such as a project's forge account or tracker.
-Adoption needs the old copy on the branch, committed and with nothing working in it; it brings the branch into the project's clone in the EDI home, makes the task's isolated copy there, carries the session's transcript beside it, and leaves the old copy as it was, so the task's first dispatch resumes the session in its new copy.
+Adoption reads the task from the old home whose clone the copy belongs to, or from the home `--from` names, and needs the old copy on the task's branch.
+While a process still works in the old copy, adoption registers it in place and EDI launches no worker in it; once nothing works there, adopting again, or adopting the first time, moves the copy with its uncommitted work under `$EDI_HOME/worktrees/` as a copy of the project's clone in the EDI home.
+It carries the session's transcript beside the copy, so the task's first dispatch resumes the session there.
 
 ## Documentation
 

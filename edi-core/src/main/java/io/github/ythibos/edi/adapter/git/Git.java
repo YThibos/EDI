@@ -76,6 +76,14 @@ public class Git {
         git(clone, "worktree", "add", "--quiet", worktree.toString(), branch.toString());
     }
 
+    public void addWorktreeOnBranchWithoutCheckout(Path clone, Path worktree, BranchName branch) {
+        git(clone, "worktree", "add", "--quiet", "--no-checkout", worktree.toString(), branch.toString());
+    }
+
+    public void indexTheHeadKeepingTheWorkingTree(Path worktree) {
+        git(worktree, "reset", "--quiet");
+    }
+
     public String currentBranch(Path worktree) {
         return git(worktree, "symbolic-ref", "--quiet", "--short", "HEAD").strip();
     }

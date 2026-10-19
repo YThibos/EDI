@@ -22,3 +22,7 @@ Last curated 2026-10-15.
 ## Communication
 
 - Outcomes first, then the decision needed. (2026-08-01)
+
+## Reporting format to the captain
+
+- Render the report with `bin/fm-captain-report.sh` and paste it verbatim. (2026-09-16)

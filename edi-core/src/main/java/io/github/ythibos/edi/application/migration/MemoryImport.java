@@ -38,7 +38,8 @@ final class MemoryImport {
 
     static MemoryImport of(ForkHome home, Set<String> projectsOfThisMachine) {
         MemoryImport memory = new MemoryImport(projectsOfThisMachine);
-        home.captainMemory().map(MarkdownSections::of).ifPresent(captain -> captain.sections().forEach(memory::route));
+        home.captainMemory().map(MarkdownSections::of)
+                .ifPresent(captain -> captain.sections().stream().map(CaptainMemoryEdits::edited).forEach(memory::route));
         home.sharedCaptainMemory().map(MarkdownSections::of).ifPresent(shared -> shared.sections().forEach(memory::keepInTheProfile));
         return memory;
     }
@@ -75,12 +76,18 @@ final class MemoryImport {
 
     private static HomeFile learningsFrom(Optional<String> learnings) {
         MarkdownSections old = MarkdownSections.of(learnings.orElse(""));
+        LearningsFilter filter = new LearningsFilter();
         List<String> parts = new ArrayList<>(List.of(LEARNINGS_HEADER));
         if (old.preambleHoldsEntries()) {
-            parts.add(old.preambleWithoutTitle());
+            parts.add(filter.kept(old.preambleWithoutTitle()));
         }
-        old.sections().forEach(section -> parts.add(section.text()));
-        return new HomeFile(LEARNINGS, String.join(PARAGRAPH_BREAK, parts) + "\n", Counted.sections(old.sections().size()));
+        old.sections().forEach(section -> parts.add(filter.kept(section.text())));
+        return new HomeFile(LEARNINGS, String.join(PARAGRAPH_BREAK, parts) + "\n", learningsHeld(old.sections().size(), filter.dropped()));
+    }
+
+    private static String learningsHeld(int sections, int dropped) {
+        String held = Counted.sections(sections);
+        return dropped == 0 ? held : held + " without " + Counted.things(dropped, "old-harness learning");
     }
 
     private HomeFile archiveFrom(Optional<String> memoryArchive) {

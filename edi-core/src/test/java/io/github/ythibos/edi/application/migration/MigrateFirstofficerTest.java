@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.migration.MigrationReportText;
@@ -53,6 +54,22 @@ class MigrateFirstofficerTest {
         assertThat(home.decisions().get(new DecisionNumber(57)).task()).isEqualTo(new TaskId("fit-lamp"));
         assertThat(home.decisions().lastNumberIssued()).isEqualTo(80);
         assertThat(home.tasks().contains(new TaskId("lantern-rework"))).isTrue();
+    }
+
+    @Test
+    void keepsTheDispatchRulesTheHomeWasTunedWithAndCarriesEachOldReasonOnce() throws IOException {
+        Path oldHome = copyOfTheOldHome();
+        String tuned = ExampleHome.file("config/dispatch-rules.json").replace(
+                "\"why\": \"A wrong plan or diagnosis costs a whole implementation round.\"", "\"why\": \"Tuned on the shadow run.\"");
+        TestHome home = TestHome.in(directory.resolve("edi-home")).writing(RoutingRulesImport.DISPATCH_RULES, tuned);
+
+        home.migrateFirstofficer().run(oldHome, true, Actor.PRIMARY);
+        MigrationReport again = home.migrateFirstofficer().run(oldHome, false, Actor.PRIMARY);
+
+        assertThat(home.home().root().resolve(RoutingRulesImport.DISPATCH_RULES)).content().contains(
+                "Tuned on the shadow run. The old harness's routing rules for this work said: A wrong plan costs a whole round (keeper, 2026-09-29).");
+        assertThat(again.home().files()).filteredOn(file -> file.path().equals(RoutingRulesImport.DISPATCH_RULES)).extracting(FileChange::change)
+                .containsExactly(HomeChange.UNCHANGED);
     }
 
     @Test

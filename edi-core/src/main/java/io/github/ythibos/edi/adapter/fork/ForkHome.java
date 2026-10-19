@@ -46,6 +46,14 @@ public record ForkHome(Path root, String backlog, String decisionSequence, Strin
                 present(root.resolve(NOTE_ARCHIVE)).orElse(""));
     }
 
+    public static Optional<Path> holdingTheClone(Path clone) {
+        Path clones = clone.getParent();
+        if (clones == null || clones.getParent() == null || !clones.getFileName().toString().equals(PROJECT_CLONES)) {
+            return Optional.empty();
+        }
+        return Optional.of(clones.getParent()).filter(root -> Files.isRegularFile(root.resolve(BACKLOG)));
+    }
+
     public static List<ArchivedFile> archiveOf(Path root) {
         return ForkArchive.of(root);
     }

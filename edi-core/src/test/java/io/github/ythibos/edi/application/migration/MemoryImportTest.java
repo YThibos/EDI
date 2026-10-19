@@ -88,14 +88,147 @@ class MemoryImportTest {
     }
 
     @Test
-    void carriesTheLearningsWholeAndKeepsAPreambleOnlyWhenItHoldsEntries() throws IOException {
-        write("learnings.md", "# Learnings\n\nCurated facts.\n\n- An entry before any section. (2026-10-01)\n\n## Shop\n\n- The lamp needs oil. (2026-10-01)\n");
+    void keepsAPreambleOnlyWhenItHoldsEntriesAndDropsTheOldHarnesssMechanicsFromTheLearnings() throws IOException {
+        write("learnings.md", """
+                # Learnings
+
+                Curated facts.
+
+                - An entry before any section. (2026-10-01)
+
+                ## Shop
+
+                - The lamp needs oil. (2026-10-01)
+
+                - **The command guard refuses commands naming a watcher script (2026-09-14).**
+                  The guard matches the script's name.
+
+                - **A dead worker is reclaimed by `fm-control.sh <id> relaunch` (2026-10-14).**
+                  It restarts in the same copy.
+
+                - **Docker can drop its WSL integration (2026-10-14).**
+                  Re-enable it in the settings.
+                """);
+
+        HomeFile learnings = fileOf(MemoryImport.of(ForkHome.at(home), Set.of()).files(ForkHome.at(home)), MemoryImport.LEARNINGS);
+
+        assertThat(learnings.content()).isEqualTo("""
+                # Learnings
+
+                Operational facts, each dated with the day it was last confirmed, with the evidence and the rule it produced.
+
+                Curated facts.
+
+                - An entry before any section. (2026-10-01)
+
+                ## Shop
+
+                - The lamp needs oil. (2026-10-01)
+
+                - **Docker can drop its WSL integration (2026-10-14).**
+                  Re-enable it in the settings.
+                """);
+        assertThat(learnings.holds()).isEqualTo("1 section without 2 old-harness learnings");
+    }
+
+    @Test
+    void generalisesTheLearningsKeptOnlyInPart() throws IOException {
+        write("learnings.md", """
+                # Learnings
+
+                ## Shop
+
+                - **`gh-axi` resolves pull requests against UPSTREAM harbour, not this fork.**
+                  Always pass `--repo someone/harbour` when reading this repo's pull requests. <!--a:2026-10-01-->
+
+                - **Never `cd` at the top level in this home; use a subshell (2026-10-07).**
+                  A guard denies a persistent `cd`.
+                  `cmd.exe` refuses a WSL working directory.
+                """);
 
         String learnings = contentOf(MemoryImport.of(ForkHome.at(home), Set.of()).files(ForkHome.at(home)), MemoryImport.LEARNINGS);
 
-        assertThat(learnings).startsWith("# Learnings\n\nOperational facts, each dated")
-                .contains("Curated facts.\n\n- An entry before any section. (2026-10-01)\n\n## Shop\n\n- The lamp needs oil. (2026-10-01)\n")
-                .doesNotContain("# Learnings\n\nCurated");
+        assertThat(learnings).endsWith("""
+                ## Shop
+
+                - **`gh-axi` can resolve pull requests against an upstream repository instead of the fork it runs in (2026-10-01).**
+                  Always pass `--repo <owner>/<name>` when reading a repository's pull requests.
+
+                - **`cmd.exe` refuses a WSL working directory (2026-10-07).**
+                  Launch a Windows tool from a subshell that first changes to a directory on a Windows drive.
+                """);
+    }
+
+    @Test
+    void editsTheCaptainsRulesOnTheWay() throws IOException {
+        write("captain.md", """
+                # Captain preferences
+
+                ## Global personal preferences - POINTER, do not restate
+
+                His rules live in `/home/someone/AGENTS.md`.
+
+                ## Hard rules on every project commit
+
+                - **Never use an `fm/` branch name.**
+                  Every branch is JIRA-keyed: `feature/<KEY>-N`.
+                  It slipped again: `fm-project-mode.sh --branch-prefix` answers `fm/`.
+
+                ## Delivery flow (current)
+
+                1. **Work and commit** on the task's branch.
+
+                Supporting rules:
+
+                - **Base branch per project:** harbour branches from `origin/master`.
+                  Branch from the origin ref.
+                - **The independent craftsmanship review is removed from ALL flows (decision 2026-09-24).**
+                  The review list now names no project.
+                - **Keep the task copy until the work has landed**, then clean up.
+
+                ## Applying changes locally, without committing
+
+                Apply the edits into his checkout at `/home/someone/sources/<repo>` and do not commit.
+
+                ## Reporting format to the captain
+
+                The report is rendered by `bin/fm-captain-report.sh` and pasted verbatim.
+                """);
+
+        String profile = contentOf(MemoryImport.of(ForkHome.at(home), Set.of()).files(ForkHome.at(home)), MemoryImport.PROFILE);
+
+        assertThat(profile).isEqualTo("""
+                # Profile
+
+                The captain's rules on every machine.
+
+                ## Global personal preferences - POINTER, do not restate
+
+                The captain's project-independent style rules live in one authoritative file, the one the machine profile names as `captain.globalRules`.
+                Read it when a style question arises; do not copy its rules here.
+
+                ## Hard rules on every project commit
+
+                - **Never use an `fm/` branch name.**
+                  Every branch is keyed with the task's work key (JIRA on the laptop, EDI-native elsewhere): `feature/<KEY>-N`.
+
+                ## Delivery flow (current)
+
+                1. **Work and commit** on the task's branch.
+
+                Supporting rules:
+
+                - **The independent craftsmanship reviewer is retired from all flows (2026-09-24); the craft rules ride in the validation pipeline instead.**
+                - **Keep the task copy until the work has landed**, then clean up.
+
+                ## Applying changes locally, without committing
+
+                Apply the edits into his checkout at `<captain.checkoutsRoot>/<repo>` (the checkout root from the machine profile) and do not commit.
+
+                ## Reporting format to the captain
+
+                The report is rendered by `edi report` and pasted verbatim.
+                """);
     }
 
     @Test
@@ -118,6 +251,10 @@ class MemoryImportTest {
     }
 
     private static String contentOf(List<HomeFile> files, String path) {
-        return files.stream().filter(file -> file.path().equals(path)).findFirst().orElseThrow().content();
+        return fileOf(files, path).content();
+    }
+
+    private static HomeFile fileOf(List<HomeFile> files, String path) {
+        return files.stream().filter(file -> file.path().equals(path)).findFirst().orElseThrow();
     }
 }

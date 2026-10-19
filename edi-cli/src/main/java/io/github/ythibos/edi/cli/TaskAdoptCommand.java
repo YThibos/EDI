@@ -8,8 +8,8 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "adopt", description = "Takes over a task still open in a firstofficer home: imports it, makes its isolated copy on the same branch"
-        + " from EDI's own clone, and records the Claude Code session its next dispatch resumes; the old copy is left as it was.")
+@Command(name = "adopt", description = "Takes over a task still open in a firstofficer home: imports it, registers its isolated copy, moved under"
+        + " EDI's worktrees with its uncommitted work when no process holds it, and records the Claude Code session its next dispatch resumes.")
 final class TaskAdoptCommand implements Callable<Integer> {
 
     @Mixin
@@ -18,7 +18,8 @@ final class TaskAdoptCommand implements Callable<Integer> {
     @Parameters(paramLabel = "TASK", description = "The task's id in the old home's backlog.")
     private String task;
 
-    @Option(names = "--from", required = true, paramLabel = "HOME", description = "The firstofficer home whose backlog holds the task.")
+    @Option(names = "--from", paramLabel = "HOME", description = "The firstofficer home whose backlog holds the task; by default the home whose"
+            + " clone the copy belongs to.")
     private Path from;
 
     @Option(names = "--branch", required = true, paramLabel = "BRANCH", description = "The task's branch, such as feature/EDI-14; it names the work.")
@@ -32,8 +33,8 @@ final class TaskAdoptCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        return core.post("/api/tasks/" + CoreExchange.encoded(task) + "/adopt", new JsonBody()
-                .with("from", absolute(from))
+        return core.postAwaitingLongWork("/api/tasks/" + CoreExchange.encoded(task) + "/adopt", new JsonBody()
+                .with("from", from == null ? null : absolute(from))
                 .with("branch", branch)
                 .with("worktree", absolute(worktree))
                 .with("session", session));

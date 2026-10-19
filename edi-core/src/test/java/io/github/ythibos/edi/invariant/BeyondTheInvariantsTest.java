@@ -206,6 +206,8 @@ class BeyondTheInvariantsTest {
         assertThat(home.memory().check().passes()).isTrue();
         assertThat(home.home().root().resolve("memory/machine.md")).content().contains("## Credentials and access", "## Release notes in harbour");
         assertThat(home.home().root().resolve("memory/archive.md")).content().contains("## 2026-09-16 stow", "## firstofficer charts its own course");
+        assertThat(home.home().root().resolve("memory/profile.md")).content().contains("Render the report with `edi report`").doesNotContain("fm-captain-report");
+        assertThat(home.home().root().resolve("memory/learnings.md")).content().contains("The lamp needs oil").doesNotContain("Monitoring restarts itself");
 
         assertThat(again.backlog().alreadyInEdi()).hasSameSizeAs(planned.plan().tasks());
         assertThat(again.home().files()).extracting(FileChange::change).containsOnly(HomeChange.UNCHANGED);
@@ -243,7 +245,8 @@ class BeyondTheInvariantsTest {
 
     @Test
     @Tag("adapter")
-    @DisplayName("AT-48 adopting an open task takes its branch over in a copy from EDI's own clone, and its next dispatch resumes the recorded session")
+    @DisplayName("AT-48 adopting an open task registers its copy in place while a process holds it, then moves it under EDI's worktrees with its"
+            + " uncommitted work, and its next dispatch resumes the recorded session there")
     void anAdoptedTaskResumesItsSessionInItsOwnCopy() throws IOException {
         Path oldHome = copyOf(OLD_HOME_FIXTURE);
         TestHome home = TestHome.in(directory.resolve("edi-home")).registering(LIGHTHOUSE_REGISTRY)
@@ -253,34 +256,40 @@ class BeyondTheInvariantsTest {
         upstream.clonedInto(home.home().root().resolve("projects/lighthouse"));
         Path oldCopy = oldCopyOn(upstream, oldHome, "feature/LHT-3");
         String oldHead = FixtureRepository.at(oldCopy).write("lantern.txt", "brighter\n").commit("LHT-3 Rework the lantern").head();
+        Files.writeString(oldCopy.resolve("lantern.txt"), "brightest\n");
+        Files.writeString(oldCopy.resolve("draft.txt"), "unsaved\n");
         UUID session = UUID.randomUUID();
         Path transcript = Files.createDirectories(home.claudeSessionFolders().resolve(claudeFolderOf(oldCopy))).resolve(session + ".jsonl");
         Files.writeString(transcript, "{\"type\":\"user\"}\n");
         TaskId lantern = new TaskId("lantern-rework");
         BranchName branch = BranchName.parse("feature/LHT-3");
+        Path copy = home.home().worktreeOf(new ProjectName("lighthouse"), lantern);
 
         assertThatThrownBy(() -> home.adoptForkTask().adopt(lantern, oldHome, BranchName.parse("feature/LHT-4"), oldCopy, session, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("has feature/LHT-3 checked out, not feature/LHT-4");
-        Files.writeString(oldCopy.resolve("draft.txt"), "unsaved\n");
-        assertThatThrownBy(() -> home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, session, Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessageContaining("holds 1 uncommitted change, such as draft.txt");
-        Files.delete(oldCopy.resolve("draft.txt"));
+        assertThat(home.tasks().ids()).isEmpty();
+
         Process holder = processes.register(new ProcessBuilder("sleep", "30").directory(oldCopy.toFile()).start());
-        assertThatThrownBy(() -> home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, session, Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessageContaining("Processes [" + holder.pid() + "] still work in " + oldCopy);
+        AdoptedTask inPlace = home.adoptForkTask().adopt(lantern, null, branch, oldCopy, session, Actor.PRIMARY);
+
+        assertThat(inPlace.moved()).isFalse();
+        assertThat(Files.readSymbolicLink(copy)).isEqualTo(oldCopy);
+        assertThat(oldCopy.resolve("draft.txt")).hasContent("unsaved");
         holder.destroy();
         assertThat(holder.onExit().join().isAlive()).isFalse();
-        assertThat(home.tasks().ids()).isEmpty();
 
         AdoptedTask adopted = home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, session, Actor.PRIMARY);
         home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, session, Actor.PRIMARY);
-        Path copy = home.home().worktreeOf(new ProjectName("lighthouse"), lantern);
 
-        assertThat(adopted.copy()).isEqualTo(copy);
+        assertThat(adopted).extracting(AdoptedTask::moved, AdoptedTask::copy).containsExactly(true, copy);
+        assertThat(oldCopy).doesNotExist();
+        assertThat(Files.isSymbolicLink(copy)).isFalse();
         assertThat(FixtureRepository.at(copy).head()).isEqualTo(oldHead);
+        assertThat(copy.resolve("lantern.txt")).hasContent("brightest");
+        assertThat(copy.resolve("draft.txt")).hasContent("unsaved");
+        assertThat(home.git().uncommittedPaths(copy)).containsExactlyInAnyOrder("lantern.txt", "draft.txt");
         assertThat(home.git().currentBranch(copy)).isEqualTo("feature/LHT-3");
         assertThat(home.git().commonDirectory(copy).toRealPath()).isEqualTo(home.home().root().resolve("projects/lighthouse/.git").toRealPath());
-        assertThat(FixtureRepository.at(oldCopy).head()).as("the old copy").isEqualTo(oldHead);
         assertThat(home.tasks().get(lantern)).extracting(Task::state, task -> task.intake().workKey())
                 .containsExactly(TaskState.IN_FLIGHT, WorkKey.parse("LHT-3"));
         assertThat(home.claudeSessionFolders().resolve(claudeFolderOf(copy)).resolve(session + ".jsonl")).hasSameTextualContentAs(transcript);

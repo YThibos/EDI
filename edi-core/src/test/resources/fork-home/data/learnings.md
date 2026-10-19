@@ -10,3 +10,6 @@ Curated operational facts for this home.
 ## Worker safety
 
 - Never stop a process you did not start. (2026-07-28)
+
+- **Monitoring restarts itself in a background-job session; no manual repair needed.**
+  The turn-end guard re-arms it.

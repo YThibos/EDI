@@ -38,6 +38,6 @@ final class MigrateFirstofficerCommand implements Callable<Integer> {
         String oldHome = from.toAbsolutePath().normalize().toString();
         return dryRun
                 ? core.get("/api/migrations/firstofficer/plan?from=" + CoreExchange.encoded(oldHome))
-                : core.post("/api/migrations/firstofficer", new JsonBody().with("from", oldHome).with("overwrite", overwrite));
+                : core.postAwaitingLongWork("/api/migrations/firstofficer", new JsonBody().with("from", oldHome).with("overwrite", overwrite));
     }
 }

@@ -42,7 +42,6 @@ public class HomeImportPlanner {
     private static final String MACHINE_PROFILE = "config/machine.yaml";
     private static final String PERSONAL_CONFIGURATION = "config/personal.yaml";
     private static final String CRAFT_RULES = "memory/craft-rules.md";
-    private static final String MEMORY = "memory/";
     private static final String TASK_FOLDERS = "data/tasks/";
     private static final String OLD_FOLDER_LINK = "/firstofficer";
     private static final String OLD_FOLDER_TARGET = "../../archive/firstofficer/tasks/";
@@ -77,7 +76,7 @@ public class HomeImportPlanner {
         List<ProjectEntry> registered = registry.entries();
         Map<String, CloneOrigin> origins = originsOfTheClonesIn(old);
         List<NewProject> newProjects = new RegistryImport(registered, old.craftRulesProjects(), notes).additions(old.projects(), origins::get);
-        MemoryImport memory = memoryFrom(old, notes);
+        MemoryImport memory = MemoryImport.of(old, projectsOfThisMachine(old));
         List<HomeFile> files = new ArrayList<>(List.of(
                 registryWith(registered, newProjects),
                 machineProfileFrom(old, notes),
@@ -100,14 +99,6 @@ public class HomeImportPlanner {
     private Map<String, CloneOrigin> originsOfTheClonesIn(ForkHome old) {
         return old.projects().stream().collect(Collectors.toMap(ForkProject::name, project -> originOf(old.projectClone(project.name())),
                 (first, _) -> first));
-    }
-
-    private static MemoryImport memoryFrom(ForkHome old, MigrationNotes notes) {
-        if (old.captainMemory().isPresent() || old.learnings().isPresent()) {
-            notes.add(MEMORY, "is carried as the old home wrote it; the first /stow edits it into EDI's shape and drops the old harness's own"
-                    + " mechanics from the learnings");
-        }
-        return MemoryImport.of(old, projectsOfThisMachine(old));
     }
 
     private HomeFile registryWith(List<ProjectEntry> registered, List<NewProject> newProjects) {
@@ -133,8 +124,9 @@ public class HomeImportPlanner {
     private HomeFile dispatchRulesFrom(ForkHome old, MigrationNotes notes) {
         RoutingRulesImport routing = RoutingRulesImport.of(old.routingRules().map(routingRules::read).orElse(List.of()), notes);
         return new HomeFile(RoutingRulesImport.DISPATCH_RULES,
-                dispatchRules.withCarriedReasons(examples.dispatchRules(), routing.reasonsByCategory(), routing.reasonsByProject()),
-                "the eight dispatch categories and the EDI override");
+                dispatchRules.withWhatItLacks(currentContentOf(RoutingRulesImport.DISPATCH_RULES).orElseGet(examples::dispatchRules),
+                        examples.dispatchRules(), routing.reasonsByCategory(), routing.reasonsByProject()),
+                "the dispatch categories and overrides, with the old reasons they lacked");
     }
 
     private HomeFile denyListFor(List<ProjectEntry> registered, List<NewProject> newProjects, Collection<CloneOrigin> origins) {

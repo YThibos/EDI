@@ -89,8 +89,13 @@ class ConfirmationText implements TextPresenter<Confirmation> {
         String next = adopted.resumesASession()
                 ? "its next dispatch resumes session " + adopted.session() + " there"
                 : "its next dispatch starts a fresh session there with its brief";
-        return "Took over " + adopted.task() + ": its isolated copy " + adopted.copy() + " is on " + adopted.branch() + " at " + adopted.head() + ", and "
-                + next + "; the old copy " + adopted.oldCopy() + " is left as it was.";
+        if (!adopted.moved()) {
+            return "Registered the old copy " + adopted.oldCopy() + " of " + adopted.task() + " in place as " + adopted.copy() + ", on "
+                    + adopted.branch() + " at " + adopted.head() + "; a process still works there, so EDI launches no worker in it: adopt again once"
+                    + " that process has stopped, and the copy moves under EDI's worktrees with its uncommitted work.";
+        }
+        return "Took over " + adopted.task() + ": the old copy " + adopted.oldCopy() + " moved to " + adopted.copy() + " with its uncommitted work, on "
+                + adopted.branch() + " at " + adopted.head() + ", and " + next + ".";
     }
 
     private static String captainHeard(CaptainHeard heard) {

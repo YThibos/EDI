@@ -417,7 +417,7 @@ public final class TestHome {
     }
 
     public AdoptForkTask adoptForkTask() {
-        return new AdoptForkTask(home, forkMigrationPlanner(), backlogImport(), registry, isolatedCopies(), adoptions, claudeSessions(), events, git,
+        return new AdoptForkTask(home, forkMigrationPlanner(), backlogImport(), tasks, registry, isolatedCopies(), adoptions, claudeSessions(), events, git,
                 processes, clock, transaction);
     }
 

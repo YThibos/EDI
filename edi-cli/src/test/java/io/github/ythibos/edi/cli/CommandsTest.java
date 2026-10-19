@@ -219,6 +219,16 @@ class CommandsTest {
     }
 
     @Test
+    void adoptsInTheSpecificationsShapeLeavingTheOldHomeToTheCore() {
+        core.answering(201, "Took over\n");
+
+        int exitCode = edi("", "task", "adopt", "lantern-rework", "--branch", "feature/LHT-3", "--worktree", "/pool/1/lighthouse");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().body()).isEqualTo("{\"branch\":\"feature/LHT-3\",\"worktree\":\"/pool/1/lighthouse\"}");
+    }
+
+    @Test
     void sendsTheTurnFromStandardInputForTheCaptainReport() {
         core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open\n");
         String turn = "{\"done\":[{\"projects\":[],\"text\":\"Fitted the lamp\"}],\"next\":[],\"tasks\":{}}";

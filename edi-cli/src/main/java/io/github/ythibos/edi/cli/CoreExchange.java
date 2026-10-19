@@ -6,6 +6,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.function.Function;
 
 import picocli.CommandLine.Model.CommandSpec;
@@ -20,6 +21,7 @@ final class CoreExchange {
     private static final String STANDARD_INPUT = "-";
     private static final String TEXT = "text/plain";
     private static final String JSON = "application/json";
+    private static final Duration LONG_WORK_PATIENCE = Duration.ofMinutes(30);
 
     @Option(names = "--json", description = "Print the core's JSON answer instead of text.")
     private boolean json;
@@ -41,6 +43,10 @@ final class CoreExchange {
 
     int post(String path, String json) {
         return printed(core -> new CoreClient().post(core, path, json, accepted()));
+    }
+
+    int postAwaitingLongWork(String path, JsonBody body) {
+        return printed(core -> new CoreClient().post(core, path, body.text(), accepted(), LONG_WORK_PATIENCE));
     }
 
     String contentOf(String source) {
