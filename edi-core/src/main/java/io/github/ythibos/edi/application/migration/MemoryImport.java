@@ -28,8 +28,8 @@ final class MemoryImport {
 
     private final Set<String> projectsOfThisMachine;
     private final List<MemoryRoute> routes = new ArrayList<>();
-    private final List<Section> profile = new ArrayList<>();
-    private final List<Section> machine = new ArrayList<>();
+    private final List<Section> profileSections = new ArrayList<>();
+    private final List<Section> machineSections = new ArrayList<>();
     private final List<Section> setAside = new ArrayList<>();
 
     private MemoryImport(Set<String> projectsOfThisMachine) {
@@ -46,8 +46,8 @@ final class MemoryImport {
 
     List<HomeFile> files(ForkHome home) {
         return List.of(
-                new HomeFile(PROFILE, document(PROFILE_HEADER, profile), Counted.sections(profile.size())),
-                new HomeFile(MACHINE, document(MACHINE_HEADER, machine), Counted.sections(machine.size())),
+                new HomeFile(PROFILE, document(PROFILE_HEADER, profileSections), Counted.sections(profileSections.size())),
+                new HomeFile(MACHINE, document(MACHINE_HEADER, machineSections), Counted.sections(machineSections.size())),
                 learningsFrom(home.learnings()),
                 archiveFrom(home.memoryArchive()));
     }
@@ -60,14 +60,14 @@ final class MemoryImport {
         if (concernsTheOldHarness(section.heading())) {
             setAside(section);
         } else if (concernsThisMachine(section.heading())) {
-            add(section, machine, MACHINE);
+            add(section, machineSections, MACHINE);
         } else {
-            add(section, profile, PROFILE);
+            add(section, profileSections, PROFILE);
         }
     }
 
     private void keepInTheProfile(Section section) {
-        add(section, profile, PROFILE);
+        add(section, profileSections, PROFILE);
     }
 
     private static String document(String header, List<Section> sections) {

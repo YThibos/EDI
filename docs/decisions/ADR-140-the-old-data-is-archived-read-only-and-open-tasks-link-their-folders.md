@@ -12,7 +12,7 @@ EDI writes a task's brief and report into `data/tasks/<id>/`.
 The old home's data is about half a gigabyte in twenty thousand files, and the import runs inside one call to the core.
 
 **Decision:** `ForkArchive` lists every file and symbolic link the archive keeps: each file directly under the old `data/` as itself, each folder under `data/` below `tasks/`, the old `config/` below `config/` and `state/held/` below `state/held/`; the rest of `state/` is the old harness's runtime and is not kept.
-`HomeWriter` copies each one into `data/archive/firstofficer/` with its time of last change, keeps a link as a link, and makes every copied file read-only; a copy with the same size and time of last change is unchanged, so a second run reads no file twice.
+`HomeWriter` copies each one into `data/archive/firstofficer/` with its time of last change, keeps a link as a link, and makes every copied file read-only and readable by its owner alone, as the old home holds the captain's private material; a copy with the same size and time of last change is unchanged, so a second run reads no file twice.
 The import also keeps the old memory and registry files here as they were, so nothing the memory split or the registry import leaves behind is lost.
 For each imported task that is not done and has an old folder, the import makes `data/tasks/<id>/firstofficer`, a relative link to its archived folder, so the task's own folder stays EDI's.
 Archive copies that differ are replaced on `--overwrite` without keeping the earlier copy, since the old home still holds its source.

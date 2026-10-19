@@ -191,7 +191,7 @@ class BeyondTheInvariantsTest {
         }
         assertThat(home.home().root().resolve("data/archive/firstofficer/backlog.md")).hasSameBinaryContentAs(oldHome.resolve("data/backlog.md"));
         assertThat(Files.getPosixFilePermissions(home.home().root().resolve("data/archive/firstofficer/tasks/tide-tables/screens/chart.png")))
-                .as("an archived file").containsExactlyInAnyOrder(PosixFilePermission.OWNER_READ, PosixFilePermission.GROUP_READ, PosixFilePermission.OTHERS_READ);
+                .as("an archived file").containsExactly(PosixFilePermission.OWNER_READ);
         assertThat(home.home().root().resolve("data/archive/firstofficer/state/held/tide-tables.md")).isRegularFile();
         assertThat(home.home().root().resolve("data/archive/firstofficer/config/crew-dispatch.json")).isRegularFile();
         assertThat(home.home().root().resolve("data/tasks/lantern-rework/firstofficer/brief.md")).hasContent("Rework the lantern controller.");

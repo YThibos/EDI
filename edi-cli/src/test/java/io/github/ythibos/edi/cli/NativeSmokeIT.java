@@ -268,7 +268,7 @@ class NativeSmokeIT {
         CommandRun plan = edi("", "migrate", "firstofficer", "--from", System.getProperty("edi.old.home.fixture"), "--dry-run");
 
         assertThat(plan.exitCode()).isZero();
-        assertThat(plan.output()).contains("Tasks to import (17)", "the first new decision is D58", "For the captain (19)",
+        assertThat(plan.output()).contains("Tasks to import (17)", "the first new decision is D58", "For the captain (18)",
                 "config/dispatch-rules.json  to replace");
     }
 

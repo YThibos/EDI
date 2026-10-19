@@ -66,10 +66,11 @@ public class DispatchRulesFile {
             Map<ProjectName, List<String>> byProject) {
         JsonNode document = json.readTree(rules);
         JsonNode examples = json.readTree(example);
-        boolean added = addLacking(document, examples, CATEGORIES, ID) | addLacking(document, examples, PROJECT_OVERRIDES, PROJECT);
-        boolean carried = carryAll(document, CATEGORIES, ID, entry -> byCategory.get(new CategoryId(entry)))
-                | carryAll(document, PROJECT_OVERRIDES, PROJECT, entry -> byProject.get(new ProjectName(entry)));
-        return added || carried ? json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n" : rules;
+        addLacking(document, examples, CATEGORIES, ID);
+        addLacking(document, examples, PROJECT_OVERRIDES, PROJECT);
+        carryAll(document, CATEGORIES, ID, entry -> byCategory.get(new CategoryId(entry)));
+        carryAll(document, PROJECT_OVERRIDES, PROJECT, entry -> byProject.get(new ProjectName(entry)));
+        return document.equals(json.readTree(rules)) ? rules : json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n";
     }
 
     private RulesDocument document() {
@@ -88,33 +89,28 @@ public class DispatchRulesFile {
         }
     }
 
-    private static boolean addLacking(JsonNode document, JsonNode examples, String list, String key) {
+    private static void addLacking(JsonNode document, JsonNode examples, String list, String key) {
         List<String> held = document.path(list).valueStream().map(entry -> entry.path(key).asString("")).toList();
         List<JsonNode> lacking = examples.path(list).valueStream().filter(entry -> !held.contains(entry.path(key).asString(""))).toList();
         if (!lacking.isEmpty()) {
             ArrayNode entries = document.has(list) ? (ArrayNode) document.get(list) : ((ObjectNode) document).putArray(list);
             lacking.forEach(entry -> entries.add(entry.deepCopy()));
         }
-        return !lacking.isEmpty();
     }
 
-    private static boolean carryAll(JsonNode document, String list, String key, Function<String, List<String>> reasonsOf) {
-        boolean carried = false;
+    private static void carryAll(JsonNode document, String list, String key, Function<String, List<String>> reasonsOf) {
         for (JsonNode entry : document.path(list)) {
-            carried |= carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
+            carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
         }
-        return carried;
     }
 
-    private static boolean carryInto(JsonNode reasoned, List<String> reasons) {
+    private static void carryInto(JsonNode reasoned, List<String> reasons) {
         String why = reasoned.path(WHY).asString("");
         List<String> uncarried = reasons == null ? List.of() : reasons.stream().filter(reason -> !why.contains(reason)).distinct().toList();
-        if (uncarried.isEmpty()) {
-            return false;
+        if (!uncarried.isEmpty()) {
+            String opening = why.contains(CARRIED_REASONS) ? why + " " : why + CARRIED_REASONS;
+            ((ObjectNode) reasoned).put(WHY, opening + String.join(" ", uncarried));
         }
-        String opening = why.contains(CARRIED_REASONS) ? why + " " : why + CARRIED_REASONS;
-        ((ObjectNode) reasoned).put(WHY, opening + String.join(" ", uncarried));
-        return true;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

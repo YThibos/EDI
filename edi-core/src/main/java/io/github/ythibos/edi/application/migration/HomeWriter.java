@@ -24,7 +24,7 @@ import io.github.ythibos.edi.adapter.fork.ArchivedFile;
 public class HomeWriter {
 
     public static final String KEPT_SUFFIX = ".before-migration";
-    private static final Set<PosixFilePermission> READ_ONLY = PosixFilePermissions.fromString("r--r--r--");
+    private static final Set<PosixFilePermission> READ_ONLY_TO_ITS_OWNER = PosixFilePermissions.fromString("r--------");
 
     private final EdiHome home;
 
@@ -92,7 +92,7 @@ public class HomeWriter {
             Files.createDirectories(target.getParent());
             Files.copy(file.source(), target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES, LinkOption.NOFOLLOW_LINKS);
             if (!Files.isSymbolicLink(target)) {
-                Files.setPosixFilePermissions(target, READ_ONLY);
+                Files.setPosixFilePermissions(target, READ_ONLY_TO_ITS_OWNER);
             }
         } catch (IOException uncopied) {
             throw new UncheckedIOException(uncopied);
