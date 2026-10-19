@@ -1,0 +1,40 @@
+<div class="sr-callwrap">
+  <div
+    class="sr-call"
+    [class.sr-call--deck]="deck().length > 0"
+    [class.sr-call--penult]="deck().length > 1 && active() === deck().length - 2"
+    [class.sr-call--last]="active() === deck().length - 1"
+    [class.sr-call--empty]="deck().length === 0"
+  >
+    @if (current(); as card) {
+      @if (card.open; as open) {
+        @for (decision of [open]; track decision.number) {
+          <app-decision-card [card]="decision" (settled)="settled.emit()" />
+        }
+      } @else if (card.answered; as answered) {
+        <app-answered-card [answer]="answered" />
+      }
+    } @else {
+      <div class="sr-panel sr-clear">
+        <span class="sr-clear__ring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        </span>
+        <div>
+          <div class="sr-clear__title">Nothing needs your decision right now.</div>
+          <div class="sr-clear__sub">EDI raises a decision here the moment one waits on you.</div>
+        </div>
+      </div>
+    }
+  </div>
+  @if (deck().length > 0) {
+    <div class="sr-stacknav">
+      <span class="sr-stacknav__count">{{ count() }}</span>
+      <button type="button" class="sr-stacknav__btn" aria-label="Previous card" [disabled]="active() === 0" (click)="show(active() - 1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+      </button>
+      <button type="button" class="sr-stacknav__btn" aria-label="Next card" [disabled]="active() === deck().length - 1" (click)="show(active() + 1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+      </button>
+    </div>
+  }
+</div>

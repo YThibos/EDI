@@ -7,7 +7,7 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S6, tracker and time, on top of the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
+The repository is at slice S7, console and boards, on top of the tracker and time of slice S6, the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
 The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
@@ -18,6 +18,7 @@ A ship's brief names the exact validation pipeline call with the intent EDI wrot
 EDI watches every open draft, follows a merge the forge reports by refreshing the clone before any follow-up work and cleaning up the task once its work is landed, and refuses any push from an isolated copy to a repository its project does not register.
 Every task gets its work key at intake: the next EDI-native key of its project, a ticket the captain chooses or has created through a decision on a JIRA project, or the key it was given once its tracker confirms it; a JIRA ticket then joins the active sprint when work starts, links the draft, and moves to the after-merge status once the merge is followed.
 EDI writes the activity ledger the time-booking tool books from, asks workers for the time they worked while the machine profile says so, and can plan unplanned work in a research task before an implementation worker builds it, measuring that pilot against unplanned ships until the captain decides.
+The EDI console shows the same fleet as a live sitrep page in the approved dark skin, where the captain signs in through a one-time link and answers decisions as their own word; a scout arms its Lavish research board through EDI, and the core listens to it, passing each round to the scout's inbox and each answer to the decisions the board is bound to.
 
 ## Parts
 
@@ -134,6 +135,30 @@ edi dispatch fix-horn --category bugfix --cause-unknown                         
 
 With `"researchFirst": true` on `implementation-unplanned` or `bugfix` in `config/dispatch-rules.json`, a ship's first dispatch adds and launches a research scout that writes the plan, and the ship waits for it; dispatching the ship again once the scout is done runs it as `implementation` with the plan in its brief.
 The activity ledger is `$EDI_HOME/state/fleet-ledger.jsonl`.
+
+### Console
+
+The core serves the EDI console on its own port; `edi console` opens it in the browser through a link that signs in once, within two minutes, and the session lasts twelve hours.
+
+```sh
+edi console                                         # open the console in the browser, signed in
+edi sitrep --board                                  # print the sitrep, then open its page in the console
+```
+
+The sitrep page shows what needs a decision, what is ongoing, what landed this week and what is charted next, and follows every change as it happens.
+Each decision card takes an option, the captain's own words, or both, and records them verbatim as the captain's answer; Reconcile asks the primary to re-check the decision against reality instead of answering it.
+The console opens through `cmd.exe /c start` from `/mnt/c` on WSL; elsewhere, or when that fails, the command prints the sign-in link instead.
+
+### Research boards
+
+A scout writes its Lavish board in its task's directory, opens it with `lavish-axi`, and has EDI listen to it:
+
+```sh
+edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --bind D58,D59
+```
+
+The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops; each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` (with `option`) or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word.
+A board stops listening when the captain ends its session or its task is cleaned up.
 
 ## Documentation
 

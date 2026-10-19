@@ -1,0 +1,6 @@
+session:
+  file: /home/user/.edi/data/tasks/lantern-research/board.html
+  status: feedback
+  session_ended: true
+  ended_by: user
+next_step: The user ended the session without feedback. Stop polling /home/user/.edi/data/tasks/lantern-research/board.html.

@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
@@ -57,7 +59,7 @@ class FleetSnapshotQueryTest {
 
         assertThat(fleet.decisions()).extracting(open -> open.decision().number(), open -> open.task().id())
                 .containsExactly(tuple(new DecisionNumber(58), new TaskId("lamp-choice")));
-        assertThat(fleet.ongoing()).extracting(Task::id).containsExactly(new TaskId("horn"));
+        assertThat(fleet.ongoing()).extracting(ongoing -> ongoing.task().id()).containsExactly(new TaskId("horn"));
         assertThat(fleet.parked()).extracting(parked -> parked.task().id()).containsExactly(new TaskId("mast"));
         assertThat(fleet.queued()).extracting(Task::id).containsExactly(new TaskId("lantern"));
         assertThat(fleet.isQuiet()).isFalse();
@@ -125,6 +127,39 @@ class FleetSnapshotQueryTest {
         assertThat(fleet.ongoing()).isEmpty();
         assertThat(fleet.queued()).extracting(Task::id).containsExactly(new TaskId("horn"), new TaskId("deck"));
         assertThat(fleet.isQuiet()).isTrue();
+    }
+
+    @Test
+    void carriesWhatEachOngoingTaskIsDoingTheWorkThatLandedThisWeekAndWhatTheCaptainAnsweredToday() {
+        add(ship("horn", "Tune the horn"));
+        add(ship("lantern", "Rework the lantern"));
+        add(ship("anchor", "Raise the anchor"));
+        add(captainItem("lamp-choice", "Choose the lamp"));
+        home.putInFlight(new TaskId("horn"));
+        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", "abc123", null), TestHome.START);
+        home.markDone(new TaskId("anchor"));
+        home.clock().advance(Duration.ofDays(8));
+        home.markDone(new TaskId("lantern"));
+        raise("lamp-choice");
+        home.answerDecision().answer(new TaskReference.ByDecision(new DecisionNumber(58)),
+                new GivenAnswer("A: the simple way", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+
+        FleetSnapshot fleet = home.fleetSnapshot().snapshot();
+
+        assertThat(fleet.ongoing()).singleElement().satisfies(horn -> {
+            assertThat(horn.pipelineRun().activeStep()).isEqualTo("review");
+            assertThat(horn.worker()).isNull();
+            assertThat(horn.delivery()).isNull();
+        });
+        assertThat(fleet.landed()).extracting(landed -> landed.task().id()).containsExactly(new TaskId("lantern"));
+        assertThat(fleet.answered()).singleElement().satisfies(answered -> {
+            assertThat(answered.decision().answer().verbatim()).isEqualTo("A: the simple way");
+            assertThat(answered.task().id()).isEqualTo(new TaskId("lamp-choice"));
+        });
+
+        home.clock().advance(Duration.ofHours(25));
+
+        assertThat(home.fleetSnapshot().snapshot().answered()).isEmpty();
     }
 
     private void add(NewTask task) {

@@ -18,8 +18,8 @@
         <skipTests>false</skipTests>
         <sonar.sources>src</sonar.sources>
         <sonar.tests>src</sonar.tests>
-        <sonar.exclusions>**/*.spec.ts</sonar.exclusions>
-        <sonar.test.inclusions>**/*.spec.ts</sonar.test.inclusions>
+        <sonar.exclusions>**/*.spec.ts,**/*.fixture.ts</sonar.exclusions>
+        <sonar.test.inclusions>**/*.spec.ts,**/*.fixture.ts</sonar.test.inclusions>
     </properties>
 
     <build>

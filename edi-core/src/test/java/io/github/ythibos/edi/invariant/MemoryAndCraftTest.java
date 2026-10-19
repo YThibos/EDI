@@ -19,12 +19,16 @@ import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BriefFixtures;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.console.ConsoleSitrep;
+import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
+import tools.jackson.databind.json.JsonMapper;
 
 @DisplayName("4.7 Memory and craft")
 class MemoryAndCraftTest {
@@ -148,6 +152,8 @@ class MemoryAndCraftTest {
     class FleetSizedDataNeverTravelsAsAnArgument {
 
         private static final long TWO_MEGABYTES = 2_000_000;
+        private static final int CHARTED_ON_THE_BOARD = 20;
+        private static final int BOARD_DOCUMENT_CEILING = 16_384;
         private static final int SITREP_PANE_COLUMNS = 90;
 
         @Test
@@ -178,9 +184,18 @@ class MemoryAndCraftTest {
         }
 
         @Test
+        @Tag("adapter")
         @DisplayName("AT-36 the sitrep board renders from a 2 MB backlog fixture")
-        void theSitrepBoardRendersFromALargeBacklog() {
-            Pending.until(Slice.S7);
+        void theSitrepBoardRendersFromALargeBacklog() throws IOException {
+            TestHome home = ReportGoldenCases.homeIn(directory);
+            ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
+
+            ConsoleSitrep board = new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT);
+
+            assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);
+            assertThat(board.chartedTotal()).isEqualTo(ReportGoldenCases.TWO_MEGABYTE_TASKS);
+            assertThat(board.charted()).hasSize(CHARTED_ON_THE_BOARD).first().extracting(ConsoleSitrep.Charted::title).isEqualTo("Queued work item 1");
+            assertThat(new JsonMapper().writeValueAsString(board)).hasSizeLessThan(BOARD_DOCUMENT_CEILING);
         }
 
         private static long charactersOfTheBacklog(TestHome home) {

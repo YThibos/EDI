@@ -88,7 +88,8 @@ class ApiTest {
         HttpResponse<String> refused = send(HttpRequest.newBuilder(uri("/api/backlog")).GET());
 
         assertThat(refused.statusCode()).isEqualTo(401);
-        assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, or the token EDI gave a worker at launch.\n");
+        assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, the token EDI gave a worker at launch, "
+                + "or a console session opened through edi console.\n");
         assertThat(send(HttpRequest.newBuilder(uri("/api/health")).GET()).statusCode()).isEqualTo(200);
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(HOME.resolve("state/core.token")))).isEqualTo("rw-------");
     }

@@ -1,0 +1,18 @@
+<div class="sr-stats">
+  <div class="sr-stat" [class.sr-stat--hot]="needYou() > 0" [class.sr-stat--call]="needYou() === 0">
+    <span class="sr-stat__num">{{ needYou() }}</span>
+    <span class="sr-stat__label">need you</span>
+  </div>
+  <div class="sr-stat" [class.sr-stat--live]="ongoing() > 0">
+    <span class="sr-stat__num">{{ ongoing() }}</span>
+    <span class="sr-stat__label">ongoing</span>
+  </div>
+  <div class="sr-stat">
+    <span class="sr-stat__num">{{ landed() }}</span>
+    <span class="sr-stat__label">landed recently</span>
+  </div>
+  <div class="sr-stat">
+    <span class="sr-stat__num">{{ charted() }}</span>
+    <span class="sr-stat__label">charted next</span>
+  </div>
+</div>

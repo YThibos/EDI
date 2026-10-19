@@ -4,6 +4,11 @@ import java.util.Optional;
 
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
@@ -28,6 +33,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunFinished;
 import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecheckAsked;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
@@ -101,15 +107,30 @@ public final class WakeRule {
             case TicketUpdateRefused refused -> wake(WakeKind.TICKET_REFUSED, refused, null,
                     refused.update() + " of " + refused.key() + ": " + refused.because());
             case TaskKeyed keyed -> wake(WakeKind.TASK_KEYED, keyed, null, keyed.key().toString());
-            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, DecisionAnswered _, TaskDone _, DispatchDeferred _,
+            case DecisionAnswered answered -> wake(WakeKind.DECISION_ANSWERED, answered, null,
+                    answered.number() + " in the " + answered.answer().channel().word() + ": " + answered.answer().verbatim());
+            case RecheckAsked asked -> wake(WakeKind.RECHECK_ASKED, asked, null, recheckOf(asked));
+            case BoardAnswered answered -> wake(WakeKind.BOARD_ANSWERED, answered, null, roundOf(answered));
+            case BoardAnswerRefused refused -> wake(WakeKind.BOARD_ANSWER_REFUSED, refused, null, refused.number() + ": " + refused.because());
+            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, TaskDone _, DispatchDeferred _,
                     TaskDispatched _, WorkerStarted _, WorkerRetired _, SteerSent _, SteerReceived _, SteerAcknowledged _, SteerNotReceived _,
                     ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
                     WorkerNotified _, WorkerSessionEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _, RecoveryFailed _,
                     WorkerStopRequested _, RecoveryCostRecorded _, DeliveryRefused _, DraftRecorded _, DraftOpened _, CloneRefreshed _,
                     ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, PipelineRunSeen _, PipelineRunFinished _,
                     TicketCreated _, TicketChoiceRefused _, TicketAddedToSprint _, TicketLinked _, TicketTransitioned _, ResearchQueuedFirst _,
-                    ReviewCounted _ -> Optional.empty();
+                    ReviewCounted _, BoardArmed _, BoardClosed _, BoardRetired _ -> Optional.empty();
         };
+    }
+
+    private static String recheckOf(RecheckAsked asked) {
+        return asked.note().isEmpty() ? asked.number().toString() : asked.number() + " (\"" + asked.note() + "\")";
+    }
+
+    private static String roundOf(BoardAnswered answered) {
+        String ending = answered.sessionEnded() ? ", and the captain ended the session" : "";
+        return "board " + answered.board() + " round " + answered.round() + ": " + answered.prompts() + " prompt" + (answered.prompts() == 1 ? "" : "s")
+                + ending;
     }
 
     private static Optional<Wake> statusWake(StatusReported reported) {

@@ -2,6 +2,7 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -101,6 +102,12 @@ public class TaskStore {
 
     public List<Task> inState(TaskState state) {
         return tasks(store.sql(SELECT_TASKS + "where state = :state order by rowid").param("state", state.word()));
+    }
+
+    public List<Task> closedSince(TaskState state, Instant since) {
+        return tasks(store.sql(SELECT_TASKS + "where state = :state and closed_at >= :since order by closed_at desc, rowid desc")
+                .param("state", state.word())
+                .param("since", Columns.text(since)));
     }
 
     public List<Blocker> blockersOf(Task task) {

@@ -5,6 +5,7 @@ import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
@@ -64,5 +65,11 @@ public sealed interface Confirmation {
     }
 
     record CleanedUp(Task task) implements Confirmation {
+    }
+
+    record BoardArmed(Board board) implements Confirmation {
+    }
+
+    record RecheckAsked(DecisionNumber number) implements Confirmation {
     }
 }

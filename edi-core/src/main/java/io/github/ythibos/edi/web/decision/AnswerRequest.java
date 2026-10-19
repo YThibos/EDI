@@ -9,10 +9,10 @@ import io.github.ythibos.edi.domain.decision.OptionKey;
 
 record AnswerRequest(String option, String text, String interpretation) {
 
-    GivenAnswer givenInChat() {
+    GivenAnswer givenThrough(AnswerChannel channel) {
         if (text == null) {
             throw new IllegalArgumentException("An answer records the captain's own words.");
         }
-        return new GivenAnswer(text, optional(option, OptionKey::parse), orEmpty(interpretation), AnswerChannel.CHAT);
+        return new GivenAnswer(text, optional(option, OptionKey::parse), orEmpty(interpretation), channel);
     }
 }

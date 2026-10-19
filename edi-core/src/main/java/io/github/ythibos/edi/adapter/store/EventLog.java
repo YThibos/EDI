@@ -8,10 +8,16 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
@@ -36,6 +42,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunFinished;
 import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
+import io.github.ythibos.edi.domain.event.DomainEvent.RecheckAsked;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryChosen;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
@@ -234,6 +241,18 @@ public class EventLog {
                     .put("because", refused.because());
             case ResearchQueuedFirst queued -> payload.put("research", queued.research().value()).put("category", queued.category().value());
             case ReviewCounted counted -> payload.put("rounds", counted.review().rounds()).put("findings", counted.review().findings());
+            case RecheckAsked asked -> payload.put("number", asked.number().toString()).put("note", asked.note());
+            case BoardArmed armed -> withEach(payload.put("board", armed.board().value()).put("file", armed.file()), "bound",
+                    armed.bound().stream().map(DecisionNumber::toString).toList());
+            case BoardAnswered answered -> payload.put("board", answered.board().value())
+                    .put("round", answered.round())
+                    .put("prompts", answered.prompts())
+                    .put("sessionEnded", answered.sessionEnded());
+            case BoardClosed closed -> payload.put("board", closed.board().value());
+            case BoardRetired retired -> payload.put("board", retired.board().value());
+            case BoardAnswerRefused refused -> payload.put("number", refused.number().toString())
+                    .put("board", refused.board().value())
+                    .put("because", refused.because());
         };
     }
 

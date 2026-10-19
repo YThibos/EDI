@@ -1,0 +1,135 @@
+.sr-callwrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sr-call {
+  position: relative;
+  display: grid;
+}
+
+.sr-call::before,
+.sr-call::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.sr-call::before {
+  transform: translateY(8px) scaleX(0.965);
+  opacity: 0.6;
+}
+
+.sr-call::after {
+  transform: translateY(16px) scaleX(0.93);
+  opacity: 0.3;
+}
+
+.sr-call--penult::after,
+.sr-call--last::before,
+.sr-call--last::after,
+.sr-call--empty::before,
+.sr-call--empty::after {
+  display: none;
+}
+
+.sr-call > * {
+  grid-area: 1 / 1;
+  z-index: 1;
+  min-width: 0;
+}
+
+.sr-call--deck {
+  margin-bottom: 16px;
+}
+
+.sr-stacknav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sr-stacknav__count {
+  flex: 1 1 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.sr-stacknav__btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  background: var(--panel-sunk);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color 120ms, color 120ms;
+}
+
+.sr-stacknav__btn:hover {
+  border-color: var(--ion-line);
+  color: var(--ion);
+}
+
+.sr-stacknav__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.sr-stacknav__btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sr-stacknav__btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.sr-clear {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 20px;
+}
+
+.sr-clear__ring {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  border: 1px solid rgba(62, 224, 161, 0.45);
+  background: var(--green-soft);
+  box-shadow: 0 0 18px rgba(62, 224, 161, 0.18);
+}
+
+.sr-clear__ring svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sr-clear__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-hi);
+}
+
+.sr-clear__sub {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin-top: 2px;
+}

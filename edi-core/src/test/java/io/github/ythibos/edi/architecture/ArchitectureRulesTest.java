@@ -44,7 +44,9 @@ class ArchitectureRulesTest {
             "GLAB", "io.github.ythibos.edi.adapter.forge..",
             "GH", "io.github.ythibos.edi.adapter.forge..",
             "NO_MISTAKES", "io.github.ythibos.edi.adapter.pipeline..",
-            "SHELL", "io.github.ythibos.edi.adapter.build..");
+            "SHELL", "io.github.ythibos.edi.adapter.build..",
+            "LAVISH", "io.github.ythibos.edi.adapter.board..",
+            "CMD", "io.github.ythibos.edi.adapter.browser..");
 
     @ArchTest
     static final ArchRule theDomainDependsOnlyOnItselfAndTheCoreJavaLibrary = classes()

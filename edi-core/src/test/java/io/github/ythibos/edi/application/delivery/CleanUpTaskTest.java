@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -23,6 +25,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.FakeBoardHost;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -123,6 +126,26 @@ class CleanUpTaskTest {
         assertThat(dispatched.launched().worktree()).doesNotExist();
         assertThat(home.tasks().get(new TaskId("map-caves")).state()).isEqualTo(TaskState.DONE);
         assertThat(home.taskCosts().of(new TaskId("map-caves"))).map(TaskCost::workers).contains(TokenUsage.NONE);
+    }
+
+    @Test
+    void retiresTheResearchBoardOfACleanedUpScoutAndStopsItsListener() throws IOException, InterruptedException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-5"));
+        Worker scout = dispatched.launched().worker();
+        Path taskDirectory = home.home().taskDirectory(new TaskId("map-caves"));
+        Path board = Files.writeString(Files.createDirectories(taskDirectory).resolve("board.html"), "<!doctype html>\n");
+        home.boardHost().holdsTheNextPollOpen();
+        CountDownLatch polled = home.boardHost().expectPolls(1);
+        home.armBoard().arm(scout.id(), TaskReference.parse("map-caves"), board, List.of());
+        FakeBoardHost.await(polled);
+        home.recordStatus().report(scout.id(), StatusState.DONE, null, null, "The caves are mapped.");
+        Files.writeString(taskDirectory.resolve("report.md"), "The caves run north.\n");
+
+        cleanUp("map-caves");
+
+        home.boardHost().awaitStopOfTheHeldPoll();
+        assertThat(home.boards().listening()).isEmpty();
+        assertThat(home.eventTypesOf(new TaskId("map-caves"))).contains("BoardRetired");
     }
 
     private void cleanUp(String task) {

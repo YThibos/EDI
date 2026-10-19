@@ -1,0 +1,110 @@
+package io.github.ythibos.edi.application.board;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.DecisionStore;
+import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
+import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+
+@Service
+public class ArmBoard {
+
+    private static final String HTML = ".html";
+
+    private final EdiHome home;
+    private final TaskStore tasks;
+    private final DecisionStore decisions;
+    private final BoardStore boards;
+    private final EventLog events;
+    private final BoardListeners listeners;
+    private final Clock clock;
+    private final TransactionTemplate transaction;
+
+    public ArmBoard(EdiHome home, TaskStore tasks, DecisionStore decisions, BoardStore boards, EventLog events, BoardListeners listeners, Clock clock,
+            TransactionTemplate transaction) {
+        this.home = home;
+        this.tasks = tasks;
+        this.decisions = decisions;
+        this.boards = boards;
+        this.events = events;
+        this.listeners = listeners;
+        this.clock = clock;
+        this.transaction = transaction;
+    }
+
+    public Board arm(WorkerId worker, TaskReference reference, Path file, List<DecisionNumber> bound) {
+        Board armed = transaction.execute(_ -> armedOrRebound(worker, tasks.get(reference), file, List.copyOf(bound)));
+        listeners.listenTo(armed);
+        return armed;
+    }
+
+    private Board armedOrRebound(WorkerId worker, Task task, Path file, List<DecisionNumber> bound) {
+        Instant now = clock.now();
+        requireItsOwnWorker(task, worker);
+        String board = boardFileOf(task, file).toString();
+        bound.forEach(this::requireOpen);
+        Board armed = boards.listeningAt(board).map(listening -> rebound(listening, task, bound)).orElseGet(() -> boards.arm(task.id(), board, bound, now));
+        events.record(new BoardArmed(task.id(), armed.id(), armed.file(), armed.bound()), Actor.worker(worker), now);
+        return armed;
+    }
+
+    private static void requireItsOwnWorker(Task task, WorkerId worker) {
+        if (!worker.task().equals(task.id())) {
+            throw new Refusal(worker + " arms boards for its own task, " + worker.task() + ", not for " + task.id() + ".");
+        }
+    }
+
+    private Path boardFileOf(Task task, Path file) {
+        Path taskDirectory = home.taskDirectory(task.id());
+        if (!file.isAbsolute() || !file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(HTML) || !Files.isRegularFile(file)) {
+            throw new Refusal("A research board is an HTML file that exists, named by its absolute path; " + file + " is not.");
+        }
+        Path real = realPathOf(file);
+        if (!Files.isDirectory(taskDirectory) || !real.startsWith(realPathOf(taskDirectory))) {
+            throw new Refusal("A research board lives in its task's directory, " + taskDirectory + "; " + file + " does not.");
+        }
+        return real;
+    }
+
+    private void requireOpen(DecisionNumber number) {
+        if (!decisions.get(number).isOpen()) {
+            throw new Refusal(number + " is already answered; a board answers only open decisions.");
+        }
+    }
+
+    private Board rebound(Board listening, Task task, List<DecisionNumber> bound) {
+        if (!listening.task().equals(task.id())) {
+            throw new Refusal(listening.file() + " is already armed for " + listening.task() + ".");
+        }
+        Board rebound = listening.rebound(bound);
+        boards.update(rebound);
+        return rebound;
+    }
+
+    private static Path realPathOf(Path path) {
+        try {
+            return path.toRealPath();
+        } catch (IOException unreadable) {
+            throw new Refusal(path + " cannot be read: " + unreadable.getMessage());
+        }
+    }
+}

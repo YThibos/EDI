@@ -3,7 +3,6 @@ package io.github.ythibos.edi.testing;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 
 public final class ForgeStandIns {
@@ -66,8 +65,6 @@ public final class ForgeStandIns {
     }
 
     private void install(String tool) throws IOException {
-        Path script = place.resolve(tool);
-        Files.writeString(script, STAND_IN.formatted(place));
-        Files.setPosixFilePermissions(script, PosixFilePermissions.fromString("rwx------"));
+        StandInScripts.installed(place.resolve(tool), STAND_IN.formatted(place));
     }
 }

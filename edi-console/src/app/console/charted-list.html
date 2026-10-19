@@ -1,0 +1,25 @@
+<div class="sr-panel">
+  <div class="sr-rows">
+    @for (charted of tasks(); track charted.task) {
+      <div class="sr-row">
+        <div class="sr-row__main">
+          <div class="sr-row__title">{{ charted.title }}</div>
+          <div class="sr-row__sub">
+            @if (charted.waiting) {
+              {{ charted.waiting }} ·
+            }
+            {{ projectsOf(charted.projects, charted.task) }}
+          </div>
+        </div>
+        @if (charted.waiting) {
+          <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>waiting</span>
+        }
+      </div>
+    } @empty {
+      <div class="sr-empty">Nothing is queued.</div>
+    }
+    @if (total() > tasks().length) {
+      <span class="sr-morechip">+{{ total() - tasks().length }} more queued · edi backlog charts them all</span>
+    }
+  </div>
+</div>

@@ -24,7 +24,11 @@ public enum WakeKind {
     CLEANUP_REFUSED,
     DECISION_RAISED,
     TASK_KEYED,
-    TICKET_REFUSED;
+    TICKET_REFUSED,
+    DECISION_ANSWERED,
+    RECHECK_ASKED,
+    BOARD_ANSWERED,
+    BOARD_ANSWER_REFUSED;
 
     public static WakeKind named(String word) {
         return Arrays.stream(values())

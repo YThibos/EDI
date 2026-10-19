@@ -52,6 +52,11 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case DECISION_RAISED -> wake.task() + ": EDI raised " + wake.detail() + "; put it before the captain.";
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";
             case TICKET_REFUSED -> wake.task() + ": the tracker refused " + wake.detail();
+            case DECISION_ANSWERED -> wake.task() + ": the captain answered " + wake.detail() + "; carry the answer to its work.";
+            case RECHECK_ASKED -> wake.task() + ": the captain asks to re-check " + wake.detail()
+                    + "; verify the latest state against reality, then close it with evidence or keep it open with a note.";
+            case BOARD_ANSWERED -> wake.task() + ": the captain answered on " + wake.detail() + "; its worker has them in its inbox.";
+            case BOARD_ANSWER_REFUSED -> wake.task() + ": a board answer to " + wake.detail();
         };
     }
 

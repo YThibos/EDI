@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.report.CaptainReport;
@@ -141,6 +142,25 @@ class DecisionsAndReportingTest {
             assertThat(recorded.answeredAt()).isEqualTo(TestHome.START.plus(Duration.ofMinutes(5)));
             assertThat(home.decisionList().open().decisions()).isEmpty();
             assertThat(captainReport(home, Turn.NONE)).doesNotContain(number.toString(), "Which lamp?").contains("nothing open");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-20 an answer given in the EDI console lands verbatim, as the captain's own word, and wakes the primary")
+        void anAnswerGivenInTheConsoleLandsVerbatim() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
+            home.addTask().add(captainItem("lamp-choice", "Choose the lamp"), Actor.PRIMARY);
+            DecisionNumber number = raise(home, "lamp-choice", "Which lamp?");
+
+            home.answerDecision().answer(new TaskReference.ByDecision(number), new GivenAnswer(VERBATIM, new OptionKey('A'), "", AnswerChannel.CONSOLE),
+                    Actor.CAPTAIN);
+
+            CaptainAnswer recorded = home.decisions().get(number).answer();
+            assertThat(recorded.verbatim()).isEqualTo(VERBATIM);
+            assertThat(recorded.channel()).isEqualTo(AnswerChannel.CONSOLE);
+            assertThat(home.jdbc().sql("select actor from event where type = 'DecisionAnswered'").query(String.class).single()).isEqualTo("captain");
+            assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.DECISION_ANSWERED);
+            assertThat(captainReport(home, Turn.NONE)).doesNotContain(number.toString()).contains("nothing open");
         }
     }
 

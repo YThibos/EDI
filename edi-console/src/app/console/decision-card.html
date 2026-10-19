@@ -1,0 +1,77 @@
+<div class="sr-panel sr-decision">
+  <div class="sr-decision__pad">
+    <div class="sr-decision__top">
+      <span class="sr-badge sr-badge--solid"><span class="sr-badge__dot"></span>decision</span>
+      <span class="sr-decision__repo">{{ card().number }} · {{ projects() }}</span>
+    </div>
+    <h3 class="sr-decision__title">{{ card().title }}</h3>
+    @if (card().context) {
+      <div class="sr-ctx">
+        <div class="sr-ctx__row">
+          <span class="sr-ctx__k">about</span>
+          <span class="sr-ctx__v">{{ card().context }}</span>
+        </div>
+      </div>
+    }
+    <form class="sr-decision__form" (submit)="answer($event)">
+      <div class="sr-opts" role="radiogroup" [attr.aria-label]="'Options for ' + card().number">
+        @for (option of card().options; track option.key) {
+          <label class="sr-opt">
+            <input
+              type="radio"
+              [name]="card().number"
+              [value]="option.key"
+              [checked]="choice() === option.key"
+              [attr.aria-label]="option.key + ': ' + option.text + (option.key === card().recommended.key ? ' (recommended)' : '')"
+              (change)="choice.set(option.key)"
+            />
+            <span class="sr-opt__body">
+              <span class="sr-opt__label"><span class="sr-opt__key">{{ option.key }}</span>{{ option.text }}</span>
+              @if (option.key === card().recommended.key) {
+                <span class="sr-opt__hint">{{ card().recommended.why }}</span>
+              }
+            </span>
+            @if (option.key === card().recommended.key) {
+              <span class="sr-opt__rec">rec</span>
+            }
+          </label>
+        }
+        <label class="sr-opt">
+          <input
+            type="radio"
+            [name]="card().number"
+            [value]="reconcile"
+            [checked]="choice() === reconcile"
+            aria-label="Reconcile: re-check the latest state instead of answering"
+            (change)="choice.set(reconcile)"
+          />
+          <span class="sr-opt__body">
+            <span class="sr-opt__label">Reconcile</span>
+            <span class="sr-opt__hint">Re-check the latest state, then close this with evidence or keep it open with a note</span>
+          </span>
+        </label>
+      </div>
+      <input
+        class="sr-freeform"
+        type="text"
+        name="words"
+        placeholder="or answer in your own words…"
+        [attr.aria-label]="'Your own words on ' + card().number"
+        [value]="words()"
+        (input)="words.set($any($event.target).value)"
+      />
+      <div class="sr-decision__foot">
+        <button type="submit" class="sr-btn" [disabled]="!canAnswer()">Answer</button>
+        @if (recheckAsked()) {
+          <span class="sr-queued">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            re-check asked
+          </span>
+        }
+        @if (refusal(); as sentence) {
+          <span class="sr-limit" role="alert">{{ sentence }}</span>
+        }
+      </div>
+    </form>
+  </div>
+</div>

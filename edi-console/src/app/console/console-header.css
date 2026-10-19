@@ -1,0 +1,93 @@
+:host {
+  display: contents;
+}
+
+.sr-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(6, 10, 23, 0.82);
+  backdrop-filter: saturate(140%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.sr-nav__inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sr-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sr-brand__mark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  color: var(--ion);
+  filter: drop-shadow(0 0 6px rgba(86, 200, 255, 0.45));
+}
+
+.sr-brand__wm {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  color: var(--text-hi);
+  line-height: 1;
+}
+
+.sr-brand__sub {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sr-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex: none;
+}
+
+.sr-clock__sd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--ion);
+}
+
+.sr-clock__home {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+@media (max-width: 560px) {
+  .sr-nav__inner {
+    padding: 0 16px;
+  }
+
+  .sr-brand__sub {
+    display: none;
+  }
+}

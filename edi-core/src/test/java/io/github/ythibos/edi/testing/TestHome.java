@@ -27,7 +27,9 @@ import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
+import io.github.ythibos.edi.adapter.store.ConsoleAccessStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
@@ -50,8 +52,14 @@ import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
 import io.github.ythibos.edi.adapter.tracker.NoTracker;
+import io.github.ythibos.edi.application.access.ConsoleAccess;
+import io.github.ythibos.edi.application.board.ArmBoard;
+import io.github.ythibos.edi.application.board.BoardListeners;
+import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
+import io.github.ythibos.edi.application.board.SettleBoardAnswers;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
+import io.github.ythibos.edi.application.decision.AskForARecheck;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.delivery.CaptainCheckouts;
@@ -106,6 +114,7 @@ import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
+import io.github.ythibos.edi.application.worker.InboxNotice;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
 import io.github.ythibos.edi.application.worker.RecordStatus;
@@ -160,6 +169,9 @@ public final class TestHome {
     private final EventCursorStore eventCursors;
     private final UnplannedShipStore unplannedShips;
     private final PipelineReviewStore reviews;
+    private final BoardStore boards;
+    private final FakeBoardHost boardHost = new FakeBoardHost();
+    private BoardListeners boardListeners;
 
     private TestHome(EdiHome home, DataSource store, FakeWorkerRuntime runtime, ManualClock clock) {
         this.home = home;
@@ -188,6 +200,7 @@ public final class TestHome {
         this.eventCursors = new EventCursorStore(jdbc);
         this.unplannedShips = new UnplannedShipStore(jdbc);
         this.reviews = new PipelineReviewStore(jdbc);
+        this.boards = new BoardStore(jdbc);
     }
 
     public static TestHome in(Path directory) throws IOException {
@@ -339,7 +352,7 @@ public final class TestHome {
     }
 
     public FleetSnapshotQuery fleetSnapshot() {
-        return new FleetSnapshotQuery(tasks, decisions, transaction);
+        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, clock, transaction);
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {
@@ -450,8 +463,8 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(home, tasks, workers, taskCosts, reviews, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, git, runtime, clock, transaction);
+        return new CleanUpTask(home, tasks, workers, taskCosts, reviews, boards, events, workerContext(), landedWork(),
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, git, runtime, boardListeners(), clock, transaction);
     }
 
     public FollowMerges followMerges() {
@@ -511,7 +524,7 @@ public final class TestHome {
     }
 
     public SteerWorker steerWorker() {
-        return new SteerWorker(tasks, workers, inbox, events, runtime, clock, transaction);
+        return new SteerWorker(tasks, workers, inbox, events, new InboxNotice(runtime), clock, transaction);
     }
 
     public WorkerHooks workerHooks() {
@@ -616,6 +629,41 @@ public final class TestHome {
     public CheckMechanicalChange checkMechanicalChange() {
         return new CheckMechanicalChange(workers, workerContext(), git, new ProjectBuild(programs), runtime, launchWorker(), deliverAcceptedWork(),
                 events, clock, transaction);
+    }
+
+    public BoardStore boards() {
+        return boards;
+    }
+
+    public FakeBoardHost boardHost() {
+        return boardHost;
+    }
+
+    public synchronized BoardListeners boardListeners() {
+        if (boardListeners == null) {
+            boardListeners = new BoardListeners(boards, boardHost, receiveBoardFeedback(), settleBoardAnswers(), transaction);
+        }
+        return boardListeners;
+    }
+
+    public ArmBoard armBoard() {
+        return new ArmBoard(home, tasks, decisions, boards, events, boardListeners(), clock, transaction);
+    }
+
+    public ReceiveBoardFeedback receiveBoardFeedback() {
+        return new ReceiveBoardFeedback(boards, decisions, inbox, workers, events, new InboxNotice(runtime), settleBoardAnswers(), clock, transaction);
+    }
+
+    public SettleBoardAnswers settleBoardAnswers() {
+        return new SettleBoardAnswers(boards, decisions, events, answerDecision(), clock, transaction);
+    }
+
+    public ConsoleAccess consoleAccess() {
+        return new ConsoleAccess(new ConsoleAccessStore(jdbc), clock, transaction);
+    }
+
+    public AskForARecheck askForARecheck() {
+        return new AskForARecheck(tasks, decisions, events, clock, transaction);
     }
 
     public List<String> eventTypesOf(TaskId task) {
