@@ -49,6 +49,13 @@ class PersonalConfigurationTest {
                 .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("positive duration");
     }
 
+    @Test
+    void writesTheAddressWordOnlyIntoAHomeWithoutAConfiguration() throws IOException {
+        assertThat(new PersonalConfiguration(new EdiHome(home)).contentAddressing(CaptainAddress.DEFAULT)).isEqualTo("identity:\n  address: Commander\n");
+        assertThat(configurationOf("presence:\n  quietBatch: PT10M\n").contentAddressing(CaptainAddress.DEFAULT))
+                .isEqualTo("presence:\n  quietBatch: PT10M\n");
+    }
+
     private PersonalConfiguration configurationOf(String content) throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/personal.yaml"), content);

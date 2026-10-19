@@ -47,6 +47,10 @@ public class TaskStore {
                 .single() > 0;
     }
 
+    public List<TaskId> ids() {
+        return store.sql("select id from task order by rowid").query((row, _) -> new TaskId(row.getString("id"))).list();
+    }
+
     public TaskId firstFreeIdFrom(TaskId slug) {
         TaskId candidate = slug;
         for (int suffix = 2; contains(candidate); suffix++) {

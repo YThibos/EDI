@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.WorkerFixtures;
 
 @Tag("adapter")
 class ForkMigrationPlannerTest {
@@ -84,7 +85,7 @@ class ForkMigrationPlannerTest {
         assertThat(plan.tasks()).extracting(task -> task.id().value()).containsExactly("waiting");
         assertThat(plan.tasks().getFirst().intake().blockedBy()).isEmpty();
         assertThat(plan.notes()).extracting(MigrationNote::subject, MigrationNote::note).containsExactly(
-                tuple("Odd-Id", "is not imported: A task id is a kebab-case slug of at most 64 characters, such as fix-login-timeout: Odd-Id"),
+                tuple("Odd-Id", "is not imported: EDI names a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout"),
                 tuple("waiting", "is blocked by Odd-Id, which is not imported; the dependency is dropped"),
                 tuple("waiting", "is blocked by itself; the dependency is dropped"));
     }
@@ -104,6 +105,6 @@ class ForkMigrationPlannerTest {
         Path oldHome = directory.resolve("old-home");
         Files.createDirectories(oldHome.resolve("data"));
         Files.writeString(oldHome.resolve("data/backlog.md"), backlog);
-        return TestHome.in(directory.resolve("edi-home")).forkMigrationPlanner().plan(oldHome);
+        return TestHome.in(directory.resolve("edi-home")).writing("memory/craft-rules.md", WorkerFixtures.CRAFT_RULES).forkMigrationPlanner().plan(oldHome);
     }
 }

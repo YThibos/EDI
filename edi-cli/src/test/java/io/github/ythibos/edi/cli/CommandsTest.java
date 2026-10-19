@@ -185,12 +185,47 @@ class CommandsTest {
     }
 
     @Test
-    void refusesAMigrationThatIsNotADryRun() {
-        int exitCode = edi("", "migrate", "firstofficer", "--from", "/old");
+    void importsTheOldHomeForRealAndOverwritesOnlyWhenTold() {
+        core.answering(200, "Imported\n");
+
+        int exitCode = edi("", "migrate", "firstofficer", "--from", "/old", "--overwrite");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().method()).isEqualTo("POST");
+        assertThat(core.received().target()).isEqualTo("/api/migrations/firstofficer");
+        assertThat(core.received().body()).isEqualTo("{\"from\":\"/old\",\"overwrite\":true}");
+    }
+
+    @Test
+    void refusesADryRunThatWouldOverwrite() {
+        int exitCode = edi("", "migrate", "firstofficer", "--from", "/old", "--dry-run", "--overwrite");
 
         assertThat(exitCode).isEqualTo(2);
-        assertThat(err.toString()).contains("--dry-run");
+        assertThat(err.toString()).contains("A dry run changes nothing, so it takes no --overwrite.");
         assertThat(core.received()).isNull();
+    }
+
+    @Test
+    void adoptsATaskOfTheOldHomeByItsBranchAndCopy() {
+        core.answering(201, "Took over\n");
+
+        int exitCode = edi("", "task", "adopt", "lantern-rework", "--from", "/old", "--branch", "feature/LHT-3", "--worktree", "pool/1/lighthouse",
+                "--session", "0f6c1d2e-3a4b-4c5d-8e9f-a0b1c2d3e4f5");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().target()).isEqualTo("/api/tasks/lantern-rework/adopt");
+        assertThat(core.received().body()).isEqualTo("{\"from\":\"/old\",\"branch\":\"feature/LHT-3\",\"worktree\":\""
+                + Path.of("pool/1/lighthouse").toAbsolutePath().normalize() + "\",\"session\":\"0f6c1d2e-3a4b-4c5d-8e9f-a0b1c2d3e4f5\"}");
+    }
+
+    @Test
+    void adoptsInTheSpecificationsShapeLeavingTheOldHomeToTheCore() {
+        core.answering(201, "Took over\n");
+
+        int exitCode = edi("", "task", "adopt", "lantern-rework", "--branch", "feature/LHT-3", "--worktree", "/pool/1/lighthouse");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().body()).isEqualTo("{\"branch\":\"feature/LHT-3\",\"worktree\":\"/pool/1/lighthouse\"}");
     }
 
     @Test

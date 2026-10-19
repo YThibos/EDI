@@ -7,6 +7,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,9 @@ import io.github.ythibos.edi.domain.tracker.Workflow;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.SupervisionRules;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 @Component
@@ -43,6 +47,7 @@ public class MachineProfile {
 
     private final Path file;
     private final YAMLMapper yaml = new YAMLMapper();
+    private final YAMLMapper writer = ConfigurationYaml.writer();
 
     public MachineProfile(EdiHome home) {
         this.file = home.machineProfile();
@@ -104,6 +109,22 @@ public class MachineProfile {
         return memory == null || memory.startupBudgetTokens() == null ? STARTUP_MEMORY_BUDGET_TOKENS : memory.startupBudgetTokens();
     }
 
+    public boolean namesATracker() {
+        return document().tracker() != null;
+    }
+
+    public String contentWith(CarriedMachineSettings carried) {
+        Optional<String> content = ConfigurationFile.contentOf(file);
+        ObjectNode profile = content.map(this::treeOf).orElseGet(writer::createObjectNode);
+        boolean added = putEachMissing(profile, carried);
+        return added || content.isEmpty() ? writer.writeValueAsString(profile) : content.get();
+    }
+
+    public static ModelRoster workerRosterIn(String profile) {
+        WorkersSection workers = new YAMLMapper().readValue(profile, ProfileDocument.class).workers();
+        return roster(Objects.requireNonNullElse(workers, WorkersSection.NONE));
+    }
+
     private ProfileDocument document() {
         try {
             return ConfigurationFile.contentOf(file).map(content -> yaml.readValue(content, ProfileDocument.class)).orElse(EMPTY);
@@ -133,6 +154,55 @@ public class MachineProfile {
 
     private static Duration durationOf(String written, Duration absent) {
         return written == null ? absent : Duration.parse(written);
+    }
+
+    private ObjectNode treeOf(String content) {
+        try {
+            JsonNode profile = yaml.readTree(content);
+            if (!profile.isObject()) {
+                throw new InvalidConfiguration(file, "it is not a machine profile of named sections.");
+            }
+            return (ObjectNode) profile;
+        } catch (JacksonException unreadable) {
+            throw new InvalidConfiguration(file, unreadable.getOriginalMessage());
+        }
+    }
+
+    private boolean putEachMissing(ObjectNode profile, CarriedMachineSettings carried) {
+        boolean added = false;
+        if (carried.workers() != null) {
+            added |= putIfMissing(profile, "workers", "models", modelsOf(carried.workers()));
+        }
+        if (carried.fleetLedger() != null) {
+            added |= putIfMissing(profile, "time", "fleetLedger", writer.getNodeFactory().booleanNode(carried.fleetLedger()));
+        }
+        if (carried.startupBudgetTokens() != null) {
+            added |= putIfMissing(profile, "memory", "startupBudgetTokens", writer.getNodeFactory().numberNode(carried.startupBudgetTokens()));
+        }
+        if (carried.pauseResurface() != null) {
+            added |= putIfMissing(profile, "supervision", "pauseResurface", writer.getNodeFactory().stringNode(carried.pauseResurface().toString()));
+        }
+        return added;
+    }
+
+    private ArrayNode modelsOf(ModelRoster roster) {
+        ArrayNode models = writer.createArrayNode();
+        roster.strongestFirst().forEach(model -> {
+            ObjectNode entry = models.addObject().put("id", model.id().value());
+            if (!model.takesEffort()) {
+                entry.put("ignoresEffort", true);
+            }
+        });
+        return models;
+    }
+
+    private static boolean putIfMissing(ObjectNode profile, String section, String setting, JsonNode value) {
+        ObjectNode part = profile.get(section) instanceof ObjectNode existing ? existing : profile.putObject(section);
+        if (part.has(setting)) {
+            return false;
+        }
+        part.set(setting, value);
+        return true;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

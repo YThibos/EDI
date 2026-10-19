@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.testkit.engine.EventConditions.event;
@@ -12,6 +13,7 @@ import static org.junit.platform.testkit.engine.TestExecutionResultConditions.me
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,6 +21,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -33,37 +36,68 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.testkit.engine.EngineTestKit;
 
+import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.application.migration.AdoptedTask;
+import io.github.ythibos.edi.application.migration.ArchiveSurvey;
+import io.github.ythibos.edi.application.migration.FileChange;
+import io.github.ythibos.edi.application.migration.HomeChange;
+import io.github.ythibos.edi.application.migration.HomeFile;
 import io.github.ythibos.edi.application.migration.MigrationNote;
 import io.github.ythibos.edi.application.migration.MigrationPlan;
+import io.github.ythibos.edi.application.migration.MigrationReport;
 import io.github.ythibos.edi.application.migration.SetAsideSection;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.worker.HookAnswer;
+import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.presence.PresenceCause;
 import io.github.ythibos.edi.domain.presence.PresenceMode;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
+import io.github.ythibos.edi.domain.project.ProjectKey;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.ExampleHome;
+import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
-import io.github.ythibos.edi.web.migration.MigrationPlanText;
+import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.migration.MigrationReportText;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 
 @DisplayName("Acceptance tests beyond the invariants (12.7 and 17.4)")
 class BeyondTheInvariantsTest {
 
     private static final Path OLD_HOME_FIXTURE = Path.of("src/test/resources/fork-home");
+    private static final String LIGHTHOUSE_REGISTRY = """
+            projects:
+              - name: lighthouse
+                tracker: { kind: edi, projectKey: LHT }
+                forge: { kind: github, path: example-owner/lighthouse, account: example-owner }
+                base: main
+            """;
+    private static final Pattern OUTSIDE_A_CLAUDE_FOLDER_NAME = Pattern.compile("[^A-Za-z0-9]");
+
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
 
     @TempDir
     private Path directory;
@@ -86,12 +120,13 @@ class BeyondTheInvariantsTest {
         Path oldHome = copyOf(OLD_HOME_FIXTURE);
         Map<Path, byte[]> before = contentsOf(oldHome);
 
-        MigrationPlan plan = TestHome.in(directory.resolve("edi-home")).forkMigrationPlanner().plan(oldHome);
+        MigrationReport report = TestHome.in(directory.resolve("edi-home")).migrateFirstofficer().dryRun(oldHome);
+        MigrationPlan plan = report.plan();
 
         assertThat(countsByState(plan.tasks())).containsExactly(
-                Map.entry(TaskState.QUEUED, 8L), Map.entry(TaskState.IN_FLIGHT, 3L), Map.entry(TaskState.DONE, 4L));
+                Map.entry(TaskState.QUEUED, 10L), Map.entry(TaskState.IN_FLIGHT, 3L), Map.entry(TaskState.DONE, 4L));
         assertThat(plan.tasks().stream().collect(Collectors.groupingBy(task -> task.intake().kind(), Collectors.counting())))
-                .containsExactlyInAnyOrderEntriesOf(Map.of(TaskKind.SHIP, 9L, TaskKind.SCOUT, 1L, TaskKind.CAPTAIN, 5L));
+                .containsExactlyInAnyOrderEntriesOf(Map.of(TaskKind.SHIP, 10L, TaskKind.SCOUT, 2L, TaskKind.CAPTAIN, 5L));
         assertThat(plan.tasks().stream().filter(Task::isHeld))
                 .extracting(task -> task.id().value(), task -> task.hold().kind(), task -> task.hold().until())
                 .containsExactly(
@@ -106,22 +141,166 @@ class BeyondTheInvariantsTest {
                         tuple(new DecisionNumber(56), null, AnswerChannel.BOARD));
         assertThat(plan.decisionSequence().highest()).isEqualTo(57);
         assertThat(plan.decisionSequence().firstNewNumber()).isEqualTo(new DecisionNumber(58));
-        assertThat(plan.highestEdiKey()).isEqualTo(WorkKey.parse("EDI-7"));
+        assertThat(plan.highestEdiKey()).as("a key named only in a task's notes").isEqualTo(WorkKey.parse("EDI-9"));
         assertThat(plan.setAside()).containsExactly(
                 new SetAsideSection("Captain's Call (manual holds, all resolved)", List.of("old-call-one", "old-call-two")));
-        assertThat(plan.notes()).extracting(MigrationNote::subject, MigrationNote::note).containsExactly(
-                tuple("fog-horn", "appears again on line 30 of the backlog; only its first entry is imported"),
+        assertThat(plan.oldHarnessWork()).containsExactly("old-harness-polish");
+        assertThat(plan.notes().subList(0, 10)).extracting(MigrationNote::subject, MigrationNote::note).containsExactly(
+                tuple("fog-horn", "appears again on line 31 of the backlog; only its first entry is imported"),
                 tuple("gull-survey", "is blocked by bird-census, which is not in the backlog; the dependency is dropped"),
                 tuple("loose-end", "names no project; the captain sets one"),
                 tuple("relay-mast", "is not imported: its kind secondmate has no counterpart in EDI"),
-                tuple("boat-paint", "has a hold of kind external, which is not a hold for the captain; it is not carried"),
-                tuple("Gate-Repair", "is not imported: A task id is a kebab-case slug of at most 64 characters, such as fix-login-timeout: Gate-Repair"),
+                tuple("boat-paint", "waits on something outside EDI (\"waiting on supplies\"); EDI holds a task only for the captain, so the wait is not"
+                        + " carried"),
+                tuple("Gate-Repair", "is not imported: EDI names a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout"),
+                tuple("night-watch", "waits until 2026-11-15 on something outside EDI (\"waits for a stormy night to test the lamp\"); EDI holds a task"
+                        + " only for the captain, so the wait is not carried"),
+                tuple("polish-follow-up", "is blocked by old-harness-polish, which is not imported; the dependency is dropped"),
                 tuple("D54", "on silent-choice was settled, but no answer was recorded; it is not carried"),
-                tuple("Backlog line 32", "is not a task entry and is not imported: This line is not a task entry."));
-        assertThat(new MigrationPlanText().text(plan)).contains(
-                "Tasks to import (15)", "in-flight  3 (2 held)", "queued     8 (1 held)", "done       4",
-                "open      D57", "answered  D55, D56", "the first new decision is D58", "the next is EDI-8", "For the captain (8)");
+                tuple("Backlog line 36", "is not a task entry and is not imported: This line is not a task entry."));
+        assertThat(new MigrationReportText().text(report)).contains(
+                "Dry run of the import from " + oldHome + "; nothing was changed.", "Tasks to import (17)", "in-flight  3 (2 held)",
+                "queued     10 (1 held)", "done       4", "open      D57", "answered  D55, D56", "the first new decision is D58", "the next is EDI-10",
+                "Set aside, as they improve the old harness EDI replaces (1)", "For the captain (" + plan.notes().size() + ")")
+                .doesNotContain("kind null", "of kind");
         assertThat(contentsOf(oldHome)).as("the old home after the dry run").containsExactlyInAnyOrderEntriesOf(before);
+    }
+
+    @Test
+    @Tag("adapter")
+    @DisplayName("AT-47 the import writes what its dry run planned into a fresh home, leaves the old home as it was and runs again as a no-op")
+    void theImportWritesWhatItsDryRunPlanned() throws IOException {
+        Path oldHome = withTheOldClones(copyOf(OLD_HOME_FIXTURE));
+        Map<Path, byte[]> before = contentsOf(oldHome);
+        TestHome home = freshHomeIn(directory.resolve("edi-home"));
+
+        MigrationReport planned = home.migrateFirstofficer().dryRun(oldHome);
+        MigrationReport imported = home.migrateFirstofficer().run(oldHome, false, Actor.PRIMARY);
+        long eventsOfTheImport = home.events().latestSequence();
+        MigrationReport again = home.migrateFirstofficer().run(oldHome, false, Actor.PRIMARY);
+
+        assertThat(imported.backlog()).isEqualTo(planned.backlog());
+        assertThat(imported.home()).isEqualTo(planned.home());
+        assertThat(home.tasks().ids()).containsExactlyElementsOf(planned.plan().tasks().stream().map(Task::id).toList());
+        planned.plan().tasks().forEach(task -> assertThat(home.tasks().get(task.id())).isEqualTo(task));
+        assertThat(home.decisions().all()).containsExactlyInAnyOrderElementsOf(planned.plan().decisions());
+        assertThat(home.decisions().lastNumberIssued()).isEqualTo(57);
+        assertThat(home.workKeySequences().upcoming(new ProjectKey("EDI"))).isEqualTo(WorkKey.parse("EDI-10"));
+        for (HomeFile file : planned.plan().home().files()) {
+            assertThat(home.home().root().resolve(file.path())).as(file.path()).hasContent(file.content());
+        }
+        assertThat(home.home().root().resolve("data/archive/firstofficer/backlog.md")).hasSameBinaryContentAs(oldHome.resolve("data/backlog.md"));
+        assertThat(Files.getPosixFilePermissions(home.home().root().resolve("data/archive/firstofficer/tasks/tide-tables/screens/chart.png")))
+                .as("an archived file").containsExactly(PosixFilePermission.OWNER_READ);
+        assertThat(home.home().root().resolve("data/archive/firstofficer/state/held/tide-tables.md")).isRegularFile();
+        assertThat(home.home().root().resolve("data/archive/firstofficer/config/crew-dispatch.json")).isRegularFile();
+        assertThat(home.home().root().resolve("data/tasks/lantern-rework/firstofficer/brief.md")).hasContent("Rework the lantern controller.");
+        assertThat(home.home().root().resolve("data/tasks/flag-pole")).as("a done task's folder stays in the archive only").doesNotExist();
+        assertThat(home.registry().entryOf(new ProjectName("lighthouse")))
+                .extracting(entry -> entry.forge(), entry -> entry.delivery(), entry -> entry.craftRules())
+                .containsExactly(null, DeliveryMode.DRAFT_REVIEW, true);
+        assertThat(home.registry().entryOf(new ProjectName("harbour")).delivery()).isEqualTo(DeliveryMode.LOCAL_BRANCH);
+        assertThat(home.registry().entryOf(new ProjectName("EDI")).project().workKeys()).isEqualTo(new ProjectKey("EDI"));
+        assertThat(home.dispatchRulesFile().validatedAgainst(home.machineProfile().workers().models()).categories()).hasSize(8);
+        assertThat(home.homeSetup().missing()).as("the session-start digest lists nothing missing").isEmpty();
+        assertThat(home.memory().check().passes()).isTrue();
+        assertThat(home.home().root().resolve("memory/machine.md")).content().contains("## Credentials and access", "## Release notes in harbour");
+        assertThat(home.home().root().resolve("memory/archive.md")).content().contains("## 2026-09-16 stow", "## firstofficer charts its own course");
+        assertThat(home.home().root().resolve("memory/profile.md")).content().contains("Render the report with `edi report`").doesNotContain("fm-captain-report");
+        assertThat(home.home().root().resolve("memory/learnings.md")).content().contains("The lamp needs oil").doesNotContain("Monitoring restarts itself").doesNotContain("fleet lock");
+
+        assertThat(again.backlog().alreadyInEdi()).hasSameSizeAs(planned.plan().tasks());
+        assertThat(again.home().files()).extracting(FileChange::change).containsOnly(HomeChange.UNCHANGED);
+        assertThat(again.home().links()).extracting(FileChange::change).containsOnly(HomeChange.UNCHANGED);
+        assertThat(again.home().archive()).extracting(ArchiveSurvey::added, ArchiveSurvey::replaced).containsExactly(0, 0);
+        assertThat(home.events().latestSequence()).as("events after running again").isEqualTo(eventsOfTheImport);
+        assertThat(contentsOf(oldHome)).as("the old home after the import").containsExactlyInAnyOrderEntriesOf(before);
+    }
+
+    @Test
+    @Tag("adapter")
+    @DisplayName("AT-47 the import refuses an EDI home that holds work of its own unless told to overwrite, and then keeps that work and each replaced file")
+    void theImportOverwritesAHomeInUseOnlyWhenTold() throws IOException {
+        Path oldHome = copyOf(OLD_HOME_FIXTURE);
+        TestHome home = TestHome.in(directory.resolve("edi-home")).registering(LIGHTHOUSE_REGISTRY)
+                .storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "lighthouse", "LHT-1")));
+        String machineProfile = Files.readString(home.home().machineProfile());
+
+        assertThatThrownBy(() -> home.migrateFirstofficer().run(oldHome, false, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class)
+                .hasMessageContaining("already holds 1 task and 0 decisions of its own and 2 files the import would replace")
+                .hasMessageContaining("--overwrite");
+        assertThat(home.tasks().ids()).containsExactly(new TaskId("fit-lamp"));
+        assertThat(home.home().root().resolve("data/archive")).doesNotExist();
+
+        home.migrateFirstofficer().run(oldHome, true, Actor.PRIMARY);
+
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).intake().workKey()).isEqualTo(WorkKey.parse("LHT-1"));
+        assertThat(home.tasks().ids()).hasSize(18);
+        assertThat(home.home().root().resolve("config/machine.yaml.before-migration")).hasContent(machineProfile);
+        assertThat(home.home().root().resolve("config/projects.yaml.before-migration")).hasContent(LIGHTHOUSE_REGISTRY);
+        assertThat(home.registry().entryOf(new ProjectName("lighthouse")).project().workKeys()).isEqualTo(new ProjectKey("LHT"));
+        assertThat(home.registry().projects()).extracting(project -> project.name().value()).containsExactly("lighthouse", "harbour", "EDI");
+    }
+
+    @Test
+    @Tag("adapter")
+    @DisplayName("AT-48 adopting an open task registers its copy in place while a process holds it, then moves it under EDI's worktrees with its"
+            + " uncommitted work, and its next dispatch resumes the recorded session there")
+    void anAdoptedTaskResumesItsSessionInItsOwnCopy() throws IOException {
+        Path oldHome = copyOf(OLD_HOME_FIXTURE);
+        TestHome home = TestHome.in(directory.resolve("edi-home")).registering(LIGHTHOUSE_REGISTRY)
+                .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"));
+        FixtureRepository upstream = FixtureRepository.initialise(Files.createDirectories(directory.resolve("upstream/lighthouse")))
+                .write("README.md", "lamp\n").commit("Start");
+        upstream.clonedInto(home.home().root().resolve("projects/lighthouse"));
+        Path oldCopy = oldCopyOn(upstream, oldHome, "feature/LHT-3");
+        String oldHead = FixtureRepository.at(oldCopy).write("lantern.txt", "brighter\n").commit("LHT-3 Rework the lantern").head();
+        Files.writeString(oldCopy.resolve("lantern.txt"), "brightest\n");
+        Files.writeString(oldCopy.resolve("draft.txt"), "unsaved\n");
+        UUID session = UUID.randomUUID();
+        Path transcript = Files.createDirectories(home.claudeSessionFolders().resolve(claudeFolderOf(oldCopy))).resolve(session + ".jsonl");
+        Files.writeString(transcript, "{\"type\":\"user\"}\n");
+        TaskId lantern = new TaskId("lantern-rework");
+        BranchName branch = BranchName.parse("feature/LHT-3");
+        Path copy = home.home().worktreeOf(new ProjectName("lighthouse"), lantern);
+
+        assertThatThrownBy(() -> home.adoptForkTask().adopt(lantern, oldHome, BranchName.parse("feature/LHT-4"), oldCopy, session, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessageContaining("has feature/LHT-3 checked out, not feature/LHT-4");
+        assertThat(home.tasks().ids()).isEmpty();
+
+        Process holder = processes.register(new ProcessBuilder("sleep", "30").directory(oldCopy.toFile()).start());
+        AdoptedTask inPlace = home.adoptForkTask().adopt(lantern, null, branch, oldCopy, session, Actor.PRIMARY);
+
+        assertThat(inPlace.moved()).isFalse();
+        assertThat(Files.readSymbolicLink(copy)).isEqualTo(oldCopy);
+        assertThat(oldCopy.resolve("draft.txt")).hasContent("unsaved");
+        holder.destroy();
+        assertThat(holder.onExit().join().isAlive()).isFalse();
+
+        AdoptedTask adopted = home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, session, Actor.PRIMARY);
+        home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, session, Actor.PRIMARY);
+
+        assertThat(adopted).extracting(AdoptedTask::moved, AdoptedTask::copy).containsExactly(true, copy);
+        assertThat(oldCopy).doesNotExist();
+        assertThat(Files.isSymbolicLink(copy)).isFalse();
+        assertThat(FixtureRepository.at(copy).head()).isEqualTo(oldHead);
+        assertThat(copy.resolve("lantern.txt")).hasContent("brightest");
+        assertThat(copy.resolve("draft.txt")).hasContent("unsaved");
+        assertThat(home.git().uncommittedPaths(copy)).containsExactlyInAnyOrder("lantern.txt", "draft.txt");
+        assertThat(home.git().currentBranch(copy)).isEqualTo("feature/LHT-3");
+        assertThat(home.git().commonDirectory(copy).toRealPath()).isEqualTo(home.home().root().resolve("projects/lighthouse/.git").toRealPath());
+        assertThat(home.tasks().get(lantern)).extracting(Task::state, task -> task.intake().workKey())
+                .containsExactly(TaskState.IN_FLIGHT, WorkKey.parse("LHT-3"));
+        assertThat(home.claudeSessionFolders().resolve(claudeFolderOf(copy)).resolve(session + ".jsonl")).hasSameTextualContentAs(transcript);
+
+        home.dispatchTask().dispatch(new TaskReference.ById(lantern), new DispatchRequest(CategoryId.IMPLEMENTATION, "Carry on.", List.of(), null,
+                false), Actor.PRIMARY);
+
+        Launch launch = home.runtime().launches().getLast();
+        assertThat(launch).extracting(Launch::kind, Launch::session, Launch::worktree).containsExactly(LaunchKind.RESUME, session, copy);
+        assertThat(home.events().timelineOf(lantern)).extracting(RecordedEvent::type)
+                .containsExactly("TaskImported", "TaskAdopted", "TaskDispatched");
     }
 
     @TestFactory
@@ -213,6 +392,29 @@ class BeyondTheInvariantsTest {
             leaked.add(child.toHandle());
             child.descendants().forEach(leaked::add);
         }
+    }
+
+    private Path withTheOldClones(Path oldHome) throws IOException {
+        FixtureRepository.initialise(Files.createDirectories(oldHome.resolve("projects/lighthouse"))).write("README.md", "lamp\n").commit("Start")
+                .run("remote", "add", "origin", "git@forge.example.org:team/lighthouse.git");
+        FixtureRepository.initialise(Files.createDirectories(oldHome.resolve("projects/harbour"))).write("README.md", "quay\n").commit("Start");
+        return oldHome;
+    }
+
+    private static TestHome freshHomeIn(Path directory) throws IOException {
+        TestHome home = TestHome.in(directory);
+        Files.delete(home.home().machineProfile());
+        return home;
+    }
+
+    private Path oldCopyOn(FixtureRepository upstream, Path oldHome, String branch) throws IOException {
+        Path copy = directory.resolve("pool/1/lighthouse");
+        upstream.clonedInto(oldHome.resolve("projects/lighthouse")).run("worktree", "add", "--quiet", "-b", branch, copy.toString());
+        return copy;
+    }
+
+    private static String claudeFolderOf(Path workingDirectory) {
+        return OUTSIDE_A_CLAUDE_FOLDER_NAME.matcher(workingDirectory.toAbsolutePath().normalize().toString()).replaceAll("-");
     }
 
     private Path copyOf(Path fixture) throws IOException {

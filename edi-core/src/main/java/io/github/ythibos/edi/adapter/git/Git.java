@@ -76,6 +76,14 @@ public class Git {
         git(clone, "worktree", "add", "--quiet", worktree.toString(), branch.toString());
     }
 
+    public void addWorktreeOnBranchWithoutCheckout(Path clone, Path worktree, BranchName branch) {
+        git(clone, "worktree", "add", "--quiet", "--no-checkout", worktree.toString(), branch.toString());
+    }
+
+    public void indexTheHeadKeepingTheWorkingTree(Path worktree) {
+        git(worktree, "reset", "--quiet");
+    }
+
     public String currentBranch(Path worktree) {
         return git(worktree, "symbolic-ref", "--quiet", "--short", "HEAD").strip();
     }
@@ -129,6 +137,11 @@ public class Git {
 
     public boolean isAncestor(Path repository, String commit, String ref) {
         return run(repository, "merge-base", "--is-ancestor", commit, ref).succeeded();
+    }
+
+    public Optional<String> fetchUrlOf(Path repository, String remote) {
+        ProgramRun url = run(repository, "remote", "get-url", remote);
+        return url.succeeded() ? Optional.of(url.output().strip()) : Optional.empty();
     }
 
     public String pushUrlOf(Path repository, String remote) {

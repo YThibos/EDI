@@ -58,15 +58,15 @@ public class IsolatedCopies {
         }
     }
 
-    private void requireInsideTheWorktrees(Path path) {
-        if (!realPathOf(path).startsWith(realPathOf(home.worktrees()))) {
-            throw new Refusal(path + " is outside " + home.worktrees() + ", so no worker is launched there.");
+    public void requireAClone(ProjectEntry project) {
+        if (!git.isRepository(project.projectClone())) {
+            throw new Refusal(project.project().name() + " has no clone at " + project.projectClone() + "; clone it there first.");
         }
     }
 
-    private void requireAClone(ProjectEntry project) {
-        if (!git.isRepository(project.projectClone())) {
-            throw new Refusal(project.project().name() + " has no clone at " + project.projectClone() + "; clone it there first.");
+    private void requireInsideTheWorktrees(Path path) {
+        if (!realPathOf(path).startsWith(realPathOf(home.worktrees()))) {
+            throw new Refusal(path + " is outside " + home.worktrees() + ", so no worker is launched there.");
         }
     }
 

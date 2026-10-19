@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "when": "The task is research or planning: a scout or report whose deliverable is knowledge.",
+      "use": { "harness": "claude", "model": "claude-opus-5-5", "effort": "high" },
+      "why": "A wrong plan costs a whole round (keeper, 2026-09-29)."
+    },
+    {
+      "when": "The task is a routine upstream sync of this fork.",
+      "use": { "harness": "claude", "model": "claude-sonnet-5-5", "effort": "medium" },
+      "why": "Syncs are small."
+    },
+    {
+      "when": "The task paints the boats.",
+      "use": { "harness": "claude", "model": "claude-sonnet-5-5", "effort": "low" },
+      "why": "Paint dries either way."
+    }
+  ],
+  "default": { "harness": "claude", "model": "claude-sonnet-5-5", "effort": "medium" }
+}

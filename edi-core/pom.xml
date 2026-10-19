@@ -71,6 +71,14 @@
                 <directory>${project.basedir}/../claude</directory>
                 <targetPath>claude</targetPath>
             </resource>
+            <resource>
+                <directory>${project.basedir}/../examples/edi-home/config</directory>
+                <targetPath>examples</targetPath>
+                <includes>
+                    <include>dispatch-rules.json</include>
+                    <include>machine.yaml</include>
+                </includes>
+            </resource>
         </resources>
 
         <plugins>

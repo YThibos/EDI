@@ -33,6 +33,10 @@ public record Intake(
         return new Intake(kind, title, projects, key, base, blockedBy, delivery);
     }
 
+    public Intake blockedOnlyBy(List<TaskId> blockers) {
+        return new Intake(kind, title, projects, workKey, base, blockers, delivery);
+    }
+
     public Intake blockedAlsoBy(TaskId blocker) {
         List<TaskId> blockers = new ArrayList<>(blockedBy);
         blockers.add(blocker);

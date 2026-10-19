@@ -7,6 +7,7 @@ import io.github.ythibos.edi.application.delivery.DiscardedWork;
 import io.github.ythibos.edi.application.delivery.DroppedTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
+import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.task.PromotedScout;
 import io.github.ythibos.edi.application.worker.SteerWorker;
@@ -86,6 +87,9 @@ public sealed interface Confirmation {
     }
 
     record Dropped(DroppedTask dropped) implements Confirmation {
+    }
+
+    record Adopted(AdoptedTask adopted) implements Confirmation {
     }
 
     record WorkDiscarded(DiscardedWork discarded) implements Confirmation {

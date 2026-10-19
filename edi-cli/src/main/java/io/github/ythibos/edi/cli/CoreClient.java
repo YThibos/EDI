@@ -30,20 +30,24 @@ final class CoreClient {
     }
 
     CoreReply get(CoreConnection core, String path, String accepted) {
-        return exchange(core, request(core, path, accepted).GET());
+        return exchange(core, request(core, path, accepted, ANSWER_PATIENCE).GET());
     }
 
     CoreReply post(CoreConnection core, String path, String json, String accepted) {
-        return exchange(core, request(core, path, accepted).header("Content-Type", JSON).POST(BodyPublishers.ofString(json)));
+        return post(core, path, json, accepted, ANSWER_PATIENCE);
+    }
+
+    CoreReply post(CoreConnection core, String path, String json, String accepted, Duration patience) {
+        return exchange(core, request(core, path, accepted, patience).header("Content-Type", JSON).POST(BodyPublishers.ofString(json)));
     }
 
     private static CoreHealth healthFrom(int status) {
         return status == OK ? CoreHealth.UP : CoreHealth.DOWN;
     }
 
-    private static HttpRequest.Builder request(CoreConnection core, String path, String accepted) {
+    private static HttpRequest.Builder request(CoreConnection core, String path, String accepted, Duration patience) {
         HttpRequest.Builder request = HttpRequest.newBuilder(core.address().endpoint(path))
-                .timeout(ANSWER_PATIENCE)
+                .timeout(patience)
                 .header("Authorization", "Bearer " + core.token())
                 .header("Accept", accepted);
         core.session().idIfAny().ifPresent(session -> request.header("EDI-Session", session));

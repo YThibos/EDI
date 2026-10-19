@@ -57,12 +57,14 @@ import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdopted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskImported;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
@@ -278,6 +280,10 @@ public class EventLog {
             case ScoutPromoted promoted -> payload.put("ship", promoted.ship().value());
             case TaskDropped dropped -> withEach(payload.put("captainsWord", dropped.captainsWord()), "discarded", dropped.discarded());
             case WorkDiscarded discarded -> withEach(payload.put("captainsWord", discarded.captainsWord()), "discarded", discarded.discarded());
+            case TaskImported imported -> payload.put("oldHome", imported.oldHome());
+            case TaskAdopted adopted -> payload.put("branch", adopted.branch().toString())
+                    .put("oldCopy", adopted.oldCopy())
+                    .put("session", Columns.textOf(adopted.session()));
         };
     }
 

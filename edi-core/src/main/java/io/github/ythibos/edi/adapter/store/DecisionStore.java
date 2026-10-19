@@ -43,7 +43,15 @@ public class DecisionStore {
 
     public DecisionNumber nextNumber() {
         store.sql("update meta set value = value + 1 where name = 'decision_seq'").update();
-        return new DecisionNumber(store.sql("select value from meta where name = 'decision_seq'").query((row, _) -> row.getInt(1)).single());
+        return new DecisionNumber(lastNumberIssued());
+    }
+
+    public int lastNumberIssued() {
+        return store.sql("select value from meta where name = 'decision_seq'").query((row, _) -> row.getInt(1)).single();
+    }
+
+    public void continueAfter(int highestNumberSoFar) {
+        store.sql("update meta set value = max(value, :highest) where name = 'decision_seq'").param("highest", highestNumberSoFar).update();
     }
 
     public void save(Decision decision) {

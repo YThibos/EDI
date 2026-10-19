@@ -1,0 +1,18 @@
+# Fleet learnings
+
+Curated operational facts for this home.
+
+## Shop and environment
+
+- The lamp needs oil before dusk. (2026-10-01)
+  Evidence: the keeper's log.
+
+## Worker safety
+
+- Never stop a process you did not start. (2026-07-28)
+
+- **Monitoring restarts itself in a background-job session; no manual repair needed.**
+  The turn-end guard re-arms it.
+
+- **When another live session holds the fleet lock, the captain stops it (2026-09-28).**
+  Writing the lock file by hand is refused.

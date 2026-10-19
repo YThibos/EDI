@@ -2,7 +2,9 @@ package io.github.ythibos.edi.adapter.home;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.stereotype.Component;
@@ -21,7 +23,10 @@ import io.github.ythibos.edi.domain.dispatch.ProjectOverride;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 @Component
 @RegisterReflectionForBinding({
@@ -32,6 +37,12 @@ import tools.jackson.databind.json.JsonMapper;
 public class DispatchRulesFile {
 
     private static final String SCHEMA = "edi-dispatch.v2";
+    private static final String CARRIED_REASONS = " The old harness's routing rules for this work said: ";
+    private static final String CATEGORIES = "categories";
+    private static final String PROJECT_OVERRIDES = "projectOverrides";
+    private static final String ID = "id";
+    private static final String PROJECT = "project";
+    private static final String WHY = "why";
 
     private final Path file;
     private final JsonMapper json;
@@ -51,6 +62,17 @@ public class DispatchRulesFile {
         }
     }
 
+    public String withWhatItLacks(String rules, String example, Map<CategoryId, List<String>> byCategory,
+            Map<ProjectName, List<String>> byProject) {
+        JsonNode document = json.readTree(rules);
+        JsonNode examples = json.readTree(example);
+        addLacking(document, examples, CATEGORIES, ID);
+        addLacking(document, examples, PROJECT_OVERRIDES, PROJECT);
+        carryAll(document, CATEGORIES, ID, entry -> byCategory.get(new CategoryId(entry)));
+        carryAll(document, PROJECT_OVERRIDES, PROJECT, entry -> byProject.get(new ProjectName(entry)));
+        return document.equals(json.readTree(rules)) ? rules : json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n";
+    }
+
     private RulesDocument document() {
         String content = ConfigurationFile.contentOf(file)
                 .orElseThrow(() -> new InvalidConfiguration(file, "it is missing, and EDI dispatches only by written categories."));
@@ -64,6 +86,30 @@ public class DispatchRulesFile {
     private static void requireSchema(RulesDocument document) {
         if (!SCHEMA.equals(document.schema())) {
             throw new IllegalArgumentException("its schema is " + document.schema() + ", and EDI reads " + SCHEMA + ".");
+        }
+    }
+
+    private static void addLacking(JsonNode document, JsonNode examples, String list, String key) {
+        List<String> held = document.path(list).valueStream().map(entry -> entry.path(key).asString("")).toList();
+        List<JsonNode> lacking = examples.path(list).valueStream().filter(entry -> !held.contains(entry.path(key).asString(""))).toList();
+        if (!lacking.isEmpty()) {
+            ArrayNode entries = document.has(list) ? (ArrayNode) document.get(list) : ((ObjectNode) document).putArray(list);
+            lacking.forEach(entry -> entries.add(entry.deepCopy()));
+        }
+    }
+
+    private static void carryAll(JsonNode document, String list, String key, Function<String, List<String>> reasonsOf) {
+        for (JsonNode entry : document.path(list)) {
+            carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
+        }
+    }
+
+    private static void carryInto(JsonNode reasoned, List<String> reasons) {
+        String why = reasoned.path(WHY).asString("");
+        List<String> uncarried = reasons == null ? List.of() : reasons.stream().filter(reason -> !why.contains(reason)).distinct().toList();
+        if (!uncarried.isEmpty()) {
+            String opening = why.contains(CARRIED_REASONS) ? why + " " : why + CARRIED_REASONS;
+            ((ObjectNode) reasoned).put(WHY, opening + String.join(" ", uncarried));
         }
     }
 

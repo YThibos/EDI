@@ -14,12 +14,15 @@ public record MigrationPlan(
         DecisionSequenceSeed decisionSequence,
         WorkKey highestEdiKey,
         List<SetAsideSection> setAside,
+        List<String> oldHarnessWork,
+        HomeImport home,
         List<MigrationNote> notes) {
 
     public MigrationPlan {
         tasks = List.copyOf(tasks);
         decisions = List.copyOf(decisions);
         setAside = List.copyOf(setAside);
+        oldHarnessWork = List.copyOf(oldHarnessWork);
         notes = List.copyOf(notes);
     }
 }

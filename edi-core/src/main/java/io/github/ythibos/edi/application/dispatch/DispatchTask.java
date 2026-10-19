@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.WorkerSettings;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
@@ -32,6 +33,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.Adoption;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -42,6 +44,7 @@ public class DispatchTask {
 
     private final TaskStore tasks;
     private final DispatchStore dispatches;
+    private final AdoptionStore adoptions;
     private final EventLog events;
     private final ProjectRegistry registry;
     private final MachineProfile machine;
@@ -54,11 +57,12 @@ public class DispatchTask {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DispatchTask(TaskStore tasks, DispatchStore dispatches, EventLog events, ProjectRegistry registry, MachineProfile machine,
-            DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes, ResearchBeforeImplementation research,
-            AwayLimit awayLimit, Clock clock, TransactionTemplate transaction) {
+    public DispatchTask(TaskStore tasks, DispatchStore dispatches, AdoptionStore adoptions, EventLog events, ProjectRegistry registry,
+            MachineProfile machine, DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes,
+            ResearchBeforeImplementation research, AwayLimit awayLimit, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
+        this.adoptions = adoptions;
         this.events = events;
         this.registry = registry;
         this.machine = machine;
@@ -156,7 +160,8 @@ public class DispatchTask {
 
     private Dispatch firstDispatch(Task task, ProjectEntry project, DispatchCategory category, DispatchRequest request,
             CaptainOverride captainsOverride) {
-        return Dispatch.requested(task.id(), category.id(), branchFor(task, project, category), request.spec(),
+        BranchName branch = adoptions.of(task.id()).map(Adoption::branch).orElseGet(() -> branchFor(task, project, category));
+        return Dispatch.requested(task.id(), category.id(), branch, request.spec(),
                 expectedChangeOf(project, category, request.spec(), request.expectedFiles()), captainsOverride, clock.now());
     }
 

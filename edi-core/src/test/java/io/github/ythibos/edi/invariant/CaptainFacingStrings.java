@@ -32,6 +32,7 @@ import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
+import io.github.ythibos.edi.web.migration.MigrationReportText;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.report.CaptainReport;
@@ -46,6 +47,7 @@ final class CaptainFacingStrings {
     private static final JsonMapper JSON = new JsonMapper();
     private static final Set<String> TOO_LARGE_TO_LINT_TWICE = Set.of("large-backlog", "two-megabyte-backlog");
     private static final Instant NOW = TestHome.START.plus(Duration.ofHours(2));
+    private static final Path OLD_HOME = Path.of("src/test/resources/fork-home");
 
     private CaptainFacingStrings() {
     }
@@ -59,6 +61,7 @@ final class CaptainFacingStrings {
         generated.add(new ReturnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
                 home.fleetSnapshot().snapshot().decisions(), home.fleetSnapshot().snapshot().landed(), List.of(),
                 home.fleetSnapshot().snapshot().ongoing())));
+        generated.add(new MigrationReportText().text(TestHome.in(directory.resolve("migration")).migrateFirstofficer().dryRun(OLD_HOME.toAbsolutePath())));
         generated.add(JSON.writeValueAsString(new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), NOW, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
         return generated;

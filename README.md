@@ -7,8 +7,8 @@
 EDI (Enhanced Development Intelligence) is a development harness for one developer across machines.
 It gives the developer one conversational interface, launches Claude Code workers in isolated git worktrees, supervises them from structured events, and delivers their work as draft merge or pull requests that the developer merges.
 
-The repository is at slice S8, the Claude layer, memory and presence, on top of the console and boards of slice S7, the tracker and time of slice S6, the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
-The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog, and plans the import of the old harness's backlog as a dry run.
+The repository is at slice S10, the import of the old harness and the take-over of its open work, on top of the Claude layer, memory and presence of slice S8, the console and boards of slice S7, the tracker and time of slice S6, the delivery of slice S5, the supervision and recovery of slice S4, the workers of slice S3, the reports of slice S2, the domain and store of slice S1 and the foundations of slice S0.
+The core keeps tasks, captain holds, decisions with their D numbers and an event log in its SQLite store and serves them over its authenticated API; the `edi` command reads and changes the backlog.
 One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report.
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off.
 Workers report with `edi status` and read `edi inbox`; `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived; a pre-tool guard refuses pattern kills, tmux without a socket, forced or base-branch pushes and merges; each copy's `commit-msg` hook refuses agent trailers and subjects without the work key.
@@ -22,6 +22,7 @@ The EDI console shows the same fleet as a live sitrep page in the approved dark 
 `edi up` starts the core and opens the primary session with its anchor, its hooks and the captain's memory in its system prompt, and `edi update` rebuilds, tests and installs EDI from its repository and restarts the core while workers keep running.
 Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own typed words from the current session, and every captain-facing card and report is linted for internal labels.
 `edi memory check` holds the captain's memory to its budget; presence follows the captain, turning quiet after a stretch without typing or when a meeting begins, gathering wakes, raising a Windows notification for what needs the captain and briefing the captain on their return.
+`edi migrate firstofficer` imports the old harness's home into EDI, its backlog, holds and decisions, its memory and configuration and an archive of its data, exactly as its dry run plans, and `edi task adopt` takes over a task still open there, with its copy, its branch and its Claude Code session.
 
 ## Parts
 
@@ -73,7 +74,6 @@ edi decision list --open
 edi report --turn - < turn.json                     # the boxed captain report that ends a turn
 edi sitrep                                          # the same report, read-only and without a turn
 edi publish-check --range origin/main..HEAD         # the publish guard over outgoing commits
-edi migrate firstofficer --from /path/to/old/home --dry-run
 ```
 
 Every command prints text, or the core's JSON with `--json`; a refusal is one sentence on standard error with exit code 1.
@@ -195,6 +195,23 @@ edi presence demo                                                              #
 `config/machine.yaml` may set `memory.startupBudgetTokens` (18,000 by default), `notify.windowsToast: true` for Windows notifications while the captain is quiet or away, and `presence.calendar: outlook` to turn quiet during a meeting in the classic Outlook calendar.
 `config/personal.yaml` may set `presence.autoQuietAfter` (PT15M), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
 `examples/edi-home/` shows each file, the memory files included.
+
+### Moving from the old harness
+
+```sh
+edi migrate firstofficer --from /path/to/old/home --dry-run    # the plan, and what it would add or replace in this EDI home
+edi migrate firstofficer --from /path/to/old/home              # the import; running it again changes nothing
+edi migrate firstofficer --from /path/to/old/home --overwrite  # into a home that already holds work or files of its own
+edi task adopt fit-the-lamp --branch feature/EDI-14 \
+    --worktree /path/to/old/copy --session <uuid>              # an open task, on its branch and in its session
+```
+
+The import only reads the old home.
+It adds the old tasks, holds and decisions beside EDI's own, continues the decision and `EDI` key sequences after the highest either side uses, and sets aside the old harness's own work; it writes the project registry, the dispatch rules, the machine profile's missing settings, the personal configuration, the publish deny-list and the memory files, adding only what the EDI home lacks and leaving the old harness's own mechanics out of the memory, and copies the old data read-only into `$EDI_HOME/data/archive/firstofficer/`, linking each open task's old folder from `data/tasks/<task>/firstofficer`.
+A file that differs from the EDI home's is replaced only with `--overwrite`, and the replaced one is kept as `<file>.before-migration`; the dry run lists every such file, every section of the old memory with the file it goes to, and every gap left for the captain, such as a project's forge account or tracker.
+Adoption reads the task from the old home whose clone the copy belongs to, or from the home `--from` names, and needs the old copy on the task's branch.
+While a process still works in the old copy, adoption registers it in place and EDI launches no worker in it; once nothing works there, adopting again, or adopting the first time, moves the copy with its uncommitted work under `$EDI_HOME/worktrees/` as a copy of the project's clone in the EDI home.
+It carries the session's transcript beside the copy, so the task's first dispatch resumes the session there.
 
 ## Documentation
 

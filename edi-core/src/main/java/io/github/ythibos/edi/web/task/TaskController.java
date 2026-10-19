@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.delivery.DropTask;
+import io.github.ythibos.edi.application.migration.AdoptForkTask;
 import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.PromoteScout;
@@ -19,6 +20,7 @@ import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskList;
 import io.github.ythibos.edi.application.task.TaskListQuery;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.web.Confirmation;
 import io.github.ythibos.edi.web.access.Caller;
@@ -33,14 +35,17 @@ class TaskController {
     private final NoteTask noteTask;
     private final PromoteScout promoteScout;
     private final DropTask dropTask;
+    private final AdoptForkTask adoptForkTask;
 
-    TaskController(TaskListQuery list, TaskDetailQuery detail, AddTask addTask, NoteTask noteTask, PromoteScout promoteScout, DropTask dropTask) {
+    TaskController(TaskListQuery list, TaskDetailQuery detail, AddTask addTask, NoteTask noteTask, PromoteScout promoteScout, DropTask dropTask,
+            AdoptForkTask adoptForkTask) {
         this.list = list;
         this.detail = detail;
         this.addTask = addTask;
         this.noteTask = noteTask;
         this.promoteScout = promoteScout;
         this.dropTask = dropTask;
+        this.adoptForkTask = adoptForkTask;
     }
 
     @GetMapping
@@ -78,5 +83,13 @@ class TaskController {
         caller.requirePrimary("edi task drop");
         return new Confirmation.Dropped(dropTask.drop(TaskReference.parse(reference), request.discardingWork(), caller.callingSession(),
                 caller.actor()));
+    }
+
+    @PostMapping("/{id}/adopt")
+    @ResponseStatus(HttpStatus.CREATED)
+    Confirmation adopt(@PathVariable String id, @RequestBody AdoptRequest request, Caller caller) {
+        caller.requirePrimary("edi task adopt");
+        return new Confirmation.Adopted(adoptForkTask.adopt(new TaskId(id), request.oldHome(), request.branchName(), request.oldCopy(),
+                request.sessionToResume(), caller.actor()));
     }
 }

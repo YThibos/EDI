@@ -6,6 +6,7 @@ edi:
   workers:
     socket: edi
     claude-config: ${CLAUDE_CONFIG_DIR:${user.home}}
+    claude-sessions: ${CLAUDE_CONFIG_DIR:${user.home}/.claude}/projects
 
 server:
   address: 127.0.0.1

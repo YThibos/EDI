@@ -1,0 +1,1 @@
+Rework the lantern controller.

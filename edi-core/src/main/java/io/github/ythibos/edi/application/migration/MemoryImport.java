@@ -1,0 +1,133 @@
+package io.github.ythibos.edi.application.migration;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
+
+import io.github.ythibos.edi.adapter.fork.ForkHome;
+import io.github.ythibos.edi.application.migration.MarkdownSections.Section;
+import io.github.ythibos.edi.domain.AsciiCharacters;
+
+final class MemoryImport {
+
+    static final String PROFILE = "memory/profile.md";
+    static final String MACHINE = "memory/machine.md";
+    static final String LEARNINGS = "memory/learnings.md";
+    static final String ARCHIVE = "memory/archive.md";
+    private static final String PROFILE_HEADER = "# Profile\n\nThe captain's rules on every machine.";
+    private static final String MACHINE_HEADER = "# This machine\n\nThe captain's rules that hold on this machine only.";
+    private static final String LEARNINGS_HEADER = "# Learnings\n\n"
+            + "Operational facts, each dated with the day it was last confirmed, with the evidence and the rule it produced.";
+    private static final String ARCHIVE_HEADER = "# Archive\n\nRetired memory, kept for reference and never loaded at session start.";
+    private static final List<String> TOPICS_OF_THIS_MACHINE = List.of("credential", "secret", "jira", "timesheet", "worklog");
+    private static final String PARAGRAPH_BREAK = "\n\n";
+    private static final String NAME_CHARACTERS = "._-";
+
+    private final Set<String> projectsOfThisMachine;
+    private final List<MemoryRoute> routes = new ArrayList<>();
+    private final List<Section> profileSections = new ArrayList<>();
+    private final List<Section> machineSections = new ArrayList<>();
+    private final List<Section> setAside = new ArrayList<>();
+
+    private MemoryImport(Set<String> projectsOfThisMachine) {
+        this.projectsOfThisMachine = Set.copyOf(projectsOfThisMachine);
+    }
+
+    static MemoryImport of(ForkHome home, Set<String> projectsOfThisMachine) {
+        MemoryImport memory = new MemoryImport(projectsOfThisMachine);
+        home.captainMemory().map(MarkdownSections::of)
+                .ifPresent(captain -> captain.sections().stream().map(CaptainMemoryEdits::edited).forEach(memory::route));
+        home.sharedCaptainMemory().map(MarkdownSections::of).ifPresent(shared -> shared.sections().forEach(memory::keepInTheProfile));
+        return memory;
+    }
+
+    List<HomeFile> files(ForkHome home) {
+        return List.of(
+                new HomeFile(PROFILE, document(PROFILE_HEADER, profileSections), Counted.sections(profileSections.size())),
+                new HomeFile(MACHINE, document(MACHINE_HEADER, machineSections), Counted.sections(machineSections.size())),
+                learningsFrom(home.learnings()),
+                archiveFrom(home.memoryArchive()));
+    }
+
+    List<MemoryRoute> routes() {
+        return List.copyOf(routes);
+    }
+
+    private void route(Section section) {
+        if (concernsTheOldHarness(section.heading())) {
+            setAside(section);
+        } else if (concernsThisMachine(section.heading())) {
+            add(section, machineSections, MACHINE);
+        } else {
+            add(section, profileSections, PROFILE);
+        }
+    }
+
+    private void keepInTheProfile(Section section) {
+        add(section, profileSections, PROFILE);
+    }
+
+    private static String document(String header, List<Section> sections) {
+        return String.join(PARAGRAPH_BREAK, Stream.concat(Stream.of(header), sections.stream().map(Section::text)).toList()) + "\n";
+    }
+
+    private static HomeFile learningsFrom(Optional<String> learnings) {
+        MarkdownSections old = MarkdownSections.of(learnings.orElse(""));
+        LearningsFilter filter = new LearningsFilter();
+        List<String> parts = new ArrayList<>(List.of(LEARNINGS_HEADER));
+        if (old.preambleHoldsEntries()) {
+            parts.add(filter.kept(old.preambleWithoutTitle()));
+        }
+        old.sections().forEach(section -> parts.add(filter.kept(section.text())));
+        return new HomeFile(LEARNINGS, String.join(PARAGRAPH_BREAK, parts) + "\n", learningsHeld(old.sections().size(), filter.dropped()));
+    }
+
+    private static String learningsHeld(int sections, int dropped) {
+        String held = Counted.sections(sections);
+        return dropped == 0 ? held : held + " without " + Counted.things(dropped, "old-harness learning");
+    }
+
+    private HomeFile archiveFrom(Optional<String> memoryArchive) {
+        List<String> parts = new ArrayList<>(List.of(memoryArchive.map(String::strip).orElse(ARCHIVE_HEADER)));
+        setAside.forEach(section -> parts.add(section.text()));
+        String holds = setAside.isEmpty() ? "the old archive" : "the old archive and " + Counted.sections(setAside.size()) + " set aside";
+        return new HomeFile(ARCHIVE, String.join(PARAGRAPH_BREAK, parts) + "\n", holds);
+    }
+
+    private static boolean concernsTheOldHarness(String heading) {
+        return heading.toLowerCase(Locale.ROOT).startsWith(ForkHome.HARNESS_PROJECT);
+    }
+
+    private void setAside(Section section) {
+        setAside.add(section);
+        routes.add(new MemoryRoute(section.heading(), ARCHIVE));
+    }
+
+    private boolean concernsThisMachine(String heading) {
+        String words = heading.toLowerCase(Locale.ROOT);
+        return TOPICS_OF_THIS_MACHINE.stream().anyMatch(words::contains)
+                || projectsOfThisMachine.stream().anyMatch(project -> namesTheProject(heading, project));
+    }
+
+    private void add(Section section, List<Section> destination, String file) {
+        destination.add(section);
+        routes.add(new MemoryRoute(section.heading(), file));
+    }
+
+    private static boolean namesTheProject(String heading, String project) {
+        for (int at = heading.indexOf(project); at >= 0; at = heading.indexOf(project, at + 1)) {
+            if (!continuesAName(heading, at - 1) && !continuesAName(heading, at + project.length())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean continuesAName(String heading, int index) {
+        return index >= 0 && index < heading.length()
+                && (AsciiCharacters.isLetterOrDigit(heading.charAt(index)) || NAME_CHARACTERS.indexOf(heading.charAt(index)) >= 0);
+    }
+}
