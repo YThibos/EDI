@@ -47,7 +47,7 @@ class InstallTest {
     @Test
     void buildsWithTheJavaTheCheckoutPinsWhateverTheCallersDirectoryAndJavaHome() throws IOException, InterruptedException {
         Path checkout = checkoutPinning(Files.readString(REPOSITORY.resolve("mise.toml")));
-        assumeTrue(InstalledPrograms.answers("mise", "-C", checkout.toString(), "where", "java"), "mise or the Java the checkout pins is not installed");
+        assumeTrue(everyPinnedToolIsInstalled(checkout), "mise or a tool the checkout pins is not installed");
 
         InstallRun install = install(checkout, System.getenv("PATH"));
 
@@ -85,6 +85,17 @@ class InstallTest {
         StandInScripts.installed(checkout.resolve("mvnw"), MAVEN_NOTING_ITS_JAVA);
         Files.writeString(checkout.resolve("mise.toml"), toolchain);
         return checkout;
+    }
+
+    private static boolean everyPinnedToolIsInstalled(Path checkout) throws InterruptedException {
+        try {
+            Process listing = new ProcessBuilder("mise", "ls", "--local", "--missing", "--no-header").directory(checkout.toFile())
+                    .redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            String missing = new String(listing.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return listing.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS) && listing.exitValue() == 0 && missing.isBlank();
+        } catch (IOException miseIsMissing) {
+            return false;
+        }
     }
 
     private InstallRun install(Path checkout, String searchPath) throws IOException, InterruptedException {
