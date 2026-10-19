@@ -46,7 +46,7 @@ mise install
 ## Run
 
 ```sh
-ops/install.sh             # native build and tests, then edi and edi-core in ~/.local/bin and the skills linked into the EDI home
+ops/install.sh             # native build and tests with the toolchain mise.toml pins, then edi and edi-core in ~/.local/bin and the skills linked into the EDI home
 edi up                     # start the core unless it runs, then open the primary session in tmux
 edi up --core-only         # start only the core
 edi health
