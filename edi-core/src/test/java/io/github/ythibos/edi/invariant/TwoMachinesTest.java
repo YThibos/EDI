@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -34,6 +35,7 @@ import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.MachineFixture;
 import io.github.ythibos.edi.testing.PrePushHook;
 import io.github.ythibos.edi.testing.PrePushHook.HookRun;
+import io.github.ythibos.edi.testing.PrePushHook.RunningHook;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
@@ -100,17 +102,18 @@ class TwoMachinesTest {
                 copy.commit(copy.run("rev-parse", "--abbrev-ref", "HEAD").strip().replace("feature/", "") + " Add the work");
                 home.forge().pushed(BranchName.parse(copy.run("rev-parse", "--abbrev-ref", "HEAD").strip()), copy.head());
             }
+            Map<String, RunningHook> pushes = pushesStartedFor(home, leaks.keySet(), processes);
 
             for (String leaking : List.of("leak-secret", "leak-term", "leak-path")) {
                 assertThatThrownBy(() -> home.deliverDraft().deliver(TaskReference.parse(leaking), Actor.PRIMARY))
                         .as(leaking).isInstanceOf(Refusal.class).hasMessageContaining("The publish check refuses").hasMessageNotContaining(token);
-                HookRun push = PrePushHook.pushes(copyOf(home, leaking), home.home().root(), branchOf(home, leaking), REGISTERED, processes);
+                HookRun push = pushes.get(leaking).finished();
                 assertThat(push.refused()).as(leaking).isTrue();
                 assertThat(push.output()).as(leaking).contains("Refused: the outgoing commits carry a secret or personal material.")
                         .doesNotContain(token).doesNotContain(DENIED_HOST);
             }
             assertThat(home.deliverDraft().deliver(TaskReference.parse("no-leak"), Actor.PRIMARY).opened()).isTrue();
-            HookRun cleanPush = PrePushHook.pushes(copyOf(home, "no-leak"), home.home().root(), branchOf(home, "no-leak"), REGISTERED, processes);
+            HookRun cleanPush = pushes.get("no-leak").finished();
             assertThat(cleanPush.refused()).as(cleanPush.output()).isFalse();
             assertThat(home.forge().openedDrafts()).singleElement().satisfies(draft -> assertThat(draft.title()).isEqualTo("HRN-6 Work on no-leak"));
         }
@@ -154,6 +157,14 @@ class TwoMachinesTest {
         FixtureRepository copy = FixtureRepository.at(dispatched.launched().worktree());
         copy.run("config", "--worktree", "remote.origin.pushurl", REGISTERED);
         return copy;
+    }
+
+    private static Map<String, RunningHook> pushesStartedFor(TestHome home, Set<String> tasks, TestProcesses processes) throws IOException {
+        Map<String, RunningHook> pushes = new LinkedHashMap<>();
+        for (String task : tasks) {
+            pushes.put(task, PrePushHook.starts(copyOf(home, task), home.home().root(), branchOf(home, task), REGISTERED, processes));
+        }
+        return pushes;
     }
 
     private static FixtureRepository copyOf(TestHome home, String task) {

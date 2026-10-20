@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import javax.sql.DataSource;
 
-import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -53,7 +52,6 @@ import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
-import io.github.ythibos.edi.adapter.store.StoreFile;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
@@ -178,6 +176,7 @@ public final class TestHome {
     private final DecisionStore decisions;
     private final EventLog events;
     private final ProjectRegistry registry;
+    private final MachineProfile machineProfile;
     private final JsonMapper json = new JsonMapper();
     private final DispatchStore dispatches;
     private final WorkerStore workers;
@@ -225,6 +224,7 @@ public final class TestHome {
         this.wakes = new WakeStore(jdbc);
         this.events = new EventLog(jdbc, json, wakes, _ -> { });
         this.registry = new ProjectRegistry(home);
+        this.machineProfile = new MachineProfile(home);
         this.dispatches = new DispatchStore(jdbc);
         this.workers = new WorkerStore(jdbc);
         this.inbox = new InboxStore(jdbc);
@@ -265,8 +265,7 @@ public final class TestHome {
     }
 
     private static TestHome openedIn(Path directory, FakeWorkerRuntime runtime, ManualClock clock) throws IOException {
-        DataSource store = StoreFile.openedAt(new EdiHome(directory).store());
-        Flyway.configure().dataSource(store).load().migrate();
+        DataSource store = MigratedStore.openedAt(new EdiHome(directory).store());
         if (!Files.exists(bootIdFile(directory))) {
             Files.writeString(bootIdFile(directory), UUID.randomUUID().toString());
         }
@@ -463,7 +462,7 @@ public final class TestHome {
     }
 
     public MachineProfile machineProfile() {
-        return new MachineProfile(home);
+        return machineProfile;
     }
 
     public PrepareThePrimary prepareThePrimary(Path checkout) {
