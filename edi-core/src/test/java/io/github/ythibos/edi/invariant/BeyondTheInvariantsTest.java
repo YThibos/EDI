@@ -12,18 +12,24 @@ import static org.junit.platform.testkit.engine.TestExecutionResultConditions.me
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.EnumMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -95,6 +101,7 @@ class BeyondTheInvariantsTest {
                 base: main
             """;
     private static final Pattern OUTSIDE_A_CLAUDE_FOLDER_NAME = Pattern.compile("[^A-Za-z0-9]");
+    private static final String ABSENT = "absent";
 
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
@@ -118,7 +125,7 @@ class BeyondTheInvariantsTest {
     @DisplayName("AT-41 the migration dry run on a copy of the old home reproduces its counts and reports every unmapped item")
     void theMigrationDryRunReproducesTheCounts() throws IOException {
         Path oldHome = copyOf(OLD_HOME_FIXTURE);
-        Map<Path, byte[]> before = contentsOf(oldHome);
+        Map<Path, String> before = entriesOf(oldHome);
 
         MigrationReport report = TestHome.in(directory.resolve("edi-home")).migrateFirstofficer().dryRun(oldHome);
         MigrationPlan plan = report.plan();
@@ -163,7 +170,7 @@ class BeyondTheInvariantsTest {
                 "queued     10 (1 held)", "done       4", "open      D57", "answered  D55, D56", "the first new decision is D58", "the next is EDI-10",
                 "Set aside, as they improve the old harness EDI replaces (1)", "For the captain (" + plan.notes().size() + ")")
                 .doesNotContain("kind null", "of kind");
-        assertThat(contentsOf(oldHome)).as("the old home after the dry run").containsExactlyInAnyOrderEntriesOf(before);
+        assertThat(changesTo(oldHome, before)).as("the old home after the dry run").isEmpty();
     }
 
     @Test
@@ -171,7 +178,7 @@ class BeyondTheInvariantsTest {
     @DisplayName("AT-47 the import writes what its dry run planned into a fresh home, leaves the old home as it was and runs again as a no-op")
     void theImportWritesWhatItsDryRunPlanned() throws IOException {
         Path oldHome = withTheOldClones(copyOf(OLD_HOME_FIXTURE));
-        Map<Path, byte[]> before = contentsOf(oldHome);
+        Map<Path, String> before = entriesOf(oldHome);
         TestHome home = freshHomeIn(directory.resolve("edi-home"));
 
         MigrationReport planned = home.migrateFirstofficer().dryRun(oldHome);
@@ -214,7 +221,7 @@ class BeyondTheInvariantsTest {
         assertThat(again.home().links()).extracting(FileChange::change).containsOnly(HomeChange.UNCHANGED);
         assertThat(again.home().archive()).extracting(ArchiveSurvey::added, ArchiveSurvey::replaced).containsExactly(0, 0);
         assertThat(home.events().latestSequence()).as("events after running again").isEqualTo(eventsOfTheImport);
-        assertThat(contentsOf(oldHome)).as("the old home after the import").containsExactlyInAnyOrderEntriesOf(before);
+        assertThat(changesTo(oldHome, before)).as("the old home after the import").isEmpty();
     }
 
     @Test
@@ -432,18 +439,53 @@ class BeyondTheInvariantsTest {
         return copy;
     }
 
-    private static Map<Path, byte[]> contentsOf(Path home) throws IOException {
-        try (Stream<Path> files = Files.walk(home)) {
-            return files.filter(Files::isRegularFile).collect(Collectors.toMap(Function.identity(), BeyondTheInvariantsTest::bytesOf));
+    private static Map<Path, String> entriesOf(Path home) throws IOException {
+        try (Stream<Path> entries = Files.walk(home)) {
+            return entries.collect(Collectors.toMap(entry -> nameWithin(home, entry), BeyondTheInvariantsTest::descriptionOf));
         }
     }
 
-    private static byte[] bytesOf(Path file) {
+    private static Path nameWithin(Path home, Path entry) {
+        return home.getFileName().resolve(home.relativize(entry));
+    }
+
+    private static String descriptionOf(Path entry) {
         try {
-            return Files.readAllBytes(file);
+            PosixFileAttributes attributes = Files.readAttributes(entry, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            return contentOf(entry, attributes) + ", " + PosixFilePermissions.toString(attributes.permissions()) + ", modified "
+                    + attributes.lastModifiedTime();
         } catch (IOException unreadable) {
             throw new IllegalStateException(unreadable);
         }
+    }
+
+    private static String contentOf(Path entry, PosixFileAttributes attributes) throws IOException {
+        if (attributes.isSymbolicLink()) {
+            return "link to " + Files.readSymbolicLink(entry);
+        }
+        return attributes.isDirectory() ? "folder" : "file with SHA-256 " + sha256Of(Files.readAllBytes(entry));
+    }
+
+    private static String sha256Of(byte[] content) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (NoSuchAlgorithmException unavailable) {
+            throw new IllegalStateException(unavailable);
+        }
+    }
+
+    private static List<String> changesTo(Path home, Map<Path, String> before) throws IOException {
+        Map<Path, String> after = entriesOf(home);
+        return Stream.concat(before.keySet().stream(), after.keySet().stream())
+                .distinct()
+                .sorted()
+                .filter(entry -> !Objects.equals(before.get(entry), after.get(entry)))
+                .map(entry -> changeOf(entry, before.get(entry), after.get(entry)))
+                .toList();
+    }
+
+    private static String changeOf(Path entry, String before, String after) {
+        return entry + ": " + Objects.requireNonNullElse(before, ABSENT) + " -> " + Objects.requireNonNullElse(after, ABSENT);
     }
 
     private static Map<TaskState, Long> countsByState(List<Task> tasks) {
