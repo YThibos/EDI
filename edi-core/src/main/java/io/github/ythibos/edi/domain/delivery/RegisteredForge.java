@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.domain.delivery;
 
+import java.util.List;
 import java.util.Objects;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
@@ -21,6 +22,10 @@ public record RegisteredForge(ForgeRepository repository, String account) {
 
     public ForgeKind kind() {
         return repository.kind();
+    }
+
+    public List<String> identifyingNames() {
+        return List.of(repository.host(), account);
     }
 
     public boolean takesWorkflowChangesIn(OutgoingChanges changes) {

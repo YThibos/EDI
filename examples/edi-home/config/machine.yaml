@@ -13,7 +13,7 @@ supervision:
 tracker:
   kind: jira
   baseUrl: https://jira.example.org
-  credentials: { keysFile: /path/to/api-keys.yml, section: JIRA }
+  credentials: { keysFile: /path/to/tracker-keys.yml, section: JIRA }
   evergreen:
     coordination: EXAMPLE-1
     tooling: EXAMPLE-2

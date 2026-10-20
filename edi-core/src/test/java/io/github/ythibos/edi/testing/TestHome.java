@@ -598,7 +598,7 @@ public final class TestHome {
     }
 
     public PublishCheck publishCheck() {
-        return new PublishCheck(home, git, new Gitleaks(programs, json), new PublicationTargets(home, git, registry, forges()));
+        return new PublishCheck(home, git, new Gitleaks(programs, json), new PublicationTargets(home, git, registry, machineProfile(), forges()));
     }
 
     public DeliverDraft deliverDraft() {

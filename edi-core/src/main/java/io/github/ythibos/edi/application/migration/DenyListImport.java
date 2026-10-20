@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import io.github.ythibos.edi.adapter.home.TrackerSettings;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
@@ -38,13 +37,9 @@ final class DenyListImport {
 
     private static Set<String> privateNamesIn(List<RegisteredForge> forges, List<RemoteAddress> remotes, TrackerSettings tracker) {
         Set<String> names = new LinkedHashSet<>();
-        forges.stream().filter(forge -> isPrivate(forge.repository().host())).forEach(forge -> {
-            names.add(forge.repository().host());
-            names.add(forge.account());
-        });
+        forges.stream().filter(forge -> isPrivate(forge.repository().host())).forEach(forge -> names.addAll(forge.identifyingNames()));
         remotes.stream().map(RemoteAddress::host).filter(DenyListImport::isPrivate).forEach(names::add);
-        Stream.ofNullable(tracker.baseUrl()).map(url -> url.getHost()).forEach(names::add);
-        Stream.ofNullable(tracker.credentials()).map(credentials -> credentials.keysFile().getFileName().toString()).forEach(names::add);
+        names.addAll(tracker.identifyingNames());
         return names;
     }
 

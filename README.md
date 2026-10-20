@@ -81,6 +81,8 @@ A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "rec
 An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional; inside tmux the report fits the pane it runs in.
 `examples/edi-home/config/projects.yaml` shows the registry's shape with placeholder values.
+The publish check refuses outgoing commits that carry a secret, a term of `$EDI_HOME/config/publish-denylist` or a personal path.
+A push from a project's isolated copy, and the check in the project's registered clone, may still name that project's own forge host and account and, for a project tracked on JIRA, the tracker's host and the name of its keys file; every other term applies to every project.
 
 ### Workers
 
