@@ -143,10 +143,10 @@ class ProcessSafetyTest {
         }
 
         private TestHome homeReachingThe(StubJiraServer jira, String canary) throws IOException {
-            TestHome home = TestHome.in(directory).registering(TrackerFixtures.REGISTRY).writing("keys/api-keys.yml", "TRACKER:\n  API-key: " + canary + "\n");
+            TestHome home = TestHome.in(directory).registering(TrackerFixtures.REGISTRY).writing("keys/tracker-keys.yml", "TRACKER:\n  API-key: " + canary + "\n");
             return home.writing("config/machine.yaml", MachineFixture.LAPTOP.profile()
                     .replace("https://tracker.example.org", jira.address().toString())
-                    .replace("/nonexistent/tracker-keys.yml", home.home().root().resolve("keys/api-keys.yml").toString()));
+                    .replace("/nonexistent/tracker-keys.yml", home.home().root().resolve("keys/tracker-keys.yml").toString()));
         }
 
         private void runEveryTrackerCall(TestHome home, StubJiraServer jira, String canary, List<String> said) {

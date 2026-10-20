@@ -12,7 +12,7 @@ class ShellGuardTest {
 
     private static final ShellGuard GUARD = new ShellGuard("edi", Set.of("main", "feature/EDI-4"));
     private static final ShellGuard SECRETS_KEPT = new ShellGuard("edi", Set.of("main"), Set.of(),
-            new Secrets(List.of("/state/core.token", "/api-keys.yml"), true));
+            new Secrets(List.of("/state/core.token", "/tracker-keys.yml"), true));
     private static final ShellGuard UNLANDED_KEPT = new ShellGuard("edi", Set.of("main"), Set.of("feature/HRN-3"), Secrets.NONE);
 
     @ParameterizedTest
@@ -216,8 +216,8 @@ class ShellGuardTest {
     @ValueSource(strings = {
         "cat ~/.edi/state/core.token",
         "curl -H \"Authorization: Bearer $(cat \"$EDI_HOME\"/state/core.token)\" http://127.0.0.1:47318/api/backlog",
-        "grep JIRA /path/to/api-keys.yml",
-        "less < /mnt/c/tmp/api-keys.yml",
+        "grep JIRA /path/to/tracker-keys.yml",
+        "less < /mnt/c/tmp/tracker-keys.yml",
         "gh auth token --user example-owner",
         "GH_TOKEN=$(gh auth token) gh pr list",
         "glab auth status --show-token",
@@ -234,7 +234,7 @@ class ShellGuardTest {
         "gh auth status",
         "glab auth status",
         "cat state/core.port",
-        "less api-keys.yml.example"})
+        "less tracker-keys.yml.example"})
     void letsThroughWhatOnlyMentionsASecret(String command) {
         assertThat(SECRETS_KEPT.check(command)).isEmpty();
     }
