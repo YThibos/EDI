@@ -46,7 +46,7 @@ public class PublishCheck {
         DenyList denyList = denyList();
         return PublishVerdict.of(
                         gitleaks.secretsIn(repository, outgoing),
-                        denyList.findIn(changes),
+                        denyList.sparing(targets.ownNamesOf(repository)).findIn(changes),
                         personalPathsOf(repository).findIn(changes))
                 .hidingPathsDeniedBy(denyList, changes);
     }

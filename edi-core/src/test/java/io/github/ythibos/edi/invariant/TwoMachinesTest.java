@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,10 +19,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.github.ythibos.edi.adapter.home.TimeSettings;
+import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -46,6 +51,29 @@ class TwoMachinesTest {
 
     private static final String REGISTERED = "https://github.com/example-owner/harness.git";
     private static final String DENIED_HOST = "acme-corp.example";
+    private static final String EMPLOYERS_PROJECT_AND_EDI = """
+            projects:
+              - name: service
+                tracker: { kind: jira, projectKey: SVC }
+                forge: { kind: gitlab, host: forge.example.org, path: team/service, account: keeper }
+                base: main
+              - name: EDI
+                tracker: { kind: edi, projectKey: EDI }
+                forge: { kind: github, path: example-owner/EDI, account: example-owner }
+                base: main
+            """;
+    private static final String EMPLOYERS_NAMES = """
+            forge.example.org
+            keeper
+            tracker.example.org
+            tracker-keys.yml
+            deckhand
+            """;
+    private static final String NOTES_NAMING_THE_EMPLOYERS_OWN_NAMES = """
+            Clone https://forge.example.org/team/service as keeper.
+            Tickets live on https://tracker.example.org/browse/SVC-7.
+            The access token sits in tracker-keys.yml.
+            """;
 
     @TempDir
     private Path directory;
@@ -117,6 +145,61 @@ class TwoMachinesTest {
             assertThat(cleanPush.refused()).as(cleanPush.output()).isFalse();
             assertThat(home.forge().openedDrafts()).singleElement().satisfies(draft -> assertThat(draft.title()).isEqualTo("HRN-6 Work on no-leak"));
         }
+
+        @Test
+        @DisplayName("AT-38 an employer's project may push its own forge host, account, tracker host and keys file")
+        @Tag("adapter")
+        void aProjectMayPublishItsOwnNames() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeOfAnEmployersProjectAndEdi(directory);
+
+            HookRun push = pushOfNotes(home, "service", "SVC-7", NOTES_NAMING_THE_EMPLOYERS_OWN_NAMES, processes);
+
+            assertThat(push.refused()).as(push.output()).isFalse();
+        }
+
+        @Test
+        @DisplayName("AT-38 EDI's own push is refused the employer's forge host, account, tracker host and keys file")
+        @Tag("adapter")
+        void edisPushMayNotPublishTheEmployersNames() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeOfAnEmployersProjectAndEdi(directory);
+
+            HookRun push = pushOfNotes(home, "EDI", "EDI-7", NOTES_NAMING_THE_EMPLOYERS_OWN_NAMES, processes);
+
+            assertThat(push.refused()).isTrue();
+            assertThat(push.output()).contains("deny-list entry 1", "deny-list entry 2", "deny-list entry 3", "deny-list entry 4")
+                    .doesNotContain("deny-list entry 5", "forge.example.org", "keeper", "tracker.example.org", "tracker-keys.yml");
+        }
+
+        @Test
+        @DisplayName("AT-38 an employer's project is still refused another account's name beside its own names")
+        @Tag("adapter")
+        void anotherAccountIsStillRefused() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeOfAnEmployersProjectAndEdi(directory);
+
+            HookRun push = pushOfNotes(home, "service", "SVC-8", NOTES_NAMING_THE_EMPLOYERS_OWN_NAMES + "Ask deckhand for the review.\n", processes);
+
+            assertThat(push.refused()).isTrue();
+            assertThat(push.output()).contains("docs/notes.md:4 in commit").contains("deny-list entry 5")
+                    .doesNotContain("deny-list entry 1", "deny-list entry 2", "deny-list entry 3", "deny-list entry 4", "deckhand");
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @CsvSource({"service, SVC-9", "EDI, EDI-9"})
+        @DisplayName("AT-38 a secret is still refused from an employer's project and from EDI alike")
+        @Tag("adapter")
+        void aSecretIsStillRefusedFromEitherProject(String project, String key) throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeOfAnEmployersProjectAndEdi(directory);
+            String token = SyntheticSecrets.githubToken();
+
+            HookRun push = pushOfNotes(home, project, key, "forge.token=" + token + "\n", processes);
+
+            assertThat(push.refused()).isTrue();
+            assertThat(push.output()).contains("docs/notes.md:1 in commit").doesNotContain("deny-list entry").doesNotContain(token);
+        }
     }
 
     @Nested
@@ -173,6 +256,30 @@ class TwoMachinesTest {
 
     private static String branchOf(TestHome home, String task) {
         return home.dispatches().of(new TaskId(task)).orElseThrow().branch().toString();
+    }
+
+    private static TestHome homeOfAnEmployersProjectAndEdi(Path directory) throws IOException {
+        TestHome home = TestHome.in(directory.resolve("home")).on(MachineFixture.LAPTOP)
+                .registering(EMPLOYERS_PROJECT_AND_EDI)
+                .writing("config/publish-denylist", EMPLOYERS_NAMES);
+        WorkerFixtures.cloneOf(directory, home, "service");
+        WorkerFixtures.cloneOf(directory, home, "EDI");
+        return home;
+    }
+
+    private static HookRun pushOfNotes(TestHome home, String project, String key, String notes, TestProcesses processes)
+            throws IOException, InterruptedException {
+        ProjectEntry entry = home.registry().entryOf(new ProjectName(project));
+        FixtureRepository copy = copyWithItsHooks(home, entry, BranchName.parse("feature/" + key));
+        copy.write("docs/notes.md", notes).commit(key + " Write the notes");
+        return PrePushHook.pushes(copy, home.home().root(), "feature/" + key, entry.requireForge().repository().url() + ".git", processes);
+    }
+
+    private static FixtureRepository copyWithItsHooks(TestHome home, ProjectEntry project, BranchName branch) throws IOException {
+        Path copy = home.home().worktreeOf(project.project().name(), new TaskId(branch.workKey().toString().toLowerCase(Locale.ROOT)));
+        FixtureRepository.at(project.projectClone()).run("worktree", "add", "--quiet", "-b", branch.toString(), copy.toString(), "origin/main");
+        new WorktreeHooks(home.git()).installIn(project, copy, branch, project.requireBase());
+        return FixtureRepository.at(copy);
     }
 
     @FunctionalInterface

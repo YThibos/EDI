@@ -78,7 +78,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-029](ADR-029-open-source-standard-tools.md) | Open-source, standard tools only | Architecture |
 | [ADR-030](ADR-030-presence-modes.md) | Presence modes with automatic quiet and demo mode | Design |
 | [ADR-031](ADR-031-address-word-and-voice.md) | A configurable address word and a ship's-intelligence voice | Design |
-| [ADR-032](ADR-032-publish-guard.md) | The publish guard checks every outgoing commit | Architecture |
+| [ADR-032](ADR-032-publish-guard.md) | The publish guard checks every outgoing commit (superseded by ADR-144) | Architecture |
 | [ADR-033](ADR-033-no-explanatory-comments.md) | No explanatory comments in code | Design |
 | [ADR-034](ADR-034-invariant-catalogue.md) | The invariant catalogue reports pending acceptance tests | Design |
 | [ADR-035](ADR-035-scope-cuts.md) | What EDI deliberately does not build | Architecture |
@@ -189,6 +189,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-140](ADR-140-the-old-data-is-archived-read-only-and-open-tasks-link-their-folders.md) | The old home's data is archived read-only, and each open task links its old folder | Design |
 | [ADR-141](ADR-141-adopting-an-open-task-registers-its-copy-and-moves-it-when-free.md) | Adopting an open task registers its copy in place and moves it under EDI's worktrees once nothing works there | Design |
 | [ADR-142](ADR-142-the-install-builds-with-the-toolchain-the-checkout-pins.md) | The install builds with the toolchain the checkout pins, and refuses when it is not installed | Design |
+| [ADR-144](ADR-144-a-project-may-publish-its-own-forge-and-tracker-names.md) | The publish guard checks every outgoing commit, and a project may publish its own forge and tracker names | Architecture |
 | [ADR-145](ADR-145-at-38-starts-the-workers-pushes-before-edi-delivers.md) | AT-38 starts the worker's pushes before EDI delivers, and the hook's guard runs on a quick-starting JVM | Design |
 | [ADR-146](ADR-146-tests-run-git-without-the-developers-git-configuration.md) | Tests run git without the developer's own git configuration | Design |
 | [ADR-147](ADR-147-a-fixture-repositorys-git-runs-no-background-maintenance.md) | A fixture repository's git runs no background maintenance | Design |

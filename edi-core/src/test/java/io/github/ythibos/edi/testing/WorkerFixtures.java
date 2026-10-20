@@ -66,6 +66,14 @@ public final class WorkerFixtures {
                 .writing("memory/craft-rules.md", CRAFT_RULES);
     }
 
+    public static void cloneOf(Path directory, TestHome home, String project) throws IOException {
+        Path upstream = Files.createDirectories(directory.resolve("upstream").resolve(project));
+        FixtureRepository.initialise(upstream)
+                .write("README.md", project + "\n")
+                .commit("Start " + project)
+                .clonedInto(home.home().root().resolve("projects").resolve(project));
+    }
+
     public static Task queuedShip(String id, String project, String key) {
         return queued(id, TaskKind.SHIP, project, key);
     }
@@ -111,13 +119,5 @@ public final class WorkerFixtures {
         BranchName branch = home.dispatches().of(task).orElseThrow().branch();
         String head = FixtureRepository.at(home.home().worktreeOf(project.project().name(), task)).head();
         return home.forge().opensADraft(project.requireForge(), branch, project.requireBase(), head);
-    }
-
-    private static void cloneOf(Path directory, TestHome home, String project) throws IOException {
-        Path upstream = Files.createDirectories(directory.resolve("upstream").resolve(project));
-        FixtureRepository.initialise(upstream)
-                .write("README.md", project + "\n")
-                .commit("Start " + project)
-                .clonedInto(home.home().root().resolve("projects").resolve(project));
     }
 }

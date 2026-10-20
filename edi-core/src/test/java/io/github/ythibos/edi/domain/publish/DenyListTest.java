@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.publish;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -45,6 +46,21 @@ class DenyListTest {
             assertThat(finding.rule()).isEqualTo(PublishRule.DENIED_TERM);
             assertThat(finding.reason()).isEqualTo("deny-list entry 1");
         });
+    }
+
+    @Test
+    void sparesOnlyTheTermsEqualToAProjectsOwnNamesWhateverTheirCase() {
+        DenyList denyList = DenyList.parse("""
+                forge.intranet.example
+                keeper
+                intranet.example
+                keeper-two
+                """);
+
+        DenyList spared = denyList.sparing(new OwnNames(Set.of("Forge.Intranet.Example", "KEEPER")));
+
+        assertThat(spared.terms()).containsExactly(new DeniedTerm(3, "intranet.example"), new DeniedTerm(4, "keeper-two"));
+        assertThat(denyList.sparing(OwnNames.none())).isEqualTo(denyList);
     }
 
     @Test

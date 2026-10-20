@@ -25,6 +25,10 @@ public record DenyList(List<DeniedTerm> terms) {
                 .toList());
     }
 
+    public DenyList sparing(OwnNames ownNames) {
+        return new DenyList(terms.stream().filter(term -> !ownNames.include(term)).toList());
+    }
+
     public List<PublishFinding> findIn(OutgoingChanges changes) {
         return changes.commits().stream().flatMap(this::findIn).toList();
     }

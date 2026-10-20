@@ -9,6 +9,7 @@ import io.github.ythibos.edi.adapter.forge.GitHubForge;
 import io.github.ythibos.edi.adapter.forge.GitLabForge;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
+import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.application.delivery.Forges;
@@ -54,7 +55,8 @@ public final class PublishGuard {
         Git git = new Git(programs);
         ForgeCalls calls = new ForgeCalls(programs, "", "");
         Forges forges = new Forges(List.of(new GitHubForge(calls, json), new GitLabForge(calls, json)));
-        return new PublishCheck(home, git, new Gitleaks(programs, json), new PublicationTargets(home, git, new ProjectRegistry(home), forges));
+        PublicationTargets targets = new PublicationTargets(home, git, new ProjectRegistry(home), new MachineProfile(home), forges);
+        return new PublishCheck(home, git, new Gitleaks(programs, json), targets);
     }
 
     private static void report(PublishVerdict verdict, RevisionRange outgoing) {

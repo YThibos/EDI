@@ -2,6 +2,7 @@ package io.github.ythibos.edi.adapter.home;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -44,6 +45,10 @@ public record TrackerSettings(
 
     public boolean isJira() {
         return kind == TrackerKind.JIRA;
+    }
+
+    public List<String> identifyingNames() {
+        return isJira() ? List.of(baseUrl.getHost(), credentials.keysFile().getFileName().toString()) : List.of();
     }
 
     public String requireEpicLinkField() {
