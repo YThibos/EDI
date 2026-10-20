@@ -188,3 +188,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-139](ADR-139-the-old-configuration-becomes-edis-without-guessing.md) | The old home's configuration becomes EDI's by adding what EDI lacks, and every gap is listed rather than guessed | Design |
 | [ADR-140](ADR-140-the-old-data-is-archived-read-only-and-open-tasks-link-their-folders.md) | The old home's data is archived read-only, and each open task links its old folder | Design |
 | [ADR-141](ADR-141-adopting-an-open-task-registers-its-copy-and-moves-it-when-free.md) | Adopting an open task registers its copy in place and moves it under EDI's worktrees once nothing works there | Design |
+| [ADR-142](ADR-142-the-install-builds-with-the-toolchain-the-checkout-pins.md) | The install builds with the toolchain the checkout pins, and refuses when it is not installed | Design |
