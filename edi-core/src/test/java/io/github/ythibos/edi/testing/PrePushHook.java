@@ -11,6 +11,7 @@ public final class PrePushHook {
 
     private static final String NO_REMOTE_COMMIT = "0".repeat(40);
     private static final long PATIENCE_SECONDS = 25;
+    private static final String QUICK_STARTING_JVM = "-XX:TieredStopAtLevel=1 -XX:+UseSerialGC";
     private static final String EDI_ON_THE_JVM = """
             #!/bin/sh
             range=
@@ -22,7 +23,7 @@ public final class PrePushHook {
                     *) shift ;;
                 esac
             done
-            exec '%s' --enable-preview -cp '%s' io.github.ythibos.edi.application.publish.PublishGuard "$PWD" "$range" "$EDI_HOME" "$remote_url"
+            exec '%s' %s --enable-preview -cp '%s' io.github.ythibos.edi.application.publish.PublishGuard "$PWD" "$range" "$EDI_HOME" "$remote_url"
             """;
 
     private PrePushHook() {
@@ -30,6 +31,11 @@ public final class PrePushHook {
 
     public static HookRun pushes(FixtureRepository worktree, Path ediHome, String branch, String remoteUrl, TestProcesses processes)
             throws IOException, InterruptedException {
+        return starts(worktree, ediHome, branch, remoteUrl, processes).finished();
+    }
+
+    public static RunningHook starts(FixtureRepository worktree, Path ediHome, String branch, String remoteUrl, TestProcesses processes)
+            throws IOException {
         Path hook = Path.of(worktree.run("rev-parse", "--absolute-git-dir").strip()).resolve("edi-hooks/pre-push");
         ProcessBuilder push = new ProcessBuilder("sh", hook.toString(), "origin", remoteUrl).directory(worktree.root().toFile()).redirectErrorStream(true);
         push.environment().put("PATH", ediCommandIn(ediHome.resolveSibling("edi-on-the-jvm")) + ":" + System.getenv("PATH"));
@@ -39,19 +45,34 @@ public final class PrePushHook {
             refs.write(("refs/heads/" + branch + " " + worktree.head() + " refs/heads/" + branch + " " + NO_REMOTE_COMMIT + "\n")
                     .getBytes(StandardCharsets.UTF_8));
         }
-        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        if (!process.waitFor(PATIENCE_SECONDS, TimeUnit.SECONDS)) {
-            process.destroyForcibly();
-            throw new IOException("The pre-push hook did not finish.");
-        }
-        return new HookRun(process.exitValue(), output);
+        return new RunningHook(process);
     }
 
     private static Path ediCommandIn(Path directory) throws IOException {
         Path edi = Files.createDirectories(directory).resolve("edi");
-        String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
-        StandInScripts.installed(edi, EDI_ON_THE_JVM.formatted(java, System.getProperty("java.class.path")));
+        if (Files.notExists(edi)) {
+            String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+            StandInScripts.installed(edi, EDI_ON_THE_JVM.formatted(java, QUICK_STARTING_JVM, System.getProperty("java.class.path")));
+        }
         return directory;
+    }
+
+    public static final class RunningHook {
+
+        private final Process process;
+
+        private RunningHook(Process process) {
+            this.process = process;
+        }
+
+        public HookRun finished() throws IOException, InterruptedException {
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            if (!process.waitFor(PATIENCE_SECONDS, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new IOException("The pre-push hook did not finish.");
+            }
+            return new HookRun(process.exitValue(), output);
+        }
     }
 
     public record HookRun(int exitCode, String output) {

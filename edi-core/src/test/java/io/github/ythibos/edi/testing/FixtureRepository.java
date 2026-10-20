@@ -27,7 +27,7 @@ public final class FixtureRepository {
     public static FixtureRepository initialise(Path directory) throws IOException {
         FixtureRepository repository = new FixtureRepository(directory);
         repository.git("init", "--quiet", "--initial-branch=main");
-        return repository;
+        return repository.withoutBackgroundMaintenance();
     }
 
     public Path root() {
@@ -74,7 +74,7 @@ public final class FixtureRepository {
     public FixtureRepository clonedInto(Path directory) throws IOException {
         Files.createDirectories(directory.getParent());
         git("clone", "--quiet", root.toString(), directory.toString());
-        return new FixtureRepository(directory);
+        return new FixtureRepository(directory).withoutBackgroundMaintenance();
     }
 
     public FixtureRepository configure(String key, String value) throws IOException {
@@ -138,5 +138,9 @@ public final class FixtureRepository {
         if (process.exitValue() != 0) {
             throw new IOException("git " + String.join(" ", arguments) + " failed: " + output);
         }
+    }
+
+    private FixtureRepository withoutBackgroundMaintenance() throws IOException {
+        return configure("maintenance.auto", "false");
     }
 }
