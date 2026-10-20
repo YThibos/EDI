@@ -119,6 +119,9 @@ public final class FixtureRepository {
         return Map.of(
                 "GIT_CONFIG_GLOBAL", "/dev/null",
                 "GIT_CONFIG_NOSYSTEM", "1",
+                "GIT_CONFIG_COUNT", "1",
+                "GIT_CONFIG_KEY_0", "maintenance.auto",
+                "GIT_CONFIG_VALUE_0", "false",
                 "GIT_AUTHOR_NAME", nameAndEmail.get(0),
                 "GIT_AUTHOR_EMAIL", nameAndEmail.get(1),
                 "GIT_COMMITTER_NAME", nameAndEmail.get(0),
