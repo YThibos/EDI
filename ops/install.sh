@@ -5,9 +5,26 @@ checkout="$(cd "$(dirname "$0")/.." && pwd)"
 home="${EDI_HOME:-${HOME}/.edi}"
 bin="${EDI_BIN:-${HOME}/.local/bin}"
 skills="${home}/.claude/skills"
+toolchain="${checkout}/mise.toml"
+
+require_the_pinned_toolchain() {
+  if ! command -v mise >/dev/null; then
+    refuse "EDI builds with the toolchain ${toolchain} pins, and mise, which runs it, is not on the PATH; install mise, run mise install in ${checkout} and try again."
+  fi
+  local missing
+  missing="$(cd "${checkout}" && mise ls --local --missing --no-header)"
+  if [[ -n "${missing}" ]]; then
+    refuse "EDI builds with the toolchain ${toolchain} pins, and part of it is not installed; run mise install in ${checkout} and try again."$'\n'"${missing}"
+  fi
+}
+
+refuse() {
+  echo "$1" >&2
+  exit 1
+}
 
 build() {
-  (cd "${checkout}" && ./mvnw -B -ntp -Pnative verify)
+  (cd "${checkout}" && mise exec -- ./mvnw -B -ntp -Pnative verify)
 }
 
 install_the_executables() {
@@ -25,6 +42,7 @@ link_the_skills() {
   done
 }
 
+require_the_pinned_toolchain
 build
 install_the_executables
 link_the_skills
