@@ -33,6 +33,8 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.publish.PublishVerdict;
+import io.github.ythibos.edi.domain.publish.RevisionRange;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.testing.FixtureRepository;
@@ -186,6 +188,32 @@ class TwoMachinesTest {
                     .doesNotContain("deny-list entry 1", "deny-list entry 2", "deny-list entry 3", "deny-list entry 4", "deckhand");
         }
 
+        @Test
+        @DisplayName("AT-38 the publish check in an employer's project clone clears its own forge host, account, tracker host and keys file")
+        @Tag("adapter")
+        void aProjectsCloneMayPublishItsOwnNames() throws IOException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeOfAnEmployersProjectAndEdi(directory);
+
+            PublishVerdict verdict = publishCheckOfNotesIn(home, "service", "SVC-10", NOTES_NAMING_THE_EMPLOYERS_OWN_NAMES);
+
+            assertThat(verdict.findings()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("AT-38 the publish check in EDI's clone refuses the employer's forge host, account, tracker host and keys file")
+        @Tag("adapter")
+        void edisCloneMayNotPublishTheEmployersNames() throws IOException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeOfAnEmployersProjectAndEdi(directory);
+
+            PublishVerdict verdict = publishCheckOfNotesIn(home, "EDI", "EDI-10", NOTES_NAMING_THE_EMPLOYERS_OWN_NAMES);
+
+            assertThat(verdict.allowsPush()).isFalse();
+            assertThat(verdict.findings().toString()).contains("deny-list entry 1", "deny-list entry 2", "deny-list entry 3", "deny-list entry 4")
+                    .doesNotContain("deny-list entry 5", "forge.example.org", "keeper", "tracker.example.org", "tracker-keys.yml");
+        }
+
         @ParameterizedTest(name = "{0}")
         @CsvSource({"service, SVC-9", "EDI, EDI-9"})
         @DisplayName("AT-38 a secret is still refused from an employer's project and from EDI alike")
@@ -280,6 +308,12 @@ class TwoMachinesTest {
         FixtureRepository.at(project.projectClone()).run("worktree", "add", "--quiet", "-b", branch.toString(), copy.toString(), "origin/main");
         new WorktreeHooks(home.git()).installIn(project, copy, branch, project.requireBase());
         return FixtureRepository.at(copy);
+    }
+
+    private static PublishVerdict publishCheckOfNotesIn(TestHome home, String project, String key, String notes) throws IOException {
+        Path clone = home.registry().entryOf(new ProjectName(project)).projectClone();
+        FixtureRepository.at(clone).write("docs/notes.md", notes).commit(key + " Write the notes");
+        return home.publishCheck().check(clone, new RevisionRange("HEAD~1..HEAD"));
     }
 
     @FunctionalInterface

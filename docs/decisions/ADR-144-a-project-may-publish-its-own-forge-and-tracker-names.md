@@ -22,7 +22,9 @@ Before any push, EDI checks the outgoing commits (a revision range such as `orig
 
 The deny-list a push is checked against leaves out every term equal, whatever its case, to one of the pushing project's own names (`DenyList.sparing`, `OwnNames`).
 A project's own names are its forge's host and account from the project registry (`RegisteredForge.identifyingNames`) and, when the project books its work on the machine's JIRA, the tracker's host and the file name of its keys file from the machine profile (`TrackerSettings.identifyingNames`).
-`PublicationTargets.ownNamesOf` finds the project as it finds a push's registered target (ADR-086): from the isolated copy under `$EDI_HOME/worktrees/<project>/<task>` that the `pre-push` hook and `edi deliver` check; any other repository, such as a project's clone, the captain's checkout or EDI's checkout in CI, spares nothing.
+`PublicationTargets.ownNamesOf` finds the project from the repository's top level, compared by real path: the isolated copy under `$EDI_HOME/worktrees/<project>/<task>` that the `pre-push` hook and `edi deliver` check, as a push's registered target is found (ADR-086), or the project's clone the project registry records, by default `$EDI_HOME/projects/<project>`, where the captain runs `edi publish-check` by hand.
+Any other repository, such as the captain's checkout or EDI's checkout in CI, spares nothing, and no project is ever guessed from a remote URL.
+The push's target check stays with the isolated copy alone.
 Every other term still applies, such as another account on the same forge, and so does a term that merely contains an own name or is contained in one.
 EDI itself and the captain's projects on a public forge keep the whole list, because none of their own names is on it.
 The secret scan and the path check do not depend on the project, and sparing a keys file's name spares only the name: the secret scan still reads the content of every added line.
@@ -34,6 +36,7 @@ The paths are numbered in the order `Git` reads them, so `git -c core.quotePath=
 `RevisionRange` accepts one git revision expression and refuses anything that could be read as an option.
 `PublishCheckTest` proves the guard with invented patterns and secrets generated at run time, so the tracked test carries nothing personal and nothing a scanner would flag: a branch with a secret, one with a deny-listed term, one adding a file whose name and content carry a deny-listed term and a secret, reported without the name, and one with personal paths are refused, and a clean branch passes.
 AT-38 in `TwoMachinesTest` pushes through the worker's `pre-push` hook: a copy of an employer-shaped project, on GitLab at a private host and tracked on JIRA, may push a commit naming its forge host, its account, its tracker host and its keys file, the same commit from an EDI-shaped project on GitHub is refused, another account's name is still refused beside the own names, and a secret is refused from both.
+It also runs the publish check as `edi publish-check` does in each project's registered clone: the employer-shaped project's clone is clear for the same commit, and EDI's clone is refused it.
 CI runs this same guard over every pushed range through `PublishGuard`, a plain entry point that wires `PublishCheck` exactly as `PublishCheckTest` does, started by the `publish-guard` Maven profile of `edi-core`; it reads the deny-list from the optional Actions secret `PUBLISH_DENYLIST`, written into a temporary EDI home, prints only locations and fails the job on any finding.
 `edi publish-check` exposes the guard, each worktree's `pre-push` hook runs it (ADR-053), and `edi deliver` runs it before it opens a draft (AT-38).
 
@@ -44,7 +47,8 @@ CI runs this same guard over every pushed range through `PublishGuard`, a plain 
 - A deny-list that applies whole to every project, as the guard did until now - refuses an employer's own commits for naming their own hosts.
 - A per-project exemption list, or one deny-list file per project - more configuration for names the registry and the profile already hold.
 - Sparing a term that contains or is contained in an own name - would let a broader term, such as an employer's domain, through.
-- Finding the project from its clone or the captain's checkout as well - EDI's own pushes all start in isolated copies, and a second way of finding the project would differ from the one that decides the push's target.
+- Finding the project from its isolated copy alone - `edi publish-check` run by hand in the project's clone, where the captain met the refusal, would still refuse the project's own names.
+- Finding the project from the captain's checkout or from a remote URL as well - a checkout outside EDI's home is not EDI's to vouch for, and a remote URL can name any repository.
 - gitleaks alone - knows nothing of the captain's personal terms or the personal layer.
 - Regular expressions in the deny-list - hostnames are literals, and literal matching cannot be mistyped into a pattern that matches nothing.
 - Honouring a repository's own gitleaks configuration - would let a branch switch the scan off.
@@ -52,7 +56,7 @@ CI runs this same guard over every pushed range through `PublishGuard`, a plain 
 **Consequences:**
 - Good: an employer's project ships its own work without the captain trimming the deny-list.
 - Good: one guard for EDI and every project, and the guard CI runs is the guard the synthetic test proves, so the two cannot drift apart.
-- Bad: `edi publish-check` run by hand in a project's clone or the captain's checkout still applies the whole list, so it can refuse a commit that the same project's copy may push.
+- Bad: `edi publish-check` run by hand in a checkout outside EDI's home, such as the captain's checkout, still applies the whole list, so it can refuse a commit that the same project's copy or clone may push.
 - Bad: a term the captain lists that equals a project's own name no longer guards that project's pushes.
 - Bad: the CI job builds `edi-core` before it can scan, which costs a few minutes per push.
 

@@ -48,7 +48,7 @@ public class PublicationTargets {
     }
 
     public OwnNames ownNamesOf(Path repository) {
-        return projectCopiedTo(repository).map(this::ownNamesOf).orElseGet(OwnNames::none);
+        return projectCopiedTo(repository).or(() -> projectClonedTo(repository)).map(this::ownNamesOf).orElseGet(OwnNames::none);
     }
 
     private Optional<ProjectEntry> projectCopiedTo(Path repository) {
@@ -66,6 +66,11 @@ public class PublicationTargets {
                     + "; the captain grants it with gh auth refresh --hostname " + forge.repository().host() + " --user " + forge.account()
                     + " --scopes workflow.");
         }
+    }
+
+    private Optional<ProjectEntry> projectClonedTo(Path repository) {
+        Path clone = realPathOf(git.topLevel(repository));
+        return registry.entries().stream().filter(project -> realPathOf(project.projectClone()).equals(clone)).findFirst();
     }
 
     private OwnNames ownNamesOf(ProjectEntry project) {
