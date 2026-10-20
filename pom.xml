@@ -28,7 +28,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <argLine>--enable-preview --enable-native-access=ALL-UNNAMED</argLine>
+        <argLine>--enable-preview --enable-native-access=ALL-UNNAMED -XX:TieredStopAtLevel=1</argLine>
         <test.excludedGroups>live</test.excludedGroups>
         <test.junitConfiguration>
             junit.jupiter.execution.timeout.default=30 s
@@ -94,6 +94,10 @@
                         <properties>
                             <configurationParameters>${test.junitConfiguration}</configurationParameters>
                         </properties>
+                        <environmentVariables>
+                            <GIT_CONFIG_GLOBAL>/dev/null</GIT_CONFIG_GLOBAL>
+                            <GIT_CONFIG_NOSYSTEM>1</GIT_CONFIG_NOSYSTEM>
+                        </environmentVariables>
                     </configuration>
                 </plugin>
                 <plugin>
