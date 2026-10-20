@@ -12,8 +12,8 @@ user-invocable: true
 
 1. Run `edi update` in the background: the native build and its tests take minutes, and one call may outlive a foreground command.
 2. It works in `~/EDI`, or in the clone `EDI_CHECKOUT` names, and refuses one with local changes.
-3. It pulls with `--ff-only`, then runs `ops/install.sh`, which runs `./mvnw -Pnative verify` and installs `edi`, `edi-core` and the skill links.
-4. A failed build or test leaves the installed EDI and the running core unchanged; report the failure with its output.
+3. It pulls with `--ff-only`, then runs `ops/install.sh`, which runs `./mvnw -Pnative verify` with the toolchain the clone's `mise.toml` pins and installs `edi`, `edi-core` and the skill links.
+4. A missing pinned tool, a failed build or a failed test leaves the installed EDI and the running core unchanged; report the failure with its output.
 5. It then restarts the core: running workers keep running, and the store makes the restart a non-event.
 6. Read `claude/primary/CLAUDE.md` of the clone again, as the command says: the rules may have changed.
 7. A new primary session loads the new anchor, skills and memory; offer the captain `edi up` when the anchor changed.
