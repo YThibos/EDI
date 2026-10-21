@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +39,7 @@ import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProgramCall;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.decision.GivenAnswer;
+import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.port.Forge;
@@ -57,6 +60,7 @@ import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -69,6 +73,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.BriefFixtures;
 import io.github.ythibos.edi.testing.Cards;
@@ -225,7 +230,7 @@ class AuthorityAndInterfaceTest {
 
         private static void exerciseEveryCallOf(Forge forge, RegisteredForge project) {
             BranchName branch = BranchName.parse("feature/HRN-3");
-            MergeRequestView open = forge.openMergeRequestFrom(project, branch).orElseThrow();
+            MergeRequestView open = forge.mergeRequestFrom(project, branch).orElseThrow();
             forge.view(project, open.address());
             forge.openDraft(project, DraftProposal.forWork(branch, new BaseBranch("main"), "Fit the lamp", "The brass lamp."));
             forge.mayChangeWorkflows(project);
@@ -236,31 +241,107 @@ class AuthorityAndInterfaceTest {
     @DisplayName("I-04 Drafts only")
     class DraftsOnly {
 
-        @Test
-        @DisplayName("AT-04 delivery refuses a pipeline outcome whose merge request is not a draft and records a failure")
+        private static final TaskId LAMP = new TaskId("fit-lamp");
+        private static final TaskId HORN = new TaskId("fit-horn");
+
+        @ParameterizedTest(name = "{0}")
+        @EnumSource(ForgeKind.class)
+        @DisplayName("AT-04a a request marked ready for review before the done is recorded from the worker's status and accepted at the done")
         @Tag("adapter")
-        void deliveryRefusesANonDraft() throws IOException {
-            TestHome home = WorkerFixtures.homeWithProjects(directory);
-            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
-            DispatchOutcome dispatched = home.dispatchTask().dispatch(TaskReference.parse("fit-lamp"),
-                    new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY);
-            Worker worker = dispatched.launched().worker();
-            String head = FixtureRepository.at(dispatched.launched().worktree()).write("lamp.txt", "brass\n").commit("HRN-3 Fit the lamp").head();
-            RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
-            MergeRequestView ready = home.forge().opensAReadyMergeRequest(forge, dispatched.launched().branch(), new BaseBranch("main"), head);
+        void aRequestReadyBeforeTheDoneIsAccepted(ForgeKind kind) throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjectsOn(directory, kind);
+            Worker worker = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            committedIn(home, LAMP, "HRN-3", "lamp.txt");
+            MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, worker);
 
-            assertThatThrownBy(() -> home.recordStatus().report(worker.id(), StatusState.DONE, null, null, ready.address().url()))
-                    .isInstanceOf(Refusal.class)
-                    .hasMessageContaining(ready.address() + " is not a draft");
-            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DeliveryRefused");
-            assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();
-            assertThat(home.workers().get(worker.id()).orElseThrow().lastStatus()).isNull();
+            home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "The checks run on the draft.");
+            assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> assertThat(delivery.draft()).isTrue());
 
-            home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), head);
-            home.recordStatus().report(worker.id(), StatusState.DONE, null, null, ready.address().url());
+            home.forge(kind).marksReady(draft.address());
+            home.recordStatus().report(worker.id(), StatusState.DONE, null, null, draft.address().url());
 
-            assertThat(home.deliveries().of(new TaskId("fit-lamp"))).hasValueSatisfying(delivery -> assertThat(delivery.draft()).isTrue());
-            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("StatusReported", "DraftRecorded");
+            assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
+            assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded").doesNotContain("DeliveryRefused");
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @EnumSource(ForgeKind.class)
+        @DisplayName("AT-04b a request merged before the done is recorded at the done, its merge followed and its task cleaned up")
+        @Tag("adapter")
+        void aRequestMergedBeforeTheDoneIsFollowed(ForgeKind kind) throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjectsOn(directory, kind);
+            Worker worker = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            FixtureRepository copy = committedIn(home, LAMP, "HRN-3", "lamp.txt");
+            MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, worker);
+            home.forge(kind).marksReady(draft.address());
+            home.forge(kind).merges(draft.address(), landedOnMain(copy));
+            assertThat(home.deliveries().of(LAMP)).isEmpty();
+
+            home.recordStatus().report(worker.id(), StatusState.DONE, null, null, draft.address().url());
+
+            assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> assertThat(delivery.isMerged()).isTrue());
+            assertThat(home.eventTypesOf(LAMP))
+                    .containsSubsequence("StatusReported", "DraftRecorded", "DraftMerged", "CloneRefreshed", "TaskCleanedUp");
+            assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+            assertThat(copy.root()).doesNotExist();
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @EnumSource(ForgeKind.class)
+        @DisplayName("AT-04c a request merged before the pipeline finished is recorded from the pipeline's run, and the merge hands the work over")
+        @Tag("adapter")
+        void aRequestMergedBeforeThePipelineFinishedIsFollowed(ForgeKind kind) throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjectsOn(directory, kind);
+            Worker worker = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            FixtureRepository copy = committedIn(home, LAMP, "HRN-3", "lamp.txt");
+            BranchName branch = home.dispatches().of(LAMP).orElseThrow().branch();
+            home.pipeline().runs(branch, new PipelineRun("01RUN", "running", "review", copy.head(), null));
+            home.observePipelines().observe();
+            MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, worker);
+            home.forge(kind).merges(draft.address(), landedOnMain(copy));
+
+            home.pipeline().runs(branch, new PipelineRun("01RUN", "completed", null, copy.head(), draft.address().url()));
+            home.observePipelines().observe();
+
+            assertThat(home.eventTypesOf(LAMP)).containsSubsequence("PipelineRunSeen", "PipelineRunFinished", "DraftRecorded", "DraftMerged",
+                    "CloneRefreshed", "TaskCleanedUp");
+            assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+            assertThat(home.runtime().isRunning(worker.window())).isFalse();
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @EnumSource(ForgeKind.class)
+        @DisplayName("AT-04d edi merged follows a merge EDI never recorded, by task and by address, while the idle worker still runs")
+        @Tag("adapter")
+        void theCaptainsWordFollowsAMergeEdiNeverRecorded(ForgeKind kind) throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjectsOn(directory, kind);
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            FixtureRepository lampCopy = committedIn(home, LAMP, "HRN-3", "lamp.txt");
+            MergeRequestView lampRequest = home.forge(kind).marksReady(WorkerFixtures.opensTheDraftOf(home, lamp).address());
+            home.forge(kind).merges(lampRequest.address(), landedOnMain(lampCopy));
+            Worker horn = WorkerFixtures.dispatchedShip(home, "fit-horn", "HRN-4");
+            FixtureRepository hornCopy = committedIn(home, HORN, "HRN-4", "horn.txt");
+            MergeRequestView hornRequest = WorkerFixtures.opensTheDraftOf(home, horn);
+            home.forge(kind).merges(hornRequest.address(), landedOnMain(hornCopy));
+
+            MergedWork byTask = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+            MergedWork byAddress = home.followMerges().mergedSaysTheCaptain(hornRequest.address().url(), Actor.PRIMARY);
+
+            assertThat(byTask.delivery().address()).isEqualTo(lampRequest.address());
+            assertThat(byAddress.delivery().address()).isEqualTo(hornRequest.address());
+            assertThat(List.of(byTask, byAddress)).allSatisfy(merged -> assertThat(merged.cleanUp().done()).isTrue());
+            assertThat(List.of(LAMP, HORN)).allSatisfy(task -> assertThat(home.tasks().get(task).state()).isEqualTo(TaskState.DONE));
+        }
+
+        private FixtureRepository committedIn(TestHome home, TaskId task, String key, String file) throws IOException {
+            return FixtureRepository.at(home.home().worktreeOf(new ProjectName("harness"), task)).write(file, "brass\n").commit(key + " Fit " + file);
+        }
+
+        private String landedOnMain(FixtureRepository copy) throws IOException {
+            FixtureRepository upstream = FixtureRepository.at(directory.resolve("upstream/harness"));
+            upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+            upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+            return upstream.commit("Land " + copy.root().getFileName()).head();
         }
     }
 

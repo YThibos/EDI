@@ -6,6 +6,7 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
@@ -17,6 +18,7 @@ import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineReview;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -33,10 +35,11 @@ import io.github.ythibos.edi.domain.worker.Worker;
 public class CleanUpTask {
 
     private static final String REPORT_FILE = "report.md";
-    private static final String HANDED_OVER = "it is cleaned up once its work is handed over.";
+    private static final String HANDED_OVER = "it is cleaned up once its done is accepted or the forge shows its merge request merged.";
 
     private final TaskStore tasks;
     private final WorkerStore workers;
+    private final DeliveryStore deliveries;
     private final TaskCostStore costs;
     private final PipelineReviewStore reviews;
     private final EventLog events;
@@ -48,11 +51,12 @@ public class CleanUpTask {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public CleanUpTask(TaskStore tasks, WorkerStore workers, TaskCostStore costs, PipelineReviewStore reviews, EventLog events,
-            WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, CopyRetirement retirement, Clock clock,
-            TransactionTemplate transaction) {
+    public CleanUpTask(TaskStore tasks, WorkerStore workers, DeliveryStore deliveries, TaskCostStore costs, PipelineReviewStore reviews,
+            EventLog events, WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, CopyRetirement retirement,
+            Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.workers = workers;
+        this.deliveries = deliveries;
         this.costs = costs;
         this.reviews = reviews;
         this.events = events;
@@ -68,7 +72,7 @@ public class CleanUpTask {
     public Task cleanUp(TaskReference reference, Actor actor) {
         Workplace workplace = transaction.execute(_ -> context.of(tasks.get(reference).id()));
         workplace.task().requireReadyForCleanUp();
-        retirement.requireNoWorkerAtWork(workplace, HANDED_OVER);
+        requireTheWorkHandedOver(workplace);
         requireTheReportOfAScout(workplace);
         removeTheNestedRepositoriesOfAScout(workplace);
         requireLanded(workplace, landedWork.of(workplace), actor);
@@ -78,6 +82,16 @@ public class CleanUpTask {
         Task closed = closed(workplace, cost, review, actor);
         retirement.stopListeningFor(closed.id());
         return closed;
+    }
+
+    private void requireTheWorkHandedOver(Workplace workplace) {
+        if (!isMerged(workplace)) {
+            retirement.requireNoWorkerAtWork(workplace, HANDED_OVER);
+        }
+    }
+
+    private boolean isMerged(Workplace workplace) {
+        return transaction.execute(_ -> deliveries.of(workplace.task().id())).filter(Delivery::isMerged).isPresent();
     }
 
     private void requireTheReportOfAScout(Workplace workplace) {

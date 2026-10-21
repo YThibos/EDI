@@ -23,8 +23,11 @@ class DeliveryClaimsTest {
     private static final String HEAD = "1111111111111111111111111111111111111111";
 
     @Test
-    void findsNoGapInAnOpenDraftOfTheBranchAtItsHead() {
+    void findsNoGapInARequestOfTheBranchAtItsHeadWhetherADraftReadyForReviewOrMerged() {
         assertThat(view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD).gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
+        assertThat(view(MergeRequestState.OPEN, false, "feature/HRN-3", "main", HEAD).gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
+        assertThat(new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, "3333")
+                .gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
     }
 
     @Test
@@ -32,11 +35,23 @@ class DeliveryClaimsTest {
         MergeRequestView wrong = new MergeRequestView(ADDRESS, MergeRequestState.CLOSED, false, "feature/HRN-4", "develop", "2222222222222", null);
 
         assertThat(wrong.gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).containsExactly(
-                ADDRESS + " is closed, not open",
-                ADDRESS + " is not a draft; every merge request EDI delivers stays a draft until the captain merges it",
+                ADDRESS + " is closed without a merge",
                 ADDRESS + " comes from feature/HRN-4, not from feature/HRN-3",
                 ADDRESS + " targets develop, not main",
                 ADDRESS + " shows head 222222222222, but the isolated copy is at 111111111111; push the copy's head first");
+    }
+
+    @Test
+    void takesTheOpenRequestOfABranchAsItsDeliveryAndOtherwiseItsLatestMerge() {
+        MergeRequestView closed = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 9), MergeRequestState.CLOSED, true, "feature/HRN-3",
+                "main", HEAD, null);
+        MergeRequestView open = view(MergeRequestState.OPEN, false, "feature/HRN-3", "main", HEAD);
+        MergeRequestView merged = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
+                "main", HEAD, "3333");
+
+        assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged, open))).contains(open);
+        assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged))).contains(merged);
+        assertThat(MergeRequestView.deliveryAmong(List.of(closed))).isEmpty();
     }
 
     @Test

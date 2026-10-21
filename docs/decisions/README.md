@@ -129,14 +129,14 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-080](ADR-080-forge-calls-run-under-the-bound-account.md) | Every forge call for a project runs under the account its registry entry binds | Design |
 | [ADR-081](ADR-081-the-pipeline-adapter.md) | The pipeline adapter reads a branch's run from `axi status` and its spend from the pipeline's state, read-only | Design |
 | [ADR-082](ADR-082-edi-writes-the-pipeline-intent.md) | EDI writes the pipeline intent beside the brief, with the craft rules verbatim | Design |
-| [ADR-083](ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md) | A ship's done is accepted only once its claims hold, and a refused done is recorded | Design |
+| [ADR-083](ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md) | A ship's done is accepted only once its claims hold, and a refused done is recorded (superseded by ADR-155) | Design |
 | [ADR-084](ADR-084-accepted-work-reaches-the-captain-by-its-delivery-mode.md) | Accepted work reaches the captain by its delivery mode, and local-apply is asked for per task | Design |
 | [ADR-085](ADR-085-edi-deliver-opens-the-draft-the-pipeline-could-not.md) | `edi deliver` opens the draft the pipeline could not, behind the same guards | Design |
 | [ADR-086](ADR-086-publication-targets-are-the-registered-forge.md) | A push from an isolated copy goes only to the repository its project registers | Design |
 | [ADR-087](ADR-087-merges-are-followed-from-the-forge.md) | A merge is followed from the forge's word, whether EDI sees it or the captain says so | Design |
 | [ADR-088](ADR-088-follow-up-work-waits-for-the-refreshed-clone.md) | Follow-up work on a project waits until its clone holds the commit a merge landed | Design |
 | [ADR-089](ADR-089-the-landed-work-test.md) | Work is landed when nothing is uncommitted and every commit is in the base by ancestry, patch or content | Design |
-| [ADR-090](ADR-090-cleanup-retires-a-landed-task.md) | Cleanup retires a landed task's copy, branch and workers, and records what the task cost | Design |
+| [ADR-090](ADR-090-cleanup-retires-a-landed-task.md) | Cleanup retires a landed task's copy, branch and workers, and records what the task cost (superseded by ADR-157) | Design |
 | [ADR-091](ADR-091-a-running-pipeline-keeps-an-idle-worker-healthy.md) | Worker health is read from hooks, the tmux server, the boot and the pipeline, and each condition is noticed once | Design |
 | [ADR-092](ADR-092-the-store-keeps-deliveries.md) | The store keeps deliveries, pipeline runs, clone refreshes and task costs | Design |
 | [ADR-093](ADR-093-the-tracker-port-and-its-three-adapters.md) | The tracker port has three adapters, chosen per project and reachable only where the machine names the tracker | Architecture |
@@ -200,3 +200,6 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-152](ADR-152-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
 | [ADR-153](ADR-153-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
 | [ADR-154](ADR-154-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the core without the caller's EDI variables | Design |
+| [ADR-155](ADR-155-a-ships-done-accepts-a-merge-request-that-is-a-draft-ready-or-merged.md) | A ship's done is accepted once its claims hold, and its merge request may be a draft, ready for review or merged | Design |
+| [ADR-156](ADR-156-a-tasks-merge-request-is-followed-whatever-order-things-happen-in.md) | A task's merge request is recorded as soon as it exists, and a merge the forge shows is followed whatever the order | Design |
+| [ADR-157](ADR-157-a-merge-the-forge-shows-hands-the-work-over-at-cleanup.md) | Cleanup retires a landed task's copy, branch and workers, and a merge the forge shows hands the work over | Design |

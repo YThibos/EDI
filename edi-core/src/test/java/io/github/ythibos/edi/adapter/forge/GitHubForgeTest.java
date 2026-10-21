@@ -49,22 +49,41 @@ class GitHubForgeTest {
     void findsTheOpenPullRequestOfABranchUnderTheBoundAccount() throws IOException {
         standIns.answering("pr-list", "[" + OPEN_DRAFT + "]");
 
-        MergeRequestView open = forge.openMergeRequestFrom(FORGE, BRANCH).orElseThrow();
+        MergeRequestView open = forge.mergeRequestFrom(FORGE, BRANCH).orElseThrow();
 
         assertThat(open).isEqualTo(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
                 "feature/HRN-3", "main", "1111111111111111111111111111111111111111", null));
         assertThat(standIns.calls()).containsExactly(
                 "auth token --hostname github.com --user example-owner",
-                "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state open --json "
+                "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state all --json "
                         + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit");
         assertThat(standIns.tokens()).containsExactly("none", ForgeStandIns.TOKEN);
     }
 
     @Test
-    void findsNoPullRequestWhenNoneIsOpen() throws IOException {
+    void findsNoPullRequestWhenNoneIsOpenOrMerged() throws IOException {
         standIns.answering("pr-list", "[]");
+        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
 
-        assertThat(forge.openMergeRequestFrom(FORGE, BRANCH)).isEmpty();
+        standIns.answering("pr-list", "[" + OPEN_DRAFT.replace("\"OPEN\"", "\"CLOSED\"") + "]");
+        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
+    }
+
+    @Test
+    void prefersTheOpenPullRequestOfABranchAndOtherwiseFindsItsMergedOne() throws IOException {
+        String merged = OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"isDraft\":true", "\"isDraft\":false")
+                .replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}");
+        String laterOpen = OPEN_DRAFT.replace("\"number\":7", "\"number\":8").replace("pull/7", "pull/8");
+
+        standIns.answering("pr-list", "[" + merged + "," + laterOpen + "]");
+        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).map(request -> request.address().number()).contains(8);
+
+        standIns.answering("pr-list", "[" + merged + "]");
+        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).hasValueSatisfying(request -> {
+            assertThat(request.isMerged()).isTrue();
+            assertThat(request.draft()).isFalse();
+            assertThat(request.landedCommit()).isEqualTo("3333");
+        });
     }
 
     @Test

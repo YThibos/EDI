@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.delivery.CloneRefresh;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -195,6 +196,29 @@ class FollowMergesTest {
         assertThat(merged.delivery().landedCommit()).isEqualTo(landed);
         assertThat(merged.cleanUp().done()).isTrue();
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).doesNotContain(WakeKind.DRAFT_MERGED);
+    }
+
+    @Test
+    void recordsAnOpenRequestEdiNeverRecordedOnTheCaptainsWordAndKeepsWatchingIt() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView ready = home.forge().marksReady(WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker()).address());
+
+        assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain(ready.address().url(), Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("The forge shows " + ready.address() + " open, not merged, so EDI keeps watching it.");
+        assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> assertThat(delivery.state()).isEqualTo(MergeRequestState.OPEN));
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded").doesNotContain("DraftMerged");
+    }
+
+    @Test
+    void refusesTheCaptainsWordWhenTheForgeShowsNoRequestFromTheTasksBranch() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+
+        assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("EDI has no merge request to follow: no merge request from feature/HRN-3 is open or merged on"
+                        + " https://github.com/example-owner/harness.");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
     }
 
     @Test

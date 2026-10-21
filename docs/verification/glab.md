@@ -6,7 +6,7 @@ Every call was read-only; `glab mr create` is exercised against a recording stan
 | Call | Result on 1.106.0 |
 |---|---|
 | `glab mr list -R https://<host>/<group>/<project> -F json` | Prints an array of merge requests; each carries `iid`, `web_url`, `state`, `draft`, `source_branch`, `target_branch`, `sha`, `merge_commit_sha` and `squash_commit_sha`; `work_in_progress` is absent. |
-| `--source-branch <branch>` | Filters the list by source branch; the list holds open merge requests unless `--merged`, `--closed` or `--all` is given. |
+| `--source-branch <branch>` | Filters the list by source branch; the list holds open merge requests unless `--merged`, `--closed` or `--all` is given, and EDI passes `--all` to find a merged one too. |
 | `state` | `opened` while open and `merged` after a merge; a merged request through a merge commit carries `merge_commit_sha` and an empty `squash_commit_sha`. |
 | `web_url` | Ends with `/-/merge_requests/<iid>`, which the adapter rebuilds from the registered project and the number. |
 | `glab mr view <iid> -R <url> -F json` | Prints one object with the same fields. |

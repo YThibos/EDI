@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.testing;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +22,7 @@ import io.github.ythibos.edi.domain.task.BaseBranch;
 
 public final class FakeForge implements Forge {
 
+    private final ForgeKind kind;
     private final Map<Integer, MergeRequestView> mergeRequests = new HashMap<>();
     private final Map<String, String> pushedHeads = new HashMap<>();
     private final List<DraftProposal> openedDrafts = new ArrayList<>();
@@ -28,17 +30,22 @@ public final class FakeForge implements Forge {
     private boolean workflowScope = true;
     private int lastNumber;
 
-    @Override
-    public ForgeKind kind() {
-        return ForgeKind.GITHUB;
+    public FakeForge(ForgeKind kind) {
+        this.kind = kind;
     }
 
     @Override
-    public synchronized Optional<MergeRequestView> openMergeRequestFrom(RegisteredForge forge, BranchName branch) {
-        return mergeRequests.values().stream()
+    public ForgeKind kind() {
+        return kind;
+    }
+
+    @Override
+    public synchronized Optional<MergeRequestView> mergeRequestFrom(RegisteredForge forge, BranchName branch) {
+        return MergeRequestView.deliveryAmong(mergeRequests.values().stream()
                 .filter(request -> request.address().repository().equals(forge.repository()))
-                .filter(request -> request.state() == MergeRequestState.OPEN && branch.toString().equals(request.sourceBranch()))
-                .findFirst();
+                .filter(request -> branch.toString().equals(request.sourceBranch()))
+                .sorted(Comparator.comparingInt((MergeRequestView request) -> request.address().number()).reversed())
+                .toList());
     }
 
     @Override
@@ -81,6 +88,14 @@ public final class FakeForge implements Forge {
         pushedHeads.put(branch.toString(), head);
     }
 
+    public synchronized MergeRequestView marksReady(MergeRequestAddress address) {
+        MergeRequestView request = mergeRequests.get(address.number());
+        MergeRequestView ready = new MergeRequestView(address, request.state(), false, request.sourceBranch(), request.targetBranch(),
+                request.headCommit(), request.landedCommit());
+        mergeRequests.put(address.number(), ready);
+        return ready;
+    }
+
     public synchronized MergeRequestView merges(MergeRequestAddress address, String landedCommit) {
         return changed(address, MergeRequestState.MERGED, landedCommit);
     }
@@ -102,7 +117,8 @@ public final class FakeForge implements Forge {
     }
 
     private MergeRequestView opened(RegisteredForge forge, BranchName branch, BaseBranch base, String head, boolean draft) {
-        MergeRequestAddress address = openMergeRequestFrom(forge, branch).map(MergeRequestView::address)
+        MergeRequestAddress address = mergeRequestFrom(forge, branch).filter(request -> request.state() == MergeRequestState.OPEN)
+                .map(MergeRequestView::address)
                 .orElseGet(() -> new MergeRequestAddress(forge.repository(), ++lastNumber));
         MergeRequestView request = new MergeRequestView(address, MergeRequestState.OPEN, draft, branch.toString(), base.name(), head, null);
         mergeRequests.put(address.number(), request);

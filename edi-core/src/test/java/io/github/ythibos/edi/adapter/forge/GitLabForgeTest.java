@@ -49,11 +49,25 @@ class GitLabForgeTest {
     void findsTheOpenMergeRequestOfABranchByTheProjectsUrl() throws IOException {
         standIns.answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null") + "]");
 
-        MergeRequestView open = forge.openMergeRequestFrom(FORGE, BRANCH).orElseThrow();
+        MergeRequestView open = forge.mergeRequestFrom(FORGE, BRANCH).orElseThrow();
 
         assertThat(open).isEqualTo(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 5), MergeRequestState.OPEN, true,
                 "feature/HRN-3", "main", "2222", null));
-        assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 -F json");
+        assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 --all -F json");
+    }
+
+    @Test
+    void findsTheMergedRequestOfABranchWhenNoneIsOpenAndPassesOverAClosedOne() throws IOException {
+        String closed = REQUEST.formatted("closed", "null", "null").replace("\"iid\":5", "\"iid\":6").replace("merge_requests/5", "merge_requests/6");
+        standIns.answering("mr-list", "[" + closed + "," + REQUEST.formatted("merged", "\"4444\"", "null") + "]");
+
+        MergeRequestView merged = forge.mergeRequestFrom(FORGE, BRANCH).orElseThrow();
+
+        assertThat(merged.address().number()).isEqualTo(5);
+        assertThat(merged.landedCommit()).isEqualTo("4444");
+
+        standIns.answering("mr-list", "[" + closed + "]");
+        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
     }
 
     @Test

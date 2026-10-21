@@ -36,16 +36,18 @@ public class ObservePipelines {
     private final EventLog events;
     private final WorkerContext context;
     private final Pipeline pipeline;
+    private final FollowMerges merges;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public ObservePipelines(WorkerStore workers, PipelineRunStore runs, EventLog events, WorkerContext context, Pipeline pipeline, Clock clock,
-            TransactionTemplate transaction) {
+    public ObservePipelines(WorkerStore workers, PipelineRunStore runs, EventLog events, WorkerContext context, Pipeline pipeline,
+            FollowMerges merges, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.runs = runs;
         this.events = events;
         this.context = context;
         this.pipeline = pipeline;
+        this.merges = merges;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -66,17 +68,22 @@ public class ObservePipelines {
 
     private void observe(Workplace workplace) {
         try {
-            pipeline.latestRunOf(workplace.worktree(), workplace.dispatch().branch())
-                    .ifPresent(latest -> transaction.executeWithoutResult(_ -> recorded(workplace.task().id(), latest)));
+            pipeline.latestRunOf(workplace.worktree(), workplace.dispatch().branch()).ifPresent(latest -> observed(workplace.task().id(), latest));
         } catch (ProgramFailure unreadable) {
             LOG.warn("The pipeline of {} could not be read: {}", workplace.task().id(), unreadable.getMessage());
         }
     }
 
-    private void recorded(TaskId task, PipelineRun latest) {
+    private void observed(TaskId task, PipelineRun latest) {
+        if (transaction.execute(_ -> recordedWhenNew(task, latest))) {
+            merges.followTheRequestOf(task);
+        }
+    }
+
+    private boolean recordedWhenNew(TaskId task, PipelineRun latest) {
         Optional<PipelineRun> known = runs.latestOf(task);
         if (known.filter(latest::equals).isPresent()) {
-            return;
+            return false;
         }
         Instant now = clock.now();
         runs.save(task, latest, now);
@@ -87,5 +94,6 @@ public class ObservePipelines {
         if (!latest.isRunning() && sameRun.map(PipelineRun::isRunning).orElse(true)) {
             events.record(new PipelineRunFinished(task, latest), Actor.CORE, now);
         }
+        return true;
     }
 }

@@ -111,15 +111,15 @@ final class BriefSections {
                 + "EDI wrote that intent from the Captain's intent section above" + craft + "; pass it unchanged.\n"
                 + "Answer each gate yourself and never pass `--yes`; an ask-user finding is not yours to answer,"
                 + " so report it with `edi status needs-decision --key nm-<run>-<step>` and stop.\n"
-                + "The pipeline pushes the branch and opens a draft; leave it a draft.";
+                + "The pipeline pushes the branch and opens the merge request as a draft; mark it ready for review once its checks are green.";
     }
 
     private static String shipDone(BriefFacts facts) {
         return switch (facts.delivery()) {
-            case DRAFT_REVIEW -> "CI is green on the draft for your last commit, and `" + facts.reportPath() + "` holds a short delivery note.\n"
-                    + "Then run `edi status done -- <the draft's full URL>`.\n"
-                    + "EDI accepts it only when the draft is open, still a draft, from `" + facts.dispatch().branch() + "` to `" + facts.base()
-                    + "` at your last commit, and the branch adds no `-SNAPSHOT` version.";
+            case DRAFT_REVIEW -> "CI is green on the merge request for your last commit, and `" + facts.reportPath() + "` holds a short delivery note.\n"
+                    + "Then run `edi status done -- <the merge request's full URL>`.\n"
+                    + "EDI accepts it only when the merge request from `" + facts.dispatch().branch() + "` to `" + facts.base()
+                    + "` is open, as a draft or ready for review, or merged, at your last commit, and the branch adds no `-SNAPSHOT` version.";
             case LOCAL_BRANCH, LOCAL_APPLY -> "Your last commit is on `" + facts.dispatch().branch() + "`, the project's tests pass, and `"
                     + facts.reportPath() + "` holds a short delivery note.\n"
                     + "Then run `edi status done -- <the head commit>`.";

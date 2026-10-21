@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.delivery;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -26,17 +27,19 @@ public record MergeRequestView(
         }
     }
 
+    public static Optional<MergeRequestView> deliveryAmong(List<MergeRequestView> fromOneBranch) {
+        return fromOneBranch.stream().filter(request -> request.state() == MergeRequestState.OPEN).findFirst()
+                .or(() -> fromOneBranch.stream().filter(MergeRequestView::isMerged).findFirst());
+    }
+
     public boolean isMerged() {
         return state == MergeRequestState.MERGED;
     }
 
     public List<String> gapsAsTheDeliveryOf(BranchName branch, BaseBranch base, String head) {
         List<String> gaps = new ArrayList<>();
-        if (state != MergeRequestState.OPEN) {
-            gaps.add(address + " is " + state.word() + ", not open");
-        }
-        if (!draft) {
-            gaps.add(address + " is not a draft; every merge request EDI delivers stays a draft until the captain merges it");
+        if (state == MergeRequestState.CLOSED) {
+            gaps.add(address + " is closed without a merge");
         }
         if (!branch.toString().equals(sourceBranch)) {
             gaps.add(address + " comes from " + sourceBranch + ", not from " + branch);

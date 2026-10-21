@@ -17,6 +17,8 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -54,7 +56,24 @@ class CleanUpTaskTest {
         DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
 
         assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
-                .hasMessage("fit-lamp#1 still works on fit-lamp; it is cleaned up once its work is handed over.");
+                .hasMessage("fit-lamp#1 still works on fit-lamp;"
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged.");
+    }
+
+    @Test
+    void takesAMergeTheForgeShowsAsTheHandOverOfAWorkerThatStillRuns() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+        MergeRequestView merged = home.forge().merges(draft.address(), upstream.commit("Fit the lamp, squashed").head());
+        home.deliveries().save(Delivery.of(LAMP, merged, home.clock().now()));
+
+        cleanUp("fit-lamp");
+
+        assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isFalse();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
     }
 
     @Test

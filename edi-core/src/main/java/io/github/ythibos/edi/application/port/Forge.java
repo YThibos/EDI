@@ -13,7 +13,7 @@ public interface Forge {
 
     ForgeKind kind();
 
-    Optional<MergeRequestView> openMergeRequestFrom(RegisteredForge forge, BranchName branch);
+    Optional<MergeRequestView> mergeRequestFrom(RegisteredForge forge, BranchName branch);
 
     MergeRequestView view(RegisteredForge forge, MergeRequestAddress address);
 
