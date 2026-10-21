@@ -197,3 +197,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-149](ADR-149-test-jvms-compile-with-c1-only-and-test-homes-start-from-a-migrated-store.md) | The test JVMs compile with C1 only, and a new test home starts from a store migrated once | Design |
 | [ADR-150](ADR-150-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
 | [ADR-151](ADR-151-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
+| [ADR-152](ADR-152-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the command and the core without the caller's EDI variables | Design |

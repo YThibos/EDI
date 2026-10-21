@@ -93,7 +93,7 @@ class NativeSmokeIT {
                 "--edi.console.windows-directory=" + home)
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
-        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("SERVER_PORT", "0");
@@ -491,6 +491,7 @@ class NativeSmokeIT {
         commandLine.addAll(List.of(arguments));
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toAbsolutePath().toFile()).redirectErrorStream(true);
         launch.environment().keySet().removeAll(List.of("TMUX", "TMUX_PANE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_PID"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("EDI_"));
         launch.environment().putAll(environment);
         launch.environment().put("EDI_HOME", home.toString());
         return run(launch, input);
