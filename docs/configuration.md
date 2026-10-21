@@ -1,0 +1,76 @@
+# Configuration
+
+Everything that differs between machines or people lives in the EDI home, never in the repository ([ADR-006](decisions/ADR-006-machine-differences-at-runtime.md), [ADR-017](decisions/ADR-017-person-and-employer-agnostic.md)).
+[examples/edi-home/](../examples/edi-home/) shows each file but the publish deny-list with placeholder values, the memory files included.
+
+## The EDI home
+
+| Path under `$EDI_HOME` | Holds |
+|---|---|
+| `config/machine.yaml` | the machine profile |
+| `config/projects.yaml` | the project registry |
+| `config/dispatch-rules.json` | the dispatch categories and the project overrides |
+| `config/personal.yaml` | the personal configuration |
+| `config/publish-denylist` | the terms EDI never publishes |
+| `memory/` | the captain's memory and the craftsmanship rules |
+| `projects/<name>` | a project's clone, unless its registry entry names another |
+| `worktrees/<project>/<task-id>` | a task's isolated copy |
+| `data/tasks/<task-id>/` | a task's brief and report |
+| `state/` | the core's port, token, lock, logs and activity ledger |
+| `.claude/skills/` | the skills `ops/install.sh` links in |
+
+The session-start digest lists any of the machine profile, the personal configuration, the registry, the dispatch rules, the craftsmanship rules and the three startup memory files that the home still lacks.
+
+## The machine profile
+
+`config/machine.yaml` describes this machine:
+
+- `workers` lists the models workers may run, strongest first, the tools they never get and their permission mode.
+- `supervision.staleAfter` and `supervision.pauseResurface` tune the supervision round, PT20M and PT4H by default (see [Workers](workers.md)).
+- `tracker` says whether this machine reaches a JIRA instance or none, and `time` switches the activity ledger and the brief's `worked:` line (see [Trackers and time](trackers-and-time.md)).
+- `memory.startupBudgetTokens` caps the startup memory, 18,000 by default.
+- `notify.windowsToast: true` raises Windows notifications while the captain is quiet or away.
+- `presence.calendar: outlook` turns presence quiet during a meeting in the classic Outlook calendar (see [Memory and presence](memory-and-presence.md)).
+
+## The project registry
+
+`config/projects.yaml` lists the projects EDI works on, and `edi project list` prints it ([ADR-041](decisions/ADR-041-project-registry-is-configuration.md)).
+A project's entry names:
+
+- its `clone`, by default `$EDI_HOME/projects/<name>`;
+- its `forge`, `{ kind: github|gitlab, host, path, account }`, and every forge call for the project runs under that account ([ADR-080](decisions/ADR-080-forge-calls-run-under-the-bound-account.md));
+- its `delivery`, `draft-review` (the default) or `local-branch` with a `captainCheckout` (see [Delivery](delivery.md));
+- its `tracker`, `{ kind: jira|edi|none, projectKey: KEY }`;
+- `craftRules: true` when its briefs carry the craftsmanship rules.
+
+## The dispatch rules
+
+`config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([ADR-025](decisions/ADR-025-dispatch-categories.md), [ADR-050](decisions/ADR-050-dispatch-rules-read-and-routed.md)).
+`"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).
+
+## The personal configuration
+
+`config/personal.yaml` holds the address word EDI uses for the captain and the presence settings: `presence.autoQuietAfter` (PT15M), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
+
+## The memory files
+
+`memory/profile.md`, `memory/machine.md` and `memory/learnings.md` are the captain's memory, loaded into the primary's system prompt at every start.
+`memory/archive.md` is their cold tier, where `/stow` retires what no longer needs loading, and it is never loaded.
+`memory/craft-rules.md` holds the craftsmanship rules for projects with `craftRules: true`.
+
+## The publish deny-list
+
+`config/publish-denylist` holds one term per line, matched whatever its case; a line that starts with `#` is a comment.
+The publish check refuses outgoing commits that carry any of them (see [Delivery](delivery.md#the-publish-check)).
+
+## Environment
+
+| Variable | Default | Names |
+|---|---|---|
+| `EDI_HOME` | `~/.edi` | the EDI home |
+| `EDI_CHECKOUT` | `~/EDI` | the EDI repository `edi up` and `edi update` use |
+| `EDI_CORE` | `edi-core` next to `edi` | the core executable |
+| `EDI_BIN` | `~/.local/bin` | where `ops/install.sh` installs the executables |
+| `SERVER_PORT` | `47318` | the core's port |
+
+The core's own setting `edi.pipeline.home` names the validation pipeline's home when it is not `~/.no-mistakes`.

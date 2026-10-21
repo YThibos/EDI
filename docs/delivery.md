@@ -1,0 +1,45 @@
+# Delivery
+
+EDI never merges: every change reaches the captain as a draft the captain merges, or in the captain's own checkout on request ([ADR-022](decisions/ADR-022-drafts-the-captain-merges.md)).
+
+## Delivery modes
+
+A project's registry entry sets its `delivery` (see [Configuration](configuration.md#the-project-registry)):
+
+- `draft-review`, the default: the validation pipeline pushes the branch and opens a draft merge or pull request.
+- `local-branch`: the work arrives in the project's `captainCheckout` by a ref-only fetch ([ADR-062](decisions/ADR-062-ref-only-delivery-into-the-captains-checkout.md)).
+- `local-apply`, which one task may ask for with `--delivery local-apply`: the work arrives in the captain's checkout as an uncommitted patch.
+
+Accepted work reaches the captain by its delivery mode ([ADR-084](decisions/ADR-084-accepted-work-reaches-the-captain-by-its-delivery-mode.md)).
+
+## A ship's validation
+
+A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included ([ADR-081](decisions/ADR-081-the-pipeline-adapter.md), [ADR-082](decisions/ADR-082-edi-writes-the-pipeline-intent.md)).
+Its done counts only once its draft is open, still a draft and at the copy's head, and its branch adds no SNAPSHOT version ([ADR-083](decisions/ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md)).
+`gh` and `glab` must be logged in, and the validation pipeline must be installed for draft reviews (see [Tools EDI drives](tooling.md)).
+
+## Drafts and merges
+
+EDI watches every open draft, follows a merge the forge reports by refreshing the clone before any follow-up work, and cleans up the task once its work is landed ([ADR-087](decisions/ADR-087-merges-are-followed-from-the-forge.md), [ADR-088](decisions/ADR-088-follow-up-work-waits-for-the-refreshed-clone.md), [ADR-089](decisions/ADR-089-the-landed-work-test.md), [ADR-090](decisions/ADR-090-cleanup-retires-a-landed-task.md)).
+
+```sh
+edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14 --delivery local-apply
+edi deliver fit-the-lamp                            # open the draft from the pushed branch when the pipeline could not
+edi merged fit-the-lamp                             # the captain merged it: check the forge, refresh the clone, clean up
+edi merged https://github.com/owner/repo/pull/7     # the same, by the draft's address
+edi cleanup fit-the-lamp                            # retire a landed task's copy, branch and workers
+```
+
+`edi deliver` opens the draft the pipeline could not ([ADR-085](decisions/ADR-085-edi-deliver-opens-the-draft-the-pipeline-could-not.md)).
+`edi task show` names a ship's draft, its latest pipeline run and, once cleaned up, what it cost.
+A cleanup that finds unlanded work lists every uncommitted path and unlanded commit and changes nothing.
+
+## The publish check
+
+The publish check refuses outgoing commits that carry a secret, a term of the publish deny-list or a personal path ([ADR-032](decisions/ADR-032-publish-guard.md)).
+
+```sh
+edi publish-check --range origin/main..HEAD         # the publish guard over outgoing commits
+```
+
+A push from a project's isolated copy, and the check in the project's registered clone, may still name that project's own forge host and account and, for a project tracked on JIRA, the tracker's host and the name of its keys file ([ADR-144](decisions/ADR-144-a-project-may-publish-its-own-forge-and-tracker-names.md)); every other term applies to every project.
