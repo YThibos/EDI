@@ -11,6 +11,9 @@ edi sitrep --board                                  # print the sitrep, then ope
 ```
 
 The sitrep page shows what needs a decision, what is ongoing and what is charted next side by side, in one glance on a laptop screen, with what landed this week below them, and follows every change as it happens ([ADR-107](decisions/ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md), [ADR-109](decisions/ADR-109-the-console-stream-signals-each-commit.md)).
+
+![The sitrep page in a 1536 by 730 viewport, a laptop screen at 125% scaling](images/sitrep/sitrep-1536x730.webp)
+
 Each decision card takes an option, the captain's own words, or both, and records them verbatim as the captain's answer; Reconcile asks the primary to re-check the decision against reality instead of answering it ([ADR-108](decisions/ADR-108-a-console-answer-is-the-captains-word-and-reconcile-asks-for-a-recheck.md)).
 The console opens through `cmd.exe /c start` from `/mnt/c` on WSL; elsewhere, or when that fails, the command prints the sign-in link instead ([ADR-106](decisions/ADR-106-edi-opens-the-console-in-the-captains-browser.md)).
 

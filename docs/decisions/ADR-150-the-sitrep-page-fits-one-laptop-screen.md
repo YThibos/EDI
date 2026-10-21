@@ -32,4 +32,4 @@ Keeping the deck's navigation in view while a long decision scrolls keeps every 
 
 **Revisit when:** The captain reads the sitrep on a screen of a different shape, or a fifth section joins the page.
 
-**Sources:** The captain's request of 21/10/2026; ADR-019, ADR-110; `edi-console/src/styles.css`, `edi-console/src/app/sitrep/sitrep-page.html`, `edi-console/src/app/sitrep/sitrep-page.css`, `edi-console/src/app/console/hud-strip.css`, `edi-console/src/app/console/decision-deck.css`, `edi-console/src/app/console/decision-card.css`, `edi-console/src/app/console/console-header.css`.
+**Sources:** The captain's request of 21/10/2026; ADR-019, ADR-110; `edi-console/src/styles.css`, `edi-console/src/app/sitrep/sitrep-page.html`, `edi-console/src/app/sitrep/sitrep-page.css`, `edi-console/src/app/console/hud-strip.css`, `edi-console/src/app/console/decision-deck.css`, `edi-console/src/app/console/decision-card.css`, `edi-console/src/app/console/console-header.css`; the page at 1920 by 950, 1536 by 730, 1280 by 720 and 390 CSS pixels in `docs/images/sitrep/`.
