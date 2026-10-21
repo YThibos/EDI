@@ -14,7 +14,8 @@ Only adapters start programs, each program from the adapter that owns it (ADR-00
 **Decision:** `CaptainsBrowser`, in `adapter.browser`, owns the programs `CMD` and `XDG_OPEN`.
 When `edi.console.windows-directory` (`/mnt/c` by default) exists, it runs `cmd.exe /c start <sign-in link>` from that directory; otherwise, when `edi.console.desktop-display` names a display, it runs `xdg-open <sign-in link>` from the EDI home.
 `edi.console.desktop-display` defaults to `WAYLAND_DISPLAY`, then `DISPLAY`, and `edi.console.browser` names another executable for either program, which tests use.
-The browser gets 15 seconds to answer; a browser that fails, cannot run or takes longer counts as not opened.
+The opener gets 15 seconds to answer; one that fails or cannot run counts as not opened.
+An opener still running after its patience counts as opened and is left running, never stopped.
 `OpenConsole` issues a sign-in link (ADR-105) and asks the browser to open it.
 When the browser opened, `edi console` and `edi sitrep --board` print only the console's address, `EDI console: http://127.0.0.1:<port>/ is open in your browser.`; when nothing opened, they print the sign-in link itself, so the captain can open it once within two minutes.
 `edi sitrep --board` opens the console only after the report itself was printed.
@@ -22,6 +23,7 @@ When the browser opened, `edi console` and `edi sitrep --board` print only the c
 **Motivation:** WSL keeps the Windows start command, which opens the captain's Windows browser even where WSLg also offers a Linux display, and `xdg-open` is the freedesktop.org way to open a link in the desktop's default browser.
 Asking for a display before running `xdg-open` keeps a machine without a desktop, such as a build server, from falling back to a text browser that would wait for a terminal.
 A short patience keeps a session start or a command from waiting on a browser that never answers.
+`xdg-open` on a desktop without a desktop environment runs the browser in the foreground until it closes, so stopping a slow opener would close the very browser it just opened.
 
 **Alternatives considered:**
 - Choosing the opener in the machine profile - the presence of Windows and of a display is a fact of the machine EDI can see, and a setting could only disagree with it.

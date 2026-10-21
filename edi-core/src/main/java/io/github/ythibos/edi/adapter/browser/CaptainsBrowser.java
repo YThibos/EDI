@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -26,15 +27,23 @@ public class CaptainsBrowser {
     private final String executable;
     private final Path windowsDirectory;
     private final String desktopDisplay;
+    private final Duration patience;
 
+    @Autowired
     public CaptainsBrowser(ExternalPrograms programs, EdiHome home, @Value("${edi.console.browser:}") String executable,
             @Value("${edi.console.windows-directory:/mnt/c}") Path windowsDirectory,
             @Value("${edi.console.desktop-display:${WAYLAND_DISPLAY:${DISPLAY:}}}") String desktopDisplay) {
+        this(programs, home, executable, windowsDirectory, desktopDisplay, PATIENCE);
+    }
+
+    CaptainsBrowser(ExternalPrograms programs, EdiHome home, String executable, Path windowsDirectory, String desktopDisplay,
+            Duration patience) {
         this.programs = programs;
         this.home = home;
         this.executable = executable;
         this.windowsDirectory = windowsDirectory;
         this.desktopDisplay = desktopDisplay;
+        this.patience = patience;
     }
 
     public boolean open(URI page) {
@@ -53,7 +62,7 @@ public class CaptainsBrowser {
 
     private boolean succeeds(ProgramCall opening) {
         try {
-            return programs.run(opening, PATIENCE).succeeded();
+            return !programs.endsInFailureWithin(opening, patience);
         } catch (ProgramFailure unable) {
             return false;
         }

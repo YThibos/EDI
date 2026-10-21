@@ -3,6 +3,7 @@ package io.github.ythibos.edi.adapter.process;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.lang.ProcessBuilder.Redirect;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,6 +51,18 @@ public class ExternalPrograms {
         }
     }
 
+    public boolean endsInFailureWithin(ProgramCall call, Duration patience) {
+        try {
+            Process process = start(call, Redirect.DISCARD, Redirect.DISCARD);
+            return process.waitFor(patience.toMillis(), TimeUnit.MILLISECONDS) && process.exitValue() != 0;
+        } catch (IOException unstartable) {
+            throw new ProgramFailure(call.program().executable() + " could not run: " + unstartable.getMessage(), unstartable);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
     private static ProgramRun captured(ProgramCall call, Consumer<Process> awaiting) {
         Program program = call.program();
         try (Capture output = Capture.create(); Capture errors = Capture.create()) {
@@ -62,14 +75,18 @@ public class ExternalPrograms {
     }
 
     private static Process start(ProgramCall call, Path output, Path errors) throws IOException {
+        return start(call, Redirect.to(output.toFile()), Redirect.to(errors.toFile()));
+    }
+
+    private static Process start(ProgramCall call, Redirect output, Redirect errors) throws IOException {
         ProcessBuilder launch = new ProcessBuilder(Stream.concat(Stream.of(call.executable()), call.arguments().stream()).toList())
                 .directory(call.directory().toFile());
         launch.environment().keySet().removeAll(call.withheldVariables());
         launch.environment().putAll(call.environment());
         if (output.equals(errors)) {
-            launch.redirectOutput(output.toFile()).redirectErrorStream(true);
+            launch.redirectOutput(output).redirectErrorStream(true);
         } else {
-            launch.redirectOutput(output.toFile()).redirectError(errors.toFile());
+            launch.redirectOutput(output).redirectError(errors);
         }
         Process process = launch.start();
         try (OutputStream input = process.getOutputStream()) {

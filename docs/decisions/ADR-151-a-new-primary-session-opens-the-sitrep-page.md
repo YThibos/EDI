@@ -30,7 +30,7 @@ Telling the primary where the page is, or how to open it, keeps a failed opening
 **Consequences:**
 - Good: the captain finds the sitrep page in the browser as soon as a new primary session starts.
 - Good: another machine or captain switches it off in the machine profile.
-- Bad: the session start waits for the browser, at most 15 seconds.
+- Bad: the session start waits for the browser to be opened, at most 15 seconds, after which a still running opener counts as opened.
 - Bad: the sitrep line is not rebuilt from the store, so the digest of a resumed session leaves it out.
 
 **Revisit when:** Claude Code changes the sources it names at session start, or the captain wants the page at standby sessions too.

@@ -6,21 +6,28 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.testing.StandInScripts;
+import io.github.ythibos.edi.testing.TestProcesses;
 
 @Tag("adapter")
 class CaptainsBrowserTest {
 
     private static final URI SIGN_IN = URI.create("http://127.0.0.1:47318/login#token");
     private static final String NO_DESKTOP = "";
+    private static final Duration SHORT_PATIENCE = Duration.ofMillis(500);
+
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
 
     @TempDir
     private Path directory;
@@ -62,7 +69,28 @@ class CaptainsBrowserTest {
         assertThat(browserWith(directory.resolve("bin/missing"), directory.resolve("no-windows"), ":0").open(SIGN_IN)).isFalse();
     }
 
+    @Test
+    void countsABrowserStillRunningAfterItsPatienceAsOpenedAndLeavesItRunning() throws IOException {
+        Path running = directory.resolve("running-browser");
+        Path foreground = StandInScripts.installed(directory.resolve("bin/foreground-browser"),
+                "#!/bin/sh\nprintf '%s' \"$$\" > '" + running + "'\nexec sleep 30\n");
+
+        boolean opened = browserWith(foreground, directory.resolve("no-windows"), ":0", SHORT_PATIENCE).open(SIGN_IN);
+        ProcessHandle browserProcess = ProcessHandle.of(Long.parseLong(Files.readString(running))).orElseThrow();
+        processes.register(browserProcess.pid());
+
+        assertThat(opened).isTrue();
+        assertThat(browserProcess.isAlive()).isTrue();
+        browserProcess.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(browserProcess)).isTrue();
+    }
+
     private CaptainsBrowser browserWith(Path executable, Path windowsDirectory, String desktopDisplay) {
         return new CaptainsBrowser(new ExternalPrograms(), new EdiHome(directory), executable.toString(), windowsDirectory, desktopDisplay);
+    }
+
+    private CaptainsBrowser browserWith(Path executable, Path windowsDirectory, String desktopDisplay, Duration patience) {
+        return new CaptainsBrowser(new ExternalPrograms(), new EdiHome(directory), executable.toString(), windowsDirectory, desktopDisplay,
+                patience);
     }
 }
