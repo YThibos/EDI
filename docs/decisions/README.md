@@ -196,3 +196,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-148](ADR-148-the-old-home-is-compared-entry-by-entry.md) | AT-41 and AT-47 compare every entry of the old home but its access times, and name each one that changed | Design |
 | [ADR-149](ADR-149-test-jvms-compile-with-c1-only-and-test-homes-start-from-a-migrated-store.md) | The test JVMs compile with C1 only, and a new test home starts from a store migrated once | Design |
 | [ADR-150](ADR-150-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
+| [ADR-151](ADR-151-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
