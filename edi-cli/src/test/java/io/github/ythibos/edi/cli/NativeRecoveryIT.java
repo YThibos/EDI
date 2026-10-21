@@ -296,7 +296,7 @@ class NativeRecoveryIT {
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(home.toFile()).redirectErrorStream(true);
         Map<String, String> variables = new HashMap<>(environment);
         variables.put("EDI_HOME", home.toString());
-        launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
         launch.environment().putAll(variables);
         return run(launch, input);
     }

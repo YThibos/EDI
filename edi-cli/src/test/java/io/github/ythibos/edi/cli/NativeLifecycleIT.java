@@ -64,7 +64,7 @@ class NativeLifecycleIT {
     }
 
     private static CommandRun run(ProcessBuilder launch) throws Exception {
-        launch.environment().keySet().removeAll(List.of("TMUX", "TMUX_PANE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_PID"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("EDI_CORE", binary("edi.core.binary").toString());
         launch.environment().put("SERVER_PORT", "0");
