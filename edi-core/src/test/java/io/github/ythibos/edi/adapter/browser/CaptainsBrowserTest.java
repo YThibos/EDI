@@ -7,6 +7,8 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -71,18 +73,17 @@ class CaptainsBrowserTest {
 
     @Test
     void countsABrowserStillRunningAfterItsPatienceAsOpenedAndLeavesItRunning() throws IOException {
-        Path running = directory.resolve("running-browser");
-        Path foreground = StandInScripts.installed(directory.resolve("bin/foreground-browser"),
-                "#!/bin/sh\nprintf '%s' \"$$\" > '" + running + "'\nexec sleep 30\n");
+        Path foreground = StandInScripts.installed(directory.resolve("bin/foreground-browser"), "#!/bin/sh\nsleep 30\n");
 
         boolean opened = browserWith(foreground, directory.resolve("no-windows"), ":0", SHORT_PATIENCE).open(SIGN_IN);
-        ProcessHandle browserProcess = ProcessHandle.of(Long.parseLong(Files.readString(running))).orElseThrow();
+        ProcessHandle browserProcess = childRunning(foreground);
         processes.register(browserProcess.pid());
 
         assertThat(opened).isTrue();
         assertThat(browserProcess.isAlive()).isTrue();
-        browserProcess.destroyForcibly();
-        assertThat(TestProcesses.awaitExit(browserProcess)).isTrue();
+        List<ProcessHandle> tree = Stream.concat(Stream.of(browserProcess), browserProcess.descendants()).toList();
+        tree.forEach(ProcessHandle::destroyForcibly);
+        assertThat(tree).allMatch(TestProcesses::awaitExit);
     }
 
     private CaptainsBrowser browserWith(Path executable, Path windowsDirectory, String desktopDisplay) {
@@ -92,5 +93,12 @@ class CaptainsBrowserTest {
     private CaptainsBrowser browserWith(Path executable, Path windowsDirectory, String desktopDisplay, Duration patience) {
         return new CaptainsBrowser(new ExternalPrograms(), new EdiHome(directory), executable.toString(), windowsDirectory, desktopDisplay,
                 patience);
+    }
+
+    private static ProcessHandle childRunning(Path standIn) {
+        return ProcessHandle.current().children()
+                .filter(child -> child.info().commandLine().filter(command -> command.contains(standIn.toString())).isPresent())
+                .findFirst()
+                .orElseThrow();
     }
 }
