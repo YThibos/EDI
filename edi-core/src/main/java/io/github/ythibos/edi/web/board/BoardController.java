@@ -22,6 +22,6 @@ class BoardController {
     @PostMapping("/api/boards")
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation arm(@RequestBody ArmRequest request, Caller caller) {
-        return new Confirmation.BoardArmed(armBoard.arm(caller.requireWorker("edi board arm"), request.taskOfTheBoard(), request.board(), request.bound()));
+        return new Confirmation.BoardArmed(armBoard.arm(caller.requireWorker("edi board arm"), request.taskOfTheBoard(), request.board(), request.round()));
     }
 }

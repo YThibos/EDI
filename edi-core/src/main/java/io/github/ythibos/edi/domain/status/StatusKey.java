@@ -5,12 +5,17 @@ import io.github.ythibos.edi.domain.AsciiCharacters;
 public record StatusKey(String value) {
 
     private static final int LONGEST = 80;
+    private static final String PIPELINE_GATE = "nm-";
     private static final String SEPARATORS = "._-";
 
     public StatusKey {
         if (!isKey(value)) {
             throw new IllegalArgumentException("A status key is letters, digits, dots, dashes and underscores, such as nm-42-review: " + value);
         }
+    }
+
+    public boolean namesAPipelineGate() {
+        return value.startsWith(PIPELINE_GATE);
     }
 
     private static boolean isKey(String value) {

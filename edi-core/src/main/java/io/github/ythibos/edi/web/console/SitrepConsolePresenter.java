@@ -12,7 +12,9 @@ import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
+import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
@@ -21,10 +23,12 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
+import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Answer;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.Board;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Card;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Charted;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Landed;
@@ -32,6 +36,7 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Ongoing;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Option;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.PresenceShown;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Recommendation;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.Review;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 
 @Component
@@ -40,6 +45,7 @@ public class SitrepConsolePresenter {
     static final int LANDED_SHOWN = 10;
     static final int CHARTED_SHOWN = 20;
     private static final String WITHOUT_A_WORKER = "waiting";
+    private static final String WITH_EDI = "with EDI";
 
     public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, String machine, CaptainAddress address, Presence presence) {
         List<Charted> charted = chartedNext(fleet);
@@ -49,7 +55,9 @@ public class SitrepConsolePresenter {
                 machine,
                 address.word(),
                 presenceShown(presence, generated),
-                fleet.decisions().stream().map(SitrepConsolePresenter::card).toList(),
+                fleet.waiting().decisions().stream().map(SitrepConsolePresenter::card).toList(),
+                fleet.waiting().boards().stream().map(SitrepConsolePresenter::board).toList(),
+                fleet.waiting().reviews().stream().map(SitrepConsolePresenter::review).toList(),
                 fleet.answered().stream().map(SitrepConsolePresenter::answer).toList(),
                 fleet.ongoing().stream().map(SitrepConsolePresenter::ongoing).toList(),
                 fleet.landed().stream().limit(LANDED_SHOWN).map(SitrepConsolePresenter::landed).toList(),
@@ -73,6 +81,16 @@ public class SitrepConsolePresenter {
         return new Card(open.decision().number().toString(), open.task().id().value(), projectsOf(open.task()), card.title(), card.context(),
                 card.options().stream().map(option -> new Option(option.key().toString(), option.text())).toList(),
                 new Recommendation(card.recommendation().key().toString(), card.recommendation().why()), open.decision().raisedAt());
+    }
+
+    private static Board board(WaitingBoard waiting) {
+        Task task = waiting.task();
+        return new Board(task.id().value(), task.intake().title(), projectsOf(task), waiting.board().openQuestions(), waiting.board().link());
+    }
+
+    private static Review review(ReadyForReview ready) {
+        Task task = ready.task();
+        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url());
     }
 
     private static Answer answer(RecentAnswer recent) {
@@ -115,6 +133,9 @@ public class SitrepConsolePresenter {
         if (worker.lastStatus() == null) {
             return worker.activity().word();
         }
+        if (worker.waitsOnThePrimary()) {
+            return WITH_EDI;
+        }
         StatusState reported = worker.lastStatus().report().state();
         return reported == StatusState.RESOLVED ? StatusState.WORKING.word() : reported.word();
     }
@@ -128,7 +149,21 @@ public class SitrepConsolePresenter {
         if (worker == null) {
             return "no worker yet";
         }
-        return worker.lastStatus() == null ? worker.activity().word() : worker.lastStatus().report().text();
+        return worker.lastStatus() == null ? worker.activity().word() : reportedDoing(worker.lastStatus().report());
+    }
+
+    private static String reportedDoing(StatusReport report) {
+        if (report.isForThePrimary()) {
+            return whatEdiIsSettling(report);
+        }
+        return report.state() == StatusState.RESOLVED ? "back at work; EDI settled its question" : report.text();
+    }
+
+    private static String whatEdiIsSettling(StatusReport report) {
+        if (report.state() == StatusState.BLOCKED) {
+            return "EDI is helping it past a block";
+        }
+        return report.key() != null && report.key().namesAPipelineGate() ? "EDI is settling a pipeline question" : "EDI is settling a question";
     }
 
     private static String draftOf(Delivery delivery) {

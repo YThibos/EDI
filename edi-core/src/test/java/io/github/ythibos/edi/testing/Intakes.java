@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.testing;
 
+import java.util.Arrays;
 import java.util.List;
 
 import io.github.ythibos.edi.application.task.NewTask;
@@ -28,7 +29,8 @@ public final class Intakes {
         return new NewTask(new TaskId(id), new Intake(TaskKind.CAPTAIN, title, List.of(), null, null, List.of(), null), "");
     }
 
-    public static NewTask shipBlockedBy(String id, String title, String blocker) {
-        return new NewTask(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(new TaskId(blocker)), null), "");
+    public static NewTask shipBlockedBy(String id, String title, String... blockers) {
+        List<TaskId> blockedBy = Arrays.stream(blockers).map(TaskId::new).toList();
+        return new NewTask(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, blockedBy, null), "");
     }
 }

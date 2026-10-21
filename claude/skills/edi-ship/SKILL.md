@@ -33,12 +33,13 @@ description: >-
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
 - Carry the captain's answer back with `edi steer <task> --resolves <key>`.
+- Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as EDI's until the worker acknowledges the steer that resolves it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.
 
 ## Done, delivery and landing
 
 - A ship's done counts once its draft is open, still a draft, at the copy's head, and its branch adds no SNAPSHOT version.
-- `draft-review`: report the draft's full address as ready for the captain's review; the captain merges it.
+- `draft-review`: report the draft's full address as ready for the captain's review; the captain merges it, and until then it waits in the decision zone of every report.
 - `local-branch`: EDI fetches the ready branch into the captain's checkout by ref only.
 - `local-apply`: on the captain's request only, EDI applies the change to the captain's checkout without a commit.
 - When the pipeline could not open the draft, `edi deliver <task>` opens it under the project's bound account.

@@ -37,6 +37,7 @@ import io.github.ythibos.edi.web.Confirmation.StopRequested;
 import io.github.ythibos.edi.web.Confirmation.WorkDiscarded;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.Words;
 
 @Component
 class ConfirmationText implements TextPresenter<Confirmation> {
@@ -119,7 +120,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
                 ? "; it answers no decision"
                 : "; its answers to " + board.bound().stream().map(DecisionNumber::toString).collect(Collectors.joining(", "))
                         + " are recorded as the captain's";
-        return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox.";
+        return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox;"
+                + " the sitrep puts " + Words.quantity(board.openQuestions(), "question") + " before the captain until a round answers them.";
     }
 
     private static String queued(AddedTask added) {

@@ -1,0 +1,26 @@
+@if (boards().length || reviews().length) {
+  <div class="sr-panel">
+    <div class="sr-rows">
+      @for (board of boards(); track board.task + board.link) {
+        <div class="sr-row sr-waiting">
+          <div class="sr-row__main">
+            <div class="sr-row__title">Board for {{ board.title }}</div>
+            <div class="sr-row__sub">{{ questions(board.questions) }} · {{ projectsOf(board.projects, board.task) }}</div>
+            <a class="sr-waiting__link" [href]="board.link" target="_blank" rel="noopener">{{ board.link }}</a>
+          </div>
+          <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>board</span>
+        </div>
+      }
+      @for (review of reviews(); track review.url) {
+        <div class="sr-row sr-waiting">
+          <div class="sr-row__main">
+            <div class="sr-row__title">{{ review.title }}</div>
+            <div class="sr-row__sub">ready for your review · {{ projectsOf(review.projects, review.task) }}</div>
+            <a class="sr-waiting__link" [href]="review.url" target="_blank" rel="noopener">{{ review.url }}</a>
+          </div>
+          <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>review</span>
+        </div>
+      }
+    </div>
+  </div>
+}

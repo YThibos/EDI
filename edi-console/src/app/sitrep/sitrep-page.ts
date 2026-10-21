@@ -11,6 +11,7 @@ import { HudStrip } from '../console/hud-strip';
 import { LandedList } from '../console/landed-list';
 import { OngoingList } from '../console/ongoing-list';
 import { PresenceChoice, Sitrep } from '../console/sitrep';
+import { WaitingList } from '../console/waiting-list';
 
 type Access = 'loading' | 'signed-in' | 'signed-out' | 'unreachable';
 
@@ -18,7 +19,7 @@ const SIGNED_OUT = 401;
 
 @Component({
   selector: 'app-sitrep-page',
-  imports: [ConsoleHeader, HudStrip, DecisionDeck, OngoingList, LandedList, ChartedList],
+  imports: [ConsoleHeader, HudStrip, DecisionDeck, WaitingList, OngoingList, LandedList, ChartedList],
   templateUrl: './sitrep-page.html',
   styleUrl: './sitrep-page.css',
 })
@@ -28,13 +29,21 @@ export class SitrepPage {
   protected readonly sitrep = signal<Sitrep | null>(null);
   protected readonly access = signal<Access>('loading');
   protected readonly live = signal(false);
+  protected readonly waitingCount = computed(() => {
+    const sitrep = this.sitrep();
+    return sitrep ? sitrep.decisions.length + sitrep.boards.length + sitrep.reviews.length : 0;
+  });
   protected readonly waitingOnTheCaptain = computed(() => {
     const sitrep = this.sitrep();
     if (!sitrep) {
       return '';
     }
-    const open = sitrep.decisions.length;
-    return open ? `${open} waiting on you, ${sitrep.address}` : `all clear, ${sitrep.address}`;
+    const waiting = this.waitingCount();
+    return waiting ? `${waiting} waiting on you, ${sitrep.address}` : `all clear, ${sitrep.address}`;
+  });
+  protected readonly showsTheDeck = computed(() => {
+    const sitrep = this.sitrep();
+    return !!sitrep && (sitrep.decisions.length > 0 || sitrep.answered.length > 0 || this.waitingCount() === 0);
   });
   protected readonly chartedShown = computed(() => {
     const sitrep = this.sitrep();

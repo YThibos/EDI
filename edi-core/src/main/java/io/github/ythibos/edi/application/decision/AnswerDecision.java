@@ -9,6 +9,7 @@ import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -26,15 +27,17 @@ public class AnswerDecision {
     private final DecisionStore decisions;
     private final EventLog events;
     private final TicketProposals proposals;
+    private final DependantTasks dependants;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, TicketProposals proposals, Clock clock,
+    public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, TicketProposals proposals, DependantTasks dependants, Clock clock,
             TransactionTemplate transaction) {
         this.tasks = tasks;
         this.decisions = decisions;
         this.events = events;
         this.proposals = proposals;
+        this.dependants = dependants;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -48,6 +51,7 @@ public class AnswerDecision {
             Task released = task.decisionAnswered(now);
             decisions.save(decided);
             tasks.update(released);
+            releaseTheDependantsOfADoneTask(released);
             recordEvents(decided, released, actor, now);
             return new AnsweredDecision(decided, released, TicketSettlement.none());
         });
@@ -56,6 +60,12 @@ public class AnswerDecision {
 
     private Decision decisionOf(Task task) {
         return decisions.ofTask(task.id()).orElseThrow(() -> new UnknownDecision(task.id()));
+    }
+
+    private void releaseTheDependantsOfADoneTask(Task released) {
+        if (released.isDone()) {
+            dependants.stopWaitingFor(released);
+        }
     }
 
     private void recordEvents(Decision answered, Task released, Actor actor, Instant now) {

@@ -5,13 +5,20 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
+import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
+import io.github.ythibos.edi.application.fleet.ReadyForReview;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.web.presence.PresenceWords;
@@ -35,7 +42,7 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         FleetSnapshot fleet = report.fleet();
         int width = report.width().columns();
         List<String> lines = new ArrayList<>(presenceOf(report, width));
-        lines.addAll(DecisionZone.lines(decisionsOf(fleet, wording), width));
+        lines.addAll(DecisionZone.lines(waitingOnTheCaptain(fleet.waiting(), wording), width));
         lines.addAll(countedSection("DONE THIS TURN", turnItems(report.turn().done()), "Nothing finished this turn", width));
         lines.addAll(countedSection("ONGOING", ongoingItems(fleet, wording), "Nothing running", width));
         lines.addAll(section("NEXT", ProjectColumn.lines(turnItems(report.turn().next()), "Nothing planned", width)));
@@ -57,10 +64,26 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return LocalDate.ofInstant(task.created(), ZoneOffset.UTC);
     }
 
-    private static List<DecisionZone.Entry> decisionsOf(FleetSnapshot fleet, TurnWording wording) {
-        return fleet.decisions().stream()
-                .map(open -> new DecisionZone.Entry(open.decision().number(), wording.projectsOf(open.task()), open.decision().card()))
+    private static List<DecisionZone.Entry> waitingOnTheCaptain(WaitingOnTheCaptain waiting, TurnWording wording) {
+        return Stream.of(
+                        waiting.decisions().stream().map(open -> call(open, wording)),
+                        waiting.boards().stream().map(board -> boardQuestions(board, wording)),
+                        waiting.reviews().stream().map(ready -> review(ready, wording)))
+                .flatMap(Function.identity())
                 .toList();
+    }
+
+    private static DecisionZone.Entry call(OpenDecision open, TurnWording wording) {
+        return new DecisionZone.Call(open.decision().number(), wording.projectsOf(open.task()), open.decision().card());
+    }
+
+    private static DecisionZone.Entry boardQuestions(WaitingBoard waiting, TurnWording wording) {
+        Board board = waiting.board();
+        return new DecisionZone.BoardQuestions(wording.projectsOf(waiting.task()), wording.textOf(waiting.task()), board.openQuestions(), board.link());
+    }
+
+    private static DecisionZone.Entry review(ReadyForReview ready, TurnWording wording) {
+        return new DecisionZone.Review(wording.projectsOf(ready.task()), wording.textOf(ready.task()), ready.delivery().address().url());
     }
 
     private static List<String> countedSection(String title, List<ReportItem> items, String placeholder, int width) {

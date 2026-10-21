@@ -13,6 +13,8 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -43,6 +45,23 @@ class WorkerTest {
         assertThat(mechanical.doneChecked(false).doneCheck()).isEqualTo(DoneCheck.REFUSED);
         assertThat(mechanical.reported(new StatusReport(StatusState.WORKING, null, null, "Again."), LAUNCHED).doneCheck()).isNull();
         assertThatThrownBy(() -> launched(CategoryId.IMPLEMENTATION).doneChecked(true)).isInstanceOf(Refusal.class);
+    }
+
+    @Test
+    void settlesOnlyTheQuestionItsLastStatusAsksThePrimary() {
+        StatusKey gate = new StatusKey("nm-01RUN-review");
+        Worker asking = launched(CategoryId.IMPLEMENTATION).reported(new StatusReport(StatusState.NEEDS_DECISION, gate, null, "Fix or skip?"), LAUNCHED);
+        InboxMessage settling = InboxMessage.sent(asking.id().task(), 2, "Fix it.", gate, LAUNCHED);
+
+        Worker settled = asking.settledBy(settling, LAUNCHED.plusSeconds(60));
+        Worker movedOn = asking.reported(new StatusReport(StatusState.WORKING, null, null, "Fixing."), LAUNCHED).settledBy(settling, LAUNCHED);
+
+        assertThat(asking.waitsOnThePrimary()).isTrue();
+        assertThat(settled.waitsOnThePrimary()).isFalse();
+        assertThat(settled.lastStatus().report()).isEqualTo(new StatusReport(StatusState.RESOLVED, gate, null, "resolved by message 2"));
+        assertThat(movedOn.lastStatus().report().text()).isEqualTo("Fixing.");
+        assertThat(asking.settledBy(InboxMessage.sent(asking.id().task(), 3, "Carry on.", null, LAUNCHED), LAUNCHED)).isEqualTo(asking);
+        assertThat(asking.settledBy(InboxMessage.sent(asking.id().task(), 4, "Other.", new StatusKey("other"), LAUNCHED), LAUNCHED)).isEqualTo(asking);
     }
 
     @Test

@@ -114,6 +114,11 @@ public class TaskStore {
                 .param("since", Columns.text(since)));
     }
 
+    public List<Task> waitingFor(TaskId blocker) {
+        return tasks(store.sql(SELECT_TASKS + "where id in (select task_id from task_dependency where blocked_by = :blocker) order by rowid")
+                .param("blocker", blocker.value()));
+    }
+
     public List<Blocker> blockersOf(Task task) {
         List<TaskId> blockedBy = task.intake().blockedBy();
         if (blockedBy.isEmpty()) {

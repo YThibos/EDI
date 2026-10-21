@@ -30,7 +30,9 @@ An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`
 
 ## Reports
 
-One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work ([ADR-046](decisions/ADR-046-where-the-fleet-snapshot-puts-open-work.md)), and `edi report` and `edi sitrep` print it as the boxed captain report ([ADR-047](decisions/ADR-047-the-captain-report-matches-the-old-renderer.md)).
+One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report ([ADR-047](decisions/ADR-047-the-captain-report-matches-the-old-renderer.md)).
+What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([ADR-156](decisions/ADR-156-everything-that-waits-on-the-captain-is-in-the-decision-zone.md)).
+A task that is dropped or finished no longer blocks any other task ([ADR-158](decisions/ADR-158-a-closed-task-blocks-nobody.md)).
 
 ```sh
 edi report --turn - < turn.json                     # the boxed captain report that ends a turn

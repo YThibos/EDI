@@ -197,3 +197,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-149](ADR-149-test-jvms-compile-with-c1-only-and-test-homes-start-from-a-migrated-store.md) | The test JVMs compile with C1 only, and a new test home starts from a store migrated once | Design |
 | [ADR-150](ADR-150-edi-opens-the-console-through-windows-or-the-linux-desktop.md) | EDI opens the console in the captain's browser through the Windows start command, or through xdg-open on a Linux desktop | Design |
 | [ADR-151](ADR-151-a-new-primary-session-opens-the-sitrep-page.md) | A new primary session opens the console's sitrep page in the captain's browser | Design |
+| [ADR-156](ADR-156-everything-that-waits-on-the-captain-is-in-the-decision-zone.md) | Everything that waits on the captain is in the decision zone, whatever holds its task | Design |
+| [ADR-157](ADR-157-a-board-round-names-its-link-and-its-questions.md) | A board round names its link and how many questions it puts before the captain | Design |
+| [ADR-158](ADR-158-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
+| [ADR-159](ADR-159-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |
