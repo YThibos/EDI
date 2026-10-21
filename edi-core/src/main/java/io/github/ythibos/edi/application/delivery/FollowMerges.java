@@ -98,11 +98,9 @@ public class FollowMerges {
     }
 
     private Optional<Delivery> deliveryNamedBy(String reference) {
-        return reference.startsWith(WEB_ADDRESS) ? deliveries.at(reference) : followedDeliveryOf(tasks.get(TaskReference.parse(reference)).id());
-    }
-
-    private Optional<Delivery> followedDeliveryOf(TaskId task) {
-        return deliveries.of(task).filter(delivery -> !delivery.isClosed());
+        return reference.startsWith(WEB_ADDRESS)
+                ? deliveries.at(reference)
+                : records.followedDeliveryOf(tasks.get(TaskReference.parse(reference)).id());
     }
 
     private MergedWork deliveryFollowed(Delivery delivery, Actor actor) {

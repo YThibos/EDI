@@ -39,7 +39,11 @@ public class DeliveryRecords {
     }
 
     public boolean awaitsTheRequestOf(Workplace workplace) {
-        return followsARequest(workplace) && deliveries.of(workplace.task().id()).filter(delivery -> !delivery.isClosed()).isEmpty();
+        return followsARequest(workplace) && followedDeliveryOf(workplace.task().id()).isEmpty();
+    }
+
+    public Optional<Delivery> followedDeliveryOf(TaskId task) {
+        return deliveries.of(task).filter(delivery -> !delivery.isClosed());
     }
 
     public Optional<MergeRequestView> requestFrom(Workplace workplace) {
