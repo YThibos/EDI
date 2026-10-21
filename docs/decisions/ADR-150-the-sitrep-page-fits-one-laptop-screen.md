@@ -16,7 +16,7 @@ The sitrep page shows the HUD strip on top, then three columns side by side: 01 
 From 1200 CSS pixels wide, the strip and the columns together are at most the viewport's height below the header, and a column whose content is taller scrolls inside itself: an open decision scrolls inside its card, so the deck's stack and its navigation stay in view, and a list scrolls inside its panel.
 The three columns share a header row and a body row through a subgrid, so their panels start on one line however their headings wrap; the decision column is a fifth wider than the other two.
 The page fits by tightening rather than hiding: a 52-pixel header, single-line HUD tiles, smaller type steps and card padding, and row titles that wrap instead of being cut short.
-Between 761 and 1199 CSS pixels the decision deck takes the left column and the ongoing and charted lists stack on the right; below that, everything is one column with 16-pixel gutters, as ADR-019 requires at phone width.
+Between 761 and 1199 CSS pixels the decision deck takes the left column and the ongoing and charted lists stack on the right; below that, everything is one column, and at phone width, 560 CSS pixels and below, the gutters drop to 16 pixels, as ADR-019 requires.
 
 **Motivation:** The captain reads the sitrep to see what waits on them and what is underway, so those three sections belong in one glance at both scalings, and what already landed is the part they can scroll to.
 Keeping the deck's navigation in view while a long decision scrolls keeps every card reachable without moving the page.
