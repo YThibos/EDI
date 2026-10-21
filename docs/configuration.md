@@ -1,7 +1,7 @@
 # Configuration
 
 Everything that differs between machines or people lives in the EDI home, never in the repository ([ADR-006](decisions/ADR-006-machine-differences-at-runtime.md), [ADR-017](decisions/ADR-017-person-and-employer-agnostic.md)).
-[examples/edi-home/](../examples/edi-home/) shows each file with placeholder values, the memory files included.
+[examples/edi-home/](../examples/edi-home/) shows each file but the publish deny-list with placeholder values, the memory files included.
 
 ## The EDI home
 

@@ -82,7 +82,7 @@ mkdir -p ~/.edi && cp -r --update=none examples/edi-home/. ~/.edi/
 - `config/projects.yaml`, the projects registry: each project's clone, forge and account, base branch, delivery mode and tracker.
 - `config/dispatch-rules.json`, the dispatch rules: the categories of work, with the model and effort each runs on, and the project overrides.
 - `memory/`, the captain's memory (`profile.md`, `machine.md`, `learnings.md`) loaded into the primary at every start, its cold tier `archive.md`, never loaded, and the craftsmanship rules (`craft-rules.md`).
-- `config/publish-denylist`, the publish deny-list: terms that must never leave the machine in a commit, one per line.
+- `config/publish-denylist`, the publish deny-list, which the example leaves out: terms that must never leave the machine in a commit, one per line.
 - `config/personal.yaml`, the word EDI addresses the captain by and the presence settings.
 
 Then add the allow rule `Bash(edi *)` to the captain's own Claude Code settings; EDI's settings carry hooks and the status line only.
