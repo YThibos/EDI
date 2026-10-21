@@ -93,7 +93,7 @@ class StopTheCoreTest {
 
     private CallingSession session(String typed) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().sessionStarted(session, null, true);
         home.primaryHooks().promptSubmitted(session, typed);
         return new CallingSession(session);
     }

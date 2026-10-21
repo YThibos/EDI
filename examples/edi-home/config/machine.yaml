@@ -30,3 +30,5 @@ notify:
   windowsToast: true
 presence:
   calendar: outlook
+console:
+  openSitrepAtSessionStart: true

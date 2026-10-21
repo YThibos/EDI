@@ -45,8 +45,8 @@ class PrimaryHooksTest {
         Process running = processes.register(new ProcessBuilder("sleep", "30").start());
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(first, running.pid());
-        home.primaryHooks().sessionStarted(second, null);
+        home.primaryHooks().sessionStarted(first, running.pid(), true);
+        home.primaryHooks().sessionStarted(second, null, true);
 
         assertThat(home.primarySessions().standingOf(first)).isEqualTo(Standing.PRIMARY);
         assertThat(home.primarySessions().standingOf(second)).isEqualTo(Standing.STANDBY);
@@ -54,7 +54,7 @@ class PrimaryHooksTest {
         running.destroyForcibly();
         TestProcesses.awaitExit(running.toHandle());
         UUID third = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(third, null);
+        home.primaryHooks().sessionStarted(third, null, true);
 
         assertThat(home.primarySessions().standingOf(third)).isEqualTo(Standing.PRIMARY);
         assertThat(home.primarySessions().standingOf(first)).isEqualTo(Standing.STANDBY);
@@ -64,9 +64,9 @@ class PrimaryHooksTest {
     void keepsTheRoleWhenTheSameSessionStartsAgainAndFreesItWhenTheSessionEnds() {
         UUID primary = UUID.randomUUID();
         UUID standby = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null);
-        home.primaryHooks().sessionStarted(standby, null);
-        home.primaryHooks().sessionStarted(primary, null);
+        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().sessionStarted(standby, null, true);
+        home.primaryHooks().sessionStarted(primary, null, true);
 
         assertThat(home.primarySessions().standingOf(primary)).isEqualTo(Standing.PRIMARY);
 
@@ -79,7 +79,7 @@ class PrimaryHooksTest {
     void endsATurnWithWorkInFlightOnlyWhileAnEdiWaitIsLive() throws IOException {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null);
+        home.primaryHooks().sessionStarted(primary, null, true);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
         HookAnswer blind = home.primaryHooks().stopping(primary, List.of());
@@ -95,8 +95,8 @@ class PrimaryHooksTest {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
         UUID standby = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null);
-        home.primaryHooks().sessionStarted(standby, null);
+        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().sessionStarted(standby, null, true);
         home.primaryHooks().promptSubmitted(standby, "<task-notification>done</task-notification>");
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
@@ -112,16 +112,16 @@ class PrimaryHooksTest {
         Instant reset = home.clock().now().plus(Duration.ofHours(2));
         home.runtime().transcriptEndsOn(new UsageLimit("session limit", reset));
         UUID stopped = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(stopped, null);
+        home.primaryHooks().sessionStarted(stopped, null, true);
         home.primaryHooks().stopFailed(stopped, "/transcripts/stopped.jsonl");
         home.primaryHooks().sessionEnded(stopped);
 
         home.clock().advance(Duration.ofMinutes(1));
         UUID next = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(next, null);
+        home.primaryHooks().sessionStarted(next, null, true);
         home.clock().advance(Duration.ofMinutes(1));
         UUID later = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(later, null);
+        home.primaryHooks().sessionStarted(later, null, true);
 
         assertThat(home.sessionStartDigest().digestFor(next).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();

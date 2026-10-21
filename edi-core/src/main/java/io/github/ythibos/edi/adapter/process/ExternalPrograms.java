@@ -28,7 +28,11 @@ public class ExternalPrograms {
     }
 
     public ProgramRun run(ProgramCall call) {
-        return captured(call, process -> awaitCompletion(call.program(), process, PATIENCE));
+        return run(call, PATIENCE);
+    }
+
+    public ProgramRun run(ProgramCall call, Duration patience) {
+        return captured(call, process -> awaitCompletion(call.program(), process, patience));
     }
 
     public ProgramRun runUntilItEnds(ProgramCall call) {
@@ -80,7 +84,7 @@ public class ExternalPrograms {
         try {
             if (!process.waitFor(patience.toSeconds(), TimeUnit.SECONDS)) {
                 stop(process);
-                throw new ProgramFailure(program.executable() + " did not finish within " + patience.toMinutes() + " minutes.");
+                throw new ProgramFailure(program.executable() + " did not finish within " + patience.toSeconds() + " seconds.");
             }
         } catch (InterruptedException interrupted) {
             stop(process);

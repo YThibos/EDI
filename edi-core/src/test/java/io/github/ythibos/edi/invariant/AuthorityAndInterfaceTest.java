@@ -133,9 +133,9 @@ class AuthorityAndInterfaceTest {
             TestHome home = TestHome.in(directory);
             UUID first = UUID.randomUUID();
             UUID second = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(first, null);
+            home.primaryHooks().sessionStarted(first, null, true);
             home.primaryHooks().promptSubmitted(first, "What is waiting on me?");
-            home.primaryHooks().sessionStarted(second, null);
+            home.primaryHooks().sessionStarted(second, null, true);
 
             assertThat(standingOf(home, first)).isEqualTo(Standing.PRIMARY);
             assertThat(standingOf(home, second)).isEqualTo(Standing.STANDBY);
@@ -384,7 +384,7 @@ class AuthorityAndInterfaceTest {
 
     private static CallingSession primarySessionIn(TestHome home, String typed) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().sessionStarted(session, null, true);
         home.primaryHooks().promptSubmitted(session, typed);
         return new CallingSession(session);
     }

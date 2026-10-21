@@ -50,7 +50,7 @@ class PresenceAndMemoryStoresTest {
     @Test
     void keepsTypedPassagesAsDigestsAndTheCaptainsWordPerSession() {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().sessionStarted(session, null, true);
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
         home.captainWords().recordTyped(session, Passage.allTypedIn("Drop the lamp.\nAnd the horn."), TestHome.START);
         Authorisation word = new Authorisation(session, new TaskId("fit-lamp"), "Drop the lamp.", TestHome.START);

@@ -36,6 +36,15 @@ class PrimaryRulesTest {
     }
 
     @Test
+    void opensTheSitrepOnlyForTheLaunchOfANewSessionThatHoldsThePrimaryRole() {
+        assertThat(new SessionStart(true, true, Standing.PRIMARY).opensTheSitrep()).isTrue();
+        assertThat(new SessionStart(false, true, Standing.PRIMARY).opensTheSitrep()).isFalse();
+        assertThat(new SessionStart(true, false, Standing.PRIMARY).opensTheSitrep()).isFalse();
+        assertThat(new SessionStart(true, true, Standing.STANDBY).opensTheSitrep()).isFalse();
+        assertThat(new SessionStart(true, true, Standing.UNCLAIMED).opensTheSitrep()).isFalse();
+    }
+
+    @Test
     void endsATurnOnlyAfterTheReportWhenStateChangedAndWithAWaitWhileWorkIsInFlight() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
 
