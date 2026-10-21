@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.web.hook;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
+import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.HookAnswer;
@@ -21,31 +24,39 @@ import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
+import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.web.access.Caller;
 import io.github.ythibos.edi.web.access.NotPermitted;
+import io.github.ythibos.edi.web.console.ConsoleAddress;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 class HookController {
+
+    private static final String LAUNCH = "startup";
 
     private final WorkerHooks workerHooks;
     private final PrimaryHooks primaryHooks;
     private final GuardToolCall guard;
+    private final OpenTheSitrepAtSessionStart sitrep;
     private final SessionStartDigestQuery digests;
     private final SessionStartDigestText digestText;
     private final ReturnBriefText returnBriefText;
     private final JsonMapper json;
 
-    HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, SessionStartDigestQuery digests,
-            SessionStartDigestText digestText, ReturnBriefText returnBriefText, JsonMapper json) {
+    HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, OpenTheSitrepAtSessionStart sitrep,
+            SessionStartDigestQuery digests, SessionStartDigestText digestText, ReturnBriefText returnBriefText, JsonMapper json) {
         this.workerHooks = workerHooks;
         this.primaryHooks = primaryHooks;
         this.guard = guard;
+        this.sitrep = sitrep;
         this.digests = digests;
         this.digestText = digestText;
         this.returnBriefText = returnBriefText;
@@ -54,11 +65,11 @@ class HookController {
 
     @PostMapping(value = "/api/hooks/{event}", produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<String> hook(@PathVariable String event, @RequestBody JsonNode payload, Caller caller,
-            @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid) {
+            @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid, HttpServletRequest request) {
         HookEvent hook = HookEvent.named(event);
         return switch (caller) {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
-            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, claudePid);
+            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, claudePid, ConsoleAddress.servedTo(request));
             case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
@@ -75,9 +86,9 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid) {
+    private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid, URI console) {
         return switch (hook) {
-            case SESSION_START -> sessionStarted(sessionIn(payload), claudePid);
+            case SESSION_START -> sessionStarted(sessionIn(payload), claudePid, isALaunch(payload), console);
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case STOP -> rendered(primaryHooks.stopping(sessionIn(payload), backgroundJobsIn(payload)));
@@ -87,15 +98,21 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid) {
-        primaryHooks.sessionStarted(session, claudePid);
-        return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(digests.digestFor(session))));
+    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, boolean launched, URI console) {
+        SessionStart start = primaryHooks.sessionStarted(session, claudePid, launched);
+        SessionStartDigest digest = digests.digestFor(session);
+        SessionStartDigest told = sitrep.openFor(start, console).map(digest::withSitrep).orElse(digest);
+        return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
     }
 
     private ResponseEntity<String> promptSubmitted(UUID session, String prompt) {
         return primaryHooks.promptSubmitted(session, prompt)
                 .map(brief -> asJson(additionalContext(HookEvent.USER_PROMPT_SUBMIT, returnBriefText.text(brief))))
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    private static boolean isALaunch(JsonNode payload) {
+        return LAUNCH.equals(textIn(payload, "source"));
     }
 
     private static CallingSession callingSessionIn(JsonNode payload) {

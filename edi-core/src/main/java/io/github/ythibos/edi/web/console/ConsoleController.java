@@ -1,7 +1,5 @@
 package io.github.ythibos.edi.web.console;
 
-import java.net.URI;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,7 +33,7 @@ class ConsoleController {
     @PostMapping("/api/console/open")
     ConsoleOpening open(HttpServletRequest request, Caller caller) {
         caller.requireTheHomeToken("edi console");
-        return openConsole.open(consoleOf(request));
+        return openConsole.open(ConsoleAddress.servedTo(request));
     }
 
     @PostMapping("/api/console/session")
@@ -46,10 +44,6 @@ class ConsoleController {
         return signIn.presentedToken().flatMap(access::openSession)
                 .map(session -> ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, ConsoleSessionCookie.issued(session)).<String>build())
                 .orElseGet(() -> refused(HttpStatus.UNAUTHORIZED, SIGN_IN_REFUSED));
-    }
-
-    private static URI consoleOf(HttpServletRequest request) {
-        return URI.create("http://127.0.0.1:" + request.getLocalPort() + "/");
     }
 
     private static ResponseEntity<String> refused(HttpStatus status, String sentence) {

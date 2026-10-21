@@ -90,7 +90,7 @@ class WaitForWakesTest {
     void servesOnlyThePrimarySession() {
         UUID primary = primarySession();
         UUID standby = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(standby, null);
+        home.primaryHooks().sessionStarted(standby, null, true);
 
         home.waitForWakes().requireThePrimary(primary);
         assertThatThrownBy(() -> home.waitForWakes().requireThePrimary(standby)).isInstanceOf(Refusal.class).hasMessageContaining("serves the primary session");
@@ -116,7 +116,7 @@ class WaitForWakesTest {
 
     private UUID primarySession() {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().sessionStarted(session, null, true);
         home.primaryHooks().promptSubmitted(session, "Carry on.");
         return session;
     }

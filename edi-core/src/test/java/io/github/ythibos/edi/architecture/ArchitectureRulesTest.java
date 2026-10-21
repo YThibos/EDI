@@ -47,6 +47,7 @@ class ArchitectureRulesTest {
             Map.entry("SHELL", "io.github.ythibos.edi.adapter.build.."),
             Map.entry("LAVISH", "io.github.ythibos.edi.adapter.board.."),
             Map.entry("CMD", "io.github.ythibos.edi.adapter.browser.."),
+            Map.entry("XDG_OPEN", "io.github.ythibos.edi.adapter.browser.."),
             Map.entry("POWERSHELL", "io.github.ythibos.edi.adapter.windows.."));
 
     @ArchTest

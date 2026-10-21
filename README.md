@@ -66,6 +66,7 @@ edi down                   # stop the core when no worker runs
 edi update                 # pull the repository, build, test and install it, restart the core, re-read the anchor
 ```
 
+Each new primary session opens the console's sitrep page in the browser, signed in; `console.openSitrepAtSessionStart: false` in the machine profile switches that off.
 From then on the captain talks to the primary session, and every actor, the captain included, can use `edi --help` for the full command list.
 [Architecture](docs/architecture.md#the-core-at-run-time) explains where the core keeps its state and how one core runs per home.
 

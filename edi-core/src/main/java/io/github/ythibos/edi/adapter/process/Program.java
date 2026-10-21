@@ -11,6 +11,7 @@ public enum Program {
     SHELL("sh"),
     LAVISH("lavish-axi"),
     CMD("cmd.exe"),
+    XDG_OPEN("xdg-open"),
     POWERSHELL("powershell.exe");
 
     private final String executable;

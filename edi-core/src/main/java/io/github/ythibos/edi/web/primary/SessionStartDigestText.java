@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
@@ -39,6 +40,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing()),
                 "Address the captain as \"" + digest.address().word() + "\"."));
         lines.add("Presence: " + PresenceWords.of(digest.presence()) + ".");
+        lines.addAll(sitrepOf(digest.sitrep()));
         lines.addAll(memoryOf(digest.memory()));
         lines.addAll(setupOf(digest.missingFromTheHome()));
         lines.addAll(limitStop(digest.previousLimitStop()));
@@ -59,6 +61,16 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
             case STANDBY -> "This session is standby: another session holds the primary role, so this one only reads until the captain types here.";
             case UNCLAIMED -> "No session holds the primary role; the captain's next typed prompt makes this session the primary.";
         };
+    }
+
+    private static List<String> sitrepOf(ConsoleOpening opening) {
+        if (opening == null) {
+            return List.of();
+        }
+        return List.of(opening.opened()
+                ? "The console's sitrep page is open in the captain's browser at " + opening.console() + "."
+                : "EDI could not open the console's sitrep page in the captain's browser; it is at " + opening.console()
+                        + ", and edi console opens it signed in.");
     }
 
     private static List<String> memoryOf(MemoryCheck memory) {

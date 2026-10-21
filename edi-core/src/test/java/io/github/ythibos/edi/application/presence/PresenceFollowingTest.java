@@ -140,7 +140,7 @@ class PresenceFollowingTest {
 
     private UUID typed(String prompt) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().sessionStarted(session, null, true);
         home.primaryHooks().promptSubmitted(session, prompt);
         return session;
     }
