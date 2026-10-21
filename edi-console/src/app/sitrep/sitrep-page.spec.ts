@@ -44,10 +44,30 @@ describe('SitrepPage', () => {
     expect(page.querySelector('.sr-brand__wm')?.textContent).toBe('EDI');
     expect(text(page, '.sr-section__head .sr-sub')).toBe('1 waiting on you, Commander');
     expect(text(page, '.sr-decision__title')).toBe('Which lamp?');
-    expect(texts(page, '.sr-row__title')).toEqual(['Fit the lamp', 'Paint the buoy', 'Tune the horn', 'Scrub the deck']);
+    expect(texts(page, '.sr-row__title')).toEqual(['Fit the lamp', 'Tune the horn', 'Scrub the deck', 'Paint the buoy']);
     expect(text(page, '.sr-row__pr')).toBe('#12');
     expect(page.textContent).toContain('showing 2 of 23');
     expect(page.textContent).toContain('+21 more queued');
+  });
+
+  it('puts what needs a decision, what is ongoing and what is charted next side by side, in that order', async () => {
+    const page = (await rendered()).nativeElement as HTMLElement;
+
+    expect(texts(page, '.sr-cols > .sr-section .sr-sign')).toEqual(['01Needs your decision', '02Ongoing', '03Charted next']);
+    expect(Array.from(page.querySelectorAll('.sr-cols > .sr-section .sr-section__body')).map((body) => body.tagName.toLowerCase())).toEqual([
+      'app-decision-deck',
+      'app-ongoing-list',
+      'app-charted-list',
+    ]);
+  });
+
+  it('keeps what landed recently below the columns, last', async () => {
+    const page = (await rendered()).nativeElement as HTMLElement;
+    const signs = texts(page, '.sr-sign');
+
+    expect(signs).toEqual(['01Needs your decision', '02Ongoing', '03Charted next', '04Recently landed']);
+    expect(page.querySelector('.sr-cols app-landed-list')).toBeNull();
+    expect(page.querySelector('.sr-glance + .sr-section app-landed-list')).not.toBeNull();
   });
 
   it('reads the sitrep again whenever the fleet changes', async () => {

@@ -156,7 +156,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-107](ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md) | The sitrep page reads one document, edi-sitrep.v1, presented from the fleet snapshot | Design |
 | [ADR-108](ADR-108-a-console-answer-is-the-captains-word-and-reconcile-asks-for-a-recheck.md) | A console answer is the captain's word through the chat answer's use case, and Reconcile asks for a re-check | Design |
 | [ADR-109](ADR-109-the-console-stream-signals-each-commit.md) | The console stream signals each commit, and the page reads the sitrep again | Design |
-| [ADR-110](ADR-110-the-console-ports-the-approved-skin-with-its-fonts-bundled.md) | The console ports the approved skin into Angular components and bundles its fonts | Design |
+| [ADR-110](ADR-110-the-console-ports-the-approved-skin-with-its-fonts-bundled.md) | The console ports the approved skin into Angular components and bundles its fonts (superseded by ADR-150) | Design |
 | [ADR-111](ADR-111-research-boards-are-armed-through-edi-and-listened-to-by-the-core.md) | Research boards are armed through EDI and listened to by the core | Architecture |
 | [ADR-112](ADR-112-the-lavish-result-reader-follows-toon.md) | The Lavish result reader follows TOON and reads both prompt forms | Design |
 | [ADR-113](ADR-113-a-board-round-reaches-its-worker-and-its-bound-decisions.md) | A board round reaches its worker's inbox and the decisions the board is bound to | Design |
@@ -195,3 +195,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-147](ADR-147-a-fixture-repositorys-git-runs-no-background-maintenance.md) | A fixture repository's git runs no background maintenance | Design |
 | [ADR-148](ADR-148-the-old-home-is-compared-entry-by-entry.md) | AT-41 and AT-47 compare every entry of the old home but its access times, and name each one that changed | Design |
 | [ADR-149](ADR-149-test-jvms-compile-with-c1-only-and-test-homes-start-from-a-migrated-store.md) | The test JVMs compile with C1 only, and a new test home starts from a store migrated once | Design |
+| [ADR-150](ADR-150-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |

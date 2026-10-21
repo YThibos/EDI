@@ -3,18 +3,16 @@
   min-height: 100vh;
 }
 
-.sr-cols {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.sr-col {
+.sr-glance {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  min-width: 0;
+  gap: var(--gap);
+}
+
+.sr-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap) var(--gutter);
 }
 
 .sr-sign {
@@ -23,14 +21,41 @@
 
 .sr-foot {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 16px;
+  gap: 4px 16px;
   border-top: 1px solid var(--line);
-  padding-top: 14px;
+  padding-top: 12px;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 761px) and (max-width: 1199px) {
   .sr-cols {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .sr-cols > .sr-section:first-child {
+    grid-row: span 2;
+  }
+}
+
+@media (min-width: 1200px) {
+  .sr-glance {
+    max-height: max(calc(100dvh - var(--nav-height) - 2 * var(--gap)), 480px);
+  }
+
+  .sr-cols {
+    flex: 0 1 auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: var(--section-gap);
+  }
+
+  .sr-cols > .sr-section {
+    grid-row: span 2;
+    display: grid;
+    grid-template-rows: subgrid;
+    min-height: 0;
   }
 }
