@@ -211,6 +211,23 @@ class FollowMergesTest {
     }
 
     @Test
+    void followsTheRequestThatSucceedsAClosedOneOnTheCaptainsWordForTheTask() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        home.forge().closes(home.deliveries().of(LAMP).orElseThrow().address());
+        home.followMerges().watchTheOpenDrafts();
+        MergeRequestView successor = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().merges(successor.address(), squashedOntoMain(copy));
+
+        MergedWork merged = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(merged.delivery().address()).isEqualTo(successor.address());
+        assertThat(merged.cleanUp().done()).isTrue();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
     void refusesTheCaptainsWordWhenTheForgeShowsNoRequestFromTheTasksBranch() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");

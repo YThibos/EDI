@@ -262,6 +262,7 @@ class AuthorityAndInterfaceTest {
 
             assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
             assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded").doesNotContain("DeliveryRefused");
+            assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> assertThat(delivery.draft()).isFalse());
         }
 
         @ParameterizedTest(name = "{0}")

@@ -98,7 +98,11 @@ public class FollowMerges {
     }
 
     private Optional<Delivery> deliveryNamedBy(String reference) {
-        return reference.startsWith(WEB_ADDRESS) ? deliveries.at(reference) : deliveries.of(tasks.get(TaskReference.parse(reference)).id());
+        return reference.startsWith(WEB_ADDRESS) ? deliveries.at(reference) : followedDeliveryOf(tasks.get(TaskReference.parse(reference)).id());
+    }
+
+    private Optional<Delivery> followedDeliveryOf(TaskId task) {
+        return deliveries.of(task).filter(delivery -> !delivery.isClosed());
     }
 
     private MergedWork deliveryFollowed(Delivery delivery, Actor actor) {
@@ -244,7 +248,13 @@ public class FollowMerges {
             followedBefore(recorded, Actor.CORE);
         } else if (request.isMerged()) {
             followed(recorded, request, Actor.CORE);
+        } else {
+            keptAsTheForgeShowsIt(recorded, request);
         }
+    }
+
+    private void keptAsTheForgeShowsIt(Delivery recorded, MergeRequestView request) {
+        transaction.executeWithoutResult(_ -> deliveries.save(recorded.observed(request, clock.now())));
     }
 
     private void observedOnItsOwn(Delivery delivery) {
