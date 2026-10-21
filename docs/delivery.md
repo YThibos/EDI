@@ -15,13 +15,13 @@ Accepted work reaches the captain by its delivery mode ([ADR-084](decisions/ADR-
 ## A ship's validation
 
 A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included ([ADR-081](decisions/ADR-081-the-pipeline-adapter.md), [ADR-082](decisions/ADR-082-edi-writes-the-pipeline-intent.md)).
-Its done counts only once its merge request is open, as a draft or ready for review, or merged, at the copy's head, and its branch adds no SNAPSHOT version ([ADR-155](decisions/ADR-155-a-ships-done-accepts-a-merge-request-that-is-a-draft-ready-or-merged.md)).
+Its done counts only once its merge request is open, as a draft or ready for review, or merged, at the copy's head, and its branch adds no SNAPSHOT version ([ADR-153](decisions/ADR-153-a-ships-done-accepts-a-merge-request-that-is-a-draft-ready-or-merged.md)).
 `gh` and `glab` must be logged in, and the validation pipeline must be installed for draft reviews (see [Tools EDI drives](tooling.md)).
 
 ## Drafts and merges
 
 EDI records a task's merge request as soon as a pipeline run or a worker's status finds it on the forge, whether it is a draft, ready for review or already merged ([ADR-156](decisions/ADR-156-a-tasks-merge-request-is-followed-whatever-order-things-happen-in.md)).
-EDI watches every open draft, follows a merge the forge reports by refreshing the clone before any follow-up work, and cleans up the task once its work is landed ([ADR-087](decisions/ADR-087-merges-are-followed-from-the-forge.md), [ADR-088](decisions/ADR-088-follow-up-work-waits-for-the-refreshed-clone.md), [ADR-089](decisions/ADR-089-the-landed-work-test.md), [ADR-157](decisions/ADR-157-a-merge-the-forge-shows-hands-the-work-over-at-cleanup.md)).
+EDI watches every open merge request, draft or ready for review, follows a merge the forge reports by refreshing the clone before any follow-up work, and cleans up the task once its work is landed ([ADR-087](decisions/ADR-087-merges-are-followed-from-the-forge.md), [ADR-088](decisions/ADR-088-follow-up-work-waits-for-the-refreshed-clone.md), [ADR-089](decisions/ADR-089-the-landed-work-test.md), [ADR-157](decisions/ADR-157-a-merge-the-forge-shows-hands-the-work-over-at-cleanup.md)).
 
 ```sh
 edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14 --delivery local-apply
