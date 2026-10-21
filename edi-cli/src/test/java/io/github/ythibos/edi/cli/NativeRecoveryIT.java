@@ -121,7 +121,9 @@ class NativeRecoveryIT {
         workerServer().ifPresent(server -> processes.register(server.pid()));
         CommandRun woken = awaitTheWake(primary, "wake-bell#1 needs a decision: (bell) Brass or bronze?");
 
-        assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThis session is the primary");
+        assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThis session is the primary",
+                "The console's sitrep page is open in the captain's browser at http://127.0.0.1:");
+        assertThat(home.resolve("opened-in-the-browser")).content().startsWith("/c start http://127.0.0.1:");
         assertThat(unreported.output()).contains("\"decision\":\"block\"", "render the captain report with edi report");
         assertThat(reported.exitCode()).isZero();
         assertThat(reported.output()).isEmpty();
@@ -135,7 +137,9 @@ class NativeRecoveryIT {
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
                 "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
-                "--edi.machine.boot-id=" + bootIdFile())
+                "--edi.machine.boot-id=" + bootIdFile(),
+                "--edi.console.browser=" + stubBrowser(),
+                "--edi.console.windows-directory=" + home)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(home.resolve("core.log").toFile()));
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
@@ -212,6 +216,11 @@ class NativeRecoveryIT {
 
     private static Path bootIdFile() {
         return home.resolve("boot_id");
+    }
+
+    private static String stubBrowser() throws IOException {
+        return StandInScripts.installed(home.resolve("browser"), "#!/bin/sh\nprintf '%s\\n' \"$*\" > '" + home.resolve("opened-in-the-browser") + "'\n")
+                .toString();
     }
 
     private static void cloneAProjectInto(Path clone) throws Exception {

@@ -490,8 +490,7 @@ class NativeSmokeIT {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
         commandLine.addAll(List.of(arguments));
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toAbsolutePath().toFile()).redirectErrorStream(true);
-        launch.environment().keySet().removeAll(List.of("TMUX", "TMUX_PANE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_PID"));
-        launch.environment().keySet().removeIf(variable -> variable.startsWith("EDI_"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
         launch.environment().putAll(environment);
         launch.environment().put("EDI_HOME", home.toString());
         return run(launch, input);

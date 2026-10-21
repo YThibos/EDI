@@ -37,10 +37,10 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 @RegisterReflectionForBinding({MachineProfile.ProfileDocument.class, MachineProfile.WorkersSection.class, MachineProfile.ModelEntry.class,
     MachineProfile.SupervisionSection.class, MachineProfile.TrackerSection.class, MachineProfile.CredentialsSection.class,
     MachineProfile.TimeSection.class, MachineProfile.MemorySection.class, MachineProfile.NotifySection.class,
-    MachineProfile.PresenceSection.class})
+    MachineProfile.PresenceSection.class, MachineProfile.ConsoleSection.class})
 public class MachineProfile {
 
-    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null, null, null, null);
+    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null, null, null, null, null);
     private static final String OUTLOOK = "outlook";
     private static final int STARTUP_MEMORY_BUDGET_TOKENS = 18_000;
     private static final String UNNAMED = "this machine";
@@ -107,6 +107,11 @@ public class MachineProfile {
     public int startupMemoryBudgetTokens() {
         MemorySection memory = document().memory();
         return memory == null || memory.startupBudgetTokens() == null ? STARTUP_MEMORY_BUDGET_TOKENS : memory.startupBudgetTokens();
+    }
+
+    public boolean opensTheSitrepAtSessionStart() {
+        ConsoleSection console = document().console();
+        return console == null || !Boolean.FALSE.equals(console.openSitrepAtSessionStart());
     }
 
     public boolean namesATracker() {
@@ -207,7 +212,7 @@ public class MachineProfile {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ProfileDocument(String machine, WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time,
-            MemorySection memory, @JsonProperty("notify") NotifySection notifications, PresenceSection presence) {
+            MemorySection memory, @JsonProperty("notify") NotifySection notifications, PresenceSection presence, ConsoleSection console) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -274,5 +279,9 @@ public class MachineProfile {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record PresenceSection(String calendar) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ConsoleSection(Boolean openSitrepAtSessionStart) {
     }
 }

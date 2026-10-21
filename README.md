@@ -66,8 +66,18 @@ edi down                   # stop the core when no worker runs
 edi update                 # pull the repository, build, test and install it, restart the core, re-read the anchor
 ```
 
+Each new primary session opens the console's sitrep page in the browser, signed in; `console.openSitrepAtSessionStart: false` in the machine profile switches that off.
 From then on the captain talks to the primary session, and every actor, the captain included, can use `edi --help` for the full command list.
 [Architecture](docs/architecture.md#the-core-at-run-time) explains where the core keeps its state and how one core runs per home.
+
+#### The EDI console
+
+The permanent EDI dashboard is the EDI console, which the core serves on its own machine at `http://127.0.0.1:<port>/`, where `<port>` is the one `edi health` reports, 47318 by default.
+It shows the sitrep page: what needs a decision, what is ongoing, what landed this week and what is charted next, kept current as the fleet changes.
+It signs the captain in through a link that works once, so open it with `edi console` rather than from a bookmark.
+It is reachable only on the machine whose core serves it, and only while that core runs.
+Research boards are Lavish pages that `lavish-axi` opens on their own, outside the console.
+[The console and research boards](docs/console-and-boards.md) describes both.
 
 ### First configuration to look at
 

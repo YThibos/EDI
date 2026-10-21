@@ -326,7 +326,7 @@ class BeyondTheInvariantsTest {
                 .writing("config/machine.yaml", "notify:\n  windowsToast: true\npresence:\n  calendar: outlook\n")
                 .writing("config/personal.yaml", "presence:\n  calendarIgnore: [Example at the office]\n");
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null);
+        home.primaryHooks().sessionStarted(session, null, true);
         home.primaryHooks().promptSubmitted(session, "Fit the brass lamp.");
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
 

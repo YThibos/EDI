@@ -1,4 +1,4 @@
-# ADR-150: The sitrep page fits one laptop screen, with three columns above what landed
+# ADR-152: The sitrep page fits one laptop screen, with three columns above what landed
 
 **Date:** 21/10/2026
 

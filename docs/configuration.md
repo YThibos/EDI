@@ -31,6 +31,7 @@ The session-start digest lists any of the machine profile, the personal configur
 - `memory.startupBudgetTokens` caps the startup memory, 18,000 by default.
 - `notify.windowsToast: true` raises Windows notifications while the captain is quiet or away.
 - `presence.calendar: outlook` turns presence quiet during a meeting in the classic Outlook calendar (see [Memory and presence](memory-and-presence.md)).
+- `console.openSitrepAtSessionStart` opens the console's sitrep page in the browser at every new primary session, on by default; `false` switches it off (see [The console and research boards](console-and-boards.md)).
 
 ## The project registry
 

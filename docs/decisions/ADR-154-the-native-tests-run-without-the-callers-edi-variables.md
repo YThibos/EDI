@@ -1,4 +1,4 @@
-# ADR-152: The native tests start the command and the core without the caller's EDI variables
+# ADR-154: The native tests start the command and the core without the caller's EDI variables
 
 **Date:** 21/10/2026
 
@@ -11,6 +11,7 @@
 The command reads `EDI_TOKEN_FILE` before the home's token, so inside a worker it presented the worker's own token to the test's core, which refused it: 13 of the 20 native tests failed in a worker and passed outside one.
 
 **Decision:** Each of the three native test classes removes every variable whose name starts with `EDI_` from the environment of the command and the core it starts, before it sets its own, as it already removes the `TMUX` and Claude Code variables.
+EDI-27 made the same change for the command's environment on its own branch; this record covers the command and the core alike.
 
 **Motivation:** The native tests prove the same thing in a worker, in the primary's terminal and in CI.
 

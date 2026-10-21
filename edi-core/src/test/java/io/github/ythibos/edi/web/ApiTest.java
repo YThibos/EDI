@@ -51,6 +51,7 @@ import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Intakes;
+import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -75,9 +76,11 @@ class ApiTest {
     private WorkerTokens workerTokens;
 
     @BeforeAll
-    static void registerTheProjects() throws IOException {
+    static void prepareTheHomeAndTheBrowser() throws IOException {
         Files.createDirectories(home.resolve("config"));
+        Files.createDirectories(home.resolve("windows"));
         Files.writeString(home.resolve("config/projects.yaml"), Intakes.REGISTRY);
+        StandInScripts.installed(home.resolve("bin/browser"), "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '" + home.resolve("opened-in-the-browser") + "'\n");
     }
 
     @DynamicPropertySource
@@ -85,6 +88,8 @@ class ApiTest {
         properties.add("edi.home", () -> home.toString());
         properties.add("edi.checkout", () -> home.resolve("checkout").toString());
         properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
+        properties.add("edi.console.browser", () -> home.resolve("bin/browser").toString());
+        properties.add("edi.console.windows-directory", () -> home.resolve("windows").toString());
     }
 
     @Test
@@ -290,7 +295,8 @@ class ApiTest {
 
         assertThat(started.statusCode()).isEqualTo(200);
         assertThat(new JsonMapper().readTree(started.body()).path("hookSpecificOutput").path("additionalContext").asString())
-                .startsWith("EDI session-start digest\nThis session is the primary");
+                .startsWith("EDI session-start digest\nThis session is the primary")
+                .contains("\nThe console's sitrep page is open in the captain's browser at " + uri("/") + ".\n");
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
         assertThat(queued.statusCode()).isEqualTo(201);

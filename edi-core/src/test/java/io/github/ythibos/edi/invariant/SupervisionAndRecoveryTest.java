@@ -81,14 +81,14 @@ class SupervisionAndRecoveryTest {
             home.raiseDecision().raise(new TaskReference.ById(new TaskId("choose-lamp")), Cards.card("Which lamp?"), Actor.PRIMARY);
             Process killedPrimary = processes.register(new ProcessBuilder("sleep", "30").start());
             UUID beforeTheCrash = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(beforeTheCrash, killedPrimary.pid());
+            home.primaryHooks().sessionStarted(beforeTheCrash, killedPrimary.pid(), true);
             String preCrashDigest = digestOf(home, beforeTheCrash);
 
             killedPrimary.destroyForcibly();
             assertThat(TestProcesses.awaitExit(killedPrimary.toHandle())).isTrue();
             TestHome restarted = home.restarted();
             UUID afterTheRestart = UUID.randomUUID();
-            restarted.primaryHooks().sessionStarted(afterTheRestart, null);
+            restarted.primaryHooks().sessionStarted(afterTheRestart, null, true);
 
             assertThat(restarted.primarySessions().standingOf(afterTheRestart)).isEqualTo(Standing.PRIMARY);
             assertThat(digestOf(restarted, afterTheRestart)).isEqualTo(preCrashDigest)

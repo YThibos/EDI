@@ -104,6 +104,15 @@ class MachineProfileTest {
     }
 
     @Test
+    void opensTheSitrepAtSessionStartUnlessTheProfileSwitchesItOff() throws IOException {
+        MachineProfile bare = new MachineProfile(new EdiHome(home.resolve("bare")));
+
+        assertThat(bare.opensTheSitrepAtSessionStart()).isTrue();
+        assertThat(profileOf(ExampleHome.file("config/machine.yaml")).opensTheSitrepAtSessionStart()).isTrue();
+        assertThat(profileOf("console:\n  openSitrepAtSessionStart: false\n").opensTheSitrepAtSessionStart()).isFalse();
+    }
+
+    @Test
     void addsOnlyTheCarriedSettingsTheProfileLacks() throws IOException {
         CarriedMachineSettings carried = new CarriedMachineSettings(MachineProfile.workerRosterIn(ExampleHome.file("config/machine.yaml")), true, 18_000,
                 Duration.ofHours(4));

@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
 import io.github.ythibos.edi.domain.primary.Prompt;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.primary.TurnCircumstances;
 import io.github.ythibos.edi.domain.primary.TurnEnd;
@@ -65,15 +66,17 @@ public class PrimaryHooks {
         this.transaction = transaction;
     }
 
-    public void sessionStarted(UUID id, Long claudePid) {
+    public SessionStart sessionStarted(UUID id, Long claudePid, boolean launched) {
         SessionProcess process = claudePid == null ? null : processes.identify(claudePid).orElse(null);
-        transaction.executeWithoutResult(_ -> {
+        return transaction.execute(_ -> {
             Instant now = clock.now();
-            PrimarySession session = sessions.get(id).map(known -> known.restarted(process)).orElseGet(() -> PrimarySession.started(id, process, now));
+            Optional<PrimarySession> known = sessions.get(id);
+            PrimarySession session = known.map(earlier -> earlier.restarted(process)).orElseGet(() -> PrimarySession.started(id, process, now));
             sessions.save(session);
             if (roles.role().isVacant()) {
                 claim(session, now);
             }
+            return new SessionStart(launched, known.isEmpty(), roles.role().standingOf(id));
         });
     }
 

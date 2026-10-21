@@ -15,6 +15,7 @@ import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.browser.CaptainsBrowser;
 import io.github.ythibos.edi.adapter.build.ProjectBuild;
 import io.github.ythibos.edi.adapter.fork.ForkBacklogReader;
 import io.github.ythibos.edi.adapter.fork.ForkEnvironment;
@@ -64,6 +65,7 @@ import io.github.ythibos.edi.adapter.tracker.NoTracker;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
 import io.github.ythibos.edi.adapter.windows.WindowsToasts;
 import io.github.ythibos.edi.application.access.ConsoleAccess;
+import io.github.ythibos.edi.application.access.OpenConsole;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
 import io.github.ythibos.edi.application.board.BoardListeners;
@@ -118,6 +120,7 @@ import io.github.ythibos.edi.application.presence.MeetingCalendar;
 import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
+import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrepareThePrimary;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
@@ -841,6 +844,10 @@ public final class TestHome {
 
     public ConsoleAccess consoleAccess() {
         return new ConsoleAccess(new ConsoleAccessStore(jdbc), clock, transaction);
+    }
+
+    public OpenTheSitrepAtSessionStart openTheSitrepAtSessionStart(CaptainsBrowser browser) {
+        return new OpenTheSitrepAtSessionStart(machineProfile(), new OpenConsole(consoleAccess(), browser));
     }
 
     public AskForARecheck askForARecheck() {

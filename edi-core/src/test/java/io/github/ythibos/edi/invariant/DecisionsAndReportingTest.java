@@ -175,7 +175,7 @@ class DecisionsAndReportingTest {
         void theStopHookWaitsForTheReport() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             UUID primary = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(primary, null);
+            home.primaryHooks().sessionStarted(primary, null, true);
             home.primaryHooks().promptSubmitted(primary, "What is waiting on me?");
             HookAnswer quietTurn = home.primaryHooks().stopping(primary, List.of());
 

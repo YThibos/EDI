@@ -2,7 +2,7 @@
 
 ## The EDI console
 
-The core serves the EDI console on its own port, in the approved dark skin ([ADR-018](decisions/ADR-018-console-spa-served-by-the-core.md), [ADR-019](decisions/ADR-019-the-approved-skin.md), [ADR-150](decisions/ADR-150-the-sitrep-page-fits-one-laptop-screen.md)).
+The core serves the EDI console on its own port, in the approved dark skin ([ADR-018](decisions/ADR-018-console-spa-served-by-the-core.md), [ADR-019](decisions/ADR-019-the-approved-skin.md), [ADR-152](decisions/ADR-152-the-sitrep-page-fits-one-laptop-screen.md)).
 `edi console` opens it in the browser through a link that signs in once, within two minutes, and the session lasts twelve hours ([ADR-105](decisions/ADR-105-the-console-signs-the-captain-in-with-a-one-time-link.md)).
 
 ```sh
@@ -15,7 +15,12 @@ The sitrep page shows what needs a decision, what is ongoing and what is charted
 ![The sitrep page in a 1536 by 730 viewport, a laptop screen at 125% scaling](images/sitrep/sitrep-1536x730.webp)
 
 Each decision card takes an option, the captain's own words, or both, and records them verbatim as the captain's answer; Reconcile asks the primary to re-check the decision against reality instead of answering it ([ADR-108](decisions/ADR-108-a-console-answer-is-the-captains-word-and-reconcile-asks-for-a-recheck.md)).
-The console opens through `cmd.exe /c start` from `/mnt/c` on WSL; elsewhere, or when that fails, the command prints the sign-in link instead ([ADR-106](decisions/ADR-106-edi-opens-the-console-in-the-captains-browser.md)).
+The console opens through `cmd.exe /c start` from `/mnt/c` on WSL, and through `xdg-open` on a Linux desktop; elsewhere, or when that fails, the command prints the sign-in link instead ([ADR-150](decisions/ADR-150-edi-opens-the-console-through-windows-or-the-linux-desktop.md)).
+
+Every new primary session opens the sitrep page in the browser by itself, signed in, as `edi console` does ([ADR-151](decisions/ADR-151-a-new-primary-session-opens-the-sitrep-page.md)).
+It opens once, at the launch of the session that holds the primary role, and not for a standby session, a worker, or the same primary resumed, cleared or compacted.
+When the browser cannot open it, the session starts anyway, and its digest names the console's address and `edi console` as the way to open it.
+`console.openSitrepAtSessionStart: false` in the machine profile switches it off.
 
 ## Research boards
 

@@ -1,4 +1,4 @@
-# ADR-151: The browser fetches the console again on every load
+# ADR-153: The browser fetches the console again on every load
 
 **Date:** 21/10/2026
 
@@ -8,7 +8,7 @@
 
 **Context and constraints:** The core serves the console's files from the console's jar (ADR-018, ADR-110), and the reproducible build stamps every jar entry with the same date in 1980.
 Spring sent that date as `Last-Modified` and no `Cache-Control`, so a browser judged `index.html` fresh for years by its heuristic, and a revalidation with `If-Modified-Since` was answered `304 Not Modified` even when the file had changed.
-While the sitrep page's new layout was checked end to end (ADR-150), a browser that had loaded the console before kept showing the old layout from the new core until its cache was bypassed.
+While the sitrep page's new layout was checked end to end (ADR-152), a browser that had loaded the console before kept showing the old layout from the new core until its cache was bypassed.
 
 **Decision:** `application.yaml` sets `spring.web.resources.cache.use-last-modified` to `false` and `spring.web.resources.cache.cachecontrol.no-cache` to `true`, so every console file is sent with `Cache-Control: no-cache` and without `Last-Modified`, and the browser fetches it again on every load.
 
@@ -26,4 +26,4 @@ Every request stays on the loopback port, so fetching the page, its two bundles 
 
 **Revisit when:** The console is served from anywhere but the loopback port.
 
-**Sources:** ADR-018, ADR-110, ADR-150; `edi-core/src/main/resources/application.yaml`; `ConsoleApiTest`.
+**Sources:** ADR-018, ADR-110, ADR-152; `edi-core/src/main/resources/application.yaml`; `ConsoleApiTest`.
