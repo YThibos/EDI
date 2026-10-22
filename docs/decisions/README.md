@@ -128,7 +128,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-079](ADR-079-the-forge-adapters-run-an-allow-list.md) | The forge adapters run only an allow-list of gh and glab commands | Architecture |
 | [ADR-080](ADR-080-forge-calls-run-under-the-bound-account.md) | Every forge call for a project runs under the account its registry entry binds | Design |
 | [ADR-081](ADR-081-the-pipeline-adapter.md) | The pipeline adapter reads a branch's run from `axi status` and its spend from the pipeline's state, read-only | Design |
-| [ADR-082](ADR-082-edi-writes-the-pipeline-intent.md) | EDI writes the pipeline intent beside the brief, with the craft rules verbatim | Design |
+| [ADR-082](ADR-082-edi-writes-the-pipeline-intent.md) | EDI writes the pipeline intent beside the brief, with the craft rules verbatim (superseded by ADR-168) | Design |
 | [ADR-083](ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md) | A ship's done is accepted only once its claims hold, and a refused done is recorded (superseded by ADR-155) | Design |
 | [ADR-084](ADR-084-accepted-work-reaches-the-captain-by-its-delivery-mode.md) | Accepted work reaches the captain by its delivery mode, and local-apply is asked for per task | Design |
 | [ADR-085](ADR-085-edi-deliver-opens-the-draft-the-pipeline-could-not.md) | `edi deliver` opens the draft the pipeline could not, behind the same guards | Design |
@@ -212,4 +212,5 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-164](ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md) | AT-39 scales its limit to the machine's own pace, measured in the same run | Design |
 | [ADR-165](ADR-165-a-process-is-the-recorded-one-within-two-seconds-of-boot-time-drift.md) | A process is the recorded one when its start lies within two seconds of the recorded start | Design |
 | [ADR-166](ADR-166-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |
-| [ADR-167](ADR-167-a-core-has-stopped-once-it-lets-go-of-the-home.md) | A core has stopped once it lets go of the home, and edi update starts the new core only then | Design |
+| [ADR-168](ADR-168-the-pipeline-intent-carries-the-spec-and-follows-the-tasks-notes.md) | The pipeline intent carries the brief's spec and is rewritten whenever the task is noted | Design |
+| [ADR-169](ADR-169-a-core-has-stopped-once-it-lets-go-of-the-home.md) | A core has stopped once it lets go of the home, and edi update starts the new core only then | Design |

@@ -1,4 +1,4 @@
-# ADR-167: A core has stopped once it lets go of the home, and edi update starts the new core only then
+# ADR-169: A core has stopped once it lets go of the home, and edi update starts the new core only then
 
 **Date:** 22/10/2026
 

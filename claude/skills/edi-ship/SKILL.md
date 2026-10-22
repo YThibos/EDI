@@ -33,6 +33,7 @@ description: >-
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
 - Carry the captain's answer back with `edi steer <task> --resolves <key>`.
+- A steer that changes a task's scope is first recorded with `edi task note <task>`, which rewrites the brief and the pipeline intent, so the pipeline's review counts it as asked for.
 - Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as EDI's until the worker acknowledges the steer that resolves it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.
 

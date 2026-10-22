@@ -73,6 +73,7 @@ import io.github.ythibos.edi.application.board.BoardListeners;
 import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
 import io.github.ythibos.edi.application.board.SettleBoardAnswers;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
+import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.AskForARecheck;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
@@ -94,12 +95,14 @@ import io.github.ythibos.edi.application.delivery.ObservePipelines;
 import io.github.ythibos.edi.application.delivery.TaskCosts;
 import io.github.ythibos.edi.application.dispatch.AwayLimit;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
+import io.github.ythibos.edi.application.dispatch.GatherBriefFacts;
 import io.github.ythibos.edi.application.dispatch.IsolatedCopies;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.application.dispatch.ResearchBeforeImplementation;
 import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.dispatch.ResumeNotes;
+import io.github.ythibos.edi.application.dispatch.RewriteBrief;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
@@ -371,7 +374,19 @@ public final class TestHome {
     }
 
     public NoteTask noteTask() {
-        return new NoteTask(tasks, events, clock, transaction);
+        return new NoteTask(tasks, events, rewriteBrief(), clock, transaction);
+    }
+
+    public RewriteBrief rewriteBrief() {
+        return new RewriteBrief(tasks, dispatches, workers, registry, gatherBriefFacts(), writtenBriefs(), transaction);
+    }
+
+    public GatherBriefFacts gatherBriefFacts() {
+        return new GatherBriefFacts(home, machineProfile(), researchBeforeImplementation(), runtime);
+    }
+
+    public WrittenBriefs writtenBriefs() {
+        return new WrittenBriefs(home, new WorkerBriefs());
     }
 
     public HoldTask holdTask() {
@@ -570,7 +585,7 @@ public final class TestHome {
 
     public LaunchWorker launchWorker() {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
-                isolatedCopies(), workerPlaces(), new WorkerBriefs(), new ResumeNotes(git, inbox, decisions, transaction), researchBeforeImplementation(), workerTokens(),
+                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(), new ResumeNotes(git, inbox, decisions, transaction), workerTokens(),
                 runtime, processes, machineBoot(), clock, transaction);
     }
 
