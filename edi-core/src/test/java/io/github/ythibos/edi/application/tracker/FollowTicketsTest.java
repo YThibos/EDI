@@ -3,6 +3,7 @@ package io.github.ythibos.edi.application.tracker;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -63,6 +64,20 @@ class FollowTicketsTest {
         assertThat(home.jira().statusOf("SVC-1")).isEqualTo("In Progress");
         assertThat(home.eventTypesOf(new TaskId("plan-week"))).noneMatch(type -> type.startsWith("Ticket"));
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).noneMatch(type -> type.startsWith("Ticket"));
+    }
+
+    @Test
+    void booksTimeOnAnEvergreenTicketButMovesOnlyTheShippedTicketAfterTheMerges() throws IOException {
+        WorkEvents.of(home, "plan-week").dispatchedTo(1, "chore/SVC-1").deliveredAsADraft().merged();
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/SVC-40").deliveredAsADraft().merged();
+
+        home.eventFollowers().followTheLog();
+
+        assertThat(home.jira().statusOf("SVC-1")).isEqualTo("In Progress");
+        assertThat(home.jira().statusOf("SVC-40")).isEqualTo("Testing");
+        assertThat(Files.readAllLines(home.home().fleetLedger())).filteredOn(line -> line.contains("\"task\":\"plan-week\""))
+                .anySatisfy(line -> assertThat(line).contains("\"event\":\"task.dispatched\"", "\"key\":\"SVC-1\""))
+                .anySatisfy(line -> assertThat(line).contains("\"event\":\"task.merged\""));
     }
 
     @Test
