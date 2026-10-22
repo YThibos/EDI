@@ -17,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.CloneRefresh;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
@@ -243,11 +244,12 @@ class FollowMergesTest {
     }
 
     @Test
-    void leavesAMergeAnEarlierTaskLeftOnTheSameBranchToThatTask() throws IOException {
-        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+    void leavesAMergeFromBeforeTheDispatchToTheEarlierTaskOnTheSameBranch() throws IOException {
         RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
-        MergeRequestView earlier = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), "an-earlier-head");
+        MergeRequestView earlier = home.forge().opensADraft(forge, BranchName.parse("feature/HRN-3"), new BaseBranch("main"), "an-earlier-head");
         home.forge().merges(earlier.address(), "2222");
+        home.clock().advance(Duration.ofMinutes(1));
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
 
         home.followMerges().followTheRequestOf(LAMP);
 
@@ -256,6 +258,24 @@ class FollowMergesTest {
                 .hasMessageStartingWith("EDI has no merge request to follow");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isTrue();
+    }
+
+    @Test
+    void followsAMergeSinceTheDispatchWhoseHeadCarriesThePipelinesFixesBeyondTheCopy() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
+        MergeRequestView fixed = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), "a-pipeline-fix-head");
+        home.clock().advance(Duration.ofMinutes(1));
+        home.forge().merges(fixed.address(), squashedOntoMain(copy));
+
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> {
+            assertThat(delivery.address()).isEqualTo(fixed.address());
+            assertThat(delivery.state()).isEqualTo(MergeRequestState.MERGED);
+        });
+        assertThat(home.eventTypesOf(LAMP)).containsSubsequence("DraftRecorded", "DraftMerged");
     }
 
     @Test

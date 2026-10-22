@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.application.port.Clock;
@@ -26,14 +25,12 @@ public class DeliveryRecords {
     private final Forges forges;
     private final DeliveryStore deliveries;
     private final EventLog events;
-    private final Git git;
     private final Clock clock;
 
-    public DeliveryRecords(Forges forges, DeliveryStore deliveries, EventLog events, Git git, Clock clock) {
+    public DeliveryRecords(Forges forges, DeliveryStore deliveries, EventLog events, Clock clock) {
         this.forges = forges;
         this.deliveries = deliveries;
         this.events = events;
-        this.git = git;
         this.clock = clock;
     }
 
@@ -52,11 +49,11 @@ public class DeliveryRecords {
     public Optional<MergeRequestView> requestFrom(Workplace workplace) {
         RegisteredForge forge = workplace.project().requireForge();
         return forges.serving(forge).mergeRequestFrom(forge, workplace.dispatch().branch())
-                .filter(request -> !request.isMerged() || carriesTheWorkOf(workplace, request));
+                .filter(request -> !request.isMerged() || isTheMergeOf(workplace, request));
     }
 
-    private boolean carriesTheWorkOf(Workplace workplace, MergeRequestView merged) {
-        return git.head(workplace.worktree()).equals(merged.headCommit()) && !deliversAnotherTask(workplace.task().id(), merged);
+    private boolean isTheMergeOf(Workplace workplace, MergeRequestView merged) {
+        return merged.mergedSince(workplace.dispatch().requestedAt()) && !deliversAnotherTask(workplace.task().id(), merged);
     }
 
     private boolean deliversAnotherTask(TaskId task, MergeRequestView request) {

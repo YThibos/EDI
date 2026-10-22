@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.domain.delivery;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -15,7 +16,8 @@ public record MergeRequestView(
         String sourceBranch,
         String targetBranch,
         String headCommit,
-        String landedCommit) {
+        String landedCommit,
+        Instant mergedAt) {
 
     private static final int SHORT_COMMIT = 12;
 
@@ -24,6 +26,9 @@ public record MergeRequestView(
         Objects.requireNonNull(state, () -> address + " is seen open, merged or closed.");
         if (state == MergeRequestState.MERGED && (landedCommit == null || landedCommit.isBlank())) {
             throw new IllegalArgumentException(address + " is merged, so the forge names the commit it landed on its base.");
+        }
+        if (state == MergeRequestState.MERGED && mergedAt == null) {
+            throw new IllegalArgumentException(address + " is merged, so the forge names when it was merged.");
         }
     }
 
@@ -34,6 +39,10 @@ public record MergeRequestView(
 
     public boolean isMerged() {
         return state == MergeRequestState.MERGED;
+    }
+
+    public boolean mergedSince(Instant moment) {
+        return isMerged() && !mergedAt.isBefore(moment);
     }
 
     public List<String> gapsAsTheDeliveryOf(BranchName branch, BaseBranch base, String head) {

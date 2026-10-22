@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.adapter.forge;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -94,7 +95,8 @@ public class GitLabForge implements Forge {
                 request.path("source_branch").asString(null),
                 request.path("target_branch").asString(null),
                 request.path("sha").asString(null),
-                state == MergeRequestState.MERGED ? landedCommitOf(request) : null);
+                state == MergeRequestState.MERGED ? landedCommitOf(request) : null,
+                mergedAtOf(request.path("merged_at").asString(null)));
     }
 
     private static MergeRequestState stateOf(String word) {
@@ -112,5 +114,9 @@ public class GitLabForge implements Forge {
                 .filter(commit -> !commit.isBlank())
                 .findFirst()
                 .orElse(null);
+    }
+
+    private static Instant mergedAtOf(String moment) {
+        return moment == null ? null : Instant.parse(moment);
     }
 }

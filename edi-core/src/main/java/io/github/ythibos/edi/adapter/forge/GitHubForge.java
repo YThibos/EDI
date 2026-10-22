@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.adapter.forge;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class GitHubForge implements Forge {
 
-    private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit";
+    private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt";
     private static final String WORKFLOW_SCOPE = "workflow";
 
     private final ForgeCalls calls;
@@ -106,7 +107,8 @@ public class GitHubForge implements Forge {
                 pull.path("headRefName").asString(null),
                 pull.path("baseRefName").asString(null),
                 pull.path("headRefOid").asString(null),
-                pull.path("mergeCommit").path("oid").asString(null));
+                pull.path("mergeCommit").path("oid").asString(null),
+                mergedAtOf(pull.path("mergedAt").asString(null)));
     }
 
     private static MergeRequestState stateOf(String word) {
@@ -116,5 +118,9 @@ public class GitHubForge implements Forge {
             case "CLOSED" -> MergeRequestState.CLOSED;
             default -> throw new ProgramFailure("gh reported a pull request in the unknown state " + word + ".");
         };
+    }
+
+    private static Instant mergedAtOf(String moment) {
+        return moment == null ? null : Instant.parse(moment);
     }
 }

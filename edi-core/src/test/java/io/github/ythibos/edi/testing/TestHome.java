@@ -200,8 +200,8 @@ public final class TestHome {
     private final PipelineRunStore pipelineRuns;
     private final CloneRefreshStore cloneRefreshes;
     private final TaskCostStore taskCosts;
-    private final FakeForge forge = new FakeForge(ForgeKind.GITHUB);
-    private final FakeForge gitLabForge = new FakeForge(ForgeKind.GITLAB);
+    private final FakeForge forge;
+    private final FakeForge gitLabForge;
     private final FakePipeline pipeline = new FakePipeline();
     private final FakeJira jira = new FakeJira();
     private Tracker jiraAdapter = jira;
@@ -223,6 +223,8 @@ public final class TestHome {
         this.home = home;
         this.runtime = runtime;
         this.clock = clock;
+        this.forge = new FakeForge(ForgeKind.GITHUB, clock);
+        this.gitLabForge = new FakeForge(ForgeKind.GITLAB, clock);
         this.jdbc = JdbcClient.create(store);
         this.transaction = new TransactionTemplate(new JdbcTransactionManager(store));
         this.tasks = new TaskStore(jdbc);
@@ -597,7 +599,7 @@ public final class TestHome {
     }
 
     public DeliveryRecords deliveryRecords() {
-        return new DeliveryRecords(forges(), deliveries, events, git, clock);
+        return new DeliveryRecords(forges(), deliveries, events, clock);
     }
 
     public DoneClaims doneClaims() {
