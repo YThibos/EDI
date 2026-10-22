@@ -101,15 +101,17 @@ class DeliverDraftTest {
     @Test
     void refusesAMergeRequestNotAtTheCopysHeadOrAlreadyMerged() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
-        pushed(dispatched);
+        FixtureRepository copy = pushed(dispatched);
         MergeRequestView older = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), "an-older-head");
 
         assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).isInstanceOf(Refusal.class)
                 .hasMessageContaining("push the copy's head first");
 
-        home.forge().merges(older.address(), "3333");
+        home.forge().closes(older.address());
+        MergeRequestView atTheHead = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), copy.head());
+        home.forge().merges(atTheHead.address(), "3333");
         assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).isInstanceOf(Refusal.class)
-                .hasMessage(older.address() + " is merged already; edi merged fit-lamp follows its merge.");
+                .hasMessage(atTheHead.address() + " is merged already; edi merged fit-lamp follows its merge.");
         assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();
         assertThat(home.forge().openedDrafts()).isEmpty();
     }

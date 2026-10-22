@@ -597,7 +597,7 @@ public final class TestHome {
     }
 
     public DeliveryRecords deliveryRecords() {
-        return new DeliveryRecords(forges(), deliveries, events, clock);
+        return new DeliveryRecords(forges(), deliveries, events, git, clock);
     }
 
     public DoneClaims doneClaims() {

@@ -199,11 +199,21 @@ public class FollowMerges {
 
     private Optional<FoundRequest> requestAt(String url) {
         return transaction.execute(_ -> tasks.inState(TaskState.IN_FLIGHT)).stream()
-                .map(task -> transaction.execute(_ -> context.of(task.id())))
-                .filter(workplace -> records.followsARequest(workplace) && workplace.project().forge().repository().holds(url))
-                .flatMap(workplace -> records.requestFrom(workplace).filter(request -> request.address().url().equals(url))
-                        .map(request -> new FoundRequest(workplace.task().id(), request)).stream())
+                .flatMap(task -> requestOf(task.id(), url).stream())
                 .findFirst();
+    }
+
+    private Optional<FoundRequest> requestOf(TaskId task, String url) {
+        try {
+            Workplace workplace = transaction.execute(_ -> context.of(task));
+            return records.followsARequest(workplace) && workplace.project().forge().repository().holds(url)
+                    ? records.requestFrom(workplace).filter(request -> request.address().url().equals(url))
+                            .map(request -> new FoundRequest(task, request))
+                    : Optional.empty();
+        } catch (Refusal | ProgramFailure unfollowable) {
+            LOG.warn("EDI could not look up the merge request of {}: {}", task, unfollowable.getMessage());
+            return Optional.empty();
+        }
     }
 
     private MergedWork requestFollowedFor(TaskId task, Actor actor) {
