@@ -72,8 +72,8 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     }
 
     private static String unreadableCalendarLine(UnreadableCalendar unreadable) {
-        return "Calendar: unreadable since " + Moments.minute(unreadable.since()) + ", so meetings do not turn your presence quiet: \""
-                + unreadable.reason() + "\"";
+        return "Calendar: unreadable since " + Moments.minute(unreadable.since())
+                + ", so a meeting added since the last reading does not turn your presence quiet: \"" + unreadable.reason() + "\"";
     }
 
     private static LocalDate filedOn(Task task) {

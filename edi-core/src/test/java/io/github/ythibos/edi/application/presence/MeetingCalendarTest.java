@@ -20,8 +20,8 @@ import io.github.ythibos.edi.testing.TestHome;
 class MeetingCalendarTest {
 
     private static final Duration ROUND = Duration.ofSeconds(30);
-    private static final String UNREADABLE_TOAST = "The calendar cannot be read | Meetings no longer turn your presence quiet; it follows your typing"
-            + " alone until Outlook answers again.";
+    private static final String UNREADABLE_TOAST = "The calendar cannot be read | Meetings added from now on do not turn your presence quiet until"
+            + " Outlook answers again.";
 
     @TempDir
     private Path directory;

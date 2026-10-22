@@ -85,12 +85,14 @@ class PresenceTextsTest {
         String quiet = report(home, PRESENT.quiet(NOW), unreadable);
 
         assertThat(present).startsWith("""
-                Calendar: unreadable since 2026-10-17 09:30Z, so meetings do not turn your presence quiet: "Outlook did not answer."
+                Calendar: unreadable since 2026-10-17 09:30Z, so a meeting added since the last reading does not turn your presence
+                  quiet: "Outlook did not answer."
 
                 ╔══ NEEDS YOUR DECISION""");
         assertThat(quiet).startsWith("""
                 Presence: quiet since 2026-10-17 09:30Z, on request
-                Calendar: unreadable since 2026-10-17 09:30Z, so meetings do not turn your presence quiet: "Outlook did not answer."
+                Calendar: unreadable since 2026-10-17 09:30Z, so a meeting added since the last reading does not turn your presence
+                  quiet: "Outlook did not answer."
 
                 ╔══ NEEDS YOUR DECISION""");
     }
