@@ -18,6 +18,7 @@ A project's registry entry names its tracker, `tracker: { kind: jira|edi|none, p
 The machine profile's `tracker` section says whether this machine reaches a JIRA instance (`kind: jira`, with its `baseUrl`, the keys file section holding the access token, the evergreen tickets, the workflow's statuses in their forward order, the `mergedStatus`, the `issueType` and the `epicLinkField`) or none (`kind: none`).
 EDI reads the access token at the moment of each call and never shows it ([ADR-103](decisions/ADR-103-tracker-secrets-are-read-at-call-time-and-hidden.md)).
 A JIRA ticket joins the active sprint when work starts, links the draft, and moves to the after-merge status once the merge is followed ([ADR-097](decisions/ADR-097-ticket-updates-follow-the-work.md)).
+An evergreen ticket only gets worklogs: EDI never places it in a sprint, links a draft to it or moves it after a merge, and EDI knows a ticket as evergreen only while the machine profile lists it.
 [examples/edi-home/config/machine.yaml](../examples/edi-home/config/machine.yaml) shows a profile with JIRA; a machine without JIRA or time booking sets `tracker.kind: none` and leaves `time` out.
 
 ## Time
