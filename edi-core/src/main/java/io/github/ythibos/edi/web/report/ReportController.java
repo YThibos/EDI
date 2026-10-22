@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
+import io.github.ythibos.edi.application.presence.MeetingCalendar;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.domain.voice.CaptainVoice;
@@ -18,11 +19,13 @@ class ReportController {
 
     private final FleetSnapshotQuery fleet;
     private final PresenceQuery presence;
+    private final MeetingCalendar calendar;
     private final PrimaryHooks primaryHooks;
 
-    ReportController(FleetSnapshotQuery fleet, PresenceQuery presence, PrimaryHooks primaryHooks) {
+    ReportController(FleetSnapshotQuery fleet, PresenceQuery presence, MeetingCalendar calendar, PrimaryHooks primaryHooks) {
         this.fleet = fleet;
         this.presence = presence;
+        this.calendar = calendar;
         this.primaryHooks = primaryHooks;
     }
 
@@ -40,7 +43,7 @@ class ReportController {
 
     private CaptainReport reportOf(Turn turn, Integer paneWidth, Caller caller) {
         CaptainReport report = new CaptainReport(fleet.snapshot(), turn, paneWidth == null ? ReportWidth.standard() : ReportWidth.forPane(paneWidth),
-                presence.current());
+                presence.current(), calendar.unreadable().orElse(null));
         caller.claudeSession().ifPresent(primaryHooks::reportRendered);
         return report;
     }

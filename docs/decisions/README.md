@@ -205,3 +205,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
 | [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |
 | [ADR-162](ADR-162-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |
+| [ADR-163](ADR-163-the-calendar-is-read-every-two-minutes-and-an-unreadable-one-is-told-once.md) | The calendar is read every two minutes, presence switches from the last reading, and the captain hears once when it cannot be read | Design |

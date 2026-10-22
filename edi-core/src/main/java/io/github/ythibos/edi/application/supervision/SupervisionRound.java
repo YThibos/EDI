@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
+import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
@@ -32,12 +33,14 @@ public class SupervisionRound implements AutoCloseable {
     private final NoticeDueHolds dueHolds;
     private final TicketProposals ticketProposals;
     private final FollowThePresence presence;
+    private final NoticeTheUnreadableCalendar unreadableCalendar;
     private final ExecutorService checks = Executors.newVirtualThreadPerTaskExecutor();
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
     public SupervisionRound(NoticeOverdueSteers overdueSteers, NoticeMissedLaunches missedLaunches,
             LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, JudgeWorkers judgeWorkers,
-            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals, FollowThePresence presence) {
+            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals, FollowThePresence presence,
+            NoticeTheUnreadableCalendar unreadableCalendar) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
@@ -47,6 +50,7 @@ public class SupervisionRound implements AutoCloseable {
         this.dueHolds = dueHolds;
         this.ticketProposals = ticketProposals;
         this.presence = presence;
+        this.unreadableCalendar = unreadableCalendar;
     }
 
     @Scheduled(fixedDelayString = "${edi.supervision.round:PT30S}", initialDelayString = "${edi.supervision.round:PT30S}")
@@ -60,6 +64,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("check mechanical changes", this::startTheMechanicalChecks);
         attempt("settle the tickets the captain chose", ticketProposals::settleEveryAnswered);
         attempt("follow the captain's presence", presence::follow);
+        attempt("tell the captain the calendar cannot be read", unreadableCalendar::notice);
     }
 
     @Override

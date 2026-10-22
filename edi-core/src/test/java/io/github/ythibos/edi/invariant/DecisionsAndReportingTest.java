@@ -394,7 +394,8 @@ class DecisionsAndReportingTest {
     }
 
     private static String captainReport(TestHome home, Turn turn) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
+        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START),
+                null));
     }
 
     private static ConsoleSitrep consoleSitrep(TestHome home) {

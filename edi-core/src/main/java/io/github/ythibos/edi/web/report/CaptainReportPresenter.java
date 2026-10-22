@@ -20,8 +20,10 @@ import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.web.presence.PresenceWords;
+import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
 @Component
@@ -52,12 +54,26 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     }
 
     private static List<String> presenceOf(CaptainReport report, int width) {
-        if (!report.showsThePresence()) {
-            return List.of();
+        List<String> lines = new ArrayList<>();
+        if (report.showsThePresence()) {
+            lines.addAll(standing("Presence: " + PresenceWords.of(report.presence()), width));
         }
-        List<String> lines = new ArrayList<>(WordWrap.hanging(Glyphs.safe("Presence: " + PresenceWords.of(report.presence())), width, "", "  "));
-        lines.add("");
+        if (report.showsTheUnreadableCalendar()) {
+            lines.addAll(standing(unreadableCalendarLine(report.unreadableCalendar()), width));
+        }
+        if (!lines.isEmpty()) {
+            lines.add("");
+        }
         return lines;
+    }
+
+    private static List<String> standing(String line, int width) {
+        return WordWrap.hanging(Glyphs.safe(line), width, "", "  ");
+    }
+
+    private static String unreadableCalendarLine(UnreadableCalendar unreadable) {
+        return "Calendar: unreadable since " + Moments.minute(unreadable.since()) + ", so meetings do not turn your presence quiet: \""
+                + unreadable.reason() + "\"";
     }
 
     private static LocalDate filedOn(Task task) {

@@ -118,6 +118,7 @@ import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.MeetingCalendar;
+import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
 import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
@@ -216,6 +217,7 @@ public final class TestHome {
     private String oldPauseResurfaceSeconds = "";
     private final FakeBoardHost boardHost = new FakeBoardHost();
     private WindowsStandIn windowsSide;
+    private MeetingCalendar meetingCalendar;
     private BoardListeners boardListeners;
 
     private TestHome(EdiHome home, DataSource store, FakeWorkerRuntime runtime, ManualClock clock) {
@@ -506,9 +508,16 @@ public final class TestHome {
         return new DailyMemoryCheck(memory(), new MemoryCheckStore(jdbc), windowsToasts(), clock, transaction);
     }
 
-    public MeetingCalendar meetingCalendar() {
-        return new MeetingCalendar(new OutlookCalendar(programs, machineProfile(), json, windowsSide().executable(), windowsSide().windowsDirectory()),
-                new PersonalConfiguration(home));
+    public synchronized MeetingCalendar meetingCalendar() {
+        if (meetingCalendar == null) {
+            meetingCalendar = new MeetingCalendar(new OutlookCalendar(programs, machineProfile(), json, windowsSide().executable(),
+                    windowsSide().windowsDirectory()), new PersonalConfiguration(home));
+        }
+        return meetingCalendar;
+    }
+
+    public NoticeTheUnreadableCalendar noticeTheUnreadableCalendar() {
+        return new NoticeTheUnreadableCalendar(meetingCalendar(), presenceQuery(), windowsToasts());
     }
 
     public WindowsToasts windowsToasts() {
