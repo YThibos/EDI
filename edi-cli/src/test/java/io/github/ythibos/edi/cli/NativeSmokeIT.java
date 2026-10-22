@@ -323,6 +323,39 @@ class NativeSmokeIT {
     }
 
     @Test
+    @org.junit.jupiter.api.Timeout(600)
+    void experiment() throws Exception {
+        String java = ProcessHandle.current().info().command().orElseThrow();
+        Map<String, Call> calls = new java.util.LinkedHashMap<>();
+        calls.put("true", () -> run(new ProcessBuilder("true").redirectErrorStream(true), ""));
+        calls.put("java-version", () -> run(new ProcessBuilder(java, "-version").redirectErrorStream(true), ""));
+        calls.put("git-version", () -> run(new ProcessBuilder("git", "--version").redirectErrorStream(true), ""));
+        calls.put("edi-version", () -> edi("", "--version"));
+        calls.put("edi-health", () -> edi("", "health"));
+        calls.put("edi-backlog", () -> edi("", "backlog"));
+        StringBuilder out = new StringBuilder("EXPERIMENT nproc=" + Runtime.getRuntime().availableProcessors() + "\n");
+        for (int round = 0; round < 3; round++) {
+            Map<String, List<Long>> micros = new java.util.LinkedHashMap<>();
+            calls.keySet().forEach(name -> micros.put(name, new ArrayList<>()));
+            for (int i = 0; i < 200; i++) {
+                for (var call : calls.entrySet()) {
+                    long started = System.nanoTime();
+                    call.getValue().call();
+                    micros.get(call.getKey()).add(TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - started));
+                }
+            }
+            for (var sample : micros.entrySet()) {
+                List<Long> sorted = sample.getValue().stream().sorted().toList();
+                out.append("EXPERIMENT round %d %-12s p50 %6d p95 %6d max %6d us%n".formatted(round, sample.getKey(), percentile(sorted, 50), percentile(sorted, 95), sorted.getLast()));
+            }
+        }
+        System.err.print(out);
+        Files.writeString(Path.of(System.getProperty("edi.smoke.report") + ".experiment"), out);
+    }
+
+    interface Call { CommandRun call() throws Exception; }
+
+    @Test
     @DisplayName("AT-39 the native CLI round trip has a p95 under 50 ms over 200 calls")
     void theCommandAnswersQuickly() throws Exception {
         List<Long> millis = new ArrayList<>();
