@@ -49,7 +49,6 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.Adoption;
-import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
@@ -75,8 +74,8 @@ public class LaunchWorker {
     private final WorkerPlaces places;
     private final WorkerBriefs briefs;
     private final WrittenBriefs writtenBriefs;
+    private final GatherBriefFacts briefFacts;
     private final ResumeNotes resumeNotes;
-    private final ResearchBeforeImplementation research;
     private final WorkerTokens tokens;
     private final WorkerRuntime runtime;
     private final ProcessTable processes;
@@ -86,7 +85,7 @@ public class LaunchWorker {
 
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
-            WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, ResumeNotes resumeNotes, ResearchBeforeImplementation research,
+            WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
             WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
@@ -102,8 +101,8 @@ public class LaunchWorker {
         this.places = places;
         this.briefs = briefs;
         this.writtenBriefs = writtenBriefs;
+        this.briefFacts = briefFacts;
         this.resumeNotes = resumeNotes;
-        this.research = research;
         this.tokens = tokens;
         this.runtime = runtime;
         this.processes = processes;
@@ -124,9 +123,7 @@ public class LaunchWorker {
     }
 
     public String briefFor(Dispatch dispatch) {
-        Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null));
-        Path worktree = home.worktreeOf(incarnation.project().project().name(), dispatch.task());
-        return briefs.briefFor(briefFacts(incarnation, worktree, home.taskDirectory(dispatch.task())));
+        return briefs.briefFor(transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief());
     }
 
     private void requireAnEmptyCopy(TaskId task) {
@@ -139,14 +136,14 @@ public class LaunchWorker {
 
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
-        Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.base());
+        Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
         Path stateDirectory = createdDirectory(home.workerState(incarnation.worker()));
         IssuedToken token = tokens.issueInto(stateDirectory);
         String firstPrompt = kind == LaunchKind.RESUME
                 ? resumeNotes.noteFor(incarnation.earlier(), worktree, dispatch.branch(), because)
-                : briefPrompt(writtenBriefs.written(briefFacts(incarnation, worktree, taskDirectory)));
+                : briefPrompt(writtenBriefs.written(incarnation.brief()));
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
     }
@@ -169,11 +166,10 @@ public class LaunchWorker {
         places.requireNoLiveWorker(task.id());
         Worker earlier = workers.latestOf(task.id()).orElse(null);
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
-        BaseBranch base = task.intake().base() == null ? project.requireBase() : task.intake().base();
         Optional<UUID> adoptedSession = adoptedSessionToResume(task, earlier);
         return new Incarnation(task, project, dispatch, kind, adoptedSession.isPresent() ? LaunchKind.RESUME : kind, worker,
-                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, base, settings, writtenBriefs.craftRulesFor(project),
-                research.planFor(task.id()).orElse(null), machine.time().requireWorkedLine(), answered);
+                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, settings,
+                briefFacts.factsFor(task, project, dispatch, worker), answered);
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
@@ -192,11 +188,6 @@ public class LaunchWorker {
             throw new Refusal(task.id() + " never had a worker, so there is no session to resume.");
         }
         return earlier.session();
-    }
-
-    private BriefFacts briefFacts(Incarnation incarnation, Path worktree, Path taskDirectory) {
-        return new BriefFacts(incarnation.task(), incarnation.worker(), incarnation.project(), incarnation.dispatch(), incarnation.base(),
-                worktree, taskDirectory, runtime.socket(), incarnation.craftRules(), incarnation.plan(), incarnation.asksForTheTimeWorked());
     }
 
     private static String briefPrompt(Path brief) {
@@ -283,11 +274,8 @@ public class LaunchWorker {
             UUID session,
             Worker earlier,
             Route route,
-            BaseBranch base,
             WorkerSettings settings,
-            String craftRules,
-            String plan,
-            boolean asksForTheTimeWorked,
+            BriefFacts brief,
             OutageEntry answered) {
     }
 }

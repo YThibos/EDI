@@ -95,6 +95,7 @@ import io.github.ythibos.edi.application.delivery.ObservePipelines;
 import io.github.ythibos.edi.application.delivery.TaskCosts;
 import io.github.ythibos.edi.application.dispatch.AwayLimit;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
+import io.github.ythibos.edi.application.dispatch.GatherBriefFacts;
 import io.github.ythibos.edi.application.dispatch.IsolatedCopies;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
@@ -377,8 +378,11 @@ public final class TestHome {
     }
 
     public RewriteBrief rewriteBrief() {
-        return new RewriteBrief(home, tasks, dispatches, workers, registry, machineProfile(), researchBeforeImplementation(), writtenBriefs(), runtime,
-                transaction);
+        return new RewriteBrief(tasks, dispatches, workers, registry, gatherBriefFacts(), writtenBriefs(), transaction);
+    }
+
+    public GatherBriefFacts gatherBriefFacts() {
+        return new GatherBriefFacts(home, machineProfile(), researchBeforeImplementation(), runtime);
     }
 
     public WrittenBriefs writtenBriefs() {
@@ -581,7 +585,7 @@ public final class TestHome {
 
     public LaunchWorker launchWorker() {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
-                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), new ResumeNotes(git, inbox, decisions, transaction), researchBeforeImplementation(), workerTokens(),
+                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(), new ResumeNotes(git, inbox, decisions, transaction), workerTokens(),
                 runtime, processes, machineBoot(), clock, transaction);
     }
 
