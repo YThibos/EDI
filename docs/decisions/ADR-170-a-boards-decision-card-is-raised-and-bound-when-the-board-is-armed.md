@@ -15,7 +15,8 @@ A board's markup is the scout's own, and no element marks a decision card on it 
 **Decision:** `edi board arm` takes `--card -|FILE`: the decision card the round puts before the captain, in the card format of `edi decision raise`, with `question` naming the board question that answers it.
 `ArmBoard` raises the card on the board's own task, as the arming worker, through `RaiseDecision`, in the transaction that arms or posts the round, and binds the decision to the board under that question (`BoardCard`, `BoardRound.withItsCardRaisedAs`, `BoardBinding`).
 A card is checked in the captain's voice as `edi decision raise` checks one, and refused without a question.
-A round whose task already holds an answered decision raises no card on it again, and the refusal names the fix: arm without `--card`, and report a further question to EDI.
+A task holds one decision, so a card is raised only when the task holds none, or raised again, keeping its number, while it is open and this board already binds it under the same question.
+A card is refused when its task's decision is answered, or open and not bound to this board under that question, so a scout never reopens the captain's answer or replaces a card the primary raised; each refusal names the fix: arm without `--card`, bind the waiting decision with `--bind`, or report the question to EDI.
 `board_decision.question` keeps each binding's question (migration `V10__board_questions.sql`); a decision bound with `--bind` has none.
 A prompt answers a bound decision when its context data names the decision as `decision`, or names the binding's question as `question`, or when its words begin with the decision's number; the option is the context's `option` or `answer` when it is a single capital letter, or the letter typed after the number as before.
 The answer is settled through `AnswerDecision` on the `board` channel as the captain, with the prompt's words verbatim, so it authorises exactly the act its chosen option names, as a console answer does (ADR-115), and an answer to a decision already answered elsewhere comes back as `BoardAnswerRefused` (ADR-113).
@@ -33,6 +34,7 @@ Matching on the question Lavish already sends lets a form built the way Lavish's
 **Consequences:**
 - Good: a choice the captain makes on a scout's board is his word for the card it answers, promote included, and he never retypes it in chat.
 - Good: the card waits in the decision zone and the console as soon as the board is armed.
+- Good: a scout cannot reopen an answered decision or overwrite a card the primary raised on its task.
 - Bad: a task holds one decision, so a board raises at most one card of its own task; a further question after it is answered goes through the primary.
 - Bad: a scout that writes a decision on its board without `--card` still asks a question EDI does not hold; the answer reaches only its inbox.
 

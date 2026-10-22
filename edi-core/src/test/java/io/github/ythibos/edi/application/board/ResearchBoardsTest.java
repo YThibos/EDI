@@ -199,6 +199,28 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void raisesTheRevisedCardOfItsOwnBoardAgainUnderTheSameNumberWhileItIsOpen() {
+        DecisionNumber first = armQuietlyCarrying(CLOSE_OUT_CARD).bound().getFirst();
+        BoardCard revised = new BoardCard(CLOSE_OUT, Cards.authorising("Close the lantern work out now?", CaptainWordAct.PROMOTE));
+
+        Board again = armQuietlyCarrying(revised);
+
+        assertThat(again.bindings()).containsExactly(new BoardBinding(first, CLOSE_OUT));
+        assertThat(home.decisions().get(first).card()).isEqualTo(revised.card());
+    }
+
+    @Test
+    void refusesACardThatWouldReplaceADecisionTheTaskAlreadyHolds() {
+        DecisionNumber held = home.raiseDecision().raise(new TaskReference.ById(SCOUT), Cards.card("Drop the lantern work?"), Actor.PRIMARY);
+
+        assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
+                .hasMessage(held + " already waits on the captain on lantern-research (\"Drop the lantern work?\"), and a task holds one decision; bind it "
+                        + "with --bind " + held + " if the board answers it, or report the new question to EDI with edi status needs-decision.");
+        assertThat(home.decisions().get(held).card().title()).isEqualTo("Drop the lantern work?");
+        assertThat(home.boards().listening()).isEmpty();
+    }
+
+    @Test
     void refusesABoardAnswerToARaisedCardTheCaptainAnsweredInTheConsoleMeanwhile() {
         Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
         DecisionNumber raised = armed.bound().getFirst();

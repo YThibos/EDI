@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -67,9 +68,10 @@ public class ArmBoard {
         requireItsOwnWorker(task, worker);
         String board = boardFileOf(task, file).toString();
         round.bound().forEach(this::requireOpen);
-        BoardRound raised = withItsCardRaised(round, task, worker);
-        Board armed = boards.listeningAt(board)
-                .map(listening -> postedAgain(listening, task, raised))
+        Optional<Board> listening = boards.listeningAt(board);
+        BoardRound raised = withItsCardRaised(round, task, worker, listening);
+        Board armed = listening
+                .map(earlier -> postedAgain(earlier, task, raised))
                 .orElseGet(() -> boards.arm(task.id(), board, raised, now));
         events.record(new BoardArmed(task.id(), armed.id(), armed.file(), armed.bound()), Actor.worker(worker), now);
         return armed;
@@ -99,20 +101,25 @@ public class ArmBoard {
         }
     }
 
-    private BoardRound withItsCardRaised(BoardRound round, Task task, WorkerId worker) {
-        return round.carriedCard().map(card -> round.withItsCardRaisedAs(raised(card, task, worker))).orElse(round);
+    private BoardRound withItsCardRaised(BoardRound round, Task task, WorkerId worker, Optional<Board> listening) {
+        return round.carriedCard().map(card -> round.withItsCardRaisedAs(raised(card, task, worker, listening))).orElse(round);
     }
 
-    private DecisionNumber raised(BoardCard card, Task task, WorkerId worker) {
-        decisions.ofTask(task.id()).ifPresent(ArmBoard::requireStillOpen);
+    private DecisionNumber raised(BoardCard card, Task task, WorkerId worker, Optional<Board> listening) {
+        decisions.ofTask(task.id()).ifPresent(earlier -> requireRaisedAgainOnlyFromItsOwnBoard(earlier, card, listening));
         return raiseDecision.raise(new TaskReference.ById(task.id()), card.card(), Actor.worker(worker));
     }
 
-    private static void requireStillOpen(Decision earlier) {
+    private static void requireRaisedAgainOnlyFromItsOwnBoard(Decision earlier, BoardCard card, Optional<Board> listening) {
         if (!earlier.isOpen()) {
             throw new Refusal(earlier.number() + " on " + earlier.task() + " is already answered (\"" + earlier.answer().verbatim()
                     + "\"), so a board round raises no card on it again; arm the round without --card, and report a further question to EDI with "
                     + "edi status needs-decision.");
+        }
+        if (listening.filter(board -> board.bindings().contains(card.raisedAs(earlier.number()))).isEmpty()) {
+            throw new Refusal(earlier.number() + " already waits on the captain on " + earlier.task() + " (\"" + earlier.card().title()
+                    + "\"), and a task holds one decision; bind it with --bind " + earlier.number() + " if the board answers it, or report the new "
+                    + "question to EDI with edi status needs-decision.");
         }
     }
 
