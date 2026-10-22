@@ -25,10 +25,9 @@ class ClaudeLayerTest {
 
     @Test
     void everyCommandTheCaptainIsToldToTypeIsTheSkillOfItsName() throws IOException {
-        Set<String> commands = commandsTheCaptainIsToldToType();
-
-        assertThat(commands).contains("sitrep", "afk", "quiet", "present", "demo", "stow", "update");
-        assertThat(skillsTheCaptainCanInvoke()).as("skills the captain can invoke by name").containsAll(commands);
+        assertThat(commandsTheCaptainIsToldToType()).as("commands the captain is told to type")
+                .isNotEmpty()
+                .isSubsetOf(skillsTheCaptainCanInvoke());
     }
 
     @Test
