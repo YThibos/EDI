@@ -6,7 +6,7 @@
 
 **Kind:** Design
 
-**Context and constraints:** EDI tells a live Claude process from a pid the kernel reused by recording the process's start instant with its pid (ADR-067) and comparing it when it asks whether the process still runs.
+**Context and constraints:** EDI tells a live Claude process from a pid the kernel reused by recording the process's start instant with its pid (ADR-115) and comparing it when it asks whether the process still runs.
 On Linux the JDK computes that instant from `/proc/stat` `btime` plus the process's start ticks, and the kernel derives `btime` from the wall clock, so it moves whenever the clock is stepped.
 Under WSL2 the clock is stepped as it resyncs with the host: on 22/10/2026 a primary session's recorded start and the instant read an hour later differed by exactly one second.
 An exact comparison then read the live primary as gone, so after a core restart the role stood vacant, a claim by the same session still answered not-primary, and `edi wait` refused it.
@@ -28,4 +28,4 @@ A tmux server's identity (`Tmux.ServerIdentity`) keeps its exact comparison: `#{
 
 **Revisit when:** A clock step larger than two seconds is seen to drop a live session.
 
-**Sources:** `domain.primary.SessionProcess`, `adapter.process.ProcessTable`, `adapter.runtime.Tmux`, `application.primary.PrimarySessions`; ADR-067.
+**Sources:** `domain.primary.SessionProcess`, `adapter.process.ProcessTable`, `adapter.runtime.Tmux`, `application.primary.PrimarySessions`; ADR-115.
