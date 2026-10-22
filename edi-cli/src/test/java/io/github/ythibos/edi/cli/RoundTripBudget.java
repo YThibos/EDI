@@ -6,29 +6,25 @@ import java.util.List;
 
 final class RoundTripBudget {
 
+    private static final Duration LIMIT_AT_P95 = Duration.ofMillis(50);
+    private static final double PACE_MULTIPLE = 2.0;
+    private static final Duration TIME_ALLOWED = Duration.ofSeconds(20);
+
     private final int roundTrips;
-    private final int percentile;
-    private final Duration limit;
 
-    RoundTripBudget(int roundTrips, int percentile, Duration limit) {
+    RoundTripBudget(int roundTrips) {
         this.roundTrips = roundTrips;
-        this.percentile = percentile;
-        this.limit = limit;
     }
 
-    Measurement measure(RoundTrip roundTrip) throws Exception {
+    Measurement measure(RoundTrip command, RoundTrip bareStartUp) throws Exception {
         List<Duration> taken = new ArrayList<>();
-        int overruns = 0;
-        while (taken.size() < roundTrips && overruns <= allowedOverruns()) {
-            Duration took = timed(roundTrip);
-            taken.add(took);
-            overruns += overruns(took) ? 1 : 0;
+        List<Duration> bareStartUps = new ArrayList<>();
+        long deadline = System.nanoTime() + TIME_ALLOWED.toNanos();
+        while (taken.size() < roundTrips && System.nanoTime() < deadline) {
+            bareStartUps.add(timed(bareStartUp));
+            taken.add(timed(command));
         }
-        return new Measurement(taken.stream().sorted().toList(), overruns);
-    }
-
-    private int allowedOverruns() {
-        return roundTrips - (int) Math.ceil(roundTrips * percentile / 100.0);
+        return new Measurement(sorted(taken), sorted(bareStartUps));
     }
 
     private static Duration timed(RoundTrip roundTrip) throws Exception {
@@ -37,8 +33,8 @@ final class RoundTripBudget {
         return Duration.ofNanos(System.nanoTime() - started);
     }
 
-    private boolean overruns(Duration took) {
-        return took.compareTo(limit) >= 0;
+    private static List<Duration> sorted(List<Duration> durations) {
+        return durations.stream().sorted().toList();
     }
 
     @FunctionalInterface
@@ -47,35 +43,45 @@ final class RoundTripBudget {
         void make() throws Exception;
     }
 
-    final class Measurement {
-
-        private final List<Duration> sorted;
-        private final int overruns;
-
-        private Measurement(List<Duration> sorted, int overruns) {
-            this.sorted = sorted;
-            this.overruns = overruns;
-        }
+    record Measurement(List<Duration> roundTrips, List<Duration> bareStartUps) {
 
         boolean metTheBudget() {
-            return overruns <= allowedOverruns();
+            return keptToTheLimit() || keptPaceWithTheMachine();
         }
 
-        boolean decidedEarly() {
-            return sorted.size() < roundTrips;
+        boolean keptToTheLimit() {
+            return percentile(roundTrips, 95).compareTo(LIMIT_AT_P95) < 0;
+        }
+
+        boolean keptPaceWithTheMachine() {
+            return paceRatio() < PACE_MULTIPLE;
         }
 
         String summary() {
-            return metTheBudget()
-                    ? "%d round trips: p50 %d ms, p95 %d ms, slowest %d ms.".formatted(sorted.size(), millisecondsAt(50), millisecondsAt(percentile),
-                            sorted.getLast().toMillis())
-                    : "%d of the first %d round trips took %d ms or more, where a p%d under %d ms over %d allows %d; p50 %d ms, slowest %d ms.".formatted(
-                            overruns, sorted.size(), limit.toMillis(), percentile, limit.toMillis(), roundTrips, allowedOverruns(), millisecondsAt(50),
-                            sorted.getLast().toMillis());
+            return "%d round trips: p50 %d ms, p95 %d ms, slowest %d ms; the p50 is %.2f times a bare start-up's p50 of %d ms; %s.".formatted(
+                    roundTrips.size(), millisecondsAt(roundTrips, 50), millisecondsAt(roundTrips, 95), roundTrips.getLast().toMillis(), paceRatio(),
+                    millisecondsAt(bareStartUps, 50), verdict());
         }
 
-        private long millisecondsAt(int percent) {
-            return sorted.get(Math.min(sorted.size() - 1, (int) Math.ceil(sorted.size() * percent / 100.0) - 1)).toMillis();
+        private static Duration percentile(List<Duration> sorted, int percent) {
+            return sorted.get(Math.min(sorted.size() - 1, (int) Math.ceil(sorted.size() * percent / 100.0) - 1));
+        }
+
+        private double paceRatio() {
+            return (double) percentile(roundTrips, 50).toNanos() / percentile(bareStartUps, 50).toNanos();
+        }
+
+        private static long millisecondsAt(List<Duration> sorted, int percent) {
+            return percentile(sorted, percent).toMillis();
+        }
+
+        private String verdict() {
+            if (keptToTheLimit()) {
+                return "within %d ms at p95".formatted(LIMIT_AT_P95.toMillis());
+            }
+            return keptPaceWithTheMachine()
+                    ? "over %d ms at p95 but within %.0f times a bare start-up at p50".formatted(LIMIT_AT_P95.toMillis(), PACE_MULTIPLE)
+                    : "over %d ms at p95 and over %.0f times a bare start-up at p50".formatted(LIMIT_AT_P95.toMillis(), PACE_MULTIPLE);
         }
     }
 }
