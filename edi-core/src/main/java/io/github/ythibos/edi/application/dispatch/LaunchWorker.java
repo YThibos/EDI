@@ -79,6 +79,7 @@ public class LaunchWorker {
     private final WrittenBriefs writtenBriefs;
     private final GatherBriefFacts briefFacts;
     private final ResumeNotes resumeNotes;
+    private final Handovers handovers;
     private final WorkerTokens tokens;
     private final WorkerRuntime runtime;
     private final ProcessTable processes;
@@ -89,7 +90,8 @@ public class LaunchWorker {
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
             WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
-            WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
+            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock,
+            TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
@@ -106,6 +108,7 @@ public class LaunchWorker {
         this.writtenBriefs = writtenBriefs;
         this.briefFacts = briefFacts;
         this.resumeNotes = resumeNotes;
+        this.handovers = handovers;
         this.tokens = tokens;
         this.runtime = runtime;
         this.processes = processes;
@@ -208,7 +211,7 @@ public class LaunchWorker {
 
     private Path writtenHandover(BriefFacts facts, Worker earlier, String because) {
         Path brief = writtenBriefs.written(facts);
-        return written(facts.taskDirectory().resolve(HANDOVER_FILE), resumeNotes.handoverFor(facts, earlier, brief, because));
+        return written(facts.taskDirectory().resolve(HANDOVER_FILE), handovers.handoverFor(facts, earlier, brief, because));
     }
 
     private static String handoverPrompt(Path handover, String because) {

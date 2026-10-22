@@ -15,7 +15,7 @@ A fresh start through `edi recover <n> fresh` wrote the brief again and nothing 
 `RelaunchWorker` relaunches a stopped or dead worker whose context is full as a `fresh` start, because "its context filled up", and refuses one whose session still runs with a message that names the stop first; every other worker is resumed as before.
 `LaunchWorker` refuses to resume a session whose context is full, whichever command asked, since the resumed session would stop on it again.
 Every `fresh` start writes the brief again and `handover.md` beside it in the task directory, and its first prompt is `fresh start after <why>: read the handover <path> and carry on from where it leaves off`.
-`ResumeNotes.handoverFor` writes the handover from the store and the copy: who takes over from whom and why; the branch, its head and the copy; the commits beyond `origin/<base>`, oldest first; the uncommitted changes; the latest pipeline run with its step and merge request; the brief's path and, for a ship planned by a scout, the scout's report; the earlier worker's full last status and the decisions answered since; and how to carry on, starting with `edi inbox`.
+`Handovers` writes the handover from the store and the copy: who takes over from whom and why; the branch, its head and the copy; the commits beyond `origin/<base>`, oldest first; the uncommitted changes; the latest pipeline run with its step and merge request; the brief's path and, for a ship planned by a scout, the scout's report; the earlier worker's full last status and the decisions answered since; and how to carry on, starting with `edi inbox`.
 A part EDI cannot read from git says so and names the command that shows it.
 
 **Motivation:** A full context loses only the conversation, while the work lives in the copy, the store and the task directory, so EDI can write the handover the primary had to write by hand, and the captain decides only whether to stop the worker.
@@ -32,4 +32,4 @@ A part EDI cannot read from git says so and names the command that shows it.
 
 **Revisit when:** Claude Code can compact or clear a session from the command line, or the captain wants fresh starts for workers that could resume.
 
-**Sources:** the JUSTMD-53 incident of 22/10/2026; ADR-073, ADR-074, ADR-170; `application.worker.RelaunchWorker`, `application.dispatch.LaunchWorker`, `ResumeNotes`, `ResearchBeforeImplementation`, `application.supervision.RecoverFromOutage`, `web.ConfirmationText`, `web.WorkerSentences`, `edi-cli` `WorkerRelaunchCommand`; [docs/workers.md](../workers.md).
+**Sources:** the JUSTMD-53 incident of 22/10/2026; ADR-073, ADR-074, ADR-170; `application.worker.RelaunchWorker`, `application.dispatch.LaunchWorker`, `Handovers`, `ResumeNotes`, `ResearchBeforeImplementation`, `application.supervision.RecoverFromOutage`, `web.ConfirmationText`, `web.WorkerSentences`, `edi-cli` `WorkerRelaunchCommand`; [docs/workers.md](../workers.md).

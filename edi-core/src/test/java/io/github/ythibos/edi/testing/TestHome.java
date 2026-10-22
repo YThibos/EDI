@@ -96,6 +96,7 @@ import io.github.ythibos.edi.application.delivery.TaskCosts;
 import io.github.ythibos.edi.application.dispatch.AwayLimit;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.GatherBriefFacts;
+import io.github.ythibos.edi.application.dispatch.Handovers;
 import io.github.ythibos.edi.application.dispatch.IsolatedCopies;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
@@ -587,8 +588,12 @@ public final class TestHome {
     public LaunchWorker launchWorker() {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
-                new ResumeNotes(git, inbox, decisions, pipelineRuns, researchBeforeImplementation(), transaction), workerTokens(),
-                runtime, processes, machineBoot(), clock, transaction);
+                resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
+                workerTokens(), runtime, processes, machineBoot(), clock, transaction);
+    }
+
+    private ResumeNotes resumeNotes() {
+        return new ResumeNotes(git, inbox, decisions, transaction);
     }
 
     public ResearchBeforeImplementation researchBeforeImplementation() {
