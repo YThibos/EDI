@@ -24,39 +24,37 @@
     }
   }
   @if (sitrep(); as sitrep) {
-    <app-hud-strip [needYou]="sitrep.decisions.length" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
-    <div class="sr-cols">
-      <div class="sr-col">
+    <div class="sr-glance">
+      <app-hud-strip [needYou]="sitrep.decisions.length" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
+      <div class="sr-cols">
         <section class="sr-section">
           <div class="sr-section__head">
             <h2 class="sr-sign sr-sign--amber"><span class="sr-sign__no">01</span>Needs your decision</h2>
             <span class="sr-sub">{{ waitingOnTheCaptain() }}</span>
           </div>
-          <app-decision-deck [cards]="sitrep.decisions" [answered]="sitrep.answered" (settled)="refresh()" />
+          <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" (settled)="refresh()" />
         </section>
         <section class="sr-section">
           <div class="sr-section__head">
-            <h2 class="sr-sign"><span class="sr-sign__no">03</span>Ongoing</h2>
+            <h2 class="sr-sign"><span class="sr-sign__no">02</span>Ongoing</h2>
           </div>
-          <app-ongoing-list [tasks]="sitrep.ongoing" />
+          <app-ongoing-list class="sr-section__body" [tasks]="sitrep.ongoing" />
         </section>
         <section class="sr-section">
           <div class="sr-section__head">
-            <h2 class="sr-sign"><span class="sr-sign__no">04</span>Recently landed</h2>
-          </div>
-          <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" />
-        </section>
-      </div>
-      <div class="sr-col">
-        <section class="sr-section">
-          <div class="sr-section__head">
-            <h2 class="sr-sign"><span class="sr-sign__no">02</span>Charted next</h2>
+            <h2 class="sr-sign"><span class="sr-sign__no">03</span>Charted next</h2>
             <span class="sr-sub">{{ chartedShown() }}</span>
           </div>
-          <app-charted-list [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" />
+          <app-charted-list class="sr-section__body" [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" />
         </section>
       </div>
     </div>
+    <section class="sr-section">
+      <div class="sr-section__head">
+        <h2 class="sr-sign"><span class="sr-sign__no">04</span>Recently landed</h2>
+      </div>
+      <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" />
+    </section>
     <footer class="sr-foot">
       <span class="sr-meta-mono">{{ sitrep.schema }} · {{ sitrep.generated }}</span>
       <span class="sr-meta-mono">{{ live() ? 'live · answers go straight to EDI' : 'reconnecting · answers go straight to EDI' }}</span>

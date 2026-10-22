@@ -2,7 +2,7 @@
 
 ## The EDI console
 
-The core serves the EDI console on its own port, in the approved dark skin ([ADR-018](decisions/ADR-018-console-spa-served-by-the-core.md), [ADR-019](decisions/ADR-019-the-approved-skin.md), [ADR-110](decisions/ADR-110-the-console-ports-the-approved-skin-with-its-fonts-bundled.md)).
+The core serves the EDI console on its own port, in the approved dark skin ([ADR-018](decisions/ADR-018-console-spa-served-by-the-core.md), [ADR-019](decisions/ADR-019-the-approved-skin.md), [ADR-152](decisions/ADR-152-the-sitrep-page-fits-one-laptop-screen.md)).
 `edi console` opens it in the browser through a link that signs in once, within two minutes, and the session lasts twelve hours ([ADR-105](decisions/ADR-105-the-console-signs-the-captain-in-with-a-one-time-link.md)).
 
 ```sh
@@ -10,7 +10,10 @@ edi console                                         # open the console in the br
 edi sitrep --board                                  # print the sitrep, then open its page in the console
 ```
 
-The sitrep page shows what needs a decision, what is ongoing, what landed this week and what is charted next, and follows every change as it happens ([ADR-107](decisions/ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md), [ADR-109](decisions/ADR-109-the-console-stream-signals-each-commit.md)).
+The sitrep page shows what needs a decision, what is ongoing and what is charted next side by side, in one glance on a laptop screen, with what landed this week below them, and follows every change as it happens ([ADR-107](decisions/ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md), [ADR-109](decisions/ADR-109-the-console-stream-signals-each-commit.md)).
+
+![The sitrep page in a 1536 by 730 viewport, a laptop screen at 125% scaling](images/sitrep/sitrep-1536x730.webp)
+
 Each decision card takes an option, the captain's own words, or both, and records them verbatim as the captain's answer; Reconcile asks the primary to re-check the decision against reality instead of answering it ([ADR-108](decisions/ADR-108-a-console-answer-is-the-captains-word-and-reconcile-asks-for-a-recheck.md)).
 The console opens through `cmd.exe /c start` from `/mnt/c` on WSL, and through `xdg-open` on a Linux desktop; elsewhere, or when that fails, the command prints the sign-in link instead ([ADR-150](decisions/ADR-150-edi-opens-the-console-through-windows-or-the-linux-desktop.md)).
 

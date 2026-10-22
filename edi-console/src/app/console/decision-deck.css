@@ -1,12 +1,16 @@
 .sr-callwrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  min-height: 0;
 }
 
 .sr-call {
   position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .sr-call::before,
@@ -21,12 +25,12 @@
 }
 
 .sr-call::before {
-  transform: translateY(8px) scaleX(0.965);
+  transform: translateY(6px) scaleX(0.965);
   opacity: 0.6;
 }
 
 .sr-call::after {
-  transform: translateY(16px) scaleX(0.93);
+  transform: translateY(12px) scaleX(0.93);
   opacity: 0.3;
 }
 
@@ -42,13 +46,15 @@
   grid-area: 1 / 1;
   z-index: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 .sr-call--deck {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .sr-stacknav {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -66,8 +72,8 @@
 .sr-stacknav__btn {
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   cursor: pointer;
   background: var(--panel-sunk);
   color: var(--text);
@@ -100,7 +106,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 22px 20px;
+  padding: 16px;
 }
 
 .sr-clear__ring {

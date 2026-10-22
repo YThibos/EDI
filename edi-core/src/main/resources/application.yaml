@@ -17,6 +17,12 @@ spring:
     name: edi-core
   main:
     banner-mode: off
+  web:
+    resources:
+      cache:
+        use-last-modified: false
+        cachecontrol:
+          no-cache: true
   task:
     scheduling:
       shutdown:
