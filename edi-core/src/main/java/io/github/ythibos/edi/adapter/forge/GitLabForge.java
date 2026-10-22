@@ -40,11 +40,10 @@ public class GitLabForge implements Forge {
     }
 
     @Override
-    public Optional<MergeRequestView> mergeRequestFrom(RegisteredForge forge, BranchName branch) {
+    public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = calls.run(ForgeCommand.GLAB_MR_LIST,
                 List.of("-R", forge.repository().url(), "--source-branch", branch.toString(), "--all", "-F", "json"), Map.of(), null);
-        return MergeRequestView.deliveryAmong(StreamSupport.stream(json.readTree(listed).spliterator(), false)
-                .map(request -> viewOf(forge, request)).toList());
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(request -> viewOf(forge, request)).toList();
     }
 
     @Override
@@ -60,7 +59,7 @@ public class GitLabForge implements Forge {
         calls.run(ForgeCommand.GLAB_MR_CREATE, List.of("-R", forge.repository().url(), "--draft",
                 "--source-branch", proposal.branch().toString(), "--target-branch", proposal.base().name(),
                 "--title", proposal.title(), "--description", proposal.description(), "--yes"), Map.of(), null);
-        return mergeRequestFrom(forge, proposal.branch())
+        return MergeRequestView.openAmong(mergeRequestsFrom(forge, proposal.branch()))
                 .orElseThrow(() -> new ProgramFailure("glab opened no merge request from " + proposal.branch() + " on " + forge.repository() + "."));
     }
 

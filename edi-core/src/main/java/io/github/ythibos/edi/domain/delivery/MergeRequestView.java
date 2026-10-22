@@ -2,9 +2,11 @@ package io.github.ythibos.edi.domain.delivery;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -32,9 +34,16 @@ public record MergeRequestView(
         }
     }
 
-    public static Optional<MergeRequestView> deliveryAmong(List<MergeRequestView> fromOneBranch) {
-        return fromOneBranch.stream().filter(request -> request.state() == MergeRequestState.OPEN).findFirst()
-                .or(() -> fromOneBranch.stream().filter(MergeRequestView::isMerged).findFirst());
+    public static Optional<MergeRequestView> deliveryAmong(List<MergeRequestView> fromOneBranch, Predicate<MergeRequestView> ownedMerge) {
+        return openAmong(fromOneBranch).or(() -> latestMergeAmong(fromOneBranch, ownedMerge));
+    }
+
+    public static Optional<MergeRequestView> openAmong(List<MergeRequestView> fromOneBranch) {
+        return fromOneBranch.stream().filter(request -> request.state() == MergeRequestState.OPEN).findFirst();
+    }
+
+    private static Optional<MergeRequestView> latestMergeAmong(List<MergeRequestView> fromOneBranch, Predicate<MergeRequestView> ownedMerge) {
+        return fromOneBranch.stream().filter(MergeRequestView::isMerged).filter(ownedMerge).max(Comparator.comparing(MergeRequestView::mergedAt));
     }
 
     public boolean isMerged() {

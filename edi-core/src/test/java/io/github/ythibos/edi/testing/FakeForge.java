@@ -44,12 +44,12 @@ public final class FakeForge implements Forge {
     }
 
     @Override
-    public synchronized Optional<MergeRequestView> mergeRequestFrom(RegisteredForge forge, BranchName branch) {
-        return MergeRequestView.deliveryAmong(mergeRequests.values().stream()
+    public synchronized List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
+        return mergeRequests.values().stream()
                 .filter(request -> request.address().repository().equals(forge.repository()))
                 .filter(request -> branch.toString().equals(request.sourceBranch()))
                 .sorted(Comparator.comparingInt((MergeRequestView request) -> request.address().number()).reversed())
-                .toList());
+                .toList();
     }
 
     @Override
@@ -121,7 +121,7 @@ public final class FakeForge implements Forge {
     }
 
     private MergeRequestView opened(RegisteredForge forge, BranchName branch, BaseBranch base, String head, boolean draft) {
-        MergeRequestAddress address = mergeRequestFrom(forge, branch).filter(request -> request.state() == MergeRequestState.OPEN)
+        MergeRequestAddress address = MergeRequestView.openAmong(mergeRequestsFrom(forge, branch))
                 .map(MergeRequestView::address)
                 .orElseGet(() -> new MergeRequestAddress(forge.repository(), ++lastNumber));
         MergeRequestView request = new MergeRequestView(address, MergeRequestState.OPEN, draft, branch.toString(), base.name(), head, null, null);

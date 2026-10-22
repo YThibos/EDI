@@ -48,8 +48,8 @@ public class DeliveryRecords {
 
     public Optional<MergeRequestView> requestFrom(Workplace workplace) {
         RegisteredForge forge = workplace.project().requireForge();
-        return forges.serving(forge).mergeRequestFrom(forge, workplace.dispatch().branch())
-                .filter(request -> !request.isMerged() || isTheMergeOf(workplace, request));
+        return MergeRequestView.deliveryAmong(forges.serving(forge).mergeRequestsFrom(forge, workplace.dispatch().branch()),
+                merged -> isTheMergeOf(workplace, merged));
     }
 
     private boolean isTheMergeOf(Workplace workplace, MergeRequestView merged) {

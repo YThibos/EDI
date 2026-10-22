@@ -50,9 +50,24 @@ class DeliveryClaimsTest {
         MergeRequestView merged = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
                 "main", HEAD, "3333", MERGED_AT);
 
-        assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged, open))).contains(open);
-        assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged))).contains(merged);
-        assertThat(MergeRequestView.deliveryAmong(List.of(closed))).isEmpty();
+        assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged, open), request -> true)).contains(open);
+        assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged), request -> true)).contains(merged);
+        assertThat(MergeRequestView.deliveryAmong(List.of(closed), request -> true)).isEmpty();
+    }
+
+    @Test
+    void takesTheLatestOwnedMergeWhateverOrderTheForgeListsThemIn() {
+        MergeRequestView earlier = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 4), MergeRequestState.MERGED, false, "feature/HRN-3",
+                "main", HEAD, "2222", MERGED_AT.minusSeconds(3600));
+        MergeRequestView own = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
+                "main", HEAD, "3333", MERGED_AT);
+        MergeRequestView later = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 9), MergeRequestState.MERGED, false, "feature/HRN-3",
+                "main", HEAD, "4444", MERGED_AT.plusSeconds(3600));
+
+        assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own), request -> request.mergedSince(MERGED_AT))).contains(own);
+        assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own, later), request -> true)).contains(later);
+        assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own, later), request -> request != later)).contains(own);
+        assertThat(MergeRequestView.deliveryAmong(List.of(earlier), request -> request.mergedSince(MERGED_AT))).isEmpty();
     }
 
     @Test

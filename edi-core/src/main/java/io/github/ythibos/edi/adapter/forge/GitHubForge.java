@@ -41,11 +41,10 @@ public class GitHubForge implements Forge {
     }
 
     @Override
-    public Optional<MergeRequestView> mergeRequestFrom(RegisteredForge forge, BranchName branch) {
+    public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = asTheBoundAccount(forge, ForgeCommand.GH_PR_LIST,
                 List.of("--repo", repositoryOf(forge), "--head", branch.toString(), "--state", "all", "--json", FIELDS), null);
-        return MergeRequestView.deliveryAmong(StreamSupport.stream(json.readTree(listed).spliterator(), false)
-                .map(pull -> viewOf(forge, pull)).toList());
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(pull -> viewOf(forge, pull)).toList();
     }
 
     @Override
@@ -60,7 +59,7 @@ public class GitHubForge implements Forge {
         asTheBoundAccount(forge, ForgeCommand.GH_PR_CREATE, List.of("--repo", repositoryOf(forge), "--draft",
                 "--base", proposal.base().name(), "--head", proposal.branch().toString(), "--title", proposal.title(), "--body-file", "-"),
                 proposal.description());
-        return mergeRequestFrom(forge, proposal.branch())
+        return MergeRequestView.openAmong(mergeRequestsFrom(forge, proposal.branch()))
                 .orElseThrow(() -> new ProgramFailure("gh opened no pull request from " + proposal.branch() + " on " + forge.repository() + "."));
     }
 

@@ -52,9 +52,7 @@ class GitHubForgeTest {
     void findsTheOpenPullRequestOfABranchUnderTheBoundAccount() throws IOException {
         standIns.answering("pr-list", "[" + OPEN_DRAFT + "]");
 
-        MergeRequestView open = forge.mergeRequestFrom(FORGE, BRANCH).orElseThrow();
-
-        assertThat(open).isEqualTo(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
                 "feature/HRN-3", "main", "1111111111111111111111111111111111111111", null, null));
         assertThat(standIns.calls()).containsExactly(
                 "auth token --hostname github.com --user example-owner",
@@ -64,25 +62,25 @@ class GitHubForgeTest {
     }
 
     @Test
-    void findsNoPullRequestWhenNoneIsOpenOrMerged() throws IOException {
+    void listsNoPullRequestFromABranchWithoutOneAndAClosedOneAsClosed() throws IOException {
         standIns.answering("pr-list", "[]");
-        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).isEmpty();
 
         standIns.answering("pr-list", "[" + OPEN_DRAFT.replace("\"OPEN\"", "\"CLOSED\"") + "]");
-        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).extracting(MergeRequestView::state).containsExactly(MergeRequestState.CLOSED);
     }
 
     @Test
-    void prefersTheOpenPullRequestOfABranchAndOtherwiseFindsItsMergedOne() throws IOException {
+    void listsEveryPullRequestOfABranchWithAMergeReadAsLandedAndTimed() throws IOException {
         String merged = OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"isDraft\":true", "\"isDraft\":false")
                 .replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}").replace("\"mergedAt\":null", MERGED_AT);
         String laterOpen = OPEN_DRAFT.replace("\"number\":7", "\"number\":8").replace("pull/7", "pull/8");
 
         standIns.answering("pr-list", "[" + merged + "," + laterOpen + "]");
-        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).map(request -> request.address().number()).contains(8);
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).extracting(request -> request.address().number()).containsExactly(7, 8);
 
         standIns.answering("pr-list", "[" + merged + "]");
-        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).hasValueSatisfying(request -> {
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).singleElement().satisfies(request -> {
             assertThat(request.isMerged()).isTrue();
             assertThat(request.draft()).isFalse();
             assertThat(request.landedCommit()).isEqualTo("3333");
@@ -111,7 +109,7 @@ class GitHubForgeTest {
                 .hasMessage("gh shows " + address + " merged without a readable mergedAt: ''.");
 
         standIns.answering("pr-list", "[" + merged.replace("\"mergedAt\":null", "\"mergedAt\":\"yesterday\"") + "]");
-        assertThatThrownBy(() -> forge.mergeRequestFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
+        assertThatThrownBy(() -> forge.mergeRequestsFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
                 .hasMessage("gh shows " + address + " merged without a readable mergedAt: 'yesterday'.");
     }
 

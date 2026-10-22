@@ -230,7 +230,7 @@ class AuthorityAndInterfaceTest {
 
         private static void exerciseEveryCallOf(Forge forge, RegisteredForge project) {
             BranchName branch = BranchName.parse("feature/HRN-3");
-            MergeRequestView open = forge.mergeRequestFrom(project, branch).orElseThrow();
+            MergeRequestView open = forge.mergeRequestsFrom(project, branch).getFirst();
             forge.view(project, open.address());
             forge.openDraft(project, DraftProposal.forWork(branch, new BaseBranch("main"), "Fit the lamp", "The brass lamp."));
             forge.mayChangeWorkflows(project);

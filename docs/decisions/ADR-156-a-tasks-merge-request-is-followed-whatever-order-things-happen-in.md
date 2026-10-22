@@ -11,7 +11,7 @@ When the captain marked the pull request of EDI-20 ready for review and merged i
 A GitLab merge request of another project was recorded only because its worker reported done while it was still a draft.
 Every merge EDI follows must be one the forge reports (ADR-087).
 
-**Decision:** `Forge.mergeRequestFrom` lists every merge request from a branch, with `gh pr list --state all` and `glab mr list --all`, and `MergeRequestView.deliveryAmong` takes the open one, or else the latest merged one; a closed request is never the task's.
+**Decision:** `Forge.mergeRequestsFrom` lists every merge request from a branch, with `gh pr list --state all` and `glab mr list --all`, and `MergeRequestView.deliveryAmong` takes the open one, or else, among the merged ones the task owns, the one with the latest merge time, whatever order the forge lists them in; a closed request is never the task's.
 `DeliveryRecords.requestFrom` always takes an open request from the task's branch as the task's, but a merged one only when it was merged at or after the task's dispatch, by the moment the forge names (`gh`'s `mergedAt`, `glab`'s `merged_at`), and EDI has not recorded it for another task; a branch name is reused by every task on the same work key, so an earlier task's merge is never followed as a later one's.
 `FollowMerges.followTheRequestOf` looks the request up for a `draft-review` ship whose project registers a forge and which has no recorded delivery, or only a closed one, and records it once as `DraftRecorded`.
 `ObservePipelines` asks it each time a task's latest pipeline run changes, and `RecordStatus` each time a worker reports any status but an accepted done; a forge that cannot answer is logged, and the next run change or status asks again.
@@ -35,4 +35,4 @@ A request found already merged is recorded and its merge recorded in one transac
 
 **Revisit when:** The forges offer a local notification of a new or a merged request.
 
-**Sources:** ADR-083, ADR-087, ADR-088, ADR-155, ADR-157; `application.delivery.FollowMerges`, `DeliveryRecords.requestFrom`, `ObservePipelines`, `DeliverAcceptedWork`, `DeliverDraft`, `application.worker.RecordStatus`, `application.port.Forge.mergeRequestFrom`, `adapter.forge.GitHubForge`, `GitLabForge`, `domain.delivery.MergeRequestView.deliveryAmong`, `MergeRequestView.mergedSince`, `ForgeRepository.holds`, `edi-cli` `MergedCommand`.
+**Sources:** ADR-083, ADR-087, ADR-088, ADR-155, ADR-157; `application.delivery.FollowMerges`, `DeliveryRecords.requestFrom`, `ObservePipelines`, `DeliverAcceptedWork`, `DeliverDraft`, `application.worker.RecordStatus`, `application.port.Forge.mergeRequestsFrom`, `adapter.forge.GitHubForge`, `GitLabForge`, `domain.delivery.MergeRequestView.deliveryAmong`, `MergeRequestView.mergedSince`, `ForgeRepository.holds`, `edi-cli` `MergedCommand`.

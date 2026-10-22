@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,27 +54,27 @@ class GitLabForgeTest {
     void findsTheOpenMergeRequestOfABranchByTheProjectsUrl() throws IOException {
         standIns.answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]");
 
-        MergeRequestView open = forge.mergeRequestFrom(FORGE, BRANCH).orElseThrow();
-
-        assertThat(open).isEqualTo(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 5), MergeRequestState.OPEN, true,
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 5), MergeRequestState.OPEN, true,
                 "feature/HRN-3", "main", "2222", null, null));
         assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 --all -F json");
     }
 
     @Test
-    void findsTheMergedRequestOfABranchWhenNoneIsOpenAndPassesOverAClosedOne() throws IOException {
+    void listsTheClosedAndMergedRequestsOfABranchWithTheMergeReadAsLandedAndTimed() throws IOException {
         String closed = REQUEST.formatted("closed", "null", "null", "null").replace("\"iid\":5", "\"iid\":6")
                 .replace("merge_requests/5", "merge_requests/6");
         standIns.answering("mr-list", "[" + closed + "," + REQUEST.formatted("merged", "\"4444\"", "null", MERGED_AT) + "]");
 
-        MergeRequestView merged = forge.mergeRequestFrom(FORGE, BRANCH).orElseThrow();
+        List<MergeRequestView> listed = forge.mergeRequestsFrom(FORGE, BRANCH);
+        MergeRequestView merged = listed.getLast();
 
+        assertThat(listed).extracting(MergeRequestView::state).containsExactly(MergeRequestState.CLOSED, MergeRequestState.MERGED);
         assertThat(merged.address().number()).isEqualTo(5);
         assertThat(merged.landedCommit()).isEqualTo("4444");
         assertThat(merged.mergedAt()).isEqualTo(Instant.parse("2026-10-21T12:37:04.512Z"));
 
-        standIns.answering("mr-list", "[" + closed + "]");
-        assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
+        standIns.answering("mr-list", "[]");
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).isEmpty();
     }
 
     @Test
@@ -85,7 +86,7 @@ class GitLabForgeTest {
                 .hasMessage("glab shows " + address + " merged without a readable merged_at: ''.");
 
         standIns.answering("mr-list", "[" + REQUEST.formatted("merged", "\"4444\"", "null", "\"yesterday\"") + "]");
-        assertThatThrownBy(() -> forge.mergeRequestFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
+        assertThatThrownBy(() -> forge.mergeRequestsFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
                 .hasMessage("glab shows " + address + " merged without a readable merged_at: 'yesterday'.");
     }
 
