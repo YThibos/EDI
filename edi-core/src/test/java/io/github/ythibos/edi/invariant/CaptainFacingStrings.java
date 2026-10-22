@@ -157,6 +157,6 @@ final class CaptainFacingStrings {
         home.workers().update(home.workers().get(lamp.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), NOW));
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         home.deliveries().save(Delivery.of(lamp.id().task(),
-                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", null), NOW));
+                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", null, null), NOW));
     }
 }

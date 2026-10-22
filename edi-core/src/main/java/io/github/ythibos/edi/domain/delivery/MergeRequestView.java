@@ -1,8 +1,12 @@
 package io.github.ythibos.edi.domain.delivery;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -14,7 +18,8 @@ public record MergeRequestView(
         String sourceBranch,
         String targetBranch,
         String headCommit,
-        String landedCommit) {
+        String landedCommit,
+        Instant mergedAt) {
 
     private static final int SHORT_COMMIT = 12;
 
@@ -24,19 +29,35 @@ public record MergeRequestView(
         if (state == MergeRequestState.MERGED && (landedCommit == null || landedCommit.isBlank())) {
             throw new IllegalArgumentException(address + " is merged, so the forge names the commit it landed on its base.");
         }
+        if (state == MergeRequestState.MERGED && mergedAt == null) {
+            throw new IllegalArgumentException(address + " is merged, so the forge names when it was merged.");
+        }
+    }
+
+    public static Optional<MergeRequestView> deliveryAmong(List<MergeRequestView> fromOneBranch, Predicate<MergeRequestView> ownedMerge) {
+        return openAmong(fromOneBranch).or(() -> latestMergeAmong(fromOneBranch, ownedMerge));
+    }
+
+    public static Optional<MergeRequestView> openAmong(List<MergeRequestView> fromOneBranch) {
+        return fromOneBranch.stream().filter(request -> request.state() == MergeRequestState.OPEN).findFirst();
+    }
+
+    private static Optional<MergeRequestView> latestMergeAmong(List<MergeRequestView> fromOneBranch, Predicate<MergeRequestView> ownedMerge) {
+        return fromOneBranch.stream().filter(MergeRequestView::isMerged).filter(ownedMerge).max(Comparator.comparing(MergeRequestView::mergedAt));
     }
 
     public boolean isMerged() {
         return state == MergeRequestState.MERGED;
     }
 
+    public boolean mergedSince(Instant moment) {
+        return isMerged() && !mergedAt.isBefore(moment);
+    }
+
     public List<String> gapsAsTheDeliveryOf(BranchName branch, BaseBranch base, String head) {
         List<String> gaps = new ArrayList<>();
-        if (state != MergeRequestState.OPEN) {
-            gaps.add(address + " is " + state.word() + ", not open");
-        }
-        if (!draft) {
-            gaps.add(address + " is not a draft; every merge request EDI delivers stays a draft until the captain merges it");
+        if (state == MergeRequestState.CLOSED) {
+            gaps.add(address + " is closed without a merge");
         }
         if (!branch.toString().equals(sourceBranch)) {
             gaps.add(address + " comes from " + sourceBranch + ", not from " + branch);

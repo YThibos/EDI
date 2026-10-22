@@ -17,9 +17,12 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.CloneRefresh;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -195,6 +198,95 @@ class FollowMergesTest {
         assertThat(merged.delivery().landedCommit()).isEqualTo(landed);
         assertThat(merged.cleanUp().done()).isTrue();
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).doesNotContain(WakeKind.DRAFT_MERGED);
+    }
+
+    @Test
+    void recordsAnOpenRequestEdiNeverRecordedOnTheCaptainsWordAndKeepsWatchingIt() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView ready = home.forge().marksReady(WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker()).address());
+
+        assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain(ready.address().url(), Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("The forge shows " + ready.address() + " open, not merged, so EDI keeps watching it.");
+        assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> assertThat(delivery.state()).isEqualTo(MergeRequestState.OPEN));
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded").doesNotContain("DraftMerged");
+    }
+
+    @Test
+    void followsTheRequestThatSucceedsAClosedOneOnTheCaptainsWordForTheTask() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        home.forge().closes(home.deliveries().of(LAMP).orElseThrow().address());
+        home.followMerges().watchTheOpenDrafts();
+        MergeRequestView successor = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().merges(successor.address(), squashedOntoMain(copy));
+
+        MergedWork merged = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(merged.delivery().address()).isEqualTo(successor.address());
+        assertThat(merged.cleanUp().done()).isTrue();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void followsAMergeEdiNeverRecordedPastAnInFlightTaskThatWasNeverDispatched() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4").dispatched()));
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().merges(draft.address(), squashedOntoMain(copy));
+
+        MergedWork merged = home.followMerges().mergedSaysTheCaptain(draft.address().url(), Actor.PRIMARY);
+
+        assertThat(merged.task()).isEqualTo(LAMP);
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void leavesAMergeFromBeforeTheDispatchToTheEarlierTaskOnTheSameBranch() throws IOException {
+        RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
+        MergeRequestView earlier = home.forge().opensADraft(forge, BranchName.parse("feature/HRN-3"), new BaseBranch("main"), "an-earlier-head");
+        home.forge().merges(earlier.address(), "2222");
+        home.clock().advance(Duration.ofMinutes(1));
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.deliveries().of(LAMP)).isEmpty();
+        assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessageStartingWith("EDI has no merge request to follow");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+        assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isTrue();
+    }
+
+    @Test
+    void followsAMergeSinceTheDispatchWhoseHeadCarriesThePipelinesFixesBeyondTheCopy() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
+        MergeRequestView fixed = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), "a-pipeline-fix-head");
+        home.clock().advance(Duration.ofMinutes(1));
+        home.forge().merges(fixed.address(), squashedOntoMain(copy));
+
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> {
+            assertThat(delivery.address()).isEqualTo(fixed.address());
+            assertThat(delivery.state()).isEqualTo(MergeRequestState.MERGED);
+        });
+        assertThat(home.eventTypesOf(LAMP)).containsSubsequence("DraftRecorded", "DraftMerged");
+    }
+
+    @Test
+    void refusesTheCaptainsWordWhenTheForgeShowsNoRequestFromTheTasksBranch() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+
+        assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("EDI has no merge request to follow: no merge request from feature/HRN-3 is open or merged on"
+                        + " https://github.com/example-owner/harness.");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
     }
 
     @Test

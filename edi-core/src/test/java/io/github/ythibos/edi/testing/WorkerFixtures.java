@@ -11,7 +11,9 @@ import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
@@ -38,6 +40,8 @@ public final class WorkerFixtures {
             Craftsmanship rules this change must meet; review it against them as acceptance criteria:
             - Methods are short and do one thing at one level of abstraction.
             """;
+    private static final String GITHUB_HARNESS = "forge: { kind: github, path: example-owner/harness, account: example-owner }";
+    private static final String GITLAB_HARNESS = "forge: { kind: gitlab, host: forge.example.org, path: example-owner/harness, account: example-owner }";
     private static final String REGISTRY = """
             projects:
               - name: harness
@@ -64,6 +68,11 @@ public final class WorkerFixtures {
         return home.registering(REGISTRY)
                 .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))
                 .writing("memory/craft-rules.md", CRAFT_RULES);
+    }
+
+    public static TestHome homeWithProjectsOn(Path directory, ForgeKind kind) throws IOException {
+        TestHome home = homeWithProjects(directory);
+        return kind == ForgeKind.GITLAB ? home.registering(REGISTRY.replace(GITHUB_HARNESS, GITLAB_HARNESS)) : home;
     }
 
     public static void cloneOf(Path directory, TestHome home, String project) throws IOException {
@@ -118,6 +127,7 @@ public final class WorkerFixtures {
         ProjectEntry project = home.registry().entryOf(home.tasks().get(task).intake().projects().getFirst());
         BranchName branch = home.dispatches().of(task).orElseThrow().branch();
         String head = FixtureRepository.at(home.home().worktreeOf(project.project().name(), task)).head();
-        return home.forge().opensADraft(project.requireForge(), branch, project.requireBase(), head);
+        RegisteredForge forge = project.requireForge();
+        return home.forge(forge.repository().kind()).opensADraft(forge, branch, project.requireBase(), head);
     }
 }

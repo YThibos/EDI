@@ -1,6 +1,8 @@
 package io.github.ythibos.edi.testing;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Forge;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
@@ -21,6 +24,8 @@ import io.github.ythibos.edi.domain.task.BaseBranch;
 
 public final class FakeForge implements Forge {
 
+    private final ForgeKind kind;
+    private final Clock clock;
     private final Map<Integer, MergeRequestView> mergeRequests = new HashMap<>();
     private final Map<String, String> pushedHeads = new HashMap<>();
     private final List<DraftProposal> openedDrafts = new ArrayList<>();
@@ -28,17 +33,23 @@ public final class FakeForge implements Forge {
     private boolean workflowScope = true;
     private int lastNumber;
 
-    @Override
-    public ForgeKind kind() {
-        return ForgeKind.GITHUB;
+    public FakeForge(ForgeKind kind, Clock clock) {
+        this.kind = kind;
+        this.clock = clock;
     }
 
     @Override
-    public synchronized Optional<MergeRequestView> openMergeRequestFrom(RegisteredForge forge, BranchName branch) {
+    public ForgeKind kind() {
+        return kind;
+    }
+
+    @Override
+    public synchronized List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         return mergeRequests.values().stream()
                 .filter(request -> request.address().repository().equals(forge.repository()))
-                .filter(request -> request.state() == MergeRequestState.OPEN && branch.toString().equals(request.sourceBranch()))
-                .findFirst();
+                .filter(request -> branch.toString().equals(request.sourceBranch()))
+                .sorted(Comparator.comparingInt((MergeRequestView request) -> request.address().number()).reversed())
+                .toList();
     }
 
     @Override
@@ -81,12 +92,20 @@ public final class FakeForge implements Forge {
         pushedHeads.put(branch.toString(), head);
     }
 
+    public synchronized MergeRequestView marksReady(MergeRequestAddress address) {
+        MergeRequestView request = mergeRequests.get(address.number());
+        MergeRequestView ready = new MergeRequestView(address, request.state(), false, request.sourceBranch(), request.targetBranch(),
+                request.headCommit(), request.landedCommit(), request.mergedAt());
+        mergeRequests.put(address.number(), ready);
+        return ready;
+    }
+
     public synchronized MergeRequestView merges(MergeRequestAddress address, String landedCommit) {
-        return changed(address, MergeRequestState.MERGED, landedCommit);
+        return changed(address, MergeRequestState.MERGED, landedCommit, clock.now());
     }
 
     public synchronized MergeRequestView closes(MergeRequestAddress address) {
-        return changed(address, MergeRequestState.CLOSED, null);
+        return changed(address, MergeRequestState.CLOSED, null, null);
     }
 
     public synchronized void cannotShow(MergeRequestAddress address) {
@@ -102,17 +121,18 @@ public final class FakeForge implements Forge {
     }
 
     private MergeRequestView opened(RegisteredForge forge, BranchName branch, BaseBranch base, String head, boolean draft) {
-        MergeRequestAddress address = openMergeRequestFrom(forge, branch).map(MergeRequestView::address)
+        MergeRequestAddress address = MergeRequestView.openAmong(mergeRequestsFrom(forge, branch))
+                .map(MergeRequestView::address)
                 .orElseGet(() -> new MergeRequestAddress(forge.repository(), ++lastNumber));
-        MergeRequestView request = new MergeRequestView(address, MergeRequestState.OPEN, draft, branch.toString(), base.name(), head, null);
+        MergeRequestView request = new MergeRequestView(address, MergeRequestState.OPEN, draft, branch.toString(), base.name(), head, null, null);
         mergeRequests.put(address.number(), request);
         return request;
     }
 
-    private MergeRequestView changed(MergeRequestAddress address, MergeRequestState state, String landedCommit) {
+    private MergeRequestView changed(MergeRequestAddress address, MergeRequestState state, String landedCommit, Instant mergedAt) {
         MergeRequestView request = mergeRequests.get(address.number());
         MergeRequestView changed = new MergeRequestView(address, state, request.draft(), request.sourceBranch(), request.targetBranch(),
-                request.headCommit(), landedCommit);
+                request.headCommit(), landedCommit, mergedAt);
         mergeRequests.put(address.number(), changed);
         return changed;
     }

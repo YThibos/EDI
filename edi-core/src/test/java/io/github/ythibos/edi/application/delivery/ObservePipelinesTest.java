@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
+import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -48,6 +50,24 @@ class ObservePipelinesTest {
 
         assertThat(home.eventTypesOf(LAMP)).containsSubsequence("PipelineRunSeen", "PipelineRunFinished").containsOnlyOnce("PipelineRunSeen");
         assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::status).contains("completed");
+    }
+
+    @Test
+    void recordsTheMergeRequestOnceARunChangesAfterItWasOpened() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", "1111", null));
+        home.observePipelines().observe();
+        assertThat(home.deliveries().of(LAMP)).isEmpty();
+
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", "1111", draft.address().url()));
+        home.observePipelines().observe();
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", draft.address().url()));
+        home.observePipelines().observe();
+
+        assertThat(home.deliveries().of(LAMP)).map(Delivery::address).contains(draft.address());
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded");
     }
 
     @Test

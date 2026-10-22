@@ -64,7 +64,7 @@ class MechanicalChangeTest {
         home.checkMechanicalChange().check(worker.id());
 
         assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
-        assertThat(home.eventTypesOf(TASK)).endsWith("MechanicalChangeAccepted", "DraftRecorded");
+        assertThat(home.eventTypesOf(TASK)).endsWith("StatusReported", "DraftRecorded", "MechanicalChangeAccepted").containsOnlyOnce("DraftRecorded");
         assertThat(home.runtime().launches()).hasSize(1);
     }
 

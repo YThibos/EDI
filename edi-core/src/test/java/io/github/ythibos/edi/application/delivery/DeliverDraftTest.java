@@ -18,6 +18,7 @@ import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
@@ -85,17 +86,32 @@ class DeliverDraftTest {
     }
 
     @Test
-    void refusesAMergeRequestThatIsNotADraftOrNotAtTheCopysHead() throws IOException {
+    void recordsAMergeRequestAlreadyReadyForReview() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         FixtureRepository copy = pushed(dispatched);
         home.forge().opensAReadyMergeRequest(forge, dispatched.launched().branch(), new BaseBranch("main"), copy.head());
 
-        assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).isInstanceOf(Refusal.class).hasMessageContaining("is not a draft");
+        DeliveredDraft delivered = home.deliverDraft().deliver(LAMP, Actor.PRIMARY);
 
-        home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), "an-older-head");
+        assertThat(delivered.opened()).isFalse();
+        assertThat(delivered.delivery().draft()).isFalse();
+        assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DraftRecorded");
+    }
+
+    @Test
+    void refusesAMergeRequestNotAtTheCopysHeadOrAlreadyMerged() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        pushed(dispatched);
+        MergeRequestView older = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), "an-older-head");
+
         assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).isInstanceOf(Refusal.class)
                 .hasMessageContaining("push the copy's head first");
+
+        home.forge().merges(older.address(), "3333");
+        assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage(older.address() + " is merged already; edi merged fit-lamp follows its merge.");
         assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();
+        assertThat(home.forge().openedDrafts()).isEmpty();
     }
 
     @Test
