@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.dispatch;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -59,6 +60,8 @@ import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 @Service
 public class LaunchWorker {
+
+    private static final String HANDOVER_FILE = "handover.md";
 
     private final EdiHome home;
     private final TaskStore tasks;
@@ -141,9 +144,7 @@ public class LaunchWorker {
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
         Path stateDirectory = createdDirectory(home.workerState(incarnation.worker()));
         IssuedToken token = tokens.issueInto(stateDirectory);
-        String firstPrompt = kind == LaunchKind.RESUME
-                ? resumeNotes.noteFor(incarnation.earlier(), worktree, dispatch.branch(), because)
-                : briefPrompt(writtenBriefs.written(incarnation.brief()));
+        String firstPrompt = firstPromptFor(incarnation, worktree, because);
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
     }
@@ -187,11 +188,31 @@ public class LaunchWorker {
         if (earlier == null) {
             throw new Refusal(task.id() + " never had a worker, so there is no session to resume.");
         }
+        if (earlier.hasAFullContext()) {
+            throw new Refusal(earlier.id() + "'s context is full, so a resumed session would stop on it again; start it fresh instead.");
+        }
         return earlier.session();
+    }
+
+    private String firstPromptFor(Incarnation incarnation, Path worktree, String because) {
+        return switch (incarnation.kind()) {
+            case DISPATCH -> briefPrompt(writtenBriefs.written(incarnation.brief()));
+            case RESUME -> resumeNotes.noteFor(incarnation.earlier(), worktree, incarnation.dispatch().branch(), because);
+            case FRESH -> handoverPrompt(writtenHandover(incarnation.brief(), incarnation.earlier(), because), because);
+        };
     }
 
     private static String briefPrompt(Path brief) {
         return OperationalText.marked("brief waiting: read " + brief + " and follow it");
+    }
+
+    private Path writtenHandover(BriefFacts facts, Worker earlier, String because) {
+        Path brief = writtenBriefs.written(facts);
+        return written(facts.taskDirectory().resolve(HANDOVER_FILE), resumeNotes.handoverFor(facts, earlier, brief, because));
+    }
+
+    private static String handoverPrompt(Path handover, String because) {
+        return OperationalText.marked("fresh start after " + because + ": read the handover " + handover + " and carry on from where it leaves off");
     }
 
     private Launch launchOf(Incarnation incarnation, Path worktree, Path taskDirectory, Path stateDirectory, IssuedToken token, String firstPrompt) {
@@ -254,6 +275,14 @@ public class LaunchWorker {
         return incarnation.kind() == LaunchKind.DISPATCH
                 ? new TaskDispatched(task, worker.id(), worker.category(), worker.route(), incarnation.dispatch().branch(), because)
                 : new WorkerRelaunched(task, worker.id(), incarnation.kind(), worker.route(), because);
+    }
+
+    private static Path written(Path file, String content) {
+        try {
+            return Files.writeString(file, content, StandardCharsets.UTF_8);
+        } catch (IOException unwritable) {
+            throw new UncheckedIOException(unwritable);
+        }
     }
 
     private static Path createdDirectory(Path directory) {

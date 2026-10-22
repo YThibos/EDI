@@ -28,6 +28,7 @@ final class ClaudeTranscript {
     private static final int TAIL_BYTES = 256 * 1024;
     private static final List<String> LIMIT_OPENINGS = List.of("You've hit your ", "You've reached your ");
     private static final String SEPARATOR = " · ";
+    private static final String CONTEXT_LIMIT_OPENING = "Prompt is too long";
 
     private final JsonMapper json;
 
@@ -40,6 +41,14 @@ final class ClaudeTranscript {
                 .filter(ClaudeTranscript::isAnApiError)
                 .filter(record -> writtenAtOrAfter(record, since))
                 .flatMap(ClaudeTranscript::usageLimitIn);
+    }
+
+    Optional<Instant> contextLimitStop(Path transcript, Instant since) {
+        return lastConversationalRecord(transcript)
+                .filter(ClaudeTranscript::isAnApiError)
+                .filter(ClaudeTranscript::refusesAPromptTooLong)
+                .flatMap(ClaudeTranscript::writtenAt)
+                .filter(at -> !at.isBefore(since));
     }
 
     TokenUsage tokensSpent(Path transcript, Instant since) {
@@ -78,10 +87,14 @@ final class ClaudeTranscript {
     }
 
     private static boolean writtenAtOrAfter(JsonNode record, Instant since) {
+        return writtenAt(record).filter(at -> !at.isBefore(since)).isPresent();
+    }
+
+    private static Optional<Instant> writtenAt(JsonNode record) {
         try {
-            return !Instant.parse(record.path("timestamp").asString("")).isBefore(since);
+            return Optional.of(Instant.parse(record.path("timestamp").asString("")));
         } catch (DateTimeException unreadable) {
-            return false;
+            return Optional.empty();
         }
     }
 
@@ -91,6 +104,10 @@ final class ClaudeTranscript {
                 .filter(text::startsWith)
                 .findFirst()
                 .map(opening -> new UsageLimit(limitNameAfter(opening, text), resetOf(record)));
+    }
+
+    private static boolean refusesAPromptTooLong(JsonNode record) {
+        return textOf(record.path("message").path("content")).startsWith(CONTEXT_LIMIT_OPENING);
     }
 
     private Optional<JsonNode> parsed(String line) {

@@ -1,8 +1,8 @@
 ---
 name: edi-recover
 description: >-
-  Owns recovery after workers die or stop on a usage limit: the numbered outage list, one-at-a-time restarts and verification against real sources.
-  Load it at session start when the digest lists dead workers, after a usage limit, or for edi recover.
+  Owns recovery after workers die, stop on a usage limit or fill their context: the numbered outage list, one-at-a-time restarts and verification against real sources.
+  Load it at session start when the digest lists dead workers, after a usage limit or a full context, or for edi recover.
 ---
 
 # edi-recover
@@ -12,6 +12,13 @@ description: >-
 1. `edi worker list` shows its health; judge it by the structured state, never by a pane.
 2. `edi worker relaunch <task>` resumes the recorded session in the task's own isolated copy, with the model and effort its category gives now.
 3. A worker that must stop is signalled with `edi worker stop <task>`; never type into its pane and never `/exit` it.
+
+## A worker whose context is full
+
+1. EDI raises it the moment its transcript shows the full context; `edi worker list` reads `context full since <time>`.
+2. Never type into its pane and never resume it: every prompt fails the same way, and a resume reopens the full conversation.
+3. `edi worker stop <task>`, then `edi worker relaunch <task>` starts a fresh session in the same copy, briefed with `handover.md` beside the brief.
+4. Messages sent meanwhile wait in its inbox; the fresh session reads them first.
 
 ## Two or more dead workers
 

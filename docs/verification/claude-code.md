@@ -132,3 +132,17 @@ The fixtures in `edi-core/src/test/resources/statusline/` keep the recorded payl
 - After the first answer `current_usage` held `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, `prompt_cache` appeared, and `rate_limits.five_hour` and `seven_day` each held `used_percentage` and `resets_at` in epoch seconds.
 - `model.display_name` and `effort.level` were in every payload, and `workspace.current_dir` equalled `cwd` in every recorded one.
 - The bar kept the command's colours, and with the refresh it changed within a minute of the core stopping, with no event in the session.
+
+## A full context, on 2.1.308
+
+Verified on Claude Code 2.1.308 on WSL2 Ubuntu 24.04, 22/10/2026, for the full-context state (ADR-170) and the fresh start that follows it (ADR-171).
+An interactive session on `claude-haiku-5-5`, with auto-compact off in the user settings as on the captain's machine, ran in a 120 by 40 pane on a private tmux server, with a settings file whose hooks each saved the JSON they received.
+Pasting about 1.7 million characters into the composer and submitting it filled the context.
+
+- Claude Code keeps at most 150,000 characters of a `CLAUDE.md` and warns about the rest, so a large memory file cannot fill the context on its own.
+- The pane showed "Context limit reached · /compact or /clear to continue · auto-compact is off · /config to turn it on" below the prompt, then the idle composer.
+- Only `SessionStart` and `UserPromptSubmit` fired: no `Stop`, no `StopFailure`, and in five minutes no `Notification`; the session of the 22/10/2026 incident did send one `idle_prompt` notification a minute after its context filled.
+- The transcript recorded an assistant record with `isApiErrorMessage: true`, `error: "invalid_request"`, the model `<synthetic>` and the text "Prompt is too long", followed by a `system` record with `subtype: "turn_duration"` and the metadata records; the incident's transcript ends the same way.
+- Claude Code decided this itself, in the same millisecond as the prompt, without an API call.
+- Each further typed line fired `UserPromptSubmit` and failed the same way at once.
+- `--resume` of the session with a prompt after `--` fired `SessionStart` with `source: "resume"` and `UserPromptSubmit`, and failed again with "Context limit reached", so a full session cannot be resumed.

@@ -15,6 +15,7 @@ import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
+import io.github.ythibos.edi.application.worker.NoticeFullContexts;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -28,6 +29,7 @@ public class SupervisionRound implements AutoCloseable {
     private final NoticeMissedLaunches missedLaunches;
     private final LaunchDeferredDispatches deferredDispatches;
     private final CheckMechanicalChange mechanicalChanges;
+    private final NoticeFullContexts fullContexts;
     private final JudgeWorkers judgeWorkers;
     private final ResumeAfterUsageLimits usageLimits;
     private final NoticeDueHolds dueHolds;
@@ -38,13 +40,14 @@ public class SupervisionRound implements AutoCloseable {
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
     public SupervisionRound(NoticeOverdueSteers overdueSteers, NoticeMissedLaunches missedLaunches,
-            LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, JudgeWorkers judgeWorkers,
-            ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals, FollowThePresence presence,
-            NoticeTheUnreadableCalendar unreadableCalendar) {
+            LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, NoticeFullContexts fullContexts,
+            JudgeWorkers judgeWorkers, ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals,
+            FollowThePresence presence, NoticeTheUnreadableCalendar unreadableCalendar) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
         this.mechanicalChanges = mechanicalChanges;
+        this.fullContexts = fullContexts;
         this.judgeWorkers = judgeWorkers;
         this.usageLimits = usageLimits;
         this.dueHolds = dueHolds;
@@ -57,6 +60,7 @@ public class SupervisionRound implements AutoCloseable {
     public void run() {
         attempt("notice overdue steers", overdueSteers::notice);
         attempt("notice missed launches", missedLaunches::notice);
+        attempt("notice workers whose context is full", fullContexts::notice);
         attempt("judge the workers", judgeWorkers::judge);
         attempt("resume a worker after its usage limit", usageLimits::resumeTheNextOneDue);
         attempt("notice holds whose date arrived", dueHolds::notice);

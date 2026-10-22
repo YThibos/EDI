@@ -23,6 +23,9 @@ public class InboxNotice {
         if (!runtime.isRunning(worker.window())) {
             return SteerDelivery.WAITING_FOR_A_LIVE_WORKER;
         }
+        if (worker.hasAFullContext()) {
+            return SteerDelivery.WAITING_FOR_A_FRESH_SESSION;
+        }
         if (!worker.isIdle()) {
             return SteerDelivery.AT_THE_NEXT_STOP;
         }

@@ -37,7 +37,7 @@ public class WorkerStore {
             select task_id, incarnation, session_id, launch_kind, boot_id, category, model, effort, tmux_socket, server_pid,
                    server_started_at, window_id, pane_pid, activity, activity_at, launched_at, started_at, briefed_at, transcript_path,
                    ended_at, stop_requested_at, launch_failed_at, retired_at, status_state, status_key, status_until, status_text,
-                   status_at, done_check, limit_name, limit_resets_at, limit_parked_at
+                   status_at, done_check, limit_name, limit_resets_at, limit_parked_at, context_full_since
             from worker
             """;
 
@@ -84,7 +84,8 @@ public class WorkerStore {
                             briefed_at = :briefed, transcript_path = :transcript, ended_at = :ended, stop_requested_at = :stopRequested,
                             launch_failed_at = :launchFailed, retired_at = :retired, status_state = :state, status_key = :key,
                             status_until = :until, status_text = :text, status_at = :statusAt, done_check = :doneCheck,
-                            limit_name = :limitName, limit_resets_at = :limitResets, limit_parked_at = :limitParked
+                            limit_name = :limitName, limit_resets_at = :limitResets, limit_parked_at = :limitParked,
+                            context_full_since = :contextFull
                         where id = :id""")
                 .param("id", worker.id().toString())
                 .param("session", worker.session().toString())
@@ -106,6 +107,7 @@ public class WorkerStore {
                 .param("limitName", park == null ? null : park.limit().name())
                 .param("limitResets", park == null ? null : Columns.text(park.limit().resetsAt()))
                 .param("limitParked", park == null ? null : Columns.text(park.parkedAt()))
+                .param("contextFull", Columns.text(worker.contextFullSince()))
                 .update();
     }
 
@@ -163,7 +165,8 @@ public class WorkerStore {
                 Columns.instant(row.getString("retired_at")),
                 reportedStatus(row),
                 doneCheck == null ? null : DoneCheck.named(doneCheck),
-                limitPark(row));
+                limitPark(row),
+                Columns.instant(row.getString("context_full_since")));
     }
 
     private static WorkerLaunch launch(ResultSet row) throws SQLException {

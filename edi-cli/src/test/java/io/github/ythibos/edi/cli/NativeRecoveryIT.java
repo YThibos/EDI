@@ -105,6 +105,37 @@ class NativeRecoveryIT {
     }
 
     @Test
+    void aWorkerWhoseContextFillsWakesThePrimaryAtOnceAndStartsAfreshWithAHandover() throws Exception {
+        assumeTrue(answers("tmux", "-V"), "tmux is not installed");
+        stop(core);
+        core = startedCore("--edi.supervision.round=PT1S");
+        String session = UUID.randomUUID().toString();
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", session);
+        edi(primary, payload(session, "\"source\":\"startup\""), "hook", "session-start");
+        dispatch("fill-lamp", "HRN-15", "stub-run: echo brass > lamp.txt\nstub-run: edi status working -- commit 1 of 2 done\nstub-context: full");
+
+        CommandRun full = awaitOutput(List.of("worker", "list"), "fill-lamp#1  context full since");
+        CommandRun woken = awaitTheWake(primary, "fill-lamp#1's context has been full since");
+        CommandRun refused = edi(Map.of(), "", "worker", "relaunch", "fill-lamp");
+        CommandRun stopped = edi(Map.of(), "", "worker", "stop", "fill-lamp");
+        CommandRun relaunched = edi(Map.of(), "", "worker", "relaunch", "fill-lamp");
+        workerServer().ifPresent(server -> processes.register(server.pid()));
+        List<String> launches = awaitLaunches("fill-lamp", 2);
+        Path handover = home.resolve("data/tasks/fill-lamp/handover.md");
+
+        assertThat(full.output()).contains("working: commit 1 of 2 done");
+        assertThat(woken.output()).contains("edi worker stop fill-lamp, then edi worker relaunch fill-lamp starts a fresh session in its copy with a handover.");
+        assertThat(refused.output()).contains("fill-lamp#1's context is full and its session still runs; stop it first with edi worker stop");
+        assertThat(stopped.output()).contains("edi worker relaunch fill-lamp starts a fresh session with a handover, since its context is full.");
+        assertThat(relaunched.output()).startsWith("Relaunched fill-lamp as fill-lamp#2 (implementation, claude-sonnet-5-5 at high), with a fresh session and a handover");
+        assertThat(launches).hasSize(2);
+        assertThat(launches.get(1)).doesNotContain("--resume").doesNotContain(sessionOf(launches.getFirst()))
+                .contains("fresh start after its context filled up: read the handover " + handover);
+        assertThat(handover).content().contains("fill-lamp#2 takes over from fill-lamp#1 in the same isolated copy, because its context filled up.",
+                "No commits beyond origin/main yet.", "Uncommitted changes:\n\n- lamp.txt\n", "working: commit 1 of 2 done");
+    }
+
+    @Test
     void thePrimaryEndsAStateChangingTurnWithTheReportAndEdiWaitPrintsWhatNeedsIt() throws Exception {
         assumeTrue(answers("tmux", "-V"), "tmux is not installed");
         String session = UUID.randomUUID().toString();
@@ -131,15 +162,17 @@ class NativeRecoveryIT {
         assertThat(woken.output()).startsWith("EDI wake: ").contains("wake-bell#1 needs a decision: (bell) Brass or bronze?");
     }
 
-    private static Process startedCore() throws Exception {
+    private static Process startedCore(String... options) throws Exception {
         Files.deleteIfExists(home.resolve("state/core.port"));
-        ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString(),
+        List<String> commandLine = new ArrayList<>(List.of(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
                 "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
-                "--edi.console.windows-directory=" + home)
+                "--edi.console.windows-directory=" + home));
+        commandLine.addAll(List.of(options));
+        ProcessBuilder launch = new ProcessBuilder(commandLine)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(home.resolve("core.log").toFile()));
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));

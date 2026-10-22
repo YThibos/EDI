@@ -60,7 +60,7 @@ class RecoverFromOutageTest {
         assertThat(fresh.session()).isNotEqualTo(lamp.session());
         assertThat(fresh.worktree()).isEqualTo(home.home().root().resolve("worktrees/harness/fit-lamp"));
         assertThat(fresh.route()).hasToString("claude-sonnet-5-5 at medium");
-        assertThat(fresh.firstPrompt()).contains("brief waiting");
+        assertThat(fresh.firstPrompt()).contains("fresh start after its tmux server changed: read the handover ");
         assertThat(home.dispatches().of(new TaskId("fit-lamp")).orElseThrow().captainsOverride().reason())
                 .isEqualTo("the captain's answer to number 1 on the outage hold list");
     }

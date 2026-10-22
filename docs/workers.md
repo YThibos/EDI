@@ -40,14 +40,16 @@ A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page
 
 A supervision round judges each worker from its hooks, its tmux server and the machine's boot ([ADR-061](decisions/ADR-061-the-supervision-round.md), [ADR-070](decisions/ADR-070-worker-health-from-structured-state.md), [ADR-071](decisions/ADR-071-the-boot-id-marks-a-machine-restart.md)).
 It parks a worker that stopped on a usage limit and resumes it after the reset ([ADR-072](decisions/ADR-072-usage-limits-from-the-stop-failure-and-the-transcript.md)).
+It reads each working worker's transcript for a full context, which Claude Code reports through no hook, and wakes the primary at once; a steer to such a worker waits in its inbox for the fresh session ([ADR-170](decisions/ADR-170-a-full-context-is-read-from-the-transcript-and-raised-at-once.md)).
 The machine profile's `supervision` section sets when an idle worker has waited too long and when a paused one resurfaces.
 
 ## Recovery
 
 Two or more dead workers go on a numbered outage hold list that `edi recover` answers one number at a time, resuming the recorded session in the task's own copy ([ADR-073](decisions/ADR-073-relaunch-resumes-the-recorded-session.md), [ADR-074](decisions/ADR-074-the-outage-hold-list.md), [ADR-118](decisions/ADR-118-the-outage-hold-list-also-drops-a-task-on-the-captains-word.md)).
+A worker whose context is full cannot be resumed, so once it is stopped, `edi worker relaunch` starts it afresh in its own copy; every fresh start writes `handover.md` beside the brief with the branch, the commits, the uncommitted changes, the pipeline, the plan and the last status ([ADR-171](decisions/ADR-171-a-full-context-starts-afresh-in-its-copy-with-a-handover.md)).
 
 ```sh
-edi worker relaunch fit-lamp                        # resume a dead or stopped worker's session in its own copy
+edi worker relaunch fit-lamp                        # resume a dead or stopped worker's session in its own copy, or start a full context afresh
 edi worker stop fit-lamp                            # signal the processes EDI recorded for the worker
 edi recover                                         # put dead workers on the numbered outage hold list and show it
 edi recover 2 resume                                # answer one number, as the captain named it

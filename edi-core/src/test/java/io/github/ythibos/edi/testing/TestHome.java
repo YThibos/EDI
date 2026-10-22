@@ -159,6 +159,7 @@ import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.InboxNotice;
+import io.github.ythibos.edi.application.worker.NoticeFullContexts;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
 import io.github.ythibos.edi.application.worker.RecordStatus;
@@ -585,7 +586,8 @@ public final class TestHome {
 
     public LaunchWorker launchWorker() {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
-                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(), new ResumeNotes(git, inbox, decisions, transaction), workerTokens(),
+                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
+                new ResumeNotes(git, inbox, decisions, pipelineRuns, researchBeforeImplementation(), transaction), workerTokens(),
                 runtime, processes, machineBoot(), clock, transaction);
     }
 
@@ -828,6 +830,10 @@ public final class TestHome {
     public OutageListQuery outageList() {
         return new OutageListQuery(outages, tasks, workers, dispatches, decisions, inbox, recoveryCosts,
                 new CurrentRoutes(dispatchRulesFile(), machineProfile()), git, home, transaction);
+    }
+
+    public NoticeFullContexts noticeFullContexts() {
+        return new NoticeFullContexts(workerList(), workers, runtime, events, clock, transaction);
     }
 
     public JudgeWorkers judgeWorkers() {
