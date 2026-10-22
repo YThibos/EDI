@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.forge;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,15 +101,16 @@ public class GitHubForge implements Forge {
         if (!address.url().equalsIgnoreCase(pull.path("url").asString(""))) {
             throw new ProgramFailure("gh answered with " + pull.path("url").asString("") + ", which is not " + address + ".");
         }
+        MergeRequestState state = stateOf(pull.path("state").asString(""));
         return new MergeRequestView(
                 address,
-                stateOf(pull.path("state").asString("")),
+                state,
                 pull.path("isDraft").asBoolean(false),
                 pull.path("headRefName").asString(null),
                 pull.path("baseRefName").asString(null),
                 pull.path("headRefOid").asString(null),
                 pull.path("mergeCommit").path("oid").asString(null),
-                mergedAtOf(pull.path("mergedAt").asString(null)));
+                state == MergeRequestState.MERGED ? mergedAtOf(address, pull) : null);
     }
 
     private static MergeRequestState stateOf(String word) {
@@ -120,7 +122,12 @@ public class GitHubForge implements Forge {
         };
     }
 
-    private static Instant mergedAtOf(String moment) {
-        return moment == null ? null : Instant.parse(moment);
+    private static Instant mergedAtOf(MergeRequestAddress address, JsonNode pull) {
+        String moment = pull.path("mergedAt").asString("");
+        try {
+            return Instant.parse(moment);
+        } catch (DateTimeParseException unreadable) {
+            throw new ProgramFailure("gh shows " + address + " merged without a readable mergedAt: '" + moment + "'.");
+        }
     }
 }

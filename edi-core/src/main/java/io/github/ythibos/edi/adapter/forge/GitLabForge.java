@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.forge;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,7 +97,7 @@ public class GitLabForge implements Forge {
                 request.path("target_branch").asString(null),
                 request.path("sha").asString(null),
                 state == MergeRequestState.MERGED ? landedCommitOf(request) : null,
-                mergedAtOf(request.path("merged_at").asString(null)));
+                state == MergeRequestState.MERGED ? mergedAtOf(address, request) : null);
     }
 
     private static MergeRequestState stateOf(String word) {
@@ -116,7 +117,12 @@ public class GitLabForge implements Forge {
                 .orElse(null);
     }
 
-    private static Instant mergedAtOf(String moment) {
-        return moment == null ? null : Instant.parse(moment);
+    private static Instant mergedAtOf(MergeRequestAddress address, JsonNode request) {
+        String moment = request.path("merged_at").asString("");
+        try {
+            return Instant.parse(moment);
+        } catch (DateTimeParseException unreadable) {
+            throw new ProgramFailure("glab shows " + address + " merged without a readable merged_at: '" + moment + "'.");
+        }
     }
 }

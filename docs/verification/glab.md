@@ -9,7 +9,6 @@ Every call was read-only; `glab mr create` is exercised against a recording stan
 | `--source-branch <branch>` | Filters the list by source branch; the list holds open merge requests unless `--merged`, `--closed` or `--all` is given, and EDI passes `--all` to find a merged one too. |
 | `state` | `opened` while open and `merged` after a merge; a merged request through a merge commit carries `merge_commit_sha` and an empty `squash_commit_sha`. |
 | `web_url` | Ends with `/-/merge_requests/<iid>`, which the adapter rebuilds from the registered project and the number. |
-| `merged_at` | GitLab's merge requests API names the moment of the merge as an ISO 8601 UTC moment such as `2026-10-21T12:37:04.512Z`, and `null` until then; added on 22/10/2026 from the API reference and still to be seen against the on-premises GitLab. |
 | `glab mr view <iid> -R <url> -F json` | Prints one object with the same fields. |
 | `glab api user --hostname <host>` | Prints the logged-in user, whose `username` the adapter compares with the bound account. |
 | `-R <full URL>` | Accepted, so a call never depends on the directory it runs in. |

@@ -102,6 +102,20 @@ class GitHubForgeTest {
     }
 
     @Test
+    void failsOnAMergedPullRequestWithoutAReadableMergeTime() throws IOException {
+        String merged = OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}");
+        MergeRequestAddress address = new MergeRequestAddress(FORGE.repository(), 7);
+
+        standIns.answering("pr-view", merged);
+        assertThatThrownBy(() -> forge.view(FORGE, address)).isInstanceOf(ProgramFailure.class)
+                .hasMessage("gh shows " + address + " merged without a readable mergedAt: ''.");
+
+        standIns.answering("pr-list", "[" + merged.replace("\"mergedAt\":null", "\"mergedAt\":\"yesterday\"") + "]");
+        assertThatThrownBy(() -> forge.mergeRequestFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
+                .hasMessage("gh shows " + address + " merged without a readable mergedAt: 'yesterday'.");
+    }
+
+    @Test
     void refusesAnAnswerForAnotherRepository() throws IOException {
         standIns.answering("pr-view", OPEN_DRAFT.replace("example-owner/harness", "someone-else/harness"));
 

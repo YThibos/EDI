@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
+import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
@@ -73,6 +74,19 @@ class GitLabForgeTest {
 
         standIns.answering("mr-list", "[" + closed + "]");
         assertThat(forge.mergeRequestFrom(FORGE, BRANCH)).isEmpty();
+    }
+
+    @Test
+    void failsOnAMergedRequestWithoutAReadableMergeTime() throws IOException {
+        MergeRequestAddress address = new MergeRequestAddress(FORGE.repository(), 5);
+
+        standIns.answering("mr-view", REQUEST.formatted("merged", "\"4444\"", "null", "null"));
+        assertThatThrownBy(() -> forge.view(FORGE, address)).isInstanceOf(ProgramFailure.class)
+                .hasMessage("glab shows " + address + " merged without a readable merged_at: ''.");
+
+        standIns.answering("mr-list", "[" + REQUEST.formatted("merged", "\"4444\"", "null", "\"yesterday\"") + "]");
+        assertThatThrownBy(() -> forge.mergeRequestFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
+                .hasMessage("glab shows " + address + " merged without a readable merged_at: 'yesterday'.");
     }
 
     @Test
