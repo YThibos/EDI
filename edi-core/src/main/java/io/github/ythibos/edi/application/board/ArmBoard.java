@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -19,6 +20,7 @@ import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -115,9 +117,10 @@ public class ArmBoard {
             throw new Refusal(earlier.number() + " on " + earlier.task() + " already holds the captain's answer to this card (\""
                     + earlier.answer().verbatim() + "\"), so a board round raises it no more; arm the round without --card.");
         }
-        if (earlier.isOpen() && listening.filter(board -> board.bindings().contains(card.raisedAs(earlier.number()))).isEmpty()) {
+        if (earlier.isOpen() && !earlier.card().equals(card.card())
+                && listening.filter(board -> board.bindings().contains(card.raisedAs(earlier.number()))).isEmpty()) {
             throw new Refusal(earlier.number() + " already waits on the captain on " + earlier.task() + " (\"" + earlier.card().title()
-                    + "\"); bind it with --bind " + earlier.number() + " if the board answers it, or report the new question to EDI with "
+                    + "\"); if the board answers it, arm the round with that very card under --card, or report the new question to EDI with "
                     + "edi status needs-decision.");
         }
     }
@@ -126,9 +129,13 @@ public class ArmBoard {
         if (!listening.task().equals(task.id())) {
             throw new Refusal(listening.file() + " is already armed for " + listening.task() + ".");
         }
-        Board posted = listening.posted(round);
+        Board posted = listening.posted(round.carryingForward(openBindingsOf(listening)));
         boards.update(posted);
         return posted;
+    }
+
+    private List<BoardBinding> openBindingsOf(Board listening) {
+        return listening.bindings().stream().filter(binding -> decisions.get(binding.decision()).isOpen()).toList();
     }
 
     private static Path realPathOf(Path path) {

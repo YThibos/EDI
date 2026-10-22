@@ -60,7 +60,7 @@ public class ResumeNotes {
     private String answeredFor(TaskId task) {
         List<String> answered = transaction.execute(_ -> {
             List<String> found = new ArrayList<>(inbox.resolvingOf(task).stream().map(InboxMessage::resolves).map(Object::toString).toList());
-            decisions.ofTask(task).filter(decision -> !decision.isOpen()).map(Decision::number).map(Object::toString).ifPresent(found::add);
+            decisions.everyOneOfTask(task).stream().filter(decision -> !decision.isOpen()).map(Decision::number).map(Object::toString).forEach(found::add);
             return found;
         });
         return answered.isEmpty() ? "nothing" : String.join(", ", answered);

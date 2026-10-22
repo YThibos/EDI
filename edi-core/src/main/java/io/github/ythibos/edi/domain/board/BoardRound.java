@@ -44,4 +44,17 @@ public record BoardRound(String link, int questions, List<BoardBinding> bindings
         Stream<BoardBinding> others = bindings.stream().filter(binding -> !binding.decision().equals(decision));
         return new BoardRound(link, questions, Stream.concat(others, Stream.of(card.raisedAs(decision))).toList());
     }
+
+    public BoardRound carryingForward(List<BoardBinding> earlier) {
+        Stream<BoardBinding> bound = bindings.stream().map(binding -> withTheQuestionKeptFrom(earlier, binding));
+        Stream<BoardBinding> carried = earlier.stream().filter(binding -> !bound().contains(binding.decision()));
+        return new BoardRound(link, questions, Stream.concat(bound, carried).toList(), card);
+    }
+
+    private static BoardBinding withTheQuestionKeptFrom(List<BoardBinding> earlier, BoardBinding binding) {
+        if (!binding.question().isEmpty()) {
+            return binding;
+        }
+        return earlier.stream().filter(kept -> kept.decision().equals(binding.decision())).findFirst().orElse(binding);
+    }
 }

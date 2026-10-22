@@ -141,7 +141,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-092](ADR-092-the-store-keeps-deliveries.md) | The store keeps deliveries, pipeline runs, clone refreshes and task costs | Design |
 | [ADR-093](ADR-093-the-tracker-port-and-its-three-adapters.md) | The tracker port has three adapters, chosen per project and reachable only where the machine names the tracker | Architecture |
 | [ADR-094](ADR-094-work-keys-are-settled-at-intake.md) | A task's work key is settled at intake, and an external tracker's ticket is chosen by the captain | Design |
-| [ADR-095](ADR-095-the-answer-books-or-creates-the-ticket.md) | The captain's answer books the work on a ticket or creates it, and a refused answer goes back to him | Design |
+| [ADR-095](ADR-095-the-answer-books-or-creates-the-ticket.md) | The captain's answer books the work on a ticket or creates it, and a refused answer goes back to him (superseded by ADR-171) | Design |
 | [ADR-096](ADR-096-followers-read-the-event-log-from-their-own-cursor.md) | Followers read the event log from their own cursor after each commit and every 30 seconds | Design |
 | [ADR-097](ADR-097-ticket-updates-follow-the-work.md) | Ticket updates follow the work: the sprint at the first dispatch, the draft's link, and the merged status after the merge | Design |
 | [ADR-098](ADR-098-the-fleet-ledger-keeps-the-old-harnesss-contract.md) | The fleet ledger keeps the old harness's record contract for the time-booking tool | Design |

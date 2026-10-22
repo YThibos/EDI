@@ -229,10 +229,55 @@ class ResearchBoardsTest {
         DecisionNumber held = home.raiseDecision().raise(new TaskReference.ById(SCOUT), Cards.card("Drop the lantern work?"), Actor.PRIMARY);
 
         assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
-                .hasMessage(held + " already waits on the captain on lantern-research (\"Drop the lantern work?\"); bind it with --bind " + held
-                        + " if the board answers it, or report the new question to EDI with edi status needs-decision.");
+                .hasMessage(held + " already waits on the captain on lantern-research (\"Drop the lantern work?\"); if the board answers it, arm the "
+                        + "round with that very card under --card, or report the new question to EDI with edi status needs-decision.");
         assertThat(home.decisions().get(held).card().title()).isEqualTo("Drop the lantern work?");
         assertThat(home.boards().listening()).isEmpty();
+    }
+
+    @Test
+    void keepsTheCardBoundUnderItsQuestionWhenTheBoardIsArmedAgainWithoutItOrByItsNumber() {
+        DecisionNumber raised = armQuietlyCarrying(CLOSE_OUT_CARD).bound().getFirst();
+        armQuietly(boardFile, raised);
+
+        Board again = home.armBoard().arm(scout.id(), new TaskReference.ById(SCOUT), boardFile, BoardRounds.asking(2));
+        home.receiveBoardFeedback().receive(again.id(), new BoardFeedback.Answered(List.of(closeOutChosen("B")), false));
+
+        assertThat(again.bindings()).containsExactly(new BoardBinding(raised, CLOSE_OUT));
+        assertThat(home.decisions().get(raised).answer().option()).isEqualTo(new OptionKey('B'));
+        assertThat(home.decisions().get(raised).answer().channel()).isEqualTo(AnswerChannel.BOARD);
+    }
+
+    @Test
+    void raisesItsOwnOpenCardAgainOnABoardArmedAfreshOnceTheSessionEnded() {
+        Board first = armQuietlyCarrying(CLOSE_OUT_CARD);
+        DecisionNumber raised = first.bound().getFirst();
+        home.receiveBoardFeedback().receive(first.id(), new BoardFeedback.ClosedEmpty());
+
+        Board fresh = armQuietlyCarrying(CLOSE_OUT_CARD);
+        home.receiveBoardFeedback().receive(fresh.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+
+        assertThat(fresh.id()).isNotEqualTo(first.id());
+        assertThat(fresh.bindings()).containsExactly(new BoardBinding(raised, CLOSE_OUT));
+        assertThat(home.decisions().get(raised).answer().option()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
+    void refusesABoardAnswerToAnOlderAnsweredCardInsteadOfAnsweringTheNewerOneOnItsTask() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        DecisionNumber older = armed.bound().getFirst();
+        home.boards().save(armed.answeredOnceMore().answersIn(new BoardFeedback.Answered(List.of(closeOutChosen("B")), false),
+                number -> home.decisions().get(number).card(), TestHome.START).getFirst());
+        home.answerDecision().answer(new TaskReference.ByDecision(older), new GivenAnswer("A: close now", new OptionKey('A'), "", AnswerChannel.CONSOLE),
+                Actor.CAPTAIN);
+        DecisionNumber newer = armQuietlyCarrying(new BoardCard("spare-bulbs", Cards.card("Order spare bulbs?"))).bound().getLast();
+
+        home.settleBoardAnswers().settleEveryUnsettled();
+
+        assertThat(home.decisions().get(newer).isOpen()).isTrue();
+        assertThat(home.decisions().get(older).answer().option()).isEqualTo(new OptionKey('A'));
+        assertThat(home.boards().answersOf(armed.id())).singleElement()
+                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(older + " is already answered: A: close now"));
     }
 
     @Test
