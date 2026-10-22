@@ -12,7 +12,7 @@ A scope change the primary records with `edi task note` after dispatch, and stee
 The pipeline still takes its intent only as the value of `--intent`, and keeps the intent a run started with for the whole run.
 
 **Decision:** `PipelineIntent.of` composes the intent from three parts: a `## Captain's intent` section with the task's notes, a `## Spec` section with the brief's Spec section (the plan of a planned ship followed by the dispatch's `--spec`), and the craft rules block, verbatim, when the project is flagged.
-`WrittenBriefs` writes `brief.md`, and `intent.md` for a ship delivered `draft-review`, both at launch and whenever the task is noted: `NoteTask` calls `RewriteBrief`, which rebuilds the brief facts for the task's latest worker and rewrites both files while the task is in flight and EDI has written its brief.
+`WrittenBriefs` writes `brief.md`, and `intent.md` for a ship delivered `draft-review`, both at launch and whenever the task is noted: `NoteTask` calls `RewriteBrief`, which rebuilds the brief facts for the task's latest worker through `GatherBriefFacts`, the same gatherer `LaunchWorker` uses, and rewrites both files while the task is in flight and EDI has written its brief.
 A steer that changes scope reaches the pipeline through the note the primary records for it.
 The brief's Validation and delivery section says the intent comes from the Captain's intent and Spec sections and is rewritten when the task is noted.
 
@@ -32,4 +32,4 @@ Rewriting at the note keeps the brief, the intent and the task's notes saying th
 
 **Revisit when:** The pipeline reads its intent from a file or standard input, or lets a running run take a new intent.
 
-**Sources:** EDI-30; ADR-082, which this supersedes; ADR-055; `domain.delivery.PipelineIntent`, `application.brief.WorkerBriefs.pipelineIntentFor`, `application.brief.WrittenBriefs`, `application.dispatch.RewriteBrief`, `application.task.NoteTask`, `BriefSections.draftReview`, `application.dispatch.LaunchWorker`.
+**Sources:** EDI-30; ADR-082, which this supersedes; ADR-055; `domain.delivery.PipelineIntent`, `application.brief.WorkerBriefs.pipelineIntentFor`, `application.brief.WrittenBriefs`, `application.dispatch.RewriteBrief`, `application.dispatch.GatherBriefFacts`, `application.task.NoteTask`, `BriefSections.draftReview`, `application.dispatch.LaunchWorker`.
