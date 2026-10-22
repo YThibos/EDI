@@ -1,12 +1,12 @@
 ---
-name: edi-update
+name: update
 description: >-
   Owns updating EDI itself: pulling the EDI repository, building and testing it natively, installing it, restarting the core and re-reading the anchor.
   Load it when the captain types /update or asks to update EDI.
 user-invocable: true
 ---
 
-# edi-update
+# update
 
 ## Steps
 

@@ -1,8 +1,8 @@
 ---
 name: edi-presence
 description: >-
-  Owns the captain's presence: present, quiet and away, the away mandate, the demo hold and the return brief.
-  Load it when the captain types /afk, /quiet, /quiet off, /present, /demo or /demo off, or when presence changes on its own.
+  Owns what the captain's presence means: present, quiet and away, the away mandate, the demo hold and the return brief.
+  Load it when presence changes on its own, or when the captain asks what a presence means.
 user-invocable: true
 ---
 
@@ -12,13 +12,7 @@ user-invocable: true
 
 ## The captain's commands
 
-| The captain types | You run |
-|---|---|
-| `/quiet` | `edi presence quiet` |
-| `/quiet off`, `/present` | `edi presence present` |
-| `/afk <words>` | read the words back in plain sentences, then `edi presence away --mandate -` with the words verbatim on standard input |
-| `/demo` | `edi presence demo` |
-| `/demo off` | `edi presence demo off` |
+Each is a skill of its own name: `/quiet` and `/quiet off`, `/present`, `/afk <words>`, `/demo` and `/demo off`.
 
 ## What each mode means
 
