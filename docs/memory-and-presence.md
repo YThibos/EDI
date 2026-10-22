@@ -15,6 +15,7 @@ edi memory stow-list                                # what /stow should curate
 Presence follows the captain: present, quiet or away ([ADR-030](decisions/ADR-030-presence-modes.md), [ADR-122](decisions/ADR-122-presence-is-held-by-the-core-and-followed-every-round.md)).
 It turns quiet after a stretch without typing or when a meeting begins, gathers wakes while the chat is quiet, raises a Windows notification for what needs the captain, and briefs the captain on their return ([ADR-124](decisions/ADR-124-wakes-are-gathered-into-one-batch-while-the-chat-is-quiet.md), [ADR-125](decisions/ADR-125-notifications-for-the-captain-come-from-an-event-follower.md), [ADR-166](decisions/ADR-166-the-calendar-is-read-through-wsls-own-interop.md), [ADR-163](decisions/ADR-163-the-calendar-is-read-every-two-minutes-and-an-unreadable-one-is-told-once.md), [ADR-127](decisions/ADR-127-the-captain-returns-to-a-brief-of-what-happened.md)).
 The console shows the presence ([ADR-133](decisions/ADR-133-the-console-shows-the-presence.md)).
+In the primary session the captain sets it with `/quiet`, `/quiet off`, `/present`, `/afk <words>`, `/demo` and `/demo off`, each a skill of its own name ([ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md)).
 
 ```sh
 edi presence                                        # present, quiet or away

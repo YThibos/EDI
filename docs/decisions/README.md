@@ -181,7 +181,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-132](ADR-132-the-session-start-digest-adds-presence-memory-and-setup.md) | A session starts from a digest with the address word, presence, memory, setup and the weekly upkeep | Design |
 | [ADR-133](ADR-133-the-console-shows-the-presence.md) | The console shows the presence, with Present and Demo buttons | Design |
 | [ADR-134](ADR-134-the-core-writes-the-primarys-status-line.md) | The core writes the primary's status line, and edi statusline pipes it to Claude Code | Design |
-| [ADR-135](ADR-135-the-primarys-settings-hold-the-hooks-and-the-status-line.md) | The primary's anchor holds only what must always be in mind, eleven skills hold the procedures, and its settings hold the hooks and the status line | Design |
+| [ADR-135](ADR-135-the-primarys-settings-hold-the-hooks-and-the-status-line.md) | The primary's anchor holds only what must always be in mind, eleven skills hold the procedures, and its settings hold the hooks and the status line (superseded by ADR-167) | Design |
 | [ADR-136](ADR-136-the-import-writes-what-its-dry-run-plans.md) | The import writes what its dry run plans, beside EDI's own work, and overwrites a home in use only when told | Design |
 | [ADR-137](ADR-137-the-backlog-import-sets-aside-the-old-harnesss-own-work.md) | The backlog import sets aside the old harness's own work, reads EDI keys from every line, and names each wait in plain words | Design |
 | [ADR-138](ADR-138-the-old-memory-is-routed-by-section-and-edited-on-the-way.md) | The old home's memory is routed by section and edited on the way, as tables 18.1 and 18.2 name | Design |
@@ -212,4 +212,5 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-164](ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md) | AT-39 scales its limit to the machine's own pace, measured in the same run | Design |
 | [ADR-165](ADR-165-a-process-is-the-recorded-one-within-two-seconds-of-boot-time-drift.md) | A process is the recorded one when its start lies within two seconds of the recorded start | Design |
 | [ADR-166](ADR-166-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |
+| [ADR-167](ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md) | Every command the captain types is a skill of its name, and fifteen skills hold the primary's procedures | Design |
 | [ADR-168](ADR-168-the-pipeline-intent-carries-the-spec-and-follows-the-tasks-notes.md) | The pipeline intent carries the brief's spec and is rewritten whenever the task is noted | Design |

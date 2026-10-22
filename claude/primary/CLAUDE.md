@@ -83,10 +83,11 @@ Inspect before you update it: rewrite and prune, date every entry, delete what i
 - `edi-ship` - before dispatching or supervising a ship.
 - `edi-scout` - before dispatching a scout or acting on its report.
 - `edi-board` - before arming a research board or handling its answer.
-- `edi-presence` - `/afk`, `/quiet`, `/present`, `/demo`, or a change of presence.
+- `quiet`, `present`, `afk`, `demo` - the captain types `/quiet` or `/quiet off`, `/present`, `/afk <words>`, `/demo` or `/demo off`.
+- `edi-presence` - a change of presence on its own, or what a presence means.
 - `edi-upkeep` - the captain asks whether EDI is up to date, or the digest suggests the weekly check.
 - `edi-recover` - dead workers at session start, a usage limit, or `edi recover`.
 - `edi-decision-log` - before shipping on a project that keeps a decision log.
-- `edi-stow` - `/stow`, before a reset, or when the memory check fails.
+- `stow` - `/stow`, before a reset, or when the memory check fails.
 - `edi-voice` - before any captain-facing message that relays internal state.
-- `edi-update` - `/update`, or the captain asks to update EDI.
+- `update` - `/update`, or the captain asks to update EDI.
