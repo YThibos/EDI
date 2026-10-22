@@ -25,6 +25,7 @@ edi decision list --open
 ```
 
 A decision holds its task until the captain answers it ([ADR-039](decisions/ADR-039-a-decision-holds-its-task.md)), and its D number is assigned once and never reused.
+Raising a card again on a task updates its open decision under the same number; once the captain answered, the new card is a new decision with a new number, and the answered one stays as he left it ([ADR-171](decisions/ADR-171-a-task-keeps-every-decision-and-an-answered-one-is-never-rewritten.md)).
 A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}}`.
 An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
 

@@ -48,7 +48,8 @@ public class RaiseDecision {
 
     private Decision decisionOn(Task task, DecisionCard card, Instant now) {
         return decisions.ofTask(task.id())
-                .map(earlier -> earlier.reraised(card, now))
+                .filter(Decision::isOpen)
+                .map(waiting -> waiting.reraised(card, now))
                 .orElseGet(() -> Decision.raised(decisions.nextNumber(), task.id(), card, now));
     }
 }

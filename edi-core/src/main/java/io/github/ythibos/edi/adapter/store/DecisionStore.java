@@ -85,7 +85,12 @@ public class DecisionStore {
     }
 
     public Optional<Decision> ofTask(TaskId task) {
-        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task").param("task", task.value())).stream().findFirst();
+        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task order by number desc limit 1").param("task", task.value())).stream()
+                .findFirst();
+    }
+
+    public List<Decision> everyOneOfTask(TaskId task) {
+        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task order by number").param("task", task.value()));
     }
 
     public List<Decision> all() {

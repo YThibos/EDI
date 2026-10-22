@@ -111,15 +111,14 @@ public class ArmBoard {
     }
 
     private static void requireRaisedAgainOnlyFromItsOwnBoard(Decision earlier, BoardCard card, Optional<Board> listening) {
-        if (!earlier.isOpen()) {
-            throw new Refusal(earlier.number() + " on " + earlier.task() + " is already answered (\"" + earlier.answer().verbatim()
-                    + "\"), so a board round raises no card on it again; arm the round without --card, and report a further question to EDI with "
-                    + "edi status needs-decision.");
+        if (!earlier.isOpen() && earlier.card().equals(card.card())) {
+            throw new Refusal(earlier.number() + " on " + earlier.task() + " already holds the captain's answer to this card (\""
+                    + earlier.answer().verbatim() + "\"), so a board round raises it no more; arm the round without --card.");
         }
-        if (listening.filter(board -> board.bindings().contains(card.raisedAs(earlier.number()))).isEmpty()) {
+        if (earlier.isOpen() && listening.filter(board -> board.bindings().contains(card.raisedAs(earlier.number()))).isEmpty()) {
             throw new Refusal(earlier.number() + " already waits on the captain on " + earlier.task() + " (\"" + earlier.card().title()
-                    + "\"), and a task holds one decision; bind it with --bind " + earlier.number() + " if the board answers it, or report the new "
-                    + "question to EDI with edi status needs-decision.");
+                    + "\"); bind it with --bind " + earlier.number() + " if the board answers it, or report the new question to EDI with "
+                    + "edi status needs-decision.");
         }
     }
 

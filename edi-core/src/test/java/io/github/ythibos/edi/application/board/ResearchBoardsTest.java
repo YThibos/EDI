@@ -193,9 +193,24 @@ class ResearchBoardsTest {
         DecisionNumber answered = armed.bound().getFirst();
 
         assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
-                .hasMessage(answered + " on lantern-research is already answered (\"Close-out decision: option A\"), so a board round raises no card on it "
-                        + "again; arm the round without --card, and report a further question to EDI with edi status needs-decision.");
+                .hasMessage(answered + " on lantern-research already holds the captain's answer to this card (\"Close-out decision: option A\"), so a "
+                        + "board round raises it no more; arm the round without --card.");
         assertThat(home.decisions().get(answered).answer().option()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
+    void raisesANewCardAfterTheCaptainAnsweredTheLastAsANewDecision() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+        DecisionNumber answered = armed.bound().getFirst();
+        BoardCard nextQuestion = new BoardCard("spare-bulbs", Cards.card("Order spare bulbs?"));
+
+        Board again = armQuietlyCarrying(nextQuestion);
+
+        DecisionNumber raised = home.decisions().ofTask(SCOUT).orElseThrow().number();
+        assertThat(raised).isNotEqualTo(answered);
+        assertThat(again.bindings()).contains(new BoardBinding(raised, "spare-bulbs"));
+        assertThat(home.decisions().get(answered).answer().verbatim()).isEqualTo("Close-out decision: option A");
     }
 
     @Test
@@ -214,8 +229,8 @@ class ResearchBoardsTest {
         DecisionNumber held = home.raiseDecision().raise(new TaskReference.ById(SCOUT), Cards.card("Drop the lantern work?"), Actor.PRIMARY);
 
         assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
-                .hasMessage(held + " already waits on the captain on lantern-research (\"Drop the lantern work?\"), and a task holds one decision; bind it "
-                        + "with --bind " + held + " if the board answers it, or report the new question to EDI with edi status needs-decision.");
+                .hasMessage(held + " already waits on the captain on lantern-research (\"Drop the lantern work?\"); bind it with --bind " + held
+                        + " if the board answers it, or report the new question to EDI with edi status needs-decision.");
         assertThat(home.decisions().get(held).card().title()).isEqualTo("Drop the lantern work?");
         assertThat(home.boards().listening()).isEmpty();
     }
