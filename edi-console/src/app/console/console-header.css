@@ -145,3 +145,17 @@
     display: none;
   }
 }
+
+@media (max-width: 500px) {
+  .sr-nav__inner {
+    gap: 12px;
+  }
+
+  .sr-presence__button {
+    padding: 4px 6px;
+  }
+
+  .sr-clock__day {
+    display: none;
+  }
+}

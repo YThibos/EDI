@@ -40,6 +40,7 @@ edi sitrep                                          # the same report, read-only
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional.
 Inside tmux the report fits the pane it runs in ([ADR-048](decisions/ADR-048-the-command-measures-its-pane.md)).
 Every captain-facing card and report is linted for internal labels ([ADR-128](decisions/ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md)).
+Every time a report, a decision list or a presence line shows is in the machine's own time zone, such as "Answered 2026-10-22 11:14 CEST", while the store, the event log and every API keep UTC instants ([ADR-155](decisions/ADR-155-edi-shows-the-machines-local-time-and-stores-utc.md)).
 
 ## The captain's word
 

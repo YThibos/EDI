@@ -1,7 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 
 import { PresenceChoice, PresenceShown } from './sitrep';
-import { stardate } from './stardate';
+import { shipDay, shipTime } from './stardate';
 
 @Component({
   selector: 'app-console-header',
@@ -15,7 +15,8 @@ export class ConsoleHeader {
   readonly presence = input<PresenceShown | null>(null);
   readonly presenceChosen = output<PresenceChoice>();
 
-  protected readonly stamp = computed(() => stardate(this.generated() ?? '', this.zone() ?? ''));
+  protected readonly day = computed(() => shipDay(this.generated() ?? '', this.zone() ?? ''));
+  protected readonly time = computed(() => shipTime(this.generated() ?? '-', this.zone() ?? ''));
   protected readonly mode = computed(() => {
     const presence = this.presence();
     if (!presence) {

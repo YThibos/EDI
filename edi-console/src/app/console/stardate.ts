@@ -15,6 +15,11 @@ export function stardate(stamp: string, zone: string): string {
   return clock ? `${starday(clock)} · ${timeOfDay(clock)}` : stamp || '-';
 }
 
+export function shipDay(stamp: string, zone: string): string | null {
+  const clock = shipClockAt(stamp, zone);
+  return clock ? starday(clock) : null;
+}
+
 export function shipTime(stamp: string, zone: string): string {
   const clock = shipClockAt(stamp, zone);
   return clock ? timeOfDay(clock) : stamp;

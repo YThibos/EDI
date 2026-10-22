@@ -18,6 +18,7 @@ A few application classes already read `ZoneId.systemDefault()` for the machine'
 - `Moments` renders a moment as "2026-10-22 11:14 CEST" and a day as the machine's calendar day, in the zone `Clock.zone` names, with the zone's English short name so summer time shows.
 - `PresenceWords`, `HealthWords` and `DecisionLines` render through `Moments`, so the captain report, the sitrep text, the return brief, presence lines, `edi decision list`, task detail, worker lists and the primary's digests share it.
 - `edi-sitrep.v1` gains `zone`, the machine's zone id, and the console renders every time on the sitrep page in that zone, not the browser's: the header clock as "SD 2026.295 · 11:14 CEST", with the day of the year counted on the machine's calendar.
+- On a screen 500 CSS pixels wide or narrower the header clock keeps only the time, "11:14 CEST", and the header tightens its gaps and buttons, since the full stardate would push the presence buttons onto the wordmark.
 - `StatusLineText`, `MeetingCalendar`, `OutlookCalendar`, `MemoryQuery`, `PrepareThePrimary` and `SessionStartDigestQuery` take the machine's day and zone from `Clock.zone`.
 
 **Motivation:** The captain reads times against the clock on the wall, so a UTC time is a sum to do and a chance to misread a deadline by one or two hours.

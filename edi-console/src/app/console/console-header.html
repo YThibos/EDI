@@ -23,7 +23,7 @@
       </span>
     }
     <span class="sr-clock">
-      <span class="sr-clock__sd">{{ stamp() }}</span>
+      <span class="sr-clock__sd">@if (day(); as day) {<span class="sr-clock__day">{{ day }} · </span>}{{ time() }}</span>
       <span class="sr-clock__home">{{ machine() ?? '-' }}</span>
     </span>
   </div>
