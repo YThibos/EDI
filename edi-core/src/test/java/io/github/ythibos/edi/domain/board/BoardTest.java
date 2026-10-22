@@ -46,12 +46,22 @@ class BoardTest {
     }
 
     @Test
-    void refusesARoundWithoutAWebLinkOrWithoutAQuestion() {
+    void refusesARoundWithoutAWebLinkOrWithNothingToAsk() {
         assertThatThrownBy(() -> new BoardRound("/tmp/board.html", 2, List.of())).isInstanceOf(Refusal.class)
                 .hasMessageContaining("names the web link the captain opens the board at");
         assertThatThrownBy(() -> new BoardRound(null, 2, List.of())).isInstanceOf(Refusal.class);
+        assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, -1, List.of(D58))).isInstanceOf(Refusal.class)
+                .hasMessage("A board round counts its questions from 0, not -1.");
         assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, 0, List.of())).isInstanceOf(Refusal.class)
-                .hasMessage("A board round puts at least one question before the captain; it counts 0.");
+                .hasMessage("A board round puts a question or an open decision before the captain; this one counts no question and binds no decision.");
+    }
+
+    @Test
+    void leavesARoundThatAsksOnlyItsBoundDecisionsToTheirCards() {
+        Board boundOnly = board.answeredOnceMore().posted(BoardRounds.asking(0, D58, D59));
+
+        assertThat(boundOnly.waitsOnTheCaptain()).isFalse();
+        assertThat(boundOnly.bound()).containsExactly(D58, D59);
     }
 
     @Test

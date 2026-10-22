@@ -10,10 +10,12 @@
 In the shadow run two boards waited on the captain's answers while the report said nothing was open, because a board that binds no open decision never reached the decision zone.
 Lavish prints the board's link when the scout opens it, and only the scout knows how many questions a round asks.
 
-**Decision:** `edi board arm` takes `--link <url>` and `--questions <n>` as well, both required, and sends them as a `BoardRound` with the bound decisions; a round names an `http` or `https` link and at least one question, or it is refused.
+**Decision:** `edi board arm` takes `--link <url>` and `--questions <n>` as well, both required, and sends them as a `BoardRound` with the bound decisions.
+The count leaves out the decisions the round binds, since those already wait on the captain as their own cards; a round names an `http` or `https` link and at least one question or one bound decision, or it is refused.
 The board stores the link and its open questions (`board.link`, `board.open_questions`, migration `V9__waiting_on_the_captain.sql`); arming a board that already listens posts a new round on it (`Board.posted`), with the new link, count and bindings.
 An answered round sets the open questions to none (`Board.answeredOnceMore`), and a board waits on the captain while it listens and holds open questions (`Board.waitsOnTheCaptain`), which puts it in the decision zone (ADR-158).
-A board armed before this record has no link and no open questions until its scout arms it again.
+The primary may also post a new round on a listening board, with `edi board post <html> --link <url> --questions <n>` (`PostBoardRound`, recorded as `BoardRoundPosted`), keeping its bindings; this puts the board of a scout that stopped, or a board armed before this record, before the captain, since only the task's own worker may arm a board.
+A board armed before this record has no link and no open questions until its scout arms it again or the primary posts a round on it.
 
 **Motivation:** The scout states what it asks at the moment it asks it, so the zone shows the board exactly while a round waits for the captain.
 
@@ -21,6 +23,8 @@ A board armed before this record has no link and no open questions until its sco
 - Asking Lavish for the link on every read - the snapshot would run a program on every report and page load.
 - Counting the questions in the board's HTML - a board's markup is the scout's own, and no element marks a question.
 - Keeping a board in the zone until its session ends - a board the captain answered would still look unanswered.
+- Counting the bound decisions in the board's questions - the zone would count each of them twice, and answering one in the console would not lower the board's count.
+- Marking every board that listens when the migration runs as waiting, without a link - the captain could not tell where to answer.
 
 **Consequences:**
 - Good: a board with questions reaches the captain with its link even when it answers no decision.
@@ -28,4 +32,4 @@ A board armed before this record has no link and no open questions until its sco
 
 **Revisit when:** Lavish reports a board's unanswered prompts itself.
 
-**Sources:** EDI rewrite specification, section 15.5; ADR-111, ADR-113, ADR-158; `domain.board.BoardRound`, `Board`, `application.board.ArmBoard`, `adapter.store.BoardStore`, `web.board.ArmRequest`, `edi-cli` `BoardArmCommand`, the `edi-board` skill.
+**Sources:** EDI rewrite specification, section 15.5; ADR-111, ADR-113, ADR-158; `domain.board.BoardRound`, `Board`, `application.board.ArmBoard`, `PostBoardRound`, `adapter.store.BoardStore`, `web.board.ArmRequest`, `edi-cli` `BoardArmCommand`, `BoardPostCommand`, the `edi-board` skill.

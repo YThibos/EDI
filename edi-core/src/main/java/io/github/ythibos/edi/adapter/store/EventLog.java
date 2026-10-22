@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardRoundPosted;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
@@ -267,6 +268,7 @@ public class EventLog {
             case RecheckAsked asked -> payload.put("number", asked.number().toString()).put("note", asked.note());
             case BoardArmed armed -> withEach(payload.put("board", armed.board().value()).put("file", armed.file()), "bound",
                     armed.bound().stream().map(DecisionNumber::toString).toList());
+            case BoardRoundPosted posted -> payload.put("board", posted.board().value()).put("link", posted.link()).put("questions", posted.questions());
             case BoardAnswered answered -> payload.put("board", answered.board().value())
                     .put("round", answered.round())
                     .put("prompts", answered.prompts())

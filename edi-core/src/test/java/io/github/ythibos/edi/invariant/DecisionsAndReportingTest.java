@@ -212,6 +212,27 @@ class DecisionsAndReportingTest {
 
         @Test
         @Tag("adapter")
+        @DisplayName("AT-19 the primary puts the new round of a board whose scout stopped before the captain, and a round that asks only bound decisions"
+                + " leaves them to their cards")
+        void thePrimaryPutsAStoppedScoutsBoardBeforeTheCaptain() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
+            Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-4"), CategoryId.RESEARCH);
+            DecisionNumber lamp = raise(home, "survey-lamps", "Which lamp?");
+            Path board = Files.writeString(Files.createDirectories(home.home().taskDirectory(scout.id().task())).resolve("board.html"), "<!doctype html>\n");
+            home.boardHost().holdsTheNextPollOpen();
+
+            home.armBoard().arm(scout.id(), TaskReference.parse("survey-lamps"), board, BoardRounds.asking(0, lamp));
+            String boundOnly = captainReport(home, Turn.NONE);
+            home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
+            home.postBoardRound().post(board, BoardRounds.LINK, 2, Actor.PRIMARY);
+            String posted = captainReport(home, Turn.NONE);
+
+            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 1 open", "║  " + lamp + "   Which lamp?").doesNotContain("Board for");
+            assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open", "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK);
+        }
+
+        @Test
+        @Tag("adapter")
         @DisplayName("AT-19 a worker's question waits on EDI, never on the captain, and the steer that settles it clears it once acknowledged")
         void aWorkersQuestionWaitsOnEdi() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);

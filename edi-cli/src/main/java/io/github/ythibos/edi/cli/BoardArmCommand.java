@@ -25,7 +25,7 @@ final class BoardArmCommand implements Callable<Integer> {
     private String link;
 
     @Option(names = "--questions", required = true, paramLabel = "N",
-            description = "How many questions this round puts before the captain; arming the board again posts a new round.")
+            description = "How many questions this round puts before the captain, not counting the decisions it binds; arming the board again posts a new round.")
     private int questions;
 
     @Option(names = "--bind", split = ",", paramLabel = "D58,D59", description = "Open decisions the board answers for the captain.")

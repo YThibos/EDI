@@ -211,6 +211,23 @@ class ConsoleApiTest {
     }
 
     @Test
+    void letsOnlyThePrimaryPostANewRoundOnAListeningBoard() throws Exception {
+        String worker = workerTokenFor("console-surveyor");
+        Path board = Files.writeString(Files.createDirectories(home.resolve("data/tasks/console-surveyor")).resolve("board.html"), "<!doctype html>\n");
+        post(withToken(worker, "/api/boards", TEXT), "{\"file\":\"" + board + "\",\"task\":\"console-surveyor\",\"link\":\"" + BoardRounds.LINK
+                + "\",\"questions\":1}");
+        String round = "{\"file\":\"" + board + "\",\"link\":\"" + BoardRounds.LINK + "\",\"questions\":3}";
+
+        HttpResponse<String> byTheScout = post(withToken(worker, "/api/boards/rounds", TEXT), round);
+        HttpResponse<String> byThePrimary = post(withTheHomeToken("/api/boards/rounds", TEXT), round);
+
+        assertThat(byTheScout.statusCode()).isEqualTo(403);
+        assertThat(byThePrimary.statusCode()).isEqualTo(201);
+        assertThat(byThePrimary.body()).isEqualTo("Posted a new round on the research board " + board.toRealPath() + " for console-surveyor;"
+                + " the sitrep puts 3 questions before the captain until a round answers them.\n");
+    }
+
+    @Test
     void streamsASignalToTheConsoleWheneverTheFleetChanges() throws Exception {
         String cookie = signedInCookie();
         HttpClient http = HttpClient.newHttpClient();

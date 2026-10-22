@@ -17,6 +17,6 @@ public final class BoardRounds {
     }
 
     public static BoardRound binding(DecisionNumber... bound) {
-        return asking(Math.max(1, bound.length), bound);
+        return asking(bound.length == 0 ? 1 : 0, bound);
     }
 }

@@ -315,6 +315,19 @@ class CommandsTest {
     }
 
     @Test
+    void postsANewRoundOnAListeningBoardByItsAbsolutePath() {
+        core.answering(201, "Posted a new round on the research board.\n");
+
+        int exitCode = edi("", "board", "post", home.resolve("tasks/scout/board.html").toString(), "--link", "http://127.0.0.1:4387/session/1a2b3c",
+                "--questions", "2");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().target()).isEqualTo("/api/boards/rounds");
+        assertThat(core.received().body()).isEqualTo("{\"file\":\"" + home.resolve("tasks/scout/board.html")
+                + "\",\"link\":\"http://127.0.0.1:4387/session/1a2b3c\",\"questions\":2}");
+    }
+
+    @Test
     void passesOnTheCoresRefusalAndFails() {
         core.answering(409, "fit-lamp is not held.\n");
 

@@ -31,7 +31,13 @@ edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --lin
 ```
 
 The link is the one `lavish-axi` printed when the scout opened the board, and the count is how many questions the round puts before the captain ([ADR-159](decisions/ADR-159-a-board-round-names-its-link-and-its-questions.md)).
+The count leaves out the decisions the board binds, which wait as their own cards.
 The board waits in the decision zone of the report, the sitrep page and the return brief until a round of the captain's answers arrives; arming it again posts a new round.
+When the scout cannot arm it again, the primary posts the round instead:
+
+```sh
+edi board post "$EDI_HOME/data/tasks/<task-id>/board.html" --link <url> --questions 2
+```
 
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops ([ADR-112](decisions/ADR-112-the-lavish-result-reader-follows-toon.md)).
 Each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` (with `option`) or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word ([ADR-113](decisions/ADR-113-a-board-round-reaches-its-worker-and-its-bound-decisions.md)).

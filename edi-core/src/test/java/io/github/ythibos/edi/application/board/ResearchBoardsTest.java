@@ -78,6 +78,30 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void letsThePrimaryPutANewRoundOfAListeningBoardBeforeTheCaptainWhenItsScoutCannotArmItAgain() {
+        Board armed = armQuietly(boardFile, decision);
+        home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
+
+        Board posted = home.postBoardRound().post(boardFile, "http://127.0.0.1:4387/session/9f8e7d", 2, Actor.PRIMARY);
+
+        assertThat(posted.id()).isEqualTo(armed.id());
+        assertThat(posted.waitsOnTheCaptain()).isTrue();
+        assertThat(posted.openQuestions()).isEqualTo(2);
+        assertThat(posted.link()).isEqualTo("http://127.0.0.1:4387/session/9f8e7d");
+        assertThat(posted.bound()).containsExactly(decision);
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardRoundPosted");
+        assertThat(home.boards().get(armed.id())).contains(posted);
+    }
+
+    @Test
+    void refusesARoundOnAFileWhereNoBoardListens() throws IOException {
+        Path unarmed = Files.writeString(home.home().taskDirectory(SCOUT).resolve("other.html"), "<!doctype html>\n");
+
+        assertThatThrownBy(() -> home.postBoardRound().post(unarmed, BoardRounds.LINK, 1, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("No research board listens at " + unarmed + "; its scout arms it with edi board arm.");
+    }
+
+    @Test
     void rebindsABoardThatIsArmedAgainInsteadOfListeningTwice() {
         Board first = arm(boardFile);
 
