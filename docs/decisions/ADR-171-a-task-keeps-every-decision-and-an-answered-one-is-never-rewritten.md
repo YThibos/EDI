@@ -15,6 +15,7 @@ A captain-word act on a task counts any decision on it that the captain answered
 **Decision:** A task keeps every decision raised on it, and its latest decision is its decision (`DecisionStore.ofTask`); `DecisionStore.everyOneOfTask` lists them all.
 Raising a card on a task whose latest decision is open updates that card under the same number, as before.
 Raising a card on a task whose latest decision is answered raises a new decision with the next number, and the answered decision keeps its card and its answer; `Decision.reraised` refuses an answered decision, so nothing rewrites one.
+A card raised by a decision's number updates that decision while it is open, and otherwise the task's open decision, so a task holds at most one open decision and its decision hold names it; a new number is raised only when the task has none open.
 A refused ticket choice is therefore asked again as a new decision with the refusal in its context, replacing the same-number re-raise of ADR-095.
 `CaptainsWordEvidence` weighs every decision of the task, so an earlier answer that authorised an act still counts after a later decision is raised.
 Migration `V11__a_task_keeps_every_decision.sql` rebuilds the `decision` table without the unique task column, with foreign keys deferred so that the options, board bindings and board answers keep their decision, and indexes it by task and number.

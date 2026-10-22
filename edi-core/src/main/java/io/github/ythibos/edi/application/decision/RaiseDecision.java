@@ -49,6 +49,7 @@ public class RaiseDecision {
     private Decision decisionOn(TaskReference reference, Task task, DecisionCard card, Instant now) {
         return decisions.namedBy(reference)
                 .filter(Decision::isOpen)
+                .or(() -> decisions.ofTask(task.id()).filter(Decision::isOpen))
                 .map(waiting -> waiting.reraised(card, now))
                 .orElseGet(() -> Decision.raised(decisions.nextNumber(), task.id(), card, now));
     }
