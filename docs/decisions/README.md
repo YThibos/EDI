@@ -212,3 +212,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-164](ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md) | AT-39 scales its limit to the machine's own pace, measured in the same run | Design |
 | [ADR-165](ADR-165-a-process-is-the-recorded-one-within-two-seconds-of-boot-time-drift.md) | A process is the recorded one when its start lies within two seconds of the recorded start | Design |
 | [ADR-166](ADR-166-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |
+| [ADR-167](ADR-167-a-core-has-stopped-once-it-lets-go-of-the-home.md) | A core has stopped once it lets go of the home, and edi update starts the new core only then | Design |
