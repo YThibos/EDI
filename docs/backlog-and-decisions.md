@@ -30,7 +30,9 @@ An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`
 
 ## Reports
 
-One fleet snapshot sorts the open work into decisions waiting on the captain, ongoing, parked and queued work ([ADR-046](decisions/ADR-046-where-the-fleet-snapshot-puts-open-work.md)), and `edi report` and `edi sitrep` print it as the boxed captain report ([ADR-047](decisions/ADR-047-the-captain-report-matches-the-old-renderer.md)).
+One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report ([ADR-047](decisions/ADR-047-the-captain-report-matches-the-old-renderer.md)).
+What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([ADR-158](decisions/ADR-158-everything-that-waits-on-the-captain-is-in-the-decision-zone.md)).
+A task that is dropped or finished no longer blocks any other task ([ADR-160](decisions/ADR-160-a-closed-task-blocks-nobody.md)).
 
 ```sh
 edi report --turn - < turn.json                     # the boxed captain report that ends a turn
@@ -40,7 +42,7 @@ edi sitrep                                          # the same report, read-only
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional.
 Inside tmux the report fits the pane it runs in ([ADR-048](decisions/ADR-048-the-command-measures-its-pane.md)).
 Every captain-facing card and report is linted for internal labels ([ADR-128](decisions/ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md)).
-Every time a report, a decision list or a presence line shows is in the machine's own time zone, such as "Answered 2026-10-22 11:14 CEST", while the store, the event log and every API keep UTC instants ([ADR-155](decisions/ADR-155-edi-shows-the-machines-local-time-and-stores-utc.md)).
+Every time a report, a decision list or a presence line shows is in the machine's own time zone, such as "Answered 2026-10-22 11:14 CEST", while the store, the event log and every API keep UTC instants ([ADR-162](decisions/ADR-162-edi-shows-the-machines-local-time-and-stores-utc.md)).
 
 ## The captain's word
 

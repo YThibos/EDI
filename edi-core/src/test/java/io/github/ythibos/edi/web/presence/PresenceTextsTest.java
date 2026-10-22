@@ -24,7 +24,6 @@ import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.report.CaptainReport;
-import io.github.ythibos.edi.web.report.CaptainReportPresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
 import io.github.ythibos.edi.web.text.Moments;
@@ -55,13 +54,13 @@ class PresenceTextsTest {
     void briefsTheReturningCaptainInSectionsToScan() throws IOException {
         TestHome home = homeWithADecisionAndWork();
 
-        String brief = PresenterFixtures.returnBriefText().text(new ReturnBrief(PRESENT.quiet(NOW), home.fleetSnapshot().snapshot().decisions(), List.of(),
+        String brief = PresenterFixtures.returnBriefText().text(new ReturnBrief(PRESENT.quiet(NOW), home.fleetSnapshot().snapshot().waiting(), List.of(),
                 List.of(), home.fleetSnapshot().snapshot().ongoing()));
 
         assertThat(brief).isEqualTo("""
                 EDI return brief: show the captain the lines below verbatim, in one fenced block, before you answer their message.
                 While you were away (quiet since 2026-10-17 09:30 UTC, on request):
-                Decisions waiting on you (1)
+                Needs your decision (1)
                   D1  Which lamp?
                 Landed (0)
                 Failed (0)

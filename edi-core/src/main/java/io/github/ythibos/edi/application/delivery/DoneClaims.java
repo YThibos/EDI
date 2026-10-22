@@ -15,7 +15,6 @@ import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
-import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
@@ -28,15 +27,15 @@ public class DoneClaims {
 
     private final WorkerContext context;
     private final Git git;
-    private final Forges forges;
+    private final DeliveryRecords records;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DoneClaims(WorkerContext context, Git git, Forges forges, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public DoneClaims(WorkerContext context, Git git, DeliveryRecords records, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.context = context;
         this.git = git;
-        this.forges = forges;
+        this.records = records;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -48,15 +47,15 @@ public class DoneClaims {
             return Optional.empty();
         }
         requireTheCopy(workplace);
-        Optional<MergeRequestView> draft = draftOf(workplace);
+        Optional<MergeRequestView> request = requestOf(workplace);
         List<String> gaps = new ArrayList<>(snapshotGapsOf(workplace));
         if (workplace.delivery() == DeliveryMode.DRAFT_REVIEW) {
-            gaps.addAll(draftGapsOf(workplace, draft));
+            gaps.addAll(requestGapsOf(workplace, request));
         }
         if (!gaps.isEmpty()) {
             refuse(worker, gaps);
         }
-        return draft;
+        return request;
     }
 
     private static void requireTheCopy(Workplace workplace) {
@@ -65,12 +64,8 @@ public class DoneClaims {
         }
     }
 
-    private Optional<MergeRequestView> draftOf(Workplace workplace) {
-        RegisteredForge forge = workplace.project().forge();
-        if (workplace.delivery() != DeliveryMode.DRAFT_REVIEW || forge == null) {
-            return Optional.empty();
-        }
-        return forges.serving(forge).openMergeRequestFrom(forge, workplace.dispatch().branch());
+    private Optional<MergeRequestView> requestOf(Workplace workplace) {
+        return records.followsARequest(workplace) ? records.requestFrom(workplace) : Optional.empty();
     }
 
     private List<String> snapshotGapsOf(Workplace workplace) {
@@ -78,14 +73,13 @@ public class DoneClaims {
         return snapshots.isEmpty() ? List.of() : List.of(SnapshotVersions.refusalOf(snapshots));
     }
 
-    private List<String> draftGapsOf(Workplace workplace, Optional<MergeRequestView> draft) {
-        RegisteredForge forge = workplace.project().forge();
-        if (forge == null) {
-            return List.of(workplace.project().project().name() + " registers no forge, so no draft can carry this work");
+    private List<String> requestGapsOf(Workplace workplace, Optional<MergeRequestView> request) {
+        if (workplace.project().forge() == null) {
+            return List.of(workplace.project().project().name() + " registers no forge, so no merge request can carry this work");
         }
-        return draft.map(found -> found.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), git.head(workplace.worktree())))
-                .orElseGet(() -> List.of("no merge request is open from " + workplace.dispatch().branch() + " on " + forge.repository()
-                        + "; the pipeline opens the draft, and edi deliver opens it when the pipeline cannot"));
+        return request.map(found -> found.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), git.head(workplace.worktree())))
+                .orElseGet(() -> List.of(records.noRequestFrom(workplace)
+                        + "; the pipeline opens it as a draft, and edi deliver opens it when the pipeline cannot"));
     }
 
     private void refuse(WorkerId worker, List<String> gaps) {

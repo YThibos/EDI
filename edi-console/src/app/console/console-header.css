@@ -137,6 +137,20 @@
 }
 
 @media (max-width: 560px) {
+  .sr-nav__inner {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--nav-height);
+    padding-block: 10px;
+    row-gap: 8px;
+  }
+
+  .sr-presence {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
+
   .sr-brand__sub {
     display: none;
   }
@@ -146,15 +160,7 @@
   }
 }
 
-@media (max-width: 500px) {
-  .sr-nav__inner {
-    gap: 12px;
-  }
-
-  .sr-presence__button {
-    padding: 4px 6px;
-  }
-
+@media (max-width: 350px) {
   .sr-clock__day {
     display: none;
   }

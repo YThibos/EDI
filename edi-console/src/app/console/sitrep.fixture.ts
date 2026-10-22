@@ -23,6 +23,8 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
         raisedAt: '2026-10-15T06:00:00Z',
       },
     ],
+    boards: [],
+    reviews: [],
     answered: [
       {
         number: 'D57',

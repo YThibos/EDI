@@ -11,10 +11,13 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
 
 ## Arming
 
-1. The scout writes its board in its own task directory, `$EDI_HOME/data/tasks/<task>/`, and opens it with `lavish-axi`.
-2. The scout runs `edi board arm <board.html> --task <task> --bind D58,D59`, binding every open decision the board puts before the captain.
+1. The scout writes its board in its own task directory, `$EDI_HOME/data/tasks/<task>/`, and opens it with `lavish-axi`, which prints the board's link.
+2. The scout runs `edi board arm <board.html> --task <task> --link <url> --questions <n> --bind D58,D59`, naming the link, how many questions the round puts before the captain besides the decisions it binds (`0` when it asks only those), and every open decision the board binds.
 3. Raise the decisions first with `edi decision raise <task> --card -`, so the board can bind their numbers.
 4. EDI's core listens to the board and restarts its listener if it stops; nobody else polls it.
+5. The board waits in the captain's decision zone with its link and question count until a round of his answers arrives.
+6. After posting a new round of questions on the board, arm it again with the new count, so the board waits on the captain once more.
+7. When the scout has stopped, or its board was armed before boards counted their questions, the primary puts the round before the captain with `edi board post <board.html> --link <url> --questions <n>`.
 
 ## Answers
 

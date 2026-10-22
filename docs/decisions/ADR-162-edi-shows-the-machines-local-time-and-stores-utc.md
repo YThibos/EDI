@@ -1,4 +1,4 @@
-# ADR-155: EDI shows times in the machine's local time zone and stores them in UTC
+# ADR-162: EDI shows times in the machine's local time zone and stores them in UTC
 
 **Date:** 22/10/2026
 
@@ -18,7 +18,7 @@ A few application classes already read `ZoneId.systemDefault()` for the machine'
 - `Moments` renders a moment as "2026-10-22 11:14 CEST" and a day as the machine's calendar day, in the zone `Clock.zone` names, with the zone's English short name so summer time shows.
 - `PresenceWords`, `HealthWords` and `DecisionLines` render through `Moments`, so the captain report, the sitrep text, the return brief, presence lines, `edi decision list`, task detail, worker lists and the primary's digests share it.
 - `edi-sitrep.v1` gains `zone`, the machine's zone id, and the console renders every time on the sitrep page in that zone, not the browser's: the header clock as "SD 2026.295 · 11:14 CEST", with the day of the year counted on the machine's calendar.
-- On a screen 500 CSS pixels wide or narrower the header clock keeps only the time, "11:14 CEST", and the header tightens its gaps and buttons, since the full stardate would push the presence buttons onto the wordmark.
+- On a screen 350 CSS pixels wide or narrower the header clock keeps only the time, "11:14 CEST", since the full stardate and the wordmark no longer fit on one row.
 - `StatusLineText`, `MeetingCalendar`, `OutlookCalendar`, `MemoryQuery`, `PrepareThePrimary` and `SessionStartDigestQuery` take the machine's day and zone from `Clock.zone`.
 
 **Motivation:** The captain reads times against the clock on the wall, so a UTC time is a sum to do and a chance to misread a deadline by one or two hours.
@@ -36,6 +36,7 @@ One zone, named by the core, keeps the console and the command in step, and a zo
 - Good: tests set the zone through `ManualClock`, so no test depends on the zone of the machine that runs it.
 - Bad: the console and the core each spell the zone from their own Unicode CLDR data, the page in British English because a browser's plain English writes "GMT+2" for Brussels; they agree for the Western, Central and Eastern European zones and for UTC, but elsewhere the core may write "EDT" where the page writes "GMT-4", at the same wall-clock time.
 - Bad: a refusal from the application layer that names an instant, such as `RecoverFromOutage`'s usage limit, still writes it in ISO-8601 UTC, since only the web layer renders moments.
+- Bad: a hold still falls due by the UTC day (`NoticeDueHolds`, ADR-077), so a hold until a day comes due at midnight UTC, one or two hours into that day in Brussels; this record changes what EDI shows, not when it acts.
 
 **Revisit when:** The captain works across time zones, or another person reads EDI from another zone.
 

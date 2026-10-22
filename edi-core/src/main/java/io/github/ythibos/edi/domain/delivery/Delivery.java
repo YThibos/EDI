@@ -34,6 +34,18 @@ public record Delivery(
         return new Delivery(task, address, view.draft(), view.headCommit(), view.state(), view.landedCommit(), recordedAt, at);
     }
 
+    public boolean isOpen() {
+        return state == MergeRequestState.OPEN;
+    }
+
+    public boolean isClosed() {
+        return state == MergeRequestState.CLOSED;
+    }
+
+    public boolean isMerged() {
+        return state == MergeRequestState.MERGED;
+    }
+
     public boolean changesWith(MergeRequestView view) {
         return view.state() != state;
     }

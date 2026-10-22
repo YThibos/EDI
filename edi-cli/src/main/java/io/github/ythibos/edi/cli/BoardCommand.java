@@ -4,8 +4,8 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "board",
-        description = "Arms a research board, so EDI listens to the captain's answers on it.",
+        description = "Arms a research board, so EDI listens to the captain's answers on it, and posts a new round on it.",
         synopsisSubcommandLabel = "COMMAND",
-        subcommands = {BoardArmCommand.class})
+        subcommands = {BoardArmCommand.class, BoardPostCommand.class})
 final class BoardCommand extends CommandGroup {
 }

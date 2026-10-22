@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.adapter.forge;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,10 +40,10 @@ public class GitLabForge implements Forge {
     }
 
     @Override
-    public Optional<MergeRequestView> openMergeRequestFrom(RegisteredForge forge, BranchName branch) {
+    public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = calls.run(ForgeCommand.GLAB_MR_LIST,
-                List.of("-R", forge.repository().url(), "--source-branch", branch.toString(), "-F", "json"), Map.of(), null);
-        return StreamSupport.stream(json.readTree(listed).spliterator(), false).findFirst().map(request -> viewOf(forge, request));
+                List.of("-R", forge.repository().url(), "--source-branch", branch.toString(), "--all", "-F", "json"), Map.of(), null);
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(request -> viewOf(forge, request)).toList();
     }
 
     @Override
@@ -57,7 +59,7 @@ public class GitLabForge implements Forge {
         calls.run(ForgeCommand.GLAB_MR_CREATE, List.of("-R", forge.repository().url(), "--draft",
                 "--source-branch", proposal.branch().toString(), "--target-branch", proposal.base().name(),
                 "--title", proposal.title(), "--description", proposal.description(), "--yes"), Map.of(), null);
-        return openMergeRequestFrom(forge, proposal.branch())
+        return MergeRequestView.openAmong(mergeRequestsFrom(forge, proposal.branch()))
                 .orElseThrow(() -> new ProgramFailure("glab opened no merge request from " + proposal.branch() + " on " + forge.repository() + "."));
     }
 
@@ -93,7 +95,8 @@ public class GitLabForge implements Forge {
                 request.path("source_branch").asString(null),
                 request.path("target_branch").asString(null),
                 request.path("sha").asString(null),
-                state == MergeRequestState.MERGED ? landedCommitOf(request) : null);
+                state == MergeRequestState.MERGED ? landedCommitOf(request) : null,
+                state == MergeRequestState.MERGED ? mergedAtOf(address, request) : null);
     }
 
     private static MergeRequestState stateOf(String word) {
@@ -111,5 +114,14 @@ public class GitLabForge implements Forge {
                 .filter(commit -> !commit.isBlank())
                 .findFirst()
                 .orElse(null);
+    }
+
+    private static Instant mergedAtOf(MergeRequestAddress address, JsonNode request) {
+        String moment = request.path("merged_at").asString("");
+        try {
+            return Instant.parse(moment);
+        } catch (DateTimeParseException unreadable) {
+            throw new ProgramFailure("glab shows " + address + " merged without a readable merged_at: '" + moment + "'.");
+        }
     }
 }

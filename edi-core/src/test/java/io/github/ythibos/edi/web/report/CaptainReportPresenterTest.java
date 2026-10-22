@@ -11,23 +11,35 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
+import io.github.ythibos.edi.application.fleet.ReadyForReview;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
+import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
 class CaptainReportPresenterTest {
 
+    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of());
     private static final Instant FIRST_DAY = Instant.parse("2026-10-13T08:00:00Z");
 
     private final CaptainReportPresenter presenter = PresenterFixtures.captainReportPresenter();
@@ -41,7 +53,7 @@ class CaptainReportPresenterTest {
                 new Recommendation(new OptionKey('A'), "it lasts 永")), PresenterFixtures.AT);
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Shipped 🚀 today – Café €5")), List.of(), Map.of());
 
-        String report = rendered(new FleetSnapshot(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of(), List.of(), List.of()), turn);
+        String report = rendered(new FleetSnapshot(waitingFor(decision), List.of(), List.of(), List.of(), List.of(), List.of()), turn);
 
         assertThat(report).contains(
                 "║  D58   Which lamp ??\n",
@@ -56,7 +68,7 @@ class CaptainReportPresenterTest {
         List<Task> queueOrder = List.of(
                 filed("anchor", 0), filed("bell", 2), filed("chart", 1), filed("davit", 2), filed("ensign", 0), filed("fender", 1), filed("gangway", 0));
 
-        String report = rendered(new FleetSnapshot(List.of(), List.of(), List.of(), queueOrder, List.of(), List.of()), Turn.NONE);
+        String report = rendered(new FleetSnapshot(NOTHING_WAITING, List.of(), List.of(), queueOrder, List.of(), List.of()), Turn.NONE);
 
         assertThat(report).endsWith("""
 
@@ -76,9 +88,32 @@ class CaptainReportPresenterTest {
         Decision decision = PresenterFixtures.openDecision();
         Turn turn = new Turn(List.of(), List.of(), Map.of("lamp-choice", new TaskWording("Ignored for a decision", null, List.of("garden"))));
 
-        String report = rendered(new FleetSnapshot(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of(), List.of(), List.of()), turn);
+        String report = rendered(new FleetSnapshot(waitingFor(decision), List.of(), List.of(), List.of(), List.of(), List.of()), turn);
 
         assertThat(report).contains("╟── garden ───", "║  D58   Which lamp?\n").doesNotContain("Ignored for a decision", "╟── Fleet");
+    }
+
+    @Test
+    void countsAWaitingBoardAndARequestReadyForReviewInTheDecisionZoneWithTheirLinks() {
+        Task research = filed("lamp-research", 0);
+        Task lamp = filed("fit-lamp", 0);
+        Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 1, FIRST_DAY, null, null);
+        MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research)),
+                List.of(new ReadyForReview(lamp, new Delivery(lamp.id(), request, true, "abc123", MergeRequestState.OPEN, null, FIRST_DAY, FIRST_DAY))));
+
+        String report = rendered(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
+
+        assertThat(report).contains(
+                "╔══ NEEDS YOUR DECISION ══ 2 open ══",
+                "╟── harness ───",
+                "║  Board for Stow the lamp-research: 1 question waiting at " + BoardRounds.LINK + "\n",
+                "║  Ready for your review: Stow the fit-lamp - https://github.com/example-owner/harness/pull/14\n")
+                .doesNotContain("Nothing waiting on you");
+    }
+
+    private static WaitingOnTheCaptain waitingFor(Decision decision) {
+        return new WaitingOnTheCaptain(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of());
     }
 
     private String rendered(FleetSnapshot fleet, Turn turn) {

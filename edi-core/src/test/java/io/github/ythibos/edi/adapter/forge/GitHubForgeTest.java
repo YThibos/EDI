@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,9 @@ class GitHubForgeTest {
     private static final BranchName BRANCH = BranchName.parse("feature/HRN-3");
     private static final String OPEN_DRAFT = """
             {"number":7,"url":"https://github.com/example-owner/harness/pull/7","state":"OPEN","isDraft":true,"headRefName":"feature/HRN-3",
-             "baseRefName":"main","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":null}""";
+             "baseRefName":"main","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":null,
+             "mergedAt":null}""";
+    private static final String MERGED_AT = "\"mergedAt\":\"2026-10-21T12:37:04Z\"";
 
     @TempDir
     private Path directory;
@@ -49,32 +52,65 @@ class GitHubForgeTest {
     void findsTheOpenPullRequestOfABranchUnderTheBoundAccount() throws IOException {
         standIns.answering("pr-list", "[" + OPEN_DRAFT + "]");
 
-        MergeRequestView open = forge.openMergeRequestFrom(FORGE, BRANCH).orElseThrow();
-
-        assertThat(open).isEqualTo(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", null));
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
+                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", null, null));
         assertThat(standIns.calls()).containsExactly(
                 "auth token --hostname github.com --user example-owner",
-                "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state open --json "
-                        + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit");
+                "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state all --json "
+                        + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt");
         assertThat(standIns.tokens()).containsExactly("none", ForgeStandIns.TOKEN);
     }
 
     @Test
-    void findsNoPullRequestWhenNoneIsOpen() throws IOException {
+    void listsNoPullRequestFromABranchWithoutOneAndAClosedOneAsClosed() throws IOException {
         standIns.answering("pr-list", "[]");
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).isEmpty();
 
-        assertThat(forge.openMergeRequestFrom(FORGE, BRANCH)).isEmpty();
+        standIns.answering("pr-list", "[" + OPEN_DRAFT.replace("\"OPEN\"", "\"CLOSED\"") + "]");
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).extracting(MergeRequestView::state).containsExactly(MergeRequestState.CLOSED);
+    }
+
+    @Test
+    void listsEveryPullRequestOfABranchWithAMergeReadAsLandedAndTimed() throws IOException {
+        String merged = OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"isDraft\":true", "\"isDraft\":false")
+                .replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}").replace("\"mergedAt\":null", MERGED_AT);
+        String laterOpen = OPEN_DRAFT.replace("\"number\":7", "\"number\":8").replace("pull/7", "pull/8");
+
+        standIns.answering("pr-list", "[" + merged + "," + laterOpen + "]");
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).extracting(request -> request.address().number()).containsExactly(7, 8);
+
+        standIns.answering("pr-list", "[" + merged + "]");
+        assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).singleElement().satisfies(request -> {
+            assertThat(request.isMerged()).isTrue();
+            assertThat(request.draft()).isFalse();
+            assertThat(request.landedCommit()).isEqualTo("3333");
+            assertThat(request.mergedAt()).isEqualTo(Instant.parse("2026-10-21T12:37:04Z"));
+        });
     }
 
     @Test
     void readsTheCommitAMergeLanded() throws IOException {
-        standIns.answering("pr-view", OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}"));
+        standIns.answering("pr-view", OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}")
+                .replace("\"mergedAt\":null", MERGED_AT));
 
         MergeRequestView merged = forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 7));
 
         assertThat(merged.isMerged()).isTrue();
         assertThat(merged.landedCommit()).isEqualTo("3333");
+    }
+
+    @Test
+    void failsOnAMergedPullRequestWithoutAReadableMergeTime() throws IOException {
+        String merged = OPEN_DRAFT.replace("\"OPEN\"", "\"MERGED\"").replace("\"mergeCommit\":null", "\"mergeCommit\":{\"oid\":\"3333\"}");
+        MergeRequestAddress address = new MergeRequestAddress(FORGE.repository(), 7);
+
+        standIns.answering("pr-view", merged);
+        assertThatThrownBy(() -> forge.view(FORGE, address)).isInstanceOf(ProgramFailure.class)
+                .hasMessage("gh shows " + address + " merged without a readable mergedAt: ''.");
+
+        standIns.answering("pr-list", "[" + merged.replace("\"mergedAt\":null", "\"mergedAt\":\"yesterday\"") + "]");
+        assertThatThrownBy(() -> forge.mergeRequestsFrom(FORGE, BRANCH)).isInstanceOf(ProgramFailure.class)
+                .hasMessage("gh shows " + address + " merged without a readable mergedAt: 'yesterday'.");
     }
 
     @Test

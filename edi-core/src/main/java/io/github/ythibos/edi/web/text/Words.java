@@ -23,6 +23,10 @@ public final class Words {
         return heading + " (" + count + ")";
     }
 
+    public static String quantity(int count, String noun) {
+        return count + " " + noun + (count == 1 ? "" : "s");
+    }
+
     public static String indented(String text, String indent) {
         return text.lines().map(line -> line.isBlank() ? "" : indent + line).collect(Collectors.joining("\n"));
     }

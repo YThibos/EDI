@@ -17,7 +17,6 @@ import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
-import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 
@@ -61,7 +60,7 @@ public class SteerWorker {
     }
 
     private void recordResolved(Worker worker, InboxMessage message, Actor actor, Instant now) {
-        StatusReport resolved = new StatusReport(StatusState.RESOLVED, message.resolves(), null, "resolved by message " + message.number());
+        StatusReport resolved = StatusReport.resolvedBy(message.resolves(), message.number());
         events.record(new StatusReported(message.task(), worker.id(), resolved), actor, now);
     }
 

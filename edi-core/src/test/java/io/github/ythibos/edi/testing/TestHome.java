@@ -68,6 +68,7 @@ import io.github.ythibos.edi.application.access.ConsoleAccess;
 import io.github.ythibos.edi.application.access.OpenConsole;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
+import io.github.ythibos.edi.application.board.PostBoardRound;
 import io.github.ythibos.edi.application.board.BoardListeners;
 import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
 import io.github.ythibos.edi.application.board.SettleBoardAnswers;
@@ -82,6 +83,7 @@ import io.github.ythibos.edi.application.delivery.CloneRefreshes;
 import io.github.ythibos.edi.application.delivery.CopyRetirement;
 import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
 import io.github.ythibos.edi.application.delivery.DeliverDraft;
+import io.github.ythibos.edi.application.delivery.DeliveryRecords;
 import io.github.ythibos.edi.application.delivery.DiscardWork;
 import io.github.ythibos.edi.application.delivery.DoneClaims;
 import io.github.ythibos.edi.application.delivery.DropTask;
@@ -137,6 +139,7 @@ import io.github.ythibos.edi.application.supervision.RecoverFromOutage;
 import io.github.ythibos.edi.application.supervision.ResumeAfterUsageLimits;
 import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.BacklogQuery;
+import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.task.HoldTask;
 import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.PromoteScout;
@@ -163,6 +166,7 @@ import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.application.worker.WorkerInbox;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -198,7 +202,8 @@ public final class TestHome {
     private final PipelineRunStore pipelineRuns;
     private final CloneRefreshStore cloneRefreshes;
     private final TaskCostStore taskCosts;
-    private final FakeForge forge = new FakeForge();
+    private final FakeForge forge;
+    private final FakeForge gitLabForge;
     private final FakePipeline pipeline = new FakePipeline();
     private final FakeJira jira = new FakeJira();
     private Tracker jiraAdapter = jira;
@@ -220,6 +225,8 @@ public final class TestHome {
         this.home = home;
         this.runtime = runtime;
         this.clock = clock;
+        this.forge = new FakeForge(ForgeKind.GITHUB, clock);
+        this.gitLabForge = new FakeForge(ForgeKind.GITLAB, clock);
         this.jdbc = JdbcClient.create(store);
         this.transaction = new TransactionTemplate(new JdbcTransactionManager(store));
         this.tasks = new TaskStore(jdbc);
@@ -378,7 +385,7 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), clock, transaction);
     }
 
     public BacklogQuery backlog() {
@@ -398,7 +405,7 @@ public final class TestHome {
     }
 
     public FleetSnapshotQuery fleetSnapshot() {
-        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, clock, transaction);
+        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, boards, clock, transaction);
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {
@@ -585,19 +592,24 @@ public final class TestHome {
     }
 
     public RecordStatus recordStatus() {
-        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), clock, transaction);
+        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), followMerges(), clock,
+                transaction);
     }
 
     public Forges forges() {
-        return new Forges(List.of(forge));
+        return new Forges(List.of(forge, gitLabForge));
+    }
+
+    public DeliveryRecords deliveryRecords() {
+        return new DeliveryRecords(forges(), deliveries, events, clock);
     }
 
     public DoneClaims doneClaims() {
-        return new DoneClaims(workerContext(), git, forges(), events, clock, transaction);
+        return new DoneClaims(workerContext(), git, deliveryRecords(), events, clock, transaction);
     }
 
     public DeliverAcceptedWork deliverAcceptedWork() {
-        return new DeliverAcceptedWork(workerContext(), forges(), captainCheckouts(), deliveries, events, clock, transaction);
+        return new DeliverAcceptedWork(workerContext(), deliveryRecords(), followMerges(), captainCheckouts(), transaction);
     }
 
     public PublishCheck publishCheck() {
@@ -605,7 +617,7 @@ public final class TestHome {
     }
 
     public DeliverDraft deliverDraft() {
-        return new DeliverDraft(tasks, deliveries, events, workerContext(), publishCheck(), forges(), git, clock, transaction);
+        return new DeliverDraft(tasks, workerContext(), publishCheck(), forges(), deliveryRecords(), git, transaction);
     }
 
     public CloneRefreshes cloneRefreshes() {
@@ -617,8 +629,8 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(tasks, workers, taskCosts, reviews, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), clock, transaction);
+        return new CleanUpTask(tasks, workers, deliveries, taskCosts, reviews, events, workerContext(), landedWork(),
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), clock, transaction);
     }
 
     public CopyRetirement copyRetirement() {
@@ -626,7 +638,12 @@ public final class TestHome {
     }
 
     public DropTask dropTask() {
-        return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
+        return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), dependantTasks(),
+                clock, transaction);
+    }
+
+    public DependantTasks dependantTasks() {
+        return new DependantTasks(tasks);
     }
 
     public DiscardWork discardWork() {
@@ -650,15 +667,20 @@ public final class TestHome {
     }
 
     public FollowMerges followMerges() {
-        return new FollowMerges(tasks, deliveries, events, registry, forges(), cloneRefreshes(), cleanUpTask(), clock, transaction);
+        return new FollowMerges(tasks, deliveries, events, registry, workerContext(), forges(), deliveryRecords(), cloneRefreshes(), cleanUpTask(),
+                clock, transaction);
     }
 
     public ObservePipelines observePipelines() {
-        return new ObservePipelines(workers, pipelineRuns, events, workerContext(), pipeline, clock, transaction);
+        return new ObservePipelines(workers, pipelineRuns, events, workerContext(), pipeline, followMerges(), clock, transaction);
     }
 
     public FakeForge forge() {
         return forge;
+    }
+
+    public FakeForge forge(ForgeKind kind) {
+        return kind == ForgeKind.GITLAB ? gitLabForge : forge;
     }
 
     public EventFollowers eventFollowers() {
@@ -702,7 +724,7 @@ public final class TestHome {
     }
 
     public WorkerInbox workerInbox() {
-        return new WorkerInbox(inbox, events, clock, transaction);
+        return new WorkerInbox(inbox, workers, events, clock, transaction);
     }
 
     public SteerWorker steerWorker() {
@@ -832,6 +854,10 @@ public final class TestHome {
 
     public ArmBoard armBoard() {
         return new ArmBoard(home, tasks, decisions, boards, events, boardListeners(), clock, transaction);
+    }
+
+    public PostBoardRound postBoardRound() {
+        return new PostBoardRound(boards, events, clock, transaction);
     }
 
     public ReceiveBoardFeedback receiveBoardFeedback() {

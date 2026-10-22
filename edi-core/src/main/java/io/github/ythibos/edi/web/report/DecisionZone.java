@@ -10,6 +10,7 @@ import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.Recommendation;
+import io.github.ythibos.edi.web.text.WaitingWords;
 
 final class DecisionZone {
 
@@ -32,11 +33,11 @@ final class DecisionZone {
     private DecisionZone() {
     }
 
-    static List<String> lines(List<Entry> decisions, int width) {
+    static List<String> lines(List<Entry> waiting, int width) {
         List<String> lines = new ArrayList<>();
-        lines.add(topRule(decisions.size(), width));
-        groupsOf(decisions).forEach((title, group) -> lines.addAll(groupLines(title, group, width - RAIL_COLUMNS)));
-        lines.add(decisions.isEmpty() ? NOTHING_WAITING : RAIL);
+        lines.add(topRule(waiting.size(), width));
+        groupsOf(waiting).forEach((title, group) -> lines.addAll(groupLines(title, group, width - RAIL_COLUMNS)));
+        lines.add(waiting.isEmpty() ? NOTHING_WAITING : RAIL);
         lines.add(BOTTOM_CORNER + DOUBLE_RULE.repeat(width - 1));
         return lines;
     }
@@ -46,28 +47,43 @@ final class DecisionZone {
         return top + DOUBLE_RULE.repeat(Math.max(0, width - WordWrap.columns(top)));
     }
 
-    private static Map<String, List<Entry>> groupsOf(List<Entry> decisions) {
-        return decisions.stream().collect(Collectors.groupingBy(entry -> entry.projects().title(), LinkedHashMap::new, Collectors.toList()));
+    private static Map<String, List<Entry>> groupsOf(List<Entry> waiting) {
+        return waiting.stream().collect(Collectors.groupingBy(entry -> entry.projects().title(), LinkedHashMap::new, Collectors.toList()));
     }
 
     private static List<String> groupLines(String title, List<Entry> group, int boxWidth) {
         List<String> lines = new ArrayList<>();
         lines.add(RAIL);
         lines.add(GROUP_RULE + title + " " + SINGLE_RULE.repeat(Math.max(SHORTEST_GROUP_TAIL, GROUP_RULE_COLUMNS - WordWrap.columns(title))));
-        group.forEach(entry -> lines.addAll(decisionLines(entry, boxWidth)));
+        group.forEach(entry -> lines.addAll(entryLines(entry, boxWidth)));
         return lines;
     }
 
-    private static List<String> decisionLines(Entry entry, int boxWidth) {
-        DecisionCard card = entry.card();
+    private static List<String> entryLines(Entry entry, int boxWidth) {
+        return switch (entry) {
+            case Call call -> decisionLines(call, boxWidth);
+            case BoardQuestions board -> singleLine(WaitingWords.board(board.title(), board.questions(), board.link()), boxWidth);
+            case Review review -> singleLine(WaitingWords.review(review.title(), review.url()), boxWidth);
+        };
+    }
+
+    private static List<String> decisionLines(Call call, int boxWidth) {
+        DecisionCard card = call.card();
         List<String> lines = new ArrayList<>();
         lines.add(RAIL);
-        lines.addAll(onTheRail(WordWrap.hanging(Glyphs.safe(card.title()), boxWidth, numbered(entry.number()), CARD_INDENT)));
+        lines.addAll(onTheRail(WordWrap.hanging(Glyphs.safe(card.title()), boxWidth, numbered(call.number()), CARD_INDENT)));
         if (!card.context().isEmpty()) {
             lines.addAll(onTheRail(WordWrap.hanging(Glyphs.safe(card.context()), boxWidth, CARD_INDENT, CARD_INDENT)));
         }
         card.options().forEach(option -> lines.addAll(optionLines(option, boxWidth)));
         lines.addAll(recommendationLines(card.recommendation(), boxWidth));
+        return lines;
+    }
+
+    private static List<String> singleLine(String text, int boxWidth) {
+        List<String> lines = new ArrayList<>();
+        lines.add(RAIL);
+        lines.addAll(onTheRail(WordWrap.hanging(Glyphs.safe(text), boxWidth, "", CARD_INDENT)));
         return lines;
     }
 
@@ -95,6 +111,17 @@ final class DecisionZone {
         return lines;
     }
 
-    record Entry(DecisionNumber number, ProjectSet projects, DecisionCard card) {
+    sealed interface Entry {
+
+        ProjectSet projects();
+    }
+
+    record Call(DecisionNumber number, ProjectSet projects, DecisionCard card) implements Entry {
+    }
+
+    record BoardQuestions(ProjectSet projects, String title, int questions, String link) implements Entry {
+    }
+
+    record Review(ProjectSet projects, String title, String url) implements Entry {
     }
 }

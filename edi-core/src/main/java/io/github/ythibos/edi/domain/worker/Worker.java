@@ -8,6 +8,8 @@ import java.util.UUID;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 
@@ -88,6 +90,15 @@ public record Worker(
                 transcript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, new ReportedStatus(report, at), doneCheckFor(report), limitPark);
     }
 
+    public Worker settledBy(InboxMessage message, Instant at) {
+        if (message.resolves() == null || !waitsOnThePrimaryFor(message.resolves())) {
+            return this;
+        }
+        ReportedStatus settled = new ReportedStatus(StatusReport.resolvedBy(message.resolves(), message.number()), at);
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+                transcript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, settled, doneCheck, limitPark);
+    }
+
     public Worker doneChecked(boolean accepted) {
         if (doneCheck != DoneCheck.CHECKING) {
             throw new Refusal(id + " has no done waiting for its check.");
@@ -123,6 +134,10 @@ public record Worker(
         return !isRetired() && doneCheck != DoneCheck.ACCEPTED;
     }
 
+    public boolean hadItsDoneAccepted() {
+        return doneCheck == DoneCheck.ACCEPTED;
+    }
+
     public boolean handedItsWorkOver() {
         return doneCheck == DoneCheck.ACCEPTED || doneCheck == DoneCheck.REFUSED;
     }
@@ -135,12 +150,20 @@ public record Worker(
         return launchFailedAt != null && hasSentNoHook();
     }
 
+    public boolean waitsOnThePrimary() {
+        return lastStatus != null && lastStatus.report().isForThePrimary();
+    }
+
     public boolean lastReported(StatusState state) {
         return lastStatus != null && lastStatus.report().state() == state;
     }
 
     public Instant quietSince() {
         return lastStatus == null || lastStatus.at().isBefore(activitySince) ? activitySince : lastStatus.at();
+    }
+
+    private boolean waitsOnThePrimaryFor(StatusKey question) {
+        return lastStatus != null && lastStatus.report().asks(question);
     }
 
     private Worker idleSince(Instant at, LimitPark park, Instant ended) {

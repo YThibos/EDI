@@ -248,6 +248,9 @@ public sealed interface DomainEvent {
         }
     }
 
+    record BoardRoundPosted(TaskId task, BoardId board, String link, int questions) implements DomainEvent {
+    }
+
     record BoardAnswered(TaskId task, BoardId board, int round, int prompts, boolean sessionEnded) implements DomainEvent {
     }
 

@@ -18,6 +18,8 @@ import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.worker.WorkerContext;
+import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.CloneRefresh;
@@ -30,6 +32,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskState;
 
 @Service
 public class FollowMerges {
@@ -41,19 +44,23 @@ public class FollowMerges {
     private final DeliveryStore deliveries;
     private final EventLog events;
     private final ProjectRegistry registry;
+    private final WorkerContext context;
     private final Forges forges;
+    private final DeliveryRecords records;
     private final CloneRefreshes refreshes;
     private final CleanUpTask cleanUp;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public FollowMerges(TaskStore tasks, DeliveryStore deliveries, EventLog events, ProjectRegistry registry, Forges forges, CloneRefreshes refreshes,
-            CleanUpTask cleanUp, Clock clock, TransactionTemplate transaction) {
+    public FollowMerges(TaskStore tasks, DeliveryStore deliveries, EventLog events, ProjectRegistry registry, WorkerContext context, Forges forges,
+            DeliveryRecords records, CloneRefreshes refreshes, CleanUpTask cleanUp, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.deliveries = deliveries;
         this.events = events;
         this.registry = registry;
+        this.context = context;
         this.forges = forges;
+        this.records = records;
         this.refreshes = refreshes;
         this.cleanUp = cleanUp;
         this.clock = clock;
@@ -61,21 +68,22 @@ public class FollowMerges {
     }
 
     public MergedWork mergedSaysTheCaptain(String reference, Actor actor) {
-        Optional<Delivery> delivery = transaction.execute(_ -> deliveryNamedBy(reference));
-        if (delivery.isEmpty()) {
-            return new MergedWork(tasks.get(TaskReference.parse(reference)).id(), null,
-                    cleanedUpAfter(TaskReference.parse(reference), actor).triedAgainOnTheCaptainsWord());
+        return transaction.execute(_ -> deliveryNamedBy(reference))
+                .map(delivery -> deliveryFollowed(delivery, actor))
+                .orElseGet(() -> requestFollowedFromTheForge(reference, actor));
+    }
+
+    public void followTheRequestOf(TaskId task) {
+        try {
+            followedOnceItExists(transaction.execute(_ -> context.of(task)));
+        } catch (Refusal | ProgramFailure unfollowable) {
+            LOG.warn("EDI could not look up the merge request of {}: {}", task, unfollowable.getMessage());
         }
-        if (delivery.get().state() == MergeRequestState.MERGED) {
-            return followedBefore(delivery.get(), actor);
-        }
-        MergeRequestView view = viewOf(delivery.get());
-        if (!view.isMerged()) {
-            noticeAClosure(delivery.get(), view, actor);
-            throw new Refusal("The forge shows " + view.address() + " " + view.state().word() + ", not merged, so EDI keeps "
-                    + (view.state() == MergeRequestState.OPEN ? "watching it." : "the work and waits for the captain."));
-        }
-        return followed(delivery.get(), view, actor);
+    }
+
+    public void followTheAcceptedRequest(TaskId task, MergeRequestView request) {
+        transaction.execute(_ -> deliveries.of(task)).filter(delivery -> delivery.address().equals(request.address()))
+                .ifPresentOrElse(recorded -> followedOnceAccepted(recorded, request), () -> followedOnceFound(task, request, Actor.CORE));
     }
 
     public void watchTheOpenDrafts() {
@@ -91,8 +99,20 @@ public class FollowMerges {
 
     private Optional<Delivery> deliveryNamedBy(String reference) {
         return reference.startsWith(WEB_ADDRESS)
-                ? Optional.of(deliveries.at(reference).orElseThrow(() -> new Refusal("EDI delivered nothing at " + reference + ".")))
-                : deliveries.of(tasks.get(TaskReference.parse(reference)).id());
+                ? deliveries.at(reference)
+                : records.followedDeliveryOf(tasks.get(TaskReference.parse(reference)).id());
+    }
+
+    private MergedWork deliveryFollowed(Delivery delivery, Actor actor) {
+        if (delivery.isMerged()) {
+            return followedBefore(delivery, actor);
+        }
+        MergeRequestView view = viewOf(delivery);
+        if (!view.isMerged()) {
+            noticeAClosure(delivery, view, actor);
+            throw notMerged(view);
+        }
+        return followed(delivery, view, actor);
     }
 
     private MergedWork followedBefore(Delivery delivery, Actor actor) {
@@ -111,23 +131,6 @@ public class FollowMerges {
 
     private boolean isInFlight(Delivery delivery) {
         return transaction.execute(_ -> !tasks.get(delivery.task()).isClosed());
-    }
-
-    private void observedOnItsOwn(Delivery delivery) {
-        try {
-            observed(delivery);
-        } catch (Refusal | ProgramFailure unobservable) {
-            LOG.warn("EDI could not watch the draft of {}: {}", delivery.task(), unobservable.getMessage());
-        }
-    }
-
-    private void observed(Delivery delivery) {
-        MergeRequestView view = viewOf(delivery);
-        if (view.isMerged()) {
-            followed(delivery, view, Actor.CORE);
-        } else {
-            noticeAClosure(delivery, view, Actor.CORE);
-        }
     }
 
     private MergeRequestView viewOf(Delivery delivery) {
@@ -156,11 +159,13 @@ public class FollowMerges {
         });
     }
 
+    private static Refusal notMerged(MergeRequestView view) {
+        return new Refusal("The forge shows " + view.address() + " " + view.state().word() + ", not merged, so EDI keeps "
+                + (view.state() == MergeRequestState.OPEN ? "watching it." : "the work and waits for the captain."));
+    }
+
     private MergedWork followed(Delivery delivery, MergeRequestView view, Actor actor) {
-        Delivery merged = recordedAsMerged(delivery, view, actor);
-        refreshes.refreshEveryClone();
-        CleanUp cleanUp = cleanUpWhatTheClonesHold(actor).getOrDefault(delivery.task(), CleanUp.awaitingTheRefresh());
-        return new MergedWork(delivery.task(), merged, cleanUp);
+        return cleanedUpOnceMerged(recordedAsMerged(delivery, view, actor), actor);
     }
 
     private Delivery recordedAsMerged(Delivery delivery, MergeRequestView view, Actor actor) {
@@ -173,6 +178,108 @@ public class FollowMerges {
             refreshes.awaitTheMergeOf(task, view, now);
             return merged;
         });
+    }
+
+    private MergedWork cleanedUpOnceMerged(Delivery merged, Actor actor) {
+        refreshes.refreshEveryClone();
+        CleanUp cleanUp = cleanUpWhatTheClonesHold(actor).getOrDefault(merged.task(), CleanUp.awaitingTheRefresh());
+        return new MergedWork(merged.task(), merged, cleanUp);
+    }
+
+    private MergedWork requestFollowedFromTheForge(String reference, Actor actor) {
+        return reference.startsWith(WEB_ADDRESS)
+                ? requestFollowedAt(reference, actor)
+                : requestFollowedFor(tasks.get(TaskReference.parse(reference)).id(), actor);
+    }
+
+    private MergedWork requestFollowedAt(String url, Actor actor) {
+        FoundRequest found = requestAt(url).orElseThrow(() -> new Refusal("EDI delivered nothing at " + url + "."));
+        return requestFollowedOnTheCaptainsWord(found.task(), found.request(), actor);
+    }
+
+    private Optional<FoundRequest> requestAt(String url) {
+        return transaction.execute(_ -> tasks.inState(TaskState.IN_FLIGHT)).stream()
+                .flatMap(task -> requestOf(task.id(), url).stream())
+                .findFirst();
+    }
+
+    private Optional<FoundRequest> requestOf(TaskId task, String url) {
+        try {
+            Workplace workplace = transaction.execute(_ -> context.of(task));
+            return records.followsARequest(workplace) && workplace.project().forge().repository().holds(url)
+                    ? records.requestFrom(workplace).filter(request -> request.address().url().equals(url))
+                            .map(request -> new FoundRequest(task, request))
+                    : Optional.empty();
+        } catch (Refusal | ProgramFailure unfollowable) {
+            LOG.warn("EDI could not look up the merge request of {}: {}", task, unfollowable.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private MergedWork requestFollowedFor(TaskId task, Actor actor) {
+        Workplace workplace = transaction.execute(_ -> context.of(task));
+        if (!records.followsARequest(workplace)) {
+            return new MergedWork(task, null, cleanedUpAfter(new TaskReference.ById(task), actor).triedAgainOnTheCaptainsWord());
+        }
+        return requestFollowedOnTheCaptainsWord(task, records.requireTheRequestFrom(workplace), actor);
+    }
+
+    private MergedWork requestFollowedOnTheCaptainsWord(TaskId task, MergeRequestView request, Actor actor) {
+        if (!request.isMerged()) {
+            transaction.executeWithoutResult(_ -> records.recorded(task, request, actor));
+            throw notMerged(request);
+        }
+        return recordedAndFollowed(task, request, actor);
+    }
+
+    private MergedWork recordedAndFollowed(TaskId task, MergeRequestView request, Actor actor) {
+        Delivery merged = transaction.execute(_ -> recordedAsMerged(records.recorded(task, request, actor), request, actor));
+        return cleanedUpOnceMerged(merged, actor);
+    }
+
+    private void followedOnceItExists(Workplace workplace) {
+        if (transaction.execute(_ -> records.awaitsTheRequestOf(workplace))) {
+            records.requestFrom(workplace).ifPresent(request -> followedOnceFound(workplace.task().id(), request, Actor.CORE));
+        }
+    }
+
+    private void followedOnceFound(TaskId task, MergeRequestView request, Actor actor) {
+        if (request.isMerged()) {
+            recordedAndFollowed(task, request, actor);
+        } else {
+            transaction.executeWithoutResult(_ -> records.recorded(task, request, actor));
+        }
+    }
+
+    private void followedOnceAccepted(Delivery recorded, MergeRequestView request) {
+        if (recorded.isMerged()) {
+            followedBefore(recorded, Actor.CORE);
+        } else if (request.isMerged()) {
+            followed(recorded, request, Actor.CORE);
+        } else {
+            keptAsTheForgeShowsIt(recorded, request);
+        }
+    }
+
+    private void keptAsTheForgeShowsIt(Delivery recorded, MergeRequestView request) {
+        transaction.executeWithoutResult(_ -> deliveries.save(recorded.observed(request, clock.now())));
+    }
+
+    private void observedOnItsOwn(Delivery delivery) {
+        try {
+            observed(delivery);
+        } catch (Refusal | ProgramFailure unobservable) {
+            LOG.warn("EDI could not watch the draft of {}: {}", delivery.task(), unobservable.getMessage());
+        }
+    }
+
+    private void observed(Delivery delivery) {
+        MergeRequestView view = viewOf(delivery);
+        if (view.isMerged()) {
+            followed(delivery, view, Actor.CORE);
+        } else {
+            noticeAClosure(delivery, view, Actor.CORE);
+        }
     }
 
     private Map<TaskId, CleanUp> cleanUpWhatTheClonesHold(Actor actor) {
@@ -197,6 +304,9 @@ public class FollowMerges {
             LOG.warn("The clean-up of {} stopped: {}", task, failed.getMessage());
             return CleanUp.stoppedBy(failed);
         }
+    }
+
+    private record FoundRequest(TaskId task, MergeRequestView request) {
     }
 
     public record MergedWork(TaskId task, Delivery delivery, CleanUp cleanUp) {

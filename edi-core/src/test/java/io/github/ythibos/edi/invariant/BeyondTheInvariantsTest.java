@@ -88,7 +88,6 @@ import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.migration.MigrationReportText;
-import io.github.ythibos.edi.web.presence.ReturnBriefText;
 
 @DisplayName("Acceptance tests beyond the invariants (12.7 and 17.4)")
 class BeyondTheInvariantsTest {
@@ -348,7 +347,7 @@ class BeyondTheInvariantsTest {
         assertThat(home.windowsSide().toasts()).containsExactly("Decision D1 waits on you | Which lamp?");
         assertThat(afterAMonth.mode()).isEqualTo(PresenceMode.QUIET);
         assertThat(returnBrief).contains("While you were away (quiet since 2026-10-15 09:15 UTC, after a stretch without a typed message):",
-                "Decisions waiting on you (1)", "  D1  Which lamp?");
+                "Needs your decision (1)", "  D1  Which lamp?");
         assertThat(home.presenceQuery().current().mode()).isEqualTo(PresenceMode.PRESENT);
 
         Instant meetingStart = home.clock().now().plus(Duration.ofMinutes(5));
