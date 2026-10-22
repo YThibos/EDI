@@ -335,15 +335,15 @@ class NativeRecoveryIT {
     }
 
     private static CommandRun run(ProcessBuilder launch, String input) throws Exception {
-        Process command = processes.register(launch.start());
+        Path output = Files.createTempFile(homes, "command-", ".out");
+        Process command = processes.register(launch.redirectOutput(output.toFile()).start());
         try (OutputStream standardInput = command.getOutputStream()) {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
         }
-        String output = new String(command.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (!command.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
-            command.destroyForcibly();
+            command.destroyForcibly().waitFor();
         }
-        return new CommandRun(command.exitValue(), output);
+        return new CommandRun(command.exitValue(), Files.readString(output, StandardCharsets.UTF_8));
     }
 
     private record CommandRun(int exitCode, String output) {

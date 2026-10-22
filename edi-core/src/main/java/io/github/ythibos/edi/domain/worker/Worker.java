@@ -67,6 +67,12 @@ public record Worker(
                 endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, null, null);
     }
 
+    public Worker transcribedIn(String reportedTranscript) {
+        return reportedTranscript == null ? this : new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt,
+                briefedAt, reportedTranscript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, limitPark,
+                contextFullSince);
+    }
+
     public Worker turnEnded(Instant at) {
         return idleSince(at, null, null, endedAt);
     }

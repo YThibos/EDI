@@ -69,7 +69,7 @@ class RecoverFromOutageTest {
     void refusesToRelaunchWhileAUsageLimitStillHoldsALiveWorker() throws IOException {
         Worker bell = WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5");
         home.workerHooks().sessionStarted(bell.id(), bell.session(), null);
-        home.workerHooks().promptSubmitted(bell.id(), "Ring the bell.");
+        home.workerHooks().promptSubmitted(bell.id(), "Ring the bell.", null);
         home.runtime().transcriptEndsOn(new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(1))));
         home.workerHooks().stopFailed(bell.id(), "rate_limit", null);
 

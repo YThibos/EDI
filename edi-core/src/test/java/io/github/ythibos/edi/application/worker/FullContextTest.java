@@ -65,6 +65,16 @@ class FullContextTest {
     }
 
     @Test
+    void readsTheTranscriptFromThePromptWhenTheSessionStartWasMissed() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+
+        home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.", "/transcripts/lamp.jsonl");
+
+        assertThat(home.workers().get(lamp.id()).orElseThrow().transcript()).isEqualTo("/transcripts/lamp.jsonl");
+    }
+
+    @Test
     void ignoresAFullContextWrittenBeforeTheWorkerWasLaunched() throws IOException {
         TestHome home = homeWithAHarness();
         Worker lamp = busyWorker(home);
@@ -80,7 +90,7 @@ class FullContextTest {
         Worker lamp = fullWorker(home);
 
         home.runtime().transcriptEndsOnAFullContextAt(null);
-        home.workerHooks().promptSubmitted(lamp.id(), "/compact");
+        home.workerHooks().promptSubmitted(lamp.id(), "/compact", null);
         home.workerHooks().stopping(lamp.id());
 
         assertThat(healthOf(home, lamp)).isInstanceOf(WorkerHealth.Idle.class);
@@ -115,7 +125,7 @@ class FullContextTest {
         Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
         Path copy = home.runtime().lastLaunch().worktree();
         home.workerHooks().sessionStarted(lamp.id(), lamp.session(), "/transcripts/lamp.jsonl");
-        home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.");
+        home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.", null);
         home.recordStatus().report(lamp.id(), StatusState.WORKING, null, null, "commit 1 of 2 done; next: the brass horn");
         FixtureRepository.at(copy).write("lamp.txt", "brass\n").commit("HRN-3 Fit the lamp").write("horn.txt", "half a horn\n");
         home.pipelineRuns().save(lamp.id().task(), new PipelineRun("01RUN", "awaiting_approval", "review", null, null), home.clock().now());
@@ -154,7 +164,7 @@ class FullContextTest {
     void refusesToResumeASessionWhoseContextIsFull() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
         Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
-        home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.");
+        home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.", null);
         home.runtime().transcriptEndsOnAFullContextAt(home.clock().now());
         home.noticeFullContexts().notice();
         home.runtime().closeEveryWindow();
@@ -171,7 +181,7 @@ class FullContextTest {
     private static Worker busyWorker(TestHome home) {
         Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         home.workerHooks().sessionStarted(worker.id(), worker.session(), "/transcripts/lamp.jsonl");
-        home.workerHooks().promptSubmitted(worker.id(), "Fit the lamp.");
+        home.workerHooks().promptSubmitted(worker.id(), "Fit the lamp.", null);
         return worker;
     }
 

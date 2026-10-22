@@ -232,7 +232,7 @@ class SupervisionAndRecoveryTest {
             TestHome home = TestHome.in(directory).registering("projects:\n  - name: harness\n    base: main\n");
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
-            home.workerHooks().promptSubmitted(worker.id(), "Fit the lamp.");
+            home.workerHooks().promptSubmitted(worker.id(), "Fit the lamp.", null);
             home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Fitting the lamp.");
 
             home.runtime().restartTheServer();
