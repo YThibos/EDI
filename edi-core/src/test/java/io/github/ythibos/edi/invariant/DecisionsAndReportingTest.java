@@ -251,7 +251,7 @@ class DecisionsAndReportingTest {
 
             assertThat(report).contains("nothing open").doesNotContain("review finding");
             assertThat(brief).contains("Needs your decision (0)");
-            assertThat(asked).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("with EDI", "EDI is settling a pipeline question");
+            assertThat(asked).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("with EDI", "EDI is settling a question");
             assertThat(steered.state()).isEqualTo("with EDI");
             assertThat(settled).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("working", "back at work; EDI settled its question");
         }

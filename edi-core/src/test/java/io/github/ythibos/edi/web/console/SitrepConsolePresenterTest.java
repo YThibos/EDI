@@ -121,7 +121,7 @@ class SitrepConsolePresenterTest {
                 new OngoingTask(mast, settled, null, null)), List.of(), List.of(), List.of(), List.of()));
 
         assertThat(sitrep.ongoing()).extracting(ConsoleSitrep.Ongoing::task, ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly(
-                tuple("horn", "with EDI", "EDI is settling a pipeline question"),
+                tuple("horn", "with EDI", "EDI is settling a question"),
                 tuple("bell", "with EDI", "EDI is helping it past a block"),
                 tuple("mast", "working", "back at work; EDI settled its question"));
     }

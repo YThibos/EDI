@@ -94,7 +94,7 @@ describe('SitrepPage', () => {
         decisions: [],
         answered: [],
         ongoing: [
-          { task: 'fit-lamp', title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with EDI', doing: 'EDI is settling a pipeline question', draft: null },
+          { task: 'fit-lamp', title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with EDI', doing: 'EDI is settling a question', draft: null },
         ],
       }),
     );
@@ -103,7 +103,7 @@ describe('SitrepPage', () => {
 
     expect(text(page, '.sr-row .sr-badge')).toBe('with EDI');
     expect(page.querySelector('.sr-row .sr-badge')?.classList).toContain('sr-badge--info');
-    expect(text(page, '.sr-row__sub')).toContain('EDI is settling a pipeline question');
+    expect(text(page, '.sr-row__sub')).toContain('EDI is settling a question');
     expect(text(page, '.sr-section__head .sr-sub')).toBe('all clear, Commander');
   });
 

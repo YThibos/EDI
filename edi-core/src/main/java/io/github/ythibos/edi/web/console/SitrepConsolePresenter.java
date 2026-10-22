@@ -160,10 +160,7 @@ public class SitrepConsolePresenter {
     }
 
     private static String whatEdiIsSettling(StatusReport report) {
-        if (report.state() == StatusState.BLOCKED) {
-            return "EDI is helping it past a block";
-        }
-        return report.key() != null && report.key().namesAPipelineGate() ? "EDI is settling a pipeline question" : "EDI is settling a question";
+        return report.state() == StatusState.BLOCKED ? "EDI is helping it past a block" : "EDI is settling a question";
     }
 
     private static String draftOf(Delivery delivery) {
