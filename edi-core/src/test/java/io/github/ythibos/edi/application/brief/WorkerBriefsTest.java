@@ -21,6 +21,13 @@ class WorkerBriefsTest {
     }
 
     @Test
+    void givesThePipelineThePlanAndBuildInstructionsOfAPlannedShipAfterTheCaptainsIntent() {
+        String intent = briefs.pipelineIntentFor(BriefFixtures.shipFollowing(PLAN, "Keep the old bracket.", false)).text();
+
+        assertThat(intent).startsWith("## Captain's intent\n\nFit the lamp in the hall.\n\n## Spec\n\n" + PLAN + "\n\nKeep the old bracket.\n\n");
+    }
+
+    @Test
     void asksForTheWorkedLineOnlyWhileTheMachineProfileRequiresIt() {
         String worked = "end `/home/developer/.edi/data/tasks/fit-lamp/report.md` with the line `worked: <start> -> <end> = <H>h<MM>m`";
 

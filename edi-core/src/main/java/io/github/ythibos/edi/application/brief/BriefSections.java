@@ -108,7 +108,8 @@ final class BriefSections {
         String craft = facts.project().craftRules() ? ", followed by the craftsmanship rules block, verbatim" : "";
         return "Commit on `" + facts.dispatch().branch() + "`, then validate and deliver through the no-mistakes pipeline from the isolated copy:\n\n"
                 + "```sh\nno-mistakes axi run --base-branch " + facts.base() + " --intent \"$(cat '" + facts.intentPath() + "')\"\n```\n\n"
-                + "EDI wrote that intent from the Captain's intent section above" + craft + "; pass it unchanged.\n"
+                + "EDI wrote that intent from the Captain's intent and Spec sections above" + craft
+                + "; it rewrites the intent when the task is noted, so pass it unchanged.\n"
                 + "Answer each gate yourself and never pass `--yes`; an ask-user finding is not yours to answer,"
                 + " so report it with `edi status needs-decision --key nm-<run>-<step>` and stop.\n"
                 + "The pipeline pushes the branch and opens the merge request as a draft; mark it ready for review once its checks are green.";
