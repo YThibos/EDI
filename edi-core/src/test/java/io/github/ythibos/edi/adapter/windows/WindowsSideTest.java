@@ -60,6 +60,18 @@ class WindowsSideTest {
     }
 
     @Test
+    void readsTheCalendarWithTheCaptainsOrdinaryRightsEvenFromAnElevatedTerminal() throws IOException {
+        TestHome home = TestHome.in(directory).writing("config/machine.yaml", "presence:\n  calendar: outlook\n");
+        home.windowsSide().showingTheCalendar("[]");
+        OutlookCalendar calendar = new OutlookCalendar(new ExternalPrograms(), home.machineProfile(),
+                new JsonMapper(), home.windowsSide().executable(), home.windowsSide().windowsDirectory());
+
+        calendar.entriesOn(LocalDate.of(2026, 10, 17));
+
+        assertThat(home.windowsSide().interopSockets()).containsExactly("/run/WSL/1_interop");
+    }
+
+    @Test
     void readsASingleEntryAndRefusesAnExportItCannotRead() throws IOException {
         TestHome home = TestHome.in(directory).writing("config/machine.yaml", "presence:\n  calendar: outlook\n");
         OutlookCalendar calendar = new OutlookCalendar(new ExternalPrograms(), home.machineProfile(),

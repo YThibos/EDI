@@ -16,12 +16,18 @@ public final class WindowsStandIn {
             place='%s'
             for argument; do last="$argument"; done
             printf '%%s\\n' "$last" >> "$place/calls.log"
+            printf '%%s\\n' "${WSL_INTEROP:-}" >> "$place/interop.log"
+            if [ -f "$place/calendar.failure" ] && printf '%%s' "$last" | base64 -d | tr -d '\\000' | grep -q GetDefaultFolder; then
+                cat "$place/calendar.failure" >&2
+                exit 1
+            fi
             if [ -f "$place/calendar.json" ]; then
                 cat "$place/calendar.json"
             fi
             """;
     private static final Pattern ENCODED_TEXT = Pattern.compile("FromBase64String\\('([A-Za-z0-9+/=]*)'\\)");
     private static final String TOAST_SCRIPT_MARK = "ToastNotificationManager";
+    private static final String CALENDAR_SCRIPT_MARK = "GetDefaultFolder";
 
     private final Path place;
 
@@ -36,7 +42,13 @@ public final class WindowsStandIn {
     }
 
     public WindowsStandIn showingTheCalendar(String exported) throws IOException {
+        Files.deleteIfExists(place.resolve("calendar.failure"));
         Files.writeString(place.resolve("calendar.json"), exported);
+        return this;
+    }
+
+    public WindowsStandIn failingToReadTheCalendar(String reason) throws IOException {
+        Files.writeString(place.resolve("calendar.failure"), reason);
         return this;
     }
 
@@ -52,14 +64,23 @@ public final class WindowsStandIn {
         return scripts().stream().filter(script -> script.contains(TOAST_SCRIPT_MARK)).map(WindowsStandIn::toastOf).toList();
     }
 
+    public long calendarReads() throws IOException {
+        return scripts().stream().filter(script -> script.contains(CALENDAR_SCRIPT_MARK)).count();
+    }
+
+    public List<String> interopSockets() throws IOException {
+        return linesOf("interop.log");
+    }
+
     private List<String> scripts() throws IOException {
-        Path log = place.resolve("calls.log");
-        if (!Files.exists(log)) {
-            return List.of();
-        }
-        return Files.readAllLines(log).stream()
+        return linesOf("calls.log").stream()
                 .map(encoded -> new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_16LE))
                 .toList();
+    }
+
+    private List<String> linesOf(String file) throws IOException {
+        Path log = place.resolve(file);
+        return Files.exists(log) ? Files.readAllLines(log) : List.of();
     }
 
     private static String toastOf(String script) {
