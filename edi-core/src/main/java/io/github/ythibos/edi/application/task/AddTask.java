@@ -22,7 +22,6 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.task.UnknownTask;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketProposal;
 import io.github.ythibos.edi.domain.tracker.WorkKeying;
@@ -54,7 +53,7 @@ public class AddTask {
         requireRegistered(newTask.intake().projects());
         WorkKeying keying = keys.keyingFor(newTask.intake(), newTask.notes(), newTask.ticket());
         return transaction.execute(_ -> {
-            requireExisting(newTask.intake().blockedBy());
+            requireOpen(newTask.intake().blockedBy());
             Task task = queued(newTask, keyedIntake(newTask.intake(), keying));
             tasks.insert(task);
             events.record(new TaskAdded(task.id(), task.intake()), actor, task.created());
@@ -78,12 +77,13 @@ public class AddTask {
                 });
     }
 
-    private void requireExisting(List<TaskId> blockers) {
+    private void requireOpen(List<TaskId> blockers) {
         blockers.stream()
-                .filter(blocker -> !tasks.contains(blocker))
+                .map(tasks::get)
+                .filter(Task::isClosed)
                 .findFirst()
-                .ifPresent(unknown -> {
-                    throw new UnknownTask(unknown);
+                .ifPresent(closed -> {
+                    throw new Refusal(closed.id() + " is already " + closed.state().word() + ", so no task can wait for it.");
                 });
     }
 

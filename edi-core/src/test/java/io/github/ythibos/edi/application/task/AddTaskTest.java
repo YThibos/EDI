@@ -95,4 +95,15 @@ class AddTaskTest {
                 .isInstanceOf(UnknownTask.class);
         assertThat(home.tasks().contains(new TaskId("fog-horn"))).isFalse();
     }
+
+    @Test
+    void neverWaitsForAClosedTask() {
+        TaskId lantern = home.addTask().add(ship("lantern", "Light the lantern"), Actor.PRIMARY).id();
+        home.tasks().update(home.tasks().get(lantern).dispatched().cleanedUp(TestHome.START));
+
+        assertThatThrownBy(() -> home.addTask().add(shipBlockedBy("fog-horn", "Tune the horn", "lantern"), Actor.PRIMARY))
+                .isInstanceOf(Refusal.class)
+                .hasMessage("lantern is already done, so no task can wait for it.");
+        assertThat(home.tasks().contains(new TaskId("fog-horn"))).isFalse();
+    }
 }

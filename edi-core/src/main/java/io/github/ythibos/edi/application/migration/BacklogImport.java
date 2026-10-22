@@ -121,7 +121,11 @@ public class BacklogImport {
     }
 
     private Task withBlockersInEdi(Task task) {
-        return task.blockedOnlyBy(task.intake().blockedBy().stream().filter(tasks::contains).toList());
+        return task.blockedOnlyBy(task.intake().blockedBy().stream().filter(tasks::contains).filter(this::isOpen).toList());
+    }
+
+    private boolean isOpen(TaskId id) {
+        return !tasks.get(id).isClosed();
     }
 
     private void saved(Decision decision) {

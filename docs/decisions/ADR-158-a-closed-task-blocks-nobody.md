@@ -11,6 +11,7 @@ A dropped blocker therefore blocked its dependants for good: in the shadow run t
 A task closes in three places: `DropTask` on the captain's word, `CleanUpTask` when its work landed, and `AnswerDecision` when a captain item's decision is answered.
 
 **Decision:** Closing a task takes it out of every other task's blocked-by in the same transaction: each of the three use cases calls `DependantTasks.stopWaitingFor`, which updates every task that waits for the closed one with `Task.noLongerWaitingFor`.
+A dependency is never written on a closed task: `AddTask` refuses a closed blocker, and `BacklogImport` keeps only the blockers still open in EDI.
 The migration `V9__waiting_on_the_captain.sql` removes the dependencies on tasks that were already done or dropped.
 
 **Motivation:** A dropped task no longer stands in anyone's way, and a task's blocked-by names only work that is still open, so the report, the backlog and dispatch read the same list.
@@ -25,4 +26,4 @@ The migration `V9__waiting_on_the_captain.sql` removes the dependencies on tasks
 
 **Revisit when:** A dependant needs to know which blocker it waited for, such as to read that blocker's report.
 
-**Sources:** EDI rewrite specification, section 8.1; ADR-046, ADR-117, ADR-156; `domain.task.Task`, `application.task.DependantTasks`, `application.delivery.DropTask`, `CleanUpTask`, `application.decision.AnswerDecision`, `adapter.store.TaskStore`.
+**Sources:** EDI rewrite specification, section 8.1; ADR-046, ADR-117, ADR-156; `domain.task.Task`, `application.task.DependantTasks`, `AddTask`, `application.migration.BacklogImport`, `application.delivery.DropTask`, `CleanUpTask`, `application.decision.AnswerDecision`, `adapter.store.TaskStore`.
