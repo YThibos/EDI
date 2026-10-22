@@ -2,9 +2,7 @@ package io.github.ythibos.edi.application.dispatch;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -31,6 +29,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.brief.BriefFacts;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
+import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -48,13 +47,10 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
-import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.Adoption;
-import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -63,8 +59,6 @@ import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 @Service
 public class LaunchWorker {
-
-    private static final String BRIEF_FILE = "brief.md";
 
     private final EdiHome home;
     private final TaskStore tasks;
@@ -79,8 +73,9 @@ public class LaunchWorker {
     private final IsolatedCopies copies;
     private final WorkerPlaces places;
     private final WorkerBriefs briefs;
+    private final WrittenBriefs writtenBriefs;
+    private final GatherBriefFacts briefFacts;
     private final ResumeNotes resumeNotes;
-    private final ResearchBeforeImplementation research;
     private final WorkerTokens tokens;
     private final WorkerRuntime runtime;
     private final ProcessTable processes;
@@ -90,8 +85,8 @@ public class LaunchWorker {
 
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
-            WorkerPlaces places, WorkerBriefs briefs, ResumeNotes resumeNotes, ResearchBeforeImplementation research, WorkerTokens tokens,
-            WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
+            WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
+            WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
@@ -105,8 +100,9 @@ public class LaunchWorker {
         this.copies = copies;
         this.places = places;
         this.briefs = briefs;
+        this.writtenBriefs = writtenBriefs;
+        this.briefFacts = briefFacts;
         this.resumeNotes = resumeNotes;
-        this.research = research;
         this.tokens = tokens;
         this.runtime = runtime;
         this.processes = processes;
@@ -127,9 +123,7 @@ public class LaunchWorker {
     }
 
     public String briefFor(Dispatch dispatch) {
-        Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null));
-        Path worktree = home.worktreeOf(incarnation.project().project().name(), dispatch.task());
-        return briefs.briefFor(briefFacts(incarnation, worktree, home.taskDirectory(dispatch.task())));
+        return briefs.briefFor(transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief());
     }
 
     private void requireAnEmptyCopy(TaskId task) {
@@ -142,14 +136,14 @@ public class LaunchWorker {
 
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
-        Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.base());
+        Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
         Path stateDirectory = createdDirectory(home.workerState(incarnation.worker()));
         IssuedToken token = tokens.issueInto(stateDirectory);
         String firstPrompt = kind == LaunchKind.RESUME
                 ? resumeNotes.noteFor(incarnation.earlier(), worktree, dispatch.branch(), because)
-                : briefPrompt(writtenBriefAndIntent(briefFacts(incarnation, worktree, taskDirectory)));
+                : briefPrompt(writtenBriefs.written(incarnation.brief()));
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
     }
@@ -172,11 +166,10 @@ public class LaunchWorker {
         places.requireNoLiveWorker(task.id());
         Worker earlier = workers.latestOf(task.id()).orElse(null);
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
-        BaseBranch base = task.intake().base() == null ? project.requireBase() : task.intake().base();
         Optional<UUID> adoptedSession = adoptedSessionToResume(task, earlier);
         return new Incarnation(task, project, dispatch, kind, adoptedSession.isPresent() ? LaunchKind.RESUME : kind, worker,
-                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, base, settings, craftRulesFor(project),
-                research.planFor(task.id()).orElse(null), machine.time().requireWorkedLine(), answered);
+                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, settings,
+                briefFacts.factsFor(task, project, dispatch, worker), answered);
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
@@ -195,31 +188,6 @@ public class LaunchWorker {
             throw new Refusal(task.id() + " never had a worker, so there is no session to resume.");
         }
         return earlier.session();
-    }
-
-    private String craftRulesFor(ProjectEntry project) {
-        if (!project.craftRules()) {
-            return null;
-        }
-        try {
-            return Files.readString(home.craftRules(), StandardCharsets.UTF_8);
-        } catch (NoSuchFileException absent) {
-            throw new Refusal(project.project().name() + " follows the craft rules, but " + home.craftRules() + " is missing; write the rules block there first.");
-        } catch (IOException unreadable) {
-            throw new UncheckedIOException(unreadable);
-        }
-    }
-
-    private BriefFacts briefFacts(Incarnation incarnation, Path worktree, Path taskDirectory) {
-        return new BriefFacts(incarnation.task(), incarnation.worker(), incarnation.project(), incarnation.dispatch(), incarnation.base(),
-                worktree, taskDirectory, runtime.socket(), incarnation.craftRules(), incarnation.plan(), incarnation.asksForTheTimeWorked());
-    }
-
-    private Path writtenBriefAndIntent(BriefFacts facts) {
-        if (facts.task().intake().kind() == TaskKind.SHIP && facts.delivery() == DeliveryMode.DRAFT_REVIEW) {
-            written(facts.intentPath(), briefs.pipelineIntentFor(facts).text());
-        }
-        return written(facts.taskDirectory().resolve(BRIEF_FILE), briefs.briefFor(facts));
     }
 
     private static String briefPrompt(Path brief) {
@@ -296,14 +264,6 @@ public class LaunchWorker {
         }
     }
 
-    private static Path written(Path file, String content) {
-        try {
-            return Files.writeString(file, content, StandardCharsets.UTF_8);
-        } catch (IOException unwritable) {
-            throw new UncheckedIOException(unwritable);
-        }
-    }
-
     private record Incarnation(
             Task task,
             ProjectEntry project,
@@ -314,11 +274,8 @@ public class LaunchWorker {
             UUID session,
             Worker earlier,
             Route route,
-            BaseBranch base,
             WorkerSettings settings,
-            String craftRules,
-            String plan,
-            boolean asksForTheTimeWorked,
+            BriefFacts brief,
             OutageEntry answered) {
     }
 }

@@ -142,11 +142,12 @@ class DeliveryClaimsTest {
     }
 
     @Test
-    void composesThePipelineIntentWithTheCraftRulesVerbatim() {
-        assertThat(PipelineIntent.of("Fit the lamp.\nAcceptance: it lights.\n", "  Craft rules:\n- Short methods.\n").text())
-                .isEqualTo("Fit the lamp.\nAcceptance: it lights.\n\nCraft rules:\n- Short methods.");
-        assertThat(PipelineIntent.of("Fit the lamp.", null).text()).isEqualTo("Fit the lamp.");
-        assertThatIllegalArgumentException().isThrownBy(() -> PipelineIntent.of("  ", null));
+    void composesThePipelineIntentFromTheCaptainsIntentAndTheSpecWithTheCraftRulesVerbatim() {
+        assertThat(PipelineIntent.of("Fit the lamp.\nAcceptance: it lights.\n", "\nThe switch also dims it.\n", "  Craft rules:\n- Short methods.\n").text())
+                .isEqualTo("## Captain's intent\n\nFit the lamp.\nAcceptance: it lights.\n\n## Spec\n\nThe switch also dims it.\n\nCraft rules:\n- Short methods.");
+        assertThat(PipelineIntent.of("Fit the lamp.", "The switch also dims it.", null).text())
+                .isEqualTo("## Captain's intent\n\nFit the lamp.\n\n## Spec\n\nThe switch also dims it.");
+        assertThatIllegalArgumentException().isThrownBy(() -> PipelineIntent.of("  ", "The switch also dims it.", null));
     }
 
     @Test

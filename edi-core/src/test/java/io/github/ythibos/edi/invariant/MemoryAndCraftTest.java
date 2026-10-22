@@ -78,7 +78,7 @@ class MemoryAndCraftTest {
     class CraftRulesTravelWithTheWork {
 
         @Test
-        @DisplayName("AT-34 the pipeline intent for a craftRules project holds the rules block verbatim and the acceptance criteria")
+        @DisplayName("AT-34 the pipeline intent for a craftRules project holds the rules block verbatim, the acceptance criteria and the spec")
         @Tag("adapter")
         void theIntentCarriesTheCraftRules() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
@@ -86,6 +86,7 @@ class MemoryAndCraftTest {
                     Fit the brass lamp in the hall.
                     Acceptance: AT-99 passes and the lamp lights; a draft pull request the captain merges.
                     Offline verification is accepted for anything that needs no network.""";
+            String spec = "The hall switch also dims the lamp, with a test for the dimmer.";
             home.registering("""
                     projects:
                       - name: harness
@@ -101,20 +102,21 @@ class MemoryAndCraftTest {
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3").noted(intent),
                     WorkerFixtures.queuedShip("map-caves", "EDI", "EDI-9").noted(intent)));
 
-            dispatchShip(home, "fit-lamp");
-            dispatchShip(home, "map-caves");
+            dispatchShip(home, "fit-lamp", spec);
+            dispatchShip(home, "map-caves", spec);
 
             Path flagged = home.home().taskDirectory(new TaskId("fit-lamp")).resolve("intent.md");
-            assertThat(Files.readString(flagged)).isEqualTo("Do the work on fit-lamp.\n\n" + intent + "\n\n" + WorkerFixtures.CRAFT_RULES.strip());
+            assertThat(Files.readString(flagged)).isEqualTo("## Captain's intent\n\nDo the work on fit-lamp.\n\n" + intent + "\n\n## Spec\n\n" + spec
+                    + "\n\n" + WorkerFixtures.CRAFT_RULES.strip());
             assertThat(Files.readString(flagged)).contains("Acceptance: AT-99 passes", "Offline verification is accepted", WorkerFixtures.CRAFT_RULES.strip());
             assertThat(Files.readString(home.home().taskDirectory(new TaskId("fit-lamp")).resolve("brief.md")))
                     .contains("no-mistakes axi run --base-branch main --intent \"$(cat '" + flagged + "')\"");
             assertThat(Files.readString(home.home().taskDirectory(new TaskId("map-caves")).resolve("intent.md")))
-                    .isEqualTo("Do the work on map-caves.\n\n" + intent);
+                    .isEqualTo("## Captain's intent\n\nDo the work on map-caves.\n\n" + intent + "\n\n## Spec\n\n" + spec);
         }
 
-        private static void dispatchShip(TestHome home, String task) {
-            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY);
+        private static void dispatchShip(TestHome home, String task, String spec) {
+            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, spec, List.of(), null), Actor.PRIMARY);
         }
     }
 
