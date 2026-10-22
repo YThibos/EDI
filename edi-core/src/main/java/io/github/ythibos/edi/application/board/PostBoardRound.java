@@ -35,7 +35,7 @@ public class PostBoardRound {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Board listening = listeningAt(file);
-            Board posted = listening.posted(new BoardRound(link, questions, listening.bound()));
+            Board posted = listening.posted(new BoardRound(link, questions, listening.bindings()));
             boards.update(posted);
             events.record(new BoardRoundPosted(posted.task(), posted.id(), posted.link(), posted.openQuestions()), actor, now);
             return posted;

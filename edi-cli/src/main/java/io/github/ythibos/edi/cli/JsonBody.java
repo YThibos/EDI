@@ -35,6 +35,13 @@ final class JsonBody {
         return this;
     }
 
+    JsonBody withJson(String name, String json) {
+        if (json != null) {
+            field(name).append(json.strip());
+        }
+        return this;
+    }
+
     String text() {
         return json + "}";
     }

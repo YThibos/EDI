@@ -18,10 +18,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardAttachment;
+import io.github.ythibos.edi.domain.board.BoardBinding;
+import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.board.BoardPrompt;
+import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -46,6 +50,8 @@ class ResearchBoardsTest {
     private static final TaskId LAMP_CHOICE = new TaskId("choose-lamp");
     private static final int ROUNDS_UNTIL_THE_LISTENER_RESTARTS = 50;
     private static final Duration ROUND_PATIENCE = Duration.ofMillis(100);
+    private static final String CLOSE_OUT = "close-out";
+    private static final BoardCard CLOSE_OUT_CARD = new BoardCard(CLOSE_OUT, Cards.authorising("Close the lantern work out?", CaptainWordAct.PROMOTE));
 
     @TempDir
     private Path directory;
@@ -151,6 +157,60 @@ class ResearchBoardsTest {
         assertThat(home.eventTypesOf(SCOUT)).endsWith("SteerSent", "BoardAnswered");
         assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind())
                 .contains(WakeKind.BOARD_ANSWERED, WakeKind.DECISION_ANSWERED);
+    }
+
+    @Test
+    void raisesTheCardARoundCarriesOnItsOwnTaskAndBindsItUnderTheQuestionThatAnswersIt() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+
+        DecisionNumber raised = home.decisions().ofTask(SCOUT).orElseThrow().number();
+        assertThat(armed.bindings()).containsExactly(new BoardBinding(raised, CLOSE_OUT));
+        assertThat(home.boards().get(armed.id())).contains(armed);
+        assertThat(home.decisions().get(raised).card()).isEqualTo(CLOSE_OUT_CARD.card());
+        assertThat(home.decisions().get(raised).isOpen()).isTrue();
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("DecisionRaised", "BoardArmed");
+        assertThat(home.jdbc().sql("select actor from event where type = 'DecisionRaised' and task_id = :task").param("task", SCOUT.value())
+                .query(String.class).single()).isEqualTo("worker:" + scout.id());
+    }
+
+    @Test
+    void answersTheRaisedCardWithTheBoardsWordsWhenTheCaptainChoosesOnTheBoard() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+
+        CaptainAnswer recorded = home.decisions().ofTask(SCOUT).orElseThrow().answer();
+        assertThat(recorded.verbatim()).isEqualTo("Close-out decision: option A");
+        assertThat(recorded.option()).isEqualTo(new OptionKey('A'));
+        assertThat(recorded.channel()).isEqualTo(AnswerChannel.BOARD);
+        assertThat(home.boards().answersOf(armed.id())).singleElement().satisfies(answer -> assertThat(answer.refusedBecause()).isNull());
+    }
+
+    @Test
+    void refusesToRaiseTheCardAgainOnceTheCaptainAnsweredIt() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+        DecisionNumber answered = armed.bound().getFirst();
+
+        assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
+                .hasMessage(answered + " on lantern-research is already answered (\"Close-out decision: option A\"), so a board round raises no card on it "
+                        + "again; arm the round without --card, and report a further question to EDI with edi status needs-decision.");
+        assertThat(home.decisions().get(answered).answer().option()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
+    void refusesABoardAnswerToARaisedCardTheCaptainAnsweredInTheConsoleMeanwhile() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        DecisionNumber raised = armed.bound().getFirst();
+        home.answerDecision().answer(new TaskReference.ByDecision(raised), new GivenAnswer("B: keep it", new OptionKey('B'), "", AnswerChannel.CONSOLE),
+                Actor.CAPTAIN);
+
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+
+        assertThat(home.decisions().get(raised).answer().channel()).isEqualTo(AnswerChannel.CONSOLE);
+        assertThat(home.boards().answersOf(armed.id())).singleElement()
+                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(raised + " is already answered: B: keep it"));
+        assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).contains(WakeKind.BOARD_ANSWER_REFUSED);
     }
 
     @Test
@@ -270,6 +330,16 @@ class ResearchBoardsTest {
         context.put(firstField, firstValue);
         context.put(secondField, secondValue);
         return context;
+    }
+
+    private Board armQuietlyCarrying(BoardCard card) {
+        home.boardHost().holdsTheNextPollOpen();
+        return home.armBoard().arm(scout.id(), new TaskReference.ById(SCOUT), boardFile, new BoardRound(BoardRounds.LINK, 0, List.of(), card));
+    }
+
+    private static BoardPrompt closeOutChosen(String option) {
+        return new BoardPrompt("7", "choice", "Close out: " + option, "Close-out decision: option " + option, "section#decision > form",
+                contextOf("question", CLOSE_OUT, "answer", option), List.of());
     }
 
     private static BoardPrompt farewell() {

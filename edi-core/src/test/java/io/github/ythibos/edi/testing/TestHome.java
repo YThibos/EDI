@@ -877,7 +877,7 @@ public final class TestHome {
     }
 
     public ArmBoard armBoard() {
-        return new ArmBoard(home, tasks, decisions, boards, events, boardListeners(), clock, transaction);
+        return new ArmBoard(home, tasks, decisions, boards, events, raiseDecision(), boardListeners(), clock, transaction);
     }
 
     public PostBoardRound postBoardRound() {

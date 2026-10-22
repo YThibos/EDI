@@ -25,11 +25,15 @@ final class BoardArmCommand implements Callable<Integer> {
     private String link;
 
     @Option(names = "--questions", required = true, paramLabel = "N",
-            description = "How many questions this round puts before the captain, not counting the decisions it binds; arming the board again posts a new round.")
+            description = "How many questions this round puts before the captain, not counting its card or the decisions it binds; arming the board again posts a new round.")
     private int questions;
 
     @Option(names = "--bind", split = ",", paramLabel = "D58,D59", description = "Open decisions the board answers for the captain.")
     private List<String> decisions;
+
+    @Option(names = "--card", paramLabel = "-|FILE",
+            description = "The decision card this round puts before the captain, as JSON, {question, title, context, options: [{key, text, authorises}], recommend: {key, why}}, from standard input (-) or a file; question is the board question that answers it, which the answer's data names as question; EDI raises it on your task and binds it, so choosing on the board is the captain's word.")
+    private String card;
 
     @Override
     public Integer call() {
@@ -38,6 +42,7 @@ final class BoardArmCommand implements Callable<Integer> {
                 .with("task", task)
                 .with("link", link)
                 .with("questions", questions)
-                .with("bind", decisions));
+                .with("bind", decisions)
+                .withJson("card", card == null ? null : core.contentOf(card)));
     }
 }

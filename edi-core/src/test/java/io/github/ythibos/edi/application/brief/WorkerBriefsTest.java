@@ -34,4 +34,14 @@ class WorkerBriefsTest {
         assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", true))).contains("Before you report done, " + worked);
         assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).doesNotContain("worked:");
     }
+
+    @Test
+    void tellsAScoutToPassItsBoardsDecisionCardWhenItArmsTheBoard() {
+        String brief = briefs.briefFor(BriefFixtures.scout());
+
+        assertThat(brief).contains("`edi board arm <board.html> --task fit-lamp --link <url> --questions <n>`",
+                "A decision the board asks is a card you pass with `--card <card.json>`",
+                "EDI raises the card on your task and binds it before the captain sees the board");
+        assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).doesNotContain("edi board arm");
+    }
 }

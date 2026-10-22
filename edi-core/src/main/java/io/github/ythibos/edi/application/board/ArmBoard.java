@@ -14,10 +14,13 @@ import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardRound;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -35,17 +38,19 @@ public class ArmBoard {
     private final DecisionStore decisions;
     private final BoardStore boards;
     private final EventLog events;
+    private final RaiseDecision raiseDecision;
     private final BoardListeners listeners;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public ArmBoard(EdiHome home, TaskStore tasks, DecisionStore decisions, BoardStore boards, EventLog events, BoardListeners listeners, Clock clock,
-            TransactionTemplate transaction) {
+    public ArmBoard(EdiHome home, TaskStore tasks, DecisionStore decisions, BoardStore boards, EventLog events, RaiseDecision raiseDecision,
+            BoardListeners listeners, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.decisions = decisions;
         this.boards = boards;
         this.events = events;
+        this.raiseDecision = raiseDecision;
         this.listeners = listeners;
         this.clock = clock;
         this.transaction = transaction;
@@ -62,9 +67,10 @@ public class ArmBoard {
         requireItsOwnWorker(task, worker);
         String board = boardFileOf(task, file).toString();
         round.bound().forEach(this::requireOpen);
+        BoardRound raised = withItsCardRaised(round, task, worker);
         Board armed = boards.listeningAt(board)
-                .map(listening -> postedAgain(listening, task, round))
-                .orElseGet(() -> boards.arm(task.id(), board, round, now));
+                .map(listening -> postedAgain(listening, task, raised))
+                .orElseGet(() -> boards.arm(task.id(), board, raised, now));
         events.record(new BoardArmed(task.id(), armed.id(), armed.file(), armed.bound()), Actor.worker(worker), now);
         return armed;
     }
@@ -90,6 +96,23 @@ public class ArmBoard {
     private void requireOpen(DecisionNumber number) {
         if (!decisions.get(number).isOpen()) {
             throw new Refusal(number + " is already answered; a board answers only open decisions.");
+        }
+    }
+
+    private BoardRound withItsCardRaised(BoardRound round, Task task, WorkerId worker) {
+        return round.carriedCard().map(card -> round.withItsCardRaisedAs(raised(card, task, worker))).orElse(round);
+    }
+
+    private DecisionNumber raised(BoardCard card, Task task, WorkerId worker) {
+        decisions.ofTask(task.id()).ifPresent(ArmBoard::requireStillOpen);
+        return raiseDecision.raise(new TaskReference.ById(task.id()), card.card(), Actor.worker(worker));
+    }
+
+    private static void requireStillOpen(Decision earlier) {
+        if (!earlier.isOpen()) {
+            throw new Refusal(earlier.number() + " on " + earlier.task() + " is already answered (\"" + earlier.answer().verbatim()
+                    + "\"), so a board round raises no card on it again; arm the round without --card, and report a further question to EDI with "
+                    + "edi status needs-decision.");
         }
     }
 

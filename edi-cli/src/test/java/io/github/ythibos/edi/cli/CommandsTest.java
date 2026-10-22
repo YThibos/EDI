@@ -315,6 +315,20 @@ class CommandsTest {
     }
 
     @Test
+    void armsAResearchBoardCarryingTheDecisionCardItPutsBeforeTheCaptain() {
+        core.answering(201, "EDI listens to the research board.\n");
+        String card = "{\"question\":\"close-out\",\"title\":\"Close it out?\",\"options\":[{\"key\":\"A\",\"text\":\"Ship the plan\","
+                + "\"authorises\":\"promote\"}],\"recommend\":{\"key\":\"A\",\"why\":\"it is ready\"}}";
+
+        int exitCode = edi(card + "\n", "board", "arm", home.resolve("tasks/scout/board.html").toString(), "--task", "scout",
+                "--link", "http://127.0.0.1:4387/session/1a2b3c", "--questions", "0", "--card", "-");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().body()).isEqualTo("{\"file\":\"" + home.resolve("tasks/scout/board.html") + "\",\"task\":\"scout\","
+                + "\"link\":\"http://127.0.0.1:4387/session/1a2b3c\",\"questions\":0,\"card\":" + card + "}");
+    }
+
+    @Test
     void postsANewRoundOnAListeningBoardByItsAbsolutePath() {
         core.answering(201, "Posted a new round on the research board.\n");
 
