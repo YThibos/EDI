@@ -3,15 +3,20 @@ package io.github.ythibos.edi.web.presence;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
+import io.github.ythibos.edi.application.fleet.ReadyForReview;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.application.presence.Setback;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.WaitingWords;
 import io.github.ythibos.edi.web.text.Words;
 
 @Component
@@ -28,7 +33,7 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     @Override
     public String text(ReturnBrief brief) {
         List<String> lines = new ArrayList<>(List.of(INSTRUCTION, "While you were away (" + PresenceWords.of(brief.left()) + "):"));
-        lines.addAll(section("Decisions waiting on you", brief.decisions(), ReturnBriefText::decisionLine));
+        lines.addAll(section("Needs your decision", waitingLines(brief.waiting()), Function.identity()));
         lines.addAll(section("Landed", brief.landed(), landed -> landed.task().intake().title()));
         lines.addAll(section("Failed", brief.setbacks(), ReturnBriefText::setbackLine));
         lines.addAll(section("Running", brief.running(), ReturnBriefText::runningLine));
@@ -44,8 +49,25 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
         return lines;
     }
 
+    private static List<String> waitingLines(WaitingOnTheCaptain waiting) {
+        return Stream.of(
+                        waiting.decisions().stream().map(ReturnBriefText::decisionLine),
+                        waiting.boards().stream().map(ReturnBriefText::boardLine),
+                        waiting.reviews().stream().map(ReturnBriefText::reviewLine))
+                .flatMap(Function.identity())
+                .toList();
+    }
+
     private static String decisionLine(OpenDecision open) {
         return open.decision().number() + "  " + open.decision().card().title();
+    }
+
+    private static String boardLine(WaitingBoard waiting) {
+        return WaitingWords.board(waiting.task().intake().title(), waiting.board().openQuestions(), waiting.board().link());
+    }
+
+    private static String reviewLine(ReadyForReview ready) {
+        return WaitingWords.review(ready.task().intake().title(), ready.delivery().address().url());
     }
 
     private static String setbackLine(Setback setback) {
@@ -62,7 +84,6 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     }
 
     private static String runningLine(OngoingTask ongoing) {
-        String draft = ongoing.delivery() == null ? "" : ", ready for your review: " + ongoing.delivery().address().url();
-        return ongoing.task().intake().title() + draft;
+        return ongoing.task().intake().title();
     }
 }

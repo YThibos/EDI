@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,8 +26,10 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.FakeBoardHost;
 import io.github.ythibos.edi.testing.FixtureRepository;
+import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -118,6 +119,21 @@ class CleanUpTaskTest {
     }
 
     @Test
+    void stopsEveryOtherTaskWaitingForTheTaskItCleansUp() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        home.addTask().add(Intakes.shipBlockedBy("paint-lamp", "Paint the lamp", "fit-lamp"), Actor.PRIMARY);
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+        upstream.commit("Fit the lamp, squashed");
+
+        cleanUp("fit-lamp");
+
+        assertThat(home.tasks().get(new TaskId("paint-lamp")).intake().blockedBy()).isEmpty();
+    }
+
+    @Test
     void refusesACopyThatHoldsANestedRepository() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
@@ -155,7 +171,7 @@ class CleanUpTaskTest {
         Path board = Files.writeString(Files.createDirectories(taskDirectory).resolve("board.html"), "<!doctype html>\n");
         home.boardHost().holdsTheNextPollOpen();
         CountDownLatch polled = home.boardHost().expectPolls(1);
-        home.armBoard().arm(scout.id(), TaskReference.parse("map-caves"), board, List.of());
+        home.armBoard().arm(scout.id(), TaskReference.parse("map-caves"), board, BoardRounds.binding());
         FakeBoardHost.await(polled);
         home.recordStatus().report(scout.id(), StatusState.DONE, null, null, "The caves are mapped.");
         Files.writeString(taskDirectory.resolve("report.md"), "The caves run north.\n");

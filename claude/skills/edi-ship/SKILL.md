@@ -33,12 +33,13 @@ description: >-
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
 - Carry the captain's answer back with `edi steer <task> --resolves <key>`.
+- Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as EDI's until the worker acknowledges the steer that resolves it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.
 
 ## Done, delivery and landing
 
 - A ship's done counts once its merge request is open, as a draft or ready for review, or already merged, at the copy's head, and its branch adds no SNAPSHOT version.
-- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green; report its full address to the captain, who merges it.
+- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report.
 - EDI records a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
 - `local-branch`: EDI fetches the ready branch into the captain's checkout by ref only.
 - `local-apply`: on the captain's request only, EDI applies the change to the captain's checkout without a commit.

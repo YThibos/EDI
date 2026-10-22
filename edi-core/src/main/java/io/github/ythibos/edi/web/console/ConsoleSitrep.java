@@ -10,6 +10,8 @@ public record ConsoleSitrep(
         String address,
         PresenceShown presence,
         List<Card> decisions,
+        List<Board> boards,
+        List<Review> reviews,
         List<Answer> answered,
         List<Ongoing> ongoing,
         List<Landed> landed,
@@ -21,6 +23,8 @@ public record ConsoleSitrep(
 
     public ConsoleSitrep {
         decisions = List.copyOf(decisions);
+        boards = List.copyOf(boards);
+        reviews = List.copyOf(reviews);
         answered = List.copyOf(answered);
         ongoing = List.copyOf(ongoing);
         landed = List.copyOf(landed);
@@ -38,6 +42,12 @@ public record ConsoleSitrep(
     }
 
     public record Recommendation(String key, String why) {
+    }
+
+    public record Board(String task, String title, List<String> projects, int questions, String link) {
+    }
+
+    public record Review(String task, String title, List<String> projects, String url) {
     }
 
     public record Answer(String number, String task, List<String> projects, String title, String verbatim, String option, String channel,

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardAnswer;
 import io.github.ythibos.edi.domain.board.BoardId;
+import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -21,7 +22,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 @Component
 public class BoardStore {
 
-    private static final String SELECT_BOARDS = "select id, task_id, file, rounds, armed_at, ended_at, retired_at from board ";
+    private static final String SELECT_BOARDS = "select id, task_id, file, link, rounds, open_questions, armed_at, ended_at, retired_at from board ";
     private static final String LISTENING = "ended_at is null and retired_at is null";
     private static final String SELECT_ANSWERS = """
             select board_id, round, decision_number, verbatim, option_key, received_at, settled_at, refused_because
@@ -34,22 +35,30 @@ public class BoardStore {
         this.store = store;
     }
 
-    public Board arm(TaskId task, String file, List<DecisionNumber> bound, Instant at) {
-        long id = store.sql("insert into board (task_id, file, rounds, armed_at) values (:task, :file, 0, :at) returning id")
+    public Board arm(TaskId task, String file, BoardRound round, Instant at) {
+        long id = store.sql("""
+                        insert into board (task_id, file, link, rounds, open_questions, armed_at)
+                        values (:task, :file, :link, 0, :questions, :at) returning id""")
                 .param("task", task.value())
                 .param("file", file)
+                .param("link", round.link())
+                .param("questions", round.questions())
                 .param("at", Columns.text(at))
                 .query((row, _) -> row.getLong(1))
                 .single();
-        Board armed = new Board(new BoardId(id), task, file, bound, 0, at, null, null);
+        Board armed = new Board(new BoardId(id), task, file, round.link(), round.bound(), 0, round.questions(), at, null, null);
         bind(armed);
         return armed;
     }
 
     public void update(Board board) {
-        store.sql("update board set rounds = :rounds, ended_at = :ended, retired_at = :retired where id = :id")
+        store.sql("""
+                        update board set link = :link, rounds = :rounds, open_questions = :questions, ended_at = :ended, retired_at = :retired
+                        where id = :id""")
                 .param("id", board.id().value())
+                .param("link", board.link())
                 .param("rounds", board.rounds())
+                .param("questions", board.openQuestions())
                 .param("ended", Columns.text(board.endedAt()))
                 .param("retired", Columns.text(board.retiredAt()))
                 .update();
@@ -114,15 +123,15 @@ public class BoardStore {
 
     private List<Board> boards(StatementSpec query) {
         return query.query((row, _) -> unboundBoardOf(row)).list().stream()
-                .map(board -> new Board(board.id(), board.task(), board.file(), boundTo(board.id()), board.rounds(), board.armedAt(),
-                        board.endedAt(), board.retiredAt()))
+                .map(board -> new Board(board.id(), board.task(), board.file(), board.link(), boundTo(board.id()), board.rounds(),
+                        board.openQuestions(), board.armedAt(), board.endedAt(), board.retiredAt()))
                 .toList();
     }
 
     private static Board unboundBoardOf(ResultSet row) throws SQLException {
-        return new Board(new BoardId(row.getLong("id")), new TaskId(row.getString("task_id")), row.getString("file"), List.of(),
-                row.getInt("rounds"), Columns.instant(row.getString("armed_at")), Columns.instant(row.getString("ended_at")),
-                Columns.instant(row.getString("retired_at")));
+        return new Board(new BoardId(row.getLong("id")), new TaskId(row.getString("task_id")), row.getString("file"), row.getString("link"), List.of(),
+                row.getInt("rounds"), row.getInt("open_questions"), Columns.instant(row.getString("armed_at")),
+                Columns.instant(row.getString("ended_at")), Columns.instant(row.getString("retired_at")));
     }
 
     private List<DecisionNumber> boundTo(BoardId board) {

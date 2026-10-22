@@ -49,13 +49,13 @@ class PresenceTextsTest {
     void briefsTheReturningCaptainInSectionsToScan() throws IOException {
         TestHome home = homeWithADecisionAndWork();
 
-        String brief = new ReturnBriefText().text(new ReturnBrief(PRESENT.quiet(NOW), home.fleetSnapshot().snapshot().decisions(), List.of(),
+        String brief = new ReturnBriefText().text(new ReturnBrief(PRESENT.quiet(NOW), home.fleetSnapshot().snapshot().waiting(), List.of(),
                 List.of(), home.fleetSnapshot().snapshot().ongoing()));
 
         assertThat(brief).isEqualTo("""
                 EDI return brief: show the captain the lines below verbatim, in one fenced block, before you answer their message.
                 While you were away (quiet since 2026-10-17 09:30Z, on request):
-                Decisions waiting on you (1)
+                Needs your decision (1)
                   D1  Which lamp?
                 Landed (0)
                 Failed (0)

@@ -160,6 +160,17 @@ class TaskTest {
                 new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id), null), TaskState.QUEUED, "", null, AT, null));
     }
 
+    @Test
+    void stopsWaitingForATaskThatClosedAndKeepsWaitingForTheOthers() {
+        TaskId cleanup = new TaskId("refuse-cleanup");
+        TaskId drill = new TaskId("choose-drill");
+        Task waiting = Task.queued(new TaskId("plan-timesheet"),
+                new Intake(TaskKind.SHIP, "Plan the timesheet", List.of(new ProjectName("harness")), null, null, List.of(cleanup, drill), null), "", AT);
+
+        assertThat(waiting.noLongerWaitingFor(cleanup).intake().blockedBy()).containsExactly(drill);
+        assertThat(waiting.noLongerWaitingFor(cleanup).noLongerWaitingFor(drill).intake().blockedBy()).isEmpty();
+    }
+
     private static Task ship() {
         return Task.queued(new TaskId("fit-lamp"),
                 new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null), "  Intake notes. ", AT);

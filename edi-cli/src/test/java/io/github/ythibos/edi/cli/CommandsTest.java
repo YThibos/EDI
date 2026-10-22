@@ -298,15 +298,33 @@ class CommandsTest {
     }
 
     @Test
-    void armsAResearchBoardByItsAbsolutePathWithTheDecisionsItAnswers() {
+    void armsAResearchBoardByItsAbsolutePathWithItsLinkItsQuestionsAndTheDecisionsItAnswers() {
         core.answering(201, "EDI listens to the research board.\n");
 
-        int exitCode = edi("", "board", "arm", home.resolve("tasks/scout/board.html").toString(), "--task", "scout", "--bind", "D58,D59");
+        int exitCode = edi("", "board", "arm", home.resolve("tasks/scout/board.html").toString(), "--task", "scout",
+                "--link", "http://127.0.0.1:4387/session/1a2b3c", "--questions", "3", "--bind", "D58,D59");
+        int uncounted = edi("", "board", "arm", home.resolve("tasks/scout/board.html").toString(), "--task", "scout",
+                "--link", "http://127.0.0.1:4387/session/1a2b3c");
 
         assertThat(exitCode).isZero();
+        assertThat(uncounted).isEqualTo(2);
+        assertThat(core.requests()).hasSize(1);
         assertThat(core.received().target()).isEqualTo("/api/boards");
         assertThat(core.received().body()).isEqualTo("{\"file\":\"" + home.resolve("tasks/scout/board.html") + "\",\"task\":\"scout\","
-                + "\"bind\":[\"D58\",\"D59\"]}");
+                + "\"link\":\"http://127.0.0.1:4387/session/1a2b3c\",\"questions\":3,\"bind\":[\"D58\",\"D59\"]}");
+    }
+
+    @Test
+    void postsANewRoundOnAListeningBoardByItsAbsolutePath() {
+        core.answering(201, "Posted a new round on the research board.\n");
+
+        int exitCode = edi("", "board", "post", home.resolve("tasks/scout/board.html").toString(), "--link", "http://127.0.0.1:4387/session/1a2b3c",
+                "--questions", "2");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().target()).isEqualTo("/api/boards/rounds");
+        assertThat(core.received().body()).isEqualTo("{\"file\":\"" + home.resolve("tasks/scout/board.html")
+                + "\",\"link\":\"http://127.0.0.1:4387/session/1a2b3c\",\"questions\":2}");
     }
 
     @Test

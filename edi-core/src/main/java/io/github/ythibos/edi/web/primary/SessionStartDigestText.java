@@ -10,6 +10,9 @@ import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
+import io.github.ythibos.edi.application.fleet.ReadyForReview;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
@@ -44,7 +47,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.addAll(memoryOf(digest.memory()));
         lines.addAll(setupOf(digest.missingFromTheHome()));
         lines.addAll(limitStop(digest.previousLimitStop()));
-        lines.addAll(decisions(digest.fleet()));
+        lines.addAll(waitingOnTheCaptain(digest.fleet()));
         lines.add(workers.text(digest.workers()).stripTrailing());
         lines.addAll(parked(digest.fleet()));
         lines.add("Queued: " + digest.fleet().queued().size() + ".");
@@ -100,14 +103,25 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
                 + Moments.minute(stopped.limitReachedAt()) + "; the workers parked on a limit are listed below.");
     }
 
-    private static List<String> decisions(FleetSnapshot fleet) {
-        List<String> lines = new ArrayList<>(List.of(Words.counted("Decisions waiting on the captain", fleet.decisions().size())));
-        fleet.decisions().forEach(open -> lines.add("  " + decisionLine(open)));
+    private static List<String> waitingOnTheCaptain(FleetSnapshot fleet) {
+        WaitingOnTheCaptain waiting = fleet.waiting();
+        List<String> lines = new ArrayList<>(List.of(Words.counted("Waiting on the captain", waiting.count())));
+        waiting.decisions().forEach(open -> lines.add("  " + decisionLine(open)));
+        waiting.boards().forEach(board -> lines.add("  " + boardLine(board)));
+        waiting.reviews().forEach(ready -> lines.add("  " + reviewLine(ready)));
         return lines;
     }
 
     private static String decisionLine(OpenDecision open) {
         return open.decision().number() + "  " + open.task().id() + "  " + open.decision().card().title();
+    }
+
+    private static String boardLine(WaitingBoard waiting) {
+        return "board  " + waiting.task().id() + "  " + Words.quantity(waiting.board().openQuestions(), "question") + " at " + waiting.board().link();
+    }
+
+    private static String reviewLine(ReadyForReview ready) {
+        return "review  " + ready.task().id() + "  " + ready.delivery().address().url();
     }
 
     private static List<String> parked(FleetSnapshot fleet) {

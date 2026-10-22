@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.application.worker;
 
+import static java.util.function.Predicate.not;
+
 import java.time.Instant;
 import java.util.List;
 
@@ -8,12 +10,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
+import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 @Service
@@ -22,12 +26,14 @@ public class WorkerInbox {
     static final String READ_WITH_EDI_INBOX = "edi inbox";
 
     private final InboxStore inbox;
+    private final WorkerStore workers;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public WorkerInbox(InboxStore inbox, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public WorkerInbox(InboxStore inbox, WorkerStore workers, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.inbox = inbox;
+        this.workers = workers;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -47,9 +53,14 @@ public class WorkerInbox {
                     .orElseThrow(() -> new Refusal("No message " + number + " waits for " + worker.task() + "."))
                     .acknowledged(now);
             inbox.save(acknowledged);
+            settleTheQuestionItResolves(worker, acknowledged, now);
             events.record(new SteerAcknowledged(worker.task(), number), Actor.worker(worker), now);
             return acknowledged;
         });
+    }
+
+    private void settleTheQuestionItResolves(WorkerId id, InboxMessage acknowledged, Instant now) {
+        workers.get(id).filter(not(Worker::isRetired)).ifPresent(worker -> workers.update(worker.settledBy(acknowledged, now)));
     }
 
     private InboxMessage receivedNow(InboxMessage message, WorkerId worker, Instant now) {

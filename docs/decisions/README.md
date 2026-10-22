@@ -203,3 +203,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-155](ADR-155-a-ships-done-accepts-a-merge-request-that-is-a-draft-ready-or-merged.md) | A ship's done is accepted once its claims hold, and its merge request may be a draft, ready for review or merged | Design |
 | [ADR-156](ADR-156-a-tasks-merge-request-is-followed-whatever-order-things-happen-in.md) | A task's merge request is recorded as soon as it exists, and a merge the forge shows is followed whatever the order | Design |
 | [ADR-157](ADR-157-a-merge-the-forge-shows-hands-the-work-over-at-cleanup.md) | Cleanup retires a landed task's copy, branch and workers, and a merge the forge shows hands the work over | Design |
+| [ADR-158](ADR-158-everything-that-waits-on-the-captain-is-in-the-decision-zone.md) | Everything that waits on the captain is in the decision zone, whatever holds its task | Design |
+| [ADR-159](ADR-159-a-board-round-names-its-link-and-its-questions.md) | A board round names its link and how many questions it puts before the captain | Design |
+| [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
+| [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |

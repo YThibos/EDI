@@ -27,6 +27,18 @@ public record StatusReport(StatusState state, StatusKey key, Instant until, Stri
         return report;
     }
 
+    public static StatusReport resolvedBy(StatusKey key, int message) {
+        return new StatusReport(StatusState.RESOLVED, key, null, "resolved by message " + message);
+    }
+
+    public boolean isForThePrimary() {
+        return state == StatusState.NEEDS_DECISION || state == StatusState.BLOCKED;
+    }
+
+    public boolean asks(StatusKey question) {
+        return isForThePrimary() && question.equals(key);
+    }
+
     public boolean isDone() {
         return state == StatusState.DONE;
     }

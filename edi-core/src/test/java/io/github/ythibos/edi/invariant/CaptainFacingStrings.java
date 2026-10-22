@@ -13,6 +13,12 @@ import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.application.presence.CaptainNotices;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.PilotComparison;
 import io.github.ythibos.edi.domain.dispatch.ShipMeasure;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -22,12 +28,16 @@ import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
+import io.github.ythibos.edi.domain.status.StatusReport;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketProposal;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -59,8 +69,10 @@ final class CaptainFacingStrings {
         generated.addAll(presences().stream().map(PresenceWords::of).toList());
         TestHome home = fleetIn(directory.resolve("fleet"));
         generated.add(new ReturnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
-                home.fleetSnapshot().snapshot().decisions(), home.fleetSnapshot().snapshot().landed(), List.of(),
+                home.fleetSnapshot().snapshot().waiting(), home.fleetSnapshot().snapshot().landed(), List.of(),
                 home.fleetSnapshot().snapshot().ongoing())));
+        generated.add(new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(),
+                Presence.presentSince(TestHome.START))));
         generated.add(new MigrationReportText().text(TestHome.in(directory.resolve("migration")).migrateFirstofficer().dryRun(OLD_HOME.toAbsolutePath())));
         generated.add(JSON.writeValueAsString(new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), NOW, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
@@ -133,9 +145,18 @@ final class CaptainFacingStrings {
 
     private static TestHome fleetIn(Path directory) throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
-        WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+        Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
         home.storing(List.of(WorkerFixtures.queued("choose-lamp", TaskKind.CAPTAIN, "harness", null), WorkerFixtures.queuedShip("tune-horn", "harness", "HRN-4")));
         home.raiseDecision().raise(new TaskReference.ById(new TaskId("choose-lamp")), Cards.card("Which lamp?"), Actor.PRIMARY);
+        home.boards().arm(new TaskId("tune-horn"), directory.resolve("board.html").toString(), BoardRounds.asking(2), TestHome.START);
+        readyForReview(home, lamp);
         return home;
+    }
+
+    private static void readyForReview(TestHome home, Worker lamp) {
+        home.workers().update(home.workers().get(lamp.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), NOW));
+        MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
+        home.deliveries().save(Delivery.of(lamp.id().task(),
+                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", null, null), NOW));
     }
 }

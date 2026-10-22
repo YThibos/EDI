@@ -34,6 +34,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.FakeBoardHost;
 import io.github.ythibos.edi.testing.TestHome;
@@ -77,6 +78,30 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void letsThePrimaryPutANewRoundOfAListeningBoardBeforeTheCaptainWhenItsScoutCannotArmItAgain() {
+        Board armed = armQuietly(boardFile, decision);
+        home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
+
+        Board posted = home.postBoardRound().post(boardFile, "http://127.0.0.1:4387/session/9f8e7d", 2, Actor.PRIMARY);
+
+        assertThat(posted.id()).isEqualTo(armed.id());
+        assertThat(posted.waitsOnTheCaptain()).isTrue();
+        assertThat(posted.openQuestions()).isEqualTo(2);
+        assertThat(posted.link()).isEqualTo("http://127.0.0.1:4387/session/9f8e7d");
+        assertThat(posted.bound()).containsExactly(decision);
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardRoundPosted");
+        assertThat(home.boards().get(armed.id())).contains(posted);
+    }
+
+    @Test
+    void refusesARoundOnAFileWhereNoBoardListens() throws IOException {
+        Path unarmed = Files.writeString(home.home().taskDirectory(SCOUT).resolve("other.html"), "<!doctype html>\n");
+
+        assertThatThrownBy(() -> home.postBoardRound().post(unarmed, BoardRounds.LINK, 1, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("No research board listens at " + unarmed + "; its scout arms it with edi board arm.");
+    }
+
+    @Test
     void rebindsABoardThatIsArmedAgainInsteadOfListeningTwice() {
         Board first = arm(boardFile);
 
@@ -94,7 +119,7 @@ class ResearchBoardsTest {
         assertThatThrownBy(() -> arm(elsewhere)).isInstanceOf(Refusal.class).hasMessageContaining("lives in its task's directory");
         assertThatThrownBy(() -> arm(boardFile, decision)).isInstanceOf(Refusal.class)
                 .hasMessage(decision + " is already answered; a board answers only open decisions.");
-        assertThatThrownBy(() -> home.armBoard().arm(scout.id(), new TaskReference.ById(LAMP_CHOICE), boardFile, List.of()))
+        assertThatThrownBy(() -> home.armBoard().arm(scout.id(), new TaskReference.ById(LAMP_CHOICE), boardFile, BoardRounds.binding()))
                 .isInstanceOf(Refusal.class)
                 .hasMessage("lantern-research#1 arms boards for its own task, lantern-research, not for choose-lamp.");
     }
@@ -223,7 +248,7 @@ class ResearchBoardsTest {
     }
 
     private Board arm(Path file, DecisionNumber... bound) {
-        return home.armBoard().arm(scout.id(), new TaskReference.ById(SCOUT), file, List.of(bound));
+        return home.armBoard().arm(scout.id(), new TaskReference.ById(SCOUT), file, BoardRounds.binding(bound));
     }
 
     private Board armQuietly(Path file, DecisionNumber... bound) {

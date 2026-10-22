@@ -1,4 +1,4 @@
-╔══ NEEDS YOUR DECISION ══ 1 open ══════════════════════════════════════
+╔══ NEEDS YOUR DECISION ══ 2 open ══════════════════════════════════════
 ║
 ╟── HarbourMaster + A-project-title-of-forty-one-characters-x ────
 ║
@@ -22,6 +22,16 @@
 ║        » Recommended: A - months match how the captain reviews the
 ║          season, and the archive of each month never changes once the
 ║          month has closed, which keeps every earlier page stable
+║
+╟── quayside ────────────────────────────────
+║
+║  D59   Rent the crane
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
 ║
 ╚═══════════════════════════════════════════════════════════════════════
 

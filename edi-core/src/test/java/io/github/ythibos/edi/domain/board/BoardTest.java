@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Cards;
 
 class BoardTest {
@@ -28,7 +29,40 @@ class BoardTest {
     private static final Function<DecisionNumber, DecisionCard> LAMP_CARDS = _ -> Cards.card("Which lamp?");
 
     private final Board board = new Board(new BoardId(4), new TaskId("lantern-research"), "/home/user/.edi/data/tasks/lantern-research/board.html",
-            List.of(D58, D59), 0, ARMED, null, null);
+            BoardRounds.LINK, List.of(D58, D59), 0, 2, ARMED, null, null);
+
+    @Test
+    void waitsOnTheCaptainWhileARoundHoldsQuestionsAndAgainOnceANewRoundIsPosted() {
+        Board answered = board.answeredOnceMore();
+        Board postedAgain = answered.posted(BoardRounds.asking(1, D59));
+
+        assertThat(board.waitsOnTheCaptain()).isTrue();
+        assertThat(answered.waitsOnTheCaptain()).isFalse();
+        assertThat(postedAgain.waitsOnTheCaptain()).isTrue();
+        assertThat(postedAgain.openQuestions()).isEqualTo(1);
+        assertThat(postedAgain.bound()).containsExactly(D59);
+        assertThat(board.ended(ANSWERED).waitsOnTheCaptain()).isFalse();
+        assertThat(board.retired(ANSWERED).waitsOnTheCaptain()).isFalse();
+    }
+
+    @Test
+    void refusesARoundWithoutAWebLinkOrWithNothingToAsk() {
+        assertThatThrownBy(() -> new BoardRound("/tmp/board.html", 2, List.of())).isInstanceOf(Refusal.class)
+                .hasMessageContaining("names the web link the captain opens the board at");
+        assertThatThrownBy(() -> new BoardRound(null, 2, List.of())).isInstanceOf(Refusal.class);
+        assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, -1, List.of(D58))).isInstanceOf(Refusal.class)
+                .hasMessage("A board round counts its questions from 0, not -1.");
+        assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, 0, List.of())).isInstanceOf(Refusal.class)
+                .hasMessage("A board round puts a question or an open decision before the captain; this one counts no question and binds no decision.");
+    }
+
+    @Test
+    void leavesARoundThatAsksOnlyItsBoundDecisionsToTheirCards() {
+        Board boundOnly = board.answeredOnceMore().posted(BoardRounds.asking(0, D58, D59));
+
+        assertThat(boundOnly.waitsOnTheCaptain()).isFalse();
+        assertThat(boundOnly.bound()).containsExactly(D58, D59);
+    }
 
     @Test
     void readsAnAnswerFromTheContextDataTheBoardSent() {
