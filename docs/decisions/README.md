@@ -91,7 +91,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-042](ADR-042-one-home-token.md) | One home token authenticates the API until callers are told apart (superseded by ADR-049) | Design |
 | [ADR-043](ADR-043-the-core-renders-text.md) | The core renders text and JSON; the command is a pipe | Architecture |
 | [ADR-044](ADR-044-migration-reads-the-old-grammar.md) | The migration reads the old backlog with its own grammar and maps it through the domain | Design |
-| [ADR-045](ADR-045-native-round-trip-in-the-smoke-test.md) | The native round trip is measured by the native smoke test | Design |
+| [ADR-045](ADR-045-native-round-trip-in-the-smoke-test.md) | The native round trip is measured by the native smoke test (superseded by ADR-164) | Design |
 | [ADR-046](ADR-046-where-the-fleet-snapshot-puts-open-work.md) | Where the fleet snapshot puts open work | Design |
 | [ADR-047](ADR-047-the-captain-report-matches-the-old-renderer.md) | The captain report matches the old renderer byte for byte | Design |
 | [ADR-048](ADR-048-the-command-measures-its-pane.md) | The command measures its pane and the core sizes the report | Design |
@@ -208,3 +208,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
 | [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |
 | [ADR-162](ADR-162-edi-shows-the-machines-local-time-and-stores-utc.md) | EDI shows times in the machine's local time zone and stores them in UTC | Design |
+| [ADR-164](ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md) | AT-39 scales its limit to the machine's own pace, measured in the same run | Design |
