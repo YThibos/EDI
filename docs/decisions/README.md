@@ -199,4 +199,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-151](ADR-151-a-new-primary-session-opens-the-sitrep-page.md) | A new primary session opens the console's sitrep page in the captain's browser | Design |
 | [ADR-152](ADR-152-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
 | [ADR-153](ADR-153-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
-| [ADR-154](ADR-154-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the command and the core without the caller's EDI variables | Design |
+| [ADR-154](ADR-154-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the core without the caller's EDI variables | Design |

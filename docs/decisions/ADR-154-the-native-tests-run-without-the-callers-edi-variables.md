@@ -1,4 +1,4 @@
-# ADR-154: The native tests start the command and the core without the caller's EDI variables
+# ADR-154: The native tests start the core without the caller's EDI variables
 
 **Date:** 21/10/2026
 
@@ -7,11 +7,12 @@
 **Kind:** Design
 
 **Context and constraints:** AGENTS.md has a worker run `./mvnw -Pnative verify` when a change touches Spring configuration, and EDI starts every worker with `EDI_HOME`, `EDI_ROLE`, `EDI_TASK_ID`, `EDI_WORKER` and `EDI_TOKEN_FILE` in its environment (`LaunchWorker`).
-`NativeSmokeIT`, `NativeRecoveryIT` and `NativeLifecycleIT` start the native command and core with the caller's environment, setting `EDI_HOME` to their temporary home but leaving the other variables in place.
-The command reads `EDI_TOKEN_FILE` before the home's token, so inside a worker it presented the worker's own token to the test's core, which refused it: 13 of the 20 native tests failed in a worker and passed outside one.
+EDI-27 already made `NativeSmokeIT`, `NativeRecoveryIT` and `NativeLifecycleIT` remove every `EDI_` variable from the environment of the native command they start.
+`NativeSmokeIT` and `NativeRecoveryIT` still started the native core with the caller's environment, setting `EDI_HOME` to their temporary home but leaving the other variables in place.
+Inside a worker the core so inherited the worker's `EDI_ROLE`, `EDI_TASK_ID`, `EDI_WORKER` and `EDI_TOKEN_FILE`, and 13 of the 20 native tests failed in a worker and passed outside one.
 
-**Decision:** Each of the three native test classes removes every variable whose name starts with `EDI_` from the environment of the command and the core it starts, before it sets its own, as it already removes the `TMUX` and Claude Code variables.
-EDI-27 made the same change for the command's environment on its own branch; this record covers the command and the core alike.
+**Decision:** `NativeSmokeIT` and `NativeRecoveryIT` remove every variable whose name starts with `EDI_` from the environment of the core they start, before they set their own, as they already remove the `TMUX` and `GIT_CONFIG_` variables.
+This extends the rule EDI-27 set for the command to the core, so every program a native test starts runs without the caller's `EDI_` variables.
 
 **Motivation:** The native tests prove the same thing in a worker, in the primary's terminal and in CI.
 
