@@ -24,6 +24,12 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     private static final String SECTION_RULE = "─";
     private static final Comparator<Task> NEWEST_FILED_FIRST = Comparator.comparing(CaptainReportPresenter::filedOn).reversed();
 
+    private final PresenceWords presenceWords;
+
+    public CaptainReportPresenter(PresenceWords presenceWords) {
+        this.presenceWords = presenceWords;
+    }
+
     @Override
     public Class<CaptainReport> presents() {
         return CaptainReport.class;
@@ -44,11 +50,11 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return lines.stream().map(CaptainReportPresenter::withoutTrailingSpaces).collect(Collectors.joining("\n", "", "\n"));
     }
 
-    private static List<String> presenceOf(CaptainReport report, int width) {
+    private List<String> presenceOf(CaptainReport report, int width) {
         if (!report.showsThePresence()) {
             return List.of();
         }
-        List<String> lines = new ArrayList<>(WordWrap.hanging(Glyphs.safe("Presence: " + PresenceWords.of(report.presence())), width, "", "  "));
+        List<String> lines = new ArrayList<>(WordWrap.hanging(Glyphs.safe("Presence: " + presenceWords.of(report.presence())), width, "", "  "));
         lines.add("");
         return lines;
     }

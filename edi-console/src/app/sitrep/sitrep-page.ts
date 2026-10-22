@@ -11,6 +11,7 @@ import { HudStrip } from '../console/hud-strip';
 import { LandedList } from '../console/landed-list';
 import { OngoingList } from '../console/ongoing-list';
 import { PresenceChoice, Sitrep } from '../console/sitrep';
+import { shipMoment } from '../console/stardate';
 
 type Access = 'loading' | 'signed-in' | 'signed-out' | 'unreachable';
 
@@ -28,6 +29,7 @@ export class SitrepPage {
   protected readonly sitrep = signal<Sitrep | null>(null);
   protected readonly access = signal<Access>('loading');
   protected readonly live = signal(false);
+  protected readonly shipMoment = shipMoment;
   protected readonly waitingOnTheCaptain = computed(() => {
     const sitrep = this.sitrep();
     if (!sitrep) {

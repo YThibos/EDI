@@ -41,6 +41,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.web.PresenterFixtures;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -49,7 +50,7 @@ class SitrepConsolePresenterTest {
     private static final Instant NOW = PresenterFixtures.AT.plusSeconds(3_600);
     private static final MergeRequestAddress DRAFT = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 12);
 
-    private final SitrepConsolePresenter presenter = new SitrepConsolePresenter();
+    private final SitrepConsolePresenter presenter = PresenterFixtures.sitrepConsolePresenter();
 
     @Test
     void presentsTheDecisionDeckWithEachCardsOptionsAndRecommendation() {
@@ -129,12 +130,12 @@ class SitrepConsolePresenterTest {
 
         String json = new JsonMapper().writeValueAsString(sitrep);
 
-        assertThat(json).contains("\"schema\":\"edi-sitrep.v1\"", "\"generated\":\"2026-10-15T10:30:00Z\"", "\"number\":\"D58\"",
+        assertThat(json).contains("\"schema\":\"edi-sitrep.v1\"", "\"generated\":\"2026-10-15T10:30:00Z\"", "\"zone\":\"UTC\"", "\"number\":\"D58\"",
                 "\"recommended\":{\"key\":\"A\",\"why\":\"it is enough\"}", "\"landedTotal\":0", "\"chartedTotal\":0");
     }
 
     private ConsoleSitrep presented(FleetSnapshot fleet) {
-        return presenter.present(fleet, NOW, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW));
+        return presenter.present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW));
     }
 
     private static Task ship(String id, String title) {

@@ -200,3 +200,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-152](ADR-152-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
 | [ADR-153](ADR-153-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
 | [ADR-154](ADR-154-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the core without the caller's EDI variables | Design |
+| [ADR-155](ADR-155-edi-shows-the-machines-local-time-and-stores-utc.md) | EDI shows times in the machine's local time zone and stores them in UTC | Design |

@@ -10,11 +10,12 @@ import { shipTime } from './stardate';
 })
 export class AnsweredCard {
   readonly answer = input.required<AnsweredDecision>();
+  readonly zone = input.required<string>();
 
   protected readonly projects = computed(() => projectsOf(this.answer().projects, this.answer().task));
   protected readonly given = computed(() => {
     const answer = this.answer();
     const option = answer.option ? `option ${answer.option}, ` : '';
-    return `${option}in the ${answer.channel} at ${shipTime(answer.answeredAt)}`;
+    return `${option}in the ${answer.channel} at ${shipTime(answer.answeredAt, this.zone())}`;
   });
 }

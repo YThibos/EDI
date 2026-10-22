@@ -3,7 +3,6 @@ package io.github.ythibos.edi.application.presence;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.presence.CalendarEntry;
 
 @Component
@@ -24,11 +24,13 @@ public class MeetingCalendar {
 
     private final OutlookCalendar outlook;
     private final PersonalConfiguration personal;
+    private final Clock clock;
     private Reading latest;
 
-    public MeetingCalendar(OutlookCalendar outlook, PersonalConfiguration personal) {
+    public MeetingCalendar(OutlookCalendar outlook, PersonalConfiguration personal, Clock clock) {
         this.outlook = outlook;
         this.personal = personal;
+        this.clock = clock;
     }
 
     public Optional<CalendarEntry> meetingInProgressAt(Instant now) {
@@ -40,7 +42,7 @@ public class MeetingCalendar {
     }
 
     private synchronized List<CalendarEntry> entriesOf(Instant now) {
-        LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+        LocalDate today = LocalDate.ofInstant(now, clock.zone());
         if (latest == null || !latest.isFreshFor(today, now)) {
             latest = read(today, now);
         }

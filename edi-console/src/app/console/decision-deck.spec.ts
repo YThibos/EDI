@@ -26,7 +26,7 @@ describe('DecisionDeck', () => {
 
     expect(deck.querySelector('.sr-badge')?.textContent?.trim()).toBe('answered');
     expect(deck.querySelector('.sr-ctx__v')?.textContent).toBe('B, and tune it lower');
-    expect(Array.from(deck.querySelectorAll('.sr-ctx__v')).map((value) => value.textContent)).toContain('option B, in the console at 05:40Z');
+    expect(Array.from(deck.querySelectorAll('.sr-ctx__v')).map((value) => value.textContent)).toContain('option B, in the console at 07:40 CEST');
     expect(deck.querySelector('.sr-call')?.classList).toContain('sr-call--last');
   });
 
@@ -112,6 +112,7 @@ describe('DecisionDeck', () => {
   async function dealt(sitrep: ReturnType<typeof sitrepFixture>): Promise<void> {
     fixture.componentRef.setInput('cards', sitrep.decisions);
     fixture.componentRef.setInput('answered', sitrep.answered);
+    fixture.componentRef.setInput('zone', sitrep.zone);
     await fixture.whenStable();
   }
 });

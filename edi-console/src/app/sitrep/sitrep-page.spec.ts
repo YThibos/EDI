@@ -40,7 +40,7 @@ describe('SitrepPage', () => {
 
     expect(texts(page, '.sr-stat__num')).toEqual(['1', '1', '1', '23']);
     expect(page.querySelector('.sr-stat')?.classList).toContain('sr-stat--hot');
-    expect(page.querySelector('.sr-clock__sd')?.textContent).toBe('SD 2026.288 · 06:17Z');
+    expect(page.querySelector('.sr-clock__sd')?.textContent).toBe('SD 2026.288 · 08:17 CEST');
     expect(page.querySelector('.sr-brand__wm')?.textContent).toBe('EDI');
     expect(text(page, '.sr-section__head .sr-sub')).toBe('1 waiting on you, Commander');
     expect(text(page, '.sr-decision__title')).toBe('Which lamp?');
@@ -48,6 +48,14 @@ describe('SitrepPage', () => {
     expect(text(page, '.sr-row__pr')).toBe('#12');
     expect(page.textContent).toContain('showing 2 of 23');
     expect(page.textContent).toContain('+21 more queued');
+  });
+
+  it('shows every time on the page in the machine’s zone that the core names', async () => {
+    const page = (await rendered(sitrepFixture({ zone: 'Europe/London' }))).nativeElement as HTMLElement;
+
+    expect(page.querySelector('.sr-clock__sd')?.textContent).toBe('SD 2026.288 · 07:17 BST');
+    expect(text(page, 'app-landed-list .sr-row__sub')).toContain('SD 2026.287 · 17:02 BST');
+    expect(text(page, '.sr-foot .sr-meta-mono')).toBe('edi-sitrep.v1 · 2026-10-15 07:17 BST');
   });
 
   it('puts what needs a decision, what is ongoing and what is charted next side by side, in that order', async () => {
@@ -93,8 +101,8 @@ describe('SitrepPage', () => {
     const chosen = http.expectOne('/api/presence');
     expect(chosen.request.body).toEqual({ mode: 'demo' });
     expect(chosen.request.headers.get('X-EDI-Console')).toBe('1');
-    chosen.flush('Presence: present for a demo until 2026-10-15 09:00Z.');
-    http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'present', demo: true, words: 'present for a demo until 2026-10-15 09:00Z' } }));
+    chosen.flush('Presence: present for a demo until 2026-10-15 11:00 CEST.');
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'present', demo: true, words: 'present for a demo until 2026-10-15 11:00 CEST' } }));
     await fixture.whenStable();
 
     expect(text(page, '.sr-presence__mode')).toBe('demo');
@@ -109,9 +117,9 @@ describe('SitrepPage', () => {
     expect(text(fixture.nativeElement, '.sr-notice__title')).toBe('Sign in to see the sitrep');
   });
 
-  async function rendered(): Promise<ComponentFixture<SitrepPage>> {
+  async function rendered(sitrep = sitrepFixture()): Promise<ComponentFixture<SitrepPage>> {
     const fixture = TestBed.createComponent(SitrepPage);
-    http.expectOne('/api/sitrep').flush(sitrepFixture());
+    http.expectOne('/api/sitrep').flush(sitrep);
     await fixture.whenStable();
     return fixture;
   }

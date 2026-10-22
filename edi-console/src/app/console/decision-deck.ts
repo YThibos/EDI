@@ -15,6 +15,7 @@ type DeckCard = { open: DecisionCard; answered?: never } | { answered: AnsweredD
 export class DecisionDeck {
   readonly cards = input.required<DecisionCard[]>();
   readonly answered = input.required<AnsweredDecision[]>();
+  readonly zone = input.required<string>();
   readonly settled = output<void>();
 
   protected readonly deck = computed<DeckCard[]>(() => [

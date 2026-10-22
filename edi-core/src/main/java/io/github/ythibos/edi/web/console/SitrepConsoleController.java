@@ -31,6 +31,6 @@ class SitrepConsoleController {
 
     @GetMapping("/api/sitrep")
     ConsoleSitrep sitrep() {
-        return presenter.present(fleet.snapshot(), clock.now(), machine.name(), personal.address(), presence.current());
+        return presenter.present(fleet.snapshot(), clock.now(), clock.zone(), machine.name(), personal.address(), presence.current());
     }
 }

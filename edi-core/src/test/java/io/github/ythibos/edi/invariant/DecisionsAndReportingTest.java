@@ -35,6 +35,7 @@ import io.github.ythibos.edi.domain.voice.CaptainVoice;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.CaptainReportPresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
@@ -216,7 +217,7 @@ class DecisionsAndReportingTest {
     }
 
     private static String captainReport(TestHome home, Turn turn) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
     }
 
     private static DecisionNumber raise(TestHome home, String task, String title) {

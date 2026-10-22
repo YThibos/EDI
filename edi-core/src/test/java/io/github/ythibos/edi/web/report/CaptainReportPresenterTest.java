@@ -30,7 +30,7 @@ class CaptainReportPresenterTest {
 
     private static final Instant FIRST_DAY = Instant.parse("2026-10-13T08:00:00Z");
 
-    private final CaptainReportPresenter presenter = new CaptainReportPresenter();
+    private final CaptainReportPresenter presenter = PresenterFixtures.captainReportPresenter();
 
     @Test
     void replacesEveryGlyphThatCouldWidenALineAndJoinsBrokenLines() {

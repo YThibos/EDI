@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.clock;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 import org.springframework.stereotype.Component;
@@ -13,5 +14,10 @@ public class SystemClock implements Clock {
     @Override
     public Instant now() {
         return Instant.now().truncatedTo(ChronoUnit.MILLIS);
+    }
+
+    @Override
+    public ZoneId zone() {
+        return ZoneId.systemDefault();
     }
 }

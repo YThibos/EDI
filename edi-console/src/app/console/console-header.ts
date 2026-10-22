@@ -10,11 +10,12 @@ import { stardate } from './stardate';
 })
 export class ConsoleHeader {
   readonly generated = input<string | null>(null);
+  readonly zone = input<string | null>(null);
   readonly machine = input<string | null>(null);
   readonly presence = input<PresenceShown | null>(null);
   readonly presenceChosen = output<PresenceChoice>();
 
-  protected readonly stamp = computed(() => stardate(this.generated() ?? ''));
+  protected readonly stamp = computed(() => stardate(this.generated() ?? '', this.zone() ?? ''));
   protected readonly mode = computed(() => {
     const presence = this.presence();
     if (!presence) {

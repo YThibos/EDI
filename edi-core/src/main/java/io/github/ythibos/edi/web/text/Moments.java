@@ -1,25 +1,32 @@
 package io.github.ythibos.edi.web.text;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
+import org.springframework.stereotype.Component;
+
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 
-public final class Moments {
+@Component
+public class Moments {
 
-    private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm'Z'").withZone(ZoneOffset.UTC);
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm zzz", Locale.ENGLISH);
 
-    private Moments() {
+    private final Clock clock;
+
+    public Moments(Clock clock) {
+        this.clock = clock;
     }
 
-    public static String minute(Instant instant) {
-        return MINUTE.format(instant);
+    public String minute(Instant instant) {
+        return MINUTE.format(onTheMachine(instant));
     }
 
-    public static String day(Instant instant) {
-        return DAY.format(instant);
+    public String day(Instant instant) {
+        return onTheMachine(instant).toLocalDate().toString();
     }
 
     public static String until(HoldUntil until) {
@@ -27,5 +34,9 @@ public final class Moments {
             case HoldUntil.Day day -> "until " + day.date();
             case HoldUntil.CaptainsWord _ -> "until your word";
         };
+    }
+
+    private ZonedDateTime onTheMachine(Instant instant) {
+        return instant.atZone(clock.zone());
     }
 }

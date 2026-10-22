@@ -2,7 +2,6 @@ package io.github.ythibos.edi.application.primary;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -60,7 +59,7 @@ public class SessionStartDigestQuery {
     public SessionStartDigest digestFor(UUID session) {
         return new SessionStartDigest(roles.standingOf(session), personal.address(), transaction.execute(_ -> limitStopToTell(session)),
                 fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()), transaction.execute(_ -> wakes.unacknowledged().size()),
-                presence.current(), memory.check(), WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), ZoneId.systemDefault())),
+                presence.current(), memory.check(), WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), clock.zone())),
                 home.missing(), null);
     }
 

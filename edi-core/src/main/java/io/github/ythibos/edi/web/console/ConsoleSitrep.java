@@ -6,6 +6,7 @@ import java.util.List;
 public record ConsoleSitrep(
         String schema,
         Instant generated,
+        String zone,
         String machine,
         String address,
         PresenceShown presence,

@@ -505,8 +505,8 @@ public final class TestHome {
     }
 
     public MeetingCalendar meetingCalendar() {
-        return new MeetingCalendar(new OutlookCalendar(programs, machineProfile(), json, windowsSide().executable(), windowsSide().windowsDirectory()),
-                new PersonalConfiguration(home));
+        return new MeetingCalendar(new OutlookCalendar(programs, machineProfile(), json, windowsSide().executable(), windowsSide().windowsDirectory(), clock),
+                new PersonalConfiguration(home), clock);
     }
 
     public WindowsToasts windowsToasts() {

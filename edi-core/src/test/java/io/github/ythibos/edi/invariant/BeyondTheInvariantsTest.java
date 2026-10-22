@@ -86,6 +86,7 @@ import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.migration.MigrationReportText;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 
@@ -338,7 +339,7 @@ class BeyondTheInvariantsTest {
         home.eventFollowers().followTheLog();
         home.eventFollowers().followTheLog();
         Presence afterAMonth = followedAfter(home, Duration.ofDays(30));
-        String returnBrief = new ReturnBriefText().text(home.primaryHooks().promptSubmitted(session, "I am back.").orElseThrow());
+        String returnBrief = PresenterFixtures.returnBriefText().text(home.primaryHooks().promptSubmitted(session, "I am back.").orElseThrow());
 
         assertThat(beforeTheThreshold.mode()).isEqualTo(PresenceMode.PRESENT);
         assertThat(afterTheThreshold).extracting(Presence::mode, Presence::cause, Presence::since)
@@ -346,7 +347,7 @@ class BeyondTheInvariantsTest {
         assertThat(quietStop).isEqualTo(HookAnswer.PROCEED);
         assertThat(home.windowsSide().toasts()).containsExactly("Decision D1 waits on you | Which lamp?");
         assertThat(afterAMonth.mode()).isEqualTo(PresenceMode.QUIET);
-        assertThat(returnBrief).contains("While you were away (quiet since 2026-10-15 09:15Z, after a stretch without a typed message):",
+        assertThat(returnBrief).contains("While you were away (quiet since 2026-10-15 09:15 UTC, after a stretch without a typed message):",
                 "Decisions waiting on you (1)", "  D1  Which lamp?");
         assertThat(home.presenceQuery().current().mode()).isEqualTo(PresenceMode.PRESENT);
 

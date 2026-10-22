@@ -7,7 +7,7 @@
         </span>
         <div class="sr-row__main">
           <div class="sr-row__title">{{ landed.title }}</div>
-          <div class="sr-row__sub">{{ projectsOf(landed.projects, landed.task) }} · {{ landed.kind }} · {{ stardate(landed.landedAt) }}</div>
+          <div class="sr-row__sub">{{ projectsOf(landed.projects, landed.task) }} · {{ landed.kind }} · {{ stardate(landed.landedAt, zone()) }}</div>
         </div>
         @if (landed.draft; as draft) {
           <a class="sr-row__pr" [href]="draft" [title]="draft" target="_blank" rel="noopener">#{{ draft.split('/').pop() }}</a>
