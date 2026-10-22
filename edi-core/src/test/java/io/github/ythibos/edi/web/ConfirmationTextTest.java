@@ -70,8 +70,8 @@ class ConfirmationTextTest {
     @Test
     void confirmsADeliveryAMergeAndACleanUp() {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
-        MergeRequestView merged = new MergeRequestView(address, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "1111", "3333");
-        Delivery delivery = Delivery.of(LANTERN, new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null),
+        MergeRequestView merged = new MergeRequestView(address, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "1111", "3333", Instant.parse("2026-10-16T10:00:00Z"));
+        Delivery delivery = Delivery.of(LANTERN, new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null, null),
                 Instant.parse("2026-10-16T09:00:00Z"));
 
         assertThat(text.text(new Confirmation.DraftDelivered(new DeliveredDraft(delivery, true)))).isEqualTo(

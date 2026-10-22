@@ -1,4 +1,4 @@
-# ADR-162: Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop
+# ADR-166: Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop
 
 **Date:** 22/10/2026
 

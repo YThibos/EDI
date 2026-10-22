@@ -42,6 +42,17 @@ class ProcessTableTest {
     }
 
     @Test
+    void recognisesARunningProcessWhoseStartTheBootTimeDriftShiftedEitherWay() throws IOException {
+        Process running = processes.register(new ProcessBuilder("sleep", "30").start());
+        SessionProcess identified = table.identify(running.pid()).orElseThrow();
+
+        assertThat(table.isRunning(new SessionProcess(running.pid(), identified.startedAt().plusSeconds(1)))).isTrue();
+        assertThat(table.isRunning(new SessionProcess(running.pid(), identified.startedAt().minusSeconds(1)))).isTrue();
+        running.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(running.toHandle())).isTrue();
+    }
+
+    @Test
     void findsTheProcessesWorkingInADirectory() throws IOException {
         Path copy = Files.createDirectories(directory.resolve("worktrees/harness/fit-lamp"));
         Process inside = processes.register(new ProcessBuilder("sleep", "30").directory(copy.toFile()).start());

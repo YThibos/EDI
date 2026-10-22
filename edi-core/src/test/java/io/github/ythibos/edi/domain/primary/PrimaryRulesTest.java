@@ -36,6 +36,19 @@ class PrimaryRulesTest {
     }
 
     @Test
+    void tellsTheSameProcessAcrossBootTimeDriftFromOneThatReusedItsId() {
+        SessionProcess recorded = new SessionProcess(41, START);
+
+        assertThat(recorded.isTheOneStartedAt(START)).isTrue();
+        assertThat(recorded.isTheOneStartedAt(START.plusSeconds(2))).isTrue();
+        assertThat(recorded.isTheOneStartedAt(START.minusSeconds(2))).isTrue();
+        assertThat(recorded.isTheOneStartedAt(START.plusSeconds(3))).isFalse();
+        assertThat(recorded.isTheOneStartedAt(START.minusSeconds(3))).isFalse();
+        assertThat(recorded.isTheOneStartedAt(START.plusSeconds(60))).isFalse();
+        assertThat(new SessionProcess(41, null).isTheOneStartedAt(START)).isTrue();
+    }
+
+    @Test
     void opensTheSitrepOnlyForTheLaunchOfANewSessionThatHoldsThePrimaryRole() {
         assertThat(new SessionStart(true, true, Standing.PRIMARY).opensTheSitrep()).isTrue();
         assertThat(new SessionStart(false, true, Standing.PRIMARY).opensTheSitrep()).isFalse();

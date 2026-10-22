@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.web.console;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -47,11 +48,18 @@ public class SitrepConsolePresenter {
     private static final String WITHOUT_A_WORKER = "waiting";
     private static final String WITH_EDI = "with EDI";
 
-    public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, String machine, CaptainAddress address, Presence presence) {
+    private final PresenceWords presenceWords;
+
+    public SitrepConsolePresenter(PresenceWords presenceWords) {
+        this.presenceWords = presenceWords;
+    }
+
+    public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, ZoneId zone, String machine, CaptainAddress address, Presence presence) {
         List<Charted> charted = chartedNext(fleet);
         return new ConsoleSitrep(
                 ConsoleSitrep.EDI_SITREP_V1,
                 generated,
+                zone.getId(),
                 machine,
                 address.word(),
                 presenceShown(presence, generated),
@@ -66,8 +74,8 @@ public class SitrepConsolePresenter {
                 charted.size());
     }
 
-    private static PresenceShown presenceShown(Presence presence, Instant generated) {
-        return new PresenceShown(presence.mode().word(), presence.demoHoldsAt(generated), PresenceWords.of(presence));
+    private PresenceShown presenceShown(Presence presence, Instant generated) {
+        return new PresenceShown(presence.mode().word(), presence.demoHoldsAt(generated), presenceWords.of(presence));
     }
 
     private static List<Charted> chartedNext(FleetSnapshot fleet) {

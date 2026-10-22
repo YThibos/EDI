@@ -53,6 +53,7 @@ import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
 import io.github.ythibos.edi.web.worker.WorkerListText;
 
@@ -97,7 +98,7 @@ class SupervisionAndRecoveryTest {
         }
 
         private static String digestOf(TestHome home, UUID session) {
-            return new SessionStartDigestText(new WorkerListText()).text(home.sessionStartDigest().digestFor(session));
+            return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session));
         }
     }
 
@@ -239,7 +240,7 @@ class SupervisionAndRecoveryTest {
             home.judgeWorkers().judge();
 
             assertThat(serving.entries().getFirst().health()).isEqualTo(new WorkerHealth.Dead(DeathCause.SERVER_CHANGED));
-            assertThat(new WorkerListText().text(serving)).contains("fit-lamp#1  dead: its tmux server changed", "working: Fitting the lamp.")
+            assertThat(PresenterFixtures.workerListText().text(serving)).contains("fit-lamp#1  dead: its tmux server changed", "working: Fitting the lamp.")
                     .doesNotContain("busy");
             assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).containsOnlyOnce("WorkerDied");
         }

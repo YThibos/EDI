@@ -8,7 +8,7 @@
 
 **Context and constraints:** ADR-122 turns presence quiet for a meeting in progress, and ADR-126 read the calendar at most every fifteen minutes, so a meeting could start a quarter of an hour before presence noticed it.
 A failed read only wrote a warning to the core's log, once per attempt, and in three days of failures the captain was never told.
-The supervision round follows presence every 30 seconds (ADR-077), and each read starts a `powershell.exe` that talks to Outlook for about four seconds (ADR-162).
+The supervision round follows presence every 30 seconds (ADR-077), and each read starts a `powershell.exe` that talks to Outlook for about four seconds (ADR-166).
 
 **Decision:** `MeetingCalendar` keeps the latest `CalendarReading`: the day, when it was read, that day's entries, and an `UnreadableCalendar` when the read failed.
 It reads the calendar again two minutes after the latest reading (`CalendarReading.READ_AGAIN_AFTER`) or on a new day, and between readings every round finds a meeting in progress in the entries it already holds, so presence turns quiet in the round a known meeting starts and returns at its end.
@@ -30,4 +30,4 @@ While the calendar cannot be read, the captain report carries a line beside the 
 
 **Revisit when:** Outlook's reads show up in the round's time, or the calendar gets another source.
 
-**Sources:** EDI rewrite specification, section 12.7 (decision E24); ADR-077, ADR-122, ADR-126, ADR-162; `domain.presence.CalendarReading`, `UnreadableCalendar`, `CalendarEntry`, `application.presence.MeetingCalendar`, `NoticeTheUnreadableCalendar`, `CaptainNotices`, `FollowThePresence`, `application.supervision.SupervisionRound`, `web.report.CaptainReport`, `CaptainReportPresenter`, `ReportController`.
+**Sources:** EDI rewrite specification, section 12.7 (decision E24); ADR-077, ADR-122, ADR-126, ADR-166; `domain.presence.CalendarReading`, `UnreadableCalendar`, `CalendarEntry`, `application.presence.MeetingCalendar`, `NoticeTheUnreadableCalendar`, `CaptainNotices`, `FollowThePresence`, `application.supervision.SupervisionRound`, `web.report.CaptainReport`, `CaptainReportPresenter`, `ReportController`.

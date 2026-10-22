@@ -2,7 +2,6 @@ package io.github.ythibos.edi.application.presence;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.presence.CalendarEntry;
 import io.github.ythibos.edi.domain.presence.CalendarReading;
 import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
@@ -23,11 +23,13 @@ public class MeetingCalendar {
 
     private final OutlookCalendar outlook;
     private final PersonalConfiguration personal;
+    private final Clock clock;
     private volatile CalendarReading latest = CalendarReading.NOT_YET_READ;
 
-    public MeetingCalendar(OutlookCalendar outlook, PersonalConfiguration personal) {
+    public MeetingCalendar(OutlookCalendar outlook, PersonalConfiguration personal, Clock clock) {
         this.outlook = outlook;
         this.personal = personal;
+        this.clock = clock;
     }
 
     public Optional<CalendarEntry> meetingInProgressAt(Instant now) {
@@ -42,7 +44,7 @@ public class MeetingCalendar {
     }
 
     private synchronized CalendarReading readingAt(Instant now) {
-        LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+        LocalDate today = LocalDate.ofInstant(now, clock.zone());
         if (latest.isDueAt(today, now)) {
             latest = readOn(today, now);
         }

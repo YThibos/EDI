@@ -40,14 +40,12 @@ import io.github.ythibos.edi.domain.tracker.TicketProposal;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
-import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.migration.MigrationReportText;
-import io.github.ythibos.edi.web.presence.PresenceWords;
-import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.report.CaptainReport;
-import io.github.ythibos.edi.web.report.CaptainReportPresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
 import tools.jackson.databind.json.JsonMapper;
@@ -67,15 +65,15 @@ final class CaptainFacingStrings {
         List<String> generated = new ArrayList<>(reports(directory));
         generated.addAll(cardsEdiRaises());
         generated.addAll(notifications());
-        generated.addAll(presences().stream().map(PresenceWords::of).toList());
+        generated.addAll(presences().stream().map(PresenterFixtures.presenceWords()::of).toList());
         TestHome home = fleetIn(directory.resolve("fleet"));
-        generated.add(new ReturnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
+        generated.add(PresenterFixtures.returnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
                 home.fleetSnapshot().snapshot().waiting(), home.fleetSnapshot().snapshot().landed(), List.of(),
                 home.fleetSnapshot().snapshot().ongoing())));
-        generated.add(new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(),
+        generated.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(),
                 Presence.presentSince(TestHome.START), null)));
         generated.add(new MigrationReportText().text(TestHome.in(directory.resolve("migration")).migrateFirstofficer().dryRun(OLD_HOME.toAbsolutePath())));
-        generated.add(JSON.writeValueAsString(new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), NOW, "laptop", CaptainAddress.DEFAULT,
+        generated.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
         return generated;
     }
@@ -88,7 +86,7 @@ final class CaptainFacingStrings {
             }
         }
         TestHome home = fleetIn(directory.resolve("reported"));
-        presences().forEach(presence -> reports.add(new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE,
+        presences().forEach(presence -> reports.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE,
                 ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer.")))));
         return reports;
     }
@@ -159,6 +157,6 @@ final class CaptainFacingStrings {
         home.workers().update(home.workers().get(lamp.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), NOW));
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         home.deliveries().save(Delivery.of(lamp.id().task(),
-                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", null), NOW));
+                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", null, null), NOW));
     }
 }

@@ -64,7 +64,7 @@ jobs:
         if: always()
         run: |
           if [[ -f edi-cli/target/native-smoke.md ]]; then
-            cat edi-cli/target/native-smoke.md >> "${GITHUB_STEP_SUMMARY}"
+            tee -a "${GITHUB_STEP_SUMMARY}" < edi-cli/target/native-smoke.md
           fi
       - name: Keep the test reports
         if: failure()

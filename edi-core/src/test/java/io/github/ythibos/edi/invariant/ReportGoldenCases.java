@@ -28,6 +28,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.CaptainReportPresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
@@ -86,7 +87,7 @@ final class ReportGoldenCases {
     }
 
     static String rendered(TestHome home, Turn turn, ReportWidth width) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width, Presence.presentSince(TestHome.START), null));
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width, Presence.presentSince(TestHome.START), null));
     }
 
     static Shown queuedBacklog(TestHome home, int tasks, int noteWords) {

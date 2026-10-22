@@ -65,13 +65,13 @@ class TaskTextTest {
     void showsAShipsDraftItsPipelineRunAndItsCost() {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         Delivery draft = Delivery.of(PresenterFixtures.lantern().id(),
-                new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null), AT);
+                new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null, null), AT);
         TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), null, draft, new PipelineRun("01RUN", "running", "ci", "1111", null),
                 new TaskCost(PresenterFixtures.lantern().id(), new TokenUsage(1, 20, 3, 4), null, AT), List.of());
 
-        assertThat(new TaskDetailText().text(detail)).contains("""
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).contains("""
                 Pipeline: run 01RUN running at ci
-                Draft: https://github.com/example-owner/harness/pull/7 open, a draft (seen 2026-10-15 09:30Z)
+                Draft: https://github.com/example-owner/harness/pull/7 open, a draft (seen 2026-10-15 09:30 UTC)
                 Cost: workers 28 tokens (1 in, 20 cache read, 3 cache write, 4 out); pipeline unknown
                 """);
     }
@@ -84,12 +84,12 @@ class TaskTextTest {
         TaskDetail detail = new TaskDetail(item, List.of(), PresenterFixtures.openDecision(), null, null, null,
                 List.of(new RecordedEvent(1, AT, Actor.PRIMARY, "TaskAdded", item.id()), new RecordedEvent(2, AT, Actor.PRIMARY, "DecisionRaised", item.id())));
 
-        assertThat(new TaskDetailText().text(detail)).isEqualTo("""
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).isEqualTo("""
                 lamp-choice  captain  queued
                 Choose the lamp
                 Projects: -
                 Since: 2026-10-15
-                Held (decision, until your word): D58 Which lamp? (since 2026-10-15 09:30Z)
+                Held (decision, until your word): D58 Which lamp? (since 2026-10-15 09:30 UTC)
 
                 D58  lamp-choice  Which lamp?
                   Both work; one is simpler.
@@ -101,8 +101,8 @@ class TaskTextTest {
                   Ask before the season.
 
                 Timeline
-                  2026-10-15 09:30Z  primary  task added
-                  2026-10-15 09:30Z  primary  decision raised
+                  2026-10-15 09:30 UTC  primary  task added
+                  2026-10-15 09:30 UTC  primary  decision raised
                 """);
     }
 }

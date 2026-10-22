@@ -83,6 +83,7 @@ import io.github.ythibos.edi.application.delivery.CloneRefreshes;
 import io.github.ythibos.edi.application.delivery.CopyRetirement;
 import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
 import io.github.ythibos.edi.application.delivery.DeliverDraft;
+import io.github.ythibos.edi.application.delivery.DeliveryRecords;
 import io.github.ythibos.edi.application.delivery.DiscardWork;
 import io.github.ythibos.edi.application.delivery.DoneClaims;
 import io.github.ythibos.edi.application.delivery.DropTask;
@@ -166,6 +167,7 @@ import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.application.worker.WorkerInbox;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -201,7 +203,8 @@ public final class TestHome {
     private final PipelineRunStore pipelineRuns;
     private final CloneRefreshStore cloneRefreshes;
     private final TaskCostStore taskCosts;
-    private final FakeForge forge = new FakeForge();
+    private final FakeForge forge;
+    private final FakeForge gitLabForge;
     private final FakePipeline pipeline = new FakePipeline();
     private final FakeJira jira = new FakeJira();
     private Tracker jiraAdapter = jira;
@@ -224,6 +227,8 @@ public final class TestHome {
         this.home = home;
         this.runtime = runtime;
         this.clock = clock;
+        this.forge = new FakeForge(ForgeKind.GITHUB, clock);
+        this.gitLabForge = new FakeForge(ForgeKind.GITLAB, clock);
         this.jdbc = JdbcClient.create(store);
         this.transaction = new TransactionTemplate(new JdbcTransactionManager(store));
         this.tasks = new TaskStore(jdbc);
@@ -511,7 +516,7 @@ public final class TestHome {
     public synchronized MeetingCalendar meetingCalendar() {
         if (meetingCalendar == null) {
             meetingCalendar = new MeetingCalendar(new OutlookCalendar(programs, machineProfile(), json, windowsSide().executable(),
-                    windowsSide().windowsDirectory()), new PersonalConfiguration(home));
+                    windowsSide().windowsDirectory(), clock), new PersonalConfiguration(home), clock);
         }
         return meetingCalendar;
     }
@@ -596,19 +601,24 @@ public final class TestHome {
     }
 
     public RecordStatus recordStatus() {
-        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), clock, transaction);
+        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), followMerges(), clock,
+                transaction);
     }
 
     public Forges forges() {
-        return new Forges(List.of(forge));
+        return new Forges(List.of(forge, gitLabForge));
+    }
+
+    public DeliveryRecords deliveryRecords() {
+        return new DeliveryRecords(forges(), deliveries, events, clock);
     }
 
     public DoneClaims doneClaims() {
-        return new DoneClaims(workerContext(), git, forges(), events, clock, transaction);
+        return new DoneClaims(workerContext(), git, deliveryRecords(), events, clock, transaction);
     }
 
     public DeliverAcceptedWork deliverAcceptedWork() {
-        return new DeliverAcceptedWork(workerContext(), forges(), captainCheckouts(), deliveries, events, clock, transaction);
+        return new DeliverAcceptedWork(workerContext(), deliveryRecords(), followMerges(), captainCheckouts(), transaction);
     }
 
     public PublishCheck publishCheck() {
@@ -616,7 +626,7 @@ public final class TestHome {
     }
 
     public DeliverDraft deliverDraft() {
-        return new DeliverDraft(tasks, deliveries, events, workerContext(), publishCheck(), forges(), git, clock, transaction);
+        return new DeliverDraft(tasks, workerContext(), publishCheck(), forges(), deliveryRecords(), git, transaction);
     }
 
     public CloneRefreshes cloneRefreshes() {
@@ -628,7 +638,7 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(tasks, workers, taskCosts, reviews, events, workerContext(), landedWork(),
+        return new CleanUpTask(tasks, workers, deliveries, taskCosts, reviews, events, workerContext(), landedWork(),
                 new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), clock, transaction);
     }
 
@@ -666,15 +676,20 @@ public final class TestHome {
     }
 
     public FollowMerges followMerges() {
-        return new FollowMerges(tasks, deliveries, events, registry, forges(), cloneRefreshes(), cleanUpTask(), clock, transaction);
+        return new FollowMerges(tasks, deliveries, events, registry, workerContext(), forges(), deliveryRecords(), cloneRefreshes(), cleanUpTask(),
+                clock, transaction);
     }
 
     public ObservePipelines observePipelines() {
-        return new ObservePipelines(workers, pipelineRuns, events, workerContext(), pipeline, clock, transaction);
+        return new ObservePipelines(workers, pipelineRuns, events, workerContext(), pipeline, followMerges(), clock, transaction);
     }
 
     public FakeForge forge() {
         return forge;
+    }
+
+    public FakeForge forge(ForgeKind kind) {
+        return kind == ForgeKind.GITLAB ? gitLabForge : forge;
     }
 
     public EventFollowers eventFollowers() {

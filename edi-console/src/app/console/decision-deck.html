@@ -12,7 +12,7 @@
           <app-decision-card [card]="decision" (settled)="settled.emit()" />
         }
       } @else if (card.answered; as answered) {
-        <app-answered-card [answer]="answered" />
+        <app-answered-card [answer]="answered" [zone]="zone()" />
       }
     } @else {
       <div class="sr-panel sr-clear">

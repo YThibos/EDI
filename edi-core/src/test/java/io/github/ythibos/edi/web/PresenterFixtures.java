@@ -19,12 +19,58 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.ManualClock;
+import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
+import io.github.ythibos.edi.web.decision.DecisionLines;
+import io.github.ythibos.edi.web.presence.PresenceWords;
+import io.github.ythibos.edi.web.presence.ReturnBriefText;
+import io.github.ythibos.edi.web.primary.SessionStartDigestText;
+import io.github.ythibos.edi.web.report.CaptainReportPresenter;
+import io.github.ythibos.edi.web.text.Moments;
+import io.github.ythibos.edi.web.worker.HealthWords;
+import io.github.ythibos.edi.web.worker.WorkerListText;
 
 public final class PresenterFixtures {
 
     public static final Instant AT = Instant.parse("2026-10-15T09:30:00Z");
 
     private PresenterFixtures() {
+    }
+
+    public static Moments moments() {
+        return new Moments(new ManualClock(AT));
+    }
+
+    public static PresenceWords presenceWords() {
+        return new PresenceWords(moments());
+    }
+
+    public static HealthWords healthWords() {
+        return new HealthWords(moments());
+    }
+
+    public static DecisionLines decisionLines() {
+        return new DecisionLines(moments());
+    }
+
+    public static WorkerListText workerListText() {
+        return new WorkerListText(healthWords());
+    }
+
+    public static SessionStartDigestText sessionStartDigestText() {
+        return new SessionStartDigestText(workerListText(), presenceWords(), healthWords(), moments());
+    }
+
+    public static CaptainReportPresenter captainReportPresenter() {
+        return new CaptainReportPresenter(presenceWords());
+    }
+
+    public static ReturnBriefText returnBriefText() {
+        return new ReturnBriefText(presenceWords());
+    }
+
+    public static SitrepConsolePresenter sitrepConsolePresenter() {
+        return new SitrepConsolePresenter(presenceWords());
     }
 
     public static Task lantern() {

@@ -41,6 +41,10 @@ public record ForgeRepository(ForgeKind kind, String host, String path) {
         return mergeRequestPrefix() + number;
     }
 
+    public boolean holds(String mergeRequestUrl) {
+        return mergeRequestUrl.startsWith(mergeRequestPrefix());
+    }
+
     String mergeRequestPrefix() {
         return url() + kind.mergeRequestPath();
     }

@@ -5,7 +5,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +39,7 @@ public class ProcessTable implements AutoCloseable {
     public boolean isRunning(SessionProcess process) {
         return ProcessHandle.of(process.pid())
                 .filter(ProcessHandle::isAlive)
-                .filter(running -> startsAt(running, process.startedAt()))
+                .filter(running -> startsAs(running, process))
                 .isPresent();
     }
 
@@ -74,8 +73,8 @@ public class ProcessTable implements AutoCloseable {
         escalations.shutdownNow();
     }
 
-    private static boolean startsAt(ProcessHandle running, Instant recordedStart) {
-        return recordedStart == null || running.info().startInstant().map(recordedStart::equals).orElse(true);
+    private static boolean startsAs(ProcessHandle running, SessionProcess recorded) {
+        return running.info().startInstant().map(recorded::isTheOneStartedAt).orElse(true);
     }
 
     private static Path realPathOf(Path directory) {

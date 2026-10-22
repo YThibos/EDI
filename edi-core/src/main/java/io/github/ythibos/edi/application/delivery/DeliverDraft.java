@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,11 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.git.Git;
-import io.github.ythibos.edi.adapter.store.DeliveryStore;
-import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
-import io.github.ythibos.edi.application.port.Clock;
-import io.github.ythibos.edi.application.port.Forge;
 import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
@@ -35,6 +30,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
+import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
 public class DeliverDraft {
@@ -43,25 +39,21 @@ public class DeliverDraft {
     private static final String REPORT_FILE = "report.md";
 
     private final TaskStore tasks;
-    private final DeliveryStore deliveries;
-    private final EventLog events;
     private final WorkerContext context;
     private final PublishCheck publishCheck;
     private final Forges forges;
+    private final DeliveryRecords records;
     private final Git git;
-    private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DeliverDraft(TaskStore tasks, DeliveryStore deliveries, EventLog events, WorkerContext context, PublishCheck publishCheck, Forges forges,
-            Git git, Clock clock, TransactionTemplate transaction) {
+    public DeliverDraft(TaskStore tasks, WorkerContext context, PublishCheck publishCheck, Forges forges, DeliveryRecords records, Git git,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
-        this.deliveries = deliveries;
-        this.events = events;
         this.context = context;
         this.publishCheck = publishCheck;
         this.forges = forges;
+        this.records = records;
         this.git = git;
-        this.clock = clock;
         this.transaction = transaction;
     }
 
@@ -70,11 +62,11 @@ public class DeliverDraft {
         RegisteredForge forge = requireADraftReviewShip(workplace);
         String head = requireTheCopy(workplace);
         requireACleanPublication(workplace);
-        Forge serving = forges.serving(forge);
-        Optional<MergeRequestView> open = serving.openMergeRequestFrom(forge, workplace.dispatch().branch());
-        MergeRequestView draft = open.orElseGet(() -> serving.openDraft(forge, proposalFor(workplace)));
-        requireTheDeliveryOf(workplace, draft, head);
-        return recorded(workplace, draft, open.isEmpty(), actor);
+        Optional<MergeRequestView> found = records.requestFrom(workplace);
+        requireNoMergeYet(workplace, found);
+        MergeRequestView request = found.orElseGet(() -> forges.serving(forge).openDraft(forge, proposalFor(workplace)));
+        requireTheDeliveryOf(workplace, request, head);
+        return recorded(workplace, request, found.isEmpty(), actor);
     }
 
     private static RegisteredForge requireADraftReviewShip(Workplace workplace) {
@@ -101,6 +93,12 @@ public class DeliverDraft {
         }
     }
 
+    private static void requireNoMergeYet(Workplace workplace, Optional<MergeRequestView> found) {
+        found.filter(MergeRequestView::isMerged).ifPresent(merged -> {
+            throw new Refusal(merged.address() + " is merged already; edi merged " + workplace.task().id() + " follows its merge.");
+        });
+    }
+
     private DraftProposal proposalFor(Workplace workplace) {
         return DraftProposal.forWork(workplace.dispatch().branch(), workplace.base(), workplace.task().intake().title(), deliveryNoteOf(workplace));
     }
@@ -123,15 +121,10 @@ public class DeliverDraft {
         }
     }
 
-    private DeliveredDraft recorded(Workplace workplace, MergeRequestView draft, boolean opened, Actor actor) {
-        return transaction.execute(_ -> {
-            Instant now = clock.now();
-            Delivery delivery = Delivery.of(workplace.task().id(), draft, now);
-            deliveries.save(delivery);
-            DomainEvent event = opened ? new DraftOpened(delivery.task(), draft.address()) : new DraftRecorded(delivery.task(), draft.address());
-            events.record(event, actor, now);
-            return new DeliveredDraft(delivery, opened);
-        });
+    private DeliveredDraft recorded(Workplace workplace, MergeRequestView request, boolean opened, Actor actor) {
+        TaskId task = workplace.task().id();
+        DomainEvent event = opened ? new DraftOpened(task, request.address()) : new DraftRecorded(task, request.address());
+        return transaction.execute(_ -> new DeliveredDraft(records.recorded(task, request, event, actor), opened));
     }
 
     public record DeliveredDraft(Delivery delivery, boolean opened) {

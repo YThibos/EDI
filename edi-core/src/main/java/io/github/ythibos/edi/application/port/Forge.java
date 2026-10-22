@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.port;
 
+import java.util.List;
 import java.util.Optional;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
@@ -13,7 +14,7 @@ public interface Forge {
 
     ForgeKind kind();
 
-    Optional<MergeRequestView> openMergeRequestFrom(RegisteredForge forge, BranchName branch);
+    List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch);
 
     MergeRequestView view(RegisteredForge forge, MergeRequestAddress address);
 

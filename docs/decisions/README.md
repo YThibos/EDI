@@ -91,7 +91,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-042](ADR-042-one-home-token.md) | One home token authenticates the API until callers are told apart (superseded by ADR-049) | Design |
 | [ADR-043](ADR-043-the-core-renders-text.md) | The core renders text and JSON; the command is a pipe | Architecture |
 | [ADR-044](ADR-044-migration-reads-the-old-grammar.md) | The migration reads the old backlog with its own grammar and maps it through the domain | Design |
-| [ADR-045](ADR-045-native-round-trip-in-the-smoke-test.md) | The native round trip is measured by the native smoke test | Design |
+| [ADR-045](ADR-045-native-round-trip-in-the-smoke-test.md) | The native round trip is measured by the native smoke test (superseded by ADR-164) | Design |
 | [ADR-046](ADR-046-where-the-fleet-snapshot-puts-open-work.md) | Where the fleet snapshot puts open work | Design |
 | [ADR-047](ADR-047-the-captain-report-matches-the-old-renderer.md) | The captain report matches the old renderer byte for byte | Design |
 | [ADR-048](ADR-048-the-command-measures-its-pane.md) | The command measures its pane and the core sizes the report | Design |
@@ -129,14 +129,14 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-080](ADR-080-forge-calls-run-under-the-bound-account.md) | Every forge call for a project runs under the account its registry entry binds | Design |
 | [ADR-081](ADR-081-the-pipeline-adapter.md) | The pipeline adapter reads a branch's run from `axi status` and its spend from the pipeline's state, read-only | Design |
 | [ADR-082](ADR-082-edi-writes-the-pipeline-intent.md) | EDI writes the pipeline intent beside the brief, with the craft rules verbatim | Design |
-| [ADR-083](ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md) | A ship's done is accepted only once its claims hold, and a refused done is recorded | Design |
+| [ADR-083](ADR-083-a-ships-done-is-accepted-once-its-claims-hold.md) | A ship's done is accepted only once its claims hold, and a refused done is recorded (superseded by ADR-155) | Design |
 | [ADR-084](ADR-084-accepted-work-reaches-the-captain-by-its-delivery-mode.md) | Accepted work reaches the captain by its delivery mode, and local-apply is asked for per task | Design |
 | [ADR-085](ADR-085-edi-deliver-opens-the-draft-the-pipeline-could-not.md) | `edi deliver` opens the draft the pipeline could not, behind the same guards | Design |
 | [ADR-086](ADR-086-publication-targets-are-the-registered-forge.md) | A push from an isolated copy goes only to the repository its project registers | Design |
 | [ADR-087](ADR-087-merges-are-followed-from-the-forge.md) | A merge is followed from the forge's word, whether EDI sees it or the captain says so | Design |
 | [ADR-088](ADR-088-follow-up-work-waits-for-the-refreshed-clone.md) | Follow-up work on a project waits until its clone holds the commit a merge landed | Design |
 | [ADR-089](ADR-089-the-landed-work-test.md) | Work is landed when nothing is uncommitted and every commit is in the base by ancestry, patch or content | Design |
-| [ADR-090](ADR-090-cleanup-retires-a-landed-task.md) | Cleanup retires a landed task's copy, branch and workers, and records what the task cost | Design |
+| [ADR-090](ADR-090-cleanup-retires-a-landed-task.md) | Cleanup retires a landed task's copy, branch and workers, and records what the task cost (superseded by ADR-157) | Design |
 | [ADR-091](ADR-091-a-running-pipeline-keeps-an-idle-worker-healthy.md) | Worker health is read from hooks, the tmux server, the boot and the pipeline, and each condition is noticed once | Design |
 | [ADR-092](ADR-092-the-store-keeps-deliveries.md) | The store keeps deliveries, pipeline runs, clone refreshes and task costs | Design |
 | [ADR-093](ADR-093-the-tracker-port-and-its-three-adapters.md) | The tracker port has three adapters, chosen per project and reachable only where the machine names the tracker | Architecture |
@@ -172,7 +172,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-123](ADR-123-the-primarys-stop-waits-for-the-report-only-while-the-captain-is-present.md) | The primary's stop waits for the captain report while the captain is present, and for a live edi wait always | Design |
 | [ADR-124](ADR-124-wakes-are-gathered-into-one-batch-while-the-chat-is-quiet.md) | Wakes are queued with their event, edi wait long-polls for them, and quiet gathers them into batches | Design |
 | [ADR-125](ADR-125-notifications-for-the-captain-come-from-an-event-follower.md) | While the chat is quiet, each event that concerns the captain raises one notification, from an event follower | Design |
-| [ADR-126](ADR-126-the-windows-side-runs-through-powershell.md) | Notifications and the calendar come from the Windows side of WSL through powershell.exe (superseded by ADR-162) | Architecture |
+| [ADR-126](ADR-126-the-windows-side-runs-through-powershell.md) | Notifications and the calendar come from the Windows side of WSL through powershell.exe (superseded by ADR-166) | Architecture |
 | [ADR-127](ADR-127-the-captain-returns-to-a-brief-of-what-happened.md) | The captain's first message after quiet or away arrives with a brief of what happened meanwhile | Design |
 | [ADR-128](ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md) | A voice lint keeps internal labels out of what the captain reads | Design |
 | [ADR-129](ADR-129-one-core-per-home-started-by-edi-up-and-stopped-by-edi-down.md) | One core per home, started by edi up and stopped by edi down | Design |
@@ -200,9 +200,15 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-152](ADR-152-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
 | [ADR-153](ADR-153-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
 | [ADR-154](ADR-154-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the core without the caller's EDI variables | Design |
+| [ADR-155](ADR-155-a-ships-done-accepts-a-merge-request-that-is-a-draft-ready-or-merged.md) | A ship's done is accepted once its claims hold, and its merge request may be a draft, ready for review or merged | Design |
+| [ADR-156](ADR-156-a-tasks-merge-request-is-followed-whatever-order-things-happen-in.md) | A task's merge request is recorded as soon as it exists, and a merge the forge shows is followed whatever the order | Design |
+| [ADR-157](ADR-157-a-merge-the-forge-shows-hands-the-work-over-at-cleanup.md) | Cleanup retires a landed task's copy, branch and workers, and a merge the forge shows hands the work over | Design |
 | [ADR-158](ADR-158-everything-that-waits-on-the-captain-is-in-the-decision-zone.md) | Everything that waits on the captain is in the decision zone, whatever holds its task | Design |
 | [ADR-159](ADR-159-a-board-round-names-its-link-and-its-questions.md) | A board round names its link and how many questions it puts before the captain | Design |
 | [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
 | [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |
-| [ADR-162](ADR-162-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |
+| [ADR-162](ADR-162-edi-shows-the-machines-local-time-and-stores-utc.md) | EDI shows times in the machine's local time zone and stores them in UTC | Design |
 | [ADR-163](ADR-163-the-calendar-is-read-every-two-minutes-and-an-unreadable-one-is-told-once.md) | The calendar is read every two minutes, presence switches from the last reading, and the captain hears once when it cannot be read | Design |
+| [ADR-164](ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md) | AT-39 scales its limit to the machine's own pace, measured in the same run | Design |
+| [ADR-165](ADR-165-a-process-is-the-recorded-one-within-two-seconds-of-boot-time-drift.md) | A process is the recorded one when its start lies within two seconds of the recorded start | Design |
+| [ADR-166](ADR-166-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |

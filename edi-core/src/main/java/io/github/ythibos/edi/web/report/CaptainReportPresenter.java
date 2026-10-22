@@ -20,10 +20,8 @@ import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
-import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.web.presence.PresenceWords;
-import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
 @Component
@@ -32,6 +30,12 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     private static final int BACKLOG_SHOWN = 5;
     private static final String SECTION_RULE = "─";
     private static final Comparator<Task> NEWEST_FILED_FIRST = Comparator.comparing(CaptainReportPresenter::filedOn).reversed();
+
+    private final PresenceWords presenceWords;
+
+    public CaptainReportPresenter(PresenceWords presenceWords) {
+        this.presenceWords = presenceWords;
+    }
 
     @Override
     public Class<CaptainReport> presents() {
@@ -53,13 +57,13 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return lines.stream().map(CaptainReportPresenter::withoutTrailingSpaces).collect(Collectors.joining("\n", "", "\n"));
     }
 
-    private static List<String> presenceOf(CaptainReport report, int width) {
+    private List<String> presenceOf(CaptainReport report, int width) {
         List<String> lines = new ArrayList<>();
         if (report.showsThePresence()) {
-            lines.addAll(standing("Presence: " + PresenceWords.of(report.presence()), width));
+            lines.addAll(standing("Presence: " + presenceWords.of(report.presence()), width));
         }
         if (report.showsTheUnreadableCalendar()) {
-            lines.addAll(standing(unreadableCalendarLine(report.unreadableCalendar()), width));
+            lines.addAll(standing("Calendar: " + presenceWords.ofTheUnreadableCalendar(report.unreadableCalendar()), width));
         }
         if (!lines.isEmpty()) {
             lines.add("");
@@ -69,11 +73,6 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static List<String> standing(String line, int width) {
         return WordWrap.hanging(Glyphs.safe(line), width, "", "  ");
-    }
-
-    private static String unreadableCalendarLine(UnreadableCalendar unreadable) {
-        return "Calendar: unreadable since " + Moments.minute(unreadable.since())
-                + ", so a meeting added since the last reading does not turn your presence quiet: \"" + unreadable.reason() + "\"";
     }
 
     private static LocalDate filedOn(Task task) {

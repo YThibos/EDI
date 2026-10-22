@@ -16,7 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,8 +40,9 @@ import io.github.ythibos.edi.testing.TestProcesses;
 class NativeSmokeIT {
 
     private static final Duration PATIENCE = Duration.ofSeconds(20);
-    private static final int ROUND_TRIPS = 200;
-    private static final long ROUND_TRIP_BUDGET_MILLISECONDS = 50;
+    private static final RoundTripBudget ROUND_TRIP_BUDGET = new RoundTripBudget(200);
+    private static final RoundTripBudget PROOF_BUDGET = new RoundTripBudget(50);
+    private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
     private static final String REGISTRY = """
             projects:
               - name: harness
@@ -323,22 +323,40 @@ class NativeSmokeIT {
     }
 
     @Test
-    @DisplayName("AT-39 the native CLI round trip has a p95 under 50 ms over 200 calls")
+    @DisplayName("AT-39 the native CLI round trip has a p95 under 50 ms, or a p50 under twice a bare start-up, over 200 calls or 20 seconds")
     void theCommandAnswersQuickly() throws Exception {
-        List<Long> millis = new ArrayList<>();
-        for (int call = 0; call < ROUND_TRIPS; call++) {
-            long started = System.nanoTime();
-            assertThat(edi("", "backlog").exitCode()).isZero();
-            millis.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
-        }
-        Collections.sort(millis);
+        Path command = binary("edi.cli.binary");
+
+        RoundTripBudget.Measurement backlog = ROUND_TRIP_BUDGET.measure(backlogThrough(command), bareStartUpOf(command));
 
         Files.writeString(Path.of(System.getProperty("edi.smoke.report")), """
                 ## Native smoke test
 
-                `edi backlog` against the native core, %d round trips: p50 %d ms, p95 %d ms, slowest %d ms.
-                """.formatted(ROUND_TRIPS, percentile(millis, 50), percentile(millis, 95), millis.getLast()));
-        assertThat(percentile(millis, 95)).as("p95 of the round trip in milliseconds").isLessThan(ROUND_TRIP_BUDGET_MILLISECONDS);
+                `edi backlog` against the native core, %s
+                """.formatted(backlog.summary()));
+        assertThat(backlog.metTheBudget()).as(backlog.summary()).isTrue();
+    }
+
+    @Test
+    void theRoundTripBudgetFailsACommandThatDoesItsWorkTwice() throws Exception {
+        Path command = binary("edi.cli.binary");
+        Path doubled = StandInScripts.installed(home.resolve("doubled-edi"),
+                "#!/bin/sh\n'%s' \"$@\" > /dev/null && exec '%s' \"$@\"\n".formatted(command, command));
+
+        RoundTripBudget.Measurement backlog = PROOF_BUDGET.measure(backlogThrough(doubled), bareStartUpOf(command));
+
+        assertThat(backlog.metTheBudget()).as(backlog.summary()).isFalse();
+    }
+
+    @Test
+    void theRoundTripBudgetKeepsPaceWithAMachineSlowedDown() throws Exception {
+        Path slowed = StandInScripts.installed(home.resolve("slowed-edi"),
+                "#!/bin/sh\nsleep %s\nexec '%s' \"$@\"\n".formatted(MACHINE_SLOWDOWN.toMillis() / 1000.0, binary("edi.cli.binary")));
+
+        RoundTripBudget.Measurement backlog = PROOF_BUDGET.measure(backlogThrough(slowed), bareStartUpOf(slowed));
+
+        assertThat(backlog.keptToTheLimit()).as(backlog.summary()).isFalse();
+        assertThat(backlog.metTheBudget()).as(backlog.summary()).isTrue();
     }
 
     private static String stubBrowser() throws IOException {
@@ -474,6 +492,14 @@ class NativeSmokeIT {
         }
     }
 
+    private static RoundTripBudget.RoundTrip backlogThrough(Path command) {
+        return () -> assertThat(commandIn(command, Path.of(""), Map.of(), "", "backlog").exitCode()).isZero();
+    }
+
+    private static RoundTripBudget.RoundTrip bareStartUpOf(Path command) {
+        return () -> assertThat(commandIn(command, Path.of(""), Map.of(), "", "--version").exitCode()).isZero();
+    }
+
     private static CommandRun edi(String input, String... arguments) throws Exception {
         return ediIn(Path.of(""), input, arguments);
     }
@@ -487,7 +513,11 @@ class NativeSmokeIT {
     }
 
     private static CommandRun ediIn(Path directory, Map<String, String> environment, String input, String... arguments) throws Exception {
-        List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
+        return commandIn(binary("edi.cli.binary"), directory, environment, input, arguments);
+    }
+
+    private static CommandRun commandIn(Path command, Path directory, Map<String, String> environment, String input, String... arguments) throws Exception {
+        List<String> commandLine = new ArrayList<>(List.of(command.toString()));
         commandLine.addAll(List.of(arguments));
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toAbsolutePath().toFile()).redirectErrorStream(true);
         launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
@@ -506,10 +536,6 @@ class NativeSmokeIT {
             command.destroyForcibly();
         }
         return new CommandRun(command.exitValue(), output);
-    }
-
-    private static long percentile(List<Long> sorted, int percent) {
-        return sorted.get(Math.min(sorted.size() - 1, (int) Math.ceil(sorted.size() * percent / 100.0) - 1));
     }
 
     private record CommandRun(int exitCode, String output) {

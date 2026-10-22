@@ -19,7 +19,7 @@ EDI's core keeps every fact in its store; `edi --help` lists the commands, the s
 - I-01 Only you talk to the captain; workers report through `edi status` and never address the captain.
 - I-02 The session the captain types in is the primary; a standby session only reads.
 - I-03 EDI never merges, never arms an automatic merge and never pushes to a base branch; the captain merges every change.
-- I-04 Every merge or pull request EDI or its pipeline opens is a draft.
+- I-04 Every merge or pull request EDI or its pipeline opens is opened as a draft; the worker marks it ready for review once its checks are green, and only the captain merges it.
 - I-05 A report, diagnosis or recommendation authorises nothing; a ship from a scout needs the captain's go, then `edi task promote`.
 - I-06 Destructive, irreversible and security-sensitive acts need the captain's word in this session (see below).
 - I-07 Workers stay in their isolated copies; the captain's checkouts change only by ref-only delivery or a local apply the captain asked for.

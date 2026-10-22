@@ -218,7 +218,8 @@ class FleetSnapshotQueryTest {
     }
 
     private static MergeRequestView requestIn(MergeRequestState state) {
-        return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", state == MergeRequestState.MERGED ? "3333" : null);
+        boolean merged = state == MergeRequestState.MERGED;
+        return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
     }
 
     private void add(NewTask task) {

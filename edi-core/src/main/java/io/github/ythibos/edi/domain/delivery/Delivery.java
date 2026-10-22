@@ -38,6 +38,14 @@ public record Delivery(
         return state == MergeRequestState.OPEN;
     }
 
+    public boolean isClosed() {
+        return state == MergeRequestState.CLOSED;
+    }
+
+    public boolean isMerged() {
+        return state == MergeRequestState.MERGED;
+    }
+
     public boolean changesWith(MergeRequestView view) {
         return view.state() != state;
     }

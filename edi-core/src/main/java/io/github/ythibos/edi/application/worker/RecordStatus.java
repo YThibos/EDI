@@ -11,6 +11,7 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
 import io.github.ythibos.edi.application.delivery.DoneClaims;
+import io.github.ythibos.edi.application.delivery.FollowMerges;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -30,16 +31,18 @@ public class RecordStatus {
     private final PersonalConfiguration personal;
     private final DoneClaims claims;
     private final DeliverAcceptedWork acceptedWork;
+    private final FollowMerges merges;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public RecordStatus(WorkerStore workers, EventLog events, PersonalConfiguration personal, DoneClaims claims, DeliverAcceptedWork acceptedWork,
-            Clock clock, TransactionTemplate transaction) {
+            FollowMerges merges, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.events = events;
         this.personal = personal;
         this.claims = claims;
         this.acceptedWork = acceptedWork;
+        this.merges = merges;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -47,9 +50,9 @@ public class RecordStatus {
     public Worker report(WorkerId id, StatusState state, StatusKey key, Instant until, String text) {
         StatusReport report = StatusReport.fromWorker(state, key, until, text, personal.address());
         requireServing(id);
-        Optional<MergeRequestView> claimedDraft = report.isDone() ? claims.verify(id) : Optional.empty();
+        Optional<MergeRequestView> claimedRequest = report.isDone() ? claims.verify(id) : Optional.empty();
         Worker reported = transaction.execute(_ -> recorded(id, report));
-        deliverWhenAccepted(reported, claimedDraft);
+        followTheWork(reported, claimedRequest);
         return reported;
     }
 
@@ -65,9 +68,11 @@ public class RecordStatus {
         return reported;
     }
 
-    private void deliverWhenAccepted(Worker reported, Optional<MergeRequestView> claimedDraft) {
+    private void followTheWork(Worker reported, Optional<MergeRequestView> claimedRequest) {
         if (reported.doneCheck() == DoneCheck.ACCEPTED) {
-            acceptedWork.deliver(reported.id().task(), claimedDraft);
+            acceptedWork.deliver(reported.id().task(), claimedRequest);
+        } else {
+            merges.followTheRequestOf(reported.id().task());
         }
     }
 }

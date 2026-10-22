@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.adapter.forge;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class GitHubForge implements Forge {
 
-    private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit";
+    private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt";
     private static final String WORKFLOW_SCOPE = "workflow";
 
     private final ForgeCalls calls;
@@ -39,10 +41,10 @@ public class GitHubForge implements Forge {
     }
 
     @Override
-    public Optional<MergeRequestView> openMergeRequestFrom(RegisteredForge forge, BranchName branch) {
+    public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = asTheBoundAccount(forge, ForgeCommand.GH_PR_LIST,
-                List.of("--repo", repositoryOf(forge), "--head", branch.toString(), "--state", "open", "--json", FIELDS), null);
-        return StreamSupport.stream(json.readTree(listed).spliterator(), false).findFirst().map(pull -> viewOf(forge, pull));
+                List.of("--repo", repositoryOf(forge), "--head", branch.toString(), "--state", "all", "--json", FIELDS), null);
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(pull -> viewOf(forge, pull)).toList();
     }
 
     @Override
@@ -57,7 +59,7 @@ public class GitHubForge implements Forge {
         asTheBoundAccount(forge, ForgeCommand.GH_PR_CREATE, List.of("--repo", repositoryOf(forge), "--draft",
                 "--base", proposal.base().name(), "--head", proposal.branch().toString(), "--title", proposal.title(), "--body-file", "-"),
                 proposal.description());
-        return openMergeRequestFrom(forge, proposal.branch())
+        return MergeRequestView.openAmong(mergeRequestsFrom(forge, proposal.branch()))
                 .orElseThrow(() -> new ProgramFailure("gh opened no pull request from " + proposal.branch() + " on " + forge.repository() + "."));
     }
 
@@ -98,14 +100,16 @@ public class GitHubForge implements Forge {
         if (!address.url().equalsIgnoreCase(pull.path("url").asString(""))) {
             throw new ProgramFailure("gh answered with " + pull.path("url").asString("") + ", which is not " + address + ".");
         }
+        MergeRequestState state = stateOf(pull.path("state").asString(""));
         return new MergeRequestView(
                 address,
-                stateOf(pull.path("state").asString("")),
+                state,
                 pull.path("isDraft").asBoolean(false),
                 pull.path("headRefName").asString(null),
                 pull.path("baseRefName").asString(null),
                 pull.path("headRefOid").asString(null),
-                pull.path("mergeCommit").path("oid").asString(null));
+                pull.path("mergeCommit").path("oid").asString(null),
+                state == MergeRequestState.MERGED ? mergedAtOf(address, pull) : null);
     }
 
     private static MergeRequestState stateOf(String word) {
@@ -115,5 +119,14 @@ public class GitHubForge implements Forge {
             case "CLOSED" -> MergeRequestState.CLOSED;
             default -> throw new ProgramFailure("gh reported a pull request in the unknown state " + word + ".");
         };
+    }
+
+    private static Instant mergedAtOf(MergeRequestAddress address, JsonNode pull) {
+        String moment = pull.path("mergedAt").asString("");
+        try {
+            return Instant.parse(moment);
+        } catch (DateTimeParseException unreadable) {
+            throw new ProgramFailure("gh shows " + address + " merged without a readable mergedAt: '" + moment + "'.");
+        }
     }
 }

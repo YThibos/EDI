@@ -28,9 +28,15 @@ import io.github.ythibos.edi.web.worker.WorkerListText;
 public class SessionStartDigestText implements TextPresenter<SessionStartDigest> {
 
     private final WorkerListText workers;
+    private final PresenceWords presenceWords;
+    private final HealthWords healthWords;
+    private final Moments moments;
 
-    public SessionStartDigestText(WorkerListText workers) {
+    public SessionStartDigestText(WorkerListText workers, PresenceWords presenceWords, HealthWords healthWords, Moments moments) {
         this.workers = workers;
+        this.presenceWords = presenceWords;
+        this.healthWords = healthWords;
+        this.moments = moments;
     }
 
     @Override
@@ -42,7 +48,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     public String text(SessionStartDigest digest) {
         List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing()),
                 "Address the captain as \"" + digest.address().word() + "\"."));
-        lines.add("Presence: " + PresenceWords.of(digest.presence()) + ".");
+        lines.add("Presence: " + presenceWords.of(digest.presence()) + ".");
         lines.addAll(sitrepOf(digest.sitrep()));
         lines.addAll(memoryOf(digest.memory()));
         lines.addAll(setupOf(digest.missingFromTheHome()));
@@ -95,12 +101,12 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
                 + "; examples/edi-home in the EDI repository shows each file's shape, and the captain decides their content.");
     }
 
-    private static List<String> limitStop(PrimarySession stopped) {
+    private List<String> limitStop(PrimarySession stopped) {
         if (stopped == null) {
             return List.of();
         }
-        return List.of("The previous primary session stopped on " + HealthWords.limit(stopped.limit()) + " at "
-                + Moments.minute(stopped.limitReachedAt()) + "; the workers parked on a limit are listed below.");
+        return List.of("The previous primary session stopped on " + healthWords.limit(stopped.limit()) + " at "
+                + moments.minute(stopped.limitReachedAt()) + "; the workers parked on a limit are listed below.");
     }
 
     private static List<String> waitingOnTheCaptain(FleetSnapshot fleet) {

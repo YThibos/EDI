@@ -46,10 +46,10 @@ class DeliveryStoresTest {
 
     @Test
     void keepsADeliveryAndFindsItByTaskUrlAndState() {
-        Delivery open = Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null),
+        Delivery open = Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null, null),
                 TestHome.START);
         home.deliveries().save(open);
-        Delivery merged = open.observed(new MergeRequestView(DRAFT, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "2222", "3333"),
+        Delivery merged = open.observed(new MergeRequestView(DRAFT, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "2222", "3333", TestHome.START.plusSeconds(600)),
                 TestHome.START.plusSeconds(600));
         home.deliveries().save(merged);
 
@@ -61,7 +61,7 @@ class DeliveryStoresTest {
 
     @Test
     void refusesADeliveryWhosePartsDoNotRebuildItsUrl() {
-        home.deliveries().save(Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null),
+        home.deliveries().save(Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null, null),
                 TestHome.START));
         home.jdbc().sql("update delivery set url = 'https://forge.example.org/elsewhere/-/merge_requests/5'").update();
 

@@ -2,7 +2,7 @@
 
 **Date:** 17/10/2026
 
-**Status:** Superseded by ADR-162
+**Status:** Superseded by ADR-166
 
 **Kind:** Architecture
 
