@@ -1,9 +1,7 @@
 package io.github.ythibos.edi.application.presence;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -15,17 +13,18 @@ import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.presence.CalendarEntry;
+import io.github.ythibos.edi.domain.presence.CalendarReading;
+import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 
 @Component
 public class MeetingCalendar {
 
     private static final Logger LOG = LoggerFactory.getLogger(MeetingCalendar.class);
-    private static final Duration FRESH_FOR = Duration.ofMinutes(15);
 
     private final OutlookCalendar outlook;
     private final PersonalConfiguration personal;
     private final Clock clock;
-    private Reading latest;
+    private volatile CalendarReading latest = CalendarReading.NOT_YET_READ;
 
     public MeetingCalendar(OutlookCalendar outlook, PersonalConfiguration personal, Clock clock) {
         this.outlook = outlook;
@@ -37,31 +36,40 @@ public class MeetingCalendar {
         if (!outlook.isConfigured()) {
             return Optional.empty();
         }
-        List<String> ignored = personal.presence().calendarIgnore();
-        return entriesOf(now).stream().filter(entry -> entry.isAMeetingInProgressAt(now, ignored)).findFirst();
+        return readingAt(now).meetingInProgressAt(now, personal.presence().calendarIgnore());
     }
 
-    private synchronized List<CalendarEntry> entriesOf(Instant now) {
+    public Optional<UnreadableCalendar> unreadable() {
+        return outlook.isConfigured() ? Optional.ofNullable(latest.unreadable()) : Optional.empty();
+    }
+
+    private synchronized CalendarReading readingAt(Instant now) {
         LocalDate today = LocalDate.ofInstant(now, clock.zone());
-        if (latest == null || !latest.isFreshFor(today, now)) {
-            latest = read(today, now);
+        if (latest.isDueAt(today, now)) {
+            latest = readOn(today, now);
         }
-        return latest.entries();
+        return latest;
     }
 
-    private Reading read(LocalDate today, Instant now) {
+    private CalendarReading readOn(LocalDate today, Instant now) {
         try {
-            return new Reading(today, now, outlook.entriesOn(today));
+            return readable(CalendarReading.of(today, now, outlook.entriesOn(today)));
         } catch (ProgramFailure unreadable) {
-            LOG.warn("The calendar could not be read, so presence follows the captain's typing alone: {}", unreadable.getMessage());
-            return new Reading(today, now, List.of());
+            return unreadable(latest.failedAt(today, now, unreadable.getMessage()));
         }
     }
 
-    private record Reading(LocalDate day, Instant readAt, List<CalendarEntry> entries) {
-
-        boolean isFreshFor(LocalDate today, Instant now) {
-            return day.equals(today) && now.isBefore(readAt.plus(FRESH_FOR));
+    private CalendarReading readable(CalendarReading reading) {
+        if (!latest.isReadable()) {
+            LOG.info("The calendar can be read again, so a meeting turns presence quiet once more.");
         }
+        return reading;
+    }
+
+    private CalendarReading unreadable(CalendarReading reading) {
+        if (latest.isReadable()) {
+            LOG.warn("The calendar cannot be read, so presence follows the captain's typing alone until it can: {}", reading.unreadable().reason());
+        }
+        return reading;
     }
 }

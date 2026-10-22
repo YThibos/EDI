@@ -172,7 +172,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-123](ADR-123-the-primarys-stop-waits-for-the-report-only-while-the-captain-is-present.md) | The primary's stop waits for the captain report while the captain is present, and for a live edi wait always | Design |
 | [ADR-124](ADR-124-wakes-are-gathered-into-one-batch-while-the-chat-is-quiet.md) | Wakes are queued with their event, edi wait long-polls for them, and quiet gathers them into batches | Design |
 | [ADR-125](ADR-125-notifications-for-the-captain-come-from-an-event-follower.md) | While the chat is quiet, each event that concerns the captain raises one notification, from an event follower | Design |
-| [ADR-126](ADR-126-the-windows-side-runs-through-powershell.md) | Notifications and the calendar come from the Windows side of WSL through powershell.exe | Architecture |
+| [ADR-126](ADR-126-the-windows-side-runs-through-powershell.md) | Notifications and the calendar come from the Windows side of WSL through powershell.exe (superseded by ADR-166) | Architecture |
 | [ADR-127](ADR-127-the-captain-returns-to-a-brief-of-what-happened.md) | The captain's first message after quiet or away arrives with a brief of what happened meanwhile | Design |
 | [ADR-128](ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md) | A voice lint keeps internal labels out of what the captain reads | Design |
 | [ADR-129](ADR-129-one-core-per-home-started-by-edi-up-and-stopped-by-edi-down.md) | One core per home, started by edi up and stopped by edi down | Design |
@@ -208,5 +208,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
 | [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |
 | [ADR-162](ADR-162-edi-shows-the-machines-local-time-and-stores-utc.md) | EDI shows times in the machine's local time zone and stores them in UTC | Design |
+| [ADR-163](ADR-163-the-calendar-is-read-every-two-minutes-and-an-unreadable-one-is-told-once.md) | The calendar is read every two minutes, presence switches from the last reading, and the captain hears once when it cannot be read | Design |
 | [ADR-164](ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md) | AT-39 scales its limit to the machine's own pace, measured in the same run | Design |
 | [ADR-165](ADR-165-a-process-is-the-recorded-one-within-two-seconds-of-boot-time-drift.md) | A process is the recorded one when its start lies within two seconds of the recorded start | Design |
+| [ADR-166](ADR-166-the-calendar-is-read-through-wsls-own-interop.md) | Notifications and the calendar come from the Windows side through powershell.exe, and the calendar is read through WSL's own interop | Architecture |

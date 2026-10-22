@@ -58,12 +58,21 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     }
 
     private List<String> presenceOf(CaptainReport report, int width) {
-        if (!report.showsThePresence()) {
-            return List.of();
+        List<String> lines = new ArrayList<>();
+        if (report.showsThePresence()) {
+            lines.addAll(standing("Presence: " + presenceWords.of(report.presence()), width));
         }
-        List<String> lines = new ArrayList<>(WordWrap.hanging(Glyphs.safe("Presence: " + presenceWords.of(report.presence())), width, "", "  "));
-        lines.add("");
+        if (report.showsTheUnreadableCalendar()) {
+            lines.addAll(standing("Calendar: " + presenceWords.ofTheUnreadableCalendar(report.unreadableCalendar()), width));
+        }
+        if (!lines.isEmpty()) {
+            lines.add("");
+        }
         return lines;
+    }
+
+    private static List<String> standing(String line, int width) {
+        return WordWrap.hanging(Glyphs.safe(line), width, "", "  ");
     }
 
     private static LocalDate filedOn(Task task) {

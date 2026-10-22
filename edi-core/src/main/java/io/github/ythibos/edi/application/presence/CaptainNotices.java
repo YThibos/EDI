@@ -28,6 +28,11 @@ public final class CaptainNotices {
         });
     }
 
+    public static CaptainNotice unreadableCalendar() {
+        return new CaptainNotice("The calendar cannot be read",
+                "Meetings added from now on do not turn your presence quiet until Outlook answers again.");
+    }
+
     private static CaptainNotice statusNotice(LoggedEvent event, Task task) {
         String title = task.intake().title();
         return switch (text(event, "state")) {

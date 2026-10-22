@@ -25,6 +25,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.CaptainNotice;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
@@ -70,7 +71,7 @@ final class CaptainFacingStrings {
                 home.fleetSnapshot().snapshot().waiting(), home.fleetSnapshot().snapshot().landed(), List.of(),
                 home.fleetSnapshot().snapshot().ongoing())));
         generated.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(),
-                Presence.presentSince(TestHome.START))));
+                Presence.presentSince(TestHome.START), null)));
         generated.add(new MigrationReportText().text(TestHome.in(directory.resolve("migration")).migrateFirstofficer().dryRun(OLD_HOME.toAbsolutePath())));
         generated.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
@@ -86,7 +87,7 @@ final class CaptainFacingStrings {
         }
         TestHome home = fleetIn(directory.resolve("reported"));
         presences().forEach(presence -> reports.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE,
-                ReportWidth.standard(), presence))));
+                ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer.")))));
         return reports;
     }
 
@@ -125,6 +126,7 @@ final class CaptainFacingStrings {
                 event("BranchDeliveryFailed", JSON.createObjectNode().put("because", "your copy has changes in lamp.txt")),
                 event("ChangeNotApplied", JSON.createObjectNode().put("because", "lamp.txt has changes")));
         List<CaptainNotice> notices = new ArrayList<>(events.stream().flatMap(event -> CaptainNotices.of(event, ship).stream()).toList());
+        notices.add(CaptainNotices.unreadableCalendar());
         CaptainNotices.of(event("StatusReported", JSON.createObjectNode().put("state", "done").put("text", "Report written.")), scout)
                 .ifPresent(notices::add);
         return notices.stream().map(notice -> notice.title() + "\n" + notice.text()).toList();

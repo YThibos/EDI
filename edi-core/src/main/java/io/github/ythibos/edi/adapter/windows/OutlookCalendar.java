@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.StreamSupport;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 @ImportRuntimeHints(WindowsScripts.class)
 public class OutlookCalendar {
+
+    private static final Map<String, String> WSL_WIDE_INTEROP = Map.of("WSL_INTEROP", "/run/WSL/1_interop");
 
     private final ExternalPrograms programs;
     private final MachineProfile machine;
@@ -54,8 +57,12 @@ public class OutlookCalendar {
 
     public List<CalendarEntry> entriesOn(LocalDate day) {
         String script = WindowsScripts.read(WindowsScripts.OUTLOOK_CALENDAR).replace("__DAY__", day.toString());
-        return entriesIn(programs.run(ProgramCall.of(Program.POWERSHELL, executable, windowsDirectory, WindowsScripts.encodedCommand(script)))
-                .outputOfSuccess());
+        return entriesIn(programs.run(withTheCaptainsOrdinaryRights(ProgramCall.of(Program.POWERSHELL, executable, windowsDirectory,
+                WindowsScripts.encodedCommand(script)))).outputOfSuccess());
+    }
+
+    private static ProgramCall withTheCaptainsOrdinaryRights(ProgramCall call) {
+        return call.withVariables(WSL_WIDE_INTEROP);
     }
 
     private List<CalendarEntry> entriesIn(String output) {

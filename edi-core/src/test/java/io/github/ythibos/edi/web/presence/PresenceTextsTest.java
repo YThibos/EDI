@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.ManualClock;
@@ -48,6 +49,8 @@ class PresenceTextsTest {
         assertThat(words.of(PRESENT.away(new Mandate("Carry on with the lamp.", 2), NOW)))
                 .isEqualTo("away since 2026-10-17 11:30 CEST, on the words \"Carry on with the lamp.\", with at most 2 workers at a time");
         assertThat(words.of(PRESENT.demo(NOW, NOW.plus(Duration.ofHours(1))))).isEqualTo("present for a demo until 2026-10-17 12:30 CEST");
+        assertThat(words.ofTheUnreadableCalendar(new UnreadableCalendar(NOW, "Outlook did not answer."))).isEqualTo(
+                "unreadable since 2026-10-17 11:30 CEST, so a meeting added since the last reading does not turn your presence quiet: \"Outlook did not answer.\"");
     }
 
     @Test
@@ -80,6 +83,27 @@ class PresenceTextsTest {
         assertThat(quiet).startsWith("Presence: quiet since 2026-10-17 09:30 UTC, on request\n\n╔══ NEEDS YOUR DECISION");
     }
 
+    @Test
+    void headsTheCaptainReportWithTheUnreadableCalendarBesideThePresence() throws IOException {
+        TestHome home = homeWithADecisionAndWork();
+        UnreadableCalendar unreadable = new UnreadableCalendar(NOW, "Outlook did not answer.");
+
+        String present = report(home, PRESENT, unreadable);
+        String quiet = report(home, PRESENT.quiet(NOW), unreadable);
+
+        assertThat(present).startsWith("""
+                Calendar: unreadable since 2026-10-17 09:30 UTC, so a meeting added since the last reading does not turn your presence
+                  quiet: "Outlook did not answer."
+
+                ╔══ NEEDS YOUR DECISION""");
+        assertThat(quiet).startsWith("""
+                Presence: quiet since 2026-10-17 09:30 UTC, on request
+                Calendar: unreadable since 2026-10-17 09:30 UTC, so a meeting added since the last reading does not turn your presence
+                  quiet: "Outlook did not answer."
+
+                ╔══ NEEDS YOUR DECISION""");
+    }
+
     private TestHome homeWithADecisionAndWork() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
         WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
@@ -89,6 +113,10 @@ class PresenceTextsTest {
     }
 
     private static String report(TestHome home, Presence presence) {
-        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(), presence));
+        return report(home, presence, null);
+    }
+
+    private static String report(TestHome home, Presence presence, UnreadableCalendar unreadable) {
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(), presence, unreadable));
     }
 }

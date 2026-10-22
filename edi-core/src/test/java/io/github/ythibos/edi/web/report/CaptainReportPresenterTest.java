@@ -117,7 +117,8 @@ class CaptainReportPresenterTest {
     }
 
     private String rendered(FleetSnapshot fleet, Turn turn) {
-        return presenter.text(new CaptainReport(fleet, turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
+        return presenter.text(new CaptainReport(fleet, turn, ReportWidth.standard(), Presence.presentSince(TestHome.START),
+                null));
     }
 
     private static Task filed(String item, int daysLater) {
