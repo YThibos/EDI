@@ -18,7 +18,7 @@ mise install
 
 `./mvnw verify` runs the whole invariant catalogue; an acceptance test a later slice owns would be reported as skipped ([ADR-034](decisions/ADR-034-invariant-catalogue.md)).
 The suite runs under both machine profiles ([ADR-102](decisions/ADR-102-the-suite-runs-under-both-machine-profiles.md)), Claude Code is replaced by a stand-in in the tests ([ADR-064](decisions/ADR-064-the-stand-in-for-claude-code.md)), and tests stop every process they start ([ADR-065](decisions/ADR-065-tests-stop-every-process-they-start.md)).
-The native smoke test runs the built executables end to end ([ADR-045](decisions/ADR-045-native-round-trip-in-the-smoke-test.md)).
+The native smoke test runs the built executables end to end ([ADR-164](decisions/ADR-164-at-39-scales-its-limit-to-the-machines-own-pace.md)).
 
 ## Continuous integration
 
