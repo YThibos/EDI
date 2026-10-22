@@ -17,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
+import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.testing.TestHome;
@@ -58,6 +59,22 @@ class PrimaryHooksTest {
 
         assertThat(home.primarySessions().standingOf(third)).isEqualTo(Standing.PRIMARY);
         assertThat(home.primarySessions().standingOf(first)).isEqualTo(Standing.STANDBY);
+    }
+
+    @Test
+    void keepsTheRoleOfALiveSessionWhoseRecordedStartTheBootTimeDriftShifted() throws IOException {
+        Process claude = processes.register(new ProcessBuilder("sleep", "30").start());
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, claude.pid(), true);
+        SessionProcess recorded = home.primarySessionStore().get(primary).orElseThrow().process();
+
+        for (Duration drift : List.of(Duration.ofSeconds(1), Duration.ofSeconds(-1))) {
+            recordTheStartShiftedBy(primary, recorded, drift);
+
+            assertThat(home.primarySessions().standingOf(primary)).isEqualTo(Standing.PRIMARY);
+        }
+        claude.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(claude.toHandle())).isTrue();
     }
 
     @Test
@@ -125,5 +142,10 @@ class PrimaryHooksTest {
 
         assertThat(home.sessionStartDigest().digestFor(next).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
+    }
+
+    private void recordTheStartShiftedBy(UUID session, SessionProcess recorded, Duration drift) {
+        SessionProcess shifted = new SessionProcess(recorded.pid(), recorded.startedAt().plus(drift));
+        home.primarySessionStore().save(home.primarySessionStore().get(session).orElseThrow().restarted(shifted));
     }
 }
