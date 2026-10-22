@@ -2,7 +2,7 @@
 
 **Date:** 15/10/2026
 
-**Status:** Superseded by ADR-156
+**Status:** Superseded by ADR-158
 
 **Kind:** Design
 

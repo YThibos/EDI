@@ -180,6 +180,18 @@ class ConsoleApiTest {
     }
 
     @Test
+    void makesTheBrowserFetchTheConsoleAgainSoAnUpdatedConsoleShowsAtOnce() throws Exception {
+        HttpResponse<String> console = send(HttpRequest.newBuilder(uri("/")).GET());
+        HttpResponse<String> signIn = send(HttpRequest.newBuilder(uri("/login")).GET());
+
+        Stream.of(console, signIn).forEach(page -> {
+            assertThat(page.statusCode()).isEqualTo(200);
+            assertThat(page.headers().firstValue("Cache-Control")).contains("no-cache");
+            assertThat(page.headers().firstValue("Last-Modified")).isEmpty();
+        });
+    }
+
+    @Test
     void armsAResearchBoardForTheWorkerOfItsTask() throws Exception {
         String worker = workerTokenFor("console-scout");
         Path board = Files.writeString(Files.createDirectories(home.resolve("data/tasks/console-scout")).resolve("board.html"), "<!doctype html>\n");

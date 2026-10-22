@@ -1,4 +1,4 @@
-# ADR-158: A closed task blocks nobody
+# ADR-160: A closed task blocks nobody
 
 **Date:** 21/10/2026
 
@@ -26,4 +26,4 @@ The migration `V9__waiting_on_the_captain.sql` removes the dependencies on tasks
 
 **Revisit when:** A dependant needs to know which blocker it waited for, such as to read that blocker's report.
 
-**Sources:** EDI rewrite specification, section 8.1; ADR-046, ADR-117, ADR-156; `domain.task.Task`, `application.task.DependantTasks`, `AddTask`, `application.migration.BacklogImport`, `application.delivery.DropTask`, `CleanUpTask`, `application.decision.AnswerDecision`, `adapter.store.TaskStore`.
+**Sources:** EDI rewrite specification, section 8.1; ADR-046, ADR-117, ADR-158; `domain.task.Task`, `application.task.DependantTasks`, `AddTask`, `application.migration.BacklogImport`, `application.delivery.DropTask`, `CleanUpTask`, `application.decision.AnswerDecision`, `adapter.store.TaskStore`.

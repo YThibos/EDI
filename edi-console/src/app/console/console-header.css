@@ -14,8 +14,8 @@
 .sr-nav__inner {
   max-width: var(--container);
   margin: 0 auto;
-  padding: 0 28px;
-  height: 64px;
+  padding: 0 var(--gutter);
+  height: var(--nav-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,8 +30,8 @@
 }
 
 .sr-brand__mark {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex: none;
   color: var(--ion);
   filter: drop-shadow(0 0 6px rgba(86, 200, 255, 0.45));
@@ -39,7 +39,7 @@
 
 .sr-brand__wm {
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.3em;
   color: var(--text-hi);
@@ -117,7 +117,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
+  gap: 2px;
   flex: none;
 }
 
@@ -137,10 +137,6 @@
 }
 
 @media (max-width: 560px) {
-  .sr-nav__inner {
-    padding: 0 16px;
-  }
-
   .sr-brand__sub {
     display: none;
   }

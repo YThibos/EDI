@@ -1,4 +1,4 @@
-# ADR-156: Everything that waits on the captain is in the decision zone, whatever holds its task
+# ADR-158: Everything that waits on the captain is in the decision zone, whatever holds its task
 
 **Date:** 21/10/2026
 
@@ -13,7 +13,7 @@ The captain report, the console's sitrep page, the return brief and the primary'
 
 **Decision:** `FleetSnapshotQuery` gathers what waits on the captain into `WaitingOnTheCaptain`, the first part of `FleetSnapshot`, in one read transaction:
 - `decisions`: every open decision in D-number order, whatever holds or blocks its task;
-- `boards`: every listening board with open questions, as `WaitingBoard` with its task (ADR-157);
+- `boards`: every listening board with open questions, as `WaitingBoard` with its task (ADR-159);
 - `reviews`: every task in flight whose latest worker's done was accepted and whose request is still open, as `ReadyForReview` with its delivery.
 `count()` is the number of all three, and the snapshot is quiet only when nothing waits on the captain and nothing is ongoing.
 PARKED still lists every held task but one that waits only for its decision, with its D number and the tasks it waits for, so a blocked task's decision appears in the zone and its task under PARKED.
@@ -40,4 +40,4 @@ A request leaves the zone when EDI sees it merged or closed.
 
 **Revisit when:** Something else starts waiting on the captain, such as a go-ahead that is not a decision.
 
-**Sources:** EDI rewrite specification, sections 5.4, 8.1 and 15.3 (I-19); ADR-012, ADR-039, ADR-046, ADR-047, ADR-107, ADR-157; `application.fleet.FleetSnapshotQuery`, `FleetSnapshot`, `WaitingOnTheCaptain`, `WaitingBoard`, `ReadyForReview`, `web.report.DecisionZone`, `CaptainReportPresenter`, `web.console.SitrepConsolePresenter`, `web.presence.ReturnBriefText`, `web.primary.SessionStartDigestText`, the console's `WaitingList`, `invariant.DecisionsAndReportingTest`.
+**Sources:** EDI rewrite specification, sections 5.4, 8.1 and 15.3 (I-19); ADR-012, ADR-039, ADR-046, ADR-047, ADR-107, ADR-159; `application.fleet.FleetSnapshotQuery`, `FleetSnapshot`, `WaitingOnTheCaptain`, `WaitingBoard`, `ReadyForReview`, `web.report.DecisionZone`, `CaptainReportPresenter`, `web.console.SitrepConsolePresenter`, `web.presence.ReturnBriefText`, `web.primary.SessionStartDigestText`, the console's `WaitingList`, `invariant.DecisionsAndReportingTest`.

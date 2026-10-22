@@ -39,20 +39,26 @@
   --font-display: "Exo 2", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --fs-h4: 1.12rem;
-  --fs-sm: 0.9rem;
-  --fs-xs: 0.8rem;
+  --fs-h4: 1rem;
+  --fs-sm: 0.86rem;
+  --fs-xs: 0.78rem;
   --fs-2xs: 0.69rem;
   --radius: 12px;
   --radius-sm: 8px;
   --radius-xs: 6px;
   --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.9);
   --focus-ring: 0 0 0 2px var(--void), 0 0 0 4px var(--ion);
-  --container: 1200px;
+  --container: 1760px;
+  --nav-height: 52px;
+  --gutter: 24px;
+  --gap: 14px;
+  --section-gap: 8px;
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-bright) transparent;
 }
 
 html,
@@ -68,7 +74,7 @@ html {
 body {
   min-height: 100vh;
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -217,17 +223,29 @@ a {
 .sr-main {
   max-width: var(--container);
   margin: 0 auto;
-  padding: 26px 28px 72px;
+  padding: var(--gap) var(--gutter) 48px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--gap);
 }
 
 .sr-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--section-gap);
   min-width: 0;
+}
+
+.sr-section__body {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.sr-section__body > .sr-panel {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sr-section__head {
@@ -281,7 +299,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 18px;
+  padding: 8px 14px;
   min-width: 0;
   border-top: 1px solid rgba(28, 42, 82, 0.75);
   transition: background 120ms;
@@ -305,9 +323,7 @@ a {
   font-weight: 600;
   color: var(--text-hi);
   line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .sr-row__sub {
@@ -315,9 +331,7 @@ a {
   color: var(--text-dim);
   line-height: 1.35;
   margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .sr-row__pr {
@@ -355,7 +369,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 10px 18px 14px;
+  margin: 8px 14px 10px;
   width: fit-content;
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
@@ -367,7 +381,7 @@ a {
 }
 
 .sr-empty {
-  padding: 18px;
+  padding: 14px;
   font-size: var(--fs-sm);
   color: var(--text-dim);
 }
@@ -385,6 +399,8 @@ a {
 .sr-decision {
   display: flex;
   flex-direction: column;
+  max-height: 100%;
+  overflow-y: auto;
   border-color: var(--amber-line);
 }
 
@@ -401,10 +417,10 @@ a {
 }
 
 .sr-decision__pad {
-  padding: 18px 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 9px;
   flex: 1;
 }
 
@@ -438,12 +454,12 @@ a {
 .sr-ctx {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 5px;
 }
 
 .sr-ctx__row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
   gap: 10px;
   align-items: baseline;
 }
@@ -496,7 +512,7 @@ a {
 }
 
 .sr-notice__pad {
-  padding: 18px 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -526,11 +542,11 @@ a {
 }
 
 @media (max-width: 560px) {
-  .sr-main {
-    padding: 18px 16px 56px;
+  :root {
+    --gutter: 16px;
   }
 
   .sr-row {
-    padding: 11px 14px;
+    padding: 8px 12px;
   }
 }

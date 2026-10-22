@@ -27,7 +27,7 @@ The worker's copy is `$EDI_HOME/worktrees/<project>/<task-id>`, its brief and re
 
 Workers report with `edi status` and read `edi inbox`.
 `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived ([ADR-056](decisions/ADR-056-steering-with-proof-of-delivery.md)).
-A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page shows its task as with EDI, and once the worker acknowledges the steer that resolves its key the question no longer shows ([ADR-159](decisions/ADR-159-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md)).
+A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page shows its task as with EDI, and once the worker acknowledges the steer that resolves its key the question no longer shows ([ADR-161](decisions/ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md)).
 
 ## Guards
 

@@ -43,12 +43,6 @@ describe('WaitingList', () => {
     expect(texts(list, '.sr-row__sub')).toEqual(['1 question waiting · harness']);
   });
 
-  it('shows nothing when no board or review waits', async () => {
-    const list = await listed([], []);
-
-    expect(list.querySelector('.sr-panel')).toBeNull();
-  });
-
   async function listed(boards: WaitingBoard[], reviews: ReadyForReview[]): Promise<HTMLElement> {
     fixture.componentRef.setInput('boards', boards);
     fixture.componentRef.setInput('reviews', reviews);

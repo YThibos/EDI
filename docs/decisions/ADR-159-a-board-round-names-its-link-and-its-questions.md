@@ -1,4 +1,4 @@
-# ADR-157: A board round names its link and how many questions it puts before the captain
+# ADR-159: A board round names its link and how many questions it puts before the captain
 
 **Date:** 21/10/2026
 
@@ -12,7 +12,7 @@ Lavish prints the board's link when the scout opens it, and only the scout knows
 
 **Decision:** `edi board arm` takes `--link <url>` and `--questions <n>` as well, both required, and sends them as a `BoardRound` with the bound decisions; a round names an `http` or `https` link and at least one question, or it is refused.
 The board stores the link and its open questions (`board.link`, `board.open_questions`, migration `V9__waiting_on_the_captain.sql`); arming a board that already listens posts a new round on it (`Board.posted`), with the new link, count and bindings.
-An answered round sets the open questions to none (`Board.answeredOnceMore`), and a board waits on the captain while it listens and holds open questions (`Board.waitsOnTheCaptain`), which puts it in the decision zone (ADR-156).
+An answered round sets the open questions to none (`Board.answeredOnceMore`), and a board waits on the captain while it listens and holds open questions (`Board.waitsOnTheCaptain`), which puts it in the decision zone (ADR-158).
 A board armed before this record has no link and no open questions until its scout arms it again.
 
 **Motivation:** The scout states what it asks at the moment it asks it, so the zone shows the board exactly while a round waits for the captain.
@@ -28,4 +28,4 @@ A board armed before this record has no link and no open questions until its sco
 
 **Revisit when:** Lavish reports a board's unanswered prompts itself.
 
-**Sources:** EDI rewrite specification, section 15.5; ADR-111, ADR-113, ADR-156; `domain.board.BoardRound`, `Board`, `application.board.ArmBoard`, `adapter.store.BoardStore`, `web.board.ArmRequest`, `edi-cli` `BoardArmCommand`, the `edi-board` skill.
+**Sources:** EDI rewrite specification, section 15.5; ADR-111, ADR-113, ADR-158; `domain.board.BoardRound`, `Board`, `application.board.ArmBoard`, `adapter.store.BoardStore`, `web.board.ArmRequest`, `edi-cli` `BoardArmCommand`, the `edi-board` skill.

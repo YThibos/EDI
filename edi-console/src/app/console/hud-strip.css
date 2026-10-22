@@ -1,15 +1,15 @@
 .sr-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--gap) var(--gutter);
 }
 
 .sr-stat {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px 13px;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 14px 7px 16px;
   min-width: 0;
   background: var(--panel-sunk);
   border: 1px solid var(--line);
@@ -29,7 +29,7 @@
 
 .sr-stat__num {
   font-family: var(--font-display);
-  font-size: 1.85rem;
+  font-size: 1.45rem;
   font-weight: 700;
   line-height: 1;
   color: var(--text-hi);
@@ -75,5 +75,12 @@
 @media (max-width: 900px) {
   .sr-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .sr-stat {
+    flex-direction: column;
+    gap: 5px;
   }
 }

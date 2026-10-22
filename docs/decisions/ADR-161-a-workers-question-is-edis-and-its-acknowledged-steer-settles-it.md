@@ -1,4 +1,4 @@
-# ADR-159: A worker's question is EDI's, and the acknowledged steer that resolves it settles it
+# ADR-161: A worker's question is EDI's, and the acknowledged steer that resolves it settles it
 
 **Date:** 21/10/2026
 
@@ -14,7 +14,7 @@ ADR-107 showed an ongoing task's state as its worker's last status, so the conso
 The sitrep page shows such a worker's task as `with EDI`, doing "EDI is settling a pipeline question" for a key that names a pipeline gate (`nm-...`), "EDI is settling a question" for any other question, or "EDI is helping it past a block"; this replaces ADR-107's state and doing for those statuses.
 When a worker acknowledges a message that resolves the key of its last status (`WorkerInbox.acknowledge`), that status becomes the resolved one (`Worker.settledBy`), which the page shows as working, "back at work; EDI settled its question"; a worker that reported something newer in between keeps its newer status.
 
-**Motivation:** Only what waits on the captain looks as if it waits on him (ADR-156), and a question EDI settled stops showing once the worker has read the answer.
+**Motivation:** Only what waits on the captain looks as if it waits on him (ADR-158), and a question EDI settled stops showing once the worker has read the answer.
 
 **Alternatives considered:**
 - Clearing the question when the steer is sent - the worker has not read the answer yet, and steering can fail to arrive (ADR-056).
@@ -26,4 +26,4 @@ When a worker acknowledges a message that resolves the key of its last status (`
 
 **Revisit when:** The primary settles worker questions in some way other than a steer.
 
-**Sources:** EDI rewrite specification, sections 10.2 and 12.4; ADR-055, ADR-056, ADR-107, ADR-128, ADR-156; `domain.status.StatusReport`, `StatusKey`, `domain.worker.Worker`, `application.worker.WorkerInbox`, `SteerWorker`, `web.console.SitrepConsolePresenter`.
+**Sources:** EDI rewrite specification, sections 10.2 and 12.4; ADR-055, ADR-056, ADR-107, ADR-128, ADR-158; `domain.status.StatusReport`, `StatusKey`, `domain.worker.Worker`, `application.worker.WorkerInbox`, `SteerWorker`, `web.console.SitrepConsolePresenter`.
