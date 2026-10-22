@@ -68,6 +68,18 @@ edi update                 # pull the repository, build, test and install it, re
 
 Each new primary session opens the console's sitrep page in the browser, signed in; `console.openSitrepAtSessionStart: false` in the machine profile switches that off.
 From then on the captain talks to the primary session, and every actor, the captain included, can use `edi --help` for the full command list.
+In the primary session the captain also types these commands, each a skill of the same name:
+
+```text
+/sitrep [board]            the situation report, in the chat or as the console's sitrep page
+/quiet [off]               no chat text while EDI carries on; off makes the captain present again
+/present                   back to present, with a brief of what happened meanwhile
+/afk <words>               away, with EDI carrying on within the mandate the words give
+/demo [off]                hold present through automatic and calendar quiet for a demo; off ends it
+/stow                      curate the captain's memory within its startup budget
+/update                    update EDI itself
+```
+
 [Architecture](docs/architecture.md#the-core-at-run-time) explains where the core keeps its state and how one core runs per home.
 
 #### The EDI console

@@ -1,12 +1,12 @@
 ---
-name: edi-stow
+name: stow
 description: >-
   Owns curating the captain's memory files and keeping them within their startup budget.
   Load it when the captain types /stow, before a context reset, or when the memory check fails.
 user-invocable: true
 ---
 
-# edi-stow
+# stow
 
 ## The memory files
 
