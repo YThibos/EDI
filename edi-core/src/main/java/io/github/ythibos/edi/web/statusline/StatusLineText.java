@@ -1,15 +1,14 @@
 package io.github.ythibos.edi.web.statusline;
 
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalInt;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.statusline.StatusLine;
 import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
 import io.github.ythibos.edi.domain.statusline.ClaudeSessionStatus;
@@ -29,15 +28,10 @@ class StatusLineText implements TextPresenter<StatusLine> {
     private static final long THOUSAND = 1000;
     private static final String DIRTY_MARK = "*";
 
-    private final ZoneId zone;
+    private final Clock clock;
 
-    @Autowired
-    StatusLineText() {
-        this(ZoneId.systemDefault());
-    }
-
-    StatusLineText(ZoneId zone) {
-        this.zone = zone;
+    StatusLineText(Clock clock) {
+        this.clock = clock;
     }
 
     @Override
@@ -92,7 +86,7 @@ class StatusLineText implements TextPresenter<StatusLine> {
     }
 
     private String resetMoment(Instant reset) {
-        return RESET_MOMENT.format(reset.atZone(zone));
+        return RESET_MOMENT.format(reset.atZone(clock.zone()));
     }
 
     private static String branch(Optional<CheckedOutBranch> branch) {

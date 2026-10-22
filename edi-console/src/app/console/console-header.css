@@ -159,3 +159,9 @@
     display: none;
   }
 }
+
+@media (max-width: 350px) {
+  .sr-clock__day {
+    display: none;
+  }
+}

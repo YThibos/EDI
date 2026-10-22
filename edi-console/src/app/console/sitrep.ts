@@ -1,6 +1,7 @@
 export interface Sitrep {
   schema: 'edi-sitrep.v1';
   generated: string;
+  zone: string;
   machine: string;
   address: string;
   presence: PresenceShown;

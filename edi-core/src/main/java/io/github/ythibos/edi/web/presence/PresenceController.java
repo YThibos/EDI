@@ -23,23 +23,25 @@ class PresenceController {
     private final PresenceQuery presence;
     private final ChangePresence change;
     private final CaptainsWordEvidence captainsWord;
+    private final PresenceWords words;
 
-    PresenceController(PresenceQuery presence, ChangePresence change, CaptainsWordEvidence captainsWord) {
+    PresenceController(PresenceQuery presence, ChangePresence change, CaptainsWordEvidence captainsWord, PresenceWords words) {
         this.presence = presence;
         this.change = change;
         this.captainsWord = captainsWord;
+        this.words = words;
     }
 
     @GetMapping("/api/presence")
     PresenceView current() {
-        return PresenceView.of(presence.current());
+        return PresenceView.of(presence.current(), words);
     }
 
     @PostMapping("/api/presence")
     PresenceView change(@RequestBody PresenceRequest request, Caller caller) {
         String mode = request.chosenMode();
         requireAllowed(mode, caller);
-        return PresenceView.of(changed(mode, request, caller));
+        return PresenceView.of(changed(mode, request, caller), words);
     }
 
     private static void requireAllowed(String mode, Caller caller) {

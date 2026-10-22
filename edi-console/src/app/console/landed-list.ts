@@ -11,6 +11,7 @@ import { stardate } from './stardate';
 export class LandedList {
   readonly tasks = input.required<LandedTask[]>();
   readonly total = input.required<number>();
+  readonly zone = input.required<string>();
 
   protected readonly projectsOf = projectsOf;
   protected readonly stardate = stardate;

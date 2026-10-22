@@ -18,6 +18,7 @@ import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
 import io.github.ythibos.edi.web.worker.WorkerListText;
 
@@ -102,6 +103,6 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     private String digestTelling(UUID session, ConsoleOpening sitrep) {
-        return new SessionStartDigestText(new WorkerListText()).text(home.sessionStartDigest().digestFor(session).withSitrep(sitrep));
+        return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session).withSitrep(sitrep));
     }
 }

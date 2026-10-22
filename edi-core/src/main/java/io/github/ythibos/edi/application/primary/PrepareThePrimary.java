@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import org.springframework.context.annotation.ImportRuntimeHints;
@@ -38,7 +37,7 @@ public class PrepareThePrimary {
         String prompt = PrimaryPrompt.composed(PrimaryLayer.read(PrimaryLayer.ANCHOR), personal.anchorAddendum(), memory.loadedAtSessionStart());
         Path settings = written(home.primaryState().resolve("settings.json"), PrimaryLayer.read(PrimaryLayer.SETTINGS));
         Path systemPrompt = written(home.primaryState().resolve("system-prompt.md"), prompt);
-        return new PrimaryLaunch(home.root(), settings, systemPrompt, "edi-" + SESSION_STAMP.format(clock.now().atZone(ZoneId.systemDefault())));
+        return new PrimaryLaunch(home.root(), settings, systemPrompt, "edi-" + SESSION_STAMP.format(clock.now().atZone(clock.zone())));
     }
 
     private static Path written(Path file, String content) {

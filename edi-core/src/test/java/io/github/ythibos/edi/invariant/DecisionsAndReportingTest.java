@@ -53,13 +53,12 @@ import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Intakes;
+import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.console.ConsoleSitrep;
-import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
-import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.report.CaptainReport;
-import io.github.ythibos.edi.web.report.CaptainReportPresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.TaskWording;
 import io.github.ythibos.edi.web.report.Turn;
@@ -395,17 +394,17 @@ class DecisionsAndReportingTest {
     }
 
     private static String captainReport(TestHome home, Turn turn) {
-        return new CaptainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START)));
     }
 
     private static ConsoleSitrep consoleSitrep(TestHome home) {
-        return new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT,
+        return PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(TestHome.START));
     }
 
     private static String returnBrief(TestHome home) {
         Presence left = Presence.presentSince(TestHome.START).quiet(TestHome.START);
-        return new ReturnBriefText().text(home.returnBriefs().since(left));
+        return PresenterFixtures.returnBriefText().text(home.returnBriefs().since(left));
     }
 
     private static DecisionNumber raise(TestHome home, String task, String title) {

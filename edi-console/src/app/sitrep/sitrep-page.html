@@ -1,5 +1,6 @@
 <app-console-header
   [generated]="sitrep()?.generated ?? null"
+  [zone]="sitrep()?.zone ?? null"
   [machine]="sitrep()?.machine ?? null"
   [presence]="sitrep()?.presence ?? null"
   (presenceChosen)="choosePresence($event)"
@@ -34,7 +35,7 @@
           </div>
           <div class="sr-section__body sr-waiting-on-you">
             @if (showsTheDeck()) {
-              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" (settled)="refresh()" />
+              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" (settled)="refresh()" />
             }
             @if (sitrep.boards.length || sitrep.reviews.length) {
               <app-waiting-list class="sr-section__body" [boards]="sitrep.boards" [reviews]="sitrep.reviews" />
@@ -60,10 +61,10 @@
       <div class="sr-section__head">
         <h2 class="sr-sign"><span class="sr-sign__no">04</span>Recently landed</h2>
       </div>
-      <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" />
+      <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" [zone]="sitrep.zone" />
     </section>
     <footer class="sr-foot">
-      <span class="sr-meta-mono">{{ sitrep.schema }} · {{ sitrep.generated }}</span>
+      <span class="sr-meta-mono">{{ sitrep.schema }} · {{ shipMoment(sitrep.generated, sitrep.zone) }}</span>
       <span class="sr-meta-mono">{{ live() ? 'live · answers go straight to EDI' : 'reconnecting · answers go straight to EDI' }}</span>
     </footer>
   }

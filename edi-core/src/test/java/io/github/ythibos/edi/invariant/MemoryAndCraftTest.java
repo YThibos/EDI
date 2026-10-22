@@ -23,8 +23,10 @@ import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BriefFixtures;
+import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.console.ConsoleSitrep;
 import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
 import io.github.ythibos.edi.web.memory.MemoryCheckText;
@@ -213,7 +215,7 @@ class MemoryAndCraftTest {
             TestHome home = ReportGoldenCases.homeIn(directory);
             ReportGoldenCases.queuedBacklog(home, ReportGoldenCases.TWO_MEGABYTE_TASKS, ReportGoldenCases.TWO_MEGABYTE_NOTE_WORDS);
 
-            ConsoleSitrep board = new SitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, "laptop", CaptainAddress.DEFAULT,
+            ConsoleSitrep board = PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                     Presence.presentSince(TestHome.START));
 
             assertThat(charactersOfTheBacklog(home)).isGreaterThanOrEqualTo(TWO_MEGABYTES);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Optional;
 
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.statusline.StatusLine;
 import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
+import io.github.ythibos.edi.testing.ManualClock;
 import tools.jackson.databind.json.JsonMapper;
 
 class StatusLineTextTest {
@@ -18,7 +20,7 @@ class StatusLineTextTest {
     private static final CheckedOutBranch CHANGED = new CheckedOutBranch("feature/HRN-3", true);
     private static final CheckedOutBranch CLEAN = new CheckedOutBranch("main", false);
 
-    private final StatusLineText presenter = new StatusLineText(ZoneId.of("Europe/Brussels"));
+    private final StatusLineText presenter = new StatusLineText(new ManualClock(Instant.EPOCH, ZoneId.of("Europe/Brussels")));
 
     @Test
     void writesTheFieldsInTheCaptainsOrder() throws IOException {

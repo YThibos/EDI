@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.StreamSupport;
@@ -20,6 +19,7 @@ import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.Program;
 import io.github.ythibos.edi.adapter.process.ProgramCall;
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.presence.CalendarEntry;
 import io.github.ythibos.edi.domain.presence.CalendarEntry.Response;
 import io.github.ythibos.edi.domain.presence.CalendarEntry.Showing;
@@ -36,14 +36,16 @@ public class OutlookCalendar {
     private final JsonMapper json;
     private final String executable;
     private final Path windowsDirectory;
+    private final Clock clock;
 
     public OutlookCalendar(ExternalPrograms programs, MachineProfile machine, JsonMapper json, @Value("${edi.windows.powershell:}") String executable,
-            @Value("${edi.console.windows-directory:/mnt/c}") Path windowsDirectory) {
+            @Value("${edi.console.windows-directory:/mnt/c}") Path windowsDirectory, Clock clock) {
         this.programs = programs;
         this.machine = machine;
         this.json = json;
         this.executable = executable;
         this.windowsDirectory = windowsDirectory;
+        this.clock = clock;
     }
 
     public boolean isConfigured() {
@@ -63,22 +65,22 @@ public class OutlookCalendar {
         try {
             JsonNode exported = json.readTree(output.strip());
             Iterable<JsonNode> items = exported.isArray() ? exported : List.of(exported);
-            return StreamSupport.stream(items.spliterator(), false).map(OutlookCalendar::entry).toList();
+            return StreamSupport.stream(items.spliterator(), false).map(this::entry).toList();
         } catch (JacksonException | DateTimeParseException unreadable) {
             throw new ProgramFailure("The Outlook calendar's export is not readable: " + unreadable.getMessage(), unreadable);
         }
     }
 
-    private static CalendarEntry entry(JsonNode item) {
+    private CalendarEntry entry(JsonNode item) {
         return new CalendarEntry(item.path("Subject").asString(""), instant(item.path("Start").asString("")), instant(item.path("End").asString("")),
                 item.path("AllDay").asBoolean(false), responseOf(item.path("ResponseStatus").asInt(0)), showingOf(item.path("BusyStatus").asInt(2)));
     }
 
-    private static Instant instant(String written) {
+    private Instant instant(String written) {
         try {
             return OffsetDateTime.parse(written).toInstant();
         } catch (DateTimeParseException withoutAnOffset) {
-            return LocalDateTime.parse(written).atZone(ZoneId.systemDefault()).toInstant();
+            return LocalDateTime.parse(written).atZone(clock.zone()).toInstant();
         }
     }
 

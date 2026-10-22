@@ -11,8 +11,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
@@ -77,6 +79,13 @@ class ArchitectureRulesTest {
             .orShould().callMethod(System.class, "nanoTime")
             .orShould().callConstructor(Date.class)
             .because("tests control time through the Clock port");
+
+    @ArchTest
+    static final ArchRule theMachinesTimeZoneIsReadThroughTheClock = noClasses()
+            .that().resideOutsideOfPackage(CLOCK_ADAPTER)
+            .should().callMethod(ZoneId.class, "systemDefault")
+            .orShould().callMethod(TimeZone.class, "getDefault")
+            .because("tests set the machine's time zone through the Clock port");
 
     @ArchTest
     static final ArchRule noClassNamesAMergeOperation = noClasses()

@@ -4,9 +4,10 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
   return {
     schema: 'edi-sitrep.v1',
     generated: '2026-10-15T06:17:35.120Z',
+    zone: 'Europe/Brussels',
     machine: 'laptop',
     address: 'Commander',
-    presence: { mode: 'quiet', demo: false, words: 'quiet since 2026-10-15 06:00Z, after a stretch without a typed message' },
+    presence: { mode: 'quiet', demo: false, words: 'quiet since 2026-10-15 08:00 CEST, after a stretch without a typed message' },
     decisions: [
       {
         number: 'D58',

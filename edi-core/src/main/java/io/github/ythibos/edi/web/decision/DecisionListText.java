@@ -13,6 +13,12 @@ import io.github.ythibos.edi.web.text.Words;
 @Component
 public class DecisionListText implements TextPresenter<DecisionList> {
 
+    private final DecisionLines decisionLines;
+
+    public DecisionListText(DecisionLines decisionLines) {
+        this.decisionLines = decisionLines;
+    }
+
     @Override
     public Class<DecisionList> presents() {
         return DecisionList.class;
@@ -22,7 +28,7 @@ public class DecisionListText implements TextPresenter<DecisionList> {
     public String text(DecisionList list) {
         List<String> lines = new ArrayList<>();
         lines.add(Words.counted(list.openOnly() ? "Open decisions" : "Decisions", list.decisions().size()));
-        list.decisions().forEach(decision -> lines.addAll(DecisionLines.of(decision)));
+        list.decisions().forEach(decision -> lines.addAll(decisionLines.of(decision)));
         return lines.stream().collect(Collectors.joining("\n", "", "\n"));
     }
 }

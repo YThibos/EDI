@@ -11,6 +11,12 @@ import io.github.ythibos.edi.web.text.Words;
 @Component
 public class WorkerListText implements TextPresenter<WorkerList> {
 
+    private final HealthWords healthWords;
+
+    public WorkerListText(HealthWords healthWords) {
+        this.healthWords = healthWords;
+    }
+
     @Override
     public Class<WorkerList> presents() {
         return WorkerList.class;
@@ -21,7 +27,7 @@ public class WorkerListText implements TextPresenter<WorkerList> {
         Table table = new Table("  ").line(Words.counted("Workers", workers.entries().size()));
         workers.entries().forEach(entry -> table.row(
                 entry.worker().id().toString(),
-                HealthWords.of(entry.health()),
+                healthWords.of(entry.health()),
                 entry.worker().category().value(),
                 entry.worker().route().toString(),
                 lastStatusOf(entry.worker())));

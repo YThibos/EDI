@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.application.memory;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 
 import org.springframework.stereotype.Service;
 
@@ -29,7 +28,7 @@ public class MemoryQuery {
     }
 
     public StowList stowList() {
-        return StowList.of(startupMemory(), LocalDate.ofInstant(clock.now(), ZoneId.systemDefault()));
+        return StowList.of(startupMemory(), LocalDate.ofInstant(clock.now(), clock.zone()));
     }
 
     public StartupMemory startupMemory() {

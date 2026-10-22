@@ -25,6 +25,12 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     static final String INSTRUCTION = "EDI return brief: show the captain the lines below verbatim, in one fenced block, before you answer their message.";
     private static final int MOST_SHOWN = 10;
 
+    private final PresenceWords presenceWords;
+
+    public ReturnBriefText(PresenceWords presenceWords) {
+        this.presenceWords = presenceWords;
+    }
+
     @Override
     public Class<ReturnBrief> presents() {
         return ReturnBrief.class;
@@ -32,7 +38,7 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
 
     @Override
     public String text(ReturnBrief brief) {
-        List<String> lines = new ArrayList<>(List.of(INSTRUCTION, "While you were away (" + PresenceWords.of(brief.left()) + "):"));
+        List<String> lines = new ArrayList<>(List.of(INSTRUCTION, "While you were away (" + presenceWords.of(brief.left()) + "):"));
         lines.addAll(section("Needs your decision", waitingLines(brief.waiting()), Function.identity()));
         lines.addAll(section("Landed", brief.landed(), landed -> landed.task().intake().title()));
         lines.addAll(section("Failed", brief.setbacks(), ReturnBriefText::setbackLine));

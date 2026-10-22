@@ -14,6 +14,14 @@ import io.github.ythibos.edi.web.text.TextPresenter;
 @Component
 class WakeDigestText implements TextPresenter<WakeDelivery> {
 
+    private final Moments moments;
+    private final PresenceWords presenceWords;
+
+    WakeDigestText(Moments moments, PresenceWords presenceWords) {
+        this.moments = moments;
+        this.presenceWords = presenceWords;
+    }
+
     @Override
     public Class<WakeDelivery> presents() {
         return WakeDelivery.class;
@@ -26,14 +34,14 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
         lines.add("Fleet: " + delivery.openDecisions() + " open decisions, " + delivery.ongoing() + " tasks in flight, "
                 + delivery.outageEntries() + " on the outage hold list.");
         if (delivery.presence().keepsTheChatQuiet()) {
-            lines.add("The captain is " + PresenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for the captain;"
+            lines.add("The captain is " + presenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for the captain;"
                     + " decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.");
         }
         lines.add("Handle these, then start edi wait in the background again.");
         return String.join("\n", lines) + "\n";
     }
 
-    private static String sentenceOf(Wake wake) {
+    private String sentenceOf(Wake wake) {
         String who = wake.worker() == null ? wake.task().value() : wake.worker().toString();
         return switch (wake.kind()) {
             case NEEDS_DECISION -> who + " needs a decision: " + wake.detail();
@@ -46,8 +54,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case LIMIT_RESUME_HELD_BACK -> who + ": its usage limit reset, but its pane shows " + wake.detail() + ", so EDI typed nothing.";
             case WORKER_DIED -> who + " died: " + wake.detail() + "; edi worker relaunch " + wake.task() + " resumes its session.";
             case LOST_IN_OUTAGE -> who + " is on the outage hold list as number " + wake.detail() + "; edi recover shows the list.";
-            case WORKER_STALE -> who + " has been idle without a declared wait since " + Moments.minute(wake.moment()) + "; look once, then steer or mark it.";
-            case BUSY_TOO_LONG -> who + " has been busy since " + Moments.minute(wake.moment()) + ", past the three-hour ceiling.";
+            case WORKER_STALE -> who + " has been idle without a declared wait since " + moments.minute(wake.moment()) + "; look once, then steer or mark it.";
+            case BUSY_TOO_LONG -> who + " has been busy since " + moments.minute(wake.moment()) + ", past the three-hour ceiling.";
             case WAIT_ENDED -> who + "'s declared wait has ended; verify what it waited for: " + wake.detail();
             case HOLD_DUE -> wake.task() + ": its hold until " + wake.detail() + " has come due.";
             case DRAFT_MERGED -> wake.task() + ": the captain merged " + wake.detail() + "; EDI refreshes the clone and cleans up.";
@@ -65,9 +73,9 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
         };
     }
 
-    private static String resumeOf(Wake wake) {
+    private String resumeOf(Wake wake) {
         return wake.moment() == null
                 ? "; it has no reset time, so it waits for the captain."
-                : "; EDI types one resume line after " + Moments.minute(wake.moment()) + ".";
+                : "; EDI types one resume line after " + moments.minute(wake.moment()) + ".";
     }
 }

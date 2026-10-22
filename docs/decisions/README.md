@@ -207,3 +207,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-159](ADR-159-a-board-round-names-its-link-and-its-questions.md) | A board round names its link and how many questions it puts before the captain | Design |
 | [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
 | [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |
+| [ADR-162](ADR-162-edi-shows-the-machines-local-time-and-stores-utc.md) | EDI shows times in the machine's local time zone and stores them in UTC | Design |
