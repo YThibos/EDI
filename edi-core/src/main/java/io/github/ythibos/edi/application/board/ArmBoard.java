@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 
 import org.springframework.stereotype.Service;
@@ -18,6 +17,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -51,18 +51,20 @@ public class ArmBoard {
         this.transaction = transaction;
     }
 
-    public Board arm(WorkerId worker, TaskReference reference, Path file, List<DecisionNumber> bound) {
-        Board armed = transaction.execute(_ -> armedOrRebound(worker, tasks.get(reference), file, List.copyOf(bound)));
+    public Board arm(WorkerId worker, TaskReference reference, Path file, BoardRound round) {
+        Board armed = transaction.execute(_ -> armedOrPostedAgain(worker, tasks.get(reference), file, round));
         listeners.listenTo(armed);
         return armed;
     }
 
-    private Board armedOrRebound(WorkerId worker, Task task, Path file, List<DecisionNumber> bound) {
+    private Board armedOrPostedAgain(WorkerId worker, Task task, Path file, BoardRound round) {
         Instant now = clock.now();
         requireItsOwnWorker(task, worker);
         String board = boardFileOf(task, file).toString();
-        bound.forEach(this::requireOpen);
-        Board armed = boards.listeningAt(board).map(listening -> rebound(listening, task, bound)).orElseGet(() -> boards.arm(task.id(), board, bound, now));
+        round.bound().forEach(this::requireOpen);
+        Board armed = boards.listeningAt(board)
+                .map(listening -> postedAgain(listening, task, round))
+                .orElseGet(() -> boards.arm(task.id(), board, round, now));
         events.record(new BoardArmed(task.id(), armed.id(), armed.file(), armed.bound()), Actor.worker(worker), now);
         return armed;
     }
@@ -91,13 +93,13 @@ public class ArmBoard {
         }
     }
 
-    private Board rebound(Board listening, Task task, List<DecisionNumber> bound) {
+    private Board postedAgain(Board listening, Task task, BoardRound round) {
         if (!listening.task().equals(task.id())) {
             throw new Refusal(listening.file() + " is already armed for " + listening.task() + ".");
         }
-        Board rebound = listening.rebound(bound);
-        boards.update(rebound);
-        return rebound;
+        Board posted = listening.posted(round);
+        boards.update(posted);
+        return posted;
     }
 
     private static Path realPathOf(Path path) {

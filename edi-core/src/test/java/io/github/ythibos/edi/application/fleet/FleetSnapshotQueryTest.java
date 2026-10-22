@@ -19,21 +19,37 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.task.NewTask;
+import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.status.StatusReport;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.WorkerFixtures;
 
 @Tag("adapter")
 class FleetSnapshotQueryTest {
+
+    private static final MergeRequestAddress REQUEST =
+            new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITLAB, "forge.example.org", "team/harness"), 5);
 
     @TempDir
     private Path directory;
@@ -57,7 +73,7 @@ class FleetSnapshotQueryTest {
 
         FleetSnapshot fleet = home.fleetSnapshot().snapshot();
 
-        assertThat(fleet.decisions()).extracting(open -> open.decision().number(), open -> open.task().id())
+        assertThat(fleet.waiting().decisions()).extracting(open -> open.decision().number(), open -> open.task().id())
                 .containsExactly(tuple(new DecisionNumber(58), new TaskId("lamp-choice")));
         assertThat(fleet.ongoing()).extracting(ongoing -> ongoing.task().id()).containsExactly(new TaskId("horn"));
         assertThat(fleet.parked()).extracting(parked -> parked.task().id()).containsExactly(new TaskId("mast"));
@@ -66,14 +82,15 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void parksADecisionWhoseTaskIsBlockedWithItsNumber() {
+    void putsADecisionOnABlockedTaskBeforeTheCaptainAndParksTheTaskWithItsNumber() {
         add(ship("lantern", "Rework the lantern"));
         add(shipBlockedBy("lamp-fitting", "Fit the lamp", "lantern"));
         raise("lamp-fitting");
 
         FleetSnapshot fleet = home.fleetSnapshot().snapshot();
 
-        assertThat(fleet.decisions()).isEmpty();
+        assertThat(fleet.waiting().decisions()).extracting(open -> open.decision().number()).containsExactly(new DecisionNumber(58));
+        assertThat(fleet.waiting().count()).isEqualTo(1);
         assertThat(fleet.parked()).singleElement().satisfies(parked -> {
             assertThat(parked.decision().number()).isEqualTo(new DecisionNumber(58));
             assertThat(parked.blockers()).extracting(Task::id).containsExactly(new TaskId("lantern"));
@@ -82,7 +99,7 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void releasesADecisionToTheCaptainOnceItsBlockerIsDone() {
+    void stopsParkingADecisionsTaskOnceItsBlockerIsDone() {
         add(ship("lantern", "Rework the lantern"));
         add(shipBlockedBy("lamp-fitting", "Fit the lamp", "lantern"));
         raise("lamp-fitting");
@@ -90,8 +107,46 @@ class FleetSnapshotQueryTest {
 
         FleetSnapshot fleet = home.fleetSnapshot().snapshot();
 
-        assertThat(fleet.decisions()).extracting(open -> open.task().id()).containsExactly(new TaskId("lamp-fitting"));
+        assertThat(fleet.waiting().decisions()).extracting(open -> open.task().id()).containsExactly(new TaskId("lamp-fitting"));
         assertThat(fleet.parked()).isEmpty();
+    }
+
+    @Test
+    void putsABoardWithQuestionsBeforeTheCaptainUntilARoundAnswersThem() {
+        add(ship("lantern", "Rework the lantern"));
+        Board armed = home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.asking(3), TestHome.START);
+
+        WaitingOnTheCaptain posted = home.fleetSnapshot().snapshot().waiting();
+        home.boards().update(armed.answeredOnceMore());
+        WaitingOnTheCaptain answered = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(posted.boards()).singleElement().satisfies(waiting -> {
+            assertThat(waiting.task().id()).isEqualTo(new TaskId("lantern"));
+            assertThat(waiting.board().openQuestions()).isEqualTo(3);
+            assertThat(waiting.board().link()).isEqualTo(BoardRounds.LINK);
+        });
+        assertThat(posted.count()).isEqualTo(1);
+        assertThat(answered.isEmpty()).isTrue();
+    }
+
+    @Test
+    void putsAnOpenRequestBeforeTheCaptainOnceItsDoneIsAcceptedUntilItIsMerged() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        Worker worker = WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+
+        WaitingOnTheCaptain beforeDone = home.fleetSnapshot().snapshot().waiting();
+        home.workers().update(worker.reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), TestHome.START));
+        WaitingOnTheCaptain afterDone = home.fleetSnapshot().snapshot().waiting();
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(requestIn(MergeRequestState.MERGED), TestHome.START));
+        WaitingOnTheCaptain afterTheMerge = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(beforeDone.reviews()).isEmpty();
+        assertThat(afterDone.reviews()).singleElement().satisfies(ready -> {
+            assertThat(ready.task().id()).isEqualTo(lamp.id());
+            assertThat(ready.delivery().address().url()).isEqualTo(REQUEST.url());
+        });
+        assertThat(afterTheMerge.reviews()).isEmpty();
     }
 
     @Test
@@ -104,7 +159,7 @@ class FleetSnapshotQueryTest {
 
         FleetSnapshot fleet = home.fleetSnapshot().snapshot();
 
-        assertThat(fleet.decisions()).isEmpty();
+        assertThat(fleet.waiting().decisions()).isEmpty();
         assertThat(fleet.parked()).singleElement().satisfies(parked -> {
             assertThat(parked.decision()).isNull();
             assertThat(parked.isBlocked()).isFalse();
@@ -160,6 +215,10 @@ class FleetSnapshotQueryTest {
         home.clock().advance(Duration.ofHours(25));
 
         assertThat(home.fleetSnapshot().snapshot().answered()).isEmpty();
+    }
+
+    private static MergeRequestView requestIn(MergeRequestState state) {
+        return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", state == MergeRequestState.MERGED ? "3333" : null);
     }
 
     private void add(NewTask task) {

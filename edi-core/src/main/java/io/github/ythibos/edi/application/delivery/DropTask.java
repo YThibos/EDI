@@ -11,6 +11,7 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
@@ -35,11 +36,12 @@ public class DropTask {
     private final LandedWorkCheck landedWork;
     private final CopyRetirement retirement;
     private final CaptainsWordEvidence captainsWord;
+    private final DependantTasks dependants;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DropTask(TaskStore tasks, DispatchStore dispatches, EventLog events, WorkerContext context, LandedWorkCheck landedWork,
-            CopyRetirement retirement, CaptainsWordEvidence captainsWord, Clock clock, TransactionTemplate transaction) {
+            CopyRetirement retirement, CaptainsWordEvidence captainsWord, DependantTasks dependants, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.events = events;
@@ -47,6 +49,7 @@ public class DropTask {
         this.landedWork = landedWork;
         this.retirement = retirement;
         this.captainsWord = captainsWord;
+        this.dependants = dependants;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -93,6 +96,7 @@ public class DropTask {
             retirement.retireWorkers(closed.id(), "its task was dropped", now, actor);
             retirement.retireBoards(closed.id(), now, actor);
             tasks.update(closed);
+            dependants.stopWaitingFor(closed);
             events.record(new TaskDropped(closed.id(), word.verbatim(), discarded), actor, now);
             return closed;
         });

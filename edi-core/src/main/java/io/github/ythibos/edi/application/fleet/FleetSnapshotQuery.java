@@ -8,25 +8,27 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.Worker;
 
 @Service
 public class FleetSnapshotQuery {
@@ -39,16 +41,18 @@ public class FleetSnapshotQuery {
     private final WorkerStore workers;
     private final PipelineRunStore pipelineRuns;
     private final DeliveryStore deliveries;
+    private final BoardStore boards;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public FleetSnapshotQuery(TaskStore tasks, DecisionStore decisions, WorkerStore workers, PipelineRunStore pipelineRuns, DeliveryStore deliveries,
-            Clock clock, TransactionTemplate transaction) {
+            BoardStore boards, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.decisions = decisions;
         this.workers = workers;
         this.pipelineRuns = pipelineRuns;
         this.deliveries = deliveries;
+        this.boards = boards;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -59,9 +63,9 @@ public class FleetSnapshotQuery {
             List<Task> inFlight = tasks.inState(TaskState.IN_FLIGHT);
             List<Task> queued = tasks.inState(TaskState.QUEUED);
             Map<TaskId, Decision> openDecisions = openDecisionsByTask();
-            List<ParkedTask> parked = parkedAmong(Stream.concat(inFlight.stream(), queued.stream()).toList(), openDecisions);
-            return new FleetSnapshot(decisionsForTheCaptain(openDecisions, parked), ongoing(unheld(inFlight)), parked, unheld(queued),
-                    landedSince(now.minus(LANDED_RECENTLY)), answeredSince(now.minus(ANSWERED_RECENTLY)));
+            List<Task> openWork = Stream.concat(inFlight.stream(), queued.stream()).toList();
+            return new FleetSnapshot(waitingOnTheCaptain(openDecisions, inFlight), ongoing(unheld(inFlight)), parkedAmong(openWork, openDecisions),
+                    unheld(queued), landedSince(now.minus(LANDED_RECENTLY)), answeredSince(now.minus(ANSWERED_RECENTLY)));
         });
     }
 
@@ -71,20 +75,34 @@ public class FleetSnapshotQuery {
         return byTask;
     }
 
-    private List<ParkedTask> parkedAmong(List<Task> openWork, Map<TaskId, Decision> openDecisions) {
-        return openWork.stream()
-                .filter(Task::isHeld)
-                .map(task -> parked(task, openDecisions.get(task.id())))
-                .flatMap(Optional::stream)
+    private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight) {
+        return new WaitingOnTheCaptain(decisionsOf(openDecisions), boardsWithQuestions(), readyForReviewAmong(inFlight));
+    }
+
+    private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {
+        return openDecisions.values().stream().map(decision -> new OpenDecision(decision, tasks.get(decision.task()))).toList();
+    }
+
+    private List<WaitingBoard> boardsWithQuestions() {
+        return boards.listening().stream()
+                .filter(Board::waitsOnTheCaptain)
+                .map(board -> new WaitingBoard(board, tasks.get(board.task())))
                 .toList();
     }
 
-    private List<OpenDecision> decisionsForTheCaptain(Map<TaskId, Decision> openDecisions, List<ParkedTask> parked) {
-        Set<TaskId> parkedTasks = parked.stream().map(parkedTask -> parkedTask.task().id()).collect(Collectors.toSet());
-        return openDecisions.values().stream()
-                .filter(decision -> !parkedTasks.contains(decision.task()))
-                .map(decision -> new OpenDecision(decision, tasks.get(decision.task())))
+    private List<ReadyForReview> readyForReviewAmong(List<Task> inFlight) {
+        return inFlight.stream()
+                .filter(this::hadItsDoneAccepted)
+                .flatMap(task -> openRequestOf(task).stream())
                 .toList();
+    }
+
+    private boolean hadItsDoneAccepted(Task task) {
+        return workers.latestOf(task.id()).filter(Worker::hadItsDoneAccepted).isPresent();
+    }
+
+    private Optional<ReadyForReview> openRequestOf(Task task) {
+        return deliveries.of(task.id()).filter(Delivery::isOpen).map(delivery -> new ReadyForReview(task, delivery));
     }
 
     private static List<Task> unheld(List<Task> work) {
@@ -111,6 +129,14 @@ public class FleetSnapshotQuery {
 
     private List<RecentAnswer> answeredSince(Instant since) {
         return decisions.answeredSince(since).stream().map(decision -> new RecentAnswer(decision, tasks.get(decision.task()))).toList();
+    }
+
+    private List<ParkedTask> parkedAmong(List<Task> openWork, Map<TaskId, Decision> openDecisions) {
+        return openWork.stream()
+                .filter(Task::isHeld)
+                .map(task -> parked(task, openDecisions.get(task.id())))
+                .flatMap(Optional::stream)
+                .toList();
     }
 
     private Optional<ParkedTask> parked(Task heldTask, Decision openDecision) {

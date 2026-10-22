@@ -1,8 +1,16 @@
-╔══ NEEDS YOUR DECISION ══ 1 open ══════════════════════════════════════════════════════════════════════════════════════
+╔══ NEEDS YOUR DECISION ══ 2 open ══════════════════════════════════════════════════════════════════════════════════════
 ║
 ╟── Gatehouse ───────────────────────────────
 ║
 ║  D1    An old unanswered call
+║
+║        (A)  Take the first path
+║
+║        (B)  Take the second path
+║
+║        » Recommended: A - it keeps the work moving
+║
+║  D2    A blocked call
 ║
 ║        (A)  Take the first path
 ║

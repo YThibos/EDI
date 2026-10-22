@@ -77,6 +77,9 @@ public sealed interface Confirmation {
     record BoardArmed(Board board) implements Confirmation {
     }
 
+    record BoardRoundPosted(Board board) implements Confirmation {
+    }
+
     record RecheckAsked(DecisionNumber number) implements Confirmation {
     }
 

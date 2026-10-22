@@ -38,6 +38,8 @@ describe('SitrepPage', () => {
   it('shows the fleet in the approved board sections', async () => {
     const page = (await rendered()).nativeElement as HTMLElement;
 
+    expect(page.querySelector('app-waiting-list')).toBeNull();
+
     expect(texts(page, '.sr-stat__num')).toEqual(['1', '1', '1', '23']);
     expect(page.querySelector('.sr-stat')?.classList).toContain('sr-stat--hot');
     expect(page.querySelector('.sr-clock__sd')?.textContent).toBe('SD 2026.288 · 06:17Z');
@@ -50,15 +52,71 @@ describe('SitrepPage', () => {
     expect(page.textContent).toContain('+21 more queued');
   });
 
+  it('counts every board and review that waits on the captain beside the decisions', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        boards: [{ task: 'lamp-research', title: 'Research the lamp', projects: ['harness'], questions: 2, link: 'http://127.0.0.1:4387/session/1a2b3c' }],
+        reviews: [{ task: 'fit-lamp', title: 'Fit the lamp', projects: ['harness'], url: 'https://github.com/example-owner/harness/pull/13' }],
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(texts(page, '.sr-stat__num')[0]).toBe('3');
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('3 waiting on you, Commander');
+    expect(text(page, '.sr-decision__title')).toBe('Which lamp?');
+    expect(texts(page, '.sr-waiting__link')).toEqual(['http://127.0.0.1:4387/session/1a2b3c', 'https://github.com/example-owner/harness/pull/13']);
+  });
+
+  it('never calls the captain all clear while a board or a review waits on him', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        decisions: [],
+        answered: [],
+        reviews: [{ task: 'fit-lamp', title: 'Fit the lamp', projects: ['harness'], url: 'https://github.com/example-owner/harness/pull/13' }],
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('1 waiting on you, Commander');
+    expect(page.querySelector('.sr-clear')).toBeNull();
+    expect(page.querySelector('.sr-stat')?.classList).toContain('sr-stat--hot');
+    expect(page.querySelector('.sr-waiting-on-you > app-waiting-list')).not.toBeNull();
+  });
+
+  it('shows a worker question as EDI\'s, in the calm tone, never as waiting on the captain', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        decisions: [],
+        answered: [],
+        ongoing: [
+          { task: 'fit-lamp', title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with EDI', doing: 'EDI is settling a question', draft: null },
+        ],
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page, '.sr-row .sr-badge')).toBe('with EDI');
+    expect(page.querySelector('.sr-row .sr-badge')?.classList).toContain('sr-badge--info');
+    expect(text(page, '.sr-row__sub')).toContain('EDI is settling a question');
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('all clear, Commander');
+  });
+
   it('puts what needs a decision, what is ongoing and what is charted next side by side, in that order', async () => {
     const page = (await rendered()).nativeElement as HTMLElement;
 
     expect(texts(page, '.sr-cols > .sr-section .sr-sign')).toEqual(['01Needs your decision', '02Ongoing', '03Charted next']);
-    expect(Array.from(page.querySelectorAll('.sr-cols > .sr-section .sr-section__body')).map((body) => body.tagName.toLowerCase())).toEqual([
-      'app-decision-deck',
+    expect(Array.from(page.querySelectorAll('.sr-cols > .sr-section > .sr-section__body')).map((body) => body.tagName.toLowerCase())).toEqual([
+      'div',
       'app-ongoing-list',
       'app-charted-list',
     ]);
+    expect(page.querySelector('.sr-waiting-on-you > app-decision-deck')).not.toBeNull();
   });
 
   it('keeps what landed recently below the columns, last', async () => {

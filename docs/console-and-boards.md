@@ -10,7 +10,7 @@ edi console                                         # open the console in the br
 edi sitrep --board                                  # print the sitrep, then open its page in the console
 ```
 
-The sitrep page shows what needs a decision, what is ongoing and what is charted next side by side, in one glance on a laptop screen, with what landed this week below them, and follows every change as it happens ([ADR-107](decisions/ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md), [ADR-109](decisions/ADR-109-the-console-stream-signals-each-commit.md)).
+The sitrep page shows what needs the captain, what is ongoing and what is charted next side by side, in one glance on a laptop screen, with what landed this week below them, and follows every change as it happens ([ADR-107](decisions/ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md), [ADR-109](decisions/ADR-109-the-console-stream-signals-each-commit.md)).
 
 ![The sitrep page in a 1536 by 730 viewport, a laptop screen at 125% scaling](images/sitrep/sitrep-1536x730.webp)
 
@@ -27,7 +27,16 @@ When the browser cannot open it, the session starts anyway, and its digest names
 A scout writes its Lavish board in its task's directory, opens it with `lavish-axi`, and has EDI listen to it ([ADR-111](decisions/ADR-111-research-boards-are-armed-through-edi-and-listened-to-by-the-core.md)):
 
 ```sh
-edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --bind D58,D59
+edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --link <url> --questions 3 --bind D58,D59
+```
+
+The link is the one `lavish-axi` printed when the scout opened the board, and the count is how many questions the round puts before the captain ([ADR-159](decisions/ADR-159-a-board-round-names-its-link-and-its-questions.md)).
+The count leaves out the decisions the board binds, which wait as their own cards.
+The board waits in the decision zone of the report, the sitrep page and the return brief until a round of the captain's answers arrives; arming it again posts a new round.
+When the scout cannot arm it again, the primary posts the round instead:
+
+```sh
+edi board post "$EDI_HOME/data/tasks/<task-id>/board.html" --link <url> --questions 2
 ```
 
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops ([ADR-112](decisions/ADR-112-the-lavish-result-reader-follows-toon.md)).

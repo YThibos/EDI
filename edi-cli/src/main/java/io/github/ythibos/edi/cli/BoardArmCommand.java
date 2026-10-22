@@ -21,6 +21,13 @@ final class BoardArmCommand implements Callable<Integer> {
     @Option(names = "--task", required = true, paramLabel = "TASK", description = "The task the board belongs to: your own.")
     private String task;
 
+    @Option(names = "--link", required = true, paramLabel = "URL", description = "The link lavish-axi printed for the board, which the captain opens.")
+    private String link;
+
+    @Option(names = "--questions", required = true, paramLabel = "N",
+            description = "How many questions this round puts before the captain, not counting the decisions it binds; arming the board again posts a new round.")
+    private int questions;
+
     @Option(names = "--bind", split = ",", paramLabel = "D58,D59", description = "Open decisions the board answers for the captain.")
     private List<String> decisions;
 
@@ -29,6 +36,8 @@ final class BoardArmCommand implements Callable<Integer> {
         return core.post("/api/boards", new JsonBody()
                 .with("file", board.toAbsolutePath().normalize().toString())
                 .with("task", task)
+                .with("link", link)
+                .with("questions", questions)
                 .with("bind", decisions));
     }
 }

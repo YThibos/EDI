@@ -4,11 +4,10 @@ import java.util.List;
 
 import io.github.ythibos.edi.domain.task.Task;
 
-public record FleetSnapshot(List<OpenDecision> decisions, List<OngoingTask> ongoing, List<ParkedTask> parked, List<Task> queued,
+public record FleetSnapshot(WaitingOnTheCaptain waiting, List<OngoingTask> ongoing, List<ParkedTask> parked, List<Task> queued,
         List<LandedTask> landed, List<RecentAnswer> answered) {
 
     public FleetSnapshot {
-        decisions = List.copyOf(decisions);
         ongoing = List.copyOf(ongoing);
         parked = List.copyOf(parked);
         queued = List.copyOf(queued);
@@ -17,6 +16,6 @@ public record FleetSnapshot(List<OpenDecision> decisions, List<OngoingTask> ongo
     }
 
     public boolean isQuiet() {
-        return decisions.isEmpty() && ongoing.isEmpty();
+        return waiting.isEmpty() && ongoing.isEmpty();
     }
 }

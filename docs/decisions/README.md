@@ -200,3 +200,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-152](ADR-152-the-sitrep-page-fits-one-laptop-screen.md) | The sitrep page fits one laptop screen, with three columns above what landed | Design |
 | [ADR-153](ADR-153-the-browser-fetches-the-console-again-on-every-load.md) | The browser fetches the console again on every load | Design |
 | [ADR-154](ADR-154-the-native-tests-run-without-the-callers-edi-variables.md) | The native tests start the core without the caller's EDI variables | Design |
+| [ADR-158](ADR-158-everything-that-waits-on-the-captain-is-in-the-decision-zone.md) | Everything that waits on the captain is in the decision zone, whatever holds its task | Design |
+| [ADR-159](ADR-159-a-board-round-names-its-link-and-its-questions.md) | A board round names its link and how many questions it puts before the captain | Design |
+| [ADR-160](ADR-160-a-closed-task-blocks-nobody.md) | A closed task blocks nobody | Design |
+| [ADR-161](ADR-161-a-workers-question-is-edis-and-its-acknowledged-steer-settles-it.md) | A worker's question is EDI's, and the acknowledged steer that resolves it settles it | Design |

@@ -68,6 +68,7 @@ import io.github.ythibos.edi.application.access.ConsoleAccess;
 import io.github.ythibos.edi.application.access.OpenConsole;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
+import io.github.ythibos.edi.application.board.PostBoardRound;
 import io.github.ythibos.edi.application.board.BoardListeners;
 import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
 import io.github.ythibos.edi.application.board.SettleBoardAnswers;
@@ -137,6 +138,7 @@ import io.github.ythibos.edi.application.supervision.RecoverFromOutage;
 import io.github.ythibos.edi.application.supervision.ResumeAfterUsageLimits;
 import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.BacklogQuery;
+import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.task.HoldTask;
 import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.PromoteScout;
@@ -378,7 +380,7 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), clock, transaction);
     }
 
     public BacklogQuery backlog() {
@@ -398,7 +400,7 @@ public final class TestHome {
     }
 
     public FleetSnapshotQuery fleetSnapshot() {
-        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, clock, transaction);
+        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, boards, clock, transaction);
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {
@@ -618,7 +620,7 @@ public final class TestHome {
 
     public CleanUpTask cleanUpTask() {
         return new CleanUpTask(tasks, workers, taskCosts, reviews, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), clock, transaction);
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), clock, transaction);
     }
 
     public CopyRetirement copyRetirement() {
@@ -626,7 +628,12 @@ public final class TestHome {
     }
 
     public DropTask dropTask() {
-        return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
+        return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), dependantTasks(),
+                clock, transaction);
+    }
+
+    public DependantTasks dependantTasks() {
+        return new DependantTasks(tasks);
     }
 
     public DiscardWork discardWork() {
@@ -702,7 +709,7 @@ public final class TestHome {
     }
 
     public WorkerInbox workerInbox() {
-        return new WorkerInbox(inbox, events, clock, transaction);
+        return new WorkerInbox(inbox, workers, events, clock, transaction);
     }
 
     public SteerWorker steerWorker() {
@@ -832,6 +839,10 @@ public final class TestHome {
 
     public ArmBoard armBoard() {
         return new ArmBoard(home, tasks, decisions, boards, events, boardListeners(), clock, transaction);
+    }
+
+    public PostBoardRound postBoardRound() {
+        return new PostBoardRound(boards, events, clock, transaction);
     }
 
     public ReceiveBoardFeedback receiveBoardFeedback() {

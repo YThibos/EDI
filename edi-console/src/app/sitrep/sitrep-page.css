@@ -60,3 +60,7 @@
     min-height: 0;
   }
 }
+
+.sr-waiting-on-you {
+  gap: var(--section-gap);
+}

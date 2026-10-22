@@ -13,6 +13,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Pipeline;
+import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
@@ -45,12 +46,13 @@ public class CleanUpTask {
     private final TaskCosts taskCosts;
     private final Pipeline pipeline;
     private final CopyRetirement retirement;
+    private final DependantTasks dependants;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public CleanUpTask(TaskStore tasks, WorkerStore workers, TaskCostStore costs, PipelineReviewStore reviews, EventLog events,
-            WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, CopyRetirement retirement, Clock clock,
-            TransactionTemplate transaction) {
+            WorkerContext context, LandedWorkCheck landedWork, TaskCosts taskCosts, Pipeline pipeline, CopyRetirement retirement,
+            DependantTasks dependants, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.workers = workers;
         this.costs = costs;
@@ -61,6 +63,7 @@ public class CleanUpTask {
         this.taskCosts = taskCosts;
         this.pipeline = pipeline;
         this.retirement = retirement;
+        this.dependants = dependants;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -117,6 +120,7 @@ public class CleanUpTask {
             retirement.retireWorkers(cleaned.id(), "its task was cleaned up", now, actor);
             retirement.retireBoards(cleaned.id(), now, actor);
             tasks.update(cleaned);
+            dependants.stopWaitingFor(cleaned);
             costs.save(cost);
             events.record(new TaskCostRecorded(cleaned.id(), cost), actor, now);
             reviews.save(cleaned.id(), review, now);

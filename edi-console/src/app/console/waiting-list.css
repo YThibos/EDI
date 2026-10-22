@@ -1,0 +1,19 @@
+.sr-waiting {
+  align-items: flex-start;
+}
+
+.sr-waiting__link {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ion);
+  overflow-wrap: anywhere;
+}
+
+.sr-waiting__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

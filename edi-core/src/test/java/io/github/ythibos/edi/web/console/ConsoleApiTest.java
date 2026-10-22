@@ -48,6 +48,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.StandInScripts;
 
@@ -195,13 +196,35 @@ class ConsoleApiTest {
         String worker = workerTokenFor("console-scout");
         Path board = Files.writeString(Files.createDirectories(home.resolve("data/tasks/console-scout")).resolve("board.html"), "<!doctype html>\n");
 
-        HttpResponse<String> armed = post(withToken(worker, "/api/boards", TEXT), "{\"file\":\"" + board + "\",\"task\":\"console-scout\"}");
-        HttpResponse<String> byThePrimary = post(withTheHomeToken("/api/boards", TEXT), "{\"file\":\"" + board + "\",\"task\":\"console-scout\"}");
+        String round = "{\"file\":\"" + board + "\",\"task\":\"console-scout\",\"link\":\"" + BoardRounds.LINK + "\",\"questions\":2}";
 
+        HttpResponse<String> uncounted = post(withToken(worker, "/api/boards", TEXT), "{\"file\":\"" + board + "\",\"task\":\"console-scout\"}");
+        HttpResponse<String> armed = post(withToken(worker, "/api/boards", TEXT), round);
+        HttpResponse<String> byThePrimary = post(withTheHomeToken("/api/boards", TEXT), round);
+
+        assertThat(uncounted.statusCode()).isEqualTo(400);
+        assertThat(uncounted.body()).isEqualTo("Arming a board counts the questions it puts before the captain.\n");
         assertThat(armed.statusCode()).isEqualTo(201);
         assertThat(armed.body()).isEqualTo("EDI listens to the research board " + board.toRealPath() + " for console-scout; it answers no decision, "
-                + "and each round reaches your inbox.\n");
+                + "and each round reaches your inbox; the sitrep puts 2 questions before the captain until a round answers them.\n");
         assertThat(byThePrimary.statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void letsOnlyThePrimaryPostANewRoundOnAListeningBoard() throws Exception {
+        String worker = workerTokenFor("console-surveyor");
+        Path board = Files.writeString(Files.createDirectories(home.resolve("data/tasks/console-surveyor")).resolve("board.html"), "<!doctype html>\n");
+        post(withToken(worker, "/api/boards", TEXT), "{\"file\":\"" + board + "\",\"task\":\"console-surveyor\",\"link\":\"" + BoardRounds.LINK
+                + "\",\"questions\":1}");
+        String round = "{\"file\":\"" + board + "\",\"link\":\"" + BoardRounds.LINK + "\",\"questions\":3}";
+
+        HttpResponse<String> byTheScout = post(withToken(worker, "/api/boards/rounds", TEXT), round);
+        HttpResponse<String> byThePrimary = post(withTheHomeToken("/api/boards/rounds", TEXT), round);
+
+        assertThat(byTheScout.statusCode()).isEqualTo(403);
+        assertThat(byThePrimary.statusCode()).isEqualTo(201);
+        assertThat(byThePrimary.body()).isEqualTo("Posted a new round on the research board " + board.toRealPath() + " for console-surveyor;"
+                + " the sitrep puts 3 questions before the captain until a round answers them.\n");
     }
 
     @Test

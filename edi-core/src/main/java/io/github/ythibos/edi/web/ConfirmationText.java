@@ -14,6 +14,7 @@ import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Adopted;
 import io.github.ythibos.edi.web.Confirmation.Answered;
 import io.github.ythibos.edi.web.Confirmation.BoardArmed;
+import io.github.ythibos.edi.web.Confirmation.BoardRoundPosted;
 import io.github.ythibos.edi.web.Confirmation.CaptainHeard;
 import io.github.ythibos.edi.web.Confirmation.CleanedUp;
 import io.github.ythibos.edi.web.Confirmation.CoreStopping;
@@ -37,6 +38,7 @@ import io.github.ythibos.edi.web.Confirmation.StopRequested;
 import io.github.ythibos.edi.web.Confirmation.WorkDiscarded;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.Words;
 
 @Component
 class ConfirmationText implements TextPresenter<Confirmation> {
@@ -73,6 +75,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case MergedWorkFollowedUp followed -> DeliverySentences.followedUp(followed.work());
             case CleanedUp cleanedUp -> DeliverySentences.cleanedUp(cleanedUp.task());
             case BoardArmed armed -> boardArmed(armed.board());
+            case BoardRoundPosted posted -> "Posted a new round on the research board " + posted.board().file() + " for " + posted.board().task() + ";"
+                    + whatTheSitrepPutsBeforeTheCaptain(posted.board());
             case RecheckAsked asked -> "Asked EDI to re-check " + asked.number() + " against reality; it stays open until it is answered.";
             case CaptainHeard heard -> captainHeard(heard);
             case Promoted promoted -> "Promoted the scout " + promoted.promoted().scout() + " to the ship " + promoted.promoted().ship().id()
@@ -119,7 +123,14 @@ class ConfirmationText implements TextPresenter<Confirmation> {
                 ? "; it answers no decision"
                 : "; its answers to " + board.bound().stream().map(DecisionNumber::toString).collect(Collectors.joining(", "))
                         + " are recorded as the captain's";
-        return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox.";
+        return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox;"
+                + whatTheSitrepPutsBeforeTheCaptain(board);
+    }
+
+    private static String whatTheSitrepPutsBeforeTheCaptain(Board board) {
+        return board.waitsOnTheCaptain()
+                ? " the sitrep puts " + Words.quantity(board.openQuestions(), "question") + " before the captain until a round answers them."
+                : " its bound decisions wait on the captain as their own cards.";
     }
 
     private static String queued(AddedTask added) {

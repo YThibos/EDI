@@ -86,6 +86,10 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
         return new Task(id, intake.blockedAlsoBy(blocker), state, notes, hold, created, closed);
     }
 
+    public Task noLongerWaitingFor(TaskId closedTask) {
+        return blockedOnlyBy(intake.blockedBy().stream().filter(blocker -> !blocker.equals(closedTask)).toList());
+    }
+
     public Task blockedOnlyBy(List<TaskId> blockers) {
         return new Task(id, intake.blockedOnlyBy(blockers), state, notes, hold, created, closed);
     }
