@@ -216,3 +216,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-168](ADR-168-the-pipeline-intent-carries-the-spec-and-follows-the-tasks-notes.md) | The pipeline intent carries the brief's spec and is rewritten whenever the task is noted | Design |
 | [ADR-169](ADR-169-a-core-has-stopped-once-it-lets-go-of-the-home.md) | A core has stopped once it lets go of the home, and edi update starts the new core only then | Design |
 | [ADR-170](ADR-170-edi-up-opens-the-primary-with-the-captains-opening-prompt.md) | edi up opens the primary with the captain's opening prompt, so EDI speaks first | Design |
+| [ADR-171](ADR-171-the-sitrep-page-a-sessions-start-opened-serves-its-opening-turn.md) | The sitrep page a new session's start opened serves its opening turn, so a fresh edi up opens one page | Design |

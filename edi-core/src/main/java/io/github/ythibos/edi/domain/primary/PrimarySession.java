@@ -17,7 +17,8 @@ public record PrimarySession(
         Instant notifiedAt,
         UsageLimit limit,
         Instant limitReachedAt,
-        Instant endedAt) {
+        Instant endedAt,
+        Instant sitrepOpenedAt) {
 
     public PrimarySession {
         Objects.requireNonNull(id, "A primary session is named by its Claude Code session id.");
@@ -25,25 +26,27 @@ public record PrimarySession(
     }
 
     public static PrimarySession started(UUID id, SessionProcess process, Instant at) {
-        return new PrimarySession(id, at, process, null, null, null, null, null, null, null, null);
+        return new PrimarySession(id, at, process, null, null, null, null, null, null, null, null, null);
     }
 
     public PrimarySession restarted(SessionProcess restartedProcess) {
         return new PrimarySession(id, startedAt, restartedProcess == null ? process : restartedProcess, claimedAt, turn, typedAt,
-                notification, notifiedAt, limit, limitReachedAt, null);
+                notification, notifiedAt, limit, limitReachedAt, null, sitrepOpenedAt);
     }
 
     public PrimarySession claimed(Instant at) {
-        return new PrimarySession(id, startedAt, process, at, turn, typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt);
+        return new PrimarySession(id, startedAt, process, at, turn, typedAt,
+                notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
     }
 
     public PrimarySession relinquished() {
-        return new PrimarySession(id, startedAt, process, null, turn, typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt);
+        return new PrimarySession(id, startedAt, process, null, turn, typedAt,
+                notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
     }
 
     public PrimarySession promptSubmitted(Prompt prompt, long eventMark, Instant at) {
         return new PrimarySession(id, startedAt, process, claimedAt, PrimaryTurn.startedAt(at, eventMark),
-                prompt.isTypedByTheCaptain() ? at : typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt);
+                prompt.isTypedByTheCaptain() ? at : typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
     }
 
     public PrimarySession reported(Instant at) {
@@ -55,19 +58,24 @@ public record PrimarySession(
     }
 
     public PrimarySession turnEnded() {
-        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, null, null, endedAt);
+        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, null, null, endedAt, null);
     }
 
     public PrimarySession notified(String kind, Instant at) {
-        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, kind, at, limit, limitReachedAt, endedAt);
+        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, kind, at, limit, limitReachedAt, endedAt, sitrepOpenedAt);
     }
 
     public PrimarySession stoppedOn(UsageLimit reached, Instant at) {
-        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, reached, at, endedAt);
+        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, reached, at, endedAt, sitrepOpenedAt);
     }
 
     public PrimarySession ended(Instant at) {
-        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, limit, limitReachedAt, at);
+        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt,
+                notification, notifiedAt, limit, limitReachedAt, at, sitrepOpenedAt);
+    }
+
+    public PrimarySession sitrepOpened(Instant at) {
+        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt, at);
     }
 
     public boolean isEnded() {
@@ -78,7 +86,12 @@ public record PrimarySession(
         return claimedAt != null;
     }
 
+    public boolean showsTheSitrepItsStartOpened() {
+        return sitrepOpenedAt != null;
+    }
+
     private PrimarySession withTurn(PrimaryTurn newTurn) {
-        return new PrimarySession(id, startedAt, process, claimedAt, newTurn, typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt);
+        return new PrimarySession(id, startedAt, process, claimedAt, newTurn, typedAt,
+                notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
     }
 }

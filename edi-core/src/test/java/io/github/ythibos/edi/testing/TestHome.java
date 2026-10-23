@@ -126,6 +126,7 @@ import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
 import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
+import io.github.ythibos.edi.application.primary.OpenTheConsoleOnRequest;
 import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrepareThePrimary;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
@@ -897,7 +898,11 @@ public final class TestHome {
     }
 
     public OpenTheSitrepAtSessionStart openTheSitrepAtSessionStart(CaptainsBrowser browser) {
-        return new OpenTheSitrepAtSessionStart(machineProfile(), new OpenConsole(consoleAccess(), browser));
+        return new OpenTheSitrepAtSessionStart(machineProfile(), new OpenConsole(consoleAccess(), browser), primarySessions, clock, transaction);
+    }
+
+    public OpenTheConsoleOnRequest openTheConsoleOnRequest(CaptainsBrowser browser) {
+        return new OpenTheConsoleOnRequest(new OpenConsole(consoleAccess(), browser), primarySessions, transaction);
     }
 
     public AskForARecheck askForARecheck() {
