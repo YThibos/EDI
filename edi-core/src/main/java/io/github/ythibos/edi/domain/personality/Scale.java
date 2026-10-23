@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.personality;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 public enum Scale {
@@ -27,7 +28,7 @@ public enum Scale {
 
     public static Scale named(String word) {
         return Arrays.stream(values())
-                .filter(scale -> scale.word.equals(word))
+                .filter(scale -> scale.word.equals(word.toLowerCase(Locale.ROOT)))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(word + " is not a personality scale; the scales are " + listed() + "."));
     }

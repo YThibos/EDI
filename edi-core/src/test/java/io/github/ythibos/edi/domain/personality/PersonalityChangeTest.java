@@ -13,7 +13,7 @@ class PersonalityChangeTest {
     @Test
     void namesAPresetOrScalesWithTheirLevels() {
         assertThat(PersonalityChange.parse(List.of("Plain"))).isEqualTo(Preset.PLAIN);
-        assertThat(PersonalityChange.parse(List.of("humour", "6", "formality", "8")))
+        assertThat(PersonalityChange.parse(List.of("Humour", "6", "formality", "8")))
                 .isEqualTo(new PersonalityOverride(Map.of(Scale.HUMOUR, Level.of(6), Scale.FORMALITY, Level.of(8))));
     }
 
