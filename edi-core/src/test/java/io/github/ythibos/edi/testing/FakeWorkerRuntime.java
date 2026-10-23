@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.Keystroke;
@@ -24,6 +25,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
     private PaneState pane = PaneState.IDLE_PROMPT;
+    private boolean paneFails;
     private boolean serverRunning = true;
     private long serverPid = 4242;
     private Instant serverStartedAt = Instant.parse("2026-10-15T08:00:00Z");
@@ -82,6 +84,9 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     @Override
     public synchronized void press(WorkerWindow window, Keystroke keystroke) {
+        if (paneFails) {
+            throw new ProgramFailure("tmux exited with 1: can't find pane");
+        }
         if (keystroke instanceof Keystroke.Line line) {
             if (!pane.acceptsALine()) {
                 throw new Refusal("The pane shows " + pane.word() + ".");
@@ -117,6 +122,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void showing(PaneState state) {
         pane = state;
+    }
+
+    public synchronized void failingEveryKeystroke() {
+        paneFails = true;
     }
 
     public synchronized void closeEveryWindow() {

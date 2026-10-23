@@ -54,8 +54,9 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case CONTEXT_FULL -> who + "'s context has been full since " + moments.minute(wake.moment()) + ", so it can take no further prompt and a resume"
                     + " would stop on it again; edi worker stop " + wake.task() + ", then edi worker relaunch " + wake.task()
                     + " starts a fresh session in its copy with a handover.";
-            case STOP_MISSED -> who + " ended its turn at " + moments.minute(wake.moment()) + " while EDI could not take its stop hook, so EDI sent it"
-                    + " a message to carry on: " + wake.detail() + ".";
+            case STOP_MISSED -> stopMissedBy(who, wake) + " was typed into its idle prompt.";
+            case STOP_MISSED_NOTICE_WAITING -> stopMissedBy(who, wake) + " waits, as its pane did not take the notice; edi worker peek " + wake.task()
+                    + " shows the pane.";
             case LIMIT_RESUME_HELD_BACK -> who + ": its usage limit reset, but its pane shows " + wake.detail() + ", so EDI typed nothing.";
             case WORKER_DIED -> who + " died: " + wake.detail() + "; edi worker relaunch " + wake.task() + " resumes its session.";
             case LOST_IN_OUTAGE -> who + " is on the outage hold list as number " + wake.detail() + "; edi recover shows the list.";
@@ -82,5 +83,10 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
         return wake.moment() == null
                 ? "; it has no reset time, so it waits for the captain."
                 : "; EDI types one resume line after " + moments.minute(wake.moment()) + ".";
+    }
+
+    private String stopMissedBy(String who, Wake wake) {
+        return who + " ended its turn at " + moments.minute(wake.moment()) + " while EDI could not take its stop hook, so EDI sent it a message to carry on:"
+                + " message " + wake.detail();
     }
 }

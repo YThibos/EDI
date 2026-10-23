@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.worker.PaneState;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerHealth;
 import io.github.ythibos.edi.testing.TestHome;
@@ -45,8 +46,8 @@ class MissedStopTest {
         assertThat(home.inbox().unacknowledgedOf(lamp.id().task())).extracting(InboxMessage::body).containsExactly(NoticeMissedStops.CARRY_ON);
         assertThat(home.runtime().typedLines()).containsExactly("EDI_OP: message 1 waiting: run edi inbox");
         assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("WorkerStopMissed").doesNotContain("WorkerStale", "WorkerBusyTooLong");
-        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.STOP_MISSED);
-        assertThat(home.wakes().unacknowledged().getFirst().wake().detail()).isEqualTo("message 1 was typed into its idle prompt");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind() + " " + queued.wake().detail())
+                .containsExactly("STOP_MISSED 1");
     }
 
     @Test
@@ -60,7 +61,44 @@ class MissedStopTest {
 
         assertThat(home.runtime().typedLines()).isEmpty();
         assertThat(home.inbox().unacknowledgedOf(lamp.id().task())).extracting(InboxMessage::isReceived).containsExactly(false);
-        assertThat(home.wakes().unacknowledged().getFirst().wake().detail()).startsWith("message 1 waits, as its pane did not take the notice");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.STOP_MISSED_NOTICE_WAITING);
+    }
+
+    @Test
+    void wakesEveryWorkerAndTellsThePrimaryWhenAPaneFailsItsKeystrokes() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        Worker horn = busyWorker(home, "tune-horn", "HRN-4");
+        home.runtime().failingEveryKeystroke();
+
+        home.runtime().transcriptEndsOnAStopEdiMissedAt(home.clock().now());
+
+        assertThat(home.noticeMissedStops().notice()).extracting(Worker::id).containsExactly(lamp.id(), horn.id());
+        assertThat(home.inbox().unacknowledgedOf(horn.id().task())).extracting(InboxMessage::body).containsExactly(NoticeMissedStops.CARRY_ON);
+        assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("WorkerStopMissed");
+        assertThat(home.eventTypesOf(horn.id().task())).containsOnlyOnce("WorkerStopMissed");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind())
+                .containsExactly(WakeKind.STOP_MISSED_NOTICE_WAITING, WakeKind.STOP_MISSED_NOTICE_WAITING);
+    }
+
+    @Test
+    void parksABusyWorkerWhoseUsageLimitStoppedItWhileTheCoreWasDownAndResumesItAtTheReset() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        UsageLimit limit = new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(2)));
+
+        home.runtime().transcriptEndsOn(limit);
+        assertThat(home.noticeMissedStops().notice()).extracting(Worker::id).containsExactly(lamp.id());
+        assertThat(home.noticeMissedStops().notice()).isEmpty();
+
+        assertThat(healthOf(home, lamp)).isEqualTo(new WorkerHealth.LimitParked(limit));
+        assertThat(home.inbox().unacknowledgedOf(lamp.id().task())).isEmpty();
+        assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("UsageLimitReached").doesNotContain("WorkerStopMissed");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.USAGE_LIMIT);
+
+        home.clock().advance(Duration.ofHours(2));
+        assertThat(home.resumeAfterUsageLimits().resumeTheNextOneDue()).map(Worker::id).contains(lamp.id());
+        assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("LimitResumeTyped");
     }
 
     @Test
@@ -122,9 +160,13 @@ class MissedStopTest {
     }
 
     private static Worker busyWorker(TestHome home) {
-        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
-        home.workerHooks().sessionStarted(worker.id(), worker.session(), "/transcripts/lamp.jsonl");
-        home.workerHooks().promptSubmitted(worker.id(), "Fit the lamp.", null);
+        return busyWorker(home, "fit-lamp", "HRN-3");
+    }
+
+    private static Worker busyWorker(TestHome home, String task, String key) {
+        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip(task, "harness", key), CategoryId.IMPLEMENTATION);
+        home.workerHooks().sessionStarted(worker.id(), worker.session(), "/transcripts/" + task + ".jsonl");
+        home.workerHooks().promptSubmitted(worker.id(), "Work on " + task + ".", null);
         return worker;
     }
 

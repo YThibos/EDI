@@ -143,6 +143,10 @@ public record Worker(
         return activity == WorkerActivity.IDLE;
     }
 
+    public boolean isStillInTheTurnOf(Worker read) {
+        return activity == read.activity && activitySince.equals(read.activitySince);
+    }
+
     public boolean awaitsItsDoneCheck() {
         return doneCheck == DoneCheck.CHECKING && !isRetired();
     }
