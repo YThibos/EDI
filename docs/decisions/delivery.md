@@ -12,7 +12,7 @@ Some ships are operations on the machine with nothing to commit: no merge reques
 
 ## Decision
 
-A project's delivery mode is `draft-review`, `local-branch`, `local-apply` or `report`, and a task may carry its own; the registry refuses `local-apply` as a default, so it is asked for per task (`DeliveryMode.registryDefault`).
+A project's delivery mode is `draft-review`, `local-branch`, `local-apply` or `report`, and a task may carry its own; the registry refuses `local-apply` and `report` as defaults, so both are asked for per task (`DeliveryMode.registryDefault`).
 For `draft-review`, the worker runs the validation pipeline with the intent EDI wrote ([worker-brief](worker-brief.md)); the pipeline pushes the branch and opens the request as a draft, the worker marks it ready for review once its checks are green, and the captain merges.
 `RecordStatus` asks `DoneClaims` before it records a ship's `done`: the branch adds no `-SNAPSHOT` word to any `pom.xml` line since `origin/<base>` (`SnapshotVersions`), and for `draft-review` the open request from the task's branch, or else the latest merged one, comes from that branch, targets the base and shows the copy's head; it may be a draft, ready or merged, and only a request closed without a merge is a gap.
 For `report` the task directory holds `report.md` (`Workplace.report`) and the copy holds no change, which `LandedWorkCheck` decides as it does for cleanup: nothing uncommitted, no nested repository and no commit beyond what `origin/<base>` holds.
@@ -27,6 +27,7 @@ When the pipeline could not open the request, `edi deliver <task>` does it behin
 The captain keeps the merge, which may deploy, in their own hands, and every delivery is reviewable before it lands.
 The done checks what the captain needs, the work at its head on the forge from the right branch to the right base, whatever order the pipeline, the worker and the captain act in.
 The captain's checkout changes only in the way they asked, and anything that could lose their work waits for their own look at the patch.
+A machine operation is a property of one task, and a project defaulting to `report` would have every code ship refused at its done.
 An operation finishes on what proves it, its report and a copy with nothing in it to lose, instead of staying in flight for want of a merge request.
 
 ## Alternatives rejected
@@ -54,4 +55,4 @@ Never for the merge authority; the claims are revisited when the pipeline itself
 - 15/10/2026: the captain set the flow of drafts they merge; the specification had the pipeline open the draft itself.
 - 16/10/2026: slice S3 fetched a `local-branch` ship into the captain's checkout by its ref; slice S5 added the claims of a done, `local-apply` and `edi deliver`.
 - 21/10/2026: a done was refused because the captain had marked or merged its request first, so the done stopped demanding a draft (EDI-23).
-- 23/10/2026: an operation with nothing to push could not report done, so the `report` delivery finishes a task on its report and a copy that holds no change (EDI-41).
+- 23/10/2026: an operation with nothing to push could not report done, so the `report` delivery finishes a task on its report and a copy that holds no change, and the captain kept it out of the registry's defaults (EDI-41).

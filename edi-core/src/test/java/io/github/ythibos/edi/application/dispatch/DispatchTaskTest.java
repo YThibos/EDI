@@ -7,6 +7,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -89,6 +93,39 @@ class DispatchTaskTest {
     }
 
     @Test
+    void keepsTheBranchOfALaunchThatFailedForItsOwnTask() throws IOException {
+        home.storing(List.of(
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-3")));
+        home.runtime().duringTheNextLaunch(() -> {
+            throw new IllegalStateException("The terminal multiplexer is gone.");
+        });
+        assertThatThrownBy(() -> dispatch("fit-lamp", "implementation")).hasMessageContaining("multiplexer is gone");
+
+        DispatchOutcome horn = dispatch("fit-horn", "implementation");
+
+        assertThat(horn.launched().branch()).hasToString("feature/HRN-3-1");
+        assertThat(home.git().currentBranch(horn.launched().worktree())).isEqualTo("feature/HRN-3-1");
+        assertThat(dispatch("fit-lamp", "implementation").launched().branch()).hasToString("feature/HRN-3");
+    }
+
+    @Test
+    void numbersDispatchesOnTheSameKeyOneAtATime() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+        home.storing(List.of(
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-3")));
+        DispatchTask dispatcher = home.dispatchTask();
+        FutureTask<DispatchOutcome> horn = new FutureTask<>(() -> dispatch(dispatcher, "fit-horn"));
+        Thread hornDispatch = new Thread(horn);
+        home.runtime().duringTheNextLaunch(() -> startedUntilBlocked(hornDispatch));
+
+        DispatchOutcome lamp = dispatch(dispatcher, "fit-lamp");
+
+        assertThat(lamp.launched().branch()).hasToString("feature/HRN-3");
+        assertThat(horn.get(20, TimeUnit.SECONDS).launched().branch()).hasToString("feature/HRN-3-1");
+    }
+
+    @Test
     void refusesASecondWorkerWhileTheFirstIsLiveAndRelaunchesOnceItsWindowCloses() throws IOException {
         home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
         dispatch("fit-lamp", "implementation");
@@ -116,8 +153,20 @@ class DispatchTaskTest {
         assertThat(home.runtime().launches()).isEmpty();
     }
 
+    private static void startedUntilBlocked(Thread thread) {
+        thread.start();
+        while (thread.isAlive() && thread.getState() != Thread.State.BLOCKED) {
+            Thread.onSpinWait();
+        }
+    }
+
     private DispatchOutcome dispatch(String task, String category) {
         DispatchRequest request = new DispatchRequest(category == null ? null : new CategoryId(category), "", List.of(), null);
         return home.dispatchTask().dispatch(TaskReference.parse(task), request, Actor.PRIMARY);
+    }
+
+    private static DispatchOutcome dispatch(DispatchTask dispatcher, String task) {
+        DispatchRequest request = new DispatchRequest(new CategoryId("implementation"), "", List.of(), null);
+        return dispatcher.dispatch(TaskReference.parse(task), request, Actor.PRIMARY);
     }
 }

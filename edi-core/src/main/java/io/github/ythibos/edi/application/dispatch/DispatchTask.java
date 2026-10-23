@@ -77,7 +77,7 @@ public class DispatchTask {
         this.transaction = transaction;
     }
 
-    public DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, Actor actor) {
+    public synchronized DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, Actor actor) {
         return carriedOut(transaction.execute(_ -> dispatching(reference, request)), actor);
     }
 
@@ -215,6 +215,7 @@ public class DispatchTask {
             return transaction.execute(_ -> deferred(dispatching, actor));
         }
         transaction.executeWithoutResult(_ -> awayLimit.requireRoomForAnotherWorker());
+        reserveTheBranchOf(dispatching.dispatch());
         return DispatchOutcome.of(launcher.launch(dispatching.dispatch(), null, actor));
     }
 
@@ -234,6 +235,10 @@ public class DispatchTask {
         events.record(new DispatchDeferred(deferred.task(), dispatching.project(), deferred.category(), dispatching.occupied(), capacity),
                 actor, deferred.deferredAt());
         return DispatchOutcome.of(new DispatchOutcome.Deferred(deferred.task(), dispatching.project(), dispatching.occupied(), capacity));
+    }
+
+    private void reserveTheBranchOf(Dispatch dispatch) {
+        transaction.executeWithoutResult(_ -> dispatches.save(dispatch));
     }
 
     private record Dispatching(Dispatch dispatch, ProjectName project, int occupied, OptionalInt capacity, ResearchFirst researchFirst) {

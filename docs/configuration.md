@@ -40,7 +40,7 @@ A project's entry names:
 
 - its `clone`, by default `$EDI_HOME/projects/<name>`;
 - its `forge`, `{ kind: github|gitlab, host, path, account }`, and every forge call for the project runs under that account ([forge-adapters](decisions/forge-adapters.md));
-- its `delivery`, `draft-review` (the default), `local-branch` with a `captainCheckout`, or `report` (see [Delivery](delivery.md));
+- its `delivery`, `draft-review` (the default) or `local-branch` with a `captainCheckout` (see [Delivery](delivery.md));
 - its `tracker`, `{ kind: jira|edi|none, projectKey: KEY }`;
 - `craftRules: true` when its briefs carry the craftsmanship rules.
 

@@ -144,6 +144,8 @@ class TaskTest {
         assertThat(DeliveryMode.registryDefault("local-branch")).isEqualTo(DeliveryMode.LOCAL_BRANCH);
         assertThatIllegalArgumentException().isThrownBy(() -> DeliveryMode.registryDefault("local-apply"))
                 .withMessageContaining("never a project's default");
+        assertThatIllegalArgumentException().isThrownBy(() -> DeliveryMode.registryDefault("report"))
+                .withMessage("report is a delivery the captain asks for on one task, never a project's default; give the task --delivery report instead.");
     }
 
     @Test

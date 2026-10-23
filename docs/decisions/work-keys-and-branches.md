@@ -18,6 +18,7 @@ How a task gets its key at intake, from either kind of tracker, is in [trackers-
 `BranchName` holds a `BranchKind` and a `WorkKey` and cannot be built without a key; `BranchName.parse` refuses `fm/` and `edi/` by name and every other shape that is not kind, slash, key and an optional follow-up number.
 A dispatch builds the branch once: a scout on `research/<KEY>-<n>`, a ship on the kind its dispatch category names, which the project's `branchKinds` must allow ([dispatch-routing](dispatch-routing.md)).
 When another task on the key was dispatched or adopted on a branch of that kind (`DispatchStore.branchesOfTasksKeyedOn`, `AdoptionStore.branchesOfTasksKeyedOn`), `BranchName.forWorkBeside` numbers the new branch one above the highest follow-up among them, so the second task gets `<kind>/<KEY>-<n>-1`; a closed task's branch counts too, so no number is ever given twice.
+Dispatches are numbered one at a time, and each records its branch before its copy is made, so a launch that fails still holds its number.
 The branch is recorded on the task's dispatch and reused by every later launch, and a task without a key is refused at dispatch.
 
 ## Why
@@ -40,11 +41,11 @@ A follow-up number keeps I-08's kind and key at the front of the name, and the s
 
 - Good: one branch and commit convention everywhere, and AT-08 holds for every registered project.
 - Bad: EDI owns a key sequence per prefix, two projects sharing a prefix share its sequence, and a ship whose nature differs from its category's branch kind needs another category.
-- Bad: a branch made outside EDI under the name a follow-up would take still makes that dispatch fail.
+- Bad: a branch made outside EDI under the name a follow-up would take is reused by that dispatch, which starts from its commits instead of the fresh `origin/<base>`, or fails when another worktree holds it.
 
 ## When to revisit
 
-When an EDI-native work board replaces the external tracker on a machine, or a branch made outside EDI takes a follow-up's name.
+When an EDI-native work board replaces the external tracker on a machine, or a branch made outside EDI under a follow-up's name is reused or held.
 
 ## How we got here
 
