@@ -12,7 +12,7 @@ final class LocalPrograms {
     private LocalPrograms() {
     }
 
-    @SuppressWarnings("java:S4036") // the captain's own tools are found on their PATH, as the core finds git and tmux (ADR-048)
+    @SuppressWarnings("java:S4036") // the captain's own tools are found on their PATH, as the core finds git and tmux (docs/decisions/captain-report.md)
     static int runAttached(List<String> command, Path directory, Map<String, String> environment) {
         try {
             ProcessBuilder launch = new ProcessBuilder(command).directory(directory.toFile()).inheritIO();
@@ -26,7 +26,7 @@ final class LocalPrograms {
         }
     }
 
-    @SuppressWarnings("java:S4036") // the captain's own tools are found on their PATH, as the core finds git and tmux (ADR-048)
+    @SuppressWarnings("java:S4036") // the captain's own tools are found on their PATH, as the core finds git and tmux (docs/decisions/captain-report.md)
     static String outputOf(List<String> command, Path directory) {
         try {
             Process run = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
