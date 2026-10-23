@@ -24,6 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -31,9 +32,12 @@ import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @DisplayName("The native core supervises the primary and recovers workers after a simulated machine restart")
+@Timeout(value = 3, unit = TimeUnit.MINUTES)
 class NativeRecoveryIT {
 
     private static final Duration PATIENCE = Duration.ofSeconds(20);
+    private static final Duration START_UP_PATIENCE = Duration.ofSeconds(60);
+    private static final Duration OWN_WORK = Duration.ofSeconds(30);
     private static final String REGISTRY = """
             projects:
               - name: harness
@@ -59,8 +63,11 @@ class NativeRecoveryIT {
 
     private static Path home;
     private static Process core;
+    private static long ownWorkStarted;
+    private static long startUpsWaitedFor;
 
     @BeforeEach
+    @Timeout(value = 90, unit = TimeUnit.SECONDS)
     void startTheNativeCoreInAFreshHome() throws Exception {
         home = Files.createTempDirectory(homes, "home-");
         Files.createDirectories(home.resolve("config"));
@@ -71,12 +78,16 @@ class NativeRecoveryIT {
         Files.writeString(bootIdFile(), UUID.randomUUID().toString());
         cloneAProjectInto(home.resolve("projects/harness"));
         core = startedCore();
+        ownWorkStarted = System.nanoTime();
+        startUpsWaitedFor = 0;
     }
 
     @AfterEach
     void stopTheNativeCore() throws Exception {
+        Duration ownWork = Duration.ofNanos(System.nanoTime() - ownWorkStarted - startUpsWaitedFor);
         stopTheWorkerServer();
         stop(core);
+        assertThat(ownWork).as("the test's own work, without the native core's start-ups it waited for").isLessThan(OWN_WORK);
     }
 
     @Test
@@ -102,6 +113,37 @@ class NativeRecoveryIT {
         assertThat(launchesOf("restart-lamp")).hasSize(1);
         assertThat(remaining.output()).contains("Outage hold list (1)", "1   restart-lamp").doesNotContain("restart-horn  harness");
         assertThat(workers.output()).contains("restart-lamp#1  dead: the machine restarted").doesNotContain("restart-horn#1");
+    }
+
+    @Test
+    void aWorkerWhoseContextFillsWakesThePrimaryAtOnceAndStartsAfreshWithAHandover() throws Exception {
+        assumeTrue(answers("tmux", "-V"), "tmux is not installed");
+        stop(core);
+        core = startedCore("--edi.supervision.round=PT1S");
+        String session = UUID.randomUUID().toString();
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", session);
+        edi(primary, payload(session, "\"source\":\"startup\""), "hook", "session-start");
+        dispatch("fill-lamp", "HRN-15", "stub-run: echo brass > lamp.txt\nstub-run: edi status working -- commit 1 of 2 done\nstub-context: full");
+
+        CommandRun full = awaitOutput(List.of("worker", "list"), "fill-lamp#1  context full since");
+        CommandRun woken = awaitTheWake(primary, "fill-lamp#1's context has been full since");
+        CommandRun refused = edi(Map.of(), "", "worker", "relaunch", "fill-lamp");
+        CommandRun stopped = edi(Map.of(), "", "worker", "stop", "fill-lamp");
+        CommandRun relaunched = edi(Map.of(), "", "worker", "relaunch", "fill-lamp");
+        workerServer().ifPresent(server -> processes.register(server.pid()));
+        List<String> launches = awaitLaunches("fill-lamp", 2);
+        Path handover = home.resolve("data/tasks/fill-lamp/handover.md");
+
+        assertThat(full.output()).contains("working: commit 1 of 2 done");
+        assertThat(woken.output()).contains("edi worker stop fill-lamp, then edi worker relaunch fill-lamp starts a fresh session in its copy with a handover.");
+        assertThat(refused.output()).contains("fill-lamp#1's context is full and its session still runs; stop it first with edi worker stop");
+        assertThat(stopped.output()).contains("edi worker relaunch fill-lamp starts a fresh session with a handover, since its context is full.");
+        assertThat(relaunched.output()).startsWith("Relaunched fill-lamp as fill-lamp#2 (implementation, claude-sonnet-5-5 at high), with a fresh session and a handover");
+        assertThat(launches).hasSize(2);
+        assertThat(launches.get(1)).doesNotContain("--resume").doesNotContain(sessionOf(launches.getFirst()))
+                .contains("fresh start after its context filled up: read the handover " + handover);
+        assertThat(handover).content().contains("fill-lamp#2 takes over from fill-lamp#1 in the same isolated copy, because its context filled up.",
+                "No commits beyond origin/main yet.", "Uncommitted changes:\n\n- lamp.txt\n", "working: commit 1 of 2 done");
     }
 
     @Test
@@ -131,15 +173,17 @@ class NativeRecoveryIT {
         assertThat(woken.output()).startsWith("EDI wake: ").contains("wake-bell#1 needs a decision: (bell) Brass or bronze?");
     }
 
-    private static Process startedCore() throws Exception {
+    private static Process startedCore(String... options) throws Exception {
         Files.deleteIfExists(home.resolve("state/core.port"));
-        ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString(),
+        List<String> commandLine = new ArrayList<>(List.of(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
                 "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
-                "--edi.console.windows-directory=" + home)
+                "--edi.console.windows-directory=" + home));
+        commandLine.addAll(List.of(options));
+        ProcessBuilder launch = new ProcessBuilder(commandLine)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(home.resolve("core.log").toFile()));
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
@@ -147,7 +191,9 @@ class NativeRecoveryIT {
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("SERVER_PORT", "0");
         Process started = processes.register(launch.start());
+        long startUp = System.nanoTime();
         awaitThePortOf(started);
+        startUpsWaitedFor += System.nanoTime() - startUp;
         return started;
     }
 
@@ -243,7 +289,7 @@ class NativeRecoveryIT {
     }
 
     private static void awaitThePortOf(Process started) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + START_UP_PATIENCE.toNanos();
         while (CoreAddress.recordedIn(home.resolve("state/core.port")).isEmpty()) {
             assertThat(started.isAlive()).as("the native core is running; its log:%n%s", Files.readString(home.resolve("core.log"))).isTrue();
             assertThat(System.nanoTime()).as("the native core recorded its port in time").isLessThan(deadline);
@@ -302,15 +348,15 @@ class NativeRecoveryIT {
     }
 
     private static CommandRun run(ProcessBuilder launch, String input) throws Exception {
-        Process command = processes.register(launch.start());
+        Path output = Files.createTempFile(homes, "command-", ".out");
+        Process command = processes.register(launch.redirectOutput(output.toFile()).start());
         try (OutputStream standardInput = command.getOutputStream()) {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
         }
-        String output = new String(command.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (!command.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
-            command.destroyForcibly();
+            command.destroyForcibly().waitFor();
         }
-        return new CommandRun(command.exitValue(), output);
+        return new CommandRun(command.exitValue(), Files.readString(output, StandardCharsets.UTF_8));
     }
 
     private record CommandRun(int exitCode, String output) {

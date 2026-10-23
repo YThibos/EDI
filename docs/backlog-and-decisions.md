@@ -14,7 +14,7 @@ edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-
 edi release fit-the-lamp
 ```
 
-Every ship and scout gets its work key at intake ([ADR-094](decisions/ADR-094-work-keys-are-settled-at-intake.md)); [Trackers and time](trackers-and-time.md) explains where the key comes from.
+Every ship and scout gets its work key at intake ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)); [Trackers and time](trackers-and-time.md) explains where the key comes from.
 
 ## Decisions
 
@@ -24,16 +24,16 @@ edi decision answer D58 --option A --text "D58, A"     # the captain's words, ve
 edi decision list --open
 ```
 
-A decision holds its task until the captain answers it ([ADR-039](decisions/ADR-039-a-decision-holds-its-task.md)), and its D number is assigned once and never reused.
-Raising a card again on a task updates its open decision under the same number; once the captain answered, the new card is a new decision with a new number, and the answered one stays as he left it ([ADR-171](decisions/ADR-171-a-task-keeps-every-decision-and-an-answered-one-is-never-rewritten.md)).
+A decision holds its task until the captain answers it ([captain-decisions](decisions/captain-decisions.md)), and its D number is assigned once and never reused.
+Raising a card again on a task updates its open decision under the same number; once the captain answered, the new card is a new decision with a new number, and the answered one stays as he left it ([captain-decisions](decisions/captain-decisions.md)).
 A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}}`.
 An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
 
 ## Reports
 
-One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report ([ADR-047](decisions/ADR-047-the-captain-report-matches-the-old-renderer.md)).
-What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([ADR-158](decisions/ADR-158-everything-that-waits-on-the-captain-is-in-the-decision-zone.md)).
-A task that is dropped or finished no longer blocks any other task ([ADR-160](decisions/ADR-160-a-closed-task-blocks-nobody.md)).
+One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report ([captain-report](decisions/captain-report.md)).
+What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
+A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 
 ```sh
 edi report --turn - < turn.json                     # the boxed captain report that ends a turn
@@ -41,13 +41,13 @@ edi sitrep                                          # the same report, read-only
 ```
 
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional.
-Inside tmux the report fits the pane it runs in ([ADR-048](decisions/ADR-048-the-command-measures-its-pane.md)).
-Every captain-facing card and report is linted for internal labels ([ADR-128](decisions/ADR-128-the-voice-lint-keeps-internal-labels-from-the-captain.md)).
-Every time a report, a decision list or a presence line shows is in the machine's own time zone, such as "Answered 2026-10-22 11:14 CEST", while the store, the event log and every API keep UTC instants ([ADR-162](decisions/ADR-162-edi-shows-the-machines-local-time-and-stores-utc.md)).
+Inside tmux the report fits the pane it runs in ([captain-report](decisions/captain-report.md)).
+Every captain-facing card and report is linted for internal labels ([captain-facing-voice](decisions/captain-facing-voice.md)).
+Every time a report, a decision list or a presence line shows is in the machine's own time zone, such as "Answered 2026-10-22 11:14 CEST", while the store, the event log and every API keep UTC instants ([time-zones](decisions/time-zones.md)).
 
 ## The captain's word
 
-Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own typed words from the current session ([ADR-115](decisions/ADR-115-the-captains-word-is-typed-in-the-current-exchange.md), [ADR-117](decisions/ADR-117-dropping-and-discarding-work-on-the-captains-word.md)).
+Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own typed words from the current session ([captains-word](decisions/captains-word.md)).
 
 ```sh
 edi captain said --task fit-the-lamp --text "Drop it, and discard its work."   # the captain's words, as typed this session
@@ -57,4 +57,4 @@ edi task drop fit-the-lamp --discard-work                                      #
 edi worktree discard fit-the-lamp                                              # the copy and branch, on the captain's word; the task stays
 ```
 
-A promoted scout queues a new ship ([ADR-116](decisions/ADR-116-a-promoted-scout-queues-a-new-ship.md)).
+A promoted scout queues a new ship ([captains-word](decisions/captains-word.md)).

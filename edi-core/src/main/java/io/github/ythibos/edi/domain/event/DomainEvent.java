@@ -120,6 +120,9 @@ public sealed interface DomainEvent {
     record UsageLimitReached(TaskId task, WorkerId worker, UsageLimit limit) implements DomainEvent {
     }
 
+    record ContextLimitReached(TaskId task, WorkerId worker, Instant fullSince) implements DomainEvent {
+    }
+
     record LimitResumeTyped(TaskId task, WorkerId worker) implements DomainEvent {
     }
 

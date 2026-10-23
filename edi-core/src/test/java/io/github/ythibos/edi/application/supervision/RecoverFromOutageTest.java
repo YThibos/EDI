@@ -60,7 +60,7 @@ class RecoverFromOutageTest {
         assertThat(fresh.session()).isNotEqualTo(lamp.session());
         assertThat(fresh.worktree()).isEqualTo(home.home().root().resolve("worktrees/harness/fit-lamp"));
         assertThat(fresh.route()).hasToString("claude-sonnet-5-5 at medium");
-        assertThat(fresh.firstPrompt()).contains("brief waiting");
+        assertThat(fresh.firstPrompt()).contains("fresh start after its tmux server changed: read the handover ");
         assertThat(home.dispatches().of(new TaskId("fit-lamp")).orElseThrow().captainsOverride().reason())
                 .isEqualTo("the captain's answer to number 1 on the outage hold list");
     }
@@ -69,7 +69,7 @@ class RecoverFromOutageTest {
     void refusesToRelaunchWhileAUsageLimitStillHoldsALiveWorker() throws IOException {
         Worker bell = WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5");
         home.workerHooks().sessionStarted(bell.id(), bell.session(), null);
-        home.workerHooks().promptSubmitted(bell.id(), "Ring the bell.");
+        home.workerHooks().promptSubmitted(bell.id(), "Ring the bell.", null);
         home.runtime().transcriptEndsOn(new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(1))));
         home.workerHooks().stopFailed(bell.id(), "rate_limit", null);
 

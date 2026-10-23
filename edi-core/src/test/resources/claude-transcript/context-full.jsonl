@@ -1,0 +1,8 @@
+{"type":"user","message":{"role":"user","content":"Fit the lamp."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","message":{"id":"msg-1","role":"assistant","content":[{"type":"text","text":"Fitting the lamp now."}],"usage":{"input_tokens":3,"cache_creation_input_tokens":100,"cache_read_input_tokens":200,"output_tokens":20}},"timestamp":"2026-10-16T09:00:05.000Z"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-1","content":"Tests run: 14, Failures: 0"}]},"timestamp":"2026-10-16T10:14:59.000Z"}
+{"type":"attachment","attachment":{"type":"total_tokens_reminder"},"timestamp":"2026-10-16T10:14:59.500Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"invalid_request","message":{"id":"msg-2","model":"<synthetic>","role":"assistant","stop_reason":"stop_sequence","content":[{"type":"text","text":"Prompt is too long"}],"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}},"timestamp":"2026-10-16T10:15:00.000Z"}
+{"type":"system","subtype":"turn_duration","durationMs":4500000,"timestamp":"2026-10-16T10:15:00.020Z"}
+{"type":"last-prompt"}
+{"type":"cost-state","totalCostUSD":1.5}

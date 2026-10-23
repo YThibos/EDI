@@ -52,7 +52,7 @@ The raw payloads contain machine paths, so they are kept outside the repository;
 
 ## Slice S3: the launch and the pane, on 2.1.301
 
-Verified on Claude Code 2.1.301 on WSL2 Ubuntu 24.04, 16/10/2026, for the worker launcher (ADR-054) and the pane probe (ADR-057).
+Verified on Claude Code 2.1.301 on WSL2 Ubuntu 24.04, 16/10/2026, for the worker launcher ([worker-sessions](../decisions/worker-sessions.md)) and the pane probe ([steering](../decisions/steering.md)).
 
 ### Launch flags
 
@@ -79,7 +79,7 @@ Each screen below was captured with `tmux capture-pane -p` in a 120 by 40 pane o
 
 ## Slice S4: sessions, background jobs and stop failures, on 2.1.301
 
-Verified on Claude Code 2.1.301 on WSL2 Ubuntu 24.04, 16/10/2026, for the primary's hooks (ADR-066 to ADR-068), the relaunch (ADR-073) and usage limits (ADR-072).
+Verified on Claude Code 2.1.301 on WSL2 Ubuntu 24.04, 16/10/2026, for the primary's hooks ([worker-sessions](../decisions/worker-sessions.md), [primary-role](../decisions/primary-role.md), [wakes-and-turn-end](../decisions/wakes-and-turn-end.md)), the relaunch and usage limits ([recovery](../decisions/recovery.md)).
 A settings file with one recording hook per event drove two headless runs in a throwaway directory on `claude-haiku-5-5`, the second resuming the first.
 
 ### Sessions
@@ -107,7 +107,7 @@ A settings file with one recording hook per event drove two headless runs in a t
 
 ## Slice S8: hook context, the primary's system prompt and skills, on 2.1.302
 
-Verified on Claude Code 2.1.302 on WSL2 Ubuntu 24.04, 17/10/2026, for the composed system prompt (ADR-121), the return brief (ADR-127) and the skills (ADR-131).
+Verified on Claude Code 2.1.302 on WSL2 Ubuntu 24.04, 17/10/2026, for the composed system prompt ([primary-startup-context](../decisions/primary-startup-context.md)), the return brief ([presence](../decisions/presence.md)) and the skills ([primary-anchor-and-skills](../decisions/primary-anchor-and-skills.md)).
 Each check was a headless run on `claude-haiku-5-5` in a throwaway directory, asked to repeat codewords without using a tool.
 
 ### Hook context has a size limit
@@ -123,7 +123,7 @@ Each check was a headless run on `claude-haiku-5-5` in a throwaway directory, as
 
 ## The status line, on 2.1.302 and 2.1.303
 
-Recorded on Claude Code 2.1.302 on WSL2 Ubuntu 24.04, 18/10/2026, and run live on 2.1.303, 19/10/2026, for the status line (ADR-134).
+Recorded on Claude Code 2.1.302 on WSL2 Ubuntu 24.04, 18/10/2026, and run live on 2.1.303, 19/10/2026, for the status line ([primary-anchor-and-skills](../decisions/primary-anchor-and-skills.md)).
 On 2.1.302 a `statusLine` command saved each JSON document it received; on 2.1.303 a settings file passed with `--settings` wired `edi statusline` with a `refreshInterval` of 60 seconds, against a running core, in a session on a private tmux server.
 The fixtures in `edi-core/src/test/resources/statusline/` keep the recorded payloads, with paths and names replaced.
 
@@ -132,3 +132,17 @@ The fixtures in `edi-core/src/test/resources/statusline/` keep the recorded payl
 - After the first answer `current_usage` held `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, `prompt_cache` appeared, and `rate_limits.five_hour` and `seven_day` each held `used_percentage` and `resets_at` in epoch seconds.
 - `model.display_name` and `effort.level` were in every payload, and `workspace.current_dir` equalled `cwd` in every recorded one.
 - The bar kept the command's colours, and with the refresh it changed within a minute of the core stopping, with no event in the session.
+
+## A full context, on 2.1.308
+
+Verified on Claude Code 2.1.308 on WSL2 Ubuntu 24.04, 22/10/2026, for the full-context state ([supervision](../decisions/supervision.md)) and the fresh start that follows it ([recovery](../decisions/recovery.md)).
+An interactive session on `claude-haiku-5-5`, with auto-compact off in the user settings as on the captain's machine, ran in a 120 by 40 pane on a private tmux server, with a settings file whose hooks each saved the JSON they received.
+Pasting about 1.7 million characters into the composer and submitting it filled the context.
+
+- Claude Code keeps at most 150,000 characters of a `CLAUDE.md` and warns about the rest, so a large memory file cannot fill the context on its own.
+- The pane showed "Context limit reached · /compact or /clear to continue · auto-compact is off · /config to turn it on" below the prompt, then the idle composer.
+- Only `SessionStart` and `UserPromptSubmit` fired: no `Stop`, no `StopFailure`, and in five minutes no `Notification`; the session of the 22/10/2026 incident did send one `idle_prompt` notification a minute after its context filled.
+- The transcript recorded an assistant record with `isApiErrorMessage: true`, `error: "invalid_request"`, the model `<synthetic>` and the text "Prompt is too long", followed by a `system` record with `subtype: "turn_duration"` and the metadata records; the incident's transcript ends the same way.
+- Claude Code decided this itself, in the same millisecond as the prompt, without an API call.
+- Each further typed line fired `UserPromptSubmit` and failed the same way at once.
+- `--resume` of the session with a prompt after `--` fired `SessionStart` with `source: "resume"` and `UserPromptSubmit`, and failed again with "Context limit reached", so a full session cannot be resumed.

@@ -30,7 +30,7 @@ class DecisionsMigrationTest {
     @Test
     void keepsEveryAnsweredDecisionWithItsOptionsAndLetsItsTaskHoldANewOne() throws IOException {
         DataSource store = StoreFile.openedAt(directory.resolve("edi.db"));
-        Flyway.configure().dataSource(store).target("10").load().migrate();
+        Flyway.configure().dataSource(store).target("11").load().migrate();
         JdbcClient jdbc = JdbcClient.create(store);
         jdbc.sql("insert into task (id, kind, title, state, notes, created_at) values ('choose-lamp', 'captain', 'Choose the lamp', 'queued', '', :at)")
                 .param("at", RAISED).update();

@@ -1,7 +1,7 @@
 # The Windows side: notifications and the Outlook calendar
 
 Verified on WSL2 Ubuntu 24.04 under Windows 11, with Windows PowerShell 5.1 reached as `powershell.exe` through WSL interop, 17/10/2026.
-The scripts are the core's own resources, `windows/toast.ps1` and `windows/outlook-calendar.ps1`, run the way `WindowsToasts` and `OutlookCalendar` run them (ADR-126, ADR-166).
+The scripts are the core's own resources, `windows/toast.ps1` and `windows/outlook-calendar.ps1`, run the way `WindowsToasts` and `OutlookCalendar` run them ([windows-side](../decisions/windows-side.md)).
 
 ## Method
 

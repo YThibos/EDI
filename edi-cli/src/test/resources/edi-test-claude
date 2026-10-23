@@ -25,13 +25,16 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 [ -z "$task_directory" ] || { printf '%s' "$launched_with" | tr '\n' ' '; echo; } >> "$task_directory/stub-launches.txt"
+transcript="${task_directory:-$PWD}/stub-transcript-$session.jsonl"
+context_full=""
 
 json_string() {
     printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk 'BEGIN { ORS = "" } NR > 1 { print "\\n" } { print }'
 }
 
 hook() {
-    printf '{"session_id":"%s","hook_event_name":"%s","cwd":"%s"%s}' "$session" "$1" "$(json_string "$PWD")" "$2" | edi hook "$3"
+    printf '{"session_id":"%s","hook_event_name":"%s","cwd":"%s","transcript_path":"%s"%s}' "$session" "$1" "$(json_string "$PWD")" \
+        "$(json_string "$transcript")" "$2" | edi hook "$3"
 }
 
 read_the_inbox() {
@@ -54,6 +57,12 @@ run_the_brief() {
     sed -n 's/^stub-run: //p' "$brief" > "$commands"
     while IFS= read -r command; do run_tool "$command" < /dev/null; done < "$commands"
     rm -f "$commands"
+    if grep -q '^stub-context: full$' "$brief"; then context_full=yes; fi
+}
+
+fill_the_context() {
+    printf '{"type":"assistant","isApiErrorMessage":true,"error":"invalid_request","message":{"role":"assistant","content":[{"type":"text","text":"%s"}]},"timestamp":"%s"}\n' \
+        "Prompt is too long" "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$transcript"
 }
 
 stop() {
@@ -69,7 +78,7 @@ turn() {
         *"brief waiting: read "*) run_the_brief "$1" ;;
         *"waiting: run edi inbox"*) read_the_inbox ;;
     esac
-    stop
+    if [ -n "$context_full" ]; then fill_the_context; else stop; fi
 }
 
 show_the_idle_prompt() {

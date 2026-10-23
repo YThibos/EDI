@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
@@ -97,6 +98,7 @@ public final class WakeRule {
             case DeferredLaunchFailed failed -> wake(WakeKind.DEFERRED_LAUNCH_FAILED, failed, null, failed.because());
             case UsageLimitReached reached -> Optional.of(new Wake(WakeKind.USAGE_LIMIT, reached.task(), reached.worker(),
                     reached.limit().name(), reached.limit().resetsAt()));
+            case ContextLimitReached reached -> Optional.of(new Wake(WakeKind.CONTEXT_FULL, reached.task(), reached.worker(), "", reached.fullSince()));
             case LimitResumeHeldBack heldBack -> wake(WakeKind.LIMIT_RESUME_HELD_BACK, heldBack, heldBack.worker(), heldBack.pane().word());
             case WorkerDied died -> wake(WakeKind.WORKER_DIED, died, died.worker(), died.cause().sentence());
             case LostInOutage lost -> wake(WakeKind.LOST_IN_OUTAGE, lost, lost.worker(), lost.number() + ": " + lost.cause().sentence());

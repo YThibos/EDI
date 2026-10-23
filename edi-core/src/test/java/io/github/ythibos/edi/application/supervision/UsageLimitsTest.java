@@ -96,7 +96,7 @@ class UsageLimitsTest {
     private Worker busyWorker(String task, String key) {
         Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip(task, "harness", key), CategoryId.IMPLEMENTATION);
         home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
-        home.workerHooks().promptSubmitted(worker.id(), "Work on " + task + ".");
+        home.workerHooks().promptSubmitted(worker.id(), "Work on " + task + ".", null);
         return worker;
     }
 

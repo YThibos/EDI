@@ -104,6 +104,11 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
+    public Optional<Instant> contextLimitStopIn(String transcript, Instant since) {
+        return transcript == null ? Optional.empty() : transcripts.contextLimitStop(Path.of(transcript), since);
+    }
+
+    @Override
     public TokenUsage tokensSpentIn(String transcript, Instant since) {
         return transcript == null ? TokenUsage.NONE : transcripts.tokensSpent(Path.of(transcript), since);
     }

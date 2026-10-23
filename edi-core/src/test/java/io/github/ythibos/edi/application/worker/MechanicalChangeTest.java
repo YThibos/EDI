@@ -49,7 +49,7 @@ class MechanicalChangeTest {
     void refusesAMechanicalDispatchWithoutItsExactChangeOrOnAProtectedFile() {
         assertThatThrownBy(() -> dispatch("", List.of("src/Lamp.java"))).isInstanceOf(Refusal.class).hasMessageContaining("states its exact expected change");
         assertThatThrownBy(() -> dispatch("Rename Lamp to Lantern.", List.of())).isInstanceOf(Refusal.class).hasMessageContaining("names every file");
-        assertThatThrownBy(() -> dispatch("Fix a typo.", List.of("docs/decisions/ADR-007-six-ports.md")))
+        assertThatThrownBy(() -> dispatch("Fix a typo.", List.of("docs/decisions/ports-and-architecture-rules.md")))
                 .isInstanceOf(Refusal.class).hasMessageContaining("never edits a decision record");
         assertThatThrownBy(() -> dispatch("Fix a typo.", List.of("src/main/resources/db/migration/V2__workers.sql")))
                 .isInstanceOf(Refusal.class).hasMessageContaining("never edits a migration");

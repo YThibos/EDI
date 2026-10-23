@@ -10,6 +10,7 @@ import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
+import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Adopted;
 import io.github.ythibos.edi.web.Confirmation.Answered;
@@ -70,7 +71,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Steered steered -> WorkerSentences.steered(steered.steered());
             case Relaunched relaunched -> WorkerSentences.relaunched(relaunched.launched());
             case StopRequested stopped -> "Stopping " + stopped.worker().id() + ": EDI signalled its processes, and those still running in "
-                    + "ten seconds are killed; edi worker relaunch " + stopped.worker().id().task() + " resumes its session.";
+                    + "ten seconds are killed; edi worker relaunch " + stopped.worker().id().task() + relaunchOutcomeOf(stopped.worker()) + ".";
             case DraftDelivered delivered -> DeliverySentences.delivered(delivered.delivered());
             case MergedWorkFollowedUp followed -> DeliverySentences.followedUp(followed.work());
             case CleanedUp cleanedUp -> DeliverySentences.cleanedUp(cleanedUp.task());
@@ -116,6 +117,10 @@ class ConfirmationText implements TextPresenter<Confirmation> {
 
     private static String discardedOf(List<String> discarded) {
         return discarded.isEmpty() ? "; nothing unlanded was discarded." : "; discarded: " + String.join("; ", discarded) + ".";
+    }
+
+    private static String relaunchOutcomeOf(Worker stopped) {
+        return stopped.hasAFullContext() ? " starts a fresh session with a handover, since its context is full" : " resumes its session";
     }
 
     private static String boardArmed(Board board) {

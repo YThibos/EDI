@@ -12,4 +12,4 @@ Every call was read-only; `gh pr create` is exercised against a recording stand-
 | `--repo <host>/<owner>/<repo>` | Accepted with the host written out, so the registered host is named on every call. |
 | `GH_TOKEN` in the environment | Used for the call instead of the stored login. |
 
-EDI's adapter is `adapter.forge.GitHubForge` (ADR-079, ADR-080).
+EDI's adapter is `adapter.forge.GitHubForge` ([forge-adapters](../decisions/forge-adapters.md)).
