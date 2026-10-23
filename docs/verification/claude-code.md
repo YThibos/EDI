@@ -132,3 +132,13 @@ The fixtures in `edi-core/src/test/resources/statusline/` keep the recorded payl
 - After the first answer `current_usage` held `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, `prompt_cache` appeared, and `rate_limits.five_hour` and `seven_day` each held `used_percentage` and `resets_at` in epoch seconds.
 - `model.display_name` and `effort.level` were in every payload, and `workspace.current_dir` equalled `cwd` in every recorded one.
 - The bar kept the command's colours, and with the refresh it changed within a minute of the core stopping, with no event in the session.
+
+## The opening prompt, on 2.1.308
+
+Verified on Claude Code 2.1.308 on WSL2 Ubuntu 24.04, 23/10/2026, for the primary's opening prompt (ADR-170).
+An interactive session on a private tmux socket ran `claude --settings <recording hooks> -- "Hello EDI, SITREP board, please."` on `claude-haiku-5-5` at `low` effort.
+
+- The prompt was submitted at once, without a key pressed, and shown as the conversation's first prompt.
+- `SessionStart` fired first with `source: "startup"`, then `UserPromptSubmit` with the prompt exactly as passed, then `Stop`.
+- The `additionalContext` that the `UserPromptSubmit` hook answered reached the transcript, so a return brief given on that hook arrives with the first turn.
+- The model loaded the `sitrep` skill and ran `edi sitrep --board`.

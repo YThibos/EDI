@@ -7,6 +7,7 @@ EDI's own settings carry hooks and the status line only; the captain's permissio
 
 The primary is the Claude Code session the captain talks to ([ADR-067](decisions/ADR-067-the-captains-session-is-primary.md)).
 `edi up` starts it in the EDI home with [claude/primary/settings.json](../claude/primary/settings.json) and a system prompt the core composes at each start ([ADR-121](decisions/ADR-121-the-primarys-system-prompt-is-composed-at-launch.md)): the anchor [claude/primary/CLAUDE.md](../claude/primary/CLAUDE.md), the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
+It opens with the prompt "Hello EDI, SITREP board, please." already submitted, so EDI's first turn greets the captain with the board sitrep ([ADR-170](decisions/ADR-170-edi-up-opens-the-primary-with-the-captains-opening-prompt.md)).
 The anchor holds the hard rules, the turn end and one line per skill ([ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md)).
 
 ## Hooks
