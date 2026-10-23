@@ -151,6 +151,35 @@ class CommitKeysTest {
     }
 
     @Test
+    void keepsTheExactRemotesFieldsOverConflictingOnesFromADifferentlySpelledEntry() throws IOException {
+        Path configuration = written(OTHER_SETTINGS + """
+                repository_overrides:
+                  git@forge.example.org:example-owner/harness.git:
+                    commands:
+                      test: ./mvnw verify
+                  https://forge.example.org/example-owner/harness:
+                    commands:
+                      test: make old
+                      lint: make lint
+                """);
+
+        CommitKeys.keyCommitsPushedTo(configuration, HARNESS);
+
+        assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + """
+                repository_overrides:
+                  git@forge.example.org:example-owner/harness.git:
+                    commands:
+                      test: ./mvnw verify
+                      lint: make lint
+                    commit:
+                      branch_pattern: "^(?:feature|chore|research)/([A-Z][A-Z0-9]*-[0-9]+)(?:-[0-9]+)?$"
+                      fix_message: "{{.Branch}} {{.Summary}}"
+                    pr:
+                      title_format: "{{.Branch}} {{.Title}}"
+                """);
+    }
+
+    @Test
     void leavesAConfigurationThatAlreadyKeysTheRepositorysCommitsUntouched() throws IOException {
         String keyed = OTHER_SETTINGS + "repository_overrides:\n" + KEYED_HARNESS + OTHER_REPOSITORY;
         Path configuration = written(keyed);

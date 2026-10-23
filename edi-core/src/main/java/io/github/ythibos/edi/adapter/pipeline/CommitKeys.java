@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.pipeline;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
@@ -40,6 +41,7 @@ final class CommitKeys {
     private static List<String> remotesOfTheRepository(ObjectNode overrides, String remoteUrl) {
         return overrides.propertyNames().stream()
                 .filter(remote -> remote.equals(remoteUrl) || namesTheSameRepository(remote, remoteUrl))
+                .sorted(exactRemoteLast(remoteUrl))
                 .toList();
     }
 
@@ -47,6 +49,10 @@ final class CommitKeys {
         return RemoteAddress.of(remote)
                 .flatMap(address -> RemoteAddress.of(remoteUrl).filter(address::isTheSameRepositoryAs))
                 .isPresent();
+    }
+
+    private static Comparator<String> exactRemoteLast(String remoteUrl) {
+        return Comparator.comparing(remoteUrl::equals);
     }
 
     private static void mergeInto(ObjectNode merged, JsonNode entry) {
