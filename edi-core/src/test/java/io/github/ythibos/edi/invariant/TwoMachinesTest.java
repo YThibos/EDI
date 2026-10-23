@@ -119,7 +119,8 @@ class TwoMachinesTest {
         void deliveryAndPushRefuseEachKindOfLeak(Leak leak) throws IOException, InterruptedException {
             assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
             TestHome home = homeWithTheDenyList(directory);
-            RunningHook push = pushStartedFor(home, committedWork(home, leak.task(), leak), processes);
+            commitWork(home, leak.task(), leak);
+            RunningHook push = pushStartedFor(home, leak.task(), processes);
 
             assertThatThrownBy(() -> home.deliverDraft().deliver(TaskReference.parse(leak.task()), Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("The publish check refuses").hasMessageNotContaining(TOKEN);
@@ -136,7 +137,8 @@ class TwoMachinesTest {
         void deliveryAndPushPassAClearBranch() throws IOException, InterruptedException {
             assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
             TestHome home = homeWithTheDenyList(directory);
-            RunningHook push = pushStartedFor(home, committedWork(home, "no-leak", copy -> copy.write("lamp.txt", "brass\n")), processes);
+            commitWork(home, "no-leak", copy -> copy.write("lamp.txt", "brass\n"));
+            RunningHook push = pushStartedFor(home, "no-leak", processes);
 
             assertThat(home.deliverDraft().deliver(TaskReference.parse("no-leak"), Actor.PRIMARY).opened()).isTrue();
             HookRun passed = push.finished();
@@ -261,12 +263,11 @@ class TwoMachinesTest {
         return WorkerFixtures.homeWithProjects(directory).writing("config/publish-denylist", DENIED_HOST + "\n");
     }
 
-    private static String committedWork(TestHome home, String task, Work work) throws IOException {
+    private static void commitWork(TestHome home, String task, Work work) throws IOException {
         FixtureRepository copy = publishedCopy(home, task, "HRN-3");
         work.into(copy);
         copy.commit("HRN-3 Add the work");
         home.forge().pushed(BranchName.parse(branchOf(home, task)), copy.head());
-        return task;
     }
 
     private static FixtureRepository publishedCopy(TestHome home, String task, String key) throws IOException {
