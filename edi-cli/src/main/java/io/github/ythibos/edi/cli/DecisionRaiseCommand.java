@@ -13,7 +13,7 @@ final class DecisionRaiseCommand implements Callable<Integer> {
     @Mixin
     private CoreExchange core;
 
-    @Parameters(paramLabel = "TASK", description = "The task the decision holds; raising it again updates the card and keeps the number.")
+    @Parameters(paramLabel = "TASK", description = "The task the decision holds; raising it again while its decision is open updates the card and keeps the number, and after an answer raises a new decision with a new number.")
     private String task;
 
     @Option(names = "--card", required = true, paramLabel = "-|FILE",

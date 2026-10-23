@@ -7,10 +7,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -51,10 +53,18 @@ import io.github.ythibos.edi.architecture.NameAMergeOperation;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardCard;
+import io.github.ythibos.edi.domain.board.BoardFeedback;
+import io.github.ythibos.edi.domain.board.BoardPrompt;
+import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -75,6 +85,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.BriefFixtures;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.FixtureRepository;
@@ -377,6 +388,42 @@ class AuthorityAndInterfaceTest {
             assertThat(home.eventTypesOf(new TaskId("survey-lamps"))).containsSubsequence("CaptainSaid", "ScoutPromoted");
             assertThatThrownBy(() -> promote(home, promoted.ship().id().value(), session))
                     .isInstanceOf(Refusal.class).hasMessageContaining("only a scout is promoted");
+        }
+
+        @Test
+        @DisplayName("AT-05 the captain's choice of the option that authorises promote, on the scout's board or in the console, is his go to promote it")
+        void aChoiceOnTheBoardOrInTheConsoleIsTheCaptainsGo() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-4"),
+                    CategoryId.RESEARCH);
+            home.storing(List.of(WorkerFixtures.queued("survey-doors", TaskKind.SCOUT, "harness", "HRN-5")));
+            CallingSession session = primarySessionIn(home, "What did the lamp survey find?");
+            Board board = armedCarryingTheCloseOutCard(home, scout);
+            DecisionNumber doors = home.raiseDecision().raise(TaskReference.parse("survey-doors"), closeOutCard(), Actor.PRIMARY);
+
+            home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(new BoardPrompt("7", "choice", "Close out: A",
+                    "Close-out decision: option A", "section#decision > form", Map.of("question", "close-out", "answer", "A"), List.of())), false));
+            home.answerDecision().answer(new TaskReference.ByDecision(doors), new GivenAnswer("A: ship the door plan", new OptionKey('A'), "",
+                    AnswerChannel.CONSOLE), Actor.CAPTAIN);
+
+            assertThat(home.tasks().get(promote(home, "survey-lamps", session).ship().id()).notes())
+                    .contains("on the captain's word: \"Close-out decision: option A\"");
+            assertThat(home.tasks().get(promote(home, "survey-doors", session).ship().id()).notes())
+                    .contains("on the captain's word: \"A: ship the door plan\"");
+        }
+
+        private static Board armedCarryingTheCloseOutCard(TestHome home, Worker scout) throws IOException {
+            Path board = Files.writeString(Files.createDirectories(home.home().taskDirectory(scout.id().task())).resolve("board.html"),
+                    "<!doctype html>\n");
+            home.boardHost().holdsTheNextPollOpen();
+            return home.armBoard().arm(scout.id(), TaskReference.parse("survey-lamps"), board,
+                    new BoardRound(BoardRounds.LINK, 0, List.of(), new BoardCard("close-out", closeOutCard())));
+        }
+
+        private static DecisionCard closeOutCard() {
+            return new DecisionCard("Ship the survey's plan?", "The survey is done.",
+                    List.of(new DecisionOption(new OptionKey('A'), "Ship the plan", CaptainWordAct.PROMOTE), new DecisionOption(new OptionKey('B'), "Close it")),
+                    new Recommendation(new OptionKey('A'), "the plan is ready"));
         }
 
         private static PromotedScout promote(TestHome home, String scout, CallingSession session) {

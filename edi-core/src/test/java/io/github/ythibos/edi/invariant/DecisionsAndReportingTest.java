@@ -99,8 +99,10 @@ class DecisionsAndReportingTest {
             assertThat(home.tasks().get(new TaskId("lamp-choice")).state()).isEqualTo(TaskState.DONE);
             assertThat(afterArchiving).isEqualTo(new DecisionNumber(59));
             assertThat(afterARefusal).isEqualTo(new DecisionNumber(60));
-            assertThat(reraisedAfterClosing).isEqualTo(afterArchiving);
-            assertThat(home.decisions().all()).extracting(decision -> decision.number().value()).containsExactly(58, 59, 60);
+            assertThat(reraisedAfterClosing).isEqualTo(new DecisionNumber(61));
+            assertThat(home.decisions().get(afterArchiving).card().title()).isEqualTo("Fit it today?");
+            assertThat(home.decisions().get(afterArchiving).isOpen()).isFalse();
+            assertThat(home.decisions().all()).extracting(decision -> decision.number().value()).containsExactly(58, 59, 60, 61);
         }
     }
 

@@ -15,6 +15,7 @@ Its report, diagnosis or recommendation authorises nothing (I-05).
 1. Add it with `edi task add --kind scout --project <project> --title "<title>" --body -`, with the captain's words verbatim in the body.
 2. Dispatch it with `edi dispatch <task> --category research --spec -`; research runs on Opus 5.5 at high.
 3. A research or design scout hosts a Lavish board as its main conversation with the captain, in the EDI skin, until the design settles (load `edi-board`).
+   Any decision the board asks goes in as a card on `edi board arm --card`, raised and bound before the captain sees the board.
 4. A scout that works in text only needs the captain's word for that.
 
 ## Completion
@@ -28,7 +29,8 @@ Its report, diagnosis or recommendation authorises nothing (I-05).
 
 1. Only the captain's go starts implementation.
 2. When the captain's message says go, record their words first: `edi captain said --task <scout> --text "<their words>"`.
-3. A decision on the scout counts as their go only when the captain chooses, in this session, an option that names `"authorises": "promote"`.
-   Raise such a card with `edi decision raise <scout> --card -`, putting `"authorises": "promote"` on the option that ships the plan and on no other.
+3. A decision on the scout counts as their go when the captain chooses, since this session opened, an option that names `"authorises": "promote"`, in the chat, in the console or on the scout's board.
+   The scout's board card carries it (load `edi-board`); otherwise raise such a card with `edi decision raise <scout> --card -`, putting `"authorises": "promote"` on the option that ships the plan and on no other.
+   Never ask the captain to retype a choice made on the console or the board.
 4. Run `edi task promote <scout> [--title "<ship title>"]`: EDI queues a ship with the scout's projects, key, base and notes, and the captain's words.
 5. Dispatch the ship as usual (load `edi-ship`), with the report's plan in the spec.

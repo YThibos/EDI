@@ -14,7 +14,7 @@ Discarding unlanded work is the one irreversible act on a task's work (I-12).
 A prompt the captain typed is kept as SHA-256 digests of its passages in `typed_passage`: `Passage.allTypedIn` takes the whole prompt and each non-blank line, compared without case, runs of spacing or curly quotes.
 The exchange a call belongs to is its own session, or for a call that names none the session holding the primary role (`CaptainsWordEvidence.currentExchange`); without a primary session there is no exchange and the act is refused.
 `edi captain said --text <words> [--task <task>]` records an `Authorisation` in `captain_word` only when the words were typed in that exchange.
-An act on a task (promoting a scout, dropping a task, discarding work) needs a word on that task from the exchange, or a decision on it the captain answered, through any channel, since the session opened, by choosing an option that names exactly that act with `authorises` (`promote`, `drop` or `discard-work`, `CaptainsAuthority.onTask`).
+An act on a task (promoting a scout, dropping a task, discarding work) needs a word on that task from the exchange, or any of its decisions the captain answered, through any channel, since the session opened (`CaptainsWordEvidence` weighs every decision of the task), by choosing an option that names exactly that act with `authorises` (`promote`, `drop` or `discard-work`, `CaptainsAuthority.onTask`).
 An act that concerns no single task (touching a secret, deleting an unlanded branch, stopping running workers) needs a word on the home (`CaptainsAuthority.onTheHome`).
 `edi decision answer` from the chat is refused unless its verbatim text was typed in the exchange.
 `PromoteScout` queues a new ship through `AddTask`, keeping the scout's projects, key, base and delivery, with the scout's notes, the captain's verbatim go and the report's path as the ship's notes.
@@ -48,3 +48,4 @@ When the console gains its own promote, drop or discard actions, or the captain 
 ## How we got here
 
 - 17/10/2026: slice S8 built the evidence from typed prompts, promotion, dropping and discarding.
+- 22/10/2026: a task keeps every decision, so an earlier answer that authorised an act still counts after a later decision is raised, and a scout's board card answered on the board is the captain's go (EDI-40).

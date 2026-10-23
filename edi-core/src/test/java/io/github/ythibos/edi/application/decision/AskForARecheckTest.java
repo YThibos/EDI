@@ -28,6 +28,7 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 class AskForARecheckTest {
 
     private static final TaskId LAMP_CHOICE = new TaskId("choose-lamp");
+    private static final TaskId FIT_LAMP = new TaskId("fit-lamp");
 
     @TempDir
     private Path directory;
@@ -60,5 +61,20 @@ class AskForARecheckTest {
         assertThatThrownBy(() -> home.askForARecheck().ask(new TaskReference.ByDecision(decision), "", Actor.CAPTAIN))
                 .isInstanceOf(Refusal.class)
                 .hasMessage(decision + " is already answered: " + decision + " A");
+    }
+
+    @Test
+    void refusesAReCheckOfAnAnsweredDecisionInsteadOfReCheckingTheLaterOneOnItsTask() {
+        home.storing(List.of(WorkerFixtures.queuedShip(FIT_LAMP.value(), "harness", "HRN-3")));
+        TaskReference fitLamp = new TaskReference.ById(FIT_LAMP);
+        DecisionNumber earlier = home.raiseDecision().raise(fitLamp, Cards.card("Which ladder?"), Actor.PRIMARY);
+        home.answerDecision().answer(new TaskReference.ByDecision(earlier), new GivenAnswer(earlier + " A", new OptionKey('A'), "", AnswerChannel.CHAT),
+                Actor.PRIMARY);
+        DecisionNumber later = home.raiseDecision().raise(fitLamp, Cards.card("Which bulb?"), Actor.PRIMARY);
+
+        assertThatThrownBy(() -> home.askForARecheck().ask(new TaskReference.ByDecision(earlier), "", Actor.CAPTAIN))
+                .isInstanceOf(Refusal.class)
+                .hasMessage(earlier + " is already answered: " + earlier + " A");
+        assertThat(home.askForARecheck().ask(new TaskReference.ByDecision(later), "", Actor.CAPTAIN).number()).isEqualTo(later);
     }
 }

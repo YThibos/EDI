@@ -38,7 +38,7 @@ public class RaiseDecision {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Task task = tasks.get(reference);
-            Decision decision = decisionOn(task, card, now);
+            Decision decision = decisionOn(reference, task, card, now);
             tasks.update(task.heldForDecision(decision.holdOnItsTask()));
             decisions.save(decision);
             events.record(new DecisionRaised(task.id(), decision.number(), card), actor, now);
@@ -46,9 +46,11 @@ public class RaiseDecision {
         });
     }
 
-    private Decision decisionOn(Task task, DecisionCard card, Instant now) {
-        return decisions.ofTask(task.id())
-                .map(earlier -> earlier.reraised(card, now))
+    private Decision decisionOn(TaskReference reference, Task task, DecisionCard card, Instant now) {
+        return decisions.namedBy(reference)
+                .filter(Decision::isOpen)
+                .or(() -> decisions.ofTask(task.id()).filter(Decision::isOpen))
+                .map(waiting -> waiting.reraised(card, now))
                 .orElseGet(() -> Decision.raised(decisions.nextNumber(), task.id(), card, now));
     }
 }

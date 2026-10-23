@@ -53,7 +53,8 @@ final class BriefSections {
     static String delivery(BriefFacts facts) {
         if (!isAShip(facts)) {
             return "This is a scout: its deliverable is knowledge, so change no tracked file unless the spec asks for it.\n"
-                    + "Write the report to `" + facts.reportPath() + "`; a report never authorises implementation.";
+                    + "Write the report to `" + facts.reportPath() + "`; a report never authorises implementation.\n"
+                    + researchBoard(facts);
         }
         return switch (facts.delivery()) {
             case DRAFT_REVIEW -> draftReview(facts);
@@ -76,6 +77,14 @@ final class BriefSections {
 
     private static boolean isAShip(BriefFacts facts) {
         return facts.task().intake().kind() == TaskKind.SHIP;
+    }
+
+    private static String researchBoard(BriefFacts facts) {
+        return "A research board lives in the task directory and reaches the captain through `edi board arm <board.html> --task " + facts.task().id()
+                + " --link <url> --questions <n>`, where the count leaves out its decision card.\n"
+                + "A decision the board asks is a card you pass with `--card <card.json>`, never one you only draw: the card as `edi decision raise --help`"
+                + " describes it, plus `question`, the `data-lavish-question` of its form, whose answer data is `{question, answer}` with the option's letter.\n"
+                + "EDI raises the card on your task and binds it before the captain sees the board, so his choice there is his word for it.";
     }
 
     private static String aiScaffoldingRule(BriefFacts facts) {

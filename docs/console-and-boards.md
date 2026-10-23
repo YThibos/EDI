@@ -30,11 +30,14 @@ When the browser cannot open it, the session starts anyway, and its digest names
 A scout writes its Lavish board in its task's directory, opens it with `lavish-axi`, and has EDI listen to it ([research-boards](decisions/research-boards.md)):
 
 ```sh
-edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --link <url> --questions 3 --bind D58,D59
+edi board arm "$EDI_HOME/data/tasks/<task-id>/board.html" --task <task-id> --link <url> --questions 3 --card card.json
 ```
 
 The link is the one `lavish-axi` printed when the scout opened the board, and the count is how many questions the round puts before the captain ([research-boards](decisions/research-boards.md)).
-The count leaves out the decisions the board binds, which wait as their own cards.
+A decision the board asks is a card on `--card`, in the format `edi decision raise` takes, with `question` naming the board question that answers it: the form's `data-lavish-question`, whose answer data is `{question, answer}`.
+EDI raises the card on the scout's task and binds it to the board when it is armed, so the captain's choice there is his word for it, promote included ([research-boards](decisions/research-boards.md)).
+`--bind D58,D59` binds decisions the primary raised already, which the board names by number.
+The count leaves out the card and the decisions the board binds, which wait as their own cards.
 The board waits in the decision zone of the report, the sitrep page and the return brief until a round of the captain's answers arrives; arming it again posts a new round.
 When the scout cannot arm it again, the primary posts the round instead:
 
@@ -43,5 +46,5 @@ edi board post "$EDI_HOME/data/tasks/<task-id>/board.html" --link <url> --questi
 ```
 
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops ([research-boards](decisions/research-boards.md)).
-Each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` (with `option`) or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word ([research-boards](decisions/research-boards.md)).
+Each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` or by its card's `question` (with `option` or `answer`), or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word ([research-boards](decisions/research-boards.md)).
 A board stops listening when the captain ends its session or its task is cleaned up.

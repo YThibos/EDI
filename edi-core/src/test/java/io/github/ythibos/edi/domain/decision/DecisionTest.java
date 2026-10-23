@@ -32,14 +32,22 @@ class DecisionTest {
     }
 
     @Test
-    void keepsItsNumberWhenRaisedAgainAndOpensOnceMore() {
-        Decision answered = Decision.raised(D58, new TaskId("lamp-choice"), card("Which lamp?"), AT).answered(answer("D58 A", A));
+    void keepsItsNumberWhenRaisedAgainWhileOpen() {
+        Decision open = Decision.raised(D58, new TaskId("lamp-choice"), card("Which lamp?"), AT);
 
-        Decision again = answered.reraised(card("Which lamp, now?"), AT.plusSeconds(60));
+        Decision again = open.reraised(card("Which lamp, now?"), AT.plusSeconds(60));
 
         assertThat(again.number()).isEqualTo(D58);
         assertThat(again.isOpen()).isTrue();
         assertThat(again.card().title()).isEqualTo("Which lamp, now?");
+    }
+
+    @Test
+    void neverRewritesTheCardTheCaptainAnswered() {
+        Decision answered = Decision.raised(D58, new TaskId("lamp-choice"), card("Which lamp?"), AT).answered(answer("D58 A", A));
+
+        assertThatThrownBy(() -> answered.reraised(card("Which lamp, now?"), AT.plusSeconds(60))).isInstanceOf(Refusal.class)
+                .hasMessage("D58 is already answered: D58 A; a new card on lamp-choice is a new decision with its own number.");
     }
 
     @Test

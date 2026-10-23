@@ -7,12 +7,15 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -52,15 +55,15 @@ class DecisionLogTest {
 
     @Test
     void everyLinkToARecordResolves() {
-        assertThat(repositoryFiles()).allSatisfy(file ->
-                assertThat(recordsCitedBy(file)).as("records cited by %s", REPOSITORY.relativize(file)).allSatisfy(cited ->
+        assertThat(repositoryTexts()).allSatisfy((file, text) ->
+                assertThat(recordsCitedBy(file, text)).as("records cited by %s", REPOSITORY.relativize(file)).allSatisfy(cited ->
                         assertThat(cited).exists()));
     }
 
     @Test
     void nothingCitesARecordByNumber() {
-        assertThat(repositoryFiles()).allSatisfy(file ->
-                assertThat(NUMBERED_RECORD.matcher(textOf(file)).find()).as("a numbered record cited in %s", REPOSITORY.relativize(file)).isFalse());
+        assertThat(repositoryTexts()).allSatisfy((file, text) ->
+                assertThat(NUMBERED_RECORD.matcher(text).find()).as("a numbered record cited in %s", REPOSITORY.relativize(file)).isFalse());
     }
 
     private static List<Path> records() {
@@ -75,8 +78,8 @@ class DecisionLogTest {
         return lines.stream().filter(line -> line.startsWith("## ")).map(line -> line.substring(3)).toList();
     }
 
-    private static List<Path> repositoryFiles() {
-        List<Path> files = new ArrayList<>();
+    private static Map<Path, String> repositoryTexts() {
+        Map<Path, String> texts = new TreeMap<>();
         try {
             Files.walkFileTree(REPOSITORY, new SimpleFileVisitor<>() {
 
@@ -87,22 +90,32 @@ class DecisionLogTest {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-                    files.add(file);
+                    textIfStillThere(file).ifPresent(text -> texts.put(file, text));
                     return FileVisitResult.CONTINUE;
                 }
             });
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
-        return files;
+        return texts;
+    }
+
+    private static Optional<String> textIfStillThere(Path file) {
+        try {
+            return Optional.of(textOf(file));
+        } catch (UncheckedIOException unreadable) {
+            if (unreadable.getCause() instanceof NoSuchFileException) {
+                return Optional.empty();
+            }
+            throw unreadable;
+        }
     }
 
     private static boolean isLeftOut(Path directory) {
         return UNTRACKED_DIRECTORIES.contains(directory.getFileName().toString()) || directory.endsWith(CAPTURED_FIXTURES);
     }
 
-    private static Stream<Path> recordsCitedBy(Path file) {
-        String text = textOf(file);
+    private static Stream<Path> recordsCitedBy(Path file, String text) {
         Stream<Path> byPath = RECORD_PATH.matcher(text).results().map(cited -> DECISION_LOG.resolve(cited.group(1)));
         Stream<Path> byLink = file.toString().endsWith(".md")
                 ? MARKDOWN_LINK.matcher(text).results()

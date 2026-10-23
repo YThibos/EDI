@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -208,6 +209,26 @@ class ConsoleApiTest {
         assertThat(armed.body()).isEqualTo("EDI listens to the research board " + board.toRealPath() + " for console-scout; it answers no decision, "
                 + "and each round reaches your inbox; the sitrep puts 2 questions before the captain until a round answers them.\n");
         assertThat(byThePrimary.statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void raisesTheCardAWorkerArmsItsBoardWithAndBindsItToTheBoard() throws Exception {
+        String worker = workerTokenFor("console-closer");
+        Path board = Files.writeString(Files.createDirectories(home.resolve("data/tasks/console-closer")).resolve("board.html"), "<!doctype html>\n");
+        String card = "{\"question\":\"close-out\",\"title\":\"Close the survey out?\",\"context\":\"The survey is done.\",\"options\":["
+                + "{\"key\":\"A\",\"text\":\"Ship the plan\",\"authorises\":\"promote\"},{\"key\":\"B\",\"text\":\"Close it\"}],"
+                + "\"recommend\":{\"key\":\"A\",\"why\":\"the plan is ready\"}}";
+        String round = "{\"file\":\"" + board + "\",\"task\":\"console-closer\",\"link\":\"" + BoardRounds.LINK + "\",\"questions\":0,\"card\":";
+
+        HttpResponse<String> unnamed = post(withToken(worker, "/api/boards", TEXT), round + card.replace("\"question\":\"close-out\",", "") + "}");
+        HttpResponse<String> armed = post(withToken(worker, "/api/boards", TEXT), round + card + "}");
+
+        assertThat(unnamed.statusCode()).isEqualTo(400);
+        assertThat(unnamed.body()).startsWith("A decision card on a board names the board question that answers it");
+        assertThat(armed.statusCode()).isEqualTo(201);
+        assertThat(armed.body()).matches("EDI listens to the research board " + Pattern.quote(board.toRealPath().toString()) + " for console-closer; "
+                + "its answers to D\\d+ \\(question close-out\\) are recorded as the captain's, and each round reaches your inbox; "
+                + "its bound decisions wait on the captain as their own cards\\.\n");
     }
 
     @Test

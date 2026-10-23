@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardAnswer;
+import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -46,7 +47,7 @@ public class BoardStore {
                 .param("at", Columns.text(at))
                 .query((row, _) -> row.getLong(1))
                 .single();
-        Board armed = new Board(new BoardId(id), task, file, round.link(), round.bound(), 0, round.questions(), at, null, null);
+        Board armed = new Board(new BoardId(id), task, file, round.link(), round.bindings(), 0, round.questions(), at, null, null);
         bind(armed);
         return armed;
     }
@@ -113,11 +114,14 @@ public class BoardStore {
     }
 
     private void bind(Board board) {
-        IntStream.range(0, board.bound().size()).forEach(position -> store.sql("""
-                        insert into board_decision (board_id, position, decision_number) values (:board, :position, :decision)""")
+        List<BoardBinding> bindings = board.bindings();
+        IntStream.range(0, bindings.size()).forEach(position -> store.sql("""
+                        insert into board_decision (board_id, position, decision_number, question)
+                        values (:board, :position, :decision, :question)""")
                 .param("board", board.id().value())
                 .param("position", position)
-                .param("decision", board.bound().get(position).value())
+                .param("decision", bindings.get(position).decision().value())
+                .param("question", bindings.get(position).question())
                 .update());
     }
 
@@ -134,10 +138,10 @@ public class BoardStore {
                 Columns.instant(row.getString("ended_at")), Columns.instant(row.getString("retired_at")));
     }
 
-    private List<DecisionNumber> boundTo(BoardId board) {
-        return store.sql("select decision_number from board_decision where board_id = :board order by position")
+    private List<BoardBinding> boundTo(BoardId board) {
+        return store.sql("select decision_number, question from board_decision where board_id = :board order by position")
                 .param("board", board.value())
-                .query((row, _) -> new DecisionNumber(row.getInt(1)))
+                .query((row, _) -> new BoardBinding(new DecisionNumber(row.getInt(1)), row.getString(2)))
                 .list();
     }
 

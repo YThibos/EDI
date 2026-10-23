@@ -22,6 +22,9 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
     }
 
     public Decision reraised(DecisionCard newCard, Instant at) {
+        if (!isOpen()) {
+            throw new Refusal(number + " is already answered: " + answer.verbatim() + "; a new card on " + task + " is a new decision with its own number.");
+        }
         return raised(number, task, newCard, at);
     }
 

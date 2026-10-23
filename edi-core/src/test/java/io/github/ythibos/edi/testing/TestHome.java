@@ -888,7 +888,7 @@ public final class TestHome {
     }
 
     public ArmBoard armBoard() {
-        return new ArmBoard(home, tasks, decisions, boards, events, boardListeners(), clock, transaction);
+        return new ArmBoard(home, tasks, decisions, boards, events, raiseDecision(), boardListeners(), clock, transaction);
     }
 
     public PostBoardRound postBoardRound() {
@@ -900,7 +900,7 @@ public final class TestHome {
     }
 
     public SettleBoardAnswers settleBoardAnswers() {
-        return new SettleBoardAnswers(boards, decisions, events, answerDecision(), clock, transaction);
+        return new SettleBoardAnswers(boards, decisions, events, inbox, workers, new InboxNotice(runtime), answerDecision(), clock, transaction);
     }
 
     public ConsoleAccess consoleAccess() {

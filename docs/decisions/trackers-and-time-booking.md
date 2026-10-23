@@ -18,7 +18,7 @@ The profile's `tracker` section holds everything a JIRA instance differs in, suc
 `JiraTracker` speaks REST version 2 and the agile API through `JiraCalls`, with the proxies the environment names (`EnvironmentProxies`); `EdiNativeTracker` issues keys and keeps no tickets; `NoTracker` issues none.
 `JiraCalls` reads the token from the keys file at every call, sends it only in the `Authorization` header, and writes `[secret]` for it in any message (`KeysFile`).
 At intake `AddTask` asks `TaskKeys`: a given key must belong to the project and exist; unkeyed work on an EDI-native project gets the next key; on JIRA, `TicketProposals` raises a decision with up to three matching tickets and a drafted new one.
-The answer settles the ticket outside the transaction: an existing ticket keys the task; a new one is created after the attempt is recorded, then filled; an interrupted creation first adopts an open ticket with exactly the drafted summary; a refused choice raises the same decision again; an unreachable tracker is retried every supervision round.
+The answer settles the ticket outside the transaction: an existing ticket keys the task; a new one is created after the attempt is recorded, then filled; an interrupted creation first adopts an open ticket with exactly the drafted summary; a refused choice raises a new decision on the task with the refusal in its context, the answered one kept ([captain-decisions](captain-decisions.md)); an unreachable tracker is retried every supervision round.
 `FollowTickets` follows the event log for tickets that are not evergreen: the first dispatch adds the ticket to the one active sprint, a recorded draft is linked once under its address, and a followed merge walks the ticket to `mergedStatus`, never further, so a story stays open until the captain closes it.
 `EmitFleetLedger` appends the old record contract to `state/fleet-ledger.jsonl` while `time.fleetLedger` is on: `task.dispatched` with the key, `task.status`, `task.pr_ready`, `task.merged` and `task.cleaned_up`, each stamped with its event's time.
 
@@ -47,3 +47,4 @@ When EDI talks to a second external tracker, JIRA retires REST version 2, or the
 ## How we got here
 
 - 17/10/2026: slice S6 built the tracker port, keying at intake, ticket follow-ups, hidden secrets and the fleet ledger, choosing the old harness's `task.pr_ready` over the specification's shorthand `task.ready`.
+- 22/10/2026: a refused ticket choice is asked again as a new decision, since an answered decision is never rewritten ([captain-decisions](captain-decisions.md), EDI-40).
