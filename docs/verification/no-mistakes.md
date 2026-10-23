@@ -38,7 +38,7 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented
 | Do `axi run --model` and `--effort` reach Claude Code? | No. They pin a profile for the Pi agent only, and conflict with native selection flags. |
 | What does the agent run on without the key? | `claude -p` starts with no `--model` and no `--effort`, so it runs at the harness's global defaults. |
 | Does an edit reach a run that has already started? | No. Two runs started before the key was edited went on starting agents without the new words after the edit. |
-| Consequence for EDI | EDI writes `agent_args_override.claude` from the dispatch rules' `pipeline` entry at every worker launch (ADR-175). |
+| Consequence for EDI | EDI writes `agent_args_override.claude` from the dispatch rules' `pipeline` entry at every worker launch ([pipeline-agent](../decisions/pipeline-agent.md)). |
 
 ## Account binding
 
@@ -46,4 +46,4 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented
 |---|---|
 | Does a `GH_TOKEN` set for one `axi run` reach the pipeline? | No. `axi run` hands the run to the daemon over its socket, and the daemon (`no-mistakes daemon run`, started once by its service) runs every step in its own environment; its environment held no `GH_TOKEN`, `GITHUB_TOKEN`, `GITLAB_TOKEN` or `GLAB_*` variable, and `axi run --help` offers no way to pass one. |
 | How does the daemon push? | From its own mirror repository, whose `credential.https://github.com.helper` entries are an empty entry followed by `gh auth git-credential`, which answers with the active `gh` account. |
-| Consequence for EDI | The pipeline publishes under whichever `gh` account is active when it pushes, so EDI's per-call account binding (ADR-080) covers EDI's own forge calls and the clone's transport, and `edi deliver` covers a project whose pipeline cannot open the draft under the right account (ADR-085). |
+| Consequence for EDI | The pipeline publishes under whichever `gh` account is active when it pushes, so EDI's per-call account binding ([forge-adapters](../decisions/forge-adapters.md)) covers EDI's own forge calls and the clone's transport, and `edi deliver` covers a project whose pipeline cannot open the draft under the right account ([delivery](../decisions/delivery.md)). |

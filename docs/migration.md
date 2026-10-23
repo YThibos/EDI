@@ -1,7 +1,7 @@
 # Moving from the old harness
 
-`edi migrate firstofficer` imports the old harness's home into EDI, its backlog, holds and decisions, its memory and configuration and an archive of its data, exactly as its dry run plans ([ADR-044](decisions/ADR-044-migration-reads-the-old-grammar.md), [ADR-136](decisions/ADR-136-the-import-writes-what-its-dry-run-plans.md)).
-`edi task adopt` takes over a task still open there, with its copy, its branch and its Claude Code session ([ADR-141](decisions/ADR-141-adopting-an-open-task-registers-its-copy-and-moves-it-when-free.md)).
+`edi migrate firstofficer` imports the old harness's home into EDI, its backlog, holds and decisions, its memory and configuration and an archive of its data, exactly as its dry run plans ([old-harness-migration](decisions/old-harness-migration.md)).
+`edi task adopt` takes over a task still open there, with its copy, its branch and its Claude Code session ([old-harness-migration](decisions/old-harness-migration.md)).
 
 ```sh
 edi migrate firstofficer --from /path/to/old/home --dry-run    # the plan, and what it would add or replace in this EDI home
@@ -14,9 +14,9 @@ edi task adopt fit-the-lamp --branch feature/EDI-14 \
 ## The import
 
 The import only reads the old home.
-It adds the old tasks, holds and decisions beside EDI's own, continues the decision and `EDI` key sequences after the highest either side uses, and sets aside the old harness's own work ([ADR-137](decisions/ADR-137-the-backlog-import-sets-aside-the-old-harnesss-own-work.md)).
-It writes the project registry, the dispatch rules, the machine profile's missing settings, the personal configuration, the publish deny-list and the memory files, adding only what the EDI home lacks and leaving the old harness's own mechanics out of the memory ([ADR-138](decisions/ADR-138-the-old-memory-is-routed-by-section-and-edited-on-the-way.md), [ADR-139](decisions/ADR-139-the-old-configuration-becomes-edis-without-guessing.md)).
-It copies the old data read-only into `$EDI_HOME/data/archive/firstofficer/`, linking each open task's old folder from `data/tasks/<task>/firstofficer` ([ADR-140](decisions/ADR-140-the-old-data-is-archived-read-only-and-open-tasks-link-their-folders.md)).
+It adds the old tasks, holds and decisions beside EDI's own, continues the decision and `EDI` key sequences after the highest either side uses, and sets aside the old harness's own work ([old-harness-migration](decisions/old-harness-migration.md)).
+It writes the project registry, the dispatch rules, the machine profile's missing settings, the personal configuration, the publish deny-list and the memory files, adding only what the EDI home lacks and leaving the old harness's own mechanics out of the memory ([old-harness-migration](decisions/old-harness-migration.md)).
+It copies the old data read-only into `$EDI_HOME/data/archive/firstofficer/`, linking each open task's old folder from `data/tasks/<task>/firstofficer` ([old-harness-migration](decisions/old-harness-migration.md)).
 A file that differs from the EDI home's is replaced only with `--overwrite`, and the replaced one is kept as `<file>.before-migration`.
 The dry run lists every such file, every section of the old memory with the file it goes to, and every gap left for the captain, such as a project's forge account or tracker.
 

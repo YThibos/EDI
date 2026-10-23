@@ -3,6 +3,8 @@ package io.github.ythibos.edi.domain.board;
 import java.time.Instant;
 import java.util.Objects;
 
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
@@ -35,5 +37,9 @@ public record BoardAnswer(BoardId board, int round, DecisionNumber decision, Str
 
     public boolean isSettled() {
         return settledAt != null;
+    }
+
+    public boolean repeats(CaptainAnswer recorded) {
+        return recorded != null && recorded.channel() == AnswerChannel.BOARD && recorded.verbatim().equals(verbatim);
     }
 }

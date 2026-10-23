@@ -16,7 +16,8 @@ public record BoardPrompt(String uid, String tag, String text, String prompt, St
         List<BoardAttachment> attachments) {
 
     private static final String DECISION_FIELD = "decision";
-    private static final String OPTION_FIELD = "option";
+    private static final String QUESTION_FIELD = "question";
+    private static final List<String> OPTION_FIELDS = List.of("option", "answer");
     private static final String SEPARATORS = " \t\n:,;.-()";
     private static final String OPTION_ENDINGS = ",.:)";
 
@@ -42,8 +43,12 @@ public record BoardPrompt(String uid, String tag, String text, String prompt, St
         return DecisionNumber.isWritten(named) ? Optional.of(DecisionNumber.parse(named)) : Optional.empty();
     }
 
+    public Optional<String> questionNamed() {
+        return Optional.ofNullable(context.get(QUESTION_FIELD)).map(String::strip);
+    }
+
     public Optional<OptionKey> optionChosen(DecisionCard card) {
-        return context.containsKey(OPTION_FIELD) ? optionIn(context.get(OPTION_FIELD).strip()) : optionTyped().filter(card::offers);
+        return optionGiven().map(BoardPrompt::optionIn).orElseGet(() -> optionTyped().filter(card::offers));
     }
 
     private static String firstWord(String words) {
@@ -53,6 +58,10 @@ public record BoardPrompt(String uid, String tag, String text, String prompt, St
             end++;
         }
         return words.substring(start, end);
+    }
+
+    private Optional<String> optionGiven() {
+        return OPTION_FIELDS.stream().filter(context::containsKey).map(context::get).map(String::strip).findFirst();
     }
 
     private static Optional<OptionKey> optionIn(String chosen) {

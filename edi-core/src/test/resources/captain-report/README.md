@@ -2,8 +2,8 @@
 
 Each file is the exact output of the old harness's renderer, `bin/fm-captain-report.sh` at its commit `b8900c3b`, on the input of one case of its test suite, `tests/fm-captain-report.test.sh`, with invented project names.
 `invariant.ReportGoldenCases` builds the same input in EDI's store, and AT-42 compares EDI's captain report with the file byte for byte.
-ADR-047 says which inputs had to be adapted and why.
-Since ADR-158, `parked-calls` and `wrapping` also show a blocked call's card in the decision zone and count it, where the old renderer showed it only under PARKED.
+The decision record [captain-report](../../../../../docs/decisions/captain-report.md) says which inputs had to be adapted and why.
+Since everything waiting on the captain joined the decision zone ([fleet-snapshot](../../../../../docs/decisions/fleet-snapshot.md)), `parked-calls` and `wrapping` also show a blocked call's card in the decision zone and count it, where the old renderer showed it only under PARKED.
 
 | File | Old test case |
 |---|---|

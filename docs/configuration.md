@@ -1,6 +1,6 @@
 # Configuration
 
-Everything that differs between machines or people lives in the EDI home, never in the repository ([ADR-006](decisions/ADR-006-machine-differences-at-runtime.md), [ADR-017](decisions/ADR-017-person-and-employer-agnostic.md)).
+Everything that differs between machines or people lives in the EDI home, never in the repository ([machine-and-person-specifics](decisions/machine-and-person-specifics.md)).
 [examples/edi-home/](../examples/edi-home/) shows each file but the publish deny-list with placeholder values, the memory files included.
 
 ## The EDI home
@@ -35,20 +35,20 @@ The session-start digest lists any of the machine profile, the personal configur
 
 ## The project registry
 
-`config/projects.yaml` lists the projects EDI works on, and `edi project list` prints it ([ADR-041](decisions/ADR-041-project-registry-is-configuration.md)).
+`config/projects.yaml` lists the projects EDI works on, and `edi project list` prints it ([task-intake](decisions/task-intake.md)).
 A project's entry names:
 
 - its `clone`, by default `$EDI_HOME/projects/<name>`;
-- its `forge`, `{ kind: github|gitlab, host, path, account }`, and every forge call for the project runs under that account ([ADR-080](decisions/ADR-080-forge-calls-run-under-the-bound-account.md));
+- its `forge`, `{ kind: github|gitlab, host, path, account }`, and every forge call for the project runs under that account ([forge-adapters](decisions/forge-adapters.md));
 - its `delivery`, `draft-review` (the default) or `local-branch` with a `captainCheckout` (see [Delivery](delivery.md));
 - its `tracker`, `{ kind: jira|edi|none, projectKey: KEY }`;
 - `craftRules: true` when its briefs carry the craftsmanship rules.
 
 ## The dispatch rules
 
-`config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([ADR-025](decisions/ADR-025-dispatch-categories.md), [ADR-050](decisions/ADR-050-dispatch-rules-read-and-routed.md)).
-A project override's `categories` names the categories it covers, and a task of any other category routes by its category; an override without `categories` covers every category ([ADR-174](decisions/ADR-174-a-project-override-names-the-categories-it-covers.md)).
-The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([ADR-175](decisions/ADR-175-the-pipelines-agent-runs-on-the-route-the-dispatch-rules-give-it.md)).
+`config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([dispatch-routing](decisions/dispatch-routing.md)).
+A project override's `categories` names the categories it covers, and a task of any other category routes by its category; an override without `categories` covers every category.
+The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([pipeline-agent](decisions/pipeline-agent.md)).
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).
 
 ## The personal configuration
