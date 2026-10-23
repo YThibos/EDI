@@ -15,6 +15,7 @@ import io.github.ythibos.edi.adapter.runtime.Tmux.OpenedWindow;
 import io.github.ythibos.edi.adapter.runtime.Tmux.ServerIdentity;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -111,6 +112,11 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     @Override
     public Optional<Instant> missedStopIn(String transcript, Instant since) {
         return transcript == null ? Optional.empty() : transcripts.missedStop(Path.of(transcript), since);
+    }
+
+    @Override
+    public Optional<ErrorStop> errorStopIn(String transcript, Instant since) {
+        return transcript == null ? Optional.empty() : transcripts.errorStop(Path.of(transcript), since);
     }
 
     @Override

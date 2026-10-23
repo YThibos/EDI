@@ -10,6 +10,7 @@ import java.util.Set;
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -32,6 +33,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private UsageLimit limitInTheTranscript;
     private Instant contextFullInTheTranscript;
     private Instant missedStopInTheTranscript;
+    private ErrorStop errorStopInTheTranscript;
     private TokenUsage tokensInTheTranscript = TokenUsage.NONE;
     private Runnable duringTheNextLaunch = () -> {
     };
@@ -116,6 +118,11 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
+    public synchronized Optional<ErrorStop> errorStopIn(String transcript, Instant since) {
+        return Optional.ofNullable(errorStopInTheTranscript).filter(stop -> !stop.endedAt().isBefore(since));
+    }
+
+    @Override
     public synchronized TokenUsage tokensSpentIn(String transcript, Instant since) {
         return tokensInTheTranscript;
     }
@@ -157,6 +164,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void transcriptEndsOnAStopEdiMissedAt(Instant at) {
         missedStopInTheTranscript = at;
+    }
+
+    public synchronized void transcriptEndsOn(ErrorStop stop) {
+        errorStopInTheTranscript = stop;
     }
 
     public synchronized void transcriptSpent(TokenUsage tokens) {

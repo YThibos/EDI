@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import tools.jackson.core.JacksonException;
@@ -33,6 +34,7 @@ final class ClaudeTranscript {
     private static final String CONTEXT_LIMIT_OPENING = "Prompt is too long";
     private static final String STOP_HOOK_SUMMARY = "stop_hook_summary";
     private static final String TURN_END = "turn_duration";
+    private static final String UNKNOWN_ERROR = "unknown";
 
     private final JsonMapper json;
 
@@ -61,6 +63,14 @@ final class ClaudeTranscript {
             return Optional.empty();
         }
         return writtenAt(latest.getFirst()).filter(at -> !at.isBefore(since));
+    }
+
+    Optional<ErrorStop> errorStop(Path transcript, Instant since) {
+        List<JsonNode> latest = lastRecordsWhere(transcript, ClaudeTranscript::marksTheTurn, 2);
+        if (!endsAfterAnApiError(latest)) {
+            return Optional.empty();
+        }
+        return writtenAt(latest.getFirst()).filter(at -> !at.isBefore(since)).map(at -> new ErrorStop(at, errorOf(latest.getLast())));
     }
 
     TokenUsage tokensSpent(Path transcript, Instant since) {
@@ -147,6 +157,15 @@ final class ClaudeTranscript {
 
     private static boolean reportsAFailedHook(JsonNode summary) {
         return isASystemRecord(summary, STOP_HOOK_SUMMARY) && !summary.path("hookErrors").isEmpty();
+    }
+
+    private static boolean endsAfterAnApiError(List<JsonNode> latest) {
+        return latest.size() == 2 && isASystemRecord(latest.getFirst(), TURN_END) && isAnApiError(latest.getLast());
+    }
+
+    private static String errorOf(JsonNode record) {
+        String error = record.path("error").asString("");
+        return error.isBlank() ? UNKNOWN_ERROR : error;
     }
 
     private Optional<JsonNode> parsed(String line) {

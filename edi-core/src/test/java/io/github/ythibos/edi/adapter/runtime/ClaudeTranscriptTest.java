@@ -11,6 +11,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import tools.jackson.databind.json.JsonMapper;
@@ -70,6 +71,24 @@ class ClaudeTranscriptTest {
             assertThat(transcripts.missedStop(fixture(fixture), LAUNCHED)).as(fixture).isEmpty();
         }
         assertThat(transcripts.missedStop(directory.resolve("absent.jsonl"), LAUNCHED)).isEmpty();
+    }
+
+    @Test
+    void readsWhenATurnEndedOnAnApiErrorAndWhichError() throws IOException {
+        Instant ended = Instant.parse("2026-10-16T10:15:00.080Z");
+        Path unnamed = directory.resolve("unnamed-error-stop.jsonl");
+        Files.writeString(unnamed, Files.readString(fixture("error-stop.jsonl")).replace("\"error\":\"overloaded\",", ""));
+
+        assertThat(transcripts.errorStop(fixture("error-stop.jsonl"), LAUNCHED)).contains(new ErrorStop(ended, "overloaded"));
+        assertThat(transcripts.errorStop(fixture("error-stop.jsonl"), ended.plusMillis(1))).isEmpty();
+        assertThat(transcripts.errorStop(unnamed, LAUNCHED)).contains(new ErrorStop(ended, "unknown"));
+        for (String fixture : new String[] {"missed-stop.jsonl", "answered-stop.jsonl", "working.jsonl", "overloaded.jsonl", "truncated.jsonl"}) {
+            assertThat(transcripts.errorStop(fixture(fixture), LAUNCHED)).as(fixture).isEmpty();
+        }
+        assertThat(transcripts.errorStop(directory.resolve("absent.jsonl"), LAUNCHED)).isEmpty();
+        assertThat(transcripts.usageLimitStop(fixture("error-stop.jsonl"), LAUNCHED)).isEmpty();
+        assertThat(transcripts.contextLimitStop(fixture("error-stop.jsonl"), LAUNCHED)).isEmpty();
+        assertThat(transcripts.missedStop(fixture("error-stop.jsonl"), LAUNCHED)).isEmpty();
     }
 
     @Test

@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.worker;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +18,8 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerHealth;
@@ -26,6 +29,7 @@ public class NoticeMissedStops {
 
     static final String CARRY_ON = "EDI could not take your stop hook when your last turn ended, and it refused your edi calls and guarded tools"
             + " while it was unreachable; it answers again now, so retry what it refused, then carry on with the task.";
+    static final Duration HOOK_GRACE = Duration.ofMinutes(2);
 
     private final WorkerListQuery workerList;
     private final WorkerStore workers;
@@ -59,6 +63,10 @@ public class NoticeMissedStops {
         if (limit.isPresent()) {
             return recordedInTheTurnRead(worker, current -> parked(current, limit.get()));
         }
+        Optional<ErrorStop> errorStop = errorStopPastTheHookGraceOf(worker);
+        if (errorStop.isPresent()) {
+            return recordedInTheTurnRead(worker, current -> stoppedOnAnError(current, errorStop.get())).map(this::woken);
+        }
         return missedStopOf(worker).flatMap(at -> recordedInTheTurnRead(worker, current -> idle(current, at))).map(this::woken);
     }
 
@@ -81,13 +89,18 @@ public class NoticeMissedStops {
         return parked;
     }
 
-    private Optional<Instant> missedStopOf(Worker worker) {
-        return runtime.missedStopIn(worker.transcript(), worker.activitySince());
+    private Optional<ErrorStop> errorStopPastTheHookGraceOf(Worker worker) {
+        return runtime.errorStopIn(worker.transcript(), worker.activitySince()).filter(this::isPastTheHookGrace);
     }
 
-    private Worker idle(Worker worker, Instant stoppedAt) {
-        Worker idle = worker.turnEnded(stoppedAt);
+    private boolean isPastTheHookGrace(ErrorStop stop) {
+        return !clock.now().isBefore(stop.endedAt().plus(HOOK_GRACE));
+    }
+
+    private Worker stoppedOnAnError(Worker worker, ErrorStop stop) {
+        Worker idle = worker.turnEnded(stop.endedAt());
         workers.update(idle);
+        events.record(new WorkerStoppedOnAnError(idle.id().task(), idle.id(), stop.error()), Actor.CORE, clock.now());
         return idle;
     }
 
@@ -95,6 +108,16 @@ public class NoticeMissedStops {
         Steered steered = steer.steer(new TaskReference.ById(idle.id().task()), CARRY_ON, null, Actor.CORE);
         transaction.executeWithoutResult(_ -> events.record(new WorkerStopMissed(idle.id().task(), idle.id(), idle.activitySince(),
                 steered.message().number(), steered.delivery().wasTyped()), Actor.CORE, clock.now()));
+        return idle;
+    }
+
+    private Optional<Instant> missedStopOf(Worker worker) {
+        return runtime.missedStopIn(worker.transcript(), worker.activitySince());
+    }
+
+    private Worker idle(Worker worker, Instant stoppedAt) {
+        Worker idle = worker.turnEnded(stoppedAt);
+        workers.update(idle);
         return idle;
     }
 }

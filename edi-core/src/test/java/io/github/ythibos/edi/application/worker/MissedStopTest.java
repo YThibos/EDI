@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeKind;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -133,6 +134,52 @@ class MissedStopTest {
         assertThat(healthOf(home, lamp)).isEqualTo(new WorkerHealth.LimitParked(limit));
         assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("UsageLimitReached");
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.USAGE_LIMIT);
+    }
+
+    @Test
+    void wakesAWorkerWhoseTurnEndedOnAnApiErrorOnceTheHookGraceHasPassed() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        Instant ended = home.clock().now();
+        home.runtime().transcriptEndsOn(new ErrorStop(ended, "overloaded"));
+        home.clock().advance(NoticeMissedStops.HOOK_GRACE);
+
+        assertThat(home.noticeMissedStops().notice()).extracting(Worker::id).containsExactly(lamp.id());
+        assertThat(home.noticeMissedStops().notice()).isEmpty();
+
+        assertThat(healthOf(home, lamp)).isEqualTo(new WorkerHealth.Idle(ended));
+        assertThat(home.runtime().typedLines()).containsExactly("EDI_OP: message 1 waiting: run edi inbox");
+        assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("WorkerStoppedOnAnError", "WorkerStopMissed");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.STOP_MISSED);
+    }
+
+    @Test
+    void leavesAWorkerWhoseTurnEndedOnAnApiErrorBusyWithinTheHookGrace() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        home.runtime().transcriptEndsOn(new ErrorStop(home.clock().now(), "overloaded"));
+        home.clock().advance(NoticeMissedStops.HOOK_GRACE.minusSeconds(1));
+
+        assertThat(home.noticeMissedStops().notice()).isEmpty();
+
+        assertThat(healthOf(home, lamp)).isInstanceOf(WorkerHealth.Busy.class);
+        assertThat(home.runtime().typedLines()).isEmpty();
+        assertThat(home.eventTypesOf(lamp.id().task())).doesNotContain("WorkerStoppedOnAnError", "WorkerStopMissed");
+    }
+
+    @Test
+    void leavesAWorkerAloneWhoseStopFailureHookArrivedFirst() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        home.runtime().transcriptEndsOn(new ErrorStop(home.clock().now(), "overloaded"));
+        home.workerHooks().stopFailed(lamp.id(), "overloaded", null);
+        home.clock().advance(NoticeMissedStops.HOOK_GRACE);
+
+        assertThat(home.noticeMissedStops().notice()).isEmpty();
+
+        assertThat(home.runtime().typedLines()).isEmpty();
+        assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("WorkerStoppedOnAnError").doesNotContain("WorkerStopMissed");
+        assertThat(home.wakes().unacknowledged()).isEmpty();
     }
 
     @Test
