@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.follow.EventFollowers;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.delivery.PipelineReview;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
@@ -29,11 +30,13 @@ class ResearchFirstPilotTest {
     private Path directory;
 
     private TestHome home;
+    private EventFollowers followers;
     private int lastKey = 100;
 
     @BeforeEach
     void finishTwoShipsWithoutResearch() throws IOException {
         home = TestHome.in(directory);
+        followers = home.eventFollowers();
         for (int number = 1; number <= 2; number++) {
             finishedShip("unplanned-" + number, null, 2_000_000, new PipelineReview(3, 4));
         }
@@ -44,11 +47,11 @@ class ResearchFirstPilotTest {
         for (int number = 1; number <= 9; number++) {
             finishedShip("planned-" + number, "plan-" + number, 1_000_000, new PipelineReview(1, 1));
         }
-        home.eventFollowers().followTheLog();
+        followers.followTheLog();
         assertThat(home.tasks().contains(ResearchFirstPilot.DECISION_TASK)).isFalse();
 
         finishedShip("planned-10", "plan-10", 1_000_000, new PipelineReview(1, 1));
-        home.eventFollowers().followTheLog();
+        followers.followTheLog();
 
         assertThat(home.tasks().get(ResearchFirstPilot.DECISION_TASK).intake().kind()).isEqualTo(TaskKind.CAPTAIN);
         Decision decision = home.decisions().ofTask(ResearchFirstPilot.DECISION_TASK).orElseThrow();
@@ -64,13 +67,17 @@ class ResearchFirstPilotTest {
     void raisesTheComparisonOnlyOnce() {
         for (int number = 1; number <= 11; number++) {
             finishedShip("planned-" + number, "plan-" + number, 1_000_000, new PipelineReview(1, 1));
-            home.eventFollowers().followTheLog();
+            followers.followTheLog();
         }
 
         assertThat(home.eventTypesOf(ResearchFirstPilot.DECISION_TASK)).containsExactly("TaskAdded", "DecisionRaised");
     }
 
     private void finishedShip(String ship, String research, long tokens, PipelineReview review) {
+        home.inOneTransaction(() -> storeAFinishedShip(ship, research, tokens, review));
+    }
+
+    private void storeAFinishedShip(String ship, String research, long tokens, PipelineReview review) {
         TaskId shipId = new TaskId(ship);
         home.storing(List.of(WorkerFixtures.queuedShip(ship, "harness", "HRN-" + ++lastKey)));
         TaskId researchId = research == null ? null : finishedResearch(research, tokens);

@@ -24,6 +24,8 @@ Only the core's `StoreConfiguration` and the migration tests `SupervisionMigrati
 A test that needs overlapping processes starts them before the work they overlap, as each AT-38 case starts its pre-push hook before its delivery, whose guard JVM starts with C1 and the serial collector.
 A test whose cases each start child processes checks each case in a home of its own, as `deliveryAndPushRefuseEachKindOfLeak` is a parameterised test over `TwoMachinesTest.Leak` and `deliveryAndPushPassAClearBranch` checks the clean branch apart.
 A test that builds many homes checks each in a case of its own, as AT-22's `captainFacingStringsCarryNoInternalLabels` is a parameterised test over every kind of string `CaptainFacingStrings` generates, each golden report a kind of its own and the fleet's views sharing one home.
+A `TestHome` helper that reads and writes several rows does so in one transaction, as `markDone` and `putInFlight` do, and a test that stores several rows for one step of its story stores them through `TestHome.inOneTransaction`, as the research-first pilot's test stores each finished ship, since every statement outside a transaction opens a connection of its own.
+A test that follows the log several times holds one `EventFollowers` for its home, as the core holds one, instead of building the followers and their trackers again for every round.
 A test that needs an external tool skips with a reason when the tool is missing, time comes only from the `Clock` port, and nothing sleeps except a helper waiting for a real child with a hard timeout.
 
 ## Why
@@ -34,6 +36,7 @@ Most test code runs a few times and is thrown away, so C1 alone nearly halved th
 A test home lives in a temporary directory thrown away when its test ends and no test checks what survives a power cut, so its commits need not wait for a disk other builds keep busy; the research-first pilot's test went from 6.7 seconds to 1.9 at a load average of about 20, and it still runs every statement, transaction and file the core does.
 Under load a test's time follows the processor work it and its children ask for, so each AT-38 case gets the whole timeout for one branch, takes 5 to 14 seconds at a load average of about 41 where the four branches together took 30, and a failing case names the kind of leak it checks.
 AT-22 rendered sixteen golden reports and built three more homes in one test, about 24 seconds of work at a load average of 39 to 54, where none of its cases now takes more than 9 seconds and a failing case names the kind of string that carries the label.
+Opening a connection took about 11 ms at a load average of about 20, and the research-first pilot's `raisesTheComparisonOnlyOnce` opened 408, seven in each call of `markDone`, about nine for each finished ship and four in each follow round only to find the log empty, and built its four followers again for each of its eleven rounds; under the same synthetic load, at a load average of 30 to 45, it went from 14 to 21 seconds to 5 to 10.
 
 ## Alternatives rejected
 
@@ -65,3 +68,4 @@ When JUnit offers process tracking, a test needs the developer's git configurati
 - 23/10/2026: AT-38, AT-32, AT-22 and the research-first pilot overran with several workers building at once while they waited on the disk, so a test home's store commits without waiting for it (EDI-45).
 - 23/10/2026: AT-38's leak test still overran in a loaded full build, so each kind of leak is checked in a case of its own (EDI-45).
 - 23/10/2026: AT-22 still overran at a load average of 39, so each kind of captain-facing string is checked in a case of its own (EDI-45).
+- 23/10/2026: the research-first pilot's test took 24 seconds at a load average of 30 to 46, so `TestHome` helpers and each finished ship use one transaction, the test holds one `EventFollowers`, a follower's run ends at a short batch and the machine profile is parsed again only when it changed (EDI-45).

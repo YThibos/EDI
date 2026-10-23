@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
@@ -48,6 +49,7 @@ public class MachineProfile {
     private final Path file;
     private final YAMLMapper yaml = new YAMLMapper();
     private final YAMLMapper writer = ConfigurationYaml.writer();
+    private final AtomicReference<ReadProfile> lastRead = new AtomicReference<>(ReadProfile.NONE);
 
     public MachineProfile(EdiHome home) {
         this.file = home.machineProfile();
@@ -132,10 +134,20 @@ public class MachineProfile {
 
     private ProfileDocument document() {
         try {
-            return ConfigurationFile.contentOf(file).map(content -> yaml.readValue(content, ProfileDocument.class)).orElse(EMPTY);
+            return ConfigurationFile.contentOf(file).map(this::documentOf).orElse(EMPTY);
         } catch (JacksonException unreadable) {
             throw new InvalidConfiguration(file, unreadable.getOriginalMessage());
         }
+    }
+
+    private ProfileDocument documentOf(String content) {
+        ReadProfile last = lastRead.get();
+        if (content.equals(last.content())) {
+            return last.document();
+        }
+        ProfileDocument document = yaml.readValue(content, ProfileDocument.class);
+        lastRead.set(new ReadProfile(content, document));
+        return document;
     }
 
     private static ModelRoster roster(WorkersSection workers) {
@@ -283,5 +295,10 @@ public class MachineProfile {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ConsoleSection(Boolean openSitrepAtSessionStart) {
+    }
+
+    private record ReadProfile(String content, ProfileDocument document) {
+
+        static final ReadProfile NONE = new ReadProfile(null, EMPTY);
     }
 }
