@@ -32,6 +32,10 @@ public record RegisteredForge(ForgeRepository repository, String account) {
         return kind() == ForgeKind.GITHUB && changes.touchAPathUnder(GITHUB_WORKFLOWS);
     }
 
+    public boolean isServedAt(String remoteUrl) {
+        return RemoteAddress.of(remoteUrl).filter(repository::isAt).isPresent();
+    }
+
     public void requirePublicationAt(String remoteUrl) {
         RemoteAddress remote = RemoteAddress.of(remoteUrl).orElseThrow(() -> unregistered("a remote outside every forge"));
         if (!repository.isAt(remote)) {

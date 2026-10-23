@@ -7,7 +7,7 @@
 Several rules follow the clock rather than a commit: an unreceived steer, a launch that sent no hook, deferred dispatches, worker health, usage-limit resets, holds whose date arrived, presence and the calendar.
 Workers are judged by structured state, never by shell liveness or their last status line (I-26); twice the old harness reported a fleet "alive" after the machine had restarted.
 A worker that drives the validation pipeline idles while the pipeline reviews and tests, often for longer than twenty minutes.
-The validation pipeline (no-mistakes) is an external tool the worker drives; EDI observes its runs and sets nothing but the route its agent runs on ([pipeline-agent](pipeline-agent.md)).
+The validation pipeline (no-mistakes) is an external tool the worker drives; EDI observes its runs and sets nothing but the route its agent runs on ([pipeline-agent](pipeline-agent.md)) and the work key in front of its commits and titles ([pipeline-commit-keys](pipeline-commit-keys.md)).
 When a worker's conversation fills up with auto-compact off, Claude Code fires no `Stop`, `StopFailure` or reliable `Notification`, while its transcript records each failed prompt as an assistant API error opening with "Prompt is too long" ([docs/verification/claude-code.md](../verification/claude-code.md)).
 
 ## Decision
@@ -59,3 +59,4 @@ When the round's tmux calls show up in its time, Claude Code reports a pending p
 - 17/10/2026 to 22/10/2026: presence, ticket settlement and the calendar joined the round.
 - 22/10/2026: a worker whose context had filled sat idle for two hours while EDI read it as busy, so the round reads each transcript for a full context (EDI-35).
 - 23/10/2026: EDI began setting the route of the pipeline's agent, its one write to the pipeline ([pipeline-agent](pipeline-agent.md), EDI-46).
+- 23/10/2026: EDI began writing each delivered repository's commit keys into the pipeline's configuration too ([pipeline-commit-keys](pipeline-commit-keys.md), EDI-21).

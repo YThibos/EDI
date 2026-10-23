@@ -59,4 +59,9 @@ public class NoMistakesPipeline implements Pipeline {
     public synchronized void runAgentOn(Route route) {
         AgentArguments.routeClaudeCodeIn(globalConfiguration, route);
     }
+
+    @Override
+    public synchronized void keyCommitsPushedTo(String remoteUrl) {
+        CommitKeys.keyCommitsPushedTo(globalConfiguration, remoteUrl);
+    }
 }

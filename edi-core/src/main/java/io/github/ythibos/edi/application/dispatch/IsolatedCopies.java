@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,8 @@ import io.github.ythibos.edi.domain.task.TaskId;
 
 @Component
 public class IsolatedCopies {
+
+    private static final String ORIGIN = "origin";
 
     private final EdiHome home;
     private final Git git;
@@ -64,6 +67,11 @@ public class IsolatedCopies {
         }
     }
 
+    public Optional<String> forgeRemoteOf(ProjectEntry project) {
+        RegisteredForge forge = project.forge();
+        return git.fetchUrlOf(project.projectClone(), ORIGIN).filter(remote -> forge != null && forge.isServedAt(remote));
+    }
+
     private void requireInsideTheWorktrees(Path path) {
         if (!realPathOf(path).startsWith(realPathOf(home.worktrees()))) {
             throw new Refusal(path + " is outside " + home.worktrees() + ", so no worker is launched there.");
@@ -77,7 +85,7 @@ public class IsolatedCopies {
         if (git.hasRef(clone, "refs/heads/" + branch)) {
             git.addWorktreeOnBranch(clone, worktree, branch);
         } else {
-            String startPoint = "origin/" + base;
+            String startPoint = ORIGIN + "/" + base;
             if (!git.hasRef(clone, startPoint)) {
                 throw new Refusal(startPoint + " does not exist in " + clone + " after a fetch, so the isolated copy has nothing to start from.");
             }

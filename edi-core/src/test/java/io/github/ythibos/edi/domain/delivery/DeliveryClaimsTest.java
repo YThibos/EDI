@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -142,12 +143,16 @@ class DeliveryClaimsTest {
     }
 
     @Test
-    void composesThePipelineIntentFromTheCaptainsIntentAndTheSpecWithTheCraftRulesVerbatim() {
-        assertThat(PipelineIntent.of("Fit the lamp.\nAcceptance: it lights.\n", "\nThe switch also dims it.\n", "  Craft rules:\n- Short methods.\n").text())
-                .isEqualTo("## Captain's intent\n\nFit the lamp.\nAcceptance: it lights.\n\n## Spec\n\nThe switch also dims it.\n\nCraft rules:\n- Short methods.");
-        assertThat(PipelineIntent.of("Fit the lamp.", "The switch also dims it.", null).text())
-                .isEqualTo("## Captain's intent\n\nFit the lamp.\n\n## Spec\n\nThe switch also dims it.");
-        assertThatIllegalArgumentException().isThrownBy(() -> PipelineIntent.of("  ", "The switch also dims it.", null));
+    void composesThePipelineIntentFromTheCaptainsIntentTheSpecAndTheKeyedCommitsWithTheCraftRulesVerbatim() {
+        WorkKey key = WorkKey.parse("HRN-3");
+        String commits = "## Commits\n\nThe pipeline starts every commit subject it writes, and the pull request's title, with the work key `HRN-3`,"
+                + " so a fix summary or a title it asks for is one short line that leaves the key out.";
+        assertThat(PipelineIntent.of(key, "Fit the lamp.\nAcceptance: it lights.\n", "\nThe switch also dims it.\n", "  Craft rules:\n- Short methods.\n").text())
+                .isEqualTo("## Captain's intent\n\nFit the lamp.\nAcceptance: it lights.\n\n## Spec\n\nThe switch also dims it.\n\n" + commits
+                        + "\n\nCraft rules:\n- Short methods.");
+        assertThat(PipelineIntent.of(key, "Fit the lamp.", "The switch also dims it.", null).text())
+                .isEqualTo("## Captain's intent\n\nFit the lamp.\n\n## Spec\n\nThe switch also dims it.\n\n" + commits);
+        assertThatIllegalArgumentException().isThrownBy(() -> PipelineIntent.of(key, "  ", "The switch also dims it.", null));
     }
 
     @Test

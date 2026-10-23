@@ -33,6 +33,7 @@ public class WorkerBriefs {
     }
 
     public PipelineIntent pipelineIntentFor(BriefFacts facts) {
-        return PipelineIntent.of(BriefSections.intent(facts), BriefSections.spec(facts), facts.project().craftRules() ? facts.craftRules() : null);
+        return PipelineIntent.of(facts.dispatch().branch().workKey(), BriefSections.intent(facts), BriefSections.spec(facts),
+                facts.project().craftRules() ? facts.craftRules() : null);
     }
 }
