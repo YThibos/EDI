@@ -326,6 +326,12 @@ a {
   overflow-wrap: anywhere;
 }
 
+.sr-row__key {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ion);
+}
+
 .sr-row__sub {
   font-size: var(--fs-xs);
   color: var(--text-dim);
