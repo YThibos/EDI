@@ -59,7 +59,7 @@ class JudgeWorkersTest {
         Worker lamp = startedWorker("fit-lamp", "HRN-3");
         Worker horn = startedWorker("tune-horn", "HRN-4");
         home.recordStatus().report(lamp.id(), StatusState.PAUSED, null, home.clock().now().plus(Duration.ofHours(1)), "Waiting for the pipeline run.");
-        home.workerHooks().promptSubmitted(horn.id(), "Tune the horn.");
+        home.workerHooks().promptSubmitted(horn.id(), "Tune the horn.", null);
 
         home.clock().advance(Duration.ofHours(3));
         home.judgeWorkers().judge();

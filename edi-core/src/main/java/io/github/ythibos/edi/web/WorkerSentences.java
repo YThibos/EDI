@@ -24,7 +24,7 @@ final class WorkerSentences {
 
     static String relaunched(DispatchOutcome.Launched launched) {
         Worker worker = launched.worker();
-        String how = worker.launch().kind() == LaunchKind.RESUME ? "resuming session " + worker.session() : "with a fresh session";
+        String how = worker.launch().kind() == LaunchKind.RESUME ? "resuming session " + worker.session() : "with a fresh session and a handover";
         return "Relaunched " + worker.id().task() + " as " + worker.id() + " (" + worker.category() + ", " + worker.route() + "), " + how
                 + ", in " + launched.worktree() + ".";
     }
@@ -46,6 +46,8 @@ final class WorkerSentences {
             case AT_THE_NEXT_STOP -> waiting + "; it is busy, so its next stop delivers the message.";
             case WAITING_FOR_THE_PANE -> waiting + "; its pane shows no idle prompt, so EDI typed nothing and waits for its next stop.";
             case WAITING_FOR_A_LIVE_WORKER -> waiting + ", whose window is closed; the message waits in its inbox.";
+            case WAITING_FOR_A_FRESH_SESSION -> waiting + ", whose context is full; the message waits in its inbox for the fresh session that edi worker"
+                    + " relaunch starts.";
         };
     }
 }

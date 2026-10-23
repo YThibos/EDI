@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
+import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
@@ -226,6 +227,7 @@ public class EventLog {
             case UsageLimitReached reached -> payload.put("worker", reached.worker().toString())
                     .put("limit", reached.limit().name())
                     .put("resetsAt", Columns.text(reached.limit().resetsAt()));
+            case ContextLimitReached reached -> payload.put("worker", reached.worker().toString()).put("fullSince", Columns.text(reached.fullSince()));
             case LimitResumeTyped typed -> payload.put("worker", typed.worker().toString());
             case LimitResumeHeldBack heldBack -> payload.put("worker", heldBack.worker().toString()).put("pane", heldBack.pane().word());
             case WorkerDied died -> payload.put("worker", died.worker().toString()).put("cause", died.cause().word());

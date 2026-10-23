@@ -8,6 +8,7 @@ Several rules follow the clock rather than a commit: an unreceived steer, a laun
 Workers are judged by structured state, never by shell liveness or their last status line (I-26); twice the old harness reported a fleet "alive" after the machine had restarted.
 A worker that drives the validation pipeline idles while the pipeline reviews and tests, often for longer than twenty minutes.
 The validation pipeline (no-mistakes) is an external tool the worker drives, and EDI only observes it.
+When a worker's conversation fills up with auto-compact off, Claude Code fires no `Stop`, `StopFailure` or reliable `Notification`, while its transcript records each failed prompt as an assistant API error opening with "Prompt is too long" ([docs/verification/claude-code.md](../verification/claude-code.md)).
 
 ## Decision
 
@@ -19,6 +20,9 @@ Each rule is a use case that tests call directly with a controllable clock.
 `TmuxClaudeRuntime.check` reads the server's pid and start time from tmux and tells `SERVER_GONE`, `SERVER_CHANGED`, `WINDOW_CLOSED` and `OPEN` apart.
 `noticeDue` names the one condition worth a wake, keyed by the moment it began: stale after `supervision.staleAfter` idle (PT20M), busy past three hours, a pause past its `until`, or died; `worker_notice` records each once, and a new activity or status starts a new condition.
 A worker waiting on the primary, on a message it has not received, or on its task's running pipeline is never stale (`Awaited`).
+`NoticeFullContexts`, each round before workers are judged, reads every busy or idle worker's transcript through `ClaudeTranscript.contextLimitStop`, which finds a full context only in a last record of that shape written since the launch; it ends the worker's turn at that moment (`Worker.contextFilled`, `worker.context_full_since`) unless a newer prompt arrived, and records `ContextLimitReached`, which wakes the primary.
+`SupervisionRules` reads such a worker as `WorkerHealth.ContextFull`, which raises no stale or busy notice; a prompt that gets through lifts it, a stop keeps it so a relaunch starts afresh ([recovery](recovery.md)), and `InboxNotice` types nothing into it, so a steer waits for the fresh session.
+`WorkerHooks` records a session's transcript path from `UserPromptSubmit` as well as `SessionStart`, so a worker whose session start was missed can still be read.
 `ObservePipelines` reads, every `edi.delivery.pipelines` (PT60S), the latest run of each `draft-review` ship whose work is not handed over, through `NoMistakesPipeline.latestRunOf`, which runs `no-mistakes axi status` in the copy and reads its `run:` block (`AxiStatus`); `PipelineRunStore` keeps the latest reading, and every status but the finished ones counts as running.
 `NoMistakesPipeline.tokensSpentOn` opens the pipeline's `state.sqlite` read-only and sums each invocation's token deltas for the branch, or keeps the spend unknown ([cleanup](cleanup.md)).
 
@@ -32,20 +36,25 @@ A worker waiting on its own pipeline is doing its job, and the reading comes fro
 
 - A timer per rule, per message or per launch - lost on a restart, and more threads with no shared order.
 - A health column the round updates - the old harness's false "alive".
-- Reading the pane to tell busy from idle - the pane probe stays out of every health decision ([steering](steering.md)).
+- Reading the pane to tell busy from idle, or for "Context limit reached" - the pane probe stays out of every health decision ([steering](steering.md)).
+- Waiting for `StopFailure` or the `idle_prompt` notification on a full context - neither came reliably on Claude Code 2.1.308.
+- Typing `/compact` into a full context - loses the worker's reasoning without a plan, and EDI types only plain lines into an idle prompt.
 - `axi status --run <id>`, or the pipeline's logs - only the worker knows the run id, and the database already holds the counts.
 
 ## Consequences
 
 - Good: a dead worker is noticed within one round, and `edi worker list` shows each worker's health in words, such as `dead: its tmux server changed`.
 - Bad: every rule reacts within 30 seconds of its time, every round asks tmux about every serving worker, and a worker in a permission dialog counts as busy until the ceiling.
+- Good: a full context is raised within one round instead of at the three-hour busy ceiling, and `edi worker list` shows `context full since <time>`.
 - Bad: the spend read depends on the pipeline's internal tables; a schema change makes it unknown, never wrong.
+- Bad: each round reads up to 256 KB of every busy or idle worker's transcript.
 
 ## When to revisit
 
-When the round's tmux calls show up in its time, Claude Code reports a pending permission prompt as a state of its own, or the pipeline reports progress or spend through `axi`.
+When the round's tmux calls show up in its time, Claude Code reports a pending permission prompt as a state of its own, the pipeline reports progress or spend through `axi`, or Claude Code fires a hook when the context fills.
 
 ## How we got here
 
 - 16/10/2026: slice S3 started the round for steers, launches, deferrals and mechanical checks; slice S4 added worker health, the boot id, outages, limit resets and due holds; slice S5 added the pipeline as a reason not to be stale.
 - 17/10/2026 to 22/10/2026: presence, ticket settlement and the calendar joined the round.
+- 22/10/2026: a worker whose context had filled sat idle for two hours while EDI read it as busy, so the round reads each transcript for a full context (EDI-35).

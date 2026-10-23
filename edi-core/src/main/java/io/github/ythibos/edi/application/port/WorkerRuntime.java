@@ -39,6 +39,8 @@ public interface WorkerRuntime {
 
     Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since);
 
+    Optional<Instant> contextLimitStopIn(String transcript, Instant since);
+
     TokenUsage tokensSpentIn(String transcript, Instant since);
 
     record Launch(

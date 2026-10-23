@@ -39,6 +39,9 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
         if (!window.isOpen()) {
             return new WorkerHealth.Dead(DeathCause.of(window));
         }
+        if (worker.hasAFullContext()) {
+            return new WorkerHealth.ContextFull(worker.contextFullSince());
+        }
         if (worker.limitPark() != null) {
             return new WorkerHealth.LimitParked(worker.limitPark().limit());
         }
@@ -50,7 +53,7 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
             case WorkerHealth.Dead _ -> Optional.of(new WorkerNotice(NoticeKind.DIED, worker.launchedAt()));
             case WorkerHealth.Busy busy -> busyTooLong(busy, now);
             case WorkerHealth.Idle _ -> waitEnded(worker, now).or(() -> stale(worker, awaited, now));
-            case WorkerHealth.Starting _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _, WorkerHealth.Stopped _,
+            case WorkerHealth.Starting _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _, WorkerHealth.ContextFull _, WorkerHealth.Stopped _,
                     WorkerHealth.LaunchFailed _, WorkerHealth.Finished _ -> Optional.empty();
         };
     }

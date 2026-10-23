@@ -1,4 +1,4 @@
-# A relaunch resumes the recorded session in the task's own copy, several dead workers wait on a numbered outage list, and usage limits are met at their reset
+# A relaunch resumes the recorded session in the task's own copy or, for a full context, starts afresh with a handover; several dead workers wait on a numbered outage list, and usage limits are met at their reset
 
 **Kind:** Design
 
@@ -9,12 +9,14 @@ EDI kills only process ids it recorded (I-30).
 When more than one worker is dead, EDI relaunches none and acts only on the numbers the captain names, one at a time (I-24), so no restart storm follows a lost machine.
 A usage limit is detected from the `StopFailure` hook and the transcript, and a live worker parked on one is resumed at its reset by one typed line; EDI never presses a key into a limit dialog, and credits stay disabled.
 A resumed session appends to the transcript of the session it resumes, and a tool result can quote a limit message.
+A worker whose context is full cannot be resumed: `--resume` reopens the same full conversation ([supervision](supervision.md)), while its work lives on in the copy, the store and the task directory.
 
 ## Decision
 
 A worker is launched as a `dispatch`, a `resume` or a `fresh` start (`LaunchKind`); `LaunchWorker.relaunch` launches the next incarnation in `EdiHome.worktreeOf` with the route the rules give now and a captain's override when one is given.
 A resume passes `--resume` with the latest session id and a first line from `ResumeNotes` naming the branch, the head, the last status and the answers since; a fresh start draws a new session id and writes the brief again.
-`RelaunchWorker` refuses a worker that still runs and a held task, and a copy in which `ProcessTable.workingIn` finds a process.
+`RelaunchWorker` refuses a worker that still runs and a held task, and a copy in which `ProcessTable.workingIn` finds a process; a stopped or dead worker whose context is full is relaunched as a `fresh` start, and `LaunchWorker` refuses to resume a full context whichever command asks.
+Every fresh start writes `handover.md` beside the brief, and its first prompt asks the worker to read it: `Handovers` writes, from the store and the copy, who takes over from whom and why, the branch, its head and the copy, the commits beyond `origin/<base>`, the uncommitted changes, the latest pipeline run, the brief and any scout's report, the last status, the decisions answered since, and how to carry on.
 `StopWorker` checks the pane's process is still a child of the recorded server, then `ProcessTable.stopTree` sends SIGTERM to it and its descendants and SIGKILL to whatever outlives ten seconds.
 When a round finds two or more dead workers, `OutageHoldList` lists each in `outage_entry`, numbered after the highest open number, holds its task for the captain and records `LostInOutage`; one dead worker alone records `WorkerDied`.
 `edi recover` prints the list, with each copy verified by git (`OutageListQuery`), and `edi recover <n> resume|fresh [--model M] [--effort E]` or `drop [--discard-work]` answers one entry (`RecoverFromOutage`, `DropFromOutage`); a relaunch is refused while a usage limit still holds.
@@ -30,7 +32,9 @@ The transcript is the session's own account of why it stopped, read with the car
 
 ## Alternatives rejected
 
-- Relaunching fresh by default - the worker would lose its reasoning; fresh stays an explicit choice.
+- Relaunching fresh by default - the worker would lose its reasoning; fresh stays an explicit choice, or the only way on for a full context.
+- Putting a full context on the outage hold list - the list suits two or more dead workers, not one whose only way on is a fresh start.
+- Writing the handover into the brief - the brief stays the same for every incarnation and within its line budget, while the handover changes with every start.
 - Stopping through `tmux kill-window` - SIGHUP without the grace period.
 - A global outage number sequence - numbers in the hundreds for a list of three.
 - Reading the reset time from the message text - the record carries the instant itself.
@@ -38,13 +42,16 @@ The transcript is the session's own account of why it stopped, read with the car
 ## Consequences
 
 - Good: the stand-in in the native test records `--resume` with the first session's id after a simulated restart, and recovery's cost is known.
+- Good: a full context costs the primary two commands, `edi worker stop` and `edi worker relaunch`, and `edi recover <n> fresh` gets the same handover.
 - Bad: reading every process's working directory scans `/proc`, which is Linux only, and a limit dialog has not been captured live.
+- Bad: the handover reads the copy's git state at launch, so a copy git cannot read gives a thinner one.
 
 ## When to revisit
 
-When Claude Code changes `--resume` or its limit records, or a worker needs a copy of another project.
+When Claude Code changes `--resume` or its limit records, can compact or clear a session from the command line, or a worker needs a copy of another project.
 
 ## How we got here
 
 - 16/10/2026: slice S4 built relaunch, stop, the outage list, usage limits and recovery cost.
 - 17/10/2026: slice S8 let the outage list drop a task on the captain's word ([captains-word](captains-word.md)).
+- 22/10/2026: a worker whose context had filled could not be resumed, and the primary wrote its successor a handover by hand, so a full context now starts afresh with a handover EDI writes (EDI-35).

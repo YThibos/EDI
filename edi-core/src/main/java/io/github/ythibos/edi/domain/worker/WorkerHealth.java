@@ -23,6 +23,9 @@ public sealed interface WorkerHealth {
     record LimitParked(UsageLimit limit) implements WorkerHealth {
     }
 
+    record ContextFull(Instant since) implements WorkerHealth {
+    }
+
     record Stopped(Instant at) implements WorkerHealth {
     }
 

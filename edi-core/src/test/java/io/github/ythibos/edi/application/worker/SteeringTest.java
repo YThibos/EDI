@@ -46,7 +46,7 @@ class SteeringTest {
         home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
 
         SteerWorker.Steered steered = steer("Use the brass lamp.", null);
-        home.workerHooks().promptSubmitted(worker.id(), home.runtime().typedLines().getLast());
+        home.workerHooks().promptSubmitted(worker.id(), home.runtime().typedLines().getLast(), null);
 
         assertThat(steered.delivery()).isEqualTo(SteerDelivery.TYPED_INTO_THE_IDLE_PROMPT);
         assertThat(home.runtime().typedLines()).containsExactly("EDI_OP: message 1 waiting: run edi inbox");
@@ -56,7 +56,7 @@ class SteeringTest {
 
     @Test
     void deliversToABusyWorkerAtItsNextStopAndBlocksThatStopOnce() {
-        home.workerHooks().promptSubmitted(worker.id(), "the brief");
+        home.workerHooks().promptSubmitted(worker.id(), "the brief", null);
 
         SteerWorker.Steered steered = steer("Use the brass lamp.", null);
         HookAnswer firstStop = home.workerHooks().stopping(worker.id());
@@ -71,7 +71,7 @@ class SteeringTest {
 
     @Test
     void keepsAWorkerBusyWhileItsBlockedStopSendsItToTheInbox() {
-        home.workerHooks().promptSubmitted(worker.id(), "the brief");
+        home.workerHooks().promptSubmitted(worker.id(), "the brief", null);
         steer("Use the brass lamp.", null);
         home.workerHooks().stopping(worker.id());
 

@@ -57,6 +57,18 @@ class SupervisionRulesTest {
     }
 
     @Test
+    void holdsAWorkerWhoseContextIsFullUntilAPromptGetsThroughAndRaisesNoFurtherNotice() {
+        Instant full = LAUNCHED.plus(Duration.ofHours(1));
+        Worker filled = launched().promptSubmitted(LAUNCHED).contextFilled(full);
+
+        assertThat(health(filled, WindowCheck.OPEN, BOOT)).isEqualTo(new WorkerHealth.ContextFull(full));
+        assertThat(RULES.noticeDue(filled, new WorkerHealth.ContextFull(full), new Awaited(false, false), LAUNCHED.plus(Duration.ofHours(9)))).isEmpty();
+        assertThat(health(filled.stopRequested(full.plusSeconds(60)), WindowCheck.WINDOW_CLOSED, BOOT)).isEqualTo(new WorkerHealth.Stopped(full.plusSeconds(60)));
+        assertThat(filled.stopRequested(full.plusSeconds(60)).sessionEnded(full.plusSeconds(61)).hasAFullContext()).isTrue();
+        assertThat(filled.promptSubmitted(full.plusSeconds(60)).hasAFullContext()).isFalse();
+    }
+
+    @Test
     void waitsUntilADeclaredPauseEndsAndThenNoticesItOnce() {
         Instant reported = LAUNCHED.plusSeconds(10);
         Worker paused = launched().started(null, null, LAUNCHED).reported(report(StatusState.PAUSED, LAUNCHED.plus(Duration.ofHours(1))), reported);

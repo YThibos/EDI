@@ -77,7 +77,7 @@ class HookController {
     private HookAnswer workerHook(HookEvent hook, WorkerId worker, JsonNode payload) {
         return switch (hook) {
             case SESSION_START -> workerHooks.sessionStarted(worker, optionalSessionIn(payload), textIn(payload, "transcript_path"));
-            case USER_PROMPT_SUBMIT -> workerHooks.promptSubmitted(worker, payload.path("prompt").asString(""));
+            case USER_PROMPT_SUBMIT -> workerHooks.promptSubmitted(worker, payload.path("prompt").asString(""), textIn(payload, "transcript_path"));
             case PRE_TOOL_USE -> guard.checkForWorker(worker, toolCallIn(payload));
             case STOP -> workerHooks.stopping(worker);
             case STOP_FAILURE -> workerHooks.stopFailed(worker, textIn(payload, "error"), textIn(payload, "transcript_path"));
