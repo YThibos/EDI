@@ -10,9 +10,9 @@ import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
 
-record CardRequest(String title, String context, List<Option> options, Recommend recommend) {
+public record CardRequest(String title, String context, List<Option> options, Recommend recommend) {
 
-    DecisionCard card() {
+    public DecisionCard card() {
         return new DecisionCard(
                 required(title, "title"),
                 orEmpty(context),
@@ -27,7 +27,7 @@ record CardRequest(String title, String context, List<Option> options, Recommend
         return value;
     }
 
-    record Option(String key, String text, String authorises) {
+    public record Option(String key, String text, String authorises) {
 
         DecisionOption option() {
             return new DecisionOption(OptionKey.parse(required(key, "option key")), required(text, "option text"),
@@ -35,7 +35,7 @@ record CardRequest(String title, String context, List<Option> options, Recommend
         }
     }
 
-    record Recommend(String key, String why) {
+    public record Recommend(String key, String why) {
 
         Recommendation recommendation() {
             return new Recommendation(OptionKey.parse(required(key, "recommended option")), required(why, "reason for the recommendation"));

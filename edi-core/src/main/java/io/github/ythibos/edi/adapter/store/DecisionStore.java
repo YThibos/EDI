@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -85,7 +86,19 @@ public class DecisionStore {
     }
 
     public Optional<Decision> ofTask(TaskId task) {
-        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task").param("task", task.value())).stream().findFirst();
+        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task order by number desc limit 1").param("task", task.value())).stream()
+                .findFirst();
+    }
+
+    public Optional<Decision> namedBy(TaskReference reference) {
+        return switch (reference) {
+            case TaskReference.ById byId -> ofTask(byId.id());
+            case TaskReference.ByDecision byDecision -> Optional.of(get(byDecision.number()));
+        };
+    }
+
+    public List<Decision> everyOneOfTask(TaskId task) {
+        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task order by number").param("task", task.value()));
     }
 
     public List<Decision> all() {

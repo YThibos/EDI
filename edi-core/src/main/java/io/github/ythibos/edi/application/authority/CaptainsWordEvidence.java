@@ -77,10 +77,10 @@ public class CaptainsWordEvidence {
     public CaptainsWord requireOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
         return transaction.execute(_ -> CaptainsAuthority.onTask(task, act, exchange, words.heardIn(exchange.session()),
-                        decisions.ofTask(task).stream().toList()))
+                        decisions.everyOneOfTask(task)))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
-                        + " --text \"<their words>\", or have the captain choose, here or in the console, the option of a decision on it"
+                        + " --text \"<their words>\", or have the captain choose, here, in the console or on a research board, the option of a decision on it"
                         + " that authorises " + act.word() + "."));
     }
 

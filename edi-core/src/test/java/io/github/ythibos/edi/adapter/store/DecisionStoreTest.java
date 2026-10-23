@@ -64,15 +64,29 @@ class DecisionStoreTest {
     }
 
     @Test
-    void replacesTheCardWhenRaisedAgain() {
+    void replacesTheCardWhenRaisedAgainWhileOpen() {
         Decision first = Decision.raised(new DecisionNumber(58), LAMP, card(), AT);
-        decisions.save(first.answered(new CaptainAnswer("A", new OptionKey('A'), "", AT, AnswerChannel.CHAT)));
+        decisions.save(first);
         Decision again = first.reraised(new DecisionCard("Which lamp now?", "", List.of(option('B', "Oil")), new Recommendation(new OptionKey('B'), "cheap")), AT);
 
         decisions.save(again);
 
         assertThat(decisions.get(new DecisionNumber(58))).isEqualTo(again);
         assertThat(decisions.open()).containsExactly(again);
+    }
+
+    @Test
+    void keepsEveryDecisionOfATaskAndNamesTheLatestAsItsDecision() {
+        Decision answered = Decision.raised(new DecisionNumber(58), LAMP, card(), AT)
+                .answered(new CaptainAnswer("A", new OptionKey('A'), "", AT, AnswerChannel.CHAT));
+        Decision next = Decision.raised(new DecisionNumber(59), LAMP, new DecisionCard("Which lamp now?", "", List.of(option('B', "Oil")),
+                new Recommendation(new OptionKey('B'), "cheap")), AT.plusSeconds(60));
+        decisions.save(answered);
+
+        decisions.save(next);
+
+        assertThat(decisions.ofTask(LAMP)).contains(next);
+        assertThat(decisions.everyOneOfTask(LAMP)).containsExactly(answered, next);
     }
 
     @Test

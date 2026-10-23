@@ -47,7 +47,7 @@ public class AnswerDecision {
             Instant now = clock.now();
             Task task = tasks.get(reference);
             proposals.requireAChoiceIn(task.id(), given.option());
-            Decision decided = decisionOf(task).answered(given.recordedAt(now));
+            Decision decided = decisionOf(reference, task).answered(given.recordedAt(now));
             Task released = task.decisionAnswered(now);
             decisions.save(decided);
             tasks.update(released);
@@ -58,8 +58,8 @@ public class AnswerDecision {
         return answered.withTicket(proposals.settle(answered.task().id(), actor));
     }
 
-    private Decision decisionOf(Task task) {
-        return decisions.ofTask(task.id()).orElseThrow(() -> new UnknownDecision(task.id()));
+    private Decision decisionOf(TaskReference reference, Task task) {
+        return decisions.namedBy(reference).orElseThrow(() -> new UnknownDecision(task.id()));
     }
 
     private void releaseTheDependantsOfADoneTask(Task released) {

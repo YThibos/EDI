@@ -13,4 +13,4 @@ Every call was read-only; `glab mr create` is exercised against a recording stan
 | `glab api user --hostname <host>` | Prints the logged-in user, whose `username` the adapter compares with the bound account. |
 | `-R <full URL>` | Accepted, so a call never depends on the directory it runs in. |
 
-EDI's adapter is `adapter.forge.GitLabForge` (ADR-079, ADR-080).
+EDI's adapter is `adapter.forge.GitLabForge` ([forge-adapters](../decisions/forge-adapters.md)).

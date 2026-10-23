@@ -35,14 +35,14 @@ public class AskForARecheck {
     public Decision ask(TaskReference reference, String note, Actor actor) {
         return transaction.execute(_ -> {
             Task task = tasks.get(reference);
-            Decision open = openDecisionOf(task);
+            Decision open = openDecisionOf(reference, task);
             events.record(new RecheckAsked(task.id(), open.number(), note), actor, clock.now());
             return open;
         });
     }
 
-    private Decision openDecisionOf(Task task) {
-        Decision decision = decisions.ofTask(task.id()).orElseThrow(() -> new UnknownDecision(task.id()));
+    private Decision openDecisionOf(TaskReference reference, Task task) {
+        Decision decision = decisions.namedBy(reference).orElseThrow(() -> new UnknownDecision(task.id()));
         if (!decision.isOpen()) {
             throw new Refusal(decision.number() + " is already answered: " + decision.answer().verbatim());
         }

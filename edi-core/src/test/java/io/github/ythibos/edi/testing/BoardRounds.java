@@ -1,7 +1,8 @@
 package io.github.ythibos.edi.testing;
 
-import java.util.List;
+import java.util.stream.Stream;
 
+import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 
@@ -13,7 +14,7 @@ public final class BoardRounds {
     }
 
     public static BoardRound asking(int questions, DecisionNumber... bound) {
-        return new BoardRound(LINK, questions, List.of(bound));
+        return new BoardRound(LINK, questions, Stream.of(bound).map(BoardBinding::byNumber).toList());
     }
 
     public static BoardRound binding(DecisionNumber... bound) {

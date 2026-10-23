@@ -25,7 +25,7 @@ record TmuxPane(String socket, String pane) {
         return Optional.of(new TmuxPane(socketOf(server), pane));
     }
 
-    @SuppressWarnings("java:S4036") // tmux is found on the captain's own PATH, as the core finds git and gitleaks (ADR-048)
+    @SuppressWarnings("java:S4036") // tmux is found on the captain's own PATH, as the core finds git and gitleaks (docs/decisions/captain-report.md)
     OptionalInt width() {
         try {
             Process tmux = new ProcessBuilder("tmux", "-S", socket, "display-message", "-p", "-t", pane, WIDTH_FORMAT)

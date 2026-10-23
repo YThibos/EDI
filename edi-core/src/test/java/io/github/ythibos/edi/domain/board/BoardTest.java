@@ -26,10 +26,11 @@ class BoardTest {
     private static final Instant ANSWERED = ARMED.plusSeconds(600);
     private static final DecisionNumber D58 = new DecisionNumber(58);
     private static final DecisionNumber D59 = new DecisionNumber(59);
+    private static final String SPARE_BULBS = "spare-bulbs";
     private static final Function<DecisionNumber, DecisionCard> LAMP_CARDS = _ -> Cards.card("Which lamp?");
 
     private final Board board = new Board(new BoardId(4), new TaskId("lantern-research"), "/home/user/.edi/data/tasks/lantern-research/board.html",
-            BoardRounds.LINK, List.of(D58, D59), 0, 2, ARMED, null, null);
+            BoardRounds.LINK, List.of(BoardBinding.byNumber(D58), new BoardBinding(D59, SPARE_BULBS)), 0, 2, ARMED, null, null);
 
     @Test
     void waitsOnTheCaptainWhileARoundHoldsQuestionsAndAgainOnceANewRoundIsPosted() {
@@ -50,10 +51,23 @@ class BoardTest {
         assertThatThrownBy(() -> new BoardRound("/tmp/board.html", 2, List.of())).isInstanceOf(Refusal.class)
                 .hasMessageContaining("names the web link the captain opens the board at");
         assertThatThrownBy(() -> new BoardRound(null, 2, List.of())).isInstanceOf(Refusal.class);
-        assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, -1, List.of(D58))).isInstanceOf(Refusal.class)
+        assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, -1, List.of(BoardBinding.byNumber(D58)))).isInstanceOf(Refusal.class)
                 .hasMessage("A board round counts its questions from 0, not -1.");
         assertThatThrownBy(() -> new BoardRound(BoardRounds.LINK, 0, List.of())).isInstanceOf(Refusal.class)
-                .hasMessage("A board round puts a question or an open decision before the captain; this one counts no question and binds no decision.");
+                .hasMessage("A board round puts a question or a decision before the captain; this one counts no question, binds no decision and "
+                        + "carries no card.");
+    }
+
+    @Test
+    void bindsTheCardItCarriesOnceItIsRaisedUnderTheQuestionThatAnswersIt() {
+        BoardRound carrying = new BoardRound(BoardRounds.LINK, 0, List.of(BoardBinding.byNumber(D58)), new BoardCard(SPARE_BULBS, Cards.card("Spares?")));
+
+        BoardRound raised = carrying.withItsCardRaisedAs(D59);
+
+        assertThat(raised.carriedCard()).isEmpty();
+        assertThat(raised.bindings()).containsExactly(BoardBinding.byNumber(D58), new BoardBinding(D59, SPARE_BULBS));
+        assertThatThrownBy(() -> new BoardCard(" ", Cards.card("Spares?"))).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageStartingWith("A decision card on a board names the board question that answers it");
     }
 
     @Test
@@ -70,6 +84,15 @@ class BoardTest {
 
         assertThat(board.answeredOnceMore().answersIn(round(choice), LAMP_CARDS, ANSWERED))
                 .containsExactly(new BoardAnswer(board.id(), 1, D58, "D58: option=A; note: LED", new OptionKey('A'), ANSWERED, null, null));
+    }
+
+    @Test
+    void readsTheAnswerToTheQuestionACardWasRaisedForAsLavishSendsIt() {
+        BoardPrompt choice = prompt("Spare bulbs decision: option B", Map.of("question", SPARE_BULBS, "answer", "B", "note", ""));
+        BoardPrompt otherQuestion = prompt("Deck colour: option A", Map.of("question", "deck-colour", "answer", "A"));
+
+        assertThat(board.answeredOnceMore().answersIn(round(choice, otherQuestion), LAMP_CARDS, ANSWERED))
+                .containsExactly(new BoardAnswer(board.id(), 1, D59, "Spare bulbs decision: option B", new OptionKey('B'), ANSWERED, null, null));
     }
 
     @Test

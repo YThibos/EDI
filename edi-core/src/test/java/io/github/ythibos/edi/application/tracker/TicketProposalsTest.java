@@ -17,6 +17,7 @@ import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -92,7 +93,8 @@ class TicketProposalsTest {
         assertThat(answered.ticket()).isEqualTo(new TicketSettlement.AskedAgain("JIRA found nothing for the ticket SVC-40 (HTTP 404)."));
         Decision raisedAgain = home.decisions().ofTask(LAMPS).orElseThrow();
         assertThat(raisedAgain.isOpen()).isTrue();
-        assertThat(raisedAgain.number()).isEqualTo(answered.decision().number());
+        assertThat(raisedAgain.number()).isEqualTo(new DecisionNumber(answered.decision().number().value() + 1));
+        assertThat(home.decisions().get(answered.decision().number()).answer().verbatim()).isEqualTo("D58 A");
         assertThat(raisedAgain.card().context()).startsWith("EDI could not carry out the earlier answer: JIRA found nothing for the ticket SVC-40");
         assertThat(home.tasks().get(LAMPS).isHeld()).isTrue();
         assertThat(home.eventTypesOf(LAMPS)).endsWith("DecisionAnswered", "TicketChoiceRefused", "DecisionRaised");

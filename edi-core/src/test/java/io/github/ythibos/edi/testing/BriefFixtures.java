@@ -42,10 +42,14 @@ public final class BriefFixtures {
 
     public static Stream<BriefFacts> everyKindOfBrief() {
         return Stream.of(
-                facts(TaskKind.SCOUT, DeliveryMode.DRAFT_REVIEW, CategoryId.RESEARCH, "", AiScaffolding.ASK),
+                scout(),
                 facts(TaskKind.SHIP, DeliveryMode.DRAFT_REVIEW, CategoryId.IMPLEMENTATION, "Fit the brass lamp.", AiScaffolding.COMMITTED),
                 facts(TaskKind.SHIP, DeliveryMode.LOCAL_BRANCH, CategoryId.IMPLEMENTATION, "", AiScaffolding.LOCAL_ONLY),
                 facts(TaskKind.SHIP, DeliveryMode.LOCAL_APPLY, CategoryId.MECHANICAL, "Rename Lamp to Lantern in src/Lamp.java.", AiScaffolding.LOCAL_ONLY));
+    }
+
+    public static BriefFacts scout() {
+        return facts(TaskKind.SCOUT, DeliveryMode.DRAFT_REVIEW, CategoryId.RESEARCH, "", AiScaffolding.ASK);
     }
 
     public static BriefFacts largestShip(String intent, String spec) {

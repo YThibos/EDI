@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.domain.board.Board;
-import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
@@ -124,12 +124,16 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     }
 
     private static String boardArmed(Board board) {
-        String bound = board.bound().isEmpty()
+        String bound = board.bindings().isEmpty()
                 ? "; it answers no decision"
-                : "; its answers to " + board.bound().stream().map(DecisionNumber::toString).collect(Collectors.joining(", "))
+                : "; its answers to " + board.bindings().stream().map(ConfirmationText::boundDecision).collect(Collectors.joining(", "))
                         + " are recorded as the captain's";
         return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox;"
                 + whatTheSitrepPutsBeforeTheCaptain(board);
+    }
+
+    private static String boundDecision(BoardBinding binding) {
+        return binding.question().isEmpty() ? binding.decision().toString() : binding.decision() + " (question " + binding.question() + ")";
     }
 
     private static String whatTheSitrepPutsBeforeTheCaptain(Board board) {

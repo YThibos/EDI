@@ -5,26 +5,26 @@ EDI's own settings carry hooks and the status line only; the captain's permissio
 
 ## The primary session
 
-The primary is the Claude Code session the captain talks to ([ADR-067](decisions/ADR-067-the-captains-session-is-primary.md)).
-`edi up` starts it in the EDI home with [claude/primary/settings.json](../claude/primary/settings.json) and a system prompt the core composes at each start ([ADR-121](decisions/ADR-121-the-primarys-system-prompt-is-composed-at-launch.md)): the anchor [claude/primary/CLAUDE.md](../claude/primary/CLAUDE.md), the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
-The anchor holds the hard rules, the turn end and one line per skill ([ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md)).
+The primary is the Claude Code session the captain talks to ([primary-role](decisions/primary-role.md)).
+`edi up` starts it in the EDI home with [claude/primary/settings.json](../claude/primary/settings.json) and a system prompt the core composes at each start ([primary-startup-context](decisions/primary-startup-context.md)): the anchor [claude/primary/CLAUDE.md](../claude/primary/CLAUDE.md), the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
+The anchor holds the hard rules, the turn end and one line per skill ([primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 
 ## Hooks
 
-The primary and the workers answer every Claude Code hook through `edi hook <event>` ([ADR-066](decisions/ADR-066-hooks-for-the-primary-and-workers.md), [ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md)).
+The primary and the workers answer every Claude Code hook through `edi hook <event>` ([worker-sessions](decisions/worker-sessions.md), [primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 The session the captain typed in last is the primary and any other stands by; a call made inside a Claude Code session names it, so a standby session's changes are refused.
-The primary's turn ends with the captain report when it changed state, and with an `edi wait` running while work is in flight ([ADR-068](decisions/ADR-068-the-primarys-turn-end-rules.md)).
-`edi wait` serves only the primary, and runs in the background until it exits printing what needs the primary, as soon as it happens ([ADR-069](decisions/ADR-069-wakes-are-durable-rows.md)).
+The primary's turn ends with the captain report when it changed state, and with an `edi wait` running while work is in flight ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
+`edi wait` serves only the primary, and runs in the background until it exits printing what needs the primary, as soon as it happens ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
 
 ```sh
 edi wait                                            # the primary, in the background: exits printing what needs it
 ```
 
-Each session starts from a digest the core rebuilds from the store ([ADR-076](decisions/ADR-076-the-session-start-digest.md), [ADR-132](decisions/ADR-132-the-session-start-digest-adds-presence-memory-and-setup.md)).
+Each session starts from a digest the core rebuilds from the store ([primary-startup-context](decisions/primary-startup-context.md)).
 
 ## The status line
 
-[claude/primary/settings.json](../claude/primary/settings.json) also runs `edi statusline` as the session's status line, after every update and once a minute ([ADR-134](decisions/ADR-134-the-core-writes-the-primarys-status-line.md)).
+[claude/primary/settings.json](../claude/primary/settings.json) also runs `edi statusline` as the session's status line, after every update and once a minute ([primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 It shows the model and effort, the context used, the session tokens with the cached and uncached split, the 5-hour and weekly limits with their resets, the branch of the working directory and the cache hit ratio.
 
 ## Workers
@@ -35,7 +35,7 @@ A worker starts with [claude/worker/settings.json](../claude/worker/settings.jso
 
 The anchor stays small; the procedures live in the skills under [claude/skills/](../claude/skills/).
 `ops/install.sh` links them into `$EDI_HOME/.claude/skills/`, together with any in the checkout's `personal/skills/`.
-Every command the captain types in the primary, such as `/sitrep` or `/quiet`, is a skill of that name, because Claude Code makes a slash command only from a skill's own name ([ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md)).
+Every command the captain types in the primary, such as `/sitrep` or `/quiet`, is a skill of that name, because Claude Code makes a slash command only from a skill's own name ([primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 
 | Skill | Owns |
 |---|---|
