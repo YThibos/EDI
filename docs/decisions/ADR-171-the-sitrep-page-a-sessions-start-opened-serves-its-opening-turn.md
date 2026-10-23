@@ -13,7 +13,7 @@ A call made inside a Claude Code session names that session to the core (ADR-067
 
 **Decision:** When `OpenTheSitrepAtSessionStart` opens the page, it records the time on the session as `primary_session.sitrep_opened_at`.
 `OpenTheConsoleOnRequest` answers `POST /api/console/open` from a session that carries that mark with `ConsoleOpening.openedAtSessionStart`, which names the page's address and opens nothing, and otherwise opens the console as before.
-The end of a turn clears the mark (`PrimarySession.turnEnded`), so it only lasts for the session's opening turn: a later `/sitrep board` or `edi console` opens the page again, and so does a request from a terminal, which names no session.
+The end of a turn clears the mark (`PrimarySession.turnEnded`), and so do the next prompt and a resume (`PrimarySession.promptSubmitted`, `PrimarySession.restarted`), so it only lasts for the session's opening turn even when the captain interrupts that turn: a later `/sitrep board` or `edi console` opens the page again, and so does a request from a terminal, which names no session.
 A start whose browser could not open the page records nothing, so the opening turn's request opens it then.
 
 **Motivation:** The core knows which session opened the page and when that session's turn ends, so the rule holds whatever the primary types, with no instruction to the model to remember.

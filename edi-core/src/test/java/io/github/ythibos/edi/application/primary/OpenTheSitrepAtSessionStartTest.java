@@ -95,6 +95,39 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     @Test
+    void opensThePageAgainOnTheNextPromptAfterTheCaptainInterruptsTheOpeningTurn() throws IOException {
+        CaptainsBrowser browser = browserThatOpens();
+        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browser);
+        OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
+        UUID primary = UUID.randomUUID();
+
+        sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
+        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
+        home.primaryHooks().promptSubmitted(primary, "/sitrep board");
+        ConsoleOpening afterTheInterrupt = console.openFor(Optional.of(primary), CONSOLE);
+
+        assertThat(afterTheInterrupt.opened()).isTrue();
+        assertThat(afterTheInterrupt.openedAtSessionStart()).isFalse();
+        assertThat(Files.readAllLines(opened)).hasSize(2);
+    }
+
+    @Test
+    void opensThePageOnRequestOnceTheSessionIsResumed() throws IOException {
+        CaptainsBrowser browser = browserThatOpens();
+        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browser);
+        OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
+        UUID primary = UUID.randomUUID();
+
+        sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
+        sitrep.openFor(primary, started(primary, RESUMED), CONSOLE);
+        ConsoleOpening afterTheResume = console.openFor(Optional.of(primary), CONSOLE);
+
+        assertThat(afterTheResume.opened()).isTrue();
+        assertThat(afterTheResume.openedAtSessionStart()).isFalse();
+        assertThat(Files.readAllLines(opened)).hasSize(2);
+    }
+
+    @Test
     void opensThePageOnRequestWhenTheSessionsStartOpenedNone() throws IOException {
         home.writing("config/machine.yaml", "console:\n  openSitrepAtSessionStart: false\n");
         CaptainsBrowser browser = browserThatOpens();

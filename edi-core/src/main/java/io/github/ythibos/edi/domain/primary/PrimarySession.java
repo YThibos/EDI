@@ -31,7 +31,7 @@ public record PrimarySession(
 
     public PrimarySession restarted(SessionProcess restartedProcess) {
         return new PrimarySession(id, startedAt, restartedProcess == null ? process : restartedProcess, claimedAt, turn, typedAt,
-                notification, notifiedAt, limit, limitReachedAt, null, sitrepOpenedAt);
+                notification, notifiedAt, limit, limitReachedAt, null, null);
     }
 
     public PrimarySession claimed(Instant at) {
@@ -46,7 +46,8 @@ public record PrimarySession(
 
     public PrimarySession promptSubmitted(Prompt prompt, long eventMark, Instant at) {
         return new PrimarySession(id, startedAt, process, claimedAt, PrimaryTurn.startedAt(at, eventMark),
-                prompt.isTypedByTheCaptain() ? at : typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
+                prompt.isTypedByTheCaptain() ? at : typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt,
+                sitrepOpenedForTheOpeningTurn());
     }
 
     public PrimarySession reported(Instant at) {
@@ -88,6 +89,10 @@ public record PrimarySession(
 
     public boolean showsTheSitrepItsStartOpened() {
         return sitrepOpenedAt != null;
+    }
+
+    private Instant sitrepOpenedForTheOpeningTurn() {
+        return turn == null ? sitrepOpenedAt : null;
     }
 
     private PrimarySession withTurn(PrimaryTurn newTurn) {
