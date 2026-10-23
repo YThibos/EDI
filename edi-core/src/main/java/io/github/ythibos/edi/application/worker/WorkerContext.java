@@ -42,6 +42,8 @@ public class WorkerContext {
 
     public record Workplace(Task task, ProjectEntry project, Dispatch dispatch, BaseBranch base, Path worktree, Path taskDirectory) {
 
+        private static final String REPORT_FILE = "report.md";
+
         public String baseRef() {
             return "origin/" + base;
         }
@@ -52,6 +54,10 @@ public class WorkerContext {
 
         public boolean isAShip() {
             return task.intake().kind() == TaskKind.SHIP;
+        }
+
+        public Path report() {
+            return taskDirectory.resolve(REPORT_FILE);
         }
     }
 }

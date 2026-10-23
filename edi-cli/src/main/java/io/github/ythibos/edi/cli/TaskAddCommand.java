@@ -35,7 +35,7 @@ final class TaskAddCommand implements Callable<Integer> {
     private List<String> blockedBy;
 
     @Option(names = "--delivery", paramLabel = "MODE",
-            description = "How this task's work reaches the captain when not the project's own way: draft-review, local-branch or local-apply.")
+            description = "How this task's work reaches the captain when not the project's own way: draft-review, local-branch, local-apply or report.")
     private String delivery;
 
     @Option(names = "--body", paramLabel = "-|FILE", description = "The task's notes, from standard input (-) or a file.")

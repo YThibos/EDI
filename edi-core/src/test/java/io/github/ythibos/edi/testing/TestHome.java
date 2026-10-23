@@ -639,11 +639,11 @@ public final class TestHome {
     }
 
     public DoneClaims doneClaims() {
-        return new DoneClaims(workerContext(), git, deliveryRecords(), events, clock, transaction);
+        return new DoneClaims(workerContext(), git, deliveryRecords(), landedWork(), events, clock, transaction);
     }
 
     public DeliverAcceptedWork deliverAcceptedWork() {
-        return new DeliverAcceptedWork(workerContext(), deliveryRecords(), followMerges(), captainCheckouts(), transaction);
+        return new DeliverAcceptedWork(workerContext(), deliveryRecords(), followMerges(), captainCheckouts(), cleanUpTask(), transaction);
     }
 
     public PublishCheck publishCheck() {

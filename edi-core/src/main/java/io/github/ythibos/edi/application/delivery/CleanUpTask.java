@@ -35,7 +35,6 @@ import io.github.ythibos.edi.domain.worker.Worker;
 @Service
 public class CleanUpTask {
 
-    private static final String REPORT_FILE = "report.md";
     private static final String HANDED_OVER = "it is cleaned up once its done is accepted or the forge shows its merge request merged.";
 
     private final TaskStore tasks;
@@ -102,9 +101,9 @@ public class CleanUpTask {
             return;
         }
         boolean doneAccepted = transaction.execute(_ -> workers.latestOf(workplace.task().id())).filter(Worker::handedItsWorkOver).isPresent();
-        if (!doneAccepted || !Files.isRegularFile(workplace.taskDirectory().resolve(REPORT_FILE))) {
+        if (!doneAccepted || !Files.isRegularFile(workplace.report())) {
             throw new Refusal(workplace.task().id() + " is a scout, and a scout is cleaned up only after its done was accepted and its report "
-                    + workplace.taskDirectory().resolve(REPORT_FILE) + " exists.");
+                    + workplace.report() + " exists.");
         }
     }
 

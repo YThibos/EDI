@@ -44,6 +44,7 @@ description: >-
 - EDI records a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
 - `local-branch`: EDI fetches the ready branch into the captain's checkout by ref only.
 - `local-apply`: on the captain's request only, EDI applies the change to the captain's checkout without a commit.
+- `report`: for an operation on the machine with nothing to commit, give the task `--delivery report`; its done counts once its report exists and its copy holds no change, and EDI then retires the task.
 - When the pipeline could not open the draft, `edi deliver <task>` opens it under the project's bound account.
 - When the captain says they merged, run `edi merged <task>` or `edi merged <url>`; EDI asks the forge for the task's request even when it never recorded it, and also sees merges itself, refreshes the clone and cleans up.
 - `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work, and nothing is discarded without the captain's word.
