@@ -70,6 +70,8 @@ import io.github.ythibos.edi.web.report.TurnItem;
 class DecisionsAndReportingTest {
 
     private static final int MIGRATED_DECISION_SEQUENCE = 57;
+    private static final int GOLDEN_REPORTS_LINTED = 16;
+    private static final int FIXED_KINDS_LINTED = 5;
 
     @TempDir
     private Path directory;
@@ -400,6 +402,12 @@ class DecisionsAndReportingTest {
 
             assertThat(generated).isNotEmpty()
                     .allSatisfy(text -> assertThat(CaptainVoice.internalLabelsIn(text)).as(text).isEmpty());
+        }
+
+        @Test
+        @DisplayName("AT-22 the lint covers every golden report and every fixed kind of captain-facing string")
+        void theLintCoversEveryKindEdiGenerates() {
+            assertThat(CaptainFacingStrings.everyKindEdiGenerates()).hasSizeGreaterThanOrEqualTo(GOLDEN_REPORTS_LINTED + FIXED_KINDS_LINTED);
         }
     }
 
