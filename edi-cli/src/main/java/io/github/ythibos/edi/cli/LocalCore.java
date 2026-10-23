@@ -7,20 +7,29 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 final class LocalCore {
 
     static final Duration STARTING_PATIENCE = Duration.ofSeconds(60);
-    static final Duration STOPPING_PATIENCE = Duration.ofSeconds(30);
+    static final Duration STOPPING_PATIENCE = Duration.ofSeconds(90);
     private static final Duration BETWEEN_LOOKS = Duration.ofMillis(250);
 
     private final Path home;
     private final String executable;
+    private final Duration stoppingPatience;
+    private final CorePidFile pidFile;
     private final CoreClient client = new CoreClient();
 
     LocalCore(Path home, String executable) {
+        this(home, executable, STOPPING_PATIENCE);
+    }
+
+    LocalCore(Path home, String executable, Duration stoppingPatience) {
         this.home = home;
         this.executable = executable;
+        this.stoppingPatience = stoppingPatience;
+        this.pidFile = CorePidFile.in(home);
     }
 
     CoreHealth health() {
@@ -35,26 +44,35 @@ final class LocalCore {
             throw new UncheckedIOException(unwritable);
         }
         LocalPrograms.startDetached(List.of("setsid", "-f", executable), log, Map.of("EDI_HOME", home.toString()));
-        if (!becomes(CoreHealth.UP, STARTING_PATIENCE)) {
+        if (!comesTrue(this::answers, STARTING_PATIENCE)) {
             throw new CommandFailure("EDI core did not answer within " + STARTING_PATIENCE.toSeconds() + " seconds; " + log + " says why.");
         }
     }
 
     void awaitItsStop() {
-        if (!becomes(CoreHealth.UNREACHABLE, STOPPING_PATIENCE)) {
-            throw new CommandFailure("EDI core still answers " + STOPPING_PATIENCE.toSeconds() + " seconds after it was asked to stop.");
+        if (!comesTrue(this::hasReleasedTheHome, stoppingPatience)) {
+            throw new CommandFailure("EDI core, process " + pidFile.recordedProcess() + ", still holds " + pidFile + " after "
+                    + stoppingPatience.toSeconds() + " seconds, so it has not stopped.");
         }
     }
 
-    private boolean becomes(CoreHealth wanted, Duration patience) {
+    private static boolean comesTrue(BooleanSupplier condition, Duration patience) {
         long deadline = System.nanoTime() + patience.toNanos();
         while (System.nanoTime() < deadline) {
-            if (health() == wanted) {
+            if (condition.getAsBoolean()) {
                 return true;
             }
             pause();
         }
-        return health() == wanted;
+        return condition.getAsBoolean();
+    }
+
+    private boolean answers() {
+        return health() == CoreHealth.UP;
+    }
+
+    private boolean hasReleasedTheHome() {
+        return !pidFile.isHeld();
     }
 
     private static void pause() {

@@ -31,6 +31,7 @@ The core keeps its store, configuration and state in `EDI_HOME`, default `~/.edi
 It listens on port 47318 unless `SERVER_PORT` says otherwise, records the port it bound in `$EDI_HOME/state/core.port`, and writes a fresh API token to `$EDI_HOME/state/core.token` at every start ([ADR-042](decisions/ADR-042-one-home-token.md)); the command reads both.
 Only one core runs per home: it locks `$EDI_HOME/state/core.pid`, and `edi up` starts it detached, logging to `$EDI_HOME/state/logs/core.log` ([ADR-129](decisions/ADR-129-one-core-per-home-started-by-edi-up-and-stopped-by-edi-down.md)).
 `edi down` stops the core only when no worker runs; `--force-stop-workers` stops them too, on the captain's word.
+A core counts as stopped once it has let go of `state/core.pid`, so `edi down` and `edi update` return or start the new core only then ([ADR-169](decisions/ADR-169-a-core-has-stopped-once-it-lets-go-of-the-home.md)).
 `edi up` and `edi update` find the EDI repository in `EDI_CHECKOUT`, default `~/EDI`, and the core executable next to `edi` or in `EDI_CORE`.
 `edi update` pulls the repository, builds, tests and installs it, restarts the core while workers keep running, and has the primary re-read its anchor ([ADR-130](decisions/ADR-130-edi-update-rebuilds-installs-and-restarts-the-core.md)).
 `ops/edi-core.service` is an optional systemd user unit for a core that restarts on failure.

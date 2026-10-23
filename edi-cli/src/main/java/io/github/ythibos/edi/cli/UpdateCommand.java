@@ -13,6 +13,7 @@ import picocli.CommandLine.Spec;
 final class UpdateCommand implements Callable<Integer> {
 
     private static final int REFUSED = 1;
+    private static final String NO_CORE_RUNS = "The new build is installed but no EDI core runs it; once the old core has exited, edi up --core-only starts it.";
 
     @ParentCommand
     private Edi edi;
@@ -39,13 +40,21 @@ final class UpdateCommand implements Callable<Integer> {
     private void restartTheCore() {
         LocalCore core = new LocalCore(edi.home(), edi.coreExecutable());
         if (core.health() == CoreHealth.UP) {
-            CoreReply stopping = new CoreClient().post(edi.core(), "/api/core/stop", new JsonBody().with("restart", true).text(), "text/plain");
-            if (!stopping.succeeded()) {
-                throw new CommandFailure(stopping.body().strip());
-            }
-            core.awaitItsStop();
+            askTheCoreToStop();
         }
-        core.start();
+        try {
+            core.awaitItsStop();
+            core.start();
+        } catch (CommandFailure noCoreRuns) {
+            throw new CommandFailure(noCoreRuns.getMessage() + "\n" + NO_CORE_RUNS);
+        }
+    }
+
+    private void askTheCoreToStop() {
+        CoreReply stopping = new CoreClient().post(edi.core(), "/api/core/stop", new JsonBody().with("restart", true).text(), "text/plain");
+        if (!stopping.succeeded()) {
+            throw new CommandFailure(stopping.body().strip());
+        }
     }
 
     private void report(EdiCheckout checkout) {

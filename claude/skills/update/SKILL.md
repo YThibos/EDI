@@ -1,12 +1,12 @@
 ---
-name: edi-update
+name: update
 description: >-
   Owns updating EDI itself: pulling the EDI repository, building and testing it natively, installing it, restarting the core and re-reading the anchor.
   Load it when the captain types /update or asks to update EDI.
 user-invocable: true
 ---
 
-# edi-update
+# update
 
 ## Steps
 
@@ -14,9 +14,10 @@ user-invocable: true
 2. It works in `~/EDI`, or in the clone `EDI_CHECKOUT` names, and refuses one with local changes.
 3. It pulls with `--ff-only`, then runs `ops/install.sh`, which runs `./mvnw -Pnative verify` with the toolchain the clone's `mise.toml` pins and installs `edi`, `edi-core` and the skill links.
 4. A missing pinned tool, a failed build or a failed test leaves the installed EDI and the running core unchanged; report the failure with its output.
-5. It then restarts the core: running workers keep running, and the store makes the restart a non-event.
-6. Read `claude/primary/CLAUDE.md` of the clone again, as the command says: the rules may have changed.
-7. A new primary session loads the new anchor, skills and memory; offer the captain `edi up` when the anchor changed.
+5. It then restarts the core: it waits until the old core has let go of the home, starts the new one and waits for it to answer; running workers keep running, and the store makes the restart a non-event.
+6. When it says no core runs the new build, run `edi up --core-only` once the old core has exited, as the command says, and report the outcome.
+7. Read `claude/primary/CLAUDE.md` of the clone again, as the command says: the rules may have changed.
+8. A new primary session loads the new anchor, skills and memory; offer the captain `edi up` when the anchor changed.
 
 ## Limits
 
