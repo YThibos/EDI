@@ -25,6 +25,7 @@ import io.github.ythibos.edi.domain.primary.SessionProcess;
 public class ProcessTable implements AutoCloseable {
 
     private static final Path PROCESSES = Path.of("/proc");
+    private static final int START_TICK_AFTER_THE_NAME = 19;
 
     private final ExecutorService escalations = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -33,13 +34,13 @@ public class ProcessTable implements AutoCloseable {
     }
 
     public Optional<SessionProcess> identify(long pid) {
-        return ProcessHandle.of(pid).map(process -> new SessionProcess(pid, process.info().startInstant().orElse(null)));
+        return ProcessHandle.of(pid).map(_ -> new SessionProcess(pid, startTickOf(pid).orElse(null)));
     }
 
     public boolean isRunning(SessionProcess process) {
         return ProcessHandle.of(process.pid())
                 .filter(ProcessHandle::isAlive)
-                .filter(running -> startsAs(running, process))
+                .filter(_ -> startsAs(process))
                 .isPresent();
     }
 
@@ -73,8 +74,21 @@ public class ProcessTable implements AutoCloseable {
         escalations.shutdownNow();
     }
 
-    private static boolean startsAs(ProcessHandle running, SessionProcess recorded) {
-        return running.info().startInstant().map(recorded::isTheOneStartedAt).orElse(true);
+    private static Optional<Long> startTickOf(long pid) {
+        try {
+            return Optional.of(startTickIn(Files.readString(PROCESSES.resolve(Long.toString(pid)).resolve("stat"))));
+        } catch (IOException gone) {
+            return Optional.empty();
+        }
+    }
+
+    private static long startTickIn(String stat) {
+        String afterTheName = stat.substring(stat.lastIndexOf(')') + 2);
+        return Long.parseLong(afterTheName.split(" ")[START_TICK_AFTER_THE_NAME]);
+    }
+
+    private static boolean startsAs(SessionProcess recorded) {
+        return startTickOf(recorded.pid()).map(recorded::isTheOneStartedAt).orElse(true);
     }
 
     private static Path realPathOf(Path directory) {

@@ -20,7 +20,7 @@ import io.github.ythibos.edi.domain.worker.UsageLimit;
 public class PrimarySessionStore {
 
     private static final String SELECT_SESSIONS = """
-            select session_id, started_at, claude_pid, claude_started_at, claimed_at, turn_started_at, turn_event_mark, reported_at,
+            select session_id, started_at, claude_pid, claude_start_tick, claimed_at, turn_started_at, turn_event_mark, reported_at,
                    stops_blocked, typed_at, notification, notified_at, limit_name, limit_resets_at, limit_reached_at, ended_at,
                    sitrep_opened_at
             from primary_session
@@ -37,13 +37,13 @@ public class PrimarySessionStore {
         PrimaryTurn turn = session.turn();
         UsageLimit limit = session.limit();
         store.sql("""
-                        insert into primary_session (session_id, started_at, claude_pid, claude_started_at, claimed_at, turn_started_at,
+                        insert into primary_session (session_id, started_at, claude_pid, claude_start_tick, claimed_at, turn_started_at,
                                                      turn_event_mark, reported_at, stops_blocked, typed_at, notification, notified_at,
                                                      limit_name, limit_resets_at, limit_reached_at, ended_at, sitrep_opened_at)
-                        values (:session, :started, :pid, :processStarted, :claimed, :turnStarted, :eventMark, :reported, :stopsBlocked,
+                        values (:session, :started, :pid, :startTick, :claimed, :turnStarted, :eventMark, :reported, :stopsBlocked,
                                 :typed, :notification, :notified, :limitName, :limitResets, :limitReached, :ended, :sitrepOpened)
                         on conflict (session_id) do update set
-                            claude_pid = excluded.claude_pid, claude_started_at = excluded.claude_started_at,
+                            claude_pid = excluded.claude_pid, claude_start_tick = excluded.claude_start_tick,
                             claimed_at = excluded.claimed_at, turn_started_at = excluded.turn_started_at,
                             turn_event_mark = excluded.turn_event_mark, reported_at = excluded.reported_at,
                             stops_blocked = excluded.stops_blocked, typed_at = excluded.typed_at, notification = excluded.notification,
@@ -53,7 +53,7 @@ public class PrimarySessionStore {
                 .param("session", session.id().toString())
                 .param("started", Columns.text(session.startedAt()))
                 .param("pid", process == null ? null : process.pid())
-                .param("processStarted", process == null ? null : Columns.text(process.startedAt()))
+                .param("startTick", process == null ? null : process.startTick())
                 .param("claimed", Columns.text(session.claimedAt()))
                 .param("turnStarted", turn == null ? null : Columns.text(turn.startedAt()))
                 .param("eventMark", turn == null ? null : turn.eventMark())
@@ -104,7 +104,12 @@ public class PrimarySessionStore {
 
     private static SessionProcess process(ResultSet row) throws SQLException {
         long pid = row.getLong("claude_pid");
-        return row.wasNull() ? null : new SessionProcess(pid, Columns.instant(row.getString("claude_started_at")));
+        return row.wasNull() ? null : new SessionProcess(pid, startTickIn(row));
+    }
+
+    private static Long startTickIn(ResultSet row) throws SQLException {
+        long tick = row.getLong("claude_start_tick");
+        return row.wasNull() ? null : tick;
     }
 
     private static PrimaryTurn turn(ResultSet row) throws SQLException {

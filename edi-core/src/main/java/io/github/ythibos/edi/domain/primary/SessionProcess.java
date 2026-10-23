@@ -1,11 +1,6 @@
 package io.github.ythibos.edi.domain.primary;
 
-import java.time.Duration;
-import java.time.Instant;
-
-public record SessionProcess(long pid, Instant startedAt) {
-
-    private static final Duration BOOT_TIME_DRIFT = Duration.ofSeconds(2);
+public record SessionProcess(long pid, Long startTick) {
 
     public SessionProcess {
         if (pid < 1) {
@@ -13,11 +8,7 @@ public record SessionProcess(long pid, Instant startedAt) {
         }
     }
 
-    public boolean isTheOneStartedAt(Instant observedStart) {
-        return startedAt == null || withinTheBootTimeDrift(Duration.between(startedAt, observedStart));
-    }
-
-    private static boolean withinTheBootTimeDrift(Duration shift) {
-        return shift.abs().compareTo(BOOT_TIME_DRIFT) <= 0;
+    public boolean isTheOneStartedAt(long observedStartTick) {
+        return startTick == null || startTick == observedStartTick;
     }
 }
