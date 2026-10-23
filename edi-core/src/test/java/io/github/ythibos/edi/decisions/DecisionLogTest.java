@@ -32,6 +32,7 @@ class DecisionLogTest {
     private static final Pattern RECORD_PATH = Pattern.compile("docs/decisions/([a-z0-9-]+\\.md)");
     private static final Set<String> UNTRACKED_DIRECTORIES = Set.of(
             ".git", "target", "node_modules", ".angular", "dist", "node", "personal", ".idea", ".vscode");
+    private static final Path CAPTURED_FIXTURES = Path.of("src", "test", "resources");
 
     @Test
     void everyRecordIsNamedByItsTopic() {
@@ -81,7 +82,7 @@ class DecisionLogTest {
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
-                    return UNTRACKED_DIRECTORIES.contains(directory.getFileName().toString()) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                    return isLeftOut(directory) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
                 }
 
                 @Override
@@ -94,6 +95,10 @@ class DecisionLogTest {
             throw new UncheckedIOException(unreadable);
         }
         return files;
+    }
+
+    private static boolean isLeftOut(Path directory) {
+        return UNTRACKED_DIRECTORIES.contains(directory.getFileName().toString()) || directory.endsWith(CAPTURED_FIXTURES);
     }
 
     private static Stream<Path> recordsCitedBy(Path file) {

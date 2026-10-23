@@ -88,7 +88,7 @@ final class BriefSections {
 
     private static String shipBriefRule(ShipBriefRule rule) {
         return switch (rule) {
-            case DECISION_LOG_ADR -> "Record each architecture or design decision this change makes or changes in the project's decision log, following the rules in its README; "
+            case DECISION_LOG_ADR -> "Record each architecture or design decision this change makes or changes in the project's decision log, following the log's own rules; "
                     + "a rule, preference or answer you were given is not a decision record.";
             case NO_EXPLANATORY_COMMENTS -> "Code carries no explanatory comments; the decision log carries the why.";
         };

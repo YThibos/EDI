@@ -19,7 +19,7 @@ A record is warranted only for an architecture decision, which reshapes boundari
 The captain's answers, preferences and "keep this in mind" rules are not records: they live in EDI's memory, the primary's anchor, a skill, `AGENTS.md` or a brief.
 `README.md` holds only these rules and the template; nothing lists the records by hand, and the directory listing with each record's title is the index.
 Code carries no explanatory comments; a record names the classes, files and settings it governs, so a search for any of those names finds the why, and anything that cites a record names its file.
-`DecisionLogTest` fails the build on a record whose name is not a topic slug, that lacks its title, kind or a required section, on a link to a record that does not exist, and on any sequence-numbered record reference left in the repository.
+`DecisionLogTest` fails the build on a record whose name is not a topic slug, that lacks its title, kind or a required section, on a link to a record that does not exist, and on any sequence-numbered record reference; its repository scans leave out the verbatim captured test fixtures under `src/test/resources`.
 Worker briefs and the `edi-decision-log` skill say when a record is warranted and how to write one ([worker-brief](worker-brief.md)).
 
 ## Why
