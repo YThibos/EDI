@@ -41,7 +41,7 @@ public class ResumeNotes {
                 + lastStatusOf(earlier) + "; answered since you started: " + answeredFor(task) + "; run edi inbox first, then carry on with the task");
     }
 
-    private String headOf(Path worktree) {
+    String headOf(Path worktree) {
         try {
             return git.headSummary(worktree);
         } catch (ProgramFailure unreadable) {
@@ -50,14 +50,18 @@ public class ResumeNotes {
     }
 
     private static String lastStatusOf(Worker earlier) {
-        if (earlier.lastStatus() == null) {
-            return "none";
-        }
-        String status = earlier.lastStatus().report().state().word() + ": " + earlier.lastStatus().report().text().replace('\n', ' ');
+        String status = statusOf(earlier).replace('\n', ' ');
         return status.length() <= LONGEST_STATUS ? status : status.substring(0, LONGEST_STATUS) + "...";
     }
 
-    private String answeredFor(TaskId task) {
+    static String statusOf(Worker earlier) {
+        if (earlier.lastStatus() == null) {
+            return "none";
+        }
+        return earlier.lastStatus().report().state().word() + ": " + earlier.lastStatus().report().text();
+    }
+
+    String answeredFor(TaskId task) {
         List<String> answered = transaction.execute(_ -> {
             List<String> found = new ArrayList<>(inbox.resolvingOf(task).stream().map(InboxMessage::resolves).map(Object::toString).toList());
             decisions.ofTask(task).filter(decision -> !decision.isOpen()).map(Decision::number).map(Object::toString).ifPresent(found::add);

@@ -49,6 +49,18 @@ class ClaudeTranscriptTest {
     }
 
     @Test
+    void readsWhenASessionStoppedOnItsFullContext() throws IOException {
+        Instant full = Instant.parse("2026-10-16T10:15:00Z");
+
+        assertThat(transcripts.contextLimitStop(fixture("context-full.jsonl"), LAUNCHED)).contains(full);
+        assertThat(transcripts.contextLimitStop(fixture("context-full.jsonl"), full.plusMillis(1))).isEmpty();
+        for (String fixture : new String[] {"working.jsonl", "overloaded.jsonl", "session-limit.jsonl", "quoted-context-limit.jsonl", "truncated.jsonl"}) {
+            assertThat(transcripts.contextLimitStop(fixture(fixture), LAUNCHED)).as(fixture).isEmpty();
+        }
+        assertThat(transcripts.contextLimitStop(directory.resolve("absent.jsonl"), LAUNCHED)).isEmpty();
+    }
+
+    @Test
     void readsOnlyTheTailOfALongTranscript() throws IOException {
         Path transcript = directory.resolve("long.jsonl");
         String filler = "{\"type\":\"assistant\",\"message\":{\"id\":\"filler\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"" + "x".repeat(1_000) + "\"}]},"

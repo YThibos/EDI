@@ -64,10 +64,10 @@ public class WorkerHooks {
         return HookAnswer.PROCEED;
     }
 
-    public HookAnswer promptSubmitted(WorkerId id, String prompt) {
+    public HookAnswer promptSubmitted(WorkerId id, String prompt, String transcript) {
         transaction.executeWithoutResult(_ -> {
             Instant now = clock.now();
-            workers.update(WorkerLookup.serving(workers, id).promptSubmitted(now));
+            workers.update(WorkerLookup.serving(workers, id).promptSubmitted(now).transcribedIn(transcript));
             unreceived(id).stream().filter(message -> message.isNamedIn(prompt)).forEach(message -> received(message, id, TYPED_NOTICE, now));
         });
         return HookAnswer.PROCEED;

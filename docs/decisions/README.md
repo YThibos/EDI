@@ -119,7 +119,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-070](ADR-070-worker-health-from-structured-state.md) | Worker health is read from hooks, the tmux server and the boot, and each condition is noticed once (superseded by ADR-091) | Design |
 | [ADR-071](ADR-071-the-boot-id-marks-a-machine-restart.md) | Every worker launched in an earlier boot is dead | Design |
 | [ADR-072](ADR-072-usage-limits-from-the-stop-failure-and-the-transcript.md) | A usage limit is confirmed in the transcript, and its reset is met with one typed line | Design |
-| [ADR-073](ADR-073-relaunch-resumes-the-recorded-session.md) | A relaunch resumes the recorded session in the task's own copy, and a stop signals only what EDI recorded | Design |
+| [ADR-073](ADR-073-relaunch-resumes-the-recorded-session.md) | A relaunch resumes the recorded session in the task's own copy, and a stop signals only what EDI recorded (superseded by ADR-171) | Design |
 | [ADR-074](ADR-074-the-outage-hold-list.md) | More than one dead worker go on a numbered outage hold list, answered one number at a time | Design |
 | [ADR-075](ADR-075-recovery-token-accounting.md) | Every recovery relaunch records the tokens it spent | Design |
 | [ADR-076](ADR-076-the-session-start-digest.md) | A session starts from a digest rebuilt from the store | Design |
@@ -215,3 +215,6 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-167](ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md) | Every command the captain types is a skill of its name, and fifteen skills hold the primary's procedures | Design |
 | [ADR-168](ADR-168-the-pipeline-intent-carries-the-spec-and-follows-the-tasks-notes.md) | The pipeline intent carries the brief's spec and is rewritten whenever the task is noted | Design |
 | [ADR-169](ADR-169-a-core-has-stopped-once-it-lets-go-of-the-home.md) | A core has stopped once it lets go of the home, and edi update starts the new core only then | Design |
+| [ADR-170](ADR-170-a-full-context-is-read-from-the-transcript-and-raised-at-once.md) | A full context is read from the transcript every supervision round and raised at once | Design |
+| [ADR-171](ADR-171-a-full-context-starts-afresh-in-its-copy-with-a-handover.md) | A worker whose context is full starts afresh in its own copy, briefed with a handover | Design |
+| [ADR-172](ADR-172-a-native-recovery-test-waits-for-the-cores-start-ups-apart.md) | A native recovery test keeps thirty seconds for its own work and waits for the core's start-ups apart | Design |

@@ -18,6 +18,8 @@ import io.github.ythibos.edi.domain.worker.WorkerHealth;
 @Service
 public class RelaunchWorker {
 
+    private static final String FULL_CONTEXT = "its context filled up";
+
     private final TaskStore tasks;
     private final WorkerStore workers;
     private final WorkerListQuery health;
@@ -37,18 +39,24 @@ public class RelaunchWorker {
         Worker latest = transaction.execute(_ -> WorkerLookup.servingTask(workers, task.id()));
         String because = lossOf(health.judged(latest).health(), latest);
         requireNoHold(task);
-        return launcher.relaunch(task.id(), LaunchKind.RESUME, null, null, because, actor);
+        return launcher.relaunch(task.id(), launchKindFor(latest), null, null, because, actor);
     }
 
     private static String lossOf(WorkerHealth health, Worker worker) {
         return switch (health) {
-            case WorkerHealth.Dead dead -> dead.cause().sentence();
-            case WorkerHealth.Stopped _ -> "EDI stopped it";
+            case WorkerHealth.Dead dead -> worker.hasAFullContext() ? FULL_CONTEXT : dead.cause().sentence();
+            case WorkerHealth.Stopped _ -> worker.hasAFullContext() ? FULL_CONTEXT : "EDI stopped it";
             case WorkerHealth.LaunchFailed _ -> "its launch failed";
             case WorkerHealth.Finished _ -> "its session ended";
+            case WorkerHealth.ContextFull _ -> throw new Refusal(worker.id() + "'s context is full and its session still runs; stop it first with edi worker"
+                    + " stop, then relaunch it for a fresh session with a handover.");
             case WorkerHealth.Starting _, WorkerHealth.Busy _, WorkerHealth.Idle _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _ ->
                     throw new Refusal(worker.id() + " is still running; stop it first with edi worker stop, then relaunch it.");
         };
+    }
+
+    private static LaunchKind launchKindFor(Worker worker) {
+        return worker.hasAFullContext() ? LaunchKind.FRESH : LaunchKind.RESUME;
     }
 
     private static void requireNoHold(Task task) {

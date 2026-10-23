@@ -3,6 +3,7 @@ package io.github.ythibos.edi.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,8 @@ import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.FollowMerges.CleanUp;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.task.AddedTask;
+import io.github.ythibos.edi.application.worker.SteerDelivery;
+import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -17,11 +20,22 @@ import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
+import io.github.ythibos.edi.domain.worker.BootId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 class ConfirmationTextTest {
 
@@ -65,6 +79,22 @@ class ConfirmationTextTest {
                 .endsWith(" Its ticket is not settled yet: JIRA cannot be reached. EDI tries again every 30 seconds.\n");
         assertThat(answerWith(new TicketSettlement.AskedAgain("JIRA found nothing for the ticket SVC-77 (HTTP 404).")))
                 .endsWith(" EDI could not carry out the answer, so it raised the decision again: JIRA found nothing for the ticket SVC-77 (HTTP 404).\n");
+    }
+
+    @Test
+    void confirmsAStopAndASteerWithWhatAFullContextNeeds() {
+        Worker lamp = Worker.launched(WorkerId.first(LANTERN), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
+                new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
+                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
+        Instant stopped = PresenterFixtures.AT.plusSeconds(60);
+
+        assertThat(text.text(new Confirmation.StopRequested(lamp.stopRequested(stopped)))).isEqualTo("Stopping lantern#1: EDI signalled its processes,"
+                + " and those still running in ten seconds are killed; edi worker relaunch lantern resumes its session.\n");
+        assertThat(text.text(new Confirmation.StopRequested(lamp.promptSubmitted(stopped).contextFilled(stopped).stopRequested(stopped))))
+                .endsWith("; edi worker relaunch lantern starts a fresh session with a handover, since its context is full.\n");
+        assertThat(text.text(new Confirmation.Steered(new SteerWorker.Steered(InboxMessage.sent(LANTERN, 1, "Use the brass lamp.", null, stopped), lamp,
+                SteerDelivery.WAITING_FOR_A_FRESH_SESSION)))).isEqualTo("Message 1 waits for lantern#1, whose context is full; the message waits in its"
+                        + " inbox for the fresh session that edi worker relaunch starts.\n");
     }
 
     @Test

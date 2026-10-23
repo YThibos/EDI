@@ -1,7 +1,7 @@
 # Claude Code transcript fixtures
 
 Each file is the tail of a Claude Code session transcript, one JSON record per line, as `ClaudeTranscript` reads it.
-The record shapes follow transcripts written by Claude Code 2.1.270 to 2.1.301; every identifier, path and text is synthetic.
+The record shapes follow transcripts written by Claude Code 2.1.270 to 2.1.308; every identifier, path and text is synthetic.
 
 | Fixture | Shape |
 |---|---|
@@ -14,4 +14,6 @@ The record shapes follow transcripts written by Claude Code 2.1.270 to 2.1.301; 
 | `quoted-limit.jsonl` | a tool result quotes a limit message; the session did not stop on it |
 | `limit-without-timestamp.jsonl` | a limit record that carries no timestamp |
 | `truncated.jsonl` | the last line is cut off in the middle of a record |
+| `context-full.jsonl` | the session ends on the API error a full context gives, `invalid_request` with "Prompt is too long", as Claude Code 2.1.308 writes it |
+| `quoted-context-limit.jsonl` | an ordinary answer quotes "Prompt is too long"; the session did not stop on it |
 | `usage.jsonl` | assistant records repeat a message's usage once per content block |

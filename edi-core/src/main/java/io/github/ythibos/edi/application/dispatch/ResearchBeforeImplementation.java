@@ -83,7 +83,11 @@ public class ResearchBeforeImplementation {
     }
 
     public Optional<String> planFor(TaskId ship) {
-        return transaction.execute(_ -> unplannedShips.of(ship)).filter(UnplannedShip::isPiloted).map(UnplannedShip::research).map(this::planWrittenBy);
+        return researchPlanning(ship).map(this::planWrittenBy);
+    }
+
+    public Optional<Path> planReportFor(TaskId ship) {
+        return researchPlanning(ship).map(this::reportOf);
     }
 
     private Task researchTaskFor(Task ship, Instant now) {
@@ -103,8 +107,12 @@ public class ResearchBeforeImplementation {
         return shipDispatch.spec().isBlank() ? plan : plan + "\n\nThe ship's own build instructions, which the plan refines:\n\n" + shipDispatch.spec();
     }
 
+    private Optional<TaskId> researchPlanning(TaskId ship) {
+        return transaction.execute(_ -> unplannedShips.of(ship)).filter(UnplannedShip::isPiloted).map(UnplannedShip::research);
+    }
+
     private String planWrittenBy(TaskId research) {
-        Path report = home.taskDirectory(research).resolve(REPORT_FILE);
+        Path report = reportOf(research);
         try {
             return "Follow the plan that research task `" + research + "` settled; its report follows verbatim.\n\n"
                     + Files.readString(report, StandardCharsets.UTF_8).strip();
@@ -113,5 +121,9 @@ public class ResearchBeforeImplementation {
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
+    }
+
+    private Path reportOf(TaskId research) {
+        return home.taskDirectory(research).resolve(REPORT_FILE);
     }
 }

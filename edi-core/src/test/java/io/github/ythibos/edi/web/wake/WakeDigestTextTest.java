@@ -45,6 +45,16 @@ class WakeDigestTextTest {
     }
 
     @Test
+    void tellsThePrimaryThatAFullContextNeedsAFreshSession() {
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.CONTEXT_FULL, LAMP, WorkerId.first(LAMP), "", RAISED))), 0, 1, 0,
+                PRESENT);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp#1's context has been full since 2026-10-16 09:00 UTC, so it can take no further prompt and"
+                + " a resume would stop on it again; edi worker stop fit-lamp, then edi worker relaunch fit-lamp starts a fresh session in its copy with a"
+                + " handover.\n");
+    }
+
+    @Test
     void tellsThePrimaryWhatHappenedToADelivery() {
         WakeDelivery delivery = new WakeDelivery(List.of(
                 queued(1, new Wake(WakeKind.DRAFT_MERGED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),

@@ -6,7 +6,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "relaunch", description = "Relaunches a task's dead or stopped worker in its own copy, resuming its recorded session.")
+@Command(name = "relaunch", description = "Relaunches a task's dead or stopped worker in its own copy, resuming its recorded session, or starting"
+        + " afresh with a handover when its context is full.")
 final class WorkerRelaunchCommand implements Callable<Integer> {
 
     @Mixin
