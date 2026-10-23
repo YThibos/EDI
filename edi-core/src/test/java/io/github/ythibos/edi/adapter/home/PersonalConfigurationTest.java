@@ -100,6 +100,10 @@ class PersonalConfigurationTest {
                 .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality.humour holds \"dry\", which is not a level from 0 to 10.");
         assertThatThrownBy(() -> configurationOf("edi-personality:\n  humor: 2\n").personality())
                 .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("humor is not a personality scale");
+        assertThatThrownBy(() -> configurationOf("edi-personality:\n  humour: 3\n  Humour: 7\n").personality())
+                .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality names humour twice; name each scale once.");
+        assertThatThrownBy(() -> configurationOf("edi-personality:\n  demo:\n    formality: 7\n    Formality: 2\n").personality())
+                .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality.demo names formality twice; name each scale once.");
         assertThatThrownBy(() -> configurationOf("edi-personality: lively\n").personality())
                 .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality holds the personality's scales and their levels, such as humour: 3.");
         assertThatThrownBy(() -> configurationOf("edi-personality:\n  demo: 7\n").personality())

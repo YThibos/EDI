@@ -54,8 +54,14 @@ final class PersonalitySection {
         Map<Scale, Level> written = new EnumMap<>(Scale.class);
         levels.properties().stream()
                 .filter(entry -> !entry.getKey().equals(DEMO))
-                .forEach(entry -> written.put(Scale.named(entry.getKey()), levelOf(entry.getValue(), path + "." + entry.getKey())));
+                .forEach(entry -> writeOnce(written, Scale.named(entry.getKey()), levelOf(entry.getValue(), path + "." + entry.getKey()), path));
         return new PersonalityOverride(written);
+    }
+
+    private static void writeOnce(Map<Scale, Level> written, Scale scale, Level level, String path) {
+        if (written.put(scale, level) != null) {
+            throw new IllegalArgumentException(path + " names " + scale.word() + " twice; name each scale once.");
+        }
     }
 
     private static Level levelOf(JsonNode written, String path) {
