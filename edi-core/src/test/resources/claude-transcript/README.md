@@ -16,4 +16,7 @@ The record shapes follow transcripts written by Claude Code 2.1.270 to 2.1.308; 
 | `truncated.jsonl` | the last line is cut off in the middle of a record |
 | `context-full.jsonl` | the session ends on the API error a full context gives, `invalid_request` with "Prompt is too long", as Claude Code 2.1.308 writes it |
 | `quoted-context-limit.jsonl` | an ordinary answer quotes "Prompt is too long"; the session did not stop on it |
+| `missed-stop.jsonl` | the turn ends after its `Stop` hook failed because EDI's core was down: a `stop_hook_summary` with `hookErrors`, then `turn_duration`, as Claude Code 2.1.308 writes it |
+| `answered-stop.jsonl` | the turn ends after a `Stop` hook EDI answered, with empty `hookErrors` |
+| `blocked-stop.jsonl` | EDI blocked the stop, so the summary carries its reason and the turn goes on |
 | `usage.jsonl` | assistant records repeat a message's usage once per content block |

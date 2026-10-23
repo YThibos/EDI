@@ -78,6 +78,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -99,6 +100,8 @@ public final class WakeRule {
             case UsageLimitReached reached -> Optional.of(new Wake(WakeKind.USAGE_LIMIT, reached.task(), reached.worker(),
                     reached.limit().name(), reached.limit().resetsAt()));
             case ContextLimitReached reached -> Optional.of(new Wake(WakeKind.CONTEXT_FULL, reached.task(), reached.worker(), "", reached.fullSince()));
+            case WorkerStopMissed missed -> Optional.of(new Wake(WakeKind.STOP_MISSED, missed.task(), missed.worker(), carryOnOf(missed),
+                    missed.stoppedAt()));
             case LimitResumeHeldBack heldBack -> wake(WakeKind.LIMIT_RESUME_HELD_BACK, heldBack, heldBack.worker(), heldBack.pane().word());
             case WorkerDied died -> wake(WakeKind.WORKER_DIED, died, died.worker(), died.cause().sentence());
             case LostInOutage lost -> wake(WakeKind.LOST_IN_OUTAGE, lost, lost.worker(), lost.number() + ": " + lost.cause().sentence());
@@ -131,6 +134,12 @@ public final class WakeRule {
                     ReviewCounted _, BoardArmed _, BoardRoundPosted _, BoardClosed _, BoardRetired _, CaptainSaid _, ScoutPromoted _, TaskDropped _,
                     WorkDiscarded _, TaskImported _, TaskAdopted _ -> Optional.empty();
         };
+    }
+
+    private static String carryOnOf(WorkerStopMissed missed) {
+        String message = "message " + missed.message();
+        return missed.noticeTyped() ? message + " was typed into its idle prompt"
+                : message + " waits, as its pane did not take the notice; edi worker peek " + missed.task() + " shows the pane";
     }
 
     private static String recheckOf(RecheckAsked asked) {

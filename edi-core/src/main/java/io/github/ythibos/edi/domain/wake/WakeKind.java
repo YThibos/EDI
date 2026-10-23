@@ -13,6 +13,7 @@ public enum WakeKind {
     USAGE_LIMIT,
     LIMIT_RESUME_HELD_BACK,
     CONTEXT_FULL,
+    STOP_MISSED,
     WORKER_DIED,
     LOST_IN_OUTAGE,
     WORKER_STALE,

@@ -54,6 +54,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case CONTEXT_FULL -> who + "'s context has been full since " + moments.minute(wake.moment()) + ", so it can take no further prompt and a resume"
                     + " would stop on it again; edi worker stop " + wake.task() + ", then edi worker relaunch " + wake.task()
                     + " starts a fresh session in its copy with a handover.";
+            case STOP_MISSED -> who + " ended its turn at " + moments.minute(wake.moment()) + " while EDI could not take its stop hook, so EDI sent it"
+                    + " a message to carry on: " + wake.detail() + ".";
             case LIMIT_RESUME_HELD_BACK -> who + ": its usage limit reset, but its pane shows " + wake.detail() + ", so EDI typed nothing.";
             case WORKER_DIED -> who + " died: " + wake.detail() + "; edi worker relaunch " + wake.task() + " resumes its session.";
             case LOST_IN_OUTAGE -> who + " is on the outage hold list as number " + wake.detail() + "; edi recover shows the list.";

@@ -29,6 +29,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private Instant serverStartedAt = Instant.parse("2026-10-15T08:00:00Z");
     private UsageLimit limitInTheTranscript;
     private Instant contextFullInTheTranscript;
+    private Instant missedStopInTheTranscript;
     private TokenUsage tokensInTheTranscript = TokenUsage.NONE;
     private Runnable duringTheNextLaunch = () -> {
     };
@@ -105,6 +106,11 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
+    public synchronized Optional<Instant> missedStopIn(String transcript, Instant since) {
+        return Optional.ofNullable(missedStopInTheTranscript).filter(at -> !at.isBefore(since));
+    }
+
+    @Override
     public synchronized TokenUsage tokensSpentIn(String transcript, Instant since) {
         return tokensInTheTranscript;
     }
@@ -138,6 +144,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void transcriptEndsOnAFullContextAt(Instant at) {
         contextFullInTheTranscript = at;
+    }
+
+    public synchronized void transcriptEndsOnAStopEdiMissedAt(Instant at) {
+        missedStopInTheTranscript = at;
     }
 
     public synchronized void transcriptSpent(TokenUsage tokens) {

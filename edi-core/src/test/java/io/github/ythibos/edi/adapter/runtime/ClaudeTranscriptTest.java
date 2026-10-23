@@ -61,6 +61,18 @@ class ClaudeTranscriptTest {
     }
 
     @Test
+    void readsWhenATurnEndedAfterAStopHookEdiCouldNotTake() throws IOException {
+        Instant ended = Instant.parse("2026-10-16T10:15:00.080Z");
+
+        assertThat(transcripts.missedStop(fixture("missed-stop.jsonl"), LAUNCHED)).contains(ended);
+        assertThat(transcripts.missedStop(fixture("missed-stop.jsonl"), ended.plusMillis(1))).isEmpty();
+        for (String fixture : new String[] {"answered-stop.jsonl", "blocked-stop.jsonl", "context-full.jsonl", "working.jsonl", "truncated.jsonl"}) {
+            assertThat(transcripts.missedStop(fixture(fixture), LAUNCHED)).as(fixture).isEmpty();
+        }
+        assertThat(transcripts.missedStop(directory.resolve("absent.jsonl"), LAUNCHED)).isEmpty();
+    }
+
+    @Test
     void readsOnlyTheTailOfALongTranscript() throws IOException {
         Path transcript = directory.resolve("long.jsonl");
         String filler = "{\"type\":\"assistant\",\"message\":{\"id\":\"filler\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"" + "x".repeat(1_000) + "\"}]},"

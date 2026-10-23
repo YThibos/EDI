@@ -164,6 +164,7 @@ import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.InboxNotice;
 import io.github.ythibos.edi.application.worker.NoticeFullContexts;
+import io.github.ythibos.edi.application.worker.NoticeMissedStops;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
 import io.github.ythibos.edi.application.worker.RecordStatus;
@@ -850,6 +851,10 @@ public final class TestHome {
 
     public NoticeFullContexts noticeFullContexts() {
         return new NoticeFullContexts(workerList(), workers, runtime, events, clock, transaction);
+    }
+
+    public NoticeMissedStops noticeMissedStops() {
+        return new NoticeMissedStops(workerList(), workers, runtime, steerWorker(), events, clock, transaction);
     }
 
     public JudgeWorkers judgeWorkers() {
