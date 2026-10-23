@@ -22,11 +22,14 @@ Then come `ongoing` (in-flight tasks nothing holds, each an `OngoingTask` with i
 The snapshot is quiet only when nothing waits on the captain and nothing is ongoing.
 A worker status of `needs-decision` or `blocked` is addressed to the primary (`StatusReport.isForThePrimary`), so the sitrep page shows its task as `with EDI` rather than waiting on the captain, and the acknowledged steer that resolves it settles it (`Worker.settledBy`, [steering](steering.md)).
 The sitrep page reads one document, `edi-sitrep.v1`, from `SitrepConsolePresenter`: the cards, the recent answers, at most ten landed and twenty charted tasks with their totals, the machine, the address word, the zone and the presence, so a 2 MB backlog gives a document of a few kilobytes.
+Each ongoing task (`ConsoleSitrep.Ongoing`) carries its work key from its intake as its own `key` field, null for an unkeyed task, and a title with a leading copy of that key taken off, together with the separator after it (spaces, a colon, a bar or a dash); the key counts as leading only when it ends where the title's word ends, so `EDI-31` never takes the start off a title beginning with `EDI-310`, and the match ignores case.
+The console's `OngoingList` shows the key first in the mono face and the ion colour, then the title, and an unkeyed task shows its title alone, with no placeholder.
 The primary passes what its turn did as a small JSON document on standard input to `edi report`, which merges it with the snapshot ([captain-report](captain-report.md)).
 
 ## Why
 
 One query keeps every surface consistent, separate presenters keep each format testable on its own, and large data travels through standard input and HTTP bodies, never arguments.
+A work key in its own field lets the page style it apart from the title, and taking a leading copy off the title in the core means the key is never shown twice, whatever the console does.
 The captain finds everything that needs them in one place on every surface, and no surface says "nothing open" while something waits.
 
 ## Alternatives rejected
@@ -34,18 +37,23 @@ The captain finds everything that needs them in one place on every surface, and 
 - A separate query or overview command per surface - duplicated state assembly, the old arrangement, and two views that can disagree.
 - Sorting in each presenter - the console, the brief and the report would drift apart.
 - Keeping a blocked task's decision only under PARKED - the captain then misses it.
+- Gluing the work key into the ongoing title in the core - the page could no longer style the key, and every other surface reading the title would inherit the prefix.
+- Leaving the work key out when the title already starts with it - the same task would show its key styled or unstyled depending on how it was titled.
+- A work key on every block of the sitrep page - the captain asked for the Ongoing block only.
 
 ## Consequences
 
 - Good: a new surface is a new presenter, not a new query, and the classification is tested against a real store in milliseconds.
 - Bad: the snapshot must carry everything any presenter needs, so its read touches the worker, pipeline, delivery and board stores, and a blocked task's decision appears both in the zone and under PARKED.
+- Bad: an ongoing title on the sitrep page can differ from the stored title by its leading key.
 
 ## When to revisit
 
-When a presenter needs data the snapshot cannot carry cheaply, the work board needs the full queue, or something else starts waiting on the captain.
+When a presenter needs data the snapshot cannot carry cheaply, the work board needs the full queue, something else starts waiting on the captain, or another block of the sitrep page should show work keys.
 
 ## How we got here
 
 - 15/10/2026: the specification made the fleet state one query; slice S2 sorted the open work into decisions, ongoing, parked and queued for the captain report.
 - 17/10/2026: slice S7 added ongoing work's worker and pipeline, landed work and recent answers for the console's sitrep page.
 - 21/10/2026: a shadow run showed a blocked task's decision only under PARKED while the zone said nothing was open, and boards and ready requests not shown at all; everything that waits on the captain moved into one part of the snapshot, and a worker's question to the primary stopped looking like one to the captain.
+- 23/10/2026: the captain could not tell which key a running task books on, so each ongoing task on the sitrep page leads with its work key (EDI-44).

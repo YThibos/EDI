@@ -38,7 +38,7 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
       },
     ],
     ongoing: [
-      { task: 'fit-lamp', title: 'Fit the lamp', kind: 'ship', projects: ['harness', 'garden'], state: 'working', doing: 'pipeline review', draft: null },
+      { task: 'fit-lamp', key: 'EDI-31', title: 'Fit the lamp', kind: 'ship', projects: ['harness', 'garden'], state: 'working', doing: 'pipeline review', draft: null },
     ],
     landed: [
       {

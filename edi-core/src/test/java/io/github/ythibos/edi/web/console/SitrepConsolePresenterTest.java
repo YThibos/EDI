@@ -34,6 +34,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -128,6 +129,26 @@ class SitrepConsolePresenterTest {
     }
 
     @Test
+    void leadsEachOngoingTaskWithItsWorkKeyOnceAndWithNothingForAnUnkeyedTask() {
+        Task horn = keyed(ship("horn", "Tune the horn"), "EDI-31");
+        Task bell = keyed(ship("bell", "DOCK-58: rejected request keeps its reason"), "DOCK-58");
+        Task buoy = keyed(ship("buoy", "EDI-310 Paint the buoy"), "EDI-31");
+        Task mast = ship("mast", "Paint the mast");
+
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
+                new OngoingTask(horn, null, null, null),
+                new OngoingTask(bell, null, null, null),
+                new OngoingTask(buoy, null, null, null),
+                new OngoingTask(mast, null, null, null)), List.of(), List.of(), List.of(), List.of()));
+
+        assertThat(sitrep.ongoing()).extracting(ConsoleSitrep.Ongoing::key, ConsoleSitrep.Ongoing::title).containsExactly(
+                tuple("EDI-31", "Tune the horn"),
+                tuple("DOCK-58", "rejected request keeps its reason"),
+                tuple("EDI-31", "EDI-310 Paint the buoy"),
+                tuple(null, "Paint the mast"));
+    }
+
+    @Test
     void presentsTheBoardsAndTheRequestsThatWaitOnTheCaptain() {
         Task research = ship("lamp-research", "Research the lamp");
         Task lamp = ship("fit-lamp", "Fit the lamp");
@@ -193,6 +214,10 @@ class SitrepConsolePresenterTest {
 
     private static Task ship(String id, String title, Instant filed) {
         return Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(), null), "", filed);
+    }
+
+    private static Task keyed(Task task, String key) {
+        return task.keyedOn(WorkKey.parse(key));
     }
 
     private static Worker workerOn(Task task) {
