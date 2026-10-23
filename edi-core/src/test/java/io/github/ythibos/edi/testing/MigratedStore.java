@@ -18,7 +18,7 @@ final class MigratedStore {
 
     static DataSource openedAt(Path database) throws IOException {
         boolean fresh = Files.notExists(database);
-        DataSource store = StoreFile.openedAt(database);
+        DataSource store = StoreFile.disposableAt(database);
         if (fresh) {
             Files.copy(MigratedOnce.STORE, database);
         } else {
@@ -40,7 +40,7 @@ final class MigratedStore {
                 Path directory = Files.createTempDirectory("edi-migrated-store-");
                 directory.toFile().deleteOnExit();
                 Path store = directory.resolve("edi.db");
-                migrate(StoreFile.openedAt(store));
+                migrate(StoreFile.disposableAt(store));
                 store.toFile().deleteOnExit();
                 return store;
             } catch (IOException unwritable) {

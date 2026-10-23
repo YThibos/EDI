@@ -218,3 +218,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-170](ADR-170-a-full-context-is-read-from-the-transcript-and-raised-at-once.md) | A full context is read from the transcript every supervision round and raised at once | Design |
 | [ADR-171](ADR-171-a-full-context-starts-afresh-in-its-copy-with-a-handover.md) | A worker whose context is full starts afresh in its own copy, briefed with a handover | Design |
 | [ADR-172](ADR-172-a-native-recovery-test-waits-for-the-cores-start-ups-apart.md) | A native recovery test keeps thirty seconds for its own work and waits for the core's start-ups apart | Design |
+| [ADR-174](ADR-174-a-test-homes-store-commits-without-waiting-for-the-disk.md) | A test home's store commits without waiting for the disk | Design |
