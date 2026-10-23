@@ -16,6 +16,7 @@ The rules are refused without a `pipeline` entry, so the pipeline's agent never 
 `LaunchWorker` resolves the pipeline's route from the rules at every launch, the first and every later one, and hands it to the `Pipeline` port's `runAgentOn`, because a worker drives the pipeline and every launch reads the rules as they are then.
 `NoMistakesPipeline.runAgentOn` sets `agent_args_override.claude` in `<pipeline home>/config.yaml` to `--model <model>`, followed by `--effort <effort>` when the route names one.
 `AgentArguments` rewrites only that top-level entry, keeps every other agent's arguments within it and every line of the file outside it, comments included, replaces the file atomically with its permissions, and writes nothing when the arguments already match.
+A configuration EDI cannot read as YAML or cannot replace refuses the launch, naming the file, and leaves no temporary file beside it.
 EDI never creates the pipeline's configuration: a pipeline home without `config.yaml` is left alone.
 EDI owns `agent_args_override.claude`, so a hand edit to it lasts only until the next launch.
 The migration from the old harness adds the example's `pipeline` entry to a rules file that lacks one (`DispatchRulesFile.withWhatItLacks`).

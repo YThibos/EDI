@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.adapter.pipeline;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +12,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import io.github.ythibos.edi.adapter.home.ConfigurationYaml;
+import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.dataformat.yaml.YAMLMapper;
@@ -34,18 +35,12 @@ final class AgentArguments {
         if (!Files.isRegularFile(globalConfiguration)) {
             return;
         }
-        String configuration = contentOf(globalConfiguration);
-        List<String> arguments = argumentsFor(route);
-        if (!claudeCodeArgumentsIn(configuration).equals(arguments)) {
-            replace(globalConfiguration, withClaudeCodeArguments(configuration, arguments));
-        }
-    }
-
-    private static String contentOf(Path file) {
         try {
-            return Files.readString(file, StandardCharsets.UTF_8);
-        } catch (IOException unreadable) {
-            throw new UncheckedIOException(unreadable);
+            routeClaudeCode(globalConfiguration, argumentsFor(route));
+        } catch (IOException unwritable) {
+            throw new Refusal("The pipeline configuration " + globalConfiguration + " cannot be read or replaced: " + unwritable.getClass().getSimpleName() + ".");
+        } catch (JacksonException malformed) {
+            throw new Refusal("The pipeline configuration " + globalConfiguration + " is not YAML EDI can read: " + malformed.getOriginalMessage());
         }
     }
 
@@ -55,6 +50,13 @@ final class AgentArguments {
             arguments.addAll(List.of("--effort", route.effort().word()));
         }
         return arguments;
+    }
+
+    private static void routeClaudeCode(Path globalConfiguration, List<String> arguments) throws IOException {
+        String configuration = Files.readString(globalConfiguration, StandardCharsets.UTF_8);
+        if (!claudeCodeArgumentsIn(configuration).equals(arguments)) {
+            replace(globalConfiguration, withClaudeCodeArguments(configuration, arguments));
+        }
     }
 
     private static List<String> claudeCodeArgumentsIn(String configuration) {
@@ -106,15 +108,15 @@ final class AgentArguments {
         return lines.stream().map(line -> line + "\n").reduce("", String::concat);
     }
 
-    private static void replace(Path file, String content) {
+    private static void replace(Path file, String content) throws IOException {
+        Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
+        Path written = Files.createTempFile(file.getParent(), file.getFileName() + "-", ".tmp");
         try {
-            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
-            Path written = Files.createTempFile(file.getParent(), file.getFileName() + "-", ".tmp");
             Files.writeString(written, content, StandardCharsets.UTF_8);
             Files.setPosixFilePermissions(written, permissions);
             Files.move(written, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException unwritable) {
-            throw new UncheckedIOException(unwritable);
+        } finally {
+            Files.deleteIfExists(written);
         }
     }
 }

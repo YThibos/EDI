@@ -1,6 +1,8 @@
 package io.github.ythibos.edi.adapter.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
@@ -144,6 +147,36 @@ class AgentArgumentsTest {
         AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH);
 
         assertThat(configuration).doesNotExist();
+    }
+
+    @Test
+    void refusesAConfigurationThatIsNotYamlNamingTheFile() throws IOException {
+        String malformed = "agent: [auto\n";
+        Path configuration = written(malformed);
+
+        assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH))
+                .isInstanceOf(Refusal.class)
+                .hasMessageStartingWith("The pipeline configuration " + configuration + " is not YAML EDI can read");
+        assertThat(configuration).content().isEqualTo(malformed);
+    }
+
+    @Test
+    void refusesAConfigurationItCannotReplaceNamingTheFileAndLeavingNothingBeside() throws IOException {
+        Path configuration = written(OTHER_SETTINGS);
+        Files.setPosixFilePermissions(home, PosixFilePermissions.fromString("r-x------"));
+        try {
+            assumeFalse(Files.isWritable(home), "the pipeline home stays writable for this user, so the refusal cannot be provoked");
+
+            assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessage("The pipeline configuration " + configuration + " cannot be read or replaced: AccessDeniedException.");
+            assertThat(configuration).content().isEqualTo(OTHER_SETTINGS);
+            try (var entries = Files.list(home)) {
+                assertThat(entries).containsExactly(configuration);
+            }
+        } finally {
+            Files.setPosixFilePermissions(home, PosixFilePermissions.fromString("rwx------"));
+        }
     }
 
     private Path written(String content) throws IOException {
