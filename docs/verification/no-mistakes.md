@@ -30,7 +30,7 @@ On the runs inspected, every delta equalled its total, because each round starte
 
 ## Agent route
 
-Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented global configuration and the running daemon's agent processes.
+Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented global configuration and the command lines of the running daemon's agent processes.
 
 | Question | Result on 1.84.0 |
 |---|---|
@@ -38,6 +38,7 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented
 | Do `axi run --model` and `--effort` reach Claude Code? | No. They pin a profile for the Pi agent only, and conflict with native selection flags. |
 | What does the agent run on without the key? | `claude -p` starts with no `--model` and no `--effort`, so it runs at the harness's global defaults. |
 | Does an edit reach a run that has already started? | No. Two runs started before the key was edited went on starting agents without the new words after the edit. |
+| Does a new run take an edit without a daemon restart? | Yes. A run started hours after the key was edited, under a daemon started before the edit, launched its agents as `claude --model claude-opus-5-5 --effort high -p ...`, the override's words placed before the pipeline's own. |
 | Consequence for EDI | EDI writes `agent_args_override.claude` from the dispatch rules' `pipeline` entry at every worker launch ([pipeline-agent](../decisions/pipeline-agent.md)). |
 
 ## Account binding
