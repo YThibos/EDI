@@ -889,7 +889,7 @@ public final class TestHome {
     }
 
     public SettleBoardAnswers settleBoardAnswers() {
-        return new SettleBoardAnswers(boards, decisions, events, answerDecision(), clock, transaction);
+        return new SettleBoardAnswers(boards, decisions, events, inbox, workers, new InboxNotice(runtime), answerDecision(), clock, transaction);
     }
 
     public ConsoleAccess consoleAccess() {

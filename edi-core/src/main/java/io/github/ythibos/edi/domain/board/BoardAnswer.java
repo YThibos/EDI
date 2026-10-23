@@ -39,10 +39,6 @@ public record BoardAnswer(BoardId board, int round, DecisionNumber decision, Str
         return settledAt != null;
     }
 
-    public boolean isRefused() {
-        return refusedBecause != null;
-    }
-
     public boolean repeats(CaptainAnswer recorded) {
         return recorded != null && recorded.channel() == AnswerChannel.BOARD && recorded.verbatim().equals(verbatim);
     }

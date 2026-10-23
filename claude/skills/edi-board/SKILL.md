@@ -29,7 +29,7 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
 - A prompt that names a bound decision, by its D number, in the board's `decision` field or by its card's `question`, answers that decision as the captain's own word, verbatim.
 - That answer authorises exactly the act its chosen option names, as an answer in the console does; nobody records it again with `edi captain said`.
 - A board answer arrives as a notification through `edi wait`; carry it to the work, and never answer the same decision again in chat.
-- An answer EDI could not apply, such as one to a decision already answered, comes back as a refusal to put before the captain once more.
+- An answer EDI could not apply, such as one to a decision already answered, comes back to the scout's inbox as a refusal naming the decision, the reason and the captain's words, and to the primary, who puts it before the captain once more.
 - An empty close of the board is not news; a round with content is.
 
 ## When the scout's worker is dead

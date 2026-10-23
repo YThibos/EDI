@@ -18,7 +18,6 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardAnswer;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.board.BoardId;
-import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
@@ -78,18 +77,12 @@ public class ReceiveBoardFeedback {
         boards.update(saved);
         List<BoardAnswer> answers = saved.answersIn(answered, decision -> decisions.get(decision).card(), now);
         answers.forEach(boards::save);
-        List<BoardAnswer> foreseen = answers.stream().map(answer -> foreseenSettlement(answer, now)).toList();
-        InboxMessage message = InboxMessage.sent(saved.task(), inbox.nextNumber(saved.task()), BoardRoundMessage.of(saved, answered, foreseen), null, now);
+        InboxMessage message = InboxMessage.sent(saved.task(), inbox.nextNumber(saved.task()), BoardRoundMessage.of(saved, answered, answers), null, now);
         inbox.save(message);
         events.record(new SteerSent(saved.task(), message.number(), null), Actor.CORE, now);
         events.record(new BoardAnswered(saved.task(), saved.id(), saved.rounds(), answered.prompts().size(), answered.sessionEnded()), Actor.CAPTAIN,
                 now);
         return new RecordedRound(message, workers.latestOf(saved.task()).filter(worker -> !worker.isRetired()).orElse(null));
-    }
-
-    private BoardAnswer foreseenSettlement(BoardAnswer answer, Instant now) {
-        Decision answered = decisions.get(answer.decision());
-        return answered.isOpen() || answer.repeats(answered.answer()) ? answer : answer.refused(answered.whyItTakesNoOtherAnswer(), now);
     }
 
     private boolean closedWithoutNews(BoardId board) {

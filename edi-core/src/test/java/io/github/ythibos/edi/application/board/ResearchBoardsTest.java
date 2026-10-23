@@ -148,7 +148,7 @@ class ResearchBoardsTest {
                   attachment: /tmp/capture.png (image/png)
                 Prompt 3 (choice, at section#s2 > form): %s: option=B
                   context: decision=%s, option=B
-                EDI records these as the captain's answers: %s option B.""".formatted(boardFile, decision, decision, decision));
+                EDI hands these to their decisions as the captain's answers: %s option B.""".formatted(boardFile, decision, decision, decision));
         CaptainAnswer recorded = home.decisions().get(decision).answer();
         assertThat(recorded.verbatim()).isEqualTo(decision + ": option=B");
         assertThat(recorded.option()).isEqualTo(new OptionKey('B'));
@@ -343,9 +343,27 @@ class ResearchBoardsTest {
 
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed(decision + " B")), false));
 
-        assertThat(message(1).body()).doesNotContain("EDI records these as the captain's answers")
-                .endsWith("EDI refused the board answer to %s: %s is already answered: %s A.".formatted(decision, decision, decision));
+        assertThat(message(1).body()).doesNotContain("records").endsWith("EDI hands these to their decisions as the captain's answers: %s option B."
+                .formatted(decision));
+        assertThat(message(2).body()).isEqualTo("EDI refused the captain's board answer to %s (\"%s B\"): %s is already answered: %s A"
+                .formatted(decision, decision, decision, decision));
         assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
+    void tellsTheScoutThatABoardAnswerWithAnOptionTheCardDoesNotOfferWasRefused() {
+        Board board = armQuietly(boardFile, decision);
+        BoardPrompt choice = new BoardPrompt("4", "choice", decision + ": option=Z", decision + ": option=Z", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "Z"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(choice), false));
+
+        assertThat(home.decisions().get(decision).isOpen()).isTrue();
+        assertThat(message(2).body()).isEqualTo("EDI refused the captain's board answer to %s (\"%s: option=Z\"): %s offers no option Z."
+                .formatted(decision, decision, decision));
+        assertThat(home.boards().answersOf(board.id())).singleElement()
+                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(decision + " offers no option Z."));
+        assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).contains(WakeKind.BOARD_ANSWER_REFUSED);
     }
 
     @Test
