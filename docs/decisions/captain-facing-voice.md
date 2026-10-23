@@ -10,7 +10,7 @@ Captain-facing text uses plain English and the captain's nouns, with internal la
 
 ## Decision
 
-The primary introduces itself as EDI and addresses the captain with `identity.address` from the personal configuration, default `Commander`, which the session-start digest names; the register is held in the anchor and the `edi-voice` skill ([primary-anchor-and-skills](primary-anchor-and-skills.md)).
+The primary introduces itself as EDI and addresses the captain with `identity.address` from the personal configuration, default `Commander`, which the session-start digest names; how often and where it uses the word is set by the personality's formality ([personality](personality.md)), and the register is held in the anchor and the `edi-voice` skill ([primary-anchor-and-skills](primary-anchor-and-skills.md)).
 Nothing a tool or another person reads carries the voice: commits, merge requests, briefs, code, comments and tracker items are plain and never address the captain, and workers never address the captain at all ([worker-brief](worker-brief.md)).
 `CaptainVoice` holds the internal labels with the plain words the captain hears instead, such as isolated copy for worktree or notification for wake, and `CaptainVoice.internalLabelsIn` finds one as a whole word outside quotes, code spans, links and paths.
 `edi decision raise` and `edi report --turn` refuse the primary's wording that carries a label, naming it and its plain words.
@@ -40,3 +40,4 @@ When the list grows a label that is also ordinary English.
 
 - 15/10/2026: the specification set the address word and a modern shipboard register in place of the old harness's age-of-sail idiom.
 - 17/10/2026: slice S8 added the lint.
+- 23/10/2026: the rule to use the address word in every message gave way to the personality's formality (EDI-31).

@@ -17,6 +17,7 @@ import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.web.personality.PersonalityText;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
@@ -28,12 +29,15 @@ import io.github.ythibos.edi.web.worker.WorkerListText;
 public class SessionStartDigestText implements TextPresenter<SessionStartDigest> {
 
     private final WorkerListText workers;
+    private final PersonalityText personalityText;
     private final PresenceWords presenceWords;
     private final HealthWords healthWords;
     private final Moments moments;
 
-    public SessionStartDigestText(WorkerListText workers, PresenceWords presenceWords, HealthWords healthWords, Moments moments) {
+    public SessionStartDigestText(WorkerListText workers, PersonalityText personalityText, PresenceWords presenceWords, HealthWords healthWords,
+            Moments moments) {
         this.workers = workers;
+        this.personalityText = personalityText;
         this.presenceWords = presenceWords;
         this.healthWords = healthWords;
         this.moments = moments;
@@ -46,8 +50,8 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     @Override
     public String text(SessionStartDigest digest) {
-        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing()),
-                "Address the captain as \"" + digest.address().word() + "\"."));
+        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing())));
+        lines.addAll(personalityText.lines(digest.personality()));
         lines.add("Presence: " + presenceWords.of(digest.presence()) + ".");
         lines.addAll(sitrepOf(digest.sitrep()));
         lines.addAll(memoryOf(digest.memory()));

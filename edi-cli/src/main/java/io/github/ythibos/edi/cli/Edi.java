@@ -50,6 +50,7 @@ import picocli.CommandLine.Spec;
             WorktreeCommand.class,
             MemoryCommand.class,
             PresenceCommand.class,
+            PersonalityCommand.class,
             HookCommand.class,
             StatusLineCommand.class,
             PublishCheckCommand.class,

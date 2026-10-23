@@ -17,7 +17,7 @@ The sitrep page reads `GET /api/sitrep` ([fleet-snapshot](fleet-snapshot.md)) an
 `application.yaml` sends every console file with `Cache-Control: no-cache` and without `Last-Modified`, so the browser fetches it again on every load.
 `CaptainsBrowser` opens a sign-in link from `OpenConsole`: through `cmd.exe /c start` from `edi.console.windows-directory` (`/mnt/c`) when it exists, else through `xdg-open` when `edi.console.desktop-display` names a display; an opener gets 15 seconds, and one still running then counts as opened and is never stopped.
 `edi console` and `edi sitrep --board` print only the console's address when the browser opened, and the sign-in link itself when nothing did.
-`SessionStart.opensTheSitrep` holds for the launch of a new session that holds the primary role, and `OpenTheSitrepAtSessionStart` then opens the console unless the profile sets `console.openSitrepAtSessionStart: false`; the digest names where the page is, never the link.
+`SessionStart.opensTheSitrep` holds for the launch of a new session that holds the primary role, and `OpenTheSitrepAtSessionStart` then opens the console unless the profile sets `console.openSitrepAtSessionStart: false`; the digest names where the page is, never the link, and the session's opening turn names that page instead of opening a second one ([opening-turn](opening-turn.md)).
 Research boards that scouts write stay in Lavish ([research-boards](research-boards.md)).
 
 ## Why
@@ -47,3 +47,4 @@ When the console must run without the core, more than a few pages stay open, the
 - 15/10/2026: the captain chose a single-page application served by the core; slice S0 shipped its skeleton.
 - 17/10/2026: slice S7 built the sitrep page, the stream and opening through the Windows start command.
 - 21/10/2026: the sitrep page opens at every new primary session, `xdg-open` serves a Linux desktop, and a browser that kept showing an old layout led to no-cache serving.
+- 23/10/2026: a fresh `edi up` leaves one sitrep page open, since the opening turn names the page its session's start opened (EDI-43).

@@ -24,14 +24,18 @@ public class OpenConsole {
         return browser.open(signIn) ? ConsoleOpening.inTheBrowser(console) : ConsoleOpening.byLink(console, signIn);
     }
 
-    public record ConsoleOpening(URI console, URI signInLink, boolean opened) {
+    public record ConsoleOpening(URI console, URI signInLink, boolean opened, boolean openedAtSessionStart) {
+
+        public static ConsoleOpening openedAtSessionStart(URI console) {
+            return new ConsoleOpening(console, null, true, true);
+        }
 
         static ConsoleOpening inTheBrowser(URI console) {
-            return new ConsoleOpening(console, null, true);
+            return new ConsoleOpening(console, null, true, false);
         }
 
         static ConsoleOpening byLink(URI console, URI signInLink) {
-            return new ConsoleOpening(console, signInLink, false);
+            return new ConsoleOpening(console, signInLink, false, false);
         }
     }
 }

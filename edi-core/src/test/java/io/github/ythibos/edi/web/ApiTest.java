@@ -296,6 +296,7 @@ class ApiTest {
         assertThat(started.statusCode()).isEqualTo(200);
         assertThat(new JsonMapper().readTree(started.body()).path("hookSpecificOutput").path("additionalContext").asString())
                 .startsWith("EDI session-start digest\nThis session is the primary")
+                .contains("\nPersonality: ", "\nAddress word \"Commander\": ", "\nBad news: humour 0, ")
                 .contains("\nThe console's sitrep page is open in the captain's browser at " + uri("/") + ".\n");
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
@@ -344,6 +345,24 @@ class ApiTest {
         assertThat(away.body()).contains("away since ", "on the words \"Carry on with the lamp.\"");
         assertThat(shown.body()).contains("\"mode\":\"away\"", "\"cause\":\"captain\"", "\"mandate\":\"Carry on with the lamp.\"", "\"workerCap\":");
         assertThat(present.body()).isEqualTo("Presence: present.\n");
+    }
+
+    @Test
+    void showsAndKeepsThePersonalityTheCaptainChooses() throws Exception {
+        String worker = workerTokenFor("api-personality");
+
+        HttpResponse<String> changed = post("/api/personality", "{\"change\":[\"humour\",\"2\",\"formality\",\"10\"]}", TEXT);
+        HttpResponse<String> shown = get("/api/personality", TEXT);
+        HttpResponse<String> unknown = post("/api/personality", "{\"change\":[\"humour\",\"8\",\"for\",\"now\"]}", TEXT);
+        HttpResponse<String> byAWorker = send(as(worker, "/api/personality", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"change\":[\"plain\"]}")));
+
+        assertThat(changed.body()).startsWith("Personality: humour 2, formality 10, verbosity 5,").contains("\nAddress word \"Commander\": almost always");
+        assertThat(shown.body()).isEqualTo(changed.body());
+        assertThat(Files.readString(home.resolve("config/personal.yaml"))).contains("edi-personality:\n  humour: 2\n  formality: 10\n");
+        assertRefusal(unknown, 400, "for is not a personality scale; the scales are humour, formality, verbosity, warmth, directness, initiative, depth,"
+                + " enthusiasm, flavour.");
+        assertThat(byAWorker.statusCode()).isEqualTo(403);
     }
 
     @Test

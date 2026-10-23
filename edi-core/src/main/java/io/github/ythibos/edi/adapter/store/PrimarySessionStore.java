@@ -21,7 +21,8 @@ public class PrimarySessionStore {
 
     private static final String SELECT_SESSIONS = """
             select session_id, started_at, claude_pid, claude_started_at, claimed_at, turn_started_at, turn_event_mark, reported_at,
-                   stops_blocked, typed_at, notification, notified_at, limit_name, limit_resets_at, limit_reached_at, ended_at
+                   stops_blocked, typed_at, notification, notified_at, limit_name, limit_resets_at, limit_reached_at, ended_at,
+                   sitrep_opened_at
             from primary_session
             """;
 
@@ -38,16 +39,17 @@ public class PrimarySessionStore {
         store.sql("""
                         insert into primary_session (session_id, started_at, claude_pid, claude_started_at, claimed_at, turn_started_at,
                                                      turn_event_mark, reported_at, stops_blocked, typed_at, notification, notified_at,
-                                                     limit_name, limit_resets_at, limit_reached_at, ended_at)
+                                                     limit_name, limit_resets_at, limit_reached_at, ended_at, sitrep_opened_at)
                         values (:session, :started, :pid, :processStarted, :claimed, :turnStarted, :eventMark, :reported, :stopsBlocked,
-                                :typed, :notification, :notified, :limitName, :limitResets, :limitReached, :ended)
+                                :typed, :notification, :notified, :limitName, :limitResets, :limitReached, :ended, :sitrepOpened)
                         on conflict (session_id) do update set
                             claude_pid = excluded.claude_pid, claude_started_at = excluded.claude_started_at,
                             claimed_at = excluded.claimed_at, turn_started_at = excluded.turn_started_at,
                             turn_event_mark = excluded.turn_event_mark, reported_at = excluded.reported_at,
                             stops_blocked = excluded.stops_blocked, typed_at = excluded.typed_at, notification = excluded.notification,
                             notified_at = excluded.notified_at, limit_name = excluded.limit_name, limit_resets_at = excluded.limit_resets_at,
-                            limit_reached_at = excluded.limit_reached_at, ended_at = excluded.ended_at""")
+                            limit_reached_at = excluded.limit_reached_at, ended_at = excluded.ended_at,
+                            sitrep_opened_at = excluded.sitrep_opened_at""")
                 .param("session", session.id().toString())
                 .param("started", Columns.text(session.startedAt()))
                 .param("pid", process == null ? null : process.pid())
@@ -64,6 +66,7 @@ public class PrimarySessionStore {
                 .param("limitResets", limit == null ? null : Columns.text(limit.resetsAt()))
                 .param("limitReached", Columns.text(session.limitReachedAt()))
                 .param("ended", Columns.text(session.endedAt()))
+                .param("sitrepOpened", Columns.text(session.sitrepOpenedAt()))
                 .update();
     }
 
@@ -95,7 +98,8 @@ public class PrimarySessionStore {
                 Columns.instant(row.getString("notified_at")),
                 limit(row),
                 Columns.instant(row.getString("limit_reached_at")),
-                Columns.instant(row.getString("ended_at")));
+                Columns.instant(row.getString("ended_at")),
+                Columns.instant(row.getString("sitrep_opened_at")));
     }
 
     private static SessionProcess process(ResultSet row) throws SQLException {

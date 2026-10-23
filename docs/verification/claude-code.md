@@ -146,3 +146,13 @@ Pasting about 1.7 million characters into the composer and submitting it filled 
 - Claude Code decided this itself, in the same millisecond as the prompt, without an API call.
 - Each further typed line fired `UserPromptSubmit` and failed the same way at once.
 - `--resume` of the session with a prompt after `--` fired `SessionStart` with `source: "resume"` and `UserPromptSubmit`, and failed again with "Context limit reached", so a full session cannot be resumed.
+
+## The opening prompt, on 2.1.308
+
+Verified on Claude Code 2.1.308 on WSL2 Ubuntu 24.04, 23/10/2026, for the primary's opening prompt ([opening-turn](../decisions/opening-turn.md)).
+An interactive session on a private tmux socket ran `claude --settings <recording hooks> -- "Hello EDI, SITREP board, please."` on `claude-haiku-5-5` at `low` effort.
+
+- The prompt was submitted at once, without a key pressed, and shown as the conversation's first prompt.
+- `SessionStart` fired first with `source: "startup"`, then `UserPromptSubmit` with the prompt exactly as passed, then `Stop`.
+- The `additionalContext` that the `UserPromptSubmit` hook answered reached the transcript, so a return brief given on that hook arrives with the first turn.
+- The model loaded the `sitrep` skill and ran `edi sitrep --board`.

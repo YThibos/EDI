@@ -46,7 +46,7 @@ describe('SitrepPage', () => {
     expect(page.querySelector('.sr-brand__wm')?.textContent).toBe('EDI');
     expect(text(page, '.sr-section__head .sr-sub')).toBe('1 waiting on you, Commander');
     expect(text(page, '.sr-decision__title')).toBe('Which lamp?');
-    expect(texts(page, '.sr-row__title')).toEqual(['Fit the lamp', 'Tune the horn', 'Scrub the deck', 'Paint the buoy']);
+    expect(texts(page, '.sr-row__title')).toEqual(['EDI-31 Fit the lamp', 'Tune the horn', 'Scrub the deck', 'Paint the buoy']);
     expect(text(page, '.sr-row__pr')).toBe('#12');
     expect(page.textContent).toContain('showing 2 of 23');
     expect(page.textContent).toContain('+21 more queued');
@@ -102,7 +102,7 @@ describe('SitrepPage', () => {
         decisions: [],
         answered: [],
         ongoing: [
-          { task: 'fit-lamp', title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with EDI', doing: 'EDI is settling a question', draft: null },
+          { task: 'fit-lamp', key: null, title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with EDI', doing: 'EDI is settling a question', draft: null },
         ],
       }),
     );

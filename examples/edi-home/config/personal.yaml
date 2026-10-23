@@ -6,3 +6,18 @@ presence:
   calendarIgnore:
     - Example at the office
     - Example working from home
+edi-personality:
+  humour: 3
+  formality: 5
+  verbosity: 5
+  warmth: 4
+  directness: 6
+  initiative: 5
+  depth: 5
+  enthusiasm: 3
+  flavour: 5
+  demo:
+    humour: 3
+    formality: 7
+    verbosity: 5
+    flavour: 7
