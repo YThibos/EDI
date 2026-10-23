@@ -15,6 +15,9 @@ class ConsoleOpeningText implements TextPresenter<ConsoleOpening> {
 
     @Override
     public String text(ConsoleOpening opening) {
+        if (opening.openedAtSessionStart()) {
+            return "EDI console: " + opening.console() + " is already open in your browser; it opened when this session started.\n";
+        }
         return opening.opened()
                 ? "EDI console: " + opening.console() + " is open in your browser.\n"
                 : "EDI console: open " + opening.signInLink() + " in your browser; the link signs you in once, within two minutes.\n";
