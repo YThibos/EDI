@@ -34,7 +34,7 @@ final class CommitKeys {
 
     private static ObjectNode takeTheEntriesFor(ObjectNode overrides, String remoteUrl) {
         ObjectNode override = overrides.objectNode();
-        remotesOfTheRepository(overrides, remoteUrl).forEach(remote -> mergeInto(override, overrides.remove(remote)));
+        remotesOfTheRepository(overrides, remoteUrl).forEach(remote -> combineInto(override, overrides.remove(remote)));
         return override;
     }
 
@@ -55,12 +55,12 @@ final class CommitKeys {
         return Comparator.comparing(remoteUrl::equals);
     }
 
-    private static void mergeInto(ObjectNode merged, JsonNode entry) {
+    private static void combineInto(ObjectNode combined, JsonNode entry) {
         entry.properties().forEach(field -> {
-            if (merged.get(field.getKey()) instanceof ObjectNode existing && field.getValue().isObject()) {
-                mergeInto(existing, field.getValue());
+            if (combined.get(field.getKey()) instanceof ObjectNode existing && field.getValue().isObject()) {
+                combineInto(existing, field.getValue());
             } else {
-                merged.set(field.getKey(), field.getValue().deepCopy());
+                combined.set(field.getKey(), field.getValue().deepCopy());
             }
         });
     }
