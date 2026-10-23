@@ -71,7 +71,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-022](ADR-022-drafts-the-captain-merges.md) | Work is delivered as a draft the captain merges | Architecture |
 | [ADR-023](ADR-023-merges-are-observed.md) | Merges are observed, never performed | Design |
 | [ADR-024](ADR-024-sitrep-only.md) | `/sitrep` is the only overview command | Design |
-| [ADR-025](ADR-025-dispatch-categories.md) | Dispatch by eight written categories and a project override | Design |
+| [ADR-025](ADR-025-dispatch-categories.md) | Dispatch by eight written categories and a project override (superseded by ADR-174) | Design |
 | [ADR-026](ADR-026-research-first-switch.md) | Research before implementation is a piloted switch | Design |
 | [ADR-027](ADR-027-renovate-upkeep.md) | Dependency upkeep through self-hosted Renovate | Architecture |
 | [ADR-028](ADR-028-security-and-quality-scanners.md) | Security and quality scanners in CI | Architecture |

@@ -18,7 +18,7 @@ Effort has three levels and `high` is the ceiling (I-14).
 The rules are refused without a `pipeline` entry, so the pipeline's agent never runs at the harness default.
 `examples/edi-home/config/dispatch-rules.json` routes it to Opus 5.5 at high effort.
 `LaunchWorker` resolves the pipeline's route from the rules at every launch, the first and every later one, and hands it to the `Pipeline` port's `runAgentOn`, because a worker drives the pipeline and every launch reads the rules as they are then (ADR-050).
-`NoMistakesPipeline.runAgentOn` sets `agent_args_override.claude` in `<pipeline home>/config.yaml` to `--model <model>` followed by `--effort <effort>` when the route names one; `AgentArguments` rewrites only that top-level entry, keeps every other agent's arguments within it and every other line of the file, comments included, replaces the file atomically with its permissions, and writes nothing when the arguments already match.
+`NoMistakesPipeline.runAgentOn` sets `agent_args_override.claude` in `<pipeline home>/config.yaml` to `--model <model>` followed by `--effort <effort>` when the route names one; `AgentArguments` rewrites only that top-level entry, keeps every other agent's arguments within it and every line of the file outside it, comments included, replaces the file atomically with its permissions, and writes nothing when the arguments already match.
 EDI never creates the pipeline's configuration: a pipeline home without `config.yaml` is left alone.
 EDI owns `agent_args_override.claude` from then on, so the stop-gap stays in place as EDI's own entry rather than being removed, and a hand edit to it lasts only until the next launch.
 The migration from the old harness adds the example's `pipeline` entry to a rules file that lacks one.

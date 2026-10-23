@@ -23,7 +23,8 @@ final class AgentArguments {
     private static final String AGENT_ARGUMENTS = "agent_args_override";
     private static final String CLAUDE_CODE = "claude";
     private static final Pattern AGENT_ARGUMENTS_KEY = Pattern.compile("^" + AGENT_ARGUMENTS + ":.*");
-    private static final Pattern NESTED_OR_BLANK = Pattern.compile("^(\\s.*|)$");
+    private static final Pattern NESTED_BLANK_OR_COMMENT = Pattern.compile("^(\\s.*|#.*|)$");
+    private static final Pattern BLANK_OR_COMMENT = Pattern.compile("^\\s*(#.*)?$");
     private static final YAMLMapper YAML = ConfigurationYaml.writer();
 
     private AgentArguments() {
@@ -92,10 +93,10 @@ final class AgentArguments {
 
     private static int endOfTheEntry(List<String> lines, int start) {
         int end = start + 1;
-        while (end < lines.size() && NESTED_OR_BLANK.matcher(lines.get(end)).matches()) {
+        while (end < lines.size() && NESTED_BLANK_OR_COMMENT.matcher(lines.get(end)).matches()) {
             end++;
         }
-        while (end > start + 1 && lines.get(end - 1).isBlank()) {
+        while (end > start + 1 && BLANK_OR_COMMENT.matcher(lines.get(end - 1)).matches()) {
             end--;
         }
         return end;

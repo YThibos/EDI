@@ -9,7 +9,7 @@ Everything that differs between machines or people lives in the EDI home, never 
 |---|---|
 | `config/machine.yaml` | the machine profile |
 | `config/projects.yaml` | the project registry |
-| `config/dispatch-rules.json` | the dispatch categories and the project overrides |
+| `config/dispatch-rules.json` | the dispatch categories, the project overrides and the validation pipeline's agent |
 | `config/personal.yaml` | the personal configuration |
 | `config/publish-denylist` | the terms EDI never publishes |
 | `memory/` | the captain's memory and the craftsmanship rules |

@@ -72,6 +72,40 @@ class AgentArgumentsTest {
     }
 
     @Test
+    void replacesTheWholeEntryWhenACommentInterruptsItAndKeepsTheCommentsAfterIt() throws IOException {
+        Path configuration = written(OTHER_SETTINGS + """
+                agent_args_override:
+                  codex:
+                    - -m
+                    - gpt-5.4
+                # Set by hand until EDI owned it.
+                  claude:
+                    - --model
+                    - claude-sonnet-5-5
+                  # The stop-gap ends here.
+
+                # Where pull requests open.
+                """ + PROVIDERS);
+
+        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH);
+
+        assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + """
+                agent_args_override:
+                  codex:
+                    - -m
+                    - gpt-5.4
+                  claude:
+                    - --model
+                    - claude-opus-5-5
+                    - --effort
+                    - high
+                  # The stop-gap ends here.
+
+                # Where pull requests open.
+                """ + PROVIDERS);
+    }
+
+    @Test
     void addsTheClaudeCodeArgumentsToAConfigurationWithoutAny() throws IOException {
         Path configuration = written(OTHER_SETTINGS + PROVIDERS);
 
