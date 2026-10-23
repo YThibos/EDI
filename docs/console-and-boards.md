@@ -11,6 +11,7 @@ edi sitrep --board                                  # print the sitrep, then ope
 ```
 
 The sitrep page shows what needs the captain, what is ongoing and what is charted next side by side, in one glance on a laptop screen, with what landed this week below them, and follows every change as it happens ([ADR-107](decisions/ADR-107-the-sitrep-page-reads-one-document-from-the-fleet-snapshot.md), [ADR-109](decisions/ADR-109-the-console-stream-signals-each-commit.md)).
+Each ongoing task leads with its EDI or JIRA work key, shown once even when the title already starts with it, and a task without a key shows its title alone ([ADR-173](decisions/ADR-173-the-sitrep-page-leads-each-ongoing-task-with-its-work-key.md)).
 
 ![The sitrep page in a 1536 by 730 viewport, a laptop screen at 125% scaling](images/sitrep/sitrep-1536x730.webp)
 
