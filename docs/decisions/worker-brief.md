@@ -1,0 +1,49 @@
+# The worker brief and the pipeline intent are written from one template and the task's own facts, and rewritten when the task is noted
+
+**Kind:** Design
+
+## Context
+
+The brief has fixed sections in order, at most 120 lines before the task's own intent and spec (I-35), and a worker never addresses the captain (I-01).
+Project rules come from the registry: craft rules, the AI scaffolding posture, the ship brief rules, no legacy below 1.0.0 and no SNAPSHOT.
+For a project flagged `craftRules`, the captain's craftsmanship rules ride in the pipeline intent verbatim with the task's acceptance criteria (I-34), and the pipeline takes its intent only as the value of `--intent`.
+The pipeline's reviewer judges a change against that intent alone, so a requirement stated only in the spec, or in a scope note recorded after dispatch, read as scope creep.
+Until the time-booking tool's continuous capture is confirmed, a worker's report ends with a `worked:` line.
+
+## Decision
+
+`claude/worker/brief-template.md` holds every fixed sentence of the brief with named placeholders; `WorkerBriefs` fills them from `BriefFacts`, which `GatherBriefFacts` collects from the task, its worker, the registry entry, the dispatch, the base, the paths and the craft rules, and a line holding only a placeholder that fills in empty is dropped (`BriefTemplate`).
+The task's notes are the captain's intent and the dispatch's `--spec` is the spec; `BriefSections` writes the variable sections: project rules, validation and delivery per kind and delivery mode, the definition of done, and a mechanical task's files and limits.
+A project with `craftRules: true` and no `memory/craft-rules.md` is refused at launch, and the definition of done asks for the `worked:` line only while the machine profile's `time.requireWorkedLine` is true.
+A ship's brief, when the project keeps a decision log, says to record each architecture or design decision in the project's log in its own form, and only those ([decision-log](decision-log.md)).
+`PipelineIntent.of` composes `intent.md` from a `## Captain's intent` section with the notes, a `## Spec` section with the brief's Spec section, and the craft rules block verbatim when the project is flagged; the brief gives the one command that passes it to the pipeline unchanged.
+`WrittenBriefs` writes `brief.md`, and `intent.md` for a `draft-review` ship, at every launch and whenever the task is noted: `NoteTask` calls `RewriteBrief`, which rebuilds the facts for the task's latest worker and rewrites both while the task is in flight.
+`edi brief <task>` prints the brief as it stands, or with `--category` the brief a dispatch would write.
+
+## Why
+
+The wording of the brief can be read and reviewed in one Markdown file, and the code decides only which parts apply.
+The worker no longer assembles the intent by hand, so the rules block cannot be paraphrased or forgotten, and the reviewer judges the change against what the worker was actually asked for.
+Turning the worked line off is one edit of the profile, with no change to the harness.
+
+## Alternatives rejected
+
+- Building the brief in code, or a template language with conditional sections - wording scattered across literals, or a second language for a handful of variants.
+- Passing every steer into the intent - most steers answer a gate and say nothing about scope.
+- An `edi intent` command the worker calls, or rewriting from an event follower - a new endpoint for what one file already does, or an intent that changes after the pipeline started.
+
+## Consequences
+
+- Good: the largest brief stays well within the 120 lines AT-35 counts, and AT-34 reads the very file the worker passes.
+- Bad: a note recorded after a pipeline run started does not reach that run, and the intent travels as one argument, fine for a task's spec but not for fleet-sized data.
+
+## When to revisit
+
+When the pipeline reads its intent from a file or standard input, or lets a running run take a new intent.
+
+## How we got here
+
+- 16/10/2026: slice S3 built the brief from one template; slice S5 had EDI write the pipeline intent with the craft rules verbatim.
+- 17/10/2026: slice S6 made the worked line depend on the machine profile.
+- 22/10/2026: reviewers flagged requirements the spec stated as scope creep, so the intent carries the spec and follows every note (EDI-30).
+- 23/10/2026: the decision-log rule in the brief was limited to architecture and design decisions (EDI-42).
