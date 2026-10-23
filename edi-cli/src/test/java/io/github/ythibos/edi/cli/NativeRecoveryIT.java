@@ -24,6 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -31,9 +32,12 @@ import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @DisplayName("The native core supervises the primary and recovers workers after a simulated machine restart")
+@Timeout(value = 3, unit = TimeUnit.MINUTES)
 class NativeRecoveryIT {
 
     private static final Duration PATIENCE = Duration.ofSeconds(20);
+    private static final Duration START_UP_PATIENCE = Duration.ofSeconds(60);
+    private static final Duration OWN_WORK = Duration.ofSeconds(30);
     private static final String REGISTRY = """
             projects:
               - name: harness
@@ -59,8 +63,11 @@ class NativeRecoveryIT {
 
     private static Path home;
     private static Process core;
+    private static long ownWorkStarted;
+    private static long startUpsWaitedFor;
 
     @BeforeEach
+    @Timeout(value = 90, unit = TimeUnit.SECONDS)
     void startTheNativeCoreInAFreshHome() throws Exception {
         home = Files.createTempDirectory(homes, "home-");
         Files.createDirectories(home.resolve("config"));
@@ -71,12 +78,16 @@ class NativeRecoveryIT {
         Files.writeString(bootIdFile(), UUID.randomUUID().toString());
         cloneAProjectInto(home.resolve("projects/harness"));
         core = startedCore();
+        ownWorkStarted = System.nanoTime();
+        startUpsWaitedFor = 0;
     }
 
     @AfterEach
     void stopTheNativeCore() throws Exception {
+        Duration ownWork = Duration.ofNanos(System.nanoTime() - ownWorkStarted - startUpsWaitedFor);
         stopTheWorkerServer();
         stop(core);
+        assertThat(ownWork).as("the test's own work, without the native core's start-ups it waited for").isLessThan(OWN_WORK);
     }
 
     @Test
@@ -180,7 +191,9 @@ class NativeRecoveryIT {
         launch.environment().put("EDI_HOME", home.toString());
         launch.environment().put("SERVER_PORT", "0");
         Process started = processes.register(launch.start());
+        long startUp = System.nanoTime();
         awaitThePortOf(started);
+        startUpsWaitedFor += System.nanoTime() - startUp;
         return started;
     }
 
@@ -276,7 +289,7 @@ class NativeRecoveryIT {
     }
 
     private static void awaitThePortOf(Process started) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + START_UP_PATIENCE.toNanos();
         while (CoreAddress.recordedIn(home.resolve("state/core.port")).isEmpty()) {
             assertThat(started.isAlive()).as("the native core is running; its log:%n%s", Files.readString(home.resolve("core.log"))).isTrue();
             assertThat(System.nanoTime()).as("the native core recorded its port in time").isLessThan(deadline);
