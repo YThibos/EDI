@@ -14,7 +14,7 @@
 
 ● The task is finished and reported as done.
 
-  There are 48 decision records in docs/decisions, numbered ADR-001 to ADR-048 with no gaps:
+  There are 48 decision records in docs/decisions, each named by its topic:
   - Architecture: 23
   - Design: 25
 

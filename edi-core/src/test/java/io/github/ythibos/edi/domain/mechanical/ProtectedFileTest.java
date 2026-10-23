@@ -14,7 +14,7 @@ class ProtectedFileTest {
 
     @ParameterizedTest
     @CsvSource({
-        "docs/decisions/ADR-007-six-ports.md, DECISION_RECORD",
+        "docs/decisions/ports-and-architecture-rules.md, DECISION_RECORD",
         "docs/adr/0003-use-postgres.md, DECISION_RECORD",
         "src/main/resources/db/migration/V2__workers.sql, MIGRATION",
         "schema/V12_1__add_index.sql, MIGRATION",

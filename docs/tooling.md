@@ -1,12 +1,12 @@
 # Tools EDI drives
 
-EDI is built only from open-source, standard tools, and drives the external programs below as they are; Claude Code is the only proprietary piece ([ADR-029](decisions/ADR-029-open-source-standard-tools.md)).
-Each program is started only from the adapter that owns it ([ADR-009](decisions/ADR-009-architecture-rules-as-tests.md)), and [docs/verification](verification/) records what was verified on each one and on which version.
+EDI is built only from open-source, standard tools, and drives the external programs below as they are; Claude Code is the only proprietary piece ([open-source-tools](decisions/open-source-tools.md)).
+Each program is started only from the adapter that owns it ([ports-and-architecture-rules](decisions/ports-and-architecture-rules.md)), and [docs/verification](verification/) records what was verified on each one and on which version.
 
 | Program | What EDI uses it for | Verified |
 |---|---|---|
 | `git` | clones, isolated copies, branches, hooks and the publish check's view of outgoing commits | - |
-| `tmux` | the primary session, on the captain's default tmux server, and the workers, on EDI's own server `tmux -L edi` ([ADR-013](decisions/ADR-013-interactive-workers-in-tmux.md)) | - |
+| `tmux` | the primary session, on the captain's default tmux server, and the workers, on EDI's own server `tmux -L edi` ([worker-sessions](decisions/worker-sessions.md)) | - |
 | `claude` | Claude Code, for the primary session and every worker | [claude-code.md](verification/claude-code.md) |
 | `gh` | drafts, merges and checks on GitHub, under the project's bound account | [gh.md](verification/gh.md) |
 | `glab` | the same on GitLab | [glab.md](verification/glab.md) |
@@ -20,7 +20,7 @@ The assumptions the rewrite was built on, and how each was verified, are in [ass
 
 ## The forge adapters
 
-The forge adapters run an allow-list of calls ([ADR-079](decisions/ADR-079-the-forge-adapters-run-an-allow-list.md)), and every call for a project runs under the account its registry entry binds ([ADR-080](decisions/ADR-080-forge-calls-run-under-the-bound-account.md)).
+The forge adapters run an allow-list of calls, and every call for a project runs under the account its registry entry binds ([forge-adapters](decisions/forge-adapters.md)).
 
 ## Keeping the tools current
 

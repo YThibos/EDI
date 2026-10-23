@@ -14,7 +14,7 @@ Module sprawl is one of the ways complexity creeps in, the command must stay fre
 EDI builds and runs on Java 25 with GraalVM Community Edition, pinned in `mise.toml` and set as `java.version` in `pom.xml`.
 The `edi` command is always a native executable, and the core is installed as one; development and tests run on the JVM.
 The Maven profile `native` compiles both executables and runs the native tests ([native-smoke-test](native-smoke-test.md)); if a native problem blocks a release, the core may run on the JVM until it is fixed, and the command never falls back.
-`--enable-preview` is passed to the compiler, the tests, the Spring Boot plugin and `native-image`, and a preview feature EDI starts to use gets its own decision record naming its JEP, in the change that first uses it; none is in use yet.
+`--enable-preview` is passed to the compiler, the tests, the Spring Boot plugin and `native-image`, and a preview feature EDI starts to use is recorded here with its JEP, in the change that first uses it; none is in use yet.
 
 There are exactly three Maven modules under one parent POM that inherits `spring-boot-starter-parent` and pins every other plugin:
 
@@ -29,7 +29,7 @@ The Maven group is `io.github.ythibos` and the Java namespace `io.github.ythibos
 
 The only open-source native toolchain is on JDK 25, so one JDK for the JVM build, the tests and the native images is the only combination that works ([open-source-tools](open-source-tools.md)).
 A native command starts in milliseconds, so hooks cost nothing noticeable, while JVM tests keep `./mvnw verify` within minutes.
-Preview on everywhere lets one change adopt a feature without touching the build, and a record per feature is the JDK upgrade checklist.
+Preview on everywhere lets one change adopt a feature without touching the build, and the recorded list of features is the JDK upgrade checklist.
 Three modules keep the boundaries that matter without one module per layer, and warnings as errors and enforced releases turn quality rules into build failures.
 
 ## Alternatives rejected

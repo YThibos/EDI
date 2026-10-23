@@ -13,4 +13,4 @@ Every call against the real instance was read-only; creating, filling, transitio
 | `GET /rest/agile/1.0/board/<id>/sprint?state=active` | Prints `values`, the board's active sprints, each with `id` and `name`. |
 
 The HTTP client goes through the proxy that `https_proxy` names and straight to the hosts `no_proxy` lists, as the JDK does not read those variables itself.
-EDI's adapter is `adapter.tracker.JiraTracker` with `JiraCalls` (ADR-093, ADR-103); `JiraLiveCheckTest`, tagged `live`, repeats the ticket read and the search against the instance an EDI home names in `EDI_LIVE_HOME`, for the ticket in `EDI_LIVE_TICKET`.
+EDI's adapter is `adapter.tracker.JiraTracker` with `JiraCalls` ([trackers-and-time-booking](../decisions/trackers-and-time-booking.md)); `JiraLiveCheckTest`, tagged `live`, repeats the ticket read and the search against the instance an EDI home names in `EDI_LIVE_HOME`, for the ticket in `EDI_LIVE_TICKET`.
