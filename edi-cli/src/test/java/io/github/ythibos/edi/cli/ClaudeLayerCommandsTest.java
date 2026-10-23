@@ -106,6 +106,22 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
+    void showsAndChangesThePersonality() {
+        edi("", "personality");
+        StubCore.Request shown = core.received();
+        edi("", "personality", "humour", "6", "formality", "8");
+        StubCore.Request changed = core.received();
+        edi("", "personality", "plain");
+        StubCore.Request preset = core.received();
+
+        assertThat(shown.method()).isEqualTo("GET");
+        assertThat(shown.target()).isEqualTo("/api/personality");
+        assertThat(changed.target()).isEqualTo("/api/personality");
+        assertThat(changed.body()).isEqualTo("{\"change\":[\"humour\",\"6\",\"formality\",\"8\"]}");
+        assertThat(preset.body()).isEqualTo("{\"change\":[\"plain\"]}");
+    }
+
+    @Test
     void staysUpWhenTheCoreRefusesToStop() {
         core.answering(409, "1 worker is running (fit-lamp#1), so EDI stays up.\n");
 

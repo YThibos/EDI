@@ -7,7 +7,7 @@ EDI's own settings carry hooks and the status line only; the captain's permissio
 
 The primary is the Claude Code session the captain talks to ([ADR-067](decisions/ADR-067-the-captains-session-is-primary.md)).
 `edi up` starts it in the EDI home with [claude/primary/settings.json](../claude/primary/settings.json) and a system prompt the core composes at each start ([ADR-121](decisions/ADR-121-the-primarys-system-prompt-is-composed-at-launch.md)): the anchor [claude/primary/CLAUDE.md](../claude/primary/CLAUDE.md), the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
-The anchor holds the hard rules, the turn end and one line per skill ([ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md)).
+The anchor holds EDI's character, the hard rules, the turn end and one line per skill ([ADR-167](decisions/ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md), [ADR-170](decisions/ADR-170-nine-personality-scales-replace-the-fixed-voice.md)).
 
 ## Hooks
 
@@ -52,5 +52,7 @@ Every command the captain types in the primary, such as `/sitrep` or `/quiet`, i
 | [edi-recover](../claude/skills/edi-recover/SKILL.md) | recovery after workers die or stop on a usage limit |
 | [edi-decision-log](../claude/skills/edi-decision-log/SKILL.md) | decision records on projects that keep a decision log |
 | [stow](../claude/skills/stow/SKILL.md) | curating the captain's memory files within their startup budget |
-| [edi-voice](../claude/skills/edi-voice/SKILL.md) | how EDI speaks to the captain, and translating internal labels into the captain's words |
+| [personality](../claude/skills/personality/SKILL.md) | `/personality`, which shows or changes the personality |
+| [edi-personality](../claude/skills/edi-personality/SKILL.md) | the nine personality scales, the address word, the guard rails, the presets and the demo override |
+| [edi-voice](../claude/skills/edi-voice/SKILL.md) | the register EDI keeps at every personality, and translating internal labels into the captain's words |
 | [update](../claude/skills/update/SKILL.md) | updating EDI itself |

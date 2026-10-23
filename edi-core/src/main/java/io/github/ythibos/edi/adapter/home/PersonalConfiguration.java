@@ -3,18 +3,23 @@ package io.github.ythibos.edi.adapter.home;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.domain.personality.CaptainsPersonality;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
@@ -50,6 +55,16 @@ public class PersonalConfiguration {
         }
     }
 
+    public CaptainsPersonality personality() {
+        return personalityIn(document());
+    }
+
+    public void choose(CaptainsPersonality personality) {
+        String section = sectionWriting(personality);
+        String chosen = ConfigurationFile.contentOf(file).map(written -> choosingIn(written, section, personality)).orElse(section);
+        ConfigurationFile.replace(file, chosen);
+    }
+
     public String contentAddressing(CaptainAddress address) {
         return ConfigurationFile.contentOf(file).orElseGet(() -> addressing(address));
     }
@@ -66,6 +81,77 @@ public class PersonalConfiguration {
         return written == null ? absent : Duration.parse(written.strip());
     }
 
+    private CaptainsPersonality personalityIn(PersonalDocument document) {
+        try {
+            return PersonalitySection.personalityIn(document.personality());
+        } catch (IllegalArgumentException invalid) {
+            throw new InvalidConfiguration(file, invalid.getMessage());
+        }
+    }
+
+    private String sectionWriting(CaptainsPersonality personality) {
+        YAMLMapper writer = ConfigurationYaml.writer();
+        ObjectNode configuration = writer.createObjectNode();
+        configuration.set(PersonalitySection.NAME, PersonalitySection.sectionOf(personality, writer));
+        return writer.writeValueAsString(configuration);
+    }
+
+    private String choosingIn(String written, String section, CaptainsPersonality personality) {
+        return withTheSectionIn(written, section)
+                .filter(edited -> readsAsTheConfigurationChoosing(edited, written, personality))
+                .orElseGet(() -> rendered(written, personality));
+    }
+
+    private static Optional<String> withTheSectionIn(String written, String section) {
+        List<String> lines = new ArrayList<>(written.lines().toList());
+        List<Integer> mentions = IntStream.range(0, lines.size()).filter(line -> lines.get(line).startsWith(PersonalitySection.NAME + ":")).boxed().toList();
+        if (mentions.isEmpty()) {
+            return Optional.of(written + (written.endsWith("\n") ? "" : "\n") + section);
+        }
+        int start = mentions.getFirst();
+        if (mentions.size() > 1 || !lines.get(start).stripTrailing().equals(PersonalitySection.NAME + ":")) {
+            return Optional.empty();
+        }
+        lines.subList(start, endOfTheSection(lines, start)).clear();
+        lines.addAll(start, section.lines().toList());
+        return Optional.of(String.join("\n", lines) + "\n");
+    }
+
+    private static int endOfTheSection(List<String> lines, int start) {
+        int end = start + 1;
+        while (end < lines.size() && (lines.get(end).isBlank() || Character.isWhitespace(lines.get(end).charAt(0)))) {
+            end++;
+        }
+        while (end > start + 1 && lines.get(end - 1).isBlank()) {
+            end--;
+        }
+        return end;
+    }
+
+    private boolean readsAsTheConfigurationChoosing(String edited, String written, CaptainsPersonality personality) {
+        try {
+            return personalityIn(yaml.readValue(edited, PersonalDocument.class)).equals(personality)
+                    && withoutTheSection(edited).equals(withoutTheSection(written));
+        } catch (JacksonException | InvalidConfiguration unreadable) {
+            return false;
+        }
+    }
+
+    private JsonNode withoutTheSection(String content) {
+        JsonNode configuration = yaml.readTree(content);
+        if (configuration instanceof ObjectNode object) {
+            object.remove(PersonalitySection.NAME);
+        }
+        return configuration;
+    }
+
+    private String rendered(String written, CaptainsPersonality personality) {
+        YAMLMapper writer = ConfigurationYaml.writer();
+        ObjectNode configuration = (ObjectNode) yaml.readTree(written);
+        configuration.set(PersonalitySection.NAME, PersonalitySection.sectionOf(personality, writer));
+        return writer.writeValueAsString(configuration);
+    }
+
     private static String addressing(CaptainAddress address) {
         YAMLMapper writer = ConfigurationYaml.writer();
         ObjectNode configuration = writer.createObjectNode();
@@ -74,9 +160,9 @@ public class PersonalConfiguration {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record PersonalDocument(IdentitySection identity, PresenceSection presence) {
+    record PersonalDocument(IdentitySection identity, PresenceSection presence, @JsonProperty(PersonalitySection.NAME) JsonNode personality) {
 
-        static final PersonalDocument EMPTY = new PersonalDocument(null, null);
+        static final PersonalDocument EMPTY = new PersonalDocument(null, null, null);
 
         PersonalDocument {
             identity = Objects.requireNonNullElse(identity, new IdentitySection(null));

@@ -77,7 +77,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-028](ADR-028-security-and-quality-scanners.md) | Security and quality scanners in CI | Architecture |
 | [ADR-029](ADR-029-open-source-standard-tools.md) | Open-source, standard tools only | Architecture |
 | [ADR-030](ADR-030-presence-modes.md) | Presence modes with automatic quiet and demo mode | Design |
-| [ADR-031](ADR-031-address-word-and-voice.md) | A configurable address word and a ship's-intelligence voice | Design |
+| [ADR-031](ADR-031-address-word-and-voice.md) | A configurable address word and a ship's-intelligence voice (superseded by ADR-170) | Design |
 | [ADR-032](ADR-032-publish-guard.md) | The publish guard checks every outgoing commit (superseded by ADR-144) | Architecture |
 | [ADR-033](ADR-033-no-explanatory-comments.md) | No explanatory comments in code | Design |
 | [ADR-034](ADR-034-invariant-catalogue.md) | The invariant catalogue reports pending acceptance tests | Design |
@@ -215,3 +215,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-167](ADR-167-every-command-the-captain-types-is-a-skill-of-its-name.md) | Every command the captain types is a skill of its name, and fifteen skills hold the primary's procedures | Design |
 | [ADR-168](ADR-168-the-pipeline-intent-carries-the-spec-and-follows-the-tasks-notes.md) | The pipeline intent carries the brief's spec and is rewritten whenever the task is noted | Design |
 | [ADR-169](ADR-169-a-core-has-stopped-once-it-lets-go-of-the-home.md) | A core has stopped once it lets go of the home, and edi update starts the new core only then | Design |
+| [ADR-170](ADR-170-nine-personality-scales-replace-the-fixed-voice.md) | Nine personality scales replace the fixed voice, and formality alone governs the address word | Design |
