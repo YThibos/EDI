@@ -143,6 +143,10 @@ public record Worker(
         return activity == WorkerActivity.IDLE;
     }
 
+    public boolean isParkedOn(UsageLimit limit) {
+        return limitPark != null && limitPark.limit().equals(limit);
+    }
+
     public boolean isStillInTheTurnOf(Worker read) {
         return activity == read.activity && activitySince.equals(read.activitySince);
     }

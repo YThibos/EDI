@@ -93,6 +93,9 @@ public class WorkerHooks {
         transaction.executeWithoutResult(_ -> {
             Instant now = clock.now();
             Worker worker = WorkerLookup.serving(workers, id);
+            if (limit.isPresent() && worker.isParkedOn(limit.get())) {
+                return;
+            }
             if (limit.isPresent()) {
                 workers.update(worker.parkedOn(limit.get(), now));
                 events.record(new UsageLimitReached(id.task(), id, limit.get()), Actor.worker(id), now);

@@ -120,6 +120,22 @@ class MissedStopTest {
     }
 
     @Test
+    void recordsALimitOnceWhenItsStopFailureHookArrivesAfterTheRoundParkedTheWorker() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        UsageLimit limit = new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(2)));
+        home.runtime().transcriptEndsOn(limit);
+
+        home.noticeMissedStops().notice();
+        home.clock().advance(Duration.ofSeconds(1));
+        home.workerHooks().stopFailed(lamp.id(), "rate_limit", null);
+
+        assertThat(healthOf(home, lamp)).isEqualTo(new WorkerHealth.LimitParked(limit));
+        assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("UsageLimitReached");
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.USAGE_LIMIT);
+    }
+
+    @Test
     void leavesABusyWorkerWhoseTranscriptShowsNoMissedStopAtWork() throws IOException {
         TestHome home = homeWithAHarness();
         Worker lamp = busyWorker(home);
