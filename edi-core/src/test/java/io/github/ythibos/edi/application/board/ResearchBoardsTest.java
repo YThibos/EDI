@@ -337,6 +337,18 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void tellsTheScoutThatABoardAnswerToAnAlreadyAnsweredDecisionWasRefusedNotRecorded() {
+        Board board = armQuietly(boardFile, decision);
+        answerInChat();
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed(decision + " B")), false));
+
+        assertThat(message(1).body()).doesNotContain("EDI records these as the captain's answers")
+                .endsWith("EDI refused the board answer to %s: %s is already answered: %s A.".formatted(decision, decision, decision));
+        assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
     void settlesABoardAnswerAfterACrashWithoutAnsweringTwice() {
         Board board = armQuietly(boardFile, decision);
         home.boards().save(board.answeredOnceMore().answersIn(new BoardFeedback.Answered(List.of(typed(decision + " B")), false),

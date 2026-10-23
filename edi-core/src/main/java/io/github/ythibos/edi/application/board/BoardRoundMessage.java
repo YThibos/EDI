@@ -22,10 +22,12 @@ final class BoardRoundMessage {
         List<String> lines = new ArrayList<>();
         lines.add("The captain answered on your research board " + board.file() + ", round " + board.rounds() + ".");
         round.prompts().forEach(prompt -> lines.addAll(promptLines(prompt)));
-        if (!answers.isEmpty()) {
-            lines.add("EDI records these as the captain's answers: " + answers.stream().map(BoardRoundMessage::answerWords).collect(Collectors.joining("; "))
+        List<BoardAnswer> recorded = answers.stream().filter(answer -> !answer.isRefused()).toList();
+        if (!recorded.isEmpty()) {
+            lines.add("EDI records these as the captain's answers: " + recorded.stream().map(BoardRoundMessage::answerWords).collect(Collectors.joining("; "))
                     + ".");
         }
+        answers.stream().filter(BoardAnswer::isRefused).forEach(refused -> lines.add(refusalWords(refused)));
         if (round.sessionEnded()) {
             lines.add("The captain ended the board session, so EDI no longer listens to it.");
         }
@@ -60,5 +62,9 @@ final class BoardRoundMessage {
 
     private static String answerWords(BoardAnswer answer) {
         return answer.option() == null ? answer.decision() + " in the captain's words" : answer.decision() + " option " + answer.option();
+    }
+
+    private static String refusalWords(BoardAnswer refused) {
+        return "EDI refused the board answer to " + refused.decision() + ": " + refused.refusedBecause() + ".";
     }
 }

@@ -30,9 +30,13 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     public Decision answered(CaptainAnswer captainsAnswer) {
         if (!isOpen()) {
-            throw new Refusal(number + " is already answered: " + answer.verbatim());
+            throw new Refusal(whyItTakesNoOtherAnswer());
         }
         return new Decision(number, task, card, raisedAt, captainsAnswer);
+    }
+
+    public String whyItTakesNoOtherAnswer() {
+        return number + " is already answered: " + answer.verbatim();
     }
 
     public boolean authorises(CaptainWordAct act) {

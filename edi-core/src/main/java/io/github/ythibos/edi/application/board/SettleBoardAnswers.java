@@ -14,7 +14,6 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.BoardAnswer;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
-import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -57,8 +56,7 @@ public class SettleBoardAnswers {
     }
 
     private boolean wasAlreadyRecorded(BoardAnswer answer) {
-        CaptainAnswer recorded = transaction.execute(_ -> decisions.get(answer.decision()).answer());
-        return recorded != null && recorded.channel() == AnswerChannel.BOARD && recorded.verbatim().equals(answer.verbatim());
+        return answer.repeats(transaction.execute(_ -> decisions.get(answer.decision()).answer()));
     }
 
     private void refusedBecause(BoardAnswer answer, String because) {
