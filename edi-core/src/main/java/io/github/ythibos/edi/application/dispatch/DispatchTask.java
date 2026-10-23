@@ -3,6 +3,7 @@ package io.github.ythibos.edi.application.dispatch;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -175,13 +176,19 @@ public class DispatchTask {
         return new ExpectedChange(spec, files);
     }
 
-    private static BranchName branchFor(Task task, ProjectEntry project, DispatchCategory category) {
+    private BranchName branchFor(Task task, ProjectEntry project, DispatchCategory category) {
+        BranchKind kind = branchKindFor(task, project, category);
+        WorkKey key = requireWorkKey(task);
+        return BranchName.forWorkBeside(kind, key, branchesOfOtherTasksOn(key));
+    }
+
+    private static BranchKind branchKindFor(Task task, ProjectEntry project, DispatchCategory category) {
         BranchKind kind = task.intake().kind() == TaskKind.SCOUT ? BranchKind.RESEARCH : category.branch();
         if (!project.branchKinds().contains(kind)) {
             throw new Refusal(project.project().name() + " takes no " + kind.word() + " branches; its registry entry allows "
                     + project.branchKinds().stream().map(BranchKind::word).sorted().toList() + ".");
         }
-        return BranchName.forWork(kind, requireWorkKey(task));
+        return kind;
     }
 
     private static WorkKey requireWorkKey(Task task) {
@@ -190,6 +197,10 @@ public class DispatchTask {
             throw new Refusal(task.id() + " has no work key, and a branch carries one; give the task its key first.");
         }
         return key;
+    }
+
+    private List<BranchName> branchesOfOtherTasksOn(WorkKey key) {
+        return Stream.concat(dispatches.branchesOfTasksKeyedOn(key).stream(), adoptions.branchesOfTasksKeyedOn(key).stream()).toList();
     }
 
     private DispatchOutcome carriedOut(Dispatching dispatching, Actor actor) {

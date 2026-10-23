@@ -84,6 +84,13 @@ public class DispatchStore {
                 .list());
     }
 
+    public List<BranchName> branchesOfTasksKeyedOn(WorkKey key) {
+        return store.sql("select dispatch.branch from dispatch join task on task.id = dispatch.task_id where task.work_key = :key")
+                .param("key", key.toString())
+                .query((row, _) -> BranchName.parse(row.getString(1)))
+                .list();
+    }
+
     public List<Dispatch> deferred() {
         return dispatches(store.sql(SELECT_DISPATCHES + "where deferred_at is not null order by deferred_at, rowid"));
     }

@@ -23,7 +23,7 @@ description: >-
 3. A bugfix with an unknown cause is research first: `--cause-unknown`.
 4. Review the brief with `edi brief <task> --category <id> --spec -` when it matters, then run `edi dispatch <task> --category <id> --spec -`.
 5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; effort is never above high.
-6. EDI makes the isolated copy on the keyed branch from the fresh origin base, writes the brief and launches the worker.
+6. EDI makes the isolated copy on the keyed branch from the fresh origin base, writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
 
 ## Supervision
 
