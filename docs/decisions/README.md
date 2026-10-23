@@ -190,7 +190,7 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-141](ADR-141-adopting-an-open-task-registers-its-copy-and-moves-it-when-free.md) | Adopting an open task registers its copy in place and moves it under EDI's worktrees once nothing works there | Design |
 | [ADR-142](ADR-142-the-install-builds-with-the-toolchain-the-checkout-pins.md) | The install builds with the toolchain the checkout pins, and refuses when it is not installed | Design |
 | [ADR-144](ADR-144-a-project-may-publish-its-own-forge-and-tracker-names.md) | The publish guard checks every outgoing commit, and a project may publish its own forge and tracker names | Architecture |
-| [ADR-145](ADR-145-at-38-starts-the-workers-pushes-before-edi-delivers.md) | AT-38 starts the worker's pushes before EDI delivers, and the hook's guard runs on a quick-starting JVM | Design |
+| [ADR-145](ADR-145-at-38-starts-the-workers-pushes-before-edi-delivers.md) | AT-38 starts the worker's pushes before EDI delivers, and the hook's guard runs on a quick-starting JVM (superseded by ADR-175) | Design |
 | [ADR-146](ADR-146-tests-run-git-without-the-developers-git-configuration.md) | Tests run git without the developer's own git configuration | Design |
 | [ADR-147](ADR-147-a-fixture-repositorys-git-runs-no-background-maintenance.md) | A fixture repository's git runs no background maintenance | Design |
 | [ADR-148](ADR-148-the-old-home-is-compared-entry-by-entry.md) | AT-41 and AT-47 compare every entry of the old home but its access times, and name each one that changed | Design |
@@ -219,3 +219,4 @@ The kind of a record is `Architecture` when undoing it would reshape boundaries,
 | [ADR-171](ADR-171-a-full-context-starts-afresh-in-its-copy-with-a-handover.md) | A worker whose context is full starts afresh in its own copy, briefed with a handover | Design |
 | [ADR-172](ADR-172-a-native-recovery-test-waits-for-the-cores-start-ups-apart.md) | A native recovery test keeps thirty seconds for its own work and waits for the core's start-ups apart | Design |
 | [ADR-174](ADR-174-a-test-homes-store-commits-without-waiting-for-the-disk.md) | A test home's store commits without waiting for the disk | Design |
+| [ADR-175](ADR-175-at-38-checks-each-kind-of-leak-in-a-case-of-its-own.md) | AT-38 checks each kind of leak in a case of its own, and each case starts its push before EDI delivers | Design |

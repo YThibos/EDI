@@ -2,7 +2,7 @@
 
 **Date:** 19/10/2026
 
-**Status:** Accepted
+**Status:** Superseded by ADR-175
 
 **Kind:** Design
 
