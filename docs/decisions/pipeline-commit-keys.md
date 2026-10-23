@@ -13,10 +13,11 @@ EDI already writes the pipeline's agent route into the same file at every launch
 ## Decision
 
 When `LaunchWorker` launches a worker whose brief delivers through the pipeline (`BriefFacts.deliversThroughThePipeline`, a `draft-review` ship), it reads the project clone's `origin` fetch URL and, when the project's registered forge serves it (`IsolatedCopies.forgeRemoteOf`, `RegisteredForge.isServedAt`), hands it to the `Pipeline` port's `keyCommitsPushedTo`.
-`NoMistakesPipeline.keyCommitsPushedTo` has `CommitKeys` write one `repository_overrides` entry under that exact URL: `commit.branch_pattern` from `BranchName.workKeyCapture`, `commit.fix_message` `{{.Branch}} {{.Summary}}` and `pr.title_format` `{{.Branch}} {{.Title}}`.
+`NoMistakesPipeline.keyCommitsPushedTo` has `CommitKeys` set three fields in the `repository_overrides` entry under that exact URL: `commit.branch_pattern` from `BranchName.workKeyCapture`, `commit.fix_message` `{{.Branch}} {{.Summary}}` and `pr.title_format` `{{.Branch}} {{.Title}}`.
+It removes `commit.branch_replacement` from that entry, because a replacement would rewrite the work key the capture group finds.
 The entry is keyed by the clone's own remote URL because the pipeline matches overrides against the remote it recorded for the repository, and outside a few public hosts a `.git` suffix or a different spelling is a different key.
-`CommitKeys` first drops every entry whose remote names the same repository (`RemoteAddress.isTheSameRepositoryAs`), because two spellings that the pipeline normalises to one key make it refuse the whole configuration, and keeps every other repository's entry.
-EDI owns the entry of each repository it launches work on, so a hand edit to it lasts only until the next launch, and a repository's own `.no-mistakes.yaml` still wins over it.
+`CommitKeys` first merges every entry whose remote names the same repository (`RemoteAddress.isTheSameRepositoryAs`) into the one under the exact URL and drops the other spellings' keys, because two spellings that the pipeline normalises to one key make it refuse the whole configuration, and keeps every other repository's entry.
+EDI owns those three fields of each repository it launches work on, so a hand edit to them lasts only until the next launch; every other field of the entry, such as its commands or ignore patterns, stays as the captain wrote it, and a repository's own `.no-mistakes.yaml` still wins over it.
 `PipelineConfiguration` carries the rules both writers share: it rewrites only one top-level entry, keeps every other line of the file, comments included, replaces the file atomically with its permissions, writes nothing when the entry already holds, never creates the file, and refuses the launch, naming the file, when it cannot read or replace it.
 The pipeline intent ends its task sections with `## Commits`, which tells the pipeline's agents that the key is put in front of every commit subject and the title, so a summary or a title they write is one short line without it (`PipelineIntent.of`).
 
@@ -41,6 +42,7 @@ The branch pattern comes from the same domain type that names the branches, so a
 - Bad: EDI writes a second entry into another tool's configuration, so a change to `repository_overrides` on a later no-mistakes version needs `CommitKeys` to follow.
 - Bad: a fix the pipeline makes on a branch without a key fails safely instead of committing, which matters only for work the captain runs through the pipeline by hand on such a branch.
 - Bad: the intent can only ask the fix agent for a short summary; a summary that still repeats the key reaches the subject.
+- Bad: whenever the `repository_overrides` block changes, EDI re-serialises the whole block, so a comment inside it is dropped, including one in another repository's entry.
 
 ## When to revisit
 
@@ -49,3 +51,4 @@ When no-mistakes takes a commit or title format per run, or keys its commits fro
 ## How we got here
 
 - 23/10/2026: a shadow run's fixes were committed as `no-mistakes(test): ...` and `no-mistakes(document): ...`, and earlier subjects on main repeated the key or held a whole report; the captain chose to have EDI write a repository override at every draft-review launch, alongside the pipeline's agent route, and to add the commits line to the intent (EDI-21).
+- 23/10/2026: a review found that replacing the whole entry deleted the captain's other per-repository settings; the captain chose to have EDI set only its three fields, remove `commit.branch_replacement`, and merge the other spellings' entries under the exact URL (EDI-21).

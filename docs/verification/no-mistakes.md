@@ -54,7 +54,7 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from the documented global and repos
 | Which remote does an override match? | The remote the pipeline recorded for the repository, which on the machine inspected was the clone's `origin` URL as written; `github.com`, `gitlab.com` and `bitbucket.org` paths match without case or `.git`, every other host keeps both, and two entries that normalise to one remote make the whole configuration invalid. |
 | What happens on a branch the pattern does not match? | Rendering fails with `commit.branch_pattern did not find an identifier in branch`, so no unkeyed commit is made. |
 | Does the entry EDI writes load and render? | Yes. The configuration package loaded the file, kept the agent route, and rendered `JUSTMD-50 Cover the empty basket` and `JUSTMD-50 Show the basket` for a GitLab remote written `git@host:group/repo.git`, `EDI-21 ...` for a follow-up branch on a GitHub remote, and the default `no-mistakes(test): ...` for a remote EDI had not written. |
-| Consequence for EDI | EDI writes the repository's entry at every draft-review launch ([pipeline-commit-keys](../decisions/pipeline-commit-keys.md)). |
+| Consequence for EDI | EDI sets the commit and title keys in the repository's entry at every draft-review launch ([pipeline-commit-keys](../decisions/pipeline-commit-keys.md)). |
 
 ## Account binding
 

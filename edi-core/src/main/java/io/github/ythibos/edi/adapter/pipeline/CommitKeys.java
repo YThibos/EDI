@@ -1,9 +1,11 @@
 package io.github.ythibos.edi.adapter.pipeline;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.RemoteAddress;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 final class CommitKeys {
@@ -11,6 +13,7 @@ final class CommitKeys {
     private static final String REPOSITORY_OVERRIDES = "repository_overrides";
     private static final String COMMIT = "commit";
     private static final String BRANCH_PATTERN = "branch_pattern";
+    private static final String BRANCH_REPLACEMENT = "branch_replacement";
     private static final String FIX_MESSAGE = "fix_message";
     private static final String KEYED_FIX_MESSAGE = "{{.Branch}} {{.Summary}}";
     private static final String PULL_REQUEST = "pr";
@@ -22,21 +25,49 @@ final class CommitKeys {
 
     static void keyCommitsPushedTo(Path globalConfiguration, String remoteUrl) {
         PipelineConfiguration.changeEntry(globalConfiguration, REPOSITORY_OVERRIDES, overrides -> {
-            dropTheEntriesFor(overrides, remoteUrl);
-            keyTheCommitsIn(overrides.putObject(remoteUrl));
+            ObjectNode override = takeTheEntriesFor(overrides, remoteUrl);
+            keyTheCommitsIn(override);
+            overrides.set(remoteUrl, override);
         });
     }
 
-    private static void dropTheEntriesFor(ObjectNode overrides, String remoteUrl) {
-        RemoteAddress.of(remoteUrl).ifPresent(repository -> overrides.remove(overrides.propertyNames().stream()
-                .filter(remote -> RemoteAddress.of(remote).filter(repository::isTheSameRepositoryAs).isPresent())
-                .toList()));
+    private static ObjectNode takeTheEntriesFor(ObjectNode overrides, String remoteUrl) {
+        ObjectNode override = overrides.objectNode();
+        remotesOfTheRepository(overrides, remoteUrl).forEach(remote -> mergeInto(override, overrides.remove(remote)));
+        return override;
+    }
+
+    private static List<String> remotesOfTheRepository(ObjectNode overrides, String remoteUrl) {
+        return overrides.propertyNames().stream()
+                .filter(remote -> remote.equals(remoteUrl) || namesTheSameRepository(remote, remoteUrl))
+                .toList();
+    }
+
+    private static boolean namesTheSameRepository(String remote, String remoteUrl) {
+        return RemoteAddress.of(remote)
+                .flatMap(address -> RemoteAddress.of(remoteUrl).filter(address::isTheSameRepositoryAs))
+                .isPresent();
+    }
+
+    private static void mergeInto(ObjectNode merged, JsonNode entry) {
+        entry.properties().forEach(field -> {
+            if (merged.get(field.getKey()) instanceof ObjectNode existing && field.getValue().isObject()) {
+                mergeInto(existing, field.getValue());
+            } else {
+                merged.set(field.getKey(), field.getValue().deepCopy());
+            }
+        });
     }
 
     private static void keyTheCommitsIn(ObjectNode override) {
-        override.putObject(COMMIT)
+        ObjectNode commit = fieldsOf(override, COMMIT)
                 .put(BRANCH_PATTERN, BranchName.workKeyCapture().pattern())
                 .put(FIX_MESSAGE, KEYED_FIX_MESSAGE);
-        override.putObject(PULL_REQUEST).put(TITLE_FORMAT, KEYED_TITLE);
+        commit.remove(BRANCH_REPLACEMENT);
+        fieldsOf(override, PULL_REQUEST).put(TITLE_FORMAT, KEYED_TITLE);
+    }
+
+    private static ObjectNode fieldsOf(ObjectNode override, String name) {
+        return override.get(name) instanceof ObjectNode fields ? fields : override.putObject(name);
     }
 }

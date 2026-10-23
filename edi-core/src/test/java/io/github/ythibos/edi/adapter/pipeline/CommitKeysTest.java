@@ -56,7 +56,7 @@ class CommitKeysTest {
     }
 
     @Test
-    void replacesTheRepositorysEntryUnderAnySpellingOfItsRemoteAndKeepsEveryOtherRepository() throws IOException {
+    void keysTheRepositorysEntryUnderAnySpellingOfItsRemoteAndKeepsEveryOtherRepository() throws IOException {
         Path configuration = written(OTHER_SETTINGS + """
 
                 # Set by hand until EDI owned it.
@@ -72,7 +72,82 @@ class CommitKeysTest {
 
                 # Set by hand until EDI owned it.
                 repository_overrides:
-                """ + OTHER_REPOSITORY + KEYED_HARNESS + "\n" + PROVIDERS);
+                """ + OTHER_REPOSITORY + """
+                  git@forge.example.org:example-owner/harness.git:
+                    commit:
+                      fix_message: "{{.Branch}} {{.Summary}}"
+                      branch_pattern: "^(?:feature|chore|research)/([A-Z][A-Z0-9]*-[0-9]+)(?:-[0-9]+)?$"
+                    pr:
+                      title_format: "{{.Branch}} {{.Title}}"
+
+                """ + PROVIDERS);
+    }
+
+    @Test
+    void keepsTheOtherFieldsOfTheRepositorysEntryAndRemovesItsBranchReplacement() throws IOException {
+        Path configuration = written(OTHER_SETTINGS + """
+                repository_overrides:
+                  git@forge.example.org:example-owner/harness.git:
+                    commands:
+                      test: make check
+                    commit:
+                      branch_replacement: "HRN-$1"
+                      fix_message: "HRN {{.Summary}}"
+                      sign: true
+                    pr:
+                      draft: false
+                    ignore_patterns:
+                      - generated/**
+                """);
+
+        CommitKeys.keyCommitsPushedTo(configuration, HARNESS);
+
+        assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + """
+                repository_overrides:
+                  git@forge.example.org:example-owner/harness.git:
+                    commands:
+                      test: make check
+                    commit:
+                      fix_message: "{{.Branch}} {{.Summary}}"
+                      sign: true
+                      branch_pattern: "^(?:feature|chore|research)/([A-Z][A-Z0-9]*-[0-9]+)(?:-[0-9]+)?$"
+                    pr:
+                      draft: false
+                      title_format: "{{.Branch}} {{.Title}}"
+                    ignore_patterns:
+                      - generated/**
+                """);
+    }
+
+    @Test
+    void mergesTheFieldsOfADifferentlySpelledEntryForTheRepositoryUnderItsExactRemote() throws IOException {
+        Path configuration = written(OTHER_SETTINGS + """
+                repository_overrides:
+                  ssh://git@Forge.Example.org/example-owner/Harness:
+                    commands:
+                      test: make check
+                    pr:
+                      draft: false
+                """ + OTHER_REPOSITORY + """
+                  git@forge.example.org:example-owner/harness.git:
+                    commands:
+                      lint: make lint
+                """);
+
+        CommitKeys.keyCommitsPushedTo(configuration, HARNESS);
+
+        assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + "repository_overrides:\n" + OTHER_REPOSITORY + """
+                  git@forge.example.org:example-owner/harness.git:
+                    commands:
+                      test: make check
+                      lint: make lint
+                    pr:
+                      draft: false
+                      title_format: "{{.Branch}} {{.Title}}"
+                    commit:
+                      branch_pattern: "^(?:feature|chore|research)/([A-Z][A-Z0-9]*-[0-9]+)(?:-[0-9]+)?$"
+                      fix_message: "{{.Branch}} {{.Summary}}"
+                """);
     }
 
     @Test
