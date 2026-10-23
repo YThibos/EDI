@@ -18,7 +18,8 @@ How a task gets its key at intake, from either kind of tracker, is in [trackers-
 `BranchName` holds a `BranchKind` and a `WorkKey` and cannot be built without a key; `BranchName.parse` refuses `fm/` and `edi/` by name and every other shape that is not kind, slash, key and an optional follow-up number.
 A dispatch builds the branch once: a scout on `research/<KEY>-<n>`, a ship on the kind its dispatch category names, which the project's `branchKinds` must allow ([dispatch-routing](dispatch-routing.md)).
 When another task on the key was dispatched or adopted on a branch of that kind (`DispatchStore.branchesOfTasksKeyedOn`, `AdoptionStore.branchesOfTasksKeyedOn`), `BranchName.forWorkBeside` numbers the new branch one above the highest follow-up among them, so the second task gets `<kind>/<KEY>-<n>-1`; a closed task's branch counts too, so no number is ever given twice.
-Dispatches are numbered one at a time, and each records its branch before its copy is made, so a launch that fails still holds its number.
+`DispatchTask.dispatch` is serialised, so no two dispatches choose a follow-up number at the same time.
+A dispatch reserves its branch on its dispatch record before the launch makes its copy, so a launch that fails still holds its number.
 The branch is recorded on the task's dispatch and reused by every later launch, and a task without a key is refused at dispatch.
 
 ## Why
