@@ -89,6 +89,7 @@ class NativeSmokeIT {
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
                 "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
+                "--edi.pipeline.home=" + pipelineHome(),
                 "--edi.console.browser=" + stubBrowser(),
                 "--edi.console.windows-directory=" + home)
                 .redirectErrorStream(true)
@@ -306,6 +307,8 @@ class NativeSmokeIT {
         CommandRun acknowledged = awaitOutput(List.of("task", "show", "native-worker"), "steer acknowledged");
 
         assertThat(dispatched.output()).startsWith("Dispatched native-worker to native-worker#1 (implementation, claude-sonnet-5-5 at high) on feature/HRN-7");
+        assertThat(home.resolve("no-mistakes/config.yaml")).content()
+                .isEqualTo("agent: auto\n\nagent_args_override:\n  claude:\n    - --model\n    - claude-opus-5-5\n    - --effort\n    - high\n");
         assertThat(done.output()).contains("native-worker#1", "done: the stub worker finished");
         assertThat(gitOutput(worktree, "log", "--format=%s", "-1")).isEqualTo("HRN-7 Add the stub file\n");
         assertThat(steered.output()).isEqualTo("Message 1 waits for native-worker#1; its idle prompt was told to run edi inbox.\n");
@@ -357,6 +360,12 @@ class NativeSmokeIT {
 
         assertThat(backlog.keptToTheLimit()).as(backlog.summary()).isFalse();
         assertThat(backlog.metTheBudget()).as(backlog.summary()).isTrue();
+    }
+
+    private static Path pipelineHome() throws IOException {
+        Path pipelineHome = Files.createDirectories(home.resolve("no-mistakes"));
+        Files.writeString(pipelineHome.resolve("config.yaml"), "agent: auto\n");
+        return pipelineHome;
     }
 
     private static String stubBrowser() throws IOException {

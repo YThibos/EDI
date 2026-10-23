@@ -28,6 +28,18 @@ The state database is `state.sqlite` in the pipeline's home.
 `agent_invocations` holds one row per agent call with `run_id`, `step_name`, `round`, `exit_status`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens` and the per-round deltas `delta_input_tokens`, `delta_output_tokens` and `delta_cache_read_tokens`; failed rounds have rows of their own.
 On the runs inspected, every delta equalled its total, because each round started a fresh agent session.
 
+## Agent route
+
+Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented global configuration and the running daemon's agent processes.
+
+| Question | Result on 1.84.0 |
+|---|---|
+| How is the Claude Code agent given a model and an effort? | Only through `agent_args_override.claude` in the global `config.yaml`, a list of extra command-line words; the key is global-only, so a repository's `.no-mistakes.yaml` cannot set it. |
+| Do `axi run --model` and `--effort` reach Claude Code? | No. They pin a profile for the Pi agent only, and conflict with native selection flags. |
+| What does the agent run on without the key? | `claude -p` starts with no `--model` and no `--effort`, so it runs at the harness's global defaults. |
+| Does an edit reach a run that has already started? | No. Two runs started before the key was edited went on starting agents without the new words after the edit. |
+| Consequence for EDI | EDI writes `agent_args_override.claude` from the dispatch rules' `pipeline` entry at every worker launch (ADR-175). |
+
 ## Account binding
 
 | Question | Result on 1.84.0 |

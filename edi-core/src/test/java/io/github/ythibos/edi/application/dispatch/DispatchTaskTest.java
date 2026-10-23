@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -61,6 +62,21 @@ class DispatchTaskTest {
         assertThat(Files.readString(home.home().root().resolve("data/tasks/fit-lamp/brief.md"))).contains("# Brief: fit-lamp", "feature/HRN-3");
         assertThat(home.tasks().get(new TaskId("fit-lamp")).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).containsExactly("TaskDispatched");
+    }
+
+    @Test
+    void runsThePipelinesAgentOnTheRouteTheRulesGiveItAtEveryLaunch() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        dispatch("fit-lamp", "implementation");
+        assertThat(home.pipeline().agentRoute()).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
+
+        home.runtime().closeEveryWindow();
+        home.writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json")
+                .replace("\"pipeline\": {\n    \"use\": { \"model\": \"claude-opus-5-5\", \"effort\": \"high\" }",
+                        "\"pipeline\": {\n    \"use\": { \"model\": \"claude-sonnet-5-5\", \"effort\": \"medium\" }"));
+        dispatch("fit-lamp", null);
+
+        assertThat(home.pipeline().agentRoute()).isEqualTo(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.MEDIUM));
     }
 
     @Test

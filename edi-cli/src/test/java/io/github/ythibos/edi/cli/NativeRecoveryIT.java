@@ -179,6 +179,7 @@ class NativeRecoveryIT {
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
                 "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
+                "--edi.pipeline.home=" + home.resolve("no-mistakes"),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
                 "--edi.console.windows-directory=" + home));

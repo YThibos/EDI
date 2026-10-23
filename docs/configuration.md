@@ -47,6 +47,8 @@ A project's entry names:
 ## The dispatch rules
 
 `config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([ADR-025](decisions/ADR-025-dispatch-categories.md), [ADR-050](decisions/ADR-050-dispatch-rules-read-and-routed.md)).
+A project override's `categories` names the categories it covers, and a task of any other category routes by its category; an override without `categories` covers every category ([ADR-174](decisions/ADR-174-a-project-override-names-the-categories-it-covers.md)).
+The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([ADR-175](decisions/ADR-175-the-pipelines-agent-runs-on-the-route-the-dispatch-rules-give-it.md)).
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).
 
 ## The personal configuration
