@@ -1,6 +1,6 @@
 # Delivery
 
-EDI never merges: every change reaches the captain as a draft the captain merges, or in the captain's own checkout on request ([delivery](decisions/delivery.md)).
+EDI never merges: every change reaches the captain as a draft the captain merges, or in the captain's own checkout on request, and an operation with nothing to commit is delivered by its report ([delivery](decisions/delivery.md)).
 
 ## Delivery modes
 
