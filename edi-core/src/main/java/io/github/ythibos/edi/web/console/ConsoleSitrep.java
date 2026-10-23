@@ -55,7 +55,7 @@ public record ConsoleSitrep(
             Instant answeredAt) {
     }
 
-    public record Ongoing(String task, String title, String kind, List<String> projects, String state, String doing, String draft) {
+    public record Ongoing(String task, String key, String title, String kind, List<String> projects, String state, String doing, String draft) {
     }
 
     public record Landed(String task, String title, String kind, List<String> projects, Instant landedAt, String draft) {

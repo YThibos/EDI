@@ -11,12 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.home.HomeSetup;
-import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.memory.MemoryQuery;
+import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
@@ -35,12 +35,12 @@ public class SessionStartDigestQuery {
     private final PresenceQuery presence;
     private final MemoryQuery memory;
     private final HomeSetup home;
-    private final PersonalConfiguration personal;
+    private final PersonalityQuery personality;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public SessionStartDigestQuery(PrimarySessions roles, PrimarySessionStore sessions, FleetSnapshotQuery fleet, WorkerListQuery workers,
-            OutageStore outages, WakeStore wakes, PresenceQuery presence, MemoryQuery memory, HomeSetup home, PersonalConfiguration personal,
+            OutageStore outages, WakeStore wakes, PresenceQuery presence, MemoryQuery memory, HomeSetup home, PersonalityQuery personality,
             Clock clock, TransactionTemplate transaction) {
         this.roles = roles;
         this.sessions = sessions;
@@ -51,13 +51,13 @@ public class SessionStartDigestQuery {
         this.presence = presence;
         this.memory = memory;
         this.home = home;
-        this.personal = personal;
+        this.personality = personality;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public SessionStartDigest digestFor(UUID session) {
-        return new SessionStartDigest(roles.standingOf(session), personal.address(), transaction.execute(_ -> limitStopToTell(session)),
+        return new SessionStartDigest(roles.standingOf(session), personality.current(), transaction.execute(_ -> limitStopToTell(session)),
                 fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()), transaction.execute(_ -> wakes.unacknowledged().size()),
                 presence.current(), memory.check(), WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), clock.zone())),
                 home.missing(), null);

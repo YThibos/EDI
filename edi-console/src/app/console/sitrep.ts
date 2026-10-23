@@ -73,6 +73,7 @@ export interface AnsweredDecision {
 
 export interface OngoingTask {
   task: string;
+  key: string | null;
   title: string;
   kind: string;
   projects: string[];

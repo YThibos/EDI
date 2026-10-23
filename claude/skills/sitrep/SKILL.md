@@ -14,11 +14,11 @@ The situation report is read-only: it never dispatches, steers, answers, cleans 
 
 1. If this turn changed EDI's state, the turn's single report is `edi report --turn -` with the turn's items on standard input; use that instead of a second report.
 2. Otherwise run `edi sitrep`.
-3. Answer with one plain line to the captain, using the address word, then the output verbatim in one fenced block.
+3. Answer with one plain line to the captain, then the output verbatim in one fenced block.
 
 ## `/sitrep board`
 
-1. Run `edi sitrep --board`: it prints the same report, opens the console's sitrep page in the captain's browser and prints its address.
+1. Run `edi sitrep --board`: it prints the same report, opens the console's sitrep page in the captain's browser and prints its address; in a session's opening turn it names the page the session's start opened instead of opening another.
 2. Answer with one plain line, the report verbatim in one fenced block, then the page's address on its own line.
 3. If the page could not be opened, say so and give the sign-in address it printed.
 

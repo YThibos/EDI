@@ -77,6 +77,7 @@ In the primary session the captain also types these commands, each a skill of th
 /afk <words>               away, with EDI carrying on within the mandate the words give
 /demo [off]                hold present through automatic and calendar quiet for a demo; off ends it
 /stow                      curate the captain's memory within its startup budget
+/personality [settings]    show the personality EDI speaks with, or change it to a preset or new levels
 /update                    update EDI itself
 ```
 
@@ -105,7 +106,7 @@ mkdir -p ~/.edi && cp -r --update=none examples/edi-home/. ~/.edi/
 - `config/dispatch-rules.json`, the dispatch rules: the categories of work, with the model and effort each runs on, and the project overrides.
 - `memory/`, the captain's memory (`profile.md`, `machine.md`, `learnings.md`) loaded into the primary at every start, its cold tier `archive.md`, never loaded, and the craftsmanship rules (`craft-rules.md`).
 - `config/publish-denylist`, the publish deny-list, which the example leaves out: terms that must never leave the machine in a commit, one per line.
-- `config/personal.yaml`, the word EDI addresses the captain by and the presence settings.
+- `config/personal.yaml`, the word EDI addresses the captain by, the personality EDI speaks with and the presence settings.
 
 Then add the allow rule `Bash(edi *)` to the captain's own Claude Code settings; EDI's settings carry hooks and the status line only.
 The primary's first session lists any file the home still lacks.

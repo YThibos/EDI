@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.access.ConsoleAccess;
-import io.github.ythibos.edi.application.access.OpenConsole;
 import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
+import io.github.ythibos.edi.application.primary.OpenTheConsoleOnRequest;
 import io.github.ythibos.edi.web.access.Caller;
 import io.github.ythibos.edi.web.access.ConsoleSessionCookie;
 
@@ -22,10 +22,10 @@ class ConsoleController {
     private static final String SIGN_IN_REFUSED = "This sign-in link was used already or has expired; run edi console for a new one.\n";
     private static final String HEADER_MISSING = "Signing in to the console carries the console's own header, " + ConsoleSessionCookie.HEADER + ".\n";
 
-    private final OpenConsole openConsole;
+    private final OpenTheConsoleOnRequest openConsole;
     private final ConsoleAccess access;
 
-    ConsoleController(OpenConsole openConsole, ConsoleAccess access) {
+    ConsoleController(OpenTheConsoleOnRequest openConsole, ConsoleAccess access) {
         this.openConsole = openConsole;
         this.access = access;
     }
@@ -33,7 +33,7 @@ class ConsoleController {
     @PostMapping("/api/console/open")
     ConsoleOpening open(HttpServletRequest request, Caller caller) {
         caller.requireTheHomeToken("edi console");
-        return openConsole.open(ConsoleAddress.servedTo(request));
+        return openConsole.openFor(caller.claudeSession(), ConsoleAddress.servedTo(request));
     }
 
     @PostMapping("/api/console/session")

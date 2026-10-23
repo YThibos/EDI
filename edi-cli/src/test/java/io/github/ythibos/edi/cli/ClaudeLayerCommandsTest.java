@@ -106,6 +106,22 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
+    void showsAndChangesThePersonality() {
+        edi("", "personality");
+        StubCore.Request shown = core.received();
+        edi("", "personality", "humour", "6", "formality", "8");
+        StubCore.Request changed = core.received();
+        edi("", "personality", "plain");
+        StubCore.Request preset = core.received();
+
+        assertThat(shown.method()).isEqualTo("GET");
+        assertThat(shown.target()).isEqualTo("/api/personality");
+        assertThat(changed.target()).isEqualTo("/api/personality");
+        assertThat(changed.body()).isEqualTo("{\"change\":[\"humour\",\"6\",\"formality\",\"8\"]}");
+        assertThat(preset.body()).isEqualTo("{\"change\":[\"plain\"]}");
+    }
+
+    @Test
     void staysUpWhenTheCoreRefusesToStop() {
         core.answering(409, "1 worker is running (fit-lamp#1), so EDI stays up.\n");
 
@@ -118,7 +134,7 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
-    void readsHowToLaunchThePrimary() {
+    void launchesThePrimaryWithTheCaptainsOpeningPrompt() {
         PrimaryLaunch launch = PrimaryLaunch.read("""
                 session: edi-261017-0930
                 directory: /home/example/.edi
@@ -128,7 +144,7 @@ class ClaudeLayerCommandsTest {
 
         assertThat(launch.session()).isEqualTo("edi-261017-0930");
         assertThat(launch.claude()).containsExactly("claude", "--settings", "/home/example/.edi/state/primary/settings.json",
-                "--append-system-prompt-file", "/home/example/.edi/state/primary/system-prompt.md");
+                "--append-system-prompt-file", "/home/example/.edi/state/primary/system-prompt.md", "--", "Hello EDI, SITREP board, please.");
     }
 
     @Test

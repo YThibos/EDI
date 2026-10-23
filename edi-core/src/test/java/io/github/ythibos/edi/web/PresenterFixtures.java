@@ -22,6 +22,7 @@ import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
 import io.github.ythibos.edi.web.decision.DecisionLines;
+import io.github.ythibos.edi.web.personality.PersonalityText;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
@@ -58,7 +59,7 @@ public final class PresenterFixtures {
     }
 
     public static SessionStartDigestText sessionStartDigestText() {
-        return new SessionStartDigestText(workerListText(), presenceWords(), healthWords(), moments());
+        return new SessionStartDigestText(workerListText(), new PersonalityText(), presenceWords(), healthWords(), moments());
     }
 
     public static CaptainReportPresenter captainReportPresenter() {

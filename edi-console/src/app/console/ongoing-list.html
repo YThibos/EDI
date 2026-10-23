@@ -3,7 +3,12 @@
     @for (ongoing of tasks(); track ongoing.task) {
       <div class="sr-row">
         <div class="sr-row__main">
-          <div class="sr-row__title">{{ ongoing.title }}</div>
+          <div class="sr-row__title">
+            @if (ongoing.key; as key) {
+              <span class="sr-row__key">{{ key }}</span>
+            }
+            {{ ongoing.title }}
+          </div>
           <div class="sr-row__sub">{{ ongoing.doing }} · {{ ongoing.kind }} · {{ projectsOf(ongoing.projects, ongoing.task) }}</div>
         </div>
         @if (ongoing.draft; as draft) {

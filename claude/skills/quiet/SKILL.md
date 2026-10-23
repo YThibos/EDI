@@ -11,7 +11,7 @@ user-invocable: true
 ## Plain `/quiet`
 
 1. Run `edi presence quiet`.
-2. Answer with one plain line to the captain, using the address word, that names the new presence in plain words.
+2. Answer with one plain line to the captain that names the new presence in plain words.
 3. From then on, a turn that only handles wakes ends with no text at all; `edi-presence` says what quiet means.
 
 ## `/quiet off`
