@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.home;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -40,20 +41,32 @@ final class PersonalitySection {
     }
 
     private static PersonalityOverride demoIn(JsonNode section) {
-        JsonNode demo = section.path(DEMO);
-        if (demo.isMissingNode() || demo.isNull()) {
+        List<JsonNode> demos = demosIn(section);
+        if (demos.size() > 1) {
+            throw new IllegalArgumentException(NAME + " names " + DEMO + " twice; name the demo once.");
+        }
+        if (demos.isEmpty() || demos.getFirst().isNull()) {
             return PersonalityOverride.SHIPPED_DEMO;
         }
+        JsonNode demo = demos.getFirst();
         if (!demo.isObject()) {
             throw new IllegalArgumentException(NAME + "." + DEMO + " holds the scales a demo overrides, such as formality: 7.");
         }
         return levelsIn(demo, NAME + "." + DEMO);
     }
 
+    private static List<JsonNode> demosIn(JsonNode section) {
+        return section.properties().stream().filter(entry -> isDemo(entry.getKey())).map(Map.Entry::getValue).toList();
+    }
+
+    private static boolean isDemo(String key) {
+        return key.equalsIgnoreCase(DEMO);
+    }
+
     private static PersonalityOverride levelsIn(JsonNode levels, String path) {
         Map<Scale, Level> written = new EnumMap<>(Scale.class);
         levels.properties().stream()
-                .filter(entry -> !entry.getKey().equals(DEMO))
+                .filter(entry -> !isDemo(entry.getKey()))
                 .forEach(entry -> writeOnce(written, Scale.named(entry.getKey()), levelOf(entry.getValue(), path + "." + entry.getKey()), path));
         return new PersonalityOverride(written);
     }

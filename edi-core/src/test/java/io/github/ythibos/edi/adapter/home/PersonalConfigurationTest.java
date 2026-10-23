@@ -93,6 +93,14 @@ class PersonalConfigurationTest {
     }
 
     @Test
+    void readsScalesAndTheDemoWhateverTheirCase() throws IOException {
+        CaptainsPersonality personality = configurationOf("edi-personality:\n  Humour: 2\n  Demo:\n    Humour: 4\n").personality();
+
+        assertThat(personality.own()).isEqualTo(Personality.of(2, 5, 5, 4, 6, 5, 5, 3, 5));
+        assertThat(personality.demo()).isEqualTo(new PersonalityOverride(Map.of(Scale.HUMOUR, Level.of(4))));
+    }
+
+    @Test
     void refusesAPersonalityItCannotRead() {
         assertThatThrownBy(() -> configurationOf("edi-personality:\n  humour: 11\n").personality())
                 .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality.humour holds 11, which is not a level from 0 to 10.");
@@ -104,6 +112,8 @@ class PersonalConfigurationTest {
                 .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality names humour twice; name each scale once.");
         assertThatThrownBy(() -> configurationOf("edi-personality:\n  demo:\n    formality: 7\n    Formality: 2\n").personality())
                 .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality.demo names formality twice; name each scale once.");
+        assertThatThrownBy(() -> configurationOf("edi-personality:\n  demo:\n    formality: 7\n  Demo:\n    formality: 2\n").personality())
+                .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality names demo twice; name the demo once.");
         assertThatThrownBy(() -> configurationOf("edi-personality: lively\n").personality())
                 .isInstanceOf(InvalidConfiguration.class).hasMessageEndingWith("edi-personality holds the personality's scales and their levels, such as humour: 3.");
         assertThatThrownBy(() -> configurationOf("edi-personality:\n  demo: 7\n").personality())
