@@ -211,6 +211,19 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandChangesAndKeepsThePersonality() throws Exception {
+        CommandRun changed = edi("", "personality", "humour", "2", "formality", "10");
+        CommandRun shown = edi("", "personality");
+        CommandRun refused = edi("", "personality", "humour", "11");
+
+        assertThat(changed.output()).startsWith("Personality: humour 2, formality 10, verbosity 5,").contains("\nBad news: humour 0, formality 10,");
+        assertThat(shown.output()).isEqualTo(changed.output());
+        assertThat(Files.readString(home.resolve("config/personal.yaml"))).startsWith("edi-personality:\n  humour: 2\n  formality: 10\n");
+        assertThat(refused.exitCode()).isNotZero();
+        assertThat(refused.output()).contains("A personality level runs from 0 to 10, not 11.");
+    }
+
+    @Test
     void theCommandPromotesAScoutOnlyOnTheCaptainsWord() throws Exception {
         edi("", "task", "add", "--kind", "scout", "--id", "native-survey", "--project", "harness", "--title", "Survey natively", "--key", "HRN-9");
         Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());

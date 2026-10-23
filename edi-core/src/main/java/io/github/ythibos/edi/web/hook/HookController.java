@@ -101,7 +101,7 @@ class HookController {
     private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, boolean launched, URI console) {
         SessionStart start = primaryHooks.sessionStarted(session, claudePid, launched);
         SessionStartDigest digest = digests.digestFor(session);
-        SessionStartDigest told = sitrep.openFor(start, console).map(digest::withSitrep).orElse(digest);
+        SessionStartDigest told = sitrep.openFor(session, start, console).map(digest::withSitrep).orElse(digest);
         return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
     }
 

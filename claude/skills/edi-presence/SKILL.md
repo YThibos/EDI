@@ -29,6 +29,7 @@ Each is a skill of its own name: `/quiet` and `/quiet off`, `/present`, `/afk <w
 - All-day, long, free, tentative and out-of-office entries never count, nor do the presence markers the captain's settings list.
 - Silence never switches to away.
 - A demo holds present through automatic and calendar quiet until `/demo off`, the end of the current meeting or three hours.
+- A demo speaks with the demo personality; once it ends on its own, run `edi personality` and speak with the captain's own again.
 
 ## Coming back
 

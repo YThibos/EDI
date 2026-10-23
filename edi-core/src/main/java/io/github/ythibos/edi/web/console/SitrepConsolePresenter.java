@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
@@ -23,9 +25,11 @@ import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Answer;
@@ -47,6 +51,7 @@ public class SitrepConsolePresenter {
     static final int CHARTED_SHOWN = 20;
     private static final String WITHOUT_A_WORKER = "waiting";
     private static final String WITH_EDI = "with EDI";
+    private static final String AFTER_A_LEADING_KEY = "\\b[\\s:|-]*";
 
     private final PresenceWords presenceWords;
 
@@ -110,8 +115,8 @@ public class SitrepConsolePresenter {
 
     private static Ongoing ongoing(OngoingTask ongoing) {
         Task task = ongoing.task();
-        return new Ongoing(task.id().value(), task.intake().title(), task.intake().kind().word(), projectsOf(task), stateOf(ongoing.worker()),
-                doingOf(ongoing), draftOf(ongoing.delivery()));
+        return new Ongoing(task.id().value(), keyOf(task.intake()), titleAfterItsKey(task.intake()), task.intake().kind().word(), projectsOf(task),
+                stateOf(ongoing.worker()), doingOf(ongoing), draftOf(ongoing.delivery()));
     }
 
     private static Landed landed(LandedTask landed) {
@@ -132,6 +137,22 @@ public class SitrepConsolePresenter {
 
     private static List<String> projectsOf(Task task) {
         return task.intake().projects().stream().map(ProjectName::value).toList();
+    }
+
+    private static String keyOf(Intake intake) {
+        return intake.workKey() == null ? null : intake.workKey().toString();
+    }
+
+    private static String titleAfterItsKey(Intake intake) {
+        if (intake.workKey() == null) {
+            return intake.title();
+        }
+        Matcher leadingKey = leadingKey(intake.workKey()).matcher(intake.title());
+        return leadingKey.lookingAt() ? intake.title().substring(leadingKey.end()) : intake.title();
+    }
+
+    private static Pattern leadingKey(WorkKey key) {
+        return Pattern.compile(Pattern.quote(key.toString()) + AFTER_A_LEADING_KEY, Pattern.CASE_INSENSITIVE);
     }
 
     private static String stateOf(Worker worker) {

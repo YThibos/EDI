@@ -11,6 +11,7 @@ edi sitrep --board                                  # print the sitrep, then ope
 ```
 
 The sitrep page shows what needs the captain, what is ongoing and what is charted next side by side, in one glance on a laptop screen, with what landed this week below them, and follows every change as it happens ([fleet-snapshot](decisions/fleet-snapshot.md), [console](decisions/console.md)).
+Each ongoing task leads with its EDI or JIRA work key, shown once even when the title already starts with it, and a task without a key shows its title alone ([fleet-snapshot](decisions/fleet-snapshot.md)).
 
 ![The sitrep page in a 1536 by 730 viewport, a laptop screen at 125% scaling](images/sitrep/sitrep-1536x730.webp)
 
