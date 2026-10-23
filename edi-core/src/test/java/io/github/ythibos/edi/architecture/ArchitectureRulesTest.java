@@ -37,6 +37,7 @@ class ArchitectureRulesTest {
     private static final String WEB = "io.github.ythibos.edi.web..";
     private static final String PROCESS_ADAPTER = "io.github.ythibos.edi.adapter.process..";
     private static final String CLOCK_ADAPTER = "io.github.ythibos.edi.adapter.clock..";
+    private static final String PERSONALITY = "io.github.ythibos.edi..personality..";
 
     private static final Map<String, String> OWNING_ADAPTER_OF_PROGRAM = Map.ofEntries(
             Map.entry("GIT", "io.github.ythibos.edi.adapter.git.."),
@@ -64,6 +65,13 @@ class ArchitectureRulesTest {
             .should().dependOnClassesThat().belongToAnyOf(
                     ProcessBuilder.class, Process.class, ProcessHandle.class, Runtime.class, System.class, Thread.class)
             .orShould().dependOnClassesThat().resideInAPackage("java.lang.reflect..");
+
+    @ArchTest
+    static final ArchRule onlyThePrimarysOwnWordsCarryThePersonality = noClasses()
+            .that().resideOutsideOfPackages(PERSONALITY, "io.github.ythibos.edi.adapter.home..", "io.github.ythibos.edi.application.primary..",
+                    "io.github.ythibos.edi.web.primary..")
+            .should().dependOnClassesThat().resideInAPackage(PERSONALITY)
+            .because("the captain report, boards, decision cards, worker statuses and everything others read carry no personality");
 
     @ArchTest
     static final ArchRule onlyTheProcessAdapterStartsPrograms = noClasses()

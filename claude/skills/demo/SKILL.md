@@ -13,12 +13,14 @@ A demo holds present through automatic and calendar quiet until `/demo off`, the
 ## Plain `/demo`
 
 1. Run `edi presence demo`.
-2. End the turn as a present turn ends, naming in its plain line until when the demo holds.
+2. Run `edi personality` and speak with the demo personality it prints until the demo ends.
+3. End the turn as a present turn ends, naming in its plain line until when the demo holds.
 
 ## `/demo off`
 
 1. Run `edi presence demo off`.
-2. End the turn as a present turn ends, naming the new presence in its plain line.
+2. Run `edi personality` and speak with the captain's own personality it prints again.
+3. End the turn as a present turn ends, naming the new presence in its plain line.
 
 ## The argument
 

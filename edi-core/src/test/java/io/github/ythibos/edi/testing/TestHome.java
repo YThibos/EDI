@@ -119,6 +119,8 @@ import io.github.ythibos.edi.application.migration.ForkMigrationPlanner;
 import io.github.ythibos.edi.application.migration.HomeImportPlanner;
 import io.github.ythibos.edi.application.migration.HomeWriter;
 import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
+import io.github.ythibos.edi.application.personality.ChangePersonality;
+import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
@@ -817,7 +819,15 @@ public final class TestHome {
 
     public SessionStartDigestQuery sessionStartDigest() {
         return new SessionStartDigestQuery(primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages, wakes, presenceQuery(), memory(),
-                new HomeSetup(home), new PersonalConfiguration(home), clock, transaction);
+                new HomeSetup(home), personalityQuery(), clock, transaction);
+    }
+
+    public PersonalityQuery personalityQuery() {
+        return new PersonalityQuery(new PersonalConfiguration(home), presenceQuery(), clock);
+    }
+
+    public ChangePersonality changePersonality() {
+        return new ChangePersonality(new PersonalConfiguration(home), personalityQuery());
     }
 
     public WaitForWakes waitForWakes() {
