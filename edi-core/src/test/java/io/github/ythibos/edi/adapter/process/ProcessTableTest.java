@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Tag;
@@ -47,7 +46,7 @@ class ProcessTableTest {
     @Test
     void readsTheStartTickOfAProcessWhoseNameLooksLikeMoreFields() throws IOException {
         Process plain = processes.register(new ProcessBuilder("sleep", "30").start());
-        Path oddlyNamed = Files.copy(Path.of(executableOf("sleep")), directory.resolve("sl) S 1 2 3"), StandardCopyOption.COPY_ATTRIBUTES);
+        Path oddlyNamed = Files.createSymbolicLink(directory.resolve("sl) S 1 2 3"), Path.of(executableOf("sleep")));
         Process odd = processes.register(new ProcessBuilder(oddlyNamed.toString(), "30").start());
 
         long plainStart = table.identify(plain.pid()).orElseThrow().startTick();
