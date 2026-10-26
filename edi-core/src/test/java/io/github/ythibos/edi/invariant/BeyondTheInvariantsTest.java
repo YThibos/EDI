@@ -55,6 +55,7 @@ import io.github.ythibos.edi.application.migration.SetAsideSection;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -302,7 +303,7 @@ class BeyondTheInvariantsTest {
         assertThat(home.claudeSessionFolders().resolve(claudeFolderOf(copy)).resolve(session + ".jsonl")).hasSameTextualContentAs(transcript);
 
         home.dispatchTask().dispatch(new TaskReference.ById(lantern), new DispatchRequest(CategoryId.IMPLEMENTATION, "Carry on.", List.of(), null,
-                false), Actor.PRIMARY);
+                false), CallingSession.UNNAMED, Actor.PRIMARY);
 
         Launch launch = home.runtime().launches().getLast();
         assertThat(launch).extracting(Launch::kind, Launch::session, Launch::worktree).containsExactly(LaunchKind.RESUME, session, copy);

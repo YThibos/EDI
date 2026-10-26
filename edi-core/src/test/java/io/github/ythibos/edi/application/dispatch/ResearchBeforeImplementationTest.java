@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.UnplannedShip;
@@ -149,6 +150,7 @@ class ResearchBeforeImplementationTest {
 
     private DispatchOutcome dispatch(String task, String category, String spec, boolean causeUnknown) {
         return home.dispatchTask().dispatch(TaskReference.parse(task),
-                new DispatchRequest(category == null ? null : new CategoryId(category), spec, List.of(), null, causeUnknown), Actor.PRIMARY);
+                new DispatchRequest(category == null ? null : new CategoryId(category), spec, List.of(), null, causeUnknown),
+                        CallingSession.UNNAMED, Actor.PRIMARY);
     }
 }

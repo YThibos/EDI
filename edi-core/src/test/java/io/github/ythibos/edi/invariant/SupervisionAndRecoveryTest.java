@@ -30,6 +30,7 @@ import io.github.ythibos.edi.application.supervision.OutageList;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
 import io.github.ythibos.edi.application.worker.WorkerList;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -365,7 +366,8 @@ class SupervisionAndRecoveryTest {
         }
 
         private static void dispatch(TestHome home, String task) {
-            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY);
+            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null),
+                    CallingSession.UNNAMED, Actor.PRIMARY);
         }
     }
 }

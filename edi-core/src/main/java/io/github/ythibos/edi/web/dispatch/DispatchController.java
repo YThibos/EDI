@@ -29,7 +29,7 @@ class DispatchController {
     @PostMapping("/dispatch")
     Confirmation dispatch(@PathVariable String reference, @RequestBody DispatchBody body, Caller caller) {
         caller.requirePrimary("edi dispatch");
-        DispatchOutcome outcome = dispatchTask.dispatch(TaskReference.parse(reference), body.request(), caller.actor());
+        DispatchOutcome outcome = dispatchTask.dispatch(TaskReference.parse(reference), body.request(), caller.callingSession(), caller.actor());
         if (outcome.plansAShip()) {
             return new Confirmation.PlannedFirst(outcome);
         }

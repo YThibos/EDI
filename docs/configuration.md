@@ -47,6 +47,7 @@ A project's entry names:
 ## The dispatch rules
 
 `config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([dispatch-routing](decisions/dispatch-routing.md)).
+An effort in the file is `low`, `medium` or `high`; only the captain's word recorded on one task lifts that task to `xhigh` or `max`, through `edi dispatch --override-effort`, never through the file.
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).
 
 ## The personal configuration

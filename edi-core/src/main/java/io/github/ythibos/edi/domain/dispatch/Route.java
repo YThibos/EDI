@@ -12,6 +12,10 @@ public record Route(ModelId model, EffortLevel effort) {
         return effort != null;
     }
 
+    public boolean isAboveTheEffortCeiling() {
+        return namesAnEffort() && effort.isAboveTheCeiling();
+    }
+
     @Override
     public String toString() {
         return namesAnEffort() ? model + " at " + effort.word() : model + " without an effort flag";

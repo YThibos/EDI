@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -25,7 +26,7 @@ final class DeliveryFixtures {
     static DispatchOutcome dispatched(TestHome home, Task task) {
         home.storing(List.of(task));
         return home.dispatchTask().dispatch(new TaskReference.ById(task.id()), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null),
-                Actor.PRIMARY);
+                CallingSession.UNNAMED, Actor.PRIMARY);
     }
 
     static FixtureRepository committedIn(DispatchOutcome dispatched, String file, String content, String subject) throws IOException {

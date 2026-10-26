@@ -84,6 +84,13 @@ public class CaptainsWordEvidence {
                         + " that authorises " + act.word() + "."));
     }
 
+    public CaptainsWord requireSaidOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
+        Exchange exchange = exchangeOf(calling);
+        return transaction.execute(_ -> CaptainsAuthority.saidOnTask(task, exchange, words.heardIn(exchange.session())))
+                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
+                        + " in this session: record it with edi captain said --task " + task + " --text \"<their words>\"."));
+    }
+
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {
         return onTheHome(exchangeOf(calling)).orElseThrow(() -> new Refusal("To " + act.sentence()
                 + ", EDI needs the captain's word in this session: record it with edi captain said --text \"<their words>\"."));

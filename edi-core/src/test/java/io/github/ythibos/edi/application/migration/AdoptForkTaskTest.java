@@ -17,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -81,7 +82,7 @@ class AdoptForkTaskTest {
 
         assertThat(home.adoptForkTask().adopt(lantern, oldHome, branch, oldCopy, null, Actor.PRIMARY).resumesASession()).isFalse();
         home.dispatchTask().dispatch(new TaskReference.ById(lantern), new DispatchRequest(CategoryId.IMPLEMENTATION, "Carry on.", List.of(), null,
-                false), Actor.PRIMARY);
+                false), CallingSession.UNNAMED, Actor.PRIMARY);
 
         Launch launch = home.runtime().launches().getLast();
         assertThat(launch.kind()).isEqualTo(LaunchKind.DISPATCH);

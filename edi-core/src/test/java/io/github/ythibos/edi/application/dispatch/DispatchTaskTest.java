@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
@@ -100,6 +101,6 @@ class DispatchTaskTest {
 
     private DispatchOutcome dispatch(String task, String category) {
         DispatchRequest request = new DispatchRequest(category == null ? null : new CategoryId(category), "", List.of(), null);
-        return home.dispatchTask().dispatch(TaskReference.parse(task), request, Actor.PRIMARY);
+        return home.dispatchTask().dispatch(TaskReference.parse(task), request, CallingSession.UNNAMED, Actor.PRIMARY);
     }
 }

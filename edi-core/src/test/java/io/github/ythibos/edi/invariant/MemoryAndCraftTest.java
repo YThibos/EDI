@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -116,7 +117,8 @@ class MemoryAndCraftTest {
         }
 
         private static void dispatchShip(TestHome home, String task, String spec) {
-            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, spec, List.of(), null), Actor.PRIMARY);
+            home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, spec, List.of(), null),
+                    CallingSession.UNNAMED, Actor.PRIMARY);
         }
     }
 

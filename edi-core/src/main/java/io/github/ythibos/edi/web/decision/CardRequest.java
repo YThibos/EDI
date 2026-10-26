@@ -31,7 +31,7 @@ public record CardRequest(String title, String context, List<Option> options, Re
 
         DecisionOption option() {
             return new DecisionOption(OptionKey.parse(required(key, "option key")), required(text, "option text"),
-                    authorises == null ? null : CaptainWordAct.onATaskNamed(authorises));
+                    authorises == null ? null : CaptainWordAct.authorisableByAnOption(authorises));
         }
     }
 

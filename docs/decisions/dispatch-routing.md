@@ -5,7 +5,7 @@
 ## Context
 
 The old harness routed work with sixteen rules and a default, with inconsistencies found in review.
-Effort has three levels with `high` as the ceiling (I-14), a relaunch resolves its model and effort from the category as a fresh dispatch does, with the captain's explicit instruction above both (I-16), and no routing looks at budget (I-17).
+Effort has three levels with `high` as the ceiling (I-14), which only the captain's explicit word for one task lifts, a relaunch resolves its model and effort from the category as a fresh dispatch does, with the captain's explicit instruction above both (I-16), and no routing looks at budget (I-17).
 Some projects' builds load the machine, such as Testcontainers suites, so running many of their workers at once hurts.
 
 ## Decision
@@ -14,6 +14,8 @@ Some projects' builds load the machine, such as Testcontainers suites, so runnin
 `DispatchRulesFile` reads it at every dispatch and every launch, and `MachineProfile` gives the allowed models under `workers.models`, strongest first, with `ignoresEffort` for a model that takes no effort flag.
 `DispatchRules.validatedAgainst` refuses, naming the file, an effort that is not low, medium or high, a category or override without a reason, a model the roster does not allow, an effort missing for a model that takes one or given to one that ignores it, a repeated category, and a researcher ranked below the implementer when research comes first ([research-first](research-first.md)).
 `DispatchRules.routeFor(projects, category, captainsOverride)` answers the captain's override when the dispatch records one, else the first project override covering the task's projects, else the category's route, and takes nothing else.
+`EffortLevel` knows the five levels Claude Code's `--effort` takes, `low` to `max`; the rules file and an outage recovery read effort with `EffortLevel.withinTheCeiling`, so `xhigh` and `max` never land in a category or a project override.
+A captain's override above `high` (`DispatchRequest.liftsTheEffortCeiling`) is accepted only with its reason and the captain's word recorded on that task in the current exchange with `edi captain said --task` (`DispatchTask`, `CaptainWordAct.RUN_ABOVE_THE_EFFORT_CEILING`, [captains-word](captains-word.md)).
 `edi dispatch` records the category, the spec and the captain's override on the task's `dispatch` row, and every launch resolves the route again from that row and the rules as they are then; the worker row keeps the route it ran on.
 Each category may name its branch kind ([work-keys-and-branches](work-keys-and-branches.md)), and `mechanical` carries its own checks ([mechanical-tasks](mechanical-tasks.md)).
 A project may set `capacity: <n>`; a dispatch beyond it records its deferral and leaves the task queued (`DispatchDeferred`), and each supervision round launches deferred dispatches, oldest first, while their project has room (`WorkerPlaces`, `LaunchDeferredDispatches`), each in its own attempt.
@@ -30,6 +32,7 @@ The roster's order is the only strength ranking the checks need, so no model fam
 - Keeping the sixteen rules - hard to apply consistently.
 - Validating once at start-up, or storing the resolved route - an edit would need a restart, and a relaunch would keep an old model.
 - Refusing a dispatch beyond capacity - the primary would have to remember to dispatch it again.
+- Allowing `xhigh` or `max` in the rules or a project override, or keeping a lifted ceiling anywhere but the task's own `dispatch` row - an exception for one task would become a standing order.
 
 ## Consequences
 
@@ -45,3 +48,4 @@ When the research-first pilot reports, a model generation changes, or a cap acro
 
 - 15/10/2026: the captain asked to compact the routing into a few simple categories, with cheaper models where that is foolproof; the specification settled eight and a project override.
 - 16/10/2026: slice S3 built the loader, the checks, the resolver and project capacity.
+- 26/10/2026: the captain asked for one researcher at `xhigh`; their recorded word on a task now lifts that task alone above `high`, through its relaunches, and nothing else (EDI-49).

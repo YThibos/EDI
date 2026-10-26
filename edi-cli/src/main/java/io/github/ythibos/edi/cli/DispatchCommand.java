@@ -39,7 +39,9 @@ final class DispatchCommand implements Callable<Integer> {
         @Option(names = "--override-model", paramLabel = "MODEL", description = "The model the captain asked for, outranking the dispatch rules.")
         private String overrideModel;
 
-        @Option(names = "--override-effort", paramLabel = "EFFORT", description = "The effort the captain asked for: low, medium or high.")
+        @Option(names = "--override-effort", paramLabel = "EFFORT", description = "The effort the captain asked for: low, medium or high,"
+                + " high being EDI's ceiling; xhigh or max only for this one task, with --reason, once the captain's word for it is recorded"
+                + " in this session with edi captain said --task TASK. The task keeps it on relaunch; no other task and no dispatch rule gets it.")
         private String overrideEffort;
 
         @Option(names = "--reason", paramLabel = "REASON", description = "The captain's reason for the override.")
