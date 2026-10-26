@@ -18,4 +18,6 @@ public interface Pipeline {
     Optional<PipelineReview> reviewOf(Path projectClone, BranchName branch);
 
     void runAgentOn(Route route);
+
+    void keyCommitsPushedTo(String remoteUrl);
 }

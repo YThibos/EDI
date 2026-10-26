@@ -152,7 +152,7 @@ public class LaunchWorker {
         Path stateDirectory = createdDirectory(home.workerState(incarnation.worker()));
         IssuedToken token = tokens.issueInto(stateDirectory);
         String firstPrompt = firstPromptFor(incarnation, worktree, because);
-        pipeline.runAgentOn(incarnation.pipelineRoute());
+        prepareThePipelineFor(incarnation);
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
     }
@@ -222,6 +222,13 @@ public class LaunchWorker {
 
     private static String handoverPrompt(Path handover, String because) {
         return OperationalText.marked("fresh start after " + because + ": read the handover " + handover + " and carry on from where it leaves off");
+    }
+
+    private void prepareThePipelineFor(Incarnation incarnation) {
+        pipeline.runAgentOn(incarnation.pipelineRoute());
+        if (incarnation.brief().deliversThroughThePipeline()) {
+            copies.forgeRemoteOf(incarnation.project()).ifPresent(pipeline::keyCommitsPushedTo);
+        }
     }
 
     private Launch launchOf(Incarnation incarnation, Path worktree, Path taskDirectory, Path stateDirectory, IssuedToken token, String firstPrompt) {

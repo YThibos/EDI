@@ -50,7 +50,7 @@ public record ForgeRepository(ForgeKind kind, String host, String path) {
     }
 
     public boolean isAt(RemoteAddress remote) {
-        return host.equalsIgnoreCase(remote.host()) && path.equalsIgnoreCase(remote.path());
+        return remote.isTheSameRepositoryAs(new RemoteAddress(host, path));
     }
 
     @Override

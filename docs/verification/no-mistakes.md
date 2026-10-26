@@ -1,7 +1,7 @@
 # The validation pipeline: run status, spend and account binding
 
 Verified on no-mistakes 1.84.0 (`no-mistakes --version`) on WSL2 Ubuntu 24.04, 16/10/2026.
-EDI reads the pipeline's state and never drives it; the worker drives it through `axi run` and `axi respond`.
+EDI reads the pipeline's state and never drives it; the worker drives it through `axi run` and `axi respond`, and EDI writes only its agent's route and each delivered repository's commit keys into its configuration.
 
 ## Method
 
@@ -40,6 +40,21 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented
 | Does an edit reach a run that has already started? | No. Two runs started before the key was edited went on starting agents without the new words after the edit. |
 | Does a new run take an edit without a daemon restart? | Yes. A run started hours after the key was edited, under a daemon started before the edit, launched its agents as `claude --model claude-opus-5-5 --effort high -p ...`, the override's words placed before the pipeline's own. |
 | Consequence for EDI | EDI writes `agent_args_override.claude` from the dispatch rules' `pipeline` entry at every worker launch ([pipeline-agent](../decisions/pipeline-agent.md)). |
+
+## Commit and title keys
+
+Verified on no-mistakes 1.84.0, 23/10/2026, from the documented global and repository configuration, the source at tag `v1.84.0` (commit `4822244`, the build the installed binary reports), and a test run against that source's own configuration package with a copy of a real global configuration after EDI had written its entries.
+
+| Question | Result on 1.84.0 |
+|---|---|
+| What titles the pipeline's own fix commits? | `commit.fix_message`, default `no-mistakes({{.Step}}): {{.Summary}}`, for the review, test, document, lint and CI repair paths; the rebase and push steps do not use it. |
+| Where does the summary come from? | A `summary` field the fix agent returns as structured output, collapsed to one line and capped at 4,096 bytes; the template cannot shorten or filter it. |
+| How does the key get in front? | `{{.Branch}}` renders the capture group of `commit.branch_pattern`, which must hold exactly one group; the same value serves `pr.title_format`, whose `{{.Title}}` is a title the agent is told to write without a branch identifier. |
+| Where can a repository get these settings? | Its `.no-mistakes.yaml` on the default branch wins, then a `repository_overrides` entry in the global configuration keyed by remote, then the global `commit` block, then the default; no `axi run` flag or environment variable sets them. |
+| Which remote does an override match? | The remote the pipeline recorded for the repository, which on the machine inspected was the clone's `origin` URL as written; `github.com`, `gitlab.com` and `bitbucket.org` paths match without case or `.git`, every other host keeps both, and two entries that normalise to one remote make the whole configuration invalid. |
+| What happens on a branch the pattern does not match? | Rendering fails with `commit.branch_pattern did not find an identifier in branch`, so no unkeyed commit is made. |
+| Does the entry EDI writes load and render? | Yes. The configuration package loaded the file, kept the agent route, and rendered `JUSTMD-50 Cover the empty basket` and `JUSTMD-50 Show the basket` for a GitLab remote written `git@host:group/repo.git`, `EDI-21 ...` for a follow-up branch on a GitHub remote, and the default `no-mistakes(test): ...` for a remote EDI had not written. |
+| Consequence for EDI | EDI sets the commit and title keys in the repository's entry at every draft-review launch ([pipeline-commit-keys](../decisions/pipeline-commit-keys.md)). |
 
 ## Account binding
 

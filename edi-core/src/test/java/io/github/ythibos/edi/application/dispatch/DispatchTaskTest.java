@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.testing.ExampleHome;
+import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -77,6 +78,22 @@ class DispatchTaskTest {
         dispatch("fit-lamp", null);
 
         assertThat(home.pipeline().agentRoute()).isEqualTo(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.MEDIUM));
+    }
+
+    @Test
+    void keysThePipelinesCommitsForTheRemoteItsForgeServesWhenAShipDeliversThroughIt() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-4")));
+        dispatch("fit-lamp", "implementation");
+        dispatch("map-caves", "research");
+        assertThat(home.pipeline().keyedRemotes()).as("an origin no forge serves").isEmpty();
+
+        home.runtime().closeEveryWindow();
+        FixtureRepository.at(home.home().root().resolve("projects/harness")).run("remote", "set-url", "origin", "git@github.com:example-owner/harness.git");
+        dispatch("map-caves", null);
+        home.runtime().closeEveryWindow();
+        dispatch("fit-lamp", null);
+
+        assertThat(home.pipeline().keyedRemotes()).containsExactly("git@github.com:example-owner/harness.git");
     }
 
     @Test

@@ -15,7 +15,7 @@ Effort has three levels and `high` is the ceiling (I-14).
 The rules are refused without a `pipeline` entry, so the pipeline's agent never runs at the harness default; `examples/edi-home/config/dispatch-rules.json` routes it to Opus 5.5 at high effort.
 `LaunchWorker` resolves the pipeline's route from the rules at every launch, the first and every later one, and hands it to the `Pipeline` port's `runAgentOn`, because a worker drives the pipeline and every launch reads the rules as they are then.
 `NoMistakesPipeline.runAgentOn` sets `agent_args_override.claude` in `<pipeline home>/config.yaml` to `--model <model>`, followed by `--effort <effort>` when the route names one.
-`AgentArguments` rewrites only that top-level entry, keeps every other agent's arguments within it and every line of the file outside it, comments included, replaces the file atomically with its permissions, and writes nothing when the arguments already match.
+`AgentArguments` writes it through `PipelineConfiguration`, which rewrites only that top-level entry, keeps every other agent's arguments within it and every line of the file outside it, comments included, replaces the file atomically with its permissions, and writes nothing when the arguments already match; the pipeline's commit keys are written the same way ([pipeline-commit-keys](pipeline-commit-keys.md)).
 A configuration EDI cannot read as YAML or cannot replace refuses the launch, naming the file, and leaves no temporary file beside it.
 EDI never creates the pipeline's configuration: a pipeline home without `config.yaml` is left alone.
 EDI owns `agent_args_override.claude`, so a hand edit to it lasts only until the next launch.
@@ -50,3 +50,4 @@ When no-mistakes takes a model and effort per run or per repository for Claude C
 ## How we got here
 
 - 23/10/2026: the pipeline's agent had run at the harness default, Opus at medium; the captain asked for an explicit model and effort from the dispatch rules, high effort either way, and Opus 5.5 stayed the model; a hand-written `agent_args_override` served as the stop-gap until EDI took the entry over (EDI-46).
+- 23/10/2026: the rules for rewriting one entry of the pipeline's configuration moved to `PipelineConfiguration`, which the commit keys share (EDI-21).

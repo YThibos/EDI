@@ -9,9 +9,7 @@ import java.nio.file.Path;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.EdiHome;
-import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.task.TaskKind;
 
 @Component
 public class WrittenBriefs {
@@ -27,7 +25,7 @@ public class WrittenBriefs {
     }
 
     public Path written(BriefFacts facts) {
-        if (deliversThroughThePipeline(facts)) {
+        if (facts.deliversThroughThePipeline()) {
             written(facts.intentPath(), briefs.pipelineIntentFor(facts).text());
         }
         return written(facts.taskDirectory().resolve(BRIEF_FILE), briefs.briefFor(facts));
@@ -35,10 +33,6 @@ public class WrittenBriefs {
 
     public boolean isWrittenFor(TaskId task) {
         return Files.exists(home.taskDirectory(task).resolve(BRIEF_FILE));
-    }
-
-    private static boolean deliversThroughThePipeline(BriefFacts facts) {
-        return facts.task().intake().kind() == TaskKind.SHIP && facts.delivery() == DeliveryMode.DRAFT_REVIEW;
     }
 
     private static Path written(Path file, String content) {

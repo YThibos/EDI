@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -16,6 +18,8 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
     private static final int MOST_DIGITS = 9;
     private static final List<String> HARNESS_PREFIXES = List.of("fm/", "edi/");
     private static final String SHAPE = "feature|chore|research/<KEY>-<n>, such as feature/EDI-5";
+    private static final Pattern WORK_KEY_CAPTURE = Pattern.compile("^(?:" + Arrays.stream(BranchKind.values()).map(BranchKind::word).collect(Collectors.joining("|"))
+            + ")/([A-Z][A-Z0-9]*-[0-9]+)(?:-[0-9]+)?$");
 
     public BranchName {
         if (kind == null) {
@@ -49,6 +53,10 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
         }
         BranchKind kind = kindIn(text.substring(0, kindEnd), text);
         return keyed(kind, text.substring(kindEnd + 1), text);
+    }
+
+    public static Pattern workKeyCapture() {
+        return WORK_KEY_CAPTURE;
     }
 
     @Override

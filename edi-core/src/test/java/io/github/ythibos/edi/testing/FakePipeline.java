@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.testing;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,6 +17,7 @@ import io.github.ythibos.edi.domain.worker.TokenUsage;
 public final class FakePipeline implements Pipeline {
 
     private final Map<String, PipelineRun> runs = new HashMap<>();
+    private final List<String> keyedRemotes = new ArrayList<>();
     private TokenUsage spend;
     private PipelineReview review;
     private Route agentRoute;
@@ -39,6 +42,11 @@ public final class FakePipeline implements Pipeline {
         agentRoute = route;
     }
 
+    @Override
+    public synchronized void keyCommitsPushedTo(String remoteUrl) {
+        keyedRemotes.add(remoteUrl);
+    }
+
     public synchronized void runs(BranchName branch, PipelineRun run) {
         runs.put(branch.toString(), run);
     }
@@ -53,5 +61,9 @@ public final class FakePipeline implements Pipeline {
 
     public synchronized Route agentRoute() {
         return agentRoute;
+    }
+
+    public synchronized List<String> keyedRemotes() {
+        return List.copyOf(keyedRemotes);
     }
 }
