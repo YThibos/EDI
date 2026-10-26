@@ -64,10 +64,14 @@ public class DoneClaims {
     }
 
     private void requireEveryMessageAcknowledged(WorkerId worker) {
-        List<Integer> waiting = transaction.execute(_ -> inbox.unacknowledgedOf(worker.task())).stream().map(InboxMessage::number).toList();
+        List<Integer> waiting = numbersWaitingIn(worker);
         if (!waiting.isEmpty()) {
             refuse(worker, List.of(unacknowledgedGapOf(waiting)));
         }
+    }
+
+    private List<Integer> numbersWaitingIn(WorkerId worker) {
+        return transaction.execute(_ -> inbox.unacknowledgedOf(worker.task())).stream().map(InboxMessage::number).toList();
     }
 
     private static String unacknowledgedGapOf(List<Integer> waiting) {
