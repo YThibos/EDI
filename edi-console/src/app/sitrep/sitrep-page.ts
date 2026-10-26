@@ -88,5 +88,5 @@ export class SitrepPage {
 }
 
 function openOnBoards(boards: WaitingBoard[]): number {
-  return boards.reduce((open, board) => open + 1 + board.decisions.length, 0);
+  return boards.reduce((open, board) => open + (board.questions > 0 ? 1 : 0) + board.decisions.length, 0);
 }

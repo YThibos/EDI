@@ -14,7 +14,12 @@ export class WaitingList {
 
   protected readonly projectsOf = projectsOf;
 
-  protected questions(count: number): string {
-    return count === 1 ? '1 question waiting' : `${count} questions waiting`;
+  protected boardSummary(board: WaitingBoard): string {
+    const projects = projectsOf(board.projects, board.task);
+    return board.questions > 0 ? `${questionsWaiting(board.questions)} · ${projects}` : projects;
   }
+}
+
+function questionsWaiting(count: number): string {
+  return count === 1 ? '1 question waiting' : `${count} questions waiting`;
 }

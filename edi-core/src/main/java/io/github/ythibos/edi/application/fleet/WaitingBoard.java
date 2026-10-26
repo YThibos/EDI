@@ -16,6 +16,6 @@ public record WaitingBoard(Board board, Task task, List<OpenDecision> decisions)
     }
 
     public int count() {
-        return 1 + decisions.size();
+        return (board.waitsOnTheCaptain() ? 1 : 0) + decisions.size();
     }
 }

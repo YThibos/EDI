@@ -51,6 +51,12 @@ describe('WaitingList', () => {
     expect(texts(list, '.sr-row__sub')).toEqual(['1 question waiting · harness']);
   });
 
+  it('names no question count for a board that asks none of its own and only answers decisions', async () => {
+    const list = await listed([{ ...LAMP_BOARD, questions: 0, decisions: [{ number: 'D58', title: 'Which lamp?' }] }], []);
+
+    expect(texts(list, '.sr-row__sub')).toEqual(['harness']);
+  });
+
   async function listed(boards: WaitingBoard[], reviews: ReadyForReview[]): Promise<HTMLElement> {
     fixture.componentRef.setInput('boards', boards);
     fixture.componentRef.setInput('reviews', reviews);

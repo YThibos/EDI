@@ -19,7 +19,7 @@ The snapshot's first part, `WaitingOnTheCaptain`, holds everything that waits on
 - `reviews`: every task in flight whose done was accepted and whose request is still open (`ReadyForReview`), until EDI sees it merged or closed.
 
 Then come `ongoing` (in-flight tasks nothing holds, each an `OngoingTask` with its latest worker, pipeline run and delivery), `parked` (every held task except one that waits only for its decision, with its D number and the open tasks it waits for, `ParkedTask.whyParked`), and `queued`, each in the store's row order, plus the tasks landed in the last seven days and the answers of the last 24 hours.
-`WaitingOnTheCaptain.count` counts each decision, board and review once.
+`WaitingOnTheCaptain.count` counts each decision, review and board with questions of its own once; a board that only binds decisions counts as those decisions, and its line names no question count.
 The snapshot is quiet only when nothing waits on the captain and nothing is ongoing.
 A worker status of `needs-decision` or `blocked` is addressed to the primary (`StatusReport.isForThePrimary`), so the sitrep page shows its task as `with EDI` rather than waiting on the captain, and the acknowledged steer that resolves it settles it (`Worker.settledBy`, [steering](steering.md)).
 The sitrep page reads one document, `edi-sitrep.v1`, from `SitrepConsolePresenter`: the cards, the recent answers, at most ten landed and twenty charted tasks with their totals, the machine, the address word, the zone and the presence, so a 2 MB backlog gives a document of a few kilobytes.

@@ -133,7 +133,11 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String boardLine(WaitingBoard waiting) {
-        return "board  " + waiting.task().id() + "  " + Words.quantity(waiting.board().openQuestions(), "question") + " at " + waiting.board().link();
+        return "board  " + waiting.task().id() + "  " + questionsAt(waiting.board().openQuestions()) + waiting.board().link();
+    }
+
+    private static String questionsAt(int questions) {
+        return questions > 0 ? Words.quantity(questions, "question") + " at " : "";
     }
 
     private static String reviewLine(ReadyForReview ready) {

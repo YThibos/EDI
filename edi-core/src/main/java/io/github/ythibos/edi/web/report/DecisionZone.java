@@ -146,7 +146,7 @@ final class DecisionZone {
 
         @Override
         public int open() {
-            return 1 + decisions.size();
+            return (questions > 0 ? 1 : 0) + decisions.size();
         }
     }
 

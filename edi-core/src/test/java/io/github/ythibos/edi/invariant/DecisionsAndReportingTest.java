@@ -264,13 +264,18 @@ class DecisionsAndReportingTest {
 
             home.armBoard().arm(scout.id(), TaskReference.parse("survey-lamps"), board, BoardRounds.asking(0, lamp));
             String boundOnly = captainReport(home, Turn.NONE);
+            String boundOnlyBrief = returnBrief(home);
+            String boundOnlyDigest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
             home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
             home.postBoardRound().post(board, BoardRounds.LINK, 2, Actor.PRIMARY);
             String posted = captainReport(home, Turn.NONE);
 
-            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 2 open",
-                    "║  Board for Work on survey-lamps: 0 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
+            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 1 open",
+                    "║  Board for Work on survey-lamps: waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
             assertThat(boundOnly).doesNotContain("Both work", "(A)", "Recommended");
+            assertThat(boundOnlyBrief).contains("  Board for Work on survey-lamps: waiting at " + BoardRounds.LINK + "\n    " + lamp + "  Which lamp?\n");
+            assertThat(boundOnlyDigest).contains("Waiting on the captain (1)\n  board  survey-lamps  " + BoardRounds.LINK + "\n    " + lamp
+                    + "  survey-lamps  Which lamp?\n");
             assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open",
                     "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
         }

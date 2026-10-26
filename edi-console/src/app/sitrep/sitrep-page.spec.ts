@@ -86,6 +86,28 @@ describe('SitrepPage', () => {
     expect(texts(page, '.sr-waiting__link')).toEqual(['http://127.0.0.1:4387/session/1a2b3c', 'https://github.com/example-owner/harness/pull/13']);
   });
 
+  it('counts only the decisions a board answers when it asks no question of its own', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        boards: [
+          {
+            task: 'lamp-research',
+            title: 'Research the lamp',
+            projects: ['harness'],
+            questions: 0,
+            link: 'http://127.0.0.1:4387/session/1a2b3c',
+            decisions: [{ number: 'D59', title: 'Which bulb?' }],
+          },
+        ],
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('2 waiting on you, Commander');
+  });
+
   it('never calls the captain all clear while a board or a review waits on him', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush(
