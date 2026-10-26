@@ -27,6 +27,7 @@ The worker's copy is `$EDI_HOME/worktrees/<project>/<task-id>`, its brief and re
 
 Workers report with `edi status` and read `edi inbox`.
 `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived ([steering](decisions/steering.md)).
+A worker's `done` is refused while a message waits unacknowledged in its inbox ([delivery](decisions/delivery.md)).
 A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page shows its task as with EDI, and once the worker acknowledges the steer that resolves its key the question no longer shows ([fleet-snapshot](decisions/fleet-snapshot.md)).
 
 ## Guards

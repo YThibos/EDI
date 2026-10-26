@@ -14,7 +14,7 @@ In live tests Claude Code never submitted a typed line that began with the invis
 Delivery follows the worker's activity, which its hooks keep: busy from `UserPromptSubmit` to `Stop`, idle after `Stop` (`WorkerHooks`).
 A busy worker gets nothing typed; its next `Stop` hook marks the message received and blocks the stop once with a notice to run `edi inbox`.
 An idle worker gets the line `EDI_OP: message <n> waiting: run edi inbox` typed only when the pane probe shows the idle prompt, and the `UserPromptSubmit` hook carrying that line marks it received; a typed line carries the visible marker without U+2063 (`OperationalText.typed`).
-`edi inbox` marks what it shows as received, and `edi inbox ack <n>` acknowledges a message once acted on; a message no hook or read received after five minutes raises `SteerNotReceived` once (`NoticeOverdueSteers`).
+`edi inbox` marks what it shows as received, and `edi inbox ack <n>` acknowledges a message once acted on; a worker's done waits until every message is acknowledged ([delivery](delivery.md)); a message no hook or read received after five minutes raises `SteerNotReceived` once (`NoticeOverdueSteers`).
 `TmuxPaneProbe` is the only code that reads a pane: the last 30 lines, checked in a fixed order for the background-task exit picker, the trust dialog, the three limit dialogs, a permission dialog, busy, and the idle prompt, which is a lone `❯` between two rule lines; anything else, including a composer holding text, is `unknown`.
 A key reaches a pane only through `WorkerRuntime.press(window, Keystroke)`, where a `Keystroke` is a `Line` of literal text, typed with `send-keys -l` and Enter after a positive idle probe, or `Escape`.
 No health decision depends on the probe.
@@ -45,3 +45,4 @@ When Claude Code changes a screen the probe reads, offers a way to push a messag
 
 - 16/10/2026: slice S3 built steering with proof of delivery and the pane probe from captured fixtures, and dropped U+2063 from typed lines after the live smoke.
 - 21/10/2026: an acknowledged steer that resolves a worker's question started to settle that question's status ([fleet-snapshot](fleet-snapshot.md)).
+- 26/10/2026: a done stopped running ahead of a steer that waits unacknowledged (EDI-52).
