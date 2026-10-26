@@ -51,6 +51,12 @@ export interface WaitingBoard {
   projects: string[];
   questions: number;
   link: string;
+  decisions: BoardDecision[];
+}
+
+export interface BoardDecision {
+  number: string;
+  title: string;
 }
 
 export interface ReadyForReview {

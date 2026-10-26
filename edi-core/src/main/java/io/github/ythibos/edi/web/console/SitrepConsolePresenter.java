@@ -34,6 +34,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Answer;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Board;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.BoardDecision;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Card;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Charted;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Landed;
@@ -98,7 +99,12 @@ public class SitrepConsolePresenter {
 
     private static Board board(WaitingBoard waiting) {
         Task task = waiting.task();
-        return new Board(task.id().value(), task.intake().title(), projectsOf(task), waiting.board().openQuestions(), waiting.board().link());
+        return new Board(task.id().value(), task.intake().title(), projectsOf(task), waiting.board().openQuestions(), waiting.board().link(),
+                waiting.decisions().stream().map(SitrepConsolePresenter::boardDecision).toList());
+    }
+
+    private static BoardDecision boardDecision(OpenDecision open) {
+        return new BoardDecision(open.decision().number().toString(), open.decision().card().title());
     }
 
     private static Review review(ReadyForReview ready) {

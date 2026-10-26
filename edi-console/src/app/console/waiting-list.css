@@ -17,3 +17,20 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+.sr-waiting__decisions {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sr-waiting__decision {
+  font-size: var(--fs-xs);
+  color: var(--text);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.sr-waiting__decision + .sr-waiting__decision {
+  margin-top: 2px;
+}

@@ -94,7 +94,12 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static DecisionZone.Entry boardQuestions(WaitingBoard waiting, TurnWording wording) {
         Board board = waiting.board();
-        return new DecisionZone.BoardQuestions(wording.projectsOf(waiting.task()), wording.textOf(waiting.task()), board.openQuestions(), board.link());
+        return new DecisionZone.BoardQuestions(wording.projectsOf(waiting.task()), wording.textOf(waiting.task()), board.openQuestions(), board.link(),
+                waiting.decisions().stream().map(CaptainReportPresenter::boardDecision).toList());
+    }
+
+    private static DecisionZone.BoardDecision boardDecision(OpenDecision open) {
+        return new DecisionZone.BoardDecision(open.decision().number(), open.decision().card().title());
     }
 
     private static DecisionZone.Entry review(ReadyForReview ready, TurnWording wording) {

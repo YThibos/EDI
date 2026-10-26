@@ -10,7 +10,7 @@ import { FleetStream, FleetStreamEvent } from '../console/fleet-stream';
 import { HudStrip } from '../console/hud-strip';
 import { LandedList } from '../console/landed-list';
 import { OngoingList } from '../console/ongoing-list';
-import { PresenceChoice, Sitrep } from '../console/sitrep';
+import { PresenceChoice, Sitrep, WaitingBoard } from '../console/sitrep';
 import { shipMoment } from '../console/stardate';
 import { WaitingList } from '../console/waiting-list';
 
@@ -33,7 +33,7 @@ export class SitrepPage {
   protected readonly shipMoment = shipMoment;
   protected readonly waitingCount = computed(() => {
     const sitrep = this.sitrep();
-    return sitrep ? sitrep.decisions.length + sitrep.boards.length + sitrep.reviews.length : 0;
+    return sitrep ? sitrep.decisions.length + openOnBoards(sitrep.boards) + sitrep.reviews.length : 0;
   });
   protected readonly waitingOnTheCaptain = computed(() => {
     const sitrep = this.sitrep();
@@ -85,4 +85,8 @@ export class SitrepPage {
     this.sitrep.set(sitrep);
     this.access.set('signed-in');
   }
+}
+
+function openOnBoards(boards: WaitingBoard[]): number {
+  return boards.reduce((open, board) => open + 1 + board.decisions.length, 0);
 }

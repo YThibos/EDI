@@ -45,7 +45,14 @@ public record ConsoleSitrep(
     public record Recommendation(String key, String why) {
     }
 
-    public record Board(String task, String title, List<String> projects, int questions, String link) {
+    public record Board(String task, String title, List<String> projects, int questions, String link, List<BoardDecision> decisions) {
+
+        public Board {
+            decisions = List.copyOf(decisions);
+        }
+    }
+
+    public record BoardDecision(String number, String title) {
     }
 
     public record Review(String task, String title, List<String> projects, String url) {

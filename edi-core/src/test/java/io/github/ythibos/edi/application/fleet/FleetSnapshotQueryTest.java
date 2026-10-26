@@ -130,6 +130,26 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void putsADecisionBoundToABoardWithQuestionsUnderThatBoardAndBackAmongTheCardsOnceTheBoardAsksNothing() {
+        add(ship("lantern", "Rework the lantern"));
+        add(captainItem("lamp-choice", "Choose the lamp"));
+        raise("lamp-choice");
+        DecisionNumber lamp = home.decisions().ofTask(new TaskId("lamp-choice")).orElseThrow().number();
+        Board armed = home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.asking(2, lamp), TestHome.START);
+
+        WaitingOnTheCaptain asking = home.fleetSnapshot().snapshot().waiting();
+        home.boards().update(armed.answeredOnceMore());
+        WaitingOnTheCaptain answered = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(asking.decisions()).isEmpty();
+        assertThat(asking.boards()).singleElement().satisfies(waiting -> assertThat(waiting.decisions()).extracting(open -> open.decision().number())
+                .containsExactly(lamp));
+        assertThat(asking.count()).isEqualTo(2);
+        assertThat(answered.decisions()).extracting(open -> open.decision().number()).containsExactly(lamp);
+        assertThat(answered.boards()).isEmpty();
+    }
+
+    @Test
     void putsAnOpenRequestBeforeTheCaptainOnceItsDoneIsAcceptedUntilItIsMerged() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         Worker worker = WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);

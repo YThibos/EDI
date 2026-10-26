@@ -117,13 +117,19 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         WaitingOnTheCaptain waiting = fleet.waiting();
         List<String> lines = new ArrayList<>(List.of(Words.counted("Waiting on the captain", waiting.count())));
         waiting.decisions().forEach(open -> lines.add("  " + decisionLine(open)));
-        waiting.boards().forEach(board -> lines.add("  " + boardLine(board)));
+        waiting.boards().forEach(board -> lines.addAll(boardLines(board)));
         waiting.reviews().forEach(ready -> lines.add("  " + reviewLine(ready)));
         return lines;
     }
 
     private static String decisionLine(OpenDecision open) {
         return open.decision().number() + "  " + open.task().id() + "  " + open.decision().card().title();
+    }
+
+    private static List<String> boardLines(WaitingBoard waiting) {
+        List<String> lines = new ArrayList<>(List.of("  " + boardLine(waiting)));
+        waiting.decisions().forEach(open -> lines.add("    " + decisionLine(open)));
+        return lines;
     }
 
     private static String boardLine(WaitingBoard waiting) {

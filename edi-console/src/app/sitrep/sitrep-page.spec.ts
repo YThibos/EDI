@@ -60,19 +60,28 @@ describe('SitrepPage', () => {
     expect(text(page, '.sr-foot .sr-meta-mono')).toBe('edi-sitrep.v1 · 2026-10-15 07:17 BST');
   });
 
-  it('counts every board and review that waits on the captain beside the decisions', async () => {
+  it('counts every board, the decisions it answers, and every review that waits on the captain beside the decisions', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush(
       sitrepFixture({
-        boards: [{ task: 'lamp-research', title: 'Research the lamp', projects: ['harness'], questions: 2, link: 'http://127.0.0.1:4387/session/1a2b3c' }],
+        boards: [
+          {
+            task: 'lamp-research',
+            title: 'Research the lamp',
+            projects: ['harness'],
+            questions: 2,
+            link: 'http://127.0.0.1:4387/session/1a2b3c',
+            decisions: [{ number: 'D59', title: 'Which bulb?' }],
+          },
+        ],
         reviews: [{ task: 'fit-lamp', title: 'Fit the lamp', projects: ['harness'], url: 'https://github.com/example-owner/harness/pull/13' }],
       }),
     );
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    expect(texts(page, '.sr-stat__num')[0]).toBe('3');
-    expect(text(page, '.sr-section__head .sr-sub')).toBe('3 waiting on you, Commander');
+    expect(texts(page, '.sr-stat__num')[0]).toBe('4');
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('4 waiting on you, Commander');
     expect(text(page, '.sr-decision__title')).toBe('Which lamp?');
     expect(texts(page, '.sr-waiting__link')).toEqual(['http://127.0.0.1:4387/session/1a2b3c', 'https://github.com/example-owner/harness/pull/13']);
   });

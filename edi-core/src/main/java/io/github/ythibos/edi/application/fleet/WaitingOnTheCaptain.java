@@ -11,7 +11,7 @@ public record WaitingOnTheCaptain(List<OpenDecision> decisions, List<WaitingBoar
     }
 
     public int count() {
-        return decisions.size() + boards.size() + reviews.size();
+        return decisions.size() + boards.stream().mapToInt(WaitingBoard::count).sum() + reviews.size();
     }
 
     public boolean isEmpty() {
