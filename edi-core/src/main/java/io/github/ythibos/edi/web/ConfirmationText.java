@@ -139,7 +139,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String whatTheSitrepPutsBeforeTheCaptain(Board board) {
         return board.waitsOnTheCaptain()
                 ? " the sitrep puts " + Words.quantity(board.openQuestions(), "question") + " before the captain until a round answers them."
-                : " its bound decisions wait on the captain as their own cards.";
+                : " the sitrep puts its bound decisions before the captain under the board until a round answers them.";
     }
 
     private static String queued(AddedTask added) {

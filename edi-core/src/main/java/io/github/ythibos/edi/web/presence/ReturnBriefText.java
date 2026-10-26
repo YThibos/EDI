@@ -58,7 +58,7 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     private static List<String> waitingLines(WaitingOnTheCaptain waiting) {
         return Stream.of(
                         waiting.decisions().stream().map(ReturnBriefText::decisionLine),
-                        waiting.boards().stream().map(ReturnBriefText::boardLine),
+                        waiting.boards().stream().flatMap(ReturnBriefText::boardLines),
                         waiting.reviews().stream().map(ReturnBriefText::reviewLine))
                 .flatMap(Function.identity())
                 .toList();
@@ -66,6 +66,10 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
 
     private static String decisionLine(OpenDecision open) {
         return open.decision().number() + "  " + open.decision().card().title();
+    }
+
+    private static Stream<String> boardLines(WaitingBoard waiting) {
+        return Stream.concat(Stream.of(boardLine(waiting)), waiting.decisions().stream().map(open -> "  " + decisionLine(open)));
     }
 
     private static String boardLine(WaitingBoard waiting) {

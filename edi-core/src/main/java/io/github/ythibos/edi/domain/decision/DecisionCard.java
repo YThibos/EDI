@@ -29,6 +29,10 @@ public record DecisionCard(String title, String context, List<DecisionOption> op
         return offers(options, key);
     }
 
+    public boolean asksTheSameAs(DecisionCard other) {
+        return title.equals(other.title);
+    }
+
     public boolean authorises(OptionKey chosen, CaptainWordAct act) {
         return options.stream().anyMatch(option -> option.key().equals(chosen) && option.authorises(act));
     }

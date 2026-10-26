@@ -9,6 +9,7 @@ const LAMP_BOARD: WaitingBoard = {
   projects: ['harness'],
   questions: 3,
   link: 'http://127.0.0.1:4387/session/1a2b3c',
+  decisions: [],
 };
 
 const BUOY_REVIEW: ReadyForReview = {
@@ -37,10 +38,23 @@ describe('WaitingList', () => {
     expect(texts(list, '.sr-badge')).toEqual(['board', 'review']);
   });
 
+  it('lists each decision the board answers as one line under it, with its number and title only', async () => {
+    const list = await listed([{ ...LAMP_BOARD, decisions: [{ number: 'D58', title: 'Which lamp?' }, { number: 'D60', title: 'Which bulb?' }] }], []);
+
+    expect(texts(list, '.sr-waiting__decision .sr-row__key')).toEqual(['D58', 'D60']);
+    expect(texts(list, '.sr-waiting__decision .sr-waiting__title')).toEqual(['Which lamp?', 'Which bulb?']);
+  });
+
   it('counts a single question in the singular', async () => {
     const list = await listed([{ ...LAMP_BOARD, questions: 1 }], []);
 
     expect(texts(list, '.sr-row__sub')).toEqual(['1 question waiting · harness']);
+  });
+
+  it('names no question count for a board that asks none of its own and only answers decisions', async () => {
+    const list = await listed([{ ...LAMP_BOARD, questions: 0, decisions: [{ number: 'D58', title: 'Which lamp?' }] }], []);
+
+    expect(texts(list, '.sr-row__sub')).toEqual(['harness']);
   });
 
   async function listed(boards: WaitingBoard[], reviews: ReadyForReview[]): Promise<HTMLElement> {

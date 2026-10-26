@@ -153,12 +153,13 @@ class SitrepConsolePresenterTest {
         Task research = ship("lamp-research", "Research the lamp");
         Task lamp = ship("fit-lamp", "Fit the lamp");
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 2, NOW, null, null);
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research)),
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of())),
                 List.of(new ReadyForReview(lamp, delivery(lamp))));
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
 
-        assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK));
+        assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK,
+                List.of()));
         assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url()));
     }
 

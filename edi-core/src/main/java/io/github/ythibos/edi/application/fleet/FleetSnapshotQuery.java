@@ -76,18 +76,28 @@ public class FleetSnapshotQuery {
     }
 
     private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight) {
-        return new WaitingOnTheCaptain(decisionsOf(openDecisions), boardsWithQuestions(), readyForReviewAmong(inFlight));
+        List<OpenDecision> open = decisionsOf(openDecisions);
+        List<WaitingBoard> waitingBoards = waitingBoards(open);
+        return new WaitingOnTheCaptain(boundToNoWaitingBoard(open, waitingBoards), waitingBoards, readyForReviewAmong(inFlight));
     }
 
     private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {
         return openDecisions.values().stream().map(decision -> new OpenDecision(decision, tasks.get(decision.task()))).toList();
     }
 
-    private List<WaitingBoard> boardsWithQuestions() {
+    private List<WaitingBoard> waitingBoards(List<OpenDecision> open) {
         return boards.listening().stream()
-                .filter(Board::waitsOnTheCaptain)
-                .map(board -> new WaitingBoard(board, tasks.get(board.task())))
+                .map(board -> new WaitingBoard(board, tasks.get(board.task()), boundBy(board, open)))
+                .filter(WaitingBoard::waitsOnTheCaptain)
                 .toList();
+    }
+
+    private static List<OpenDecision> boundBy(Board board, List<OpenDecision> open) {
+        return open.stream().filter(decision -> board.bound().contains(decision.decision().number())).toList();
+    }
+
+    private static List<OpenDecision> boundToNoWaitingBoard(List<OpenDecision> open, List<WaitingBoard> waitingBoards) {
+        return open.stream().filter(decision -> waitingBoards.stream().noneMatch(board -> board.decisions().contains(decision))).toList();
     }
 
     private List<ReadyForReview> readyForReviewAmong(List<Task> inFlight) {

@@ -16,6 +16,7 @@ Only a process in the captain's pane knows that pane, while the core runs in the
 The golden files in `edi-core/src/test/resources/captain-report/` were produced by running the old renderer on every case of its suite, and `ReportGoldenCases` builds the same state through EDI's use cases.
 Three old inputs have no counterpart in EDI and are adapted openly: a hold that is not for the captain becomes a deferral until the captain's word, drawn as the old `- on hold`; a decision deferred to a date becomes a task deferred without a card on both sides; and the old `--` call, held without a card, is not ported, because EDI holds a task for a decision only with its card.
 Text keeps every character the old renderer accepted, and replaces any other with `?` (`Glyphs`), so stored data can never stop a report.
+The zone draws a decision bound to a listening research board as one line under that board, its number and title only, because the captain answers it on the board; every other decision keeps its full card, and the zone's count counts each decision, review and board with questions of its own once ([fleet-snapshot](fleet-snapshot.md)).
 The turn's own wording arrives as `edi report --turn -`, which `TurnDocument` reads strictly, with only `done`, `next` and `tasks`; it can reword a task but never add or remove a decision.
 The command measures its own pane: `TmuxPane` asks tmux, naming the socket from `TMUX` with `-S` and waiting at most two seconds, and sends `paneWidth`; `ReportWidth.forPane` applies the rule, and without a width the report is 120 columns.
 The report heads itself with the presence when it is not plainly present, and with an unreadable calendar's line while one lasts ([presence](presence.md)).
@@ -44,3 +45,4 @@ When the captain asks for a change to the report's layout, or the report is read
 
 - 15/10/2026: the captain chose `/sitrep` as the only overview command; slice S2 ported the renderer with golden files and had the command measure its pane.
 - 21/10/2026: everything waiting on the captain joined the decision zone, which changed two golden files on purpose.
+- 26/10/2026: a scout's board decisions showed their full cards beside the board, so a board-bound decision became one line under its board (EDI-51).

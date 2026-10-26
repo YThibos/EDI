@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
@@ -27,8 +28,10 @@ import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.board.BoardPrompt;
+import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -210,15 +213,48 @@ class DecisionsAndReportingTest {
             String waiting = "║  Board for Work on survey-lamps: 3 questions waiting at " + BoardRounds.LINK + "\n";
             assertThat(posted).contains("NEEDS YOUR DECISION ══ 1 open", waiting);
             assertThat(postedBrief).contains("Needs your decision (1)\n  Board for Work on survey-lamps: 3 questions waiting at " + BoardRounds.LINK + "\n");
-            assertThat(postedOnTheConsole).containsExactly(new ConsoleSitrep.Board("survey-lamps", "Work on survey-lamps", List.of("harness"), 3, BoardRounds.LINK));
+            assertThat(postedOnTheConsole).containsExactly(new ConsoleSitrep.Board("survey-lamps", "Work on survey-lamps", List.of("harness"), 3, BoardRounds.LINK,
+                    List.of()));
             assertThat(answered).contains("nothing open").doesNotContain("Board for");
             assertThat(postedAgain).contains("NEEDS YOUR DECISION ══ 1 open", "║  Board for Work on survey-lamps: 1 question waiting at " + BoardRounds.LINK);
         }
 
         @Test
         @Tag("adapter")
+        @DisplayName("AT-19 a decision bound to a waiting board shows as one line under its board in the report, the console and the return brief,"
+                + " while a decision bound to no board keeps its full card")
+        void aBoardBoundDecisionShowsAsOneLineUnderItsBoard() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
+            Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-4"), CategoryId.RESEARCH);
+            home.addTask().add(captainItem("paint-choice", "Choose the paint"), Actor.PRIMARY);
+            DecisionNumber paint = raise(home, "paint-choice", "Which paint?");
+            Path board = Files.writeString(Files.createDirectories(home.home().taskDirectory(scout.id().task())).resolve("board.html"), "<!doctype html>\n");
+            home.boardHost().holdsTheNextPollOpen();
+
+            home.armBoard().arm(scout.id(), TaskReference.parse("survey-lamps"), board,
+                    new BoardRound(BoardRounds.LINK, 2, List.of(), new BoardCard("lamp", card("Which lamp?"))));
+            DecisionNumber lamp = home.decisions().ofTask(new TaskId("survey-lamps")).orElseThrow().number();
+            String report = captainReport(home, Turn.NONE);
+            ConsoleSitrep console = consoleSitrep(home);
+
+            assertThat(report).contains(
+                    "NEEDS YOUR DECISION ══ 3 open",
+                    "║  " + paint + "   Which paint?\n║        Both work; one is simpler.\n",
+                    "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
+            assertThat(report.substring(report.indexOf("Board for"), report.indexOf("╚"))).doesNotContain("Both work", "(A)", "Recommended");
+            assertThat(console.decisions()).extracting(ConsoleSitrep.Card::number).containsExactly(paint.toString());
+            assertThat(console.boards()).singleElement().extracting(ConsoleSitrep.Board::decisions).asInstanceOf(InstanceOfAssertFactories.LIST)
+                    .containsExactly(new ConsoleSitrep.BoardDecision(lamp.toString(), "Which lamp?"));
+            assertThat(returnBrief(home)).contains("Needs your decision (3)\n  " + paint + "  Which paint?\n  Board for Work on survey-lamps: 2 questions "
+                    + "waiting at " + BoardRounds.LINK + "\n    " + lamp + "  Which lamp?\n");
+            assertThat(PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()))).contains("  " + paint
+                    + "  paint-choice  Which paint?\n  board  survey-lamps  2 questions at " + BoardRounds.LINK + "\n    " + lamp + "  survey-lamps  Which lamp?\n");
+        }
+
+        @Test
+        @Tag("adapter")
         @DisplayName("AT-19 the primary puts the new round of a board whose scout stopped before the captain, and a round that asks only bound decisions"
-                + " leaves them to their cards")
+                + " lists them under the board")
         void thePrimaryPutsAStoppedScoutsBoardBeforeTheCaptain() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
             Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-4"), CategoryId.RESEARCH);
@@ -228,12 +264,20 @@ class DecisionsAndReportingTest {
 
             home.armBoard().arm(scout.id(), TaskReference.parse("survey-lamps"), board, BoardRounds.asking(0, lamp));
             String boundOnly = captainReport(home, Turn.NONE);
+            String boundOnlyBrief = returnBrief(home);
+            String boundOnlyDigest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
             home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
             home.postBoardRound().post(board, BoardRounds.LINK, 2, Actor.PRIMARY);
             String posted = captainReport(home, Turn.NONE);
 
-            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 1 open", "║  " + lamp + "   Which lamp?").doesNotContain("Board for");
-            assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open", "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK);
+            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 1 open",
+                    "║  Board for Work on survey-lamps: waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
+            assertThat(boundOnly).doesNotContain("Both work", "(A)", "Recommended");
+            assertThat(boundOnlyBrief).contains("  Board for Work on survey-lamps: waiting at " + BoardRounds.LINK + "\n    " + lamp + "  Which lamp?\n");
+            assertThat(boundOnlyDigest).contains("Waiting on the captain (1)\n  board  survey-lamps  " + BoardRounds.LINK + "\n    " + lamp
+                    + "  survey-lamps  Which lamp?\n");
+            assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open",
+                    "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
         }
 
         @Test
