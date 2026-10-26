@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -79,7 +80,8 @@ class RewriteBriefTest {
     }
 
     private void dispatch(String task) {
-        home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, SPEC, List.of(), null), Actor.PRIMARY);
+        home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, SPEC, List.of(), null),
+                CallingSession.UNNAMED, Actor.PRIMARY);
     }
 
     private String intentOf(String task) throws IOException {

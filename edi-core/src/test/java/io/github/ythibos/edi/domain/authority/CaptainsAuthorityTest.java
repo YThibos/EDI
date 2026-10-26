@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.authority;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,13 +30,28 @@ class CaptainsAuthorityTest {
     @Test
     void takesTheLatestWordOnTheTaskFromThisSession() {
         List<Authorisation> words = List.of(
-                new Authorisation(SESSION, LAMP, "Drop the lamp.", OPENED.plusSeconds(60)),
-                new Authorisation(SESSION, LAMP, "Discard its work too.", OPENED.plusSeconds(120)),
-                new Authorisation(UUID.randomUUID(), LAMP, "Discard everything.", OPENED.plusSeconds(180)),
-                new Authorisation(SESSION, new TaskId("fit-door"), "Drop the door.", OPENED.plusSeconds(240)));
+                new Authorisation(SESSION, LAMP, null, "Drop the lamp.", OPENED.plusSeconds(60)),
+                new Authorisation(SESSION, LAMP, null, "Discard its work too.", OPENED.plusSeconds(120)),
+                new Authorisation(UUID.randomUUID(), LAMP, null, "Discard everything.", OPENED.plusSeconds(180)),
+                new Authorisation(SESSION, new TaskId("fit-door"), null, "Drop the door.", OPENED.plusSeconds(240)));
 
         assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, words, List.of())).contains(new CaptainsWord("Discard its work too."));
         assertThat(CaptainsAuthority.onTask(new TaskId("fit-hinge"), CaptainWordAct.DROP, EXCHANGE, words, List.of())).isEmpty();
+    }
+
+    @Test
+    void aWordForEffortAboveHighAuthorisesThatActAloneAndAGeneralWordNeverLiftsEffort() {
+        Authorisation general = new Authorisation(SESSION, LAMP, null, "Drop the lamp.", OPENED.plusSeconds(60));
+        Authorisation forEffort = new Authorisation(SESSION, LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, "Fit the lamp at xhigh.", OPENED.plusSeconds(120));
+
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, List.of(forEffort), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, List.of(general, forEffort), List.of()))
+                .contains(new CaptainsWord("Drop the lamp."));
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, List.of(general))).isEmpty();
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, List.of(general, forEffort)))
+                .contains(new CaptainsWord("Fit the lamp at xhigh."));
+        assertThatThrownBy(() -> new Authorisation(SESSION, null, CaptainWordAct.EFFORT_ABOVE_HIGH, "Everything at xhigh.", OPENED))
+                .hasMessage("The captain's word for effort-above-high is on one task.");
     }
 
     @Test
@@ -60,10 +76,10 @@ class CaptainsAuthorityTest {
 
     @Test
     void keepsAWordOnTheHomeApartFromAWordOnATask() {
-        List<Authorisation> words = List.of(new Authorisation(SESSION, LAMP, "Read the token for the lamp.", OPENED.plusSeconds(60)));
+        List<Authorisation> words = List.of(new Authorisation(SESSION, LAMP, null, "Read the token for the lamp.", OPENED.plusSeconds(60)));
 
         assertThat(CaptainsAuthority.onTheHome(EXCHANGE, words)).isEmpty();
-        assertThat(CaptainsAuthority.onTheHome(EXCHANGE, List.of(new Authorisation(SESSION, null, "Read the token.", OPENED.plusSeconds(60)))))
+        assertThat(CaptainsAuthority.onTheHome(EXCHANGE, List.of(new Authorisation(SESSION, null, null, "Read the token.", OPENED.plusSeconds(60)))))
                 .contains(new CaptainsWord("Read the token."));
     }
 

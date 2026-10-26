@@ -293,7 +293,7 @@ class DecisionsAndReportingTest {
             home.primaryHooks().sessionStarted(session, null, true);
             home.primaryHooks().promptSubmitted(session, words);
             CallingSession calling = new CallingSession(session);
-            home.captainsWord().record(calling, words, TaskReference.parse(task), Actor.PRIMARY);
+            home.captainsWord().record(calling, words, TaskReference.parse(task), null, Actor.PRIMARY);
             return calling;
         }
 

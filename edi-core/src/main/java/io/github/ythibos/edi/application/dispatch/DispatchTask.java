@@ -17,9 +17,12 @@ import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.delivery.CloneRefreshes;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -55,12 +58,14 @@ public class DispatchTask {
     private final CloneRefreshes refreshes;
     private final ResearchBeforeImplementation research;
     private final AwayLimit awayLimit;
+    private final CaptainsWordEvidence captainsWord;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DispatchTask(TaskStore tasks, DispatchStore dispatches, AdoptionStore adoptions, EventLog events, ProjectRegistry registry,
             MachineProfile machine, DispatchRulesFile rulesFile, WorkerPlaces places, LaunchWorker launcher, CloneRefreshes refreshes,
-            ResearchBeforeImplementation research, AwayLimit awayLimit, Clock clock, TransactionTemplate transaction) {
+            ResearchBeforeImplementation research, AwayLimit awayLimit, CaptainsWordEvidence captainsWord, Clock clock,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.adoptions = adoptions;
@@ -73,16 +78,24 @@ public class DispatchTask {
         this.refreshes = refreshes;
         this.research = research;
         this.awayLimit = awayLimit;
+        this.captainsWord = captainsWord;
         this.clock = clock;
         this.transaction = transaction;
     }
 
-    public synchronized DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, Actor actor) {
+    public synchronized DispatchOutcome dispatch(TaskReference reference, DispatchRequest request, CallingSession calling, Actor actor) {
+        requireTheCaptainsWordAboveTheEffortCeiling(reference, request, calling);
         return carriedOut(transaction.execute(_ -> dispatching(reference, request)), actor);
     }
 
     public String previewBrief(TaskReference reference, DispatchRequest request) {
         return launcher.briefFor(transaction.execute(_ -> dispatching(reference, request)).dispatch());
+    }
+
+    private void requireTheCaptainsWordAboveTheEffortCeiling(TaskReference reference, DispatchRequest request, CallingSession calling) {
+        if (request.liftsTheEffortCeiling()) {
+            captainsWord.requireSaidForActOnTask(calling, transaction.execute(_ -> tasks.get(reference)).id(), CaptainWordAct.EFFORT_ABOVE_HIGH);
+        }
     }
 
     private Dispatching dispatching(TaskReference reference, DispatchRequest request) {

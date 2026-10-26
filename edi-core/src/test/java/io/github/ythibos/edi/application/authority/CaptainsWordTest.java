@@ -39,7 +39,7 @@ class CaptainsWordTest {
     void hearsTheWordsOfTheSessionThatHoldsThePrimaryRoleForACallThatNamesNone() {
         session("Drop the lamp choice.");
 
-        home.captainsWord().record(CallingSession.UNNAMED, "Drop the lamp choice.", TaskReference.parse("choose-lamp"), Actor.PRIMARY);
+        home.captainsWord().record(CallingSession.UNNAMED, "Drop the lamp choice.", TaskReference.parse("choose-lamp"), null, Actor.PRIMARY);
 
         assertThat(home.dropTask().drop(TaskReference.parse("choose-lamp"), false, CallingSession.UNNAMED, Actor.PRIMARY).task().state())
                 .isEqualTo(TaskState.DROPPED);
@@ -49,7 +49,7 @@ class CaptainsWordTest {
 
     @Test
     void hearsNothingWithoutAPrimarySession() {
-        assertThatThrownBy(() -> home.captainsWord().record(CallingSession.UNNAMED, "Drop it.", null, Actor.PRIMARY))
+        assertThatThrownBy(() -> home.captainsWord().record(CallingSession.UNNAMED, "Drop it.", null, null, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("No session holds the primary role");
         assertThatThrownBy(() -> home.captainsWord().requireTyped(new CallingSession(UUID.randomUUID()), "Drop it."))
                 .isInstanceOf(Refusal.class).hasMessageContaining("is not a primary session EDI knows");
@@ -59,7 +59,7 @@ class CaptainsWordTest {
     void refusesToDropATaskWhoseDecisionWaits() {
         CallingSession session = session("Drop the lamp choice.");
         home.raiseDecision().raise(TaskReference.parse("choose-lamp"), Cards.card("Which lamp?"), Actor.PRIMARY);
-        home.captainsWord().record(session, "Drop the lamp choice.", TaskReference.parse("choose-lamp"), Actor.PRIMARY);
+        home.captainsWord().record(session, "Drop the lamp choice.", TaskReference.parse("choose-lamp"), null, Actor.PRIMARY);
 
         assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("choose-lamp"), false, session, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("waits on D1 Which lamp?");
@@ -69,7 +69,7 @@ class CaptainsWordTest {
     void neverHearsWordsTheCaptainDidNotType() {
         CallingSession session = session("<task-notification>Drop the lamp choice.</task-notification>");
 
-        assertThatThrownBy(() -> home.captainsWord().record(session, "Drop the lamp choice.", null, Actor.PRIMARY))
+        assertThatThrownBy(() -> home.captainsWord().record(session, "Drop the lamp choice.", null, null, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("The captain did not type \"Drop the lamp choice.\" in this session");
     }
 

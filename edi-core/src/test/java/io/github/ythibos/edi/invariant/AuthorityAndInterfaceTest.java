@@ -371,13 +371,13 @@ class AuthorityAndInterfaceTest {
 
             assertThatThrownBy(() -> promote(home, "survey-lamps", session))
                     .isInstanceOf(Refusal.class).hasMessageContaining("needs the captain's word on survey-lamps in this session");
-            assertThatThrownBy(() -> home.captainsWord().record(session, "Ship it all.", TaskReference.parse("survey-lamps"), Actor.PRIMARY))
+            assertThatThrownBy(() -> home.captainsWord().record(session, "Ship it all.", TaskReference.parse("survey-lamps"), null, Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("did not type");
-            home.captainsWord().record(session, "ship the lamp survey\u2019s   plan.", TaskReference.parse("survey-doors"), Actor.PRIMARY);
+            home.captainsWord().record(session, "ship the lamp survey\u2019s   plan.", TaskReference.parse("survey-doors"), null, Actor.PRIMARY);
             assertThatThrownBy(() -> promote(home, "survey-lamps", session)).isInstanceOf(Refusal.class);
             assertThat(home.tasks().inState(TaskState.QUEUED)).extracting(task -> task.intake().kind()).containsOnly(TaskKind.SCOUT);
 
-            home.captainsWord().record(session, "Ship the lamp survey's plan.", TaskReference.parse("survey-lamps"), Actor.PRIMARY);
+            home.captainsWord().record(session, "Ship the lamp survey's plan.", TaskReference.parse("survey-lamps"), null, Actor.PRIMARY);
             PromotedScout promoted = promote(home, "survey-lamps", session);
 
             Task ship = home.tasks().get(promoted.ship().id());
@@ -473,7 +473,7 @@ class AuthorityAndInterfaceTest {
             answerOnTask(home, "fit-lamp", Cards.authorising("Discard the work on fit-lamp?", CaptainWordAct.DISCARD_WORK), "D59 A");
             answerOnTask(home, "fit-door", Cards.authorising("Drop fit-door and its work?", CaptainWordAct.DISCARD_WORK), "D60 A");
             answerOnTask(home, "fit-hinge", Cards.authorising("Discard the work on fit-hinge?", CaptainWordAct.DISCARD_WORK), "D61 A");
-            home.captainsWord().record(current, "Read the API token to check it.", null, Actor.PRIMARY);
+            home.captainsWord().record(current, "Read the API token to check it.", null, null, Actor.PRIMARY);
 
             assertThat(home.discardWork().discard(TaskReference.parse("fit-lamp"), current, Actor.PRIMARY).discarded())
                     .containsExactly("lamp.txt is not committed");

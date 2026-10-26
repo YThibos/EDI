@@ -27,6 +27,7 @@ import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -337,7 +338,7 @@ class WorkIsolationAndGitHygieneTest {
 
     private static DispatchOutcome dispatch(TestHome home, String task) {
         return home.dispatchTask().dispatch(TaskReference.parse(task),
-                new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY);
+                new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), CallingSession.UNNAMED, Actor.PRIMARY);
     }
 
     private static Map<Path, String> filesOf(Path checkout) throws IOException {

@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -100,7 +101,8 @@ public final class WorkerFixtures {
     public static Worker dispatchedShip(TestHome home, String id, String key) {
         home.storing(List.of(queuedShip(id, "harness", key)));
         return home.dispatchTask()
-                .dispatch(new TaskReference.ById(new TaskId(id)), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null), Actor.PRIMARY)
+                .dispatch(new TaskReference.ById(new TaskId(id)), new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), null),
+                        CallingSession.UNNAMED, Actor.PRIMARY)
                 .launched()
                 .worker();
     }

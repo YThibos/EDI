@@ -18,7 +18,7 @@ The runs used `claude-sonnet-5-5` at `low` effort, except the failure run, which
 | `--session-id <uuid>` | Verified. Every payload and the run's result carried the given UUID. |
 | `--resume <uuid>` | Verified. `SessionStart` arrived with `source: "resume"` and the same session id, and the session remembered the first run's tool call. |
 | `--model <id>` | Verified. `claude-sonnet-5-5` ran; an unknown id ended the turn with `StopFailure` and `error: "model_not_found"`. |
-| `--effort <level>` | Verified. `low` appears as `effort.level` in the tool and stop payloads. The help lists `low`, `medium`, `high`, `xhigh` and `max`, so EDI's ceiling of `high` (I-14) is EDI's own rule, not Claude Code's. |
+| `--effort <level>` | Verified. `low` appears as `effort.level` in the tool and stop payloads. The help lists `low`, `medium`, `high`, `xhigh` and `max`, so EDI's ceiling of `high` (I-14) is EDI's own rule, not Claude Code's, and `xhigh` and `max` are the levels the captain's word for one task may lift it to. |
 | `--name <name>` | Verified. Payloads carry `session_title` equal to the name. |
 | `--append-system-prompt <text>` | Listed in `claude --help`. |
 | `--append-system-prompt-file <file>` | Verified, but undocumented: `--help` names it only in the description of `--bare`, yet the model quoted a codeword that only the appended file contained. The primary can therefore load its anchor with this flag (section 10.1); if a release drops it, the fallback is `--append-system-prompt` with the anchor's text, which fits well within argument limits at 10,000 bytes. |

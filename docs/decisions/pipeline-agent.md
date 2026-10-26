@@ -7,7 +7,8 @@
 The validation pipeline (no-mistakes) runs its own Claude Code agent for its review, test, documentation, lint and pull request steps, and started it with `claude -p` without a model or an effort, so it ran at the harness's global defaults.
 On no-mistakes 1.84.0 the only way to give that agent a model and an effort is `agent_args_override.claude` in the pipeline's global `config.yaml`; the key is global-only, `axi run --model` and `--effort` serve the Pi agent only, and the daemon runs every step in its own environment ([docs/verification/no-mistakes.md](../verification/no-mistakes.md)).
 Until this decision EDI only read the pipeline's state ([supervision](supervision.md)).
-Effort has three levels and `high` is the ceiling (I-14).
+Effort has five levels, `low` to `max`, and `high` is EDI's ceiling (I-14), which only the captain's recorded word for one task lifts.
+The pipeline's agent works on no one task, so its entry stays at or below `high`.
 
 ## Decision
 

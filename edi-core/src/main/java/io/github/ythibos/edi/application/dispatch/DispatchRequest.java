@@ -16,4 +16,8 @@ public record DispatchRequest(CategoryId category, String spec, List<String> exp
     public DispatchRequest(CategoryId category, String spec, List<String> expectedFiles, CaptainOverride captainsOverride) {
         this(category, spec, expectedFiles, captainsOverride, false);
     }
+
+    public boolean liftsTheEffortCeiling() {
+        return captainsOverride != null && captainsOverride.route().isAboveTheEffortCeiling();
+    }
 }

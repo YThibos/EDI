@@ -49,6 +49,7 @@ A project's entry names:
 `config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([dispatch-routing](decisions/dispatch-routing.md)).
 A project override's `categories` names the categories it covers, and a task of any other category routes by its category; an override without `categories` covers every category.
 The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([pipeline-agent](decisions/pipeline-agent.md)).
+An effort in the file is `low`, `medium` or `high`; only the captain's word recorded on one task with `--for effort-above-high` lifts that task to `xhigh` or `max`, through `edi dispatch --override-effort`, never through the file.
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).
 
 ## The personal configuration

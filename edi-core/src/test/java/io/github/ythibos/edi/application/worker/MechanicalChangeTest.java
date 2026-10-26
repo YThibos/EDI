@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
@@ -138,6 +139,7 @@ class MechanicalChangeTest {
     }
 
     private DispatchOutcome dispatch(String spec, List<String> files) {
-        return home.dispatchTask().dispatch(TaskReference.parse(TASK.value()), new DispatchRequest(CategoryId.MECHANICAL, spec, files, null), Actor.PRIMARY);
+        return home.dispatchTask().dispatch(TaskReference.parse(TASK.value()), new DispatchRequest(CategoryId.MECHANICAL, spec, files, null),
+                CallingSession.UNNAMED, Actor.PRIMARY);
     }
 }

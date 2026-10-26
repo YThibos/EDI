@@ -179,7 +179,7 @@ public class DispatchRulesFile {
             if (use == null || use.model() == null) {
                 throw new IllegalArgumentException(usedBy + " names no model to run on.");
             }
-            return new Route(new ModelId(use.model()), use.effort() == null ? null : EffortLevel.named(use.effort()));
+            return new Route(new ModelId(use.model()), use.effort() == null ? null : EffortLevel.withinTheCeiling(use.effort()));
         }
     }
 }

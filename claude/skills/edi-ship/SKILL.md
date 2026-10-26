@@ -22,7 +22,7 @@ description: >-
 2. `mechanical` only when the spec states the exact change; pass every file with `--files`.
 3. A bugfix with an unknown cause is research first: `--cause-unknown`.
 4. Review the brief with `edi brief <task> --category <id> --spec -` when it matters, then run `edi dispatch <task> --category <id> --spec -`.
-5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; effort is never above high.
+5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; effort is never above high, unless the captain explicitly asks it for this one task: record their words with `edi captain said --task <task> --for effort-above-high` first, then `--override-effort xhigh` or `max` with `--reason`; it never goes into the dispatch rules.
 6. EDI makes the isolated copy on the keyed branch from the fresh origin base, writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
 
 ## Supervision

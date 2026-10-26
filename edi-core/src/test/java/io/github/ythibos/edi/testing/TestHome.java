@@ -614,7 +614,7 @@ public final class TestHome {
 
     public DispatchTask dispatchTask() {
         return new DispatchTask(tasks, dispatches, adoptions, events, registry, machineProfile(), dispatchRulesFile(), workerPlaces(), launchWorker(),
-                cloneRefreshes(), researchBeforeImplementation(), awayLimit(), clock, transaction);
+                cloneRefreshes(), researchBeforeImplementation(), awayLimit(), captainsWord(), clock, transaction);
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {

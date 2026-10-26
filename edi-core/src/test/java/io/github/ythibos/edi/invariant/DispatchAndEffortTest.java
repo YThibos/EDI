@@ -26,6 +26,9 @@ import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -51,12 +54,18 @@ class DispatchAndEffortTest {
     private static final Set<CategoryId> EDIS_RESEARCH_AND_IMPLEMENTATION = Set.of(CategoryId.RESEARCH, CategoryId.IMPLEMENTATION,
             CategoryId.IMPLEMENTATION_UNPLANNED, CategoryId.BUGFIX);
     private static final String PIPELINE = "{\"use\": {\"model\": \"claude-opus-5-5\", \"effort\": \"high\"}, \"why\": \"The last judge.\"}";
+    private static final Route OPUS_XHIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH);
+    private static final Route OPUS_MAX = new Route(new ModelId("claude-opus-5-5"), EffortLevel.MAX);
+    private static final Route SONNET_HIGH = new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH);
+    private static final String THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD = "To run one task above high, EDI's effort ceiling, EDI needs the captain's"
+            + " word on fit-lamp in this session recorded for it: record it with edi captain said --task fit-lamp --for effort-above-high"
+            + " --text \"<their words>\".";
 
     @TempDir
     private Path directory;
 
     @Nested
-    @DisplayName("I-14 Routing by written category, three effort levels, high is the ceiling")
+    @DisplayName("I-14 Routing by written category, high is the ceiling, and only the captain's word lifts it for one task")
     class RoutingByWrittenCategory {
 
         @Test
@@ -80,12 +89,95 @@ class DispatchAndEffortTest {
                     "high is EDI's ceiling, so not max");
             assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false).replace(", \"pipeline\": " + PIPELINE, ""),
                     "it names no pipeline entry, so the validation pipeline's agent would run at the harness default");
-            assertThatThrownBy(() -> EffortLevel.named("xhigh")).hasMessageContaining("high is EDI's ceiling");
+            assertThatThrownBy(() -> EffortLevel.withinTheCeiling("xhigh")).hasMessageContaining("high is EDI's ceiling");
+            assertThatThrownBy(() -> EffortLevel.named("ultra")).hasMessageContaining("lifts that task to xhigh or max");
             assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), LaunchKind.DISPATCH, UUID.randomUUID(), null, directory, directory, directory, directory,
                     Map.of(), List.of(), PermissionMode.BYPASS, "brief")).hasMessageContaining("explicit model and effort");
             assertThatThrownBy(() -> new Route(null, EffortLevel.HIGH)).hasMessageContaining("explicit model");
             assertThat(home.writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))
                     .dispatchRulesFile().validatedAgainst(home.machineProfile().workers().models()).categories()).hasSize(8);
+        }
+
+        @Test
+        @DisplayName("the captain's word recorded on a task for effort above high in this session lifts that task to xhigh or max, with a reason")
+        @Tag("adapter")
+        void theCaptainsWordOnATaskLiftsItAboveHigh() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
+            CallingSession session = primarySession(home);
+            captainSaysForEffortAboveHigh(home, session, "fit-lamp", "Fit the lamp on Opus at xhigh, it matters.");
+            captainSaysForEffortAboveHigh(home, session, "fit-horn", "The horn runs at max.");
+
+            dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session);
+            assertThat(home.runtime().lastLaunch().route()).isEqualTo(OPUS_XHIGH);
+            dispatchAboveHigh(home, "fit-horn", EffortLevel.MAX, session);
+            assertThat(home.runtime().lastLaunch().route()).isEqualTo(OPUS_MAX);
+            assertThatThrownBy(() -> new CaptainOverride(OPUS_XHIGH, " ")).hasMessageContaining("records the captain's reason");
+        }
+
+        @Test
+        @DisplayName("without the captain's word on the task for effort above high, effort above high is refused with how to record it")
+        @Tag("adapter")
+        void effortAboveHighWithoutTheCaptainsWordIsRefused() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            CallingSession session = primarySession(home);
+
+            assertThatThrownBy(() -> dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessage(THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD);
+            assertThat(home.runtime().launches()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("a general word on the task, such as one recorded to discard its work, lifts nothing")
+        @Tag("adapter")
+        void aGeneralWordOnTheTaskLiftsNothing() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            CallingSession session = primarySession(home);
+            captainSays(home, session, "fit-lamp", "Discard the work on fit-lamp and start it over.");
+
+            assertThatThrownBy(() -> dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessage(THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD);
+            assertThat(home.runtime().launches()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("the captain's effort word on another task, or a word on no task, lifts nothing")
+        @Tag("adapter")
+        void theCaptainsWordOnAnotherTaskLiftsNothing() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
+            CallingSession session = primarySession(home);
+            captainSaysForEffortAboveHigh(home, session, "fit-horn", "The horn runs at xhigh.");
+            home.primaryHooks().promptSubmitted(session.id(), "Everything at xhigh today.");
+            home.captainsWord().record(session, "Everything at xhigh today.", null, null, Actor.PRIMARY);
+
+            assertThatThrownBy(() -> dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session))
+                    .isInstanceOf(Refusal.class).hasMessage(THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD);
+            assertThat(home.runtime().launches()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("a relaunch of the lifted task keeps its effort in a later session, and another task does not inherit it")
+        @Tag("adapter")
+        void aRelaunchKeepsTheLiftAndNoOtherTaskInheritsIt() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
+            CallingSession session = primarySession(home);
+            captainSaysForEffortAboveHigh(home, session, "fit-lamp", "Fit the lamp on Opus at xhigh, it matters.");
+            dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session);
+            home.runtime().closeEveryWindow();
+            primarySession(home);
+
+            home.relaunchWorker().relaunch(TaskReference.parse("fit-lamp"), Actor.PRIMARY);
+            assertThat(home.runtime().lastLaunch().worker()).isEqualTo(new WorkerId(new TaskId("fit-lamp"), 2));
+            assertThat(home.runtime().lastLaunch().route()).isEqualTo(OPUS_XHIGH);
+
+            dispatch(home, "fit-horn", "implementation");
+            assertThat(home.runtime().lastLaunch().route()).isEqualTo(SONNET_HIGH);
         }
     }
 
@@ -158,7 +250,32 @@ class DispatchAndEffortTest {
 
     private static void dispatch(TestHome home, String task, String category) {
         home.dispatchTask().dispatch(TaskReference.parse(task),
-                new DispatchRequest(category == null ? null : new CategoryId(category), "", List.of(), null), Actor.PRIMARY);
+                new DispatchRequest(category == null ? null : new CategoryId(category), "", List.of(), null), CallingSession.UNNAMED, Actor.PRIMARY);
+    }
+
+    private static CallingSession primarySession(TestHome home) {
+        UUID session = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(session, null, true);
+        return new CallingSession(session);
+    }
+
+    private static void captainSaysForEffortAboveHigh(TestHome home, CallingSession session, String task, String words) {
+        recordTheCaptainsWord(home, session, task, words, CaptainWordAct.EFFORT_ABOVE_HIGH);
+    }
+
+    private static void captainSays(TestHome home, CallingSession session, String task, String words) {
+        recordTheCaptainsWord(home, session, task, words, null);
+    }
+
+    private static void recordTheCaptainsWord(TestHome home, CallingSession session, String task, String words, CaptainWordAct act) {
+        home.primaryHooks().promptSubmitted(session.id(), words);
+        home.captainsWord().record(session, words, TaskReference.parse(task), act, Actor.PRIMARY);
+    }
+
+    private static void dispatchAboveHigh(TestHome home, String task, EffortLevel effort, CallingSession session) {
+        CaptainOverride captainsOverride = new CaptainOverride(new Route(new ModelId("claude-opus-5-5"), effort), "the captain asked for " + effort.word());
+        home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(new CategoryId("research"), "", List.of(), captainsOverride),
+                session, Actor.PRIMARY);
     }
 
     private static void assertRefused(TestHome home, String rules, String reason) throws IOException {

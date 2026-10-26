@@ -9,6 +9,6 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 record RecoveryAnswer(String model, String effort) {
 
     RouteChange routeChange() {
-        return new RouteChange(optional(model, ModelId::new), optional(effort, EffortLevel::named));
+        return new RouteChange(optional(model, ModelId::new), optional(effort, EffortLevel::withinTheCeiling));
     }
 }

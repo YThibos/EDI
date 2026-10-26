@@ -173,7 +173,7 @@ public class DecisionStore {
     private static DecisionOption option(ResultSet row) throws SQLException {
         String authorises = row.getString("authorises");
         return new DecisionOption(OptionKey.parse(row.getString("option_key")), row.getString("option_text"),
-                authorises == null ? null : CaptainWordAct.onATaskNamed(authorises));
+                authorises == null ? null : CaptainWordAct.authorisableByAnOption(authorises));
     }
 
     private record DecisionRow(
