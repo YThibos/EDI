@@ -147,6 +147,15 @@ Pasting about 1.7 million characters into the composer and submitting it filled 
 - Each further typed line fired `UserPromptSubmit` and failed the same way at once.
 - `--resume` of the session with a prompt after `--` fired `SessionStart` with `source: "resume"` and `UserPromptSubmit`, and failed again with "Context limit reached", so a full session cannot be resumed.
 
+## A stop hook that cannot reach EDI, on 2.1.308 and 2.1.309
+
+Read on Claude Code 2.1.308 from the transcripts of four workers whose `Stop` hook ran during core outages on 22/10/2026, and verified on 2.1.309 on WSL2 Ubuntu 24.04, 23/10/2026, for the missed-stop notice ([supervision](../decisions/supervision.md)).
+An interactive session on a private tmux socket ran on `claude-haiku-5-5` with a settings file whose only hook, `Stop`, printed EDI's "core is not running" reason on standard error and exited with 1.
+
+- The turn ended: the pane showed "Stop hook error occurred" above the idle prompt, and no hook fired again.
+- The transcript recorded an `attachment` record of type `hook_non_blocking_error` with the hook's standard error and exit code, a `system` record with `subtype: "stop_hook_summary"` whose `hookErrors` held "Failed with non-blocking status code: " and that reason, with `preventedContinuation: false`, and then a `system` record with `subtype: "turn_duration"`.
+- A stop EDI answered writes the same two records with an empty `hookErrors`; a stop EDI blocked puts its reason in `hookErrors` and goes on with an assistant record, with no `turn_duration`.
+
 ## The opening prompt, on 2.1.308
 
 Verified on Claude Code 2.1.308 on WSL2 Ubuntu 24.04, 23/10/2026, for the primary's opening prompt ([opening-turn](../decisions/opening-turn.md)).

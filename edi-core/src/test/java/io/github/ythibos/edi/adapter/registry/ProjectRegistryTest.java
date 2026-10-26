@@ -89,10 +89,14 @@ class ProjectRegistryTest {
     }
 
     @Test
-    void refusesLocalApplyAsAProjectsDefaultAndAForgeWithoutItsAccount() throws IOException {
+    void refusesAPerTaskDeliveryAsAProjectsDefaultAndAForgeWithoutItsAccount() throws IOException {
         register("projects:\n  - name: service\n    delivery: local-apply\n");
         assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
                 .hasMessageContaining("never a project's default");
+
+        register("projects:\n  - name: service\n    delivery: report\n");
+        assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
+                .hasMessageContaining("report is a delivery the captain asks for on one task, never a project's default");
 
         register("projects:\n  - name: service\n    forge: { kind: github, path: example-owner/service }\n");
         assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)

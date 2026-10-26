@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.adapter.store;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -7,6 +8,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Adoption;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -40,6 +42,13 @@ public class AdoptionStore {
                         sessionOf(row.getString("session_id")),
                         Columns.instant(row.getString("adopted_at"))))
                 .optional();
+    }
+
+    public List<BranchName> branchesOfTasksKeyedOn(WorkKey key) {
+        return store.sql("select adoption.branch from adoption join task on task.id = adoption.task_id where task.work_key = :key")
+                .param("key", key.toString())
+                .query((row, _) -> BranchName.parse(row.getString(1)))
+                .list();
     }
 
     private static UUID sessionOf(String session) {

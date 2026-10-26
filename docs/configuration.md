@@ -9,7 +9,7 @@ Everything that differs between machines or people lives in the EDI home, never 
 |---|---|
 | `config/machine.yaml` | the machine profile |
 | `config/projects.yaml` | the project registry |
-| `config/dispatch-rules.json` | the dispatch categories and the project overrides |
+| `config/dispatch-rules.json` | the dispatch categories, the project overrides and the validation pipeline's agent |
 | `config/personal.yaml` | the personal configuration |
 | `config/publish-denylist` | the terms EDI never publishes |
 | `memory/` | the captain's memory and the craftsmanship rules |
@@ -47,6 +47,8 @@ A project's entry names:
 ## The dispatch rules
 
 `config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([dispatch-routing](decisions/dispatch-routing.md)).
+A project override's `categories` names the categories it covers, and a task of any other category routes by its category; an override without `categories` covers every category.
+The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([pipeline-agent](decisions/pipeline-agent.md)).
 An effort in the file is `low`, `medium` or `high`; only the captain's word recorded on one task lifts that task to `xhigh` or `max`, through `edi dispatch --override-effort`, never through the file.
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).
 

@@ -21,7 +21,7 @@ Every fresh start writes `handover.md` beside the brief, and its first prompt as
 When a round finds two or more dead workers, `OutageHoldList` lists each in `outage_entry`, numbered after the highest open number, holds its task for the captain and records `LostInOutage`; one dead worker alone records `WorkerDied`.
 `edi recover` prints the list, with each copy verified by git (`OutageListQuery`), and `edi recover <n> resume|fresh [--model M] [--effort E]` or `drop [--discard-work]` answers one entry (`RecoverFromOutage`, `DropFromOutage`); a relaunch is refused while a usage limit still holds.
 `ClaudeTranscript` reads a transcript's last 256 KB and finds a limit stop only in its last record, an assistant API error whose text opens like a limit message, dated after the incarnation's launch, with the reset from the record's own fields.
-`WorkerHooks.stopFailed` parks the worker on that limit, and `ResumeAfterUsageLimits` types `EDI_OP: Continue the task from where you stopped; run edi inbox first` into one reset worker a minute, at an idle prompt only; a limit without a reset is never resumed by EDI.
+`WorkerHooks.stopFailed` parks the worker on that limit unless it is already parked on it (`Worker.isParkedOn`), as the round does when the core missed that hook ([supervision](supervision.md)), and `ResumeAfterUsageLimits` types `EDI_OP: Continue the task from where you stopped; run edi inbox first` into one reset worker a minute, at an idle prompt only; a limit without a reset is never resumed by EDI.
 When a resume or fresh start ends or dies, `CountRecoveryCost` stores the tokens its records spent since its launch, each message once, in `recovery_cost`, and `edi recover` reports the total.
 
 ## Why
@@ -55,3 +55,4 @@ When Claude Code changes `--resume` or its limit records, can compact or clear a
 - 16/10/2026: slice S4 built relaunch, stop, the outage list, usage limits and recovery cost.
 - 17/10/2026: slice S8 let the outage list drop a task on the captain's word ([captains-word](captains-word.md)).
 - 22/10/2026: a worker whose context had filled could not be resumed, and the primary wrote its successor a handover by hand, so a full context now starts afresh with a handover EDI writes (EDI-35).
+- 23/10/2026: the round parks a worker whose usage limit the core missed during an outage, so the hook parks a worker only once on the same limit (EDI-38).

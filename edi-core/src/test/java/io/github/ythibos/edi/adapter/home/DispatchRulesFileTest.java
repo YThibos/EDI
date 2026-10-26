@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +16,11 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.DispatchCategory;
+import io.github.ythibos.edi.domain.dispatch.DispatchRules;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.ProjectOverride;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.testing.ExampleHome;
 import tools.jackson.databind.JsonNode;
@@ -63,6 +69,7 @@ class DispatchRulesFileTest {
         JsonNode research = categoryOf(merged, "research");
 
         assertThat(research.path("use").path("effort").asString()).isEqualTo("low");
+        assertThat(new JsonMapper().readTree(merged).path("pipeline")).isEqualTo(new JsonMapper().readTree(example).path("pipeline"));
         assertThat(research.path("why").asString())
                 .isEqualTo("Tuned on the shadow run. The old harness's routing rules for this work said: Plans decide rounds.");
         assertThat(new JsonMapper().readTree(merged).path("categories").valueStream().map(category -> category.path("id").asString()).toList())
@@ -70,6 +77,19 @@ class DispatchRulesFileTest {
                         .toList());
         assertThat(rules.withWhatItLacks(merged, example, reasons, Map.of(new ProjectName("EDI"), List.of("The strongest model."))))
                 .isEqualTo(merged);
+    }
+
+    @Test
+    void readsTheCategoriesAProjectOverrideCoversAndThePipelinesAgent() throws IOException {
+        Files.createDirectories(home.resolve("config"));
+        Files.writeString(home.resolve("config/dispatch-rules.json"), ExampleHome.file("config/dispatch-rules.json"));
+
+        DispatchRules rules = new DispatchRulesFile(new EdiHome(home), new JsonMapper())
+                .validatedAgainst(MachineProfile.workerRosterIn(ExampleHome.file("config/machine.yaml")));
+
+        assertThat(rules.projectOverrides()).singleElement().extracting(ProjectOverride::categories).asInstanceOf(InstanceOfAssertFactories.COLLECTION)
+                .containsExactlyInAnyOrder(CategoryId.RESEARCH, CategoryId.IMPLEMENTATION, CategoryId.IMPLEMENTATION_UNPLANNED, CategoryId.BUGFIX);
+        assertThat(rules.pipelineAgent().route()).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
     }
 
     private static JsonNode categoryOf(String rules, String id) {

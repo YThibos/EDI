@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
@@ -19,6 +20,7 @@ import io.github.ythibos.edi.domain.dispatch.DispatchRules;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.ModelRoster;
+import io.github.ythibos.edi.domain.dispatch.PipelineAgent;
 import io.github.ythibos.edi.domain.dispatch.ProjectOverride;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -33,6 +35,7 @@ import tools.jackson.databind.node.ObjectNode;
         DispatchRulesFile.RulesDocument.class,
         DispatchRulesFile.OverrideEntry.class,
         DispatchRulesFile.CategoryEntry.class,
+        DispatchRulesFile.PipelineEntry.class,
         DispatchRulesFile.RouteEntry.class})
 public class DispatchRulesFile {
 
@@ -40,6 +43,7 @@ public class DispatchRulesFile {
     private static final String CARRIED_REASONS = " The old harness's routing rules for this work said: ";
     private static final String CATEGORIES = "categories";
     private static final String PROJECT_OVERRIDES = "projectOverrides";
+    private static final String PIPELINE = "pipeline";
     private static final String ID = "id";
     private static final String PROJECT = "project";
     private static final String WHY = "why";
@@ -68,6 +72,7 @@ public class DispatchRulesFile {
         JsonNode examples = json.readTree(example);
         addLacking(document, examples, CATEGORIES, ID);
         addLacking(document, examples, PROJECT_OVERRIDES, PROJECT);
+        addLacking(document, examples, PIPELINE);
         carryAll(document, CATEGORIES, ID, entry -> byCategory.get(new CategoryId(entry)));
         carryAll(document, PROJECT_OVERRIDES, PROJECT, entry -> byProject.get(new ProjectName(entry)));
         return document.equals(json.readTree(rules)) ? rules : json.writerWithDefaultPrettyPrinter().writeValueAsString(document) + "\n";
@@ -98,6 +103,12 @@ public class DispatchRulesFile {
         }
     }
 
+    private static void addLacking(JsonNode document, JsonNode examples, String entry) {
+        if (!document.has(entry) && examples.has(entry)) {
+            ((ObjectNode) document).set(entry, examples.get(entry).deepCopy());
+        }
+    }
+
     private static void carryAll(JsonNode document, String list, String key, Function<String, List<String>> reasonsOf) {
         for (JsonNode entry : document.path(list)) {
             carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
@@ -114,20 +125,25 @@ public class DispatchRulesFile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record RulesDocument(String schema, List<OverrideEntry> projectOverrides, List<CategoryEntry> categories) {
+    record RulesDocument(String schema, List<OverrideEntry> projectOverrides, List<CategoryEntry> categories, PipelineEntry pipeline) {
 
         DispatchRules asRules() {
             return new DispatchRules(
                     Objects.requireNonNullElse(projectOverrides, List.<OverrideEntry>of()).stream().map(OverrideEntry::asOverride).toList(),
-                    Objects.requireNonNullElse(categories, List.<CategoryEntry>of()).stream().map(CategoryEntry::asCategory).toList());
+                    Objects.requireNonNullElse(categories, List.<CategoryEntry>of()).stream().map(CategoryEntry::asCategory).toList(),
+                    PipelineEntry.agentOf(pipeline));
         }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record OverrideEntry(String project, RouteEntry use, String why) {
+    record OverrideEntry(String project, List<String> categories, RouteEntry use, String why) {
 
         ProjectOverride asOverride() {
-            return new ProjectOverride(new ProjectName(project), RouteEntry.routeOf(use, "The override for " + project), why);
+            return new ProjectOverride(new ProjectName(project), coveredCategories(), RouteEntry.routeOf(use, "The override for " + project), why);
+        }
+
+        private Set<CategoryId> coveredCategories() {
+            return Set.copyOf(Objects.requireNonNullElse(categories, List.<String>of()).stream().map(CategoryId::new).toList());
         }
     }
 
@@ -142,6 +158,17 @@ public class DispatchRulesFile {
                     why,
                     branch == null ? null : BranchKind.named(branch),
                     Boolean.TRUE.equals(researchFirst));
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record PipelineEntry(RouteEntry use, String why) {
+
+        static PipelineAgent agentOf(PipelineEntry pipeline) {
+            if (pipeline == null) {
+                throw new IllegalArgumentException("it names no pipeline entry, so the validation pipeline's agent would run at the harness default.");
+            }
+            return new PipelineAgent(RouteEntry.routeOf(pipeline.use(), "The pipeline entry"), pipeline.why());
         }
     }
 

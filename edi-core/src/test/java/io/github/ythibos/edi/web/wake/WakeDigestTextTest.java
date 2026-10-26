@@ -10,10 +10,13 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
+import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
+import io.github.ythibos.edi.domain.wake.WakeRule;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
@@ -52,6 +55,18 @@ class WakeDigestTextTest {
         assertThat(digest.text(delivery)).contains("1. fit-lamp#1's context has been full since 2026-10-16 09:00 UTC, so it can take no further prompt and"
                 + " a resume would stop on it again; edi worker stop fit-lamp, then edi worker relaunch fit-lamp starts a fresh session in its copy with a"
                 + " handover.\n");
+    }
+
+    @Test
+    void tellsThePrimaryThatEdiWokeAWorkerWhoseStopItMissed() {
+        Wake missed = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, true), Actor.CORE).orElseThrow();
+        Wake untyped = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, false), Actor.CORE).orElseThrow();
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, missed), queued(2, untyped)), 0, 1, 0, PRESENT);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while EDI could not take its stop hook, so EDI"
+                + " sent it a message to carry on: message 2 was typed into its idle prompt.\n")
+                .contains("2. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while EDI could not take its stop hook, so EDI sent it a message to"
+                        + " carry on: message 2 waits, as its pane did not take the notice; edi worker peek fit-lamp shows the pane.\n");
     }
 
     @Test

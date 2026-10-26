@@ -108,17 +108,22 @@ class MemoryAndCraftTest {
 
             Path flagged = home.home().taskDirectory(new TaskId("fit-lamp")).resolve("intent.md");
             assertThat(Files.readString(flagged)).isEqualTo("## Captain's intent\n\nDo the work on fit-lamp.\n\n" + intent + "\n\n## Spec\n\n" + spec
-                    + "\n\n" + WorkerFixtures.CRAFT_RULES.strip());
+                    + "\n\n" + keyedCommits("HRN-3") + "\n\n" + WorkerFixtures.CRAFT_RULES.strip());
             assertThat(Files.readString(flagged)).contains("Acceptance: AT-99 passes", "Offline verification is accepted", WorkerFixtures.CRAFT_RULES.strip());
             assertThat(Files.readString(home.home().taskDirectory(new TaskId("fit-lamp")).resolve("brief.md")))
                     .contains("no-mistakes axi run --base-branch main --intent \"$(cat '" + flagged + "')\"");
             assertThat(Files.readString(home.home().taskDirectory(new TaskId("map-caves")).resolve("intent.md")))
-                    .isEqualTo("## Captain's intent\n\nDo the work on map-caves.\n\n" + intent + "\n\n## Spec\n\n" + spec);
+                    .isEqualTo("## Captain's intent\n\nDo the work on map-caves.\n\n" + intent + "\n\n## Spec\n\n" + spec + "\n\n" + keyedCommits("EDI-9"));
         }
 
         private static void dispatchShip(TestHome home, String task, String spec) {
             home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, spec, List.of(), null),
                     CallingSession.UNNAMED, Actor.PRIMARY);
+        }
+
+        private static String keyedCommits(String key) {
+            return "## Commits\n\nThe pipeline starts every commit subject it writes, and the pull request's title, with the work key `" + key
+                    + "`, so a fix summary or a title it asks for is one short line that leaves the key out.";
         }
     }
 

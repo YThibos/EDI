@@ -18,7 +18,6 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
-import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -28,14 +27,17 @@ public class DoneClaims {
     private final WorkerContext context;
     private final Git git;
     private final DeliveryRecords records;
+    private final LandedWorkCheck landedWork;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DoneClaims(WorkerContext context, Git git, DeliveryRecords records, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public DoneClaims(WorkerContext context, Git git, DeliveryRecords records, LandedWorkCheck landedWork, EventLog events, Clock clock,
+            TransactionTemplate transaction) {
         this.context = context;
         this.git = git;
         this.records = records;
+        this.landedWork = landedWork;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -49,9 +51,7 @@ public class DoneClaims {
         requireTheCopy(workplace);
         Optional<MergeRequestView> request = requestOf(workplace);
         List<String> gaps = new ArrayList<>(snapshotGapsOf(workplace));
-        if (workplace.delivery() == DeliveryMode.DRAFT_REVIEW) {
-            gaps.addAll(requestGapsOf(workplace, request));
-        }
+        gaps.addAll(deliveryGapsOf(workplace, request));
         if (!gaps.isEmpty()) {
             refuse(worker, gaps);
         }
@@ -73,6 +73,14 @@ public class DoneClaims {
         return snapshots.isEmpty() ? List.of() : List.of(SnapshotVersions.refusalOf(snapshots));
     }
 
+    private List<String> deliveryGapsOf(Workplace workplace, Optional<MergeRequestView> request) {
+        return switch (workplace.delivery()) {
+            case DRAFT_REVIEW -> requestGapsOf(workplace, request);
+            case LOCAL_BRANCH, LOCAL_APPLY -> List.of();
+            case REPORT -> reportGapsOf(workplace);
+        };
+    }
+
     private List<String> requestGapsOf(Workplace workplace, Optional<MergeRequestView> request) {
         if (workplace.project().forge() == null) {
             return List.of(workplace.project().project().name() + " registers no forge, so no merge request can carry this work");
@@ -80,6 +88,18 @@ public class DoneClaims {
         return request.map(found -> found.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), git.head(workplace.worktree())))
                 .orElseGet(() -> List.of(records.noRequestFrom(workplace)
                         + "; the pipeline opens it as a draft, and edi deliver opens it when the pipeline cannot"));
+    }
+
+    private List<String> reportGapsOf(Workplace workplace) {
+        List<String> gaps = new ArrayList<>();
+        if (!Files.isRegularFile(workplace.report())) {
+            gaps.add("the report " + workplace.report() + " does not exist, and it is all a report delivery delivers");
+        }
+        List<String> changes = landedWork.of(workplace).findings();
+        if (!changes.isEmpty()) {
+            gaps.add("a report delivery carries no change, yet " + String.join(" and ", changes));
+        }
+        return gaps;
     }
 
     private void refuse(WorkerId worker, List<String> gaps) {

@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -24,11 +26,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
     private PaneState pane = PaneState.IDLE_PROMPT;
+    private boolean paneFails;
     private boolean serverRunning = true;
     private long serverPid = 4242;
     private Instant serverStartedAt = Instant.parse("2026-10-15T08:00:00Z");
     private UsageLimit limitInTheTranscript;
     private Instant contextFullInTheTranscript;
+    private Instant missedStopInTheTranscript;
+    private ErrorStop errorStopInTheTranscript;
     private TokenUsage tokensInTheTranscript = TokenUsage.NONE;
     private Runnable duringTheNextLaunch = () -> {
     };
@@ -81,6 +86,9 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     @Override
     public synchronized void press(WorkerWindow window, Keystroke keystroke) {
+        if (paneFails) {
+            throw new ProgramFailure("tmux exited with 1: can't find pane");
+        }
         if (keystroke instanceof Keystroke.Line line) {
             if (!pane.acceptsALine()) {
                 throw new Refusal("The pane shows " + pane.word() + ".");
@@ -105,12 +113,26 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
+    public synchronized Optional<Instant> missedStopIn(String transcript, Instant since) {
+        return Optional.ofNullable(missedStopInTheTranscript).filter(at -> !at.isBefore(since));
+    }
+
+    @Override
+    public synchronized Optional<ErrorStop> errorStopIn(String transcript, Instant since) {
+        return Optional.ofNullable(errorStopInTheTranscript).filter(stop -> !stop.endedAt().isBefore(since));
+    }
+
+    @Override
     public synchronized TokenUsage tokensSpentIn(String transcript, Instant since) {
         return tokensInTheTranscript;
     }
 
     public synchronized void showing(PaneState state) {
         pane = state;
+    }
+
+    public synchronized void failingEveryKeystroke() {
+        paneFails = true;
     }
 
     public synchronized void closeEveryWindow() {
@@ -138,6 +160,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void transcriptEndsOnAFullContextAt(Instant at) {
         contextFullInTheTranscript = at;
+    }
+
+    public synchronized void transcriptEndsOnAStopEdiMissedAt(Instant at) {
+        missedStopInTheTranscript = at;
+    }
+
+    public synchronized void transcriptEndsOn(ErrorStop stop) {
+        errorStopInTheTranscript = stop;
     }
 
     public synchronized void transcriptSpent(TokenUsage tokens) {

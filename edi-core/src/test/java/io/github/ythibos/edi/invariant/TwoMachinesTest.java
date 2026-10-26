@@ -7,11 +7,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import io.github.ythibos.edi.adapter.home.TimeSettings;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
@@ -54,6 +52,7 @@ class TwoMachinesTest {
 
     private static final String REGISTERED = "https://github.com/example-owner/harness.git";
     private static final String DENIED_HOST = "acme-corp.example";
+    private static final String TOKEN = SyntheticSecrets.githubToken();
     private static final String EMPLOYERS_PROJECT_AND_EDI = """
             projects:
               - name: service
@@ -114,39 +113,38 @@ class TwoMachinesTest {
         @RegisterExtension
         private final TestProcesses processes = new TestProcesses();
 
-        @Test
+        @ParameterizedTest(name = "{0}")
+        @EnumSource(Leak.class)
         @DisplayName("AT-38 fixture branches with a secret, a deny-listed term or a personal path are refused at edi deliver and at the worker's push")
         @Tag("adapter")
-        void deliveryAndPushRefuseEachKindOfLeak() throws IOException, InterruptedException {
+        void deliveryAndPushRefuseEachKindOfLeak(Leak leak) throws IOException, InterruptedException {
             assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
-            TestHome home = WorkerFixtures.homeWithProjects(directory).writing("config/publish-denylist", DENIED_HOST + "\n");
-            String token = SyntheticSecrets.githubToken();
-            Map<String, Leak> leaks = new LinkedHashMap<>();
-            leaks.put("leak-secret", copy -> copy.write("config/app.properties", "forge.token=" + token + "\n"));
-            leaks.put("leak-term", copy -> copy.write("docs/mirror.md", "Clone from https://git." + DENIED_HOST + "/team/harness\n"));
-            leaks.put("leak-path", copy -> copy.write("personal/notes.md", "my own notes\n").forceAdd("personal/notes.md"));
-            leaks.put("no-leak", copy -> copy.write("lamp.txt", "brass\n"));
-            int key = 3;
-            for (Map.Entry<String, Leak> leak : leaks.entrySet()) {
-                FixtureRepository copy = publishedCopy(home, leak.getKey(), "HRN-" + key++);
-                leak.getValue().into(copy);
-                copy.commit(copy.run("rev-parse", "--abbrev-ref", "HEAD").strip().replace("feature/", "") + " Add the work");
-                home.forge().pushed(BranchName.parse(copy.run("rev-parse", "--abbrev-ref", "HEAD").strip()), copy.head());
-            }
-            Map<String, RunningHook> pushes = pushesStartedFor(home, leaks.keySet(), processes);
+            TestHome home = homeWithTheDenyList(directory);
+            commitWork(home, leak.task(), leak);
+            RunningHook push = pushStartedFor(home, leak.task(), processes);
 
-            for (String leaking : List.of("leak-secret", "leak-term", "leak-path")) {
-                assertThatThrownBy(() -> home.deliverDraft().deliver(TaskReference.parse(leaking), Actor.PRIMARY))
-                        .as(leaking).isInstanceOf(Refusal.class).hasMessageContaining("The publish check refuses").hasMessageNotContaining(token);
-                HookRun push = pushes.get(leaking).finished();
-                assertThat(push.refused()).as(leaking).isTrue();
-                assertThat(push.output()).as(leaking).contains("Refused: the outgoing commits carry a secret or personal material.")
-                        .doesNotContain(token).doesNotContain(DENIED_HOST);
-            }
+            assertThatThrownBy(() -> home.deliverDraft().deliver(TaskReference.parse(leak.task()), Actor.PRIMARY))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("The publish check refuses").hasMessageNotContaining(TOKEN);
+            HookRun refused = push.finished();
+            assertThat(refused.refused()).isTrue();
+            assertThat(refused.output()).contains("Refused: the outgoing commits carry a secret or personal material.")
+                    .doesNotContain(TOKEN).doesNotContain(DENIED_HOST);
+            assertThat(home.forge().openedDrafts()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("AT-38 a fixture branch without a secret or personal material passes edi deliver and the worker's push")
+        @Tag("adapter")
+        void deliveryAndPushPassAClearBranch() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = homeWithTheDenyList(directory);
+            commitWork(home, "no-leak", copy -> copy.write("lamp.txt", "brass\n"));
+            RunningHook push = pushStartedFor(home, "no-leak", processes);
+
             assertThat(home.deliverDraft().deliver(TaskReference.parse("no-leak"), Actor.PRIMARY).opened()).isTrue();
-            HookRun cleanPush = pushes.get("no-leak").finished();
-            assertThat(cleanPush.refused()).as(cleanPush.output()).isFalse();
-            assertThat(home.forge().openedDrafts()).singleElement().satisfies(draft -> assertThat(draft.title()).isEqualTo("HRN-6 Work on no-leak"));
+            HookRun passed = push.finished();
+            assertThat(passed.refused()).as(passed.output()).isFalse();
+            assertThat(home.forge().openedDrafts()).singleElement().satisfies(draft -> assertThat(draft.title()).isEqualTo("HRN-3 Work on no-leak"));
         }
 
         @Test
@@ -262,6 +260,17 @@ class TwoMachinesTest {
         }
     }
 
+    private static TestHome homeWithTheDenyList(Path directory) throws IOException {
+        return WorkerFixtures.homeWithProjects(directory).writing("config/publish-denylist", DENIED_HOST + "\n");
+    }
+
+    private static void commitWork(TestHome home, String task, Work work) throws IOException {
+        FixtureRepository copy = publishedCopy(home, task, "HRN-3");
+        work.into(copy);
+        copy.commit("HRN-3 Add the work");
+        home.forge().pushed(BranchName.parse(branchOf(home, task)), copy.head());
+    }
+
     private static FixtureRepository publishedCopy(TestHome home, String task, String key) throws IOException {
         home.storing(List.of(WorkerFixtures.queuedShip(task, "harness", key)));
         DispatchOutcome dispatched = home.dispatchTask().dispatch(TaskReference.parse(task),
@@ -271,20 +280,16 @@ class TwoMachinesTest {
         return copy;
     }
 
-    private static Map<String, RunningHook> pushesStartedFor(TestHome home, Set<String> tasks, TestProcesses processes) throws IOException {
-        Map<String, RunningHook> pushes = new LinkedHashMap<>();
-        for (String task : tasks) {
-            pushes.put(task, PrePushHook.starts(copyOf(home, task), home.home().root(), branchOf(home, task), REGISTERED, processes));
-        }
-        return pushes;
+    private static String branchOf(TestHome home, String task) {
+        return home.dispatches().of(new TaskId(task)).orElseThrow().branch().toString();
+    }
+
+    private static RunningHook pushStartedFor(TestHome home, String task, TestProcesses processes) throws IOException {
+        return PrePushHook.starts(copyOf(home, task), home.home().root(), branchOf(home, task), REGISTERED, processes);
     }
 
     private static FixtureRepository copyOf(TestHome home, String task) {
         return FixtureRepository.at(home.home().worktreeOf(new ProjectName("harness"), new TaskId(task)));
-    }
-
-    private static String branchOf(TestHome home, String task) {
-        return home.dispatches().of(new TaskId(task)).orElseThrow().branch().toString();
     }
 
     private static TestHome homeOfAnEmployersProjectAndEdi(Path directory) throws IOException {
@@ -318,8 +323,40 @@ class TwoMachinesTest {
     }
 
     @FunctionalInterface
-    private interface Leak {
+    private interface Work {
 
         void into(FixtureRepository copy) throws IOException;
+    }
+
+    private enum Leak implements Work {
+
+        SECRET("leak-secret") {
+            @Override
+            public void into(FixtureRepository copy) throws IOException {
+                copy.write("config/app.properties", "forge.token=" + TOKEN + "\n");
+            }
+        },
+        DENY_LISTED_TERM("leak-term") {
+            @Override
+            public void into(FixtureRepository copy) throws IOException {
+                copy.write("docs/mirror.md", "Clone from https://git." + DENIED_HOST + "/team/harness\n");
+            }
+        },
+        PERSONAL_PATH("leak-path") {
+            @Override
+            public void into(FixtureRepository copy) throws IOException {
+                copy.write("personal/notes.md", "my own notes\n").forceAdd("personal/notes.md");
+            }
+        };
+
+        private final String task;
+
+        Leak(String task) {
+            this.task = task;
+        }
+
+        String task() {
+            return task;
+        }
     }
 }

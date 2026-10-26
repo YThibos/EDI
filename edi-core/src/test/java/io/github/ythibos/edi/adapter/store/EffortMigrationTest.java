@@ -34,7 +34,7 @@ class EffortMigrationTest {
     @Test
     void keepsEveryDispatchAndWorkerWithWhatHangsOnThemAndStoresEffortAboveHigh() throws IOException {
         DataSource store = StoreFile.openedAt(directory.resolve("edi.db"));
-        Flyway.configure().dataSource(store).target("13").load().migrate();
+        Flyway.configure().dataSource(store).target("15").load().migrate();
         JdbcClient jdbc = JdbcClient.create(store);
         storeALaunchedLampAtHigh(jdbc);
 

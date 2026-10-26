@@ -164,6 +164,7 @@ import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.InboxNotice;
 import io.github.ythibos.edi.application.worker.NoticeFullContexts;
+import io.github.ythibos.edi.application.worker.NoticeMissedStops;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
 import io.github.ythibos.edi.application.worker.RecordStatus;
@@ -315,13 +316,21 @@ public final class TestHome {
     }
 
     public void putInFlight(TaskId id) {
-        Task task = tasks.get(id);
-        tasks.update(new Task(task.id(), task.intake(), TaskState.IN_FLIGHT, task.notes(), task.hold(), task.created(), null));
+        transaction.executeWithoutResult(_ -> {
+            Task task = tasks.get(id);
+            tasks.update(new Task(task.id(), task.intake(), TaskState.IN_FLIGHT, task.notes(), task.hold(), task.created(), null));
+        });
     }
 
     public void markDone(TaskId id) {
-        Task task = tasks.get(id);
-        tasks.update(new Task(task.id(), task.intake(), TaskState.DONE, task.notes(), null, task.created(), clock.now()));
+        transaction.executeWithoutResult(_ -> {
+            Task task = tasks.get(id);
+            tasks.update(new Task(task.id(), task.intake(), TaskState.DONE, task.notes(), null, task.created(), clock.now()));
+        });
+    }
+
+    public void inOneTransaction(Runnable work) {
+        transaction.executeWithoutResult(_ -> work.run());
     }
 
     public TestHome continuingDecisionsFrom(int highestNumberSoFar) {
@@ -592,7 +601,7 @@ public final class TestHome {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), runtime, processes, machineBoot(), clock, transaction);
+                workerTokens(), runtime, pipeline, processes, machineBoot(), clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {
@@ -639,11 +648,11 @@ public final class TestHome {
     }
 
     public DoneClaims doneClaims() {
-        return new DoneClaims(workerContext(), git, deliveryRecords(), events, clock, transaction);
+        return new DoneClaims(workerContext(), git, deliveryRecords(), landedWork(), events, clock, transaction);
     }
 
     public DeliverAcceptedWork deliverAcceptedWork() {
-        return new DeliverAcceptedWork(workerContext(), deliveryRecords(), followMerges(), captainCheckouts(), transaction);
+        return new DeliverAcceptedWork(workerContext(), deliveryRecords(), followMerges(), captainCheckouts(), cleanUpTask(), transaction);
     }
 
     public PublishCheck publishCheck() {
@@ -850,6 +859,10 @@ public final class TestHome {
 
     public NoticeFullContexts noticeFullContexts() {
         return new NoticeFullContexts(workerList(), workers, runtime, events, clock, transaction);
+    }
+
+    public NoticeMissedStops noticeMissedStops() {
+        return new NoticeMissedStops(workerList(), workers, runtime, steerWorker(), events, clock, transaction);
     }
 
     public JudgeWorkers judgeWorkers() {

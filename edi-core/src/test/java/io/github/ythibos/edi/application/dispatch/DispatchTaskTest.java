@@ -27,6 +27,8 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.testing.ExampleHome;
+import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -65,10 +67,76 @@ class DispatchTaskTest {
     }
 
     @Test
+    void runsThePipelinesAgentOnTheRouteTheRulesGiveItAtEveryLaunch() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        dispatch("fit-lamp", "implementation");
+        assertThat(home.pipeline().agentRoute()).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
+
+        home.runtime().closeEveryWindow();
+        home.writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json")
+                .replace("\"pipeline\": {\n    \"use\": { \"model\": \"claude-opus-5-5\", \"effort\": \"high\" }",
+                        "\"pipeline\": {\n    \"use\": { \"model\": \"claude-sonnet-5-5\", \"effort\": \"medium\" }"));
+        dispatch("fit-lamp", null);
+
+        assertThat(home.pipeline().agentRoute()).isEqualTo(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.MEDIUM));
+    }
+
+    @Test
+    void keysThePipelinesCommitsForTheRemoteItsForgeServesWhenAShipDeliversThroughIt() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-4")));
+        dispatch("fit-lamp", "implementation");
+        dispatch("map-caves", "research");
+        assertThat(home.pipeline().keyedRemotes()).as("an origin no forge serves").isEmpty();
+
+        home.runtime().closeEveryWindow();
+        FixtureRepository.at(home.home().root().resolve("projects/harness")).run("remote", "set-url", "origin", "git@github.com:example-owner/harness.git");
+        dispatch("map-caves", null);
+        home.runtime().closeEveryWindow();
+        dispatch("fit-lamp", null);
+
+        assertThat(home.pipeline().keyedRemotes()).containsExactly("git@github.com:example-owner/harness.git");
+    }
+
+    @Test
     void sendsAScoutToAResearchBranch() throws IOException {
         home.storing(List.of(WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-4")));
 
         assertThat(dispatch("map-caves", "research").launched().branch()).hasToString("research/HRN-4");
+    }
+
+    @Test
+    void givesEachTaskOnTheSameKeyItsOwnBranch() throws IOException {
+        home.storing(List.of(
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-bell", "harness", "HRN-3"),
+                WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-3")));
+
+        dispatch("fit-lamp", "implementation");
+        DispatchOutcome horn = dispatch("fit-horn", "implementation");
+        DispatchOutcome bell = dispatch("fit-bell", "implementation");
+
+        assertThat(horn.launched().branch()).hasToString("feature/HRN-3-1");
+        assertThat(home.git().currentBranch(horn.launched().worktree())).isEqualTo("feature/HRN-3-1");
+        assertThat(bell.launched().branch()).hasToString("feature/HRN-3-2");
+        assertThat(dispatch("map-caves", "research").launched().branch()).hasToString("research/HRN-3");
+    }
+
+    @Test
+    void keepsTheBranchOfALaunchThatFailedForItsOwnTask() throws IOException {
+        home.storing(List.of(
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-3")));
+        home.runtime().duringTheNextLaunch(() -> {
+            throw new IllegalStateException("The terminal multiplexer is gone.");
+        });
+        assertThatThrownBy(() -> dispatch("fit-lamp", "implementation")).hasMessageContaining("multiplexer is gone");
+
+        DispatchOutcome horn = dispatch("fit-horn", "implementation");
+
+        assertThat(horn.launched().branch()).hasToString("feature/HRN-3-1");
+        assertThat(home.git().currentBranch(horn.launched().worktree())).isEqualTo("feature/HRN-3-1");
+        assertThat(dispatch("fit-lamp", "implementation").launched().branch()).hasToString("feature/HRN-3");
     }
 
     @Test

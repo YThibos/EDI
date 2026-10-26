@@ -15,7 +15,7 @@ Renovate runs nightly in the EDI repository and opens every upgrade as a draft p
 1. List the open Renovate pull requests of the EDI repository with `gh-axi`, always naming the repository, with each one's CI state.
 2. Group the green ones into batches the captain can merge together, such as the patches and minors of one group.
 3. Raise one decision per green batch with `edi decision raise <task> --card -` on an upkeep captain item, listing each pull request's full address; the captain merges them.
-4. A red major is a migration: add an EDI ship keyed for it with `edi task add --kind ship --project EDI ...` and dispatch it; EDI's own work runs on Opus 5.5 at high.
+4. A red major is a migration: add an EDI ship keyed for it with `edi task add --kind ship --project EDI ...` and dispatch it; EDI's own research and implementation run on Opus 5.5 at high.
 5. Report the versions of the tools EDI drives against their latest releases: Claude Code, no-mistakes, `glab`, `gh`, Lavish and tmux.
 6. For machine tools, point the captain at their own `/laptop-update` skill; EDI installs no machine tools itself.
 

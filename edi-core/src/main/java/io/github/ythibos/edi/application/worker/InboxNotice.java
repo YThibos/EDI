@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
@@ -36,7 +37,7 @@ public class InboxNotice {
         try {
             runtime.press(worker.window(), Keystroke.line(message.notice()));
             return Optional.of(SteerDelivery.TYPED_INTO_THE_IDLE_PROMPT);
-        } catch (Refusal paneNotIdle) {
+        } catch (Refusal | ProgramFailure paneNotTaken) {
             return Optional.empty();
         }
     }

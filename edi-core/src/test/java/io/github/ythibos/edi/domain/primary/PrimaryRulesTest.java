@@ -25,7 +25,7 @@ class PrimaryRulesTest {
     @Test
     void givesTheRoleToTheLiveSessionThatClaimedItLast() {
         PrimarySession earlier = PrimarySession.started(UUID.randomUUID(), null, START).claimed(START);
-        PrimarySession later = PrimarySession.started(UUID.randomUUID(), new SessionProcess(41, START), START).claimed(START.plusSeconds(5));
+        PrimarySession later = PrimarySession.started(UUID.randomUUID(), new SessionProcess(41, 9000L), START).claimed(START.plusSeconds(5));
         PrimarySession unclaimed = PrimarySession.started(UUID.randomUUID(), null, START);
 
         assertThat(PrimaryRole.among(List.of(earlier, later, unclaimed), _ -> true).standingOf(later.id())).isEqualTo(Standing.PRIMARY);
@@ -36,16 +36,13 @@ class PrimaryRulesTest {
     }
 
     @Test
-    void tellsTheSameProcessAcrossBootTimeDriftFromOneThatReusedItsId() {
-        SessionProcess recorded = new SessionProcess(41, START);
+    void tellsTheRecordedProcessFromOneThatReusedItsIdByItsStartTick() {
+        SessionProcess recorded = new SessionProcess(41, 9000L);
 
-        assertThat(recorded.isTheOneStartedAt(START)).isTrue();
-        assertThat(recorded.isTheOneStartedAt(START.plusSeconds(2))).isTrue();
-        assertThat(recorded.isTheOneStartedAt(START.minusSeconds(2))).isTrue();
-        assertThat(recorded.isTheOneStartedAt(START.plusSeconds(3))).isFalse();
-        assertThat(recorded.isTheOneStartedAt(START.minusSeconds(3))).isFalse();
-        assertThat(recorded.isTheOneStartedAt(START.plusSeconds(60))).isFalse();
-        assertThat(new SessionProcess(41, null).isTheOneStartedAt(START)).isTrue();
+        assertThat(recorded.isTheOneStartedAt(9000)).isTrue();
+        assertThat(recorded.isTheOneStartedAt(9001)).isFalse();
+        assertThat(recorded.isTheOneStartedAt(8999)).isFalse();
+        assertThat(new SessionProcess(41, null).isTheOneStartedAt(9000)).isTrue();
     }
 
     @Test

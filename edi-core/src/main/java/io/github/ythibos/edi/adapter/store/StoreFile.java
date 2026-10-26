@@ -8,6 +8,7 @@ import javax.sql.DataSource;
 
 import org.sqlite.SQLiteConfig;
 import org.sqlite.SQLiteConfig.JournalMode;
+import org.sqlite.SQLiteConfig.SynchronousMode;
 import org.sqlite.SQLiteConfig.TransactionMode;
 import org.sqlite.SQLiteDataSource;
 
@@ -19,8 +20,18 @@ public final class StoreFile {
     }
 
     public static DataSource openedAt(Path database) throws IOException {
+        return openedAt(database, storeSettings());
+    }
+
+    public static DataSource disposableAt(Path database) throws IOException {
+        SQLiteConfig settings = storeSettings();
+        settings.setSynchronous(SynchronousMode.OFF);
+        return openedAt(database, settings);
+    }
+
+    private static DataSource openedAt(Path database, SQLiteConfig settings) throws IOException {
         Files.createDirectories(database.getParent());
-        SQLiteDataSource store = new SQLiteDataSource(storeSettings());
+        SQLiteDataSource store = new SQLiteDataSource(settings);
         store.setUrl("jdbc:sqlite:" + database);
         return store;
     }

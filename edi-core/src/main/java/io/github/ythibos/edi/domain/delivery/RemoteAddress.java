@@ -24,6 +24,10 @@ public record RemoteAddress(String host, String path) {
                 .orElseGet(() -> url.contains(SCHEME_MARK) ? Optional.empty() : fromScpLikeAddress(url));
     }
 
+    public boolean isTheSameRepositoryAs(RemoteAddress other) {
+        return host.equalsIgnoreCase(other.host) && path.equalsIgnoreCase(other.path);
+    }
+
     private static Optional<RemoteAddress> fromAuthorityAndPath(String rest) {
         int pathStart = rest.indexOf(PATH_MARK);
         if (pathStart < 1) {
