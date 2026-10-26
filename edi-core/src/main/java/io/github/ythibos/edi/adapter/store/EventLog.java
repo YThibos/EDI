@@ -93,6 +93,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.CaptainHold;
@@ -221,6 +222,7 @@ public class EventLog {
                     .put("because", relaunched.because());
             case WorkerNotified notified -> payload.put("worker", notified.worker().toString()).put("kind", notified.kind());
             case WorkerSessionEnded ended -> payload.put("worker", ended.worker().toString()).put("reason", ended.reason());
+            case WorkerTurnEnded ended -> payload.put("worker", ended.worker().toString());
             case WorkerStoppedOnAnError stopped -> payload.put("worker", stopped.worker().toString()).put("error", stopped.error());
             case UsageLimitReached reached -> payload.put("worker", reached.worker().toString())
                     .put("limit", reached.limit().name())

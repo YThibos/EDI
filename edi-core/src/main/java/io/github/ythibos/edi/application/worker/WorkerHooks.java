@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerNotified;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -80,6 +81,7 @@ public class WorkerHooks {
             List<InboxMessage> waiting = unreceived(id);
             if (waiting.isEmpty()) {
                 workers.update(worker.turnEnded(now));
+                events.record(new WorkerTurnEnded(id.task(), id), Actor.worker(id), now);
                 return HookAnswer.PROCEED;
             }
             waiting.forEach(message -> received(message, id, STOP_HOOK, now));

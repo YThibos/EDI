@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -70,6 +71,10 @@ public final class WorkEvents {
 
     public WorkEvents receivedASteer() {
         return recorded(new SteerReceived(task, 1, "stop hook"), Actor.worker(WorkerId.first(task)));
+    }
+
+    public WorkEvents endedItsTurn() {
+        return recorded(new WorkerTurnEnded(task, WorkerId.first(task)), Actor.worker(WorkerId.first(task)));
     }
 
     public WorkEvents relaunched() {

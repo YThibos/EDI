@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.WorkMark;
@@ -34,7 +35,8 @@ public class WorkedTimes {
             WorkerSessionEnded.class.getSimpleName(),
             WorkerDied.class.getSimpleName(),
             UsageLimitReached.class.getSimpleName(),
-            WorkerStoppedOnAnError.class.getSimpleName());
+            WorkerStoppedOnAnError.class.getSimpleName(),
+            WorkerTurnEnded.class.getSimpleName());
 
     private static final Set<String> STRETCH_STARTS = Set.of(
             WorkerRelaunched.class.getSimpleName(),

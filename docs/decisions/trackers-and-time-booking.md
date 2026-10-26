@@ -20,7 +20,8 @@ The profile's `tracker` section holds everything a JIRA instance differs in, suc
 At intake `AddTask` asks `TaskKeys`: a given key must belong to the project and exist; unkeyed work on an EDI-native project gets the next key; on JIRA, `TicketProposals` raises a decision with up to three matching tickets and a drafted new one.
 The answer settles the ticket outside the transaction: an existing ticket keys the task; a new one is created after the attempt is recorded, then filled; an interrupted creation first adopts an open ticket with exactly the drafted summary; a refused choice raises a new decision on the task with the refusal in its context, the answered one kept ([captain-decisions](captain-decisions.md)); an unreachable tracker is retried every supervision round.
 `FollowTickets` follows the event log for tickets that are not evergreen: the first dispatch adds the ticket to the one active sprint, a recorded draft is linked once under its address, and a followed merge walks the ticket to `mergedStatus`, never further, so a story stays open until the captain closes it.
-`WorkedTime` measures a task's active time over its timeline: `WorkedTimes` reads the event log into `WorkMark`s, where a first dispatch starts the wall clock, a working or resolved status, a received steer, a relaunch or a resume typed after a usage limit starts a stretch, and the next mark of any other kind ends it, whether a non-working status, a decision raised, a hold, a fresh dispatch, a usage limit reached, a stop on an error, or the worker's session end or death.
+`WorkedTime` measures a task's active time over its timeline: `WorkedTimes` reads the event log into `WorkMark`s, where a first dispatch starts the wall clock, a working or resolved status, a received steer, a relaunch or a resume typed after a usage limit starts a stretch, and the next mark of any other kind ends it, whether a non-working status, a decision raised, a hold, a fresh dispatch, a usage limit reached, a stop on an error, the end of the worker's turn, or its session end or death.
+`WorkerHooks.stopping` records the end of a turn as `WorkerTurnEnded` when the worker stops with no message waiting.
 A stretch still open runs up to the moment measured, which is the task's closing or now; `edi task show` prints "Worked: active <h>h<mm>m of <h>h<mm>m" against the wall clock since the first dispatch.
 `EmitFleetLedger` appends the old record contract to `state/fleet-ledger.jsonl` while `time.fleetLedger` is on: `task.dispatched` with the key, `task.status`, `task.pr_ready`, `task.merged`, then at cleanup `task.worked` with the key and `active_minutes` measured up to the cleanup, and `task.cleaned_up`, each stamped with its event's time.
 
@@ -43,8 +44,9 @@ Measuring from the event log, which already records every status with its time, 
 ## Consequences
 
 - Good: a new tracker, such as the future work board, is one adapter and one registry word, and a renewed token takes effect at the next call.
-- Good: the measure leaves out every idle stretch EDI notices, such as a decision, a hold, a usage-limit park, an error stop or a session end, and counts the work a worker resumes on a message, a relaunch or a limit resume.
-- Bad: a worker that goes idle without EDI noticing keeps its stretch open until its next mark, so its idle time counts as active.
+- Good: a stretch runs from what sets the worker going, a working status, a received message, a relaunch or a limit resume, until its turn ends or another stop EDI records.
+- Bad: a worker that wakes on its own background job's completion, with neither a message nor a status, books nothing until its next status.
+- Bad: a worker whose turn ends without its Stop hook firing keeps its stretch open until its next mark, so that idle time counts as active.
 - Bad: intake on a JIRA project fails while JIRA cannot be reached, the profile must list the workflow's statuses, and a ledger record can repeat after a crash, which its reader tolerates.
 
 ## When to revisit

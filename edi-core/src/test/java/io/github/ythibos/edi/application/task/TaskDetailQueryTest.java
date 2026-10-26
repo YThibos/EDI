@@ -103,6 +103,25 @@ class TaskDetailQueryTest {
     }
 
     @Test
+    void endsTheStretchAMessageStartsWhenTheWorkersTurnEnds() {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-41").dispatched()
+                .cleanedUp(TestHome.START.plus(Duration.ofHours(27)))));
+        WorkEvents.of(home, "fit-horn").dispatchedTo(1, "feature/HRN-41")
+                .reported(StatusState.WORKING, null, "HRN-41 set-up done")
+                .after(Duration.ofHours(2))
+                .reported(StatusState.DONE, null, "HRN-41 delivered")
+                .after(Duration.ofHours(1))
+                .receivedASteer()
+                .after(Duration.ofMinutes(5))
+                .endedItsTurn()
+                .after(Duration.ofHours(24).minusMinutes(5))
+                .cleanedUp();
+
+        assertThat(home.taskDetail().detail(TaskReference.parse("fit-horn")).worked())
+                .isEqualTo(new WorkedTime(Duration.ofMinutes(125), Duration.ofHours(27)));
+    }
+
+    @Test
     void measuresNothingForATaskNotYetDispatched() {
         assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked()).isNull();
     }
