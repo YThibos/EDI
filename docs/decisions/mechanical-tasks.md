@@ -11,7 +11,8 @@ Quality is never traded for cost (I-17), so the cheap model's own claim that its
 
 `edi dispatch --category mechanical` needs the change in `--spec`, every file it touches in `--files` (`ExpectedChange`), and the project's `verify` command in the registry.
 It refuses files `ProtectedFile` recognises: decision records, migrations, security configuration, and tests with their expected values.
-A mechanical worker's `edi status done` has its claims checked like any done ([delivery](delivery.md)), the inbox check and then a ship's delivery claims, and only then sets its done check to `checking`, and the supervision round runs `CheckMechanicalChange` off the scheduler thread: every file changed since `origin/<base>`, committed or not, must be named, at least one named file must change, and `sh -c <verify>` must succeed in the copy within 60 minutes, with its output in `mechanical-verify.log`.
+A mechanical worker's `edi status done` has its claims checked like any done ([delivery](delivery.md)), the inbox check and then a ship's delivery claims, and only then is its done check set to `checking`.
+The supervision round runs `CheckMechanicalChange` off the scheduler thread: every file changed since `origin/<base>`, committed or not, must be named, at least one named file must change, and `sh -c <verify>` must succeed in the copy within 60 minutes, with its output in `mechanical-verify.log`.
 An accepted check records `MechanicalChangeAccepted` and the work is delivered by its mode, so the mechanical check gates the delivery.
 A refused check records `MechanicalChangeRefused` with the reason, closes the worker's window, and launches an `implementation` worker in the same copy, whose brief says why.
 

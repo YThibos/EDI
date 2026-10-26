@@ -62,5 +62,4 @@ Never for the merge authority; the claims are revisited when the pipeline itself
 - 16/10/2026: slice S3 fetched a `local-branch` ship into the captain's checkout by its ref; slice S5 added the claims of a done, `local-apply` and `edi deliver`.
 - 21/10/2026: a done was refused because the captain had marked or merged its request first, so the done stopped demanding a draft (EDI-23).
 - 23/10/2026: an operation with nothing to push could not report done, so the `report` delivery finishes a task on its report and a copy that holds no change, and the captain kept it out of the registry's defaults (EDI-41).
-- 26/10/2026: a done reported inside a turn ran ahead of a steer that arrived at the turn's end, so a done waits until every message in the task's inbox is acknowledged (EDI-52).
-- 26/10/2026: the record stated that a mechanical check runs before a done's claims, so it now says that the claims, the inbox check and then a ship's delivery claims, are checked when the done is reported and the mechanical check gates the delivery (EDI-52).
+- 26/10/2026: a done reported inside a turn ran ahead of a steer that arrived at the turn's end, so a done waits until every message in the task's inbox is acknowledged, and the record now places the mechanical check after the claims, gating the delivery (EDI-52).
