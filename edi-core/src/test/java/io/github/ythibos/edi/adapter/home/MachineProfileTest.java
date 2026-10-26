@@ -131,6 +131,21 @@ class MachineProfileTest {
         assertThat(new MachineProfile(new EdiHome(home.resolve("bare"))).contentWith(carried)).contains("fleetLedger: true", "startupBudgetTokens: 18000");
     }
 
+    @Test
+    void readsAnEditedProfileAtItsNextCallAndRefusesItWhileItIsMalformed() throws IOException {
+        MachineProfile profile = profileOf("time:\n  fleetLedger: true\n");
+        boolean before = profile.time().fleetLedger();
+
+        Files.writeString(home.resolve("config/machine.yaml"), "time:\n  fleetLedger: false\n");
+        boolean edited = profile.time().fleetLedger();
+        Files.writeString(home.resolve("config/machine.yaml"), "time: [\n");
+
+        assertThat(before).isTrue();
+        assertThat(edited).isFalse();
+        assertThatThrownBy(profile::time).isInstanceOf(InvalidConfiguration.class);
+        assertThatThrownBy(profile::time).as("a malformed profile asked again").isInstanceOf(InvalidConfiguration.class);
+    }
+
     private MachineProfile profileOf(String yaml) throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/machine.yaml"), yaml);

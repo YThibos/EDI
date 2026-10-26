@@ -9,7 +9,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Named;
+
 import io.github.ythibos.edi.adapter.store.LoggedEvent;
+import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.presence.CaptainNotices;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -61,34 +64,36 @@ final class CaptainFacingStrings {
     private CaptainFacingStrings() {
     }
 
-    static List<String> everyKindEdiGenerates(Path directory) throws IOException {
-        List<String> generated = new ArrayList<>(reports(directory));
-        generated.addAll(cardsEdiRaises());
-        generated.addAll(notifications());
-        generated.addAll(presences().stream().map(PresenterFixtures.presenceWords()::of).toList());
-        TestHome home = fleetIn(directory.resolve("fleet"));
-        generated.add(PresenterFixtures.returnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
-                home.fleetSnapshot().snapshot().waiting(), home.fleetSnapshot().snapshot().landed(), List.of(),
-                home.fleetSnapshot().snapshot().ongoing())));
-        generated.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(),
-                Presence.presentSince(TestHome.START), null)));
-        generated.add(new MigrationReportText().text(TestHome.in(directory.resolve("migration")).migrateFirstofficer().dryRun(OLD_HOME.toAbsolutePath())));
-        generated.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
-                Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
-        return generated;
+    static Stream<Named<GeneratedStrings>> everyKindEdiGenerates() {
+        return Stream.concat(goldenReports(), Stream.of(
+                kind("the fleet in every view", CaptainFacingStrings::fleetInEveryView),
+                kind("cards EDI raises", _ -> cardsEdiRaises()),
+                kind("notifications", _ -> notifications()),
+                kind("presence words", _ -> presenceWords()),
+                kind("migration report", CaptainFacingStrings::migrationReport)));
     }
 
-    private static List<String> reports(Path directory) throws IOException {
-        List<String> reports = new ArrayList<>();
-        for (ReportGoldenCases.GoldenCase golden : ReportGoldenCases.all()) {
-            if (!TOO_LARGE_TO_LINT_TWICE.contains(golden.name())) {
-                reports.add(golden.rendered(directory.resolve("golden")));
-            }
-        }
-        TestHome home = fleetIn(directory.resolve("reported"));
-        presences().forEach(presence -> reports.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE,
-                ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer.")))));
-        return reports;
+    private static Stream<Named<GeneratedStrings>> goldenReports() {
+        return ReportGoldenCases.all().stream()
+                .filter(golden -> !TOO_LARGE_TO_LINT_TWICE.contains(golden.name()))
+                .map(golden -> kind("report " + golden.name(), directory -> List.of(golden.rendered(directory))));
+    }
+
+    private static Named<GeneratedStrings> kind(String name, GeneratedStrings strings) {
+        return Named.of(name, strings);
+    }
+
+    private static List<String> fleetInEveryView(Path directory) throws IOException {
+        FleetSnapshot fleet = fleetIn(directory).fleetSnapshot().snapshot();
+        List<String> views = new ArrayList<>(presences().stream().map(presence -> PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE,
+                ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer.")))).toList());
+        views.add(PresenterFixtures.returnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
+                fleet.waiting(), fleet.landed(), List.of(), fleet.ongoing())));
+        views.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE, ReportWidth.standard(),
+                Presence.presentSince(TestHome.START), null)));
+        views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
+                Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
+        return views;
     }
 
     private static List<String> cardsEdiRaises() {
@@ -136,6 +141,14 @@ final class CaptainFacingStrings {
         return new LoggedEvent(1, NOW, Actor.CORE, type, new TaskId("fit-lamp"), payload);
     }
 
+    private static List<String> presenceWords() {
+        return presences().stream().map(PresenterFixtures.presenceWords()::of).toList();
+    }
+
+    private static List<String> migrationReport(Path directory) throws IOException {
+        return List.of(new MigrationReportText().text(TestHome.in(directory).migrateFirstofficer().dryRun(OLD_HOME.toAbsolutePath())));
+    }
+
     private static List<Presence> presences() {
         Presence present = Presence.presentSince(TestHome.START);
         return List.of(present, present.quiet(NOW), present.quietAfterSilence(TestHome.START, Duration.ofMinutes(15), NOW),
@@ -158,5 +171,11 @@ final class CaptainFacingStrings {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         home.deliveries().save(Delivery.of(lamp.id().task(),
                 new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", null, null), NOW));
+    }
+
+    @FunctionalInterface
+    interface GeneratedStrings {
+
+        List<String> in(Path directory) throws IOException;
     }
 }

@@ -315,13 +315,21 @@ public final class TestHome {
     }
 
     public void putInFlight(TaskId id) {
-        Task task = tasks.get(id);
-        tasks.update(new Task(task.id(), task.intake(), TaskState.IN_FLIGHT, task.notes(), task.hold(), task.created(), null));
+        transaction.executeWithoutResult(_ -> {
+            Task task = tasks.get(id);
+            tasks.update(new Task(task.id(), task.intake(), TaskState.IN_FLIGHT, task.notes(), task.hold(), task.created(), null));
+        });
     }
 
     public void markDone(TaskId id) {
-        Task task = tasks.get(id);
-        tasks.update(new Task(task.id(), task.intake(), TaskState.DONE, task.notes(), null, task.created(), clock.now()));
+        transaction.executeWithoutResult(_ -> {
+            Task task = tasks.get(id);
+            tasks.update(new Task(task.id(), task.intake(), TaskState.DONE, task.notes(), null, task.created(), clock.now()));
+        });
+    }
+
+    public void inOneTransaction(Runnable work) {
+        transaction.executeWithoutResult(_ -> work.run());
     }
 
     public TestHome continuingDecisionsFrom(int highestNumberSoFar) {
