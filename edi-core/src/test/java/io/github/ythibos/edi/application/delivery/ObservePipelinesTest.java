@@ -12,10 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
+import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
@@ -68,6 +70,27 @@ class ObservePipelinesTest {
 
         assertThat(home.deliveries().of(LAMP)).map(Delivery::address).contains(draft.address());
         assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded");
+    }
+
+    @Test
+    void seesARunningPipelineFinishAfterTheDoneIsAccepted() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", "1111", draft.address().url()));
+        home.observePipelines().observe();
+        Worker handedOver = home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
+        WaitingOnTheCaptain changing = home.fleetSnapshot().snapshot().waiting();
+
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", draft.address().url()));
+        home.observePipelines().observe();
+        WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(handedOver.hadItsDoneAccepted()).isTrue();
+        assertThat(changing.changing()).extracting(request -> request.task().id()).containsExactly(LAMP);
+        assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::status).contains("completed");
+        assertThat(finished.changing()).isEmpty();
+        assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test

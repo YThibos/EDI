@@ -20,6 +20,7 @@ The snapshot's first part, `WaitingOnTheCaptain`, holds everything that waits on
 - `changing`: every such request whose pipeline run is still running or whose inbox still holds an unacknowledged steer (`ChangingRequest`), with why it is changing (`ChangingRequest.whyChanging`: the pipeline's step and the steers' numbers).
 
 Then come `ongoing` (in-flight tasks nothing holds, each an `OngoingTask` with its latest worker, pipeline run and delivery), `parked` (every held task except one that waits only for its decision, with its D number and the open tasks it waits for, `ParkedTask.whyParked`), and `queued`, each in the store's row order, plus the tasks landed in the last seven days and the answers of the last 24 hours.
+EDI keeps observing a handed-over task's pipeline while its stored run is running (`ObservePipelines`), so the run is seen to finish and the request becomes ready for review.
 Every surface shows a changing request as "Changing, hold the merge" with why, never as ready for review, and the console gives it a red `changing` badge in place of the amber `review` badge.
 `WaitingOnTheCaptain.count` counts each decision, review, changing request and board with questions of its own once; a board that only binds decisions counts as those decisions, and its line names no question count.
 The snapshot is quiet only when nothing waits on the captain and nothing is ongoing.
