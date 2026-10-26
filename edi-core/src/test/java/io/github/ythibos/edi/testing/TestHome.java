@@ -600,7 +600,7 @@ public final class TestHome {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), runtime, processes, machineBoot(), clock, transaction);
+                workerTokens(), runtime, pipeline, processes, machineBoot(), clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {

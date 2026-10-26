@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,7 @@ class ResearchFirstTest {
             new AllowedModel(new ModelId("claude-opus-5-5"), true),
             new AllowedModel(new ModelId("claude-sonnet-5-5"), true)));
     private static final List<ProjectName> HARNESS = List.of(new ProjectName("harness"));
+    private static final PipelineAgent PIPELINE_AGENT = new PipelineAgent(OPUS_HIGH, "The last judge before the captain.");
 
     @Test
     void queuesResearchForUnplannedWorkAndForABugWhoseCauseIsUnknown() {
@@ -49,7 +51,7 @@ class ResearchFirstTest {
         DispatchRules switchedOnForDocumentation = new DispatchRules(List.of(), List.of(
                 new DispatchCategory(CategoryId.RESEARCH, "", OPUS_HIGH, "Plans.", null, false),
                 new DispatchCategory(CategoryId.IMPLEMENTATION, "", SONNET_HIGH, "Planned work.", null, false),
-                new DispatchCategory(new CategoryId("documentation"), "", SONNET_HIGH, "Prose.", null, true)));
+                new DispatchCategory(new CategoryId("documentation"), "", SONNET_HIGH, "Prose.", null, true)), PIPELINE_AGENT);
 
         assertThatIllegalArgumentException().isThrownBy(() -> switchedOnForDocumentation.validatedAgainst(ROSTER))
                 .withMessage("The category documentation cannot switch research first on; only implementation-unplanned and bugfix work without a"
@@ -59,11 +61,11 @@ class ResearchFirstTest {
 
     private static DispatchRules rules(boolean unplannedResearchFirst, boolean bugfixResearchFirst) {
         return new DispatchRules(List.of(
-                new ProjectOverride(new ProjectName("EDI"), OPUS_HIGH, "EDI runs on Opus."),
-                new ProjectOverride(new ProjectName("lighthouse"), OPUS_HIGH, "The lighthouse runs on Opus.")), List.of(
+                new ProjectOverride(new ProjectName("EDI"), Set.of(), OPUS_HIGH, "EDI runs on Opus."),
+                new ProjectOverride(new ProjectName("lighthouse"), Set.of(), OPUS_HIGH, "The lighthouse runs on Opus.")), List.of(
                 new DispatchCategory(CategoryId.RESEARCH, "", OPUS_HIGH, "Plans.", null, false),
                 new DispatchCategory(CategoryId.IMPLEMENTATION, "", SONNET_HIGH, "Planned work.", null, false),
                 new DispatchCategory(CategoryId.IMPLEMENTATION_UNPLANNED, "", OPUS_HIGH, "Unplanned work.", null, unplannedResearchFirst),
-                new DispatchCategory(CategoryId.BUGFIX, "", SONNET_HIGH, "Known causes.", null, bugfixResearchFirst)));
+                new DispatchCategory(CategoryId.BUGFIX, "", SONNET_HIGH, "Known causes.", null, bugfixResearchFirst)), PIPELINE_AGENT);
     }
 }

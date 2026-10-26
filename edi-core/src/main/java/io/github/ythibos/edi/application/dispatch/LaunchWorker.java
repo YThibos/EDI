@@ -33,6 +33,7 @@ import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
@@ -41,6 +42,7 @@ import io.github.ythibos.edi.domain.OperationalText;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.dispatch.DispatchRules;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
@@ -82,6 +84,7 @@ public class LaunchWorker {
     private final Handovers handovers;
     private final WorkerTokens tokens;
     private final WorkerRuntime runtime;
+    private final Pipeline pipeline;
     private final ProcessTable processes;
     private final MachineBoot boot;
     private final Clock clock;
@@ -90,7 +93,7 @@ public class LaunchWorker {
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
             WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
-            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, ProcessTable processes, MachineBoot boot, Clock clock,
+            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, Clock clock,
             TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
@@ -111,6 +114,7 @@ public class LaunchWorker {
         this.handovers = handovers;
         this.tokens = tokens;
         this.runtime = runtime;
+        this.pipeline = pipeline;
         this.processes = processes;
         this.boot = boot;
         this.clock = clock;
@@ -148,6 +152,7 @@ public class LaunchWorker {
         Path stateDirectory = createdDirectory(home.workerState(incarnation.worker()));
         IssuedToken token = tokens.issueInto(stateDirectory);
         String firstPrompt = firstPromptFor(incarnation, worktree, because);
+        pipeline.runAgentOn(incarnation.pipelineRoute());
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
     }
@@ -166,13 +171,14 @@ public class LaunchWorker {
         Task task = withoutTheOutageHold(tasks.get(dispatch.task()), answered).dispatched();
         ProjectEntry project = registry.entryOf(task.intake().projects().getFirst());
         WorkerSettings settings = machine.workers();
-        Route route = rulesFile.validatedAgainst(settings.models()).routeFor(task.intake().projects(), dispatch.category(), dispatch.captainsOverride());
+        DispatchRules rules = rulesFile.validatedAgainst(settings.models());
+        Route route = rules.routeFor(task.intake().projects(), dispatch.category(), dispatch.captainsOverride());
         places.requireNoLiveWorker(task.id());
         Worker earlier = workers.latestOf(task.id()).orElse(null);
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
         Optional<UUID> adoptedSession = adoptedSessionToResume(task, earlier);
         return new Incarnation(task, project, dispatch, kind, adoptedSession.isPresent() ? LaunchKind.RESUME : kind, worker,
-                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, settings,
+                adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier)), earlier, route, rules.pipelineAgent().route(), settings,
                 briefFacts.factsFor(task, project, dispatch, worker), answered);
     }
 
@@ -306,6 +312,7 @@ public class LaunchWorker {
             UUID session,
             Worker earlier,
             Route route,
+            Route pipelineRoute,
             WorkerSettings settings,
             BriefFacts brief,
             OutageEntry answered) {
