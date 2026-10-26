@@ -189,6 +189,44 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void holdsAHandedOverRequestAsChangingWhileItsPipelineRuns() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST.url()), TestHome.START);
+
+        WaitingOnTheCaptain running = home.fleetSnapshot().snapshot().waiting();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST.url()), TestHome.START);
+        WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(running.reviews()).isEmpty();
+        assertThat(running.changing()).singleElement().satisfies(changing -> {
+            assertThat(changing.task().id()).isEqualTo(lamp.id());
+            assertThat(changing.delivery().address().url()).isEqualTo(REQUEST.url());
+            assertThat(changing.whyChanging()).isEqualTo("pipeline review");
+        });
+        assertThat(running.count()).isEqualTo(1);
+        assertThat(finished.changing()).isEmpty();
+        assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingWhileASteerWaitsUnacknowledged() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "And its history line.", null, Actor.PRIMARY);
+
+        WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
+        Worker worker = home.workers().latestOf(lamp.id()).orElseThrow();
+        home.workerInbox().acknowledge(worker.id(), 1);
+        home.workerInbox().acknowledge(worker.id(), 2);
+        WaitingOnTheCaptain acknowledged = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(steered.reviews()).isEmpty();
+        assertThat(steered.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("steers 1, 2 not acknowledged"));
+        assertThat(acknowledged.changing()).isEmpty();
+        assertThat(acknowledged.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
     void keepsAnAnsweredDecisionOutOfALaterHold() {
         add(ship("lamp-fitting", "Fit the lamp"));
         raise("lamp-fitting");
@@ -259,6 +297,14 @@ class FleetSnapshotQueryTest {
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
         return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+    }
+
+    private Task handedOverWithAnOpenRequest() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        Worker worker = WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        home.workers().update(worker.reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), TestHome.START));
+        return lamp;
     }
 
     private void add(NewTask task) {

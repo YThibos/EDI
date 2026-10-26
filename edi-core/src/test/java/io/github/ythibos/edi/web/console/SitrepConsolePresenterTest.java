@@ -10,6 +10,7 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
@@ -59,7 +60,7 @@ class SitrepConsolePresenterTest {
     private static final Instant NOW = PresenterFixtures.AT.plusSeconds(3_600);
     private static final MergeRequestAddress DRAFT = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 12);
 
-    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of());
+    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of());
 
     private final SitrepConsolePresenter presenter = PresenterFixtures.sitrepConsolePresenter();
 
@@ -154,13 +155,27 @@ class SitrepConsolePresenterTest {
         Task lamp = ship("fit-lamp", "Fit the lamp");
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 2, NOW, null, null);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of())),
-                List.of(new ReadyForReview(lamp, delivery(lamp))));
+                List.of(new ReadyForReview(lamp, delivery(lamp))), List.of());
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
 
         assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK,
                 List.of()));
         assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url()));
+    }
+
+    @Test
+    void presentsARequestStillChangingWithWhyInsteadOfAsReady() {
+        Task lamp = ship("fit-lamp", "Fit the lamp");
+        PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url());
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
+                List.of(new ChangingRequest(lamp, delivery(lamp), running, List.of(2))));
+
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
+
+        assertThat(sitrep.reviews()).isEmpty();
+        assertThat(sitrep.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(),
+                "pipeline running; steer 2 not acknowledged"));
     }
 
     @Test
@@ -202,7 +217,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static WaitingOnTheCaptain theLampDecision() {
-        return new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem())), List.of(), List.of());
+        return new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem())), List.of(), List.of(), List.of());
     }
 
     private ConsoleSitrep presented(FleetSnapshot fleet) {

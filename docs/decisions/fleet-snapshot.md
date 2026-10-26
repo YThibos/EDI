@@ -16,10 +16,12 @@ The snapshot's first part, `WaitingOnTheCaptain`, holds everything that waits on
 
 - `decisions`: every open decision in D-number order that no board in `boards` binds, whatever holds or blocks its task;
 - `boards`: every listening research board with open questions or an open decision it binds, each with the open decisions it binds (`WaitingBoard.decisions`), because the captain answers those on the board ([research-boards](research-boards.md));
-- `reviews`: every task in flight whose done was accepted and whose request is still open (`ReadyForReview`), until EDI sees it merged or closed.
+- `reviews`: every task in flight whose done was accepted and whose request is still open (`ReadyForReview`), while no pipeline run of the task is running and no message waits unacknowledged in its inbox, until EDI sees it merged or closed;
+- `changing`: every such request whose pipeline run is still running or whose inbox still holds an unacknowledged steer (`ChangingRequest`), with why it is changing (`ChangingRequest.whyChanging`: the pipeline's step and the steers' numbers).
 
 Then come `ongoing` (in-flight tasks nothing holds, each an `OngoingTask` with its latest worker, pipeline run and delivery), `parked` (every held task except one that waits only for its decision, with its D number and the open tasks it waits for, `ParkedTask.whyParked`), and `queued`, each in the store's row order, plus the tasks landed in the last seven days and the answers of the last 24 hours.
-`WaitingOnTheCaptain.count` counts each decision, review and board with questions of its own once; a board that only binds decisions counts as those decisions, and its line names no question count.
+Every surface shows a changing request as "Changing, hold the merge" with why, never as ready for review, and the console gives it a red `changing` badge in place of the amber `review` badge.
+`WaitingOnTheCaptain.count` counts each decision, review, changing request and board with questions of its own once; a board that only binds decisions counts as those decisions, and its line names no question count.
 The snapshot is quiet only when nothing waits on the captain and nothing is ongoing.
 A worker status of `needs-decision` or `blocked` is addressed to the primary (`StatusReport.isForThePrimary`), so the sitrep page shows its task as `with EDI` rather than waiting on the captain, and the acknowledged steer that resolves it settles it (`Worker.settledBy`, [steering](steering.md)).
 The sitrep page reads one document, `edi-sitrep.v1`, from `SitrepConsolePresenter`: the cards, the recent answers, at most ten landed and twenty charted tasks with their totals, the machine, the address word, the zone and the presence, so a 2 MB backlog gives a document of a few kilobytes.
@@ -32,6 +34,7 @@ The primary passes what its turn did as a small JSON document on standard input 
 One query keeps every surface consistent, separate presenters keep each format testable on its own, and large data travels through standard input and HTTP bodies, never arguments.
 A work key in its own field lets the page style it apart from the title, and taking a leading copy off the title in the core means the key is never shown twice, whatever the console does.
 The captain finds everything that needs them in one place on every surface, and no surface says "nothing open" while something waits.
+A done reported inside a turn can run ahead of a steer that arrives only when the turn ends, and a pipeline still running can push after the done, so a request is ready only once both have settled.
 
 ## Alternatives rejected
 
@@ -43,6 +46,8 @@ The captain finds everything that needs them in one place on every surface, and 
 - Gluing the work key into the ongoing title in the core - the page could no longer style the key, and every other surface reading the title would inherit the prefix.
 - Leaving the work key out when the title already starts with it - the same task would show its key styled or unstyled depending on how it was titled.
 - A work key on every block of the sitrep page - the captain asked for the Ongoing block only.
+- Leaving a changing request out of the zone - the captain would see an open request with no warning, and the forge lets him merge it.
+- Leaving a changing request out of the count - the page would call the captain all clear beside a request he must hold.
 
 ## Consequences
 
@@ -61,3 +66,4 @@ When a presenter needs data the snapshot cannot carry cheaply, the work board ne
 - 21/10/2026: a shadow run showed a blocked task's decision only under PARKED while the zone said nothing was open, and boards and ready requests not shown at all; everything that waits on the captain moved into one part of the snapshot, and a worker's question to the primary stopped looking like one to the captain.
 - 23/10/2026: the captain could not tell which key a running task books on, so each ongoing task on the sitrep page leads with its work key (EDI-44).
 - 26/10/2026: the report printed a scout's board decisions with their full cards beside the board the captain answers them on, so a waiting board carries the open decisions it binds and every surface shows each under its board (EDI-51).
+- 26/10/2026: a request was merged while a steer its worker had not yet received was still changing it, so a handed-over request shows as changing, not ready, while its pipeline runs or a steer waits unacknowledged (EDI-53).

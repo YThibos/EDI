@@ -40,7 +40,7 @@ description: >-
 ## Done, delivery and landing
 
 - A ship's done counts once its merge request is open, as a draft or ready for review, or already merged, at the copy's head, and its branch adds no SNAPSHOT version.
-- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report.
+- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report, as "Changing, hold the merge" while its pipeline still runs or a steer waits unacknowledged.
 - EDI records a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
 - `local-branch`: EDI fetches the ready branch into the captain's checkout by ref only.
 - `local-apply`: on the captain's request only, EDI applies the change to the captain's checkout without a commit.

@@ -43,6 +43,7 @@ import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
@@ -324,6 +325,39 @@ class DecisionsAndReportingTest {
             assertThat(brief).contains("Needs your decision (1)\n  Ready for your review: Work on fit-lamp - " + REQUEST + "\n");
             assertThat(onTheConsole).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST));
             assertThat(merged).contains("nothing open").doesNotContain("Ready for your review");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-19 a request whose pipeline still runs or whose steer waits unacknowledged after its done shows as changing with the reason,"
+                + " never as ready")
+        void aRequestStillChangingAfterItsDoneShowsAsChanging() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
+            home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST), TestHome.START);
+            home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Amend the record too.", null, Actor.PRIMARY);
+
+            String report = captainReport(home, Turn.NONE);
+            String brief = returnBrief(home);
+            ConsoleSitrep onTheConsole = consoleSitrep(home);
+            String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST), TestHome.START);
+            home.workerInbox().acknowledge(worker.id(), 1);
+            String settled = captainReport(home, Turn.NONE);
+
+            String changing = "Changing, hold the merge: Work on fit-lamp (pipeline review; steer 1 not acknowledged) - " + REQUEST;
+            assertThat(report).contains("NEEDS YOUR DECISION ══ 1 open",
+                    "║  Changing, hold the merge: Work on fit-lamp (pipeline review; steer 1 not acknowledged) -\n║        " + REQUEST + "\n")
+                    .doesNotContain("Ready for your review");
+            assertThat(brief).contains("Needs your decision (1)\n  " + changing + "\n");
+            assertThat(digest).contains("Waiting on the captain (1)\n  changing  fit-lamp  " + REQUEST
+                    + "  hold the merge: pipeline review; steer 1 not acknowledged\n");
+            assertThat(onTheConsole.reviews()).isEmpty();
+            assertThat(onTheConsole.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST,
+                    "pipeline review; steer 1 not acknowledged"));
+            assertThat(settled).contains("║  Ready for your review: Work on fit-lamp - " + REQUEST + "\n").doesNotContain("Changing");
         }
 
         private static MergeRequestView request(MergeRequestState state) {

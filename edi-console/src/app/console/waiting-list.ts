@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 
 import { projectsOf } from './projects';
-import { ReadyForReview, WaitingBoard } from './sitrep';
+import { ChangingRequest, ReadyForReview, WaitingBoard } from './sitrep';
 
 @Component({
   selector: 'app-waiting-list',
@@ -11,6 +11,7 @@ import { ReadyForReview, WaitingBoard } from './sitrep';
 export class WaitingList {
   readonly boards = input.required<WaitingBoard[]>();
   readonly reviews = input.required<ReadyForReview[]>();
+  readonly changing = input.required<ChangingRequest[]>();
 
   protected readonly projectsOf = projectsOf;
 

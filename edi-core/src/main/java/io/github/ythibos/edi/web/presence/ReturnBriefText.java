@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
@@ -59,7 +60,8 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
         return Stream.of(
                         waiting.decisions().stream().map(ReturnBriefText::decisionLine),
                         waiting.boards().stream().flatMap(ReturnBriefText::boardLines),
-                        waiting.reviews().stream().map(ReturnBriefText::reviewLine))
+                        waiting.reviews().stream().map(ReturnBriefText::reviewLine),
+                        waiting.changing().stream().map(ReturnBriefText::changingLine))
                 .flatMap(Function.identity())
                 .toList();
     }
@@ -78,6 +80,10 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
 
     private static String reviewLine(ReadyForReview ready) {
         return WaitingWords.review(ready.task().intake().title(), ready.delivery().address().url());
+    }
+
+    private static String changingLine(ChangingRequest changing) {
+        return WaitingWords.changing(changing.task().intake().title(), changing.delivery().address().url(), changing.whyChanging());
     }
 
     private static String setbackLine(Setback setback) {
