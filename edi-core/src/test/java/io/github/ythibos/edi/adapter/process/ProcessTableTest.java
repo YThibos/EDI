@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Tag;
@@ -17,6 +18,8 @@ import io.github.ythibos.edi.testing.TestProcesses;
 
 @Tag("adapter")
 class ProcessTableTest {
+
+    private static final long TEN_SECONDS_OF_TICKS = 1000;
 
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
@@ -32,7 +35,7 @@ class ProcessTableTest {
         SessionProcess identified = table.identify(running.pid()).orElseThrow();
 
         assertThat(table.isRunning(identified)).isTrue();
-        assertThat(table.isRunning(new SessionProcess(running.pid(), identified.startedAt().minusSeconds(60)))).isFalse();
+        assertThat(table.isRunning(new SessionProcess(running.pid(), identified.startTick() - 1))).isFalse();
         assertThat(table.parentOf(running.pid())).hasValue(ProcessHandle.current().pid());
 
         running.destroyForcibly();
@@ -42,14 +45,17 @@ class ProcessTableTest {
     }
 
     @Test
-    void recognisesARunningProcessWhoseStartTheBootTimeDriftShiftedEitherWay() throws IOException {
-        Process running = processes.register(new ProcessBuilder("sleep", "30").start());
-        SessionProcess identified = table.identify(running.pid()).orElseThrow();
+    void readsTheStartTickOfAProcessWhoseNameLooksLikeMoreFields() throws IOException {
+        Process plain = processes.register(new ProcessBuilder("sleep", "30").start());
+        Path oddlyNamed = Files.copy(Path.of(executableOf("sleep")), directory.resolve("sl) S 1 2 3"), StandardCopyOption.COPY_ATTRIBUTES);
+        Process odd = processes.register(new ProcessBuilder(oddlyNamed.toString(), "30").start());
 
-        assertThat(table.isRunning(new SessionProcess(running.pid(), identified.startedAt().plusSeconds(1)))).isTrue();
-        assertThat(table.isRunning(new SessionProcess(running.pid(), identified.startedAt().minusSeconds(1)))).isTrue();
-        running.destroyForcibly();
-        assertThat(TestProcesses.awaitExit(running.toHandle())).isTrue();
+        long plainStart = table.identify(plain.pid()).orElseThrow().startTick();
+        assertThat(table.identify(odd.pid()).orElseThrow().startTick()).isBetween(plainStart, plainStart + TEN_SECONDS_OF_TICKS);
+        plain.destroyForcibly();
+        odd.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(plain.toHandle())).isTrue();
+        assertThat(TestProcesses.awaitExit(odd.toHandle())).isTrue();
     }
 
     @Test
@@ -74,5 +80,10 @@ class ProcessTableTest {
         assertThat(TestProcesses.awaitExit(polite.toHandle())).isTrue();
         assertThat(TestProcesses.awaitExit(stubborn.toHandle())).isTrue();
         table.close();
+    }
+
+    private static String executableOf(String program) throws IOException {
+        Process which = new ProcessBuilder("sh", "-c", "command -v " + program).start();
+        return new String(which.getInputStream().readAllBytes()).strip();
     }
 }

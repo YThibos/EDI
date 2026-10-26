@@ -9,6 +9,10 @@ public enum SteerDelivery {
     WAITING_FOR_A_LIVE_WORKER,
     WAITING_FOR_A_FRESH_SESSION;
 
+    public boolean wasTyped() {
+        return this == TYPED_INTO_THE_IDLE_PROMPT;
+    }
+
     public String word() {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }

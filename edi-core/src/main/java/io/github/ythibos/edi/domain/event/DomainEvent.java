@@ -123,6 +123,9 @@ public sealed interface DomainEvent {
     record ContextLimitReached(TaskId task, WorkerId worker, Instant fullSince) implements DomainEvent {
     }
 
+    record WorkerStopMissed(TaskId task, WorkerId worker, Instant stoppedAt, int message, boolean noticeTyped) implements DomainEvent {
+    }
+
     record LimitResumeTyped(TaskId task, WorkerId worker) implements DomainEvent {
     }
 

@@ -1,0 +1,6 @@
+{"type":"user","message":{"role":"user","content":"Fit the lamp."},"timestamp":"2026-10-16T09:00:00.000Z"}
+{"type":"assistant","message":{"id":"msg-1","role":"assistant","content":[{"type":"text","text":"Fitting the lamp now."}],"usage":{"input_tokens":3,"cache_creation_input_tokens":100,"cache_read_input_tokens":200,"output_tokens":20}},"timestamp":"2026-10-16T09:00:05.000Z"}
+{"type":"assistant","isApiErrorMessage":true,"error":"overloaded","apiErrorStatus":529,"message":{"id":"msg-2","model":"<synthetic>","role":"assistant","content":[{"type":"text","text":"API Error: 529 Overloaded. This is a server-side issue, usually temporary."}],"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}},"timestamp":"2026-10-16T10:15:00.000Z"}
+{"type":"attachment","attachment":{"type":"hook_non_blocking_error","hookName":"StopFailure","hookEvent":"StopFailure","stderr":"Failed with non-blocking status code: EDI could not take the stop failure: EDI core is not running.","exitCode":1,"command":"edi hook stop-failure"},"timestamp":"2026-10-16T10:15:00.050Z"}
+{"type":"system","subtype":"turn_duration","durationMs":4500000,"messageCount":3,"timestamp":"2026-10-16T10:15:00.080Z"}
+{"type":"last-prompt"}

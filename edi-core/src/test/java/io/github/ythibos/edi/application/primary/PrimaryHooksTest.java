@@ -17,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
+import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
@@ -62,17 +63,17 @@ class PrimaryHooksTest {
     }
 
     @Test
-    void keepsTheRoleOfALiveSessionWhoseRecordedStartTheBootTimeDriftShifted() throws IOException {
+    void keepsTheRoleOfALiveSessionAcrossACoreRestartUntilAnotherProcessReusesItsId() throws IOException {
         Process claude = processes.register(new ProcessBuilder("sleep", "30").start());
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, claude.pid(), true);
-        SessionProcess recorded = home.primarySessionStore().get(primary).orElseThrow().process();
+        TestHome restarted = home.restarted();
 
-        for (Duration drift : List.of(Duration.ofSeconds(1), Duration.ofSeconds(-1))) {
-            recordTheStartShiftedBy(primary, recorded, drift);
+        assertThat(restarted.primarySessions().standingOf(primary)).isEqualTo(Standing.PRIMARY);
 
-            assertThat(home.primarySessions().standingOf(primary)).isEqualTo(Standing.PRIMARY);
-        }
+        recordTheStartOneTickLater(restarted, primary);
+
+        assertThat(restarted.primarySessions().standingOf(primary)).isEqualTo(Standing.UNCLAIMED);
         claude.destroyForcibly();
         assertThat(TestProcesses.awaitExit(claude.toHandle())).isTrue();
     }
@@ -144,8 +145,9 @@ class PrimaryHooksTest {
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
     }
 
-    private void recordTheStartShiftedBy(UUID session, SessionProcess recorded, Duration drift) {
-        SessionProcess shifted = new SessionProcess(recorded.pid(), recorded.startedAt().plus(drift));
-        home.primarySessionStore().save(home.primarySessionStore().get(session).orElseThrow().restarted(shifted));
+    private static void recordTheStartOneTickLater(TestHome home, UUID session) {
+        PrimarySession recorded = home.primarySessionStore().get(session).orElseThrow();
+        SessionProcess reused = new SessionProcess(recorded.process().pid(), recorded.process().startTick() + 1);
+        home.primarySessionStore().save(recorded.restarted(reused));
     }
 }

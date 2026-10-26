@@ -41,6 +41,7 @@ A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page
 A supervision round judges each worker from its hooks, its tmux server and the machine's boot ([supervision](decisions/supervision.md)).
 It parks a worker that stopped on a usage limit and resumes it after the reset ([recovery](decisions/recovery.md)).
 It reads each working worker's transcript for a full context, which Claude Code reports through no hook, and wakes the primary at once; a steer to such a worker waits in its inbox for the fresh session ([supervision](decisions/supervision.md)).
+It reads each busy worker's transcript for a turn that ended while EDI could not take its stop hook, such as during a core outage, marks the worker idle, sends it a message to carry on so the steers that waited reach it, and wakes the primary ([supervision](decisions/supervision.md)).
 The machine profile's `supervision` section sets when an idle worker has waited too long and when a paused one resurfaces.
 
 ## Recovery

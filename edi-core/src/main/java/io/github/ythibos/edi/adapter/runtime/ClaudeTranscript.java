@@ -13,10 +13,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import tools.jackson.core.JacksonException;
@@ -29,6 +32,9 @@ final class ClaudeTranscript {
     private static final List<String> LIMIT_OPENINGS = List.of("You've hit your ", "You've reached your ");
     private static final String SEPARATOR = " · ";
     private static final String CONTEXT_LIMIT_OPENING = "Prompt is too long";
+    private static final String STOP_HOOK_SUMMARY = "stop_hook_summary";
+    private static final String TURN_END = "turn_duration";
+    private static final String UNKNOWN_ERROR = "unknown";
 
     private final JsonMapper json;
 
@@ -49,6 +55,22 @@ final class ClaudeTranscript {
                 .filter(ClaudeTranscript::refusesAPromptTooLong)
                 .flatMap(ClaudeTranscript::writtenAt)
                 .filter(at -> !at.isBefore(since));
+    }
+
+    Optional<Instant> missedStop(Path transcript, Instant since) {
+        List<JsonNode> latest = lastRecordsWhere(transcript, ClaudeTranscript::marksTheTurn, 2);
+        if (!endsAfterAFailedStopHook(latest)) {
+            return Optional.empty();
+        }
+        return writtenAt(latest.getFirst()).filter(at -> !at.isBefore(since));
+    }
+
+    Optional<ErrorStop> errorStop(Path transcript, Instant since) {
+        List<JsonNode> latest = lastRecordsWhere(transcript, ClaudeTranscript::marksTheTurn, 2);
+        if (!endsAfterAnApiError(latest)) {
+            return Optional.empty();
+        }
+        return writtenAt(latest.getFirst()).filter(at -> !at.isBefore(since)).map(at -> new ErrorStop(at, errorOf(latest.getLast())));
     }
 
     TokenUsage tokensSpent(Path transcript, Instant since) {
@@ -108,6 +130,42 @@ final class ClaudeTranscript {
 
     private static boolean refusesAPromptTooLong(JsonNode record) {
         return textOf(record.path("message").path("content")).startsWith(CONTEXT_LIMIT_OPENING);
+    }
+
+    private List<JsonNode> lastRecordsWhere(Path transcript, Predicate<JsonNode> sought, int count) {
+        List<String> lines = tailOf(transcript);
+        return IntStream.iterate(lines.size() - 1, index -> index >= 0, index -> index - 1)
+                .mapToObj(lines::get)
+                .map(this::parsed)
+                .flatMap(Optional::stream)
+                .filter(sought)
+                .limit(count)
+                .toList();
+    }
+
+    private static boolean marksTheTurn(JsonNode record) {
+        return isConversational(record) || isASystemRecord(record, STOP_HOOK_SUMMARY) || isASystemRecord(record, TURN_END);
+    }
+
+    private static boolean endsAfterAFailedStopHook(List<JsonNode> latest) {
+        return latest.size() == 2 && isASystemRecord(latest.getFirst(), TURN_END) && reportsAFailedHook(latest.getLast());
+    }
+
+    private static boolean isASystemRecord(JsonNode record, String subtype) {
+        return record.path("type").asString("").equals("system") && record.path("subtype").asString("").equals(subtype);
+    }
+
+    private static boolean reportsAFailedHook(JsonNode summary) {
+        return isASystemRecord(summary, STOP_HOOK_SUMMARY) && !summary.path("hookErrors").isEmpty();
+    }
+
+    private static boolean endsAfterAnApiError(List<JsonNode> latest) {
+        return latest.size() == 2 && isASystemRecord(latest.getFirst(), TURN_END) && isAnApiError(latest.getLast());
+    }
+
+    private static String errorOf(JsonNode record) {
+        String error = record.path("error").asString("");
+        return error.isBlank() ? UNKNOWN_ERROR : error;
     }
 
     private Optional<JsonNode> parsed(String line) {

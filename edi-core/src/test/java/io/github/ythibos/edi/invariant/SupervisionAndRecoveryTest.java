@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -95,6 +96,44 @@ class SupervisionAndRecoveryTest {
             assertThat(digestOf(restarted, afterTheRestart)).isEqualTo(preCrashDigest)
                     .contains("This session is the primary", "D1  choose-lamp  Which lamp?", "fit-lamp#1  idle since", "working: Fitting the brass lamp.",
                             "Queued: 1.");
+        }
+
+        @Test
+        @DisplayName("AT-23 the live primary keeps its role across a core restart")
+        @Tag("adapter")
+        void thePrimaryKeepsItsRoleAcrossARestart() throws Exception {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Process primary = processes.register(new ProcessBuilder("sleep", "30").start());
+            UUID session = UUID.randomUUID();
+            home.primaryHooks().sessionStarted(session, primary.pid(), true);
+
+            TestHome restarted = home.restarted();
+
+            assertThat(restarted.primarySessions().standingOf(session)).isEqualTo(Standing.PRIMARY);
+            restarted.waitForWakes().requireThePrimary(session);
+            primary.destroyForcibly();
+            assertThat(TestProcesses.awaitExit(primary.toHandle())).isTrue();
+        }
+
+        @Test
+        @DisplayName("AT-23 a worker whose stop hook failed while the core was down is woken with its waiting steer, and the primary is told")
+        void aWorkerThatStoppedDuringTheOutageIsWoken() throws Exception {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            home.workerHooks().sessionStarted(lamp.id(), lamp.session(), "/transcripts/lamp.jsonl");
+            home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.", null);
+            Instant stoppedWhileDown = home.clock().now().plus(Duration.ofMinutes(5));
+            home.clock().advance(Duration.ofMinutes(10));
+
+            TestHome restarted = home.restarted();
+            restarted.steerWorker().steer(new TaskReference.ById(lamp.id().task()), "Use the brass screws.", null, Actor.PRIMARY);
+            restarted.runtime().transcriptEndsOnAStopEdiMissedAt(stoppedWhileDown);
+            restarted.noticeMissedStops().notice();
+            restarted.workerHooks().promptSubmitted(lamp.id(), restarted.runtime().typedLines().getLast(), null);
+
+            assertThat(restarted.runtime().typedLines()).containsExactly("EDI_OP: message 2 waiting: run edi inbox");
+            assertThat(restarted.workerList().judged(restarted.workers().get(lamp.id()).orElseThrow()).health()).isInstanceOf(WorkerHealth.Busy.class);
+            assertThat(restarted.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).contains(WakeKind.STOP_MISSED);
         }
 
         private static String digestOf(TestHome home, UUID session) {

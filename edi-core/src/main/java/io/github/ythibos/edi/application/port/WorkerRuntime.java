@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.PaneState;
@@ -40,6 +41,10 @@ public interface WorkerRuntime {
     Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since);
 
     Optional<Instant> contextLimitStopIn(String transcript, Instant since);
+
+    Optional<Instant> missedStopIn(String transcript, Instant since);
+
+    Optional<ErrorStop> errorStopIn(String transcript, Instant since);
 
     TokenUsage tokensSpentIn(String transcript, Instant since);
 
