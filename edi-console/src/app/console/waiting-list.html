@@ -9,7 +9,7 @@
           @if (board.decisions.length) {
             <ul class="sr-waiting__decisions">
               @for (decision of board.decisions; track decision.number) {
-                <li class="sr-waiting__decision"><span class="sr-row__key">{{ decision.number }}</span> {{ decision.title }}</li>
+                <li class="sr-waiting__decision"><span class="sr-row__key">{{ decision.number }}</span><span class="sr-waiting__title">{{ decision.title }}</span></li>
               }
             </ul>
           }

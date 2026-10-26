@@ -41,8 +41,8 @@ describe('WaitingList', () => {
   it('lists each decision the board answers as one line under it, with its number and title only', async () => {
     const list = await listed([{ ...LAMP_BOARD, decisions: [{ number: 'D58', title: 'Which lamp?' }, { number: 'D60', title: 'Which bulb?' }] }], []);
 
-    expect(texts(list, '.sr-waiting__decision')).toEqual(['D58 Which lamp?', 'D60 Which bulb?']);
     expect(texts(list, '.sr-waiting__decision .sr-row__key')).toEqual(['D58', 'D60']);
+    expect(texts(list, '.sr-waiting__decision .sr-waiting__title')).toEqual(['Which lamp?', 'Which bulb?']);
   });
 
   it('counts a single question in the singular', async () => {

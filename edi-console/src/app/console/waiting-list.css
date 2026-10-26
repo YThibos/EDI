@@ -25,6 +25,8 @@
 }
 
 .sr-waiting__decision {
+  display: flex;
+  gap: 0.5ch;
   font-size: var(--fs-xs);
   color: var(--text);
   line-height: 1.35;
@@ -33,4 +35,8 @@
 
 .sr-waiting__decision + .sr-waiting__decision {
   margin-top: 2px;
+}
+
+.sr-waiting__decision > .sr-row__key {
+  flex: none;
 }
