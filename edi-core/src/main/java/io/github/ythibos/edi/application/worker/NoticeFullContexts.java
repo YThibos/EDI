@@ -55,12 +55,8 @@ public class NoticeFullContexts {
     private Optional<Worker> recordedFull(Worker read, Instant fullSince) {
         return transaction.execute(_ -> {
             Worker current = WorkerLookup.serving(workers, read.id());
-            return isStillInTheTurnRead(current, read) ? Optional.of(filled(current, fullSince)) : Optional.empty();
+            return current.isStillInTheTurnOf(read) ? Optional.of(filled(current, fullSince)) : Optional.empty();
         });
-    }
-
-    private static boolean isStillInTheTurnRead(Worker current, Worker read) {
-        return current.activity() == read.activity() && current.activitySince().equals(read.activitySince());
     }
 
     private Worker filled(Worker worker, Instant fullSince) {

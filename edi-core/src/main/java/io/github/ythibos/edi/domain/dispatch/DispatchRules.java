@@ -2,18 +2,20 @@ package io.github.ythibos.edi.domain.dispatch;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.project.ProjectName;
 
-public record DispatchRules(List<ProjectOverride> projectOverrides, List<DispatchCategory> categories) {
+public record DispatchRules(List<ProjectOverride> projectOverrides, List<DispatchCategory> categories, PipelineAgent pipelineAgent) {
 
     private static final ProjectName EDI = new ProjectName("EDI");
 
     public DispatchRules {
         projectOverrides = List.copyOf(projectOverrides);
         categories = List.copyOf(categories);
+        Objects.requireNonNull(pipelineAgent, "The dispatch rules name the route of the validation pipeline's agent.");
         if (new HashSet<>(categories.stream().map(DispatchCategory::id).toList()).size() < categories.size()) {
             throw new IllegalArgumentException("The dispatch rules name each category once.");
         }
@@ -21,7 +23,9 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
 
     public DispatchRules validatedAgainst(ModelRoster roster) {
         projectOverrides.forEach(override -> requireAllowedAndExplained(override, roster));
+        projectOverrides.forEach(this::requireCoveredCategoriesExist);
         categories.forEach(category -> requireAllowedAndExplained(category, roster));
+        requireAllowedAndExplained(pipelineAgent, roster);
         requireResearchFirstOnlyWhereWorkIsUnplanned();
         requireResearchersNoWeakerThanImplementers(roster);
         return this;
@@ -32,7 +36,7 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
                 .filter(category -> category.id().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No dispatch category is called " + id + "; the categories are "
-                        + categories.stream().map(category -> category.id().value()).collect(Collectors.joining(", ")) + "."));
+                        + categoryNames() + "."));
     }
 
     public Route routeFor(List<ProjectName> projects, CategoryId category, CaptainOverride captainsOverride) {
@@ -40,7 +44,7 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
         if (captainsOverride != null) {
             return captainsOverride.route();
         }
-        return projectOverrideFor(projects).map(ProjectOverride::route).orElse(categoryRoute);
+        return projectOverrideFor(projects, category).map(ProjectOverride::route).orElse(categoryRoute);
     }
 
     public ResearchFirst researchFirstFor(List<ProjectName> projects, CategoryId category, boolean causeUnknown) {
@@ -59,12 +63,30 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
         roster.requireAllows(override.route(), usedBy);
     }
 
+    private void requireCoveredCategoriesExist(ProjectOverride override) {
+        override.categories().stream()
+                .filter(covered -> !namesCategory(covered))
+                .findFirst()
+                .ifPresent(unknown -> {
+                    throw new IllegalArgumentException("The override for " + override.project() + " covers " + unknown
+                            + ", which is no dispatch category; the categories are " + categoryNames() + ".");
+                });
+    }
+
     private static void requireAllowedAndExplained(DispatchCategory category, ModelRoster roster) {
         String usedBy = "The category " + category.id();
         if (!category.statesWhy()) {
             throw new IllegalArgumentException(usedBy + " states no why.");
         }
         roster.requireAllows(category.route(), usedBy);
+    }
+
+    private static void requireAllowedAndExplained(PipelineAgent agent, ModelRoster roster) {
+        String usedBy = "The pipeline entry";
+        if (!agent.statesWhy()) {
+            throw new IllegalArgumentException(usedBy + " states no why.");
+        }
+        roster.requireAllows(agent.route(), usedBy);
     }
 
     private void requireResearchFirstOnlyWhereWorkIsUnplanned() {
@@ -89,8 +111,16 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
         }
     }
 
-    private Optional<ProjectOverride> projectOverrideFor(List<ProjectName> projects) {
-        return projectOverrides.stream().filter(override -> override.covers(projects)).findFirst();
+    private boolean namesCategory(CategoryId id) {
+        return categories.stream().anyMatch(category -> category.id().equals(id));
+    }
+
+    private String categoryNames() {
+        return categories.stream().map(category -> category.id().value()).collect(Collectors.joining(", "));
+    }
+
+    private Optional<ProjectOverride> projectOverrideFor(List<ProjectName> projects, CategoryId category) {
+        return projectOverrides.stream().filter(override -> override.covers(projects, category)).findFirst();
     }
 
     private static boolean isEdiItself(List<ProjectName> projects) {

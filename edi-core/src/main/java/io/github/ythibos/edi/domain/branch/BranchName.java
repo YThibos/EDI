@@ -1,7 +1,11 @@
 package io.github.ythibos.edi.domain.branch;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.OptionalInt;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -14,6 +18,8 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
     private static final int MOST_DIGITS = 9;
     private static final List<String> HARNESS_PREFIXES = List.of("fm/", "edi/");
     private static final String SHAPE = "feature|chore|research/<KEY>-<n>, such as feature/EDI-5";
+    private static final Pattern WORK_KEY_CAPTURE = Pattern.compile("^(?:" + Arrays.stream(BranchKind.values()).map(BranchKind::word).collect(Collectors.joining("|"))
+            + ")/([A-Z][A-Z0-9]*-[0-9]+)(?:-[0-9]+)?$");
 
     public BranchName {
         if (kind == null) {
@@ -31,6 +37,14 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
         return new BranchName(kind, workKey, NO_FOLLOW_UP);
     }
 
+    public static BranchName forWorkBeside(BranchKind kind, WorkKey workKey, Collection<BranchName> branchesOfOtherTasks) {
+        OptionalInt highestFollowUp = branchesOfOtherTasks.stream()
+                .filter(branch -> branch.isFor(kind, workKey))
+                .mapToInt(BranchName::followUp)
+                .max();
+        return highestFollowUp.isPresent() ? new BranchName(kind, workKey, highestFollowUp.getAsInt() + 1) : forWork(kind, workKey);
+    }
+
     public static BranchName parse(String text) {
         refuseHarnessPrefixes(text);
         int kindEnd = text.indexOf(KIND_SEPARATOR);
@@ -41,10 +55,18 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
         return keyed(kind, text.substring(kindEnd + 1), text);
     }
 
+    public static Pattern workKeyCapture() {
+        return WORK_KEY_CAPTURE;
+    }
+
     @Override
     public String toString() {
         String keyed = kind.word() + KIND_SEPARATOR + workKey;
         return followUp == NO_FOLLOW_UP ? keyed : keyed + NUMBER_SEPARATOR + followUp;
+    }
+
+    private boolean isFor(BranchKind otherKind, WorkKey otherKey) {
+        return kind == otherKind && workKey.equals(otherKey);
     }
 
     private static void refuseHarnessPrefixes(String text) {

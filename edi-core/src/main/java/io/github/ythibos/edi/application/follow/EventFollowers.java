@@ -72,11 +72,11 @@ public class EventFollowers implements AutoCloseable {
     }
 
     private void followEveryEventAfterItsCursor(Follower follower) {
-        List<LoggedEvent> unfollowed = nextBatchFor(follower);
-        while (!unfollowed.isEmpty()) {
-            unfollowed.forEach(event -> followed(follower, event));
+        List<LoggedEvent> unfollowed;
+        do {
             unfollowed = nextBatchFor(follower);
-        }
+            unfollowed.forEach(event -> followed(follower, event));
+        } while (mayHaveMoreAfter(unfollowed));
     }
 
     private List<LoggedEvent> nextBatchFor(Follower follower) {
@@ -86,5 +86,9 @@ public class EventFollowers implements AutoCloseable {
     private void followed(Follower follower, LoggedEvent event) {
         follower.follows().accept(event);
         transaction.executeWithoutResult(_ -> cursors.moveTo(follower.name(), event.sequence()));
+    }
+
+    private static boolean mayHaveMoreAfter(List<LoggedEvent> batch) {
+        return batch.size() == BATCH;
     }
 }

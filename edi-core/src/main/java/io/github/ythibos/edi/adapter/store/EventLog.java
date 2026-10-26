@@ -88,6 +88,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
@@ -228,6 +229,8 @@ public class EventLog {
                     .put("limit", reached.limit().name())
                     .put("resetsAt", Columns.text(reached.limit().resetsAt()));
             case ContextLimitReached reached -> payload.put("worker", reached.worker().toString()).put("fullSince", Columns.text(reached.fullSince()));
+            case WorkerStopMissed missed -> payload.put("worker", missed.worker().toString()).put("stoppedAt", Columns.text(missed.stoppedAt()))
+                    .put("message", missed.message()).put("noticeTyped", missed.noticeTyped());
             case LimitResumeTyped typed -> payload.put("worker", typed.worker().toString());
             case LimitResumeHeldBack heldBack -> payload.put("worker", heldBack.worker().toString()).put("pane", heldBack.pane().word());
             case WorkerDied died -> payload.put("worker", died.worker().toString()).put("cause", died.cause().word());

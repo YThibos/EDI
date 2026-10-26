@@ -93,6 +93,14 @@ class DecisionLogTest {
                     textIfStillThere(file).ifPresent(text -> texts.put(file, text));
                     return FileVisitResult.CONTINUE;
                 }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException unreadable) throws IOException {
+                    if (unreadable instanceof NoSuchFileException) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    throw unreadable;
+                }
             });
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);

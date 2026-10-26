@@ -103,7 +103,7 @@ mkdir -p ~/.edi && cp -r --update=none examples/edi-home/. ~/.edi/
 
 - `config/machine.yaml`, the machine profile: the models workers may run, the tools they never get, supervision timings, the tracker and time booking.
 - `config/projects.yaml`, the projects registry: each project's clone, forge and account, base branch, delivery mode and tracker.
-- `config/dispatch-rules.json`, the dispatch rules: the categories of work, with the model and effort each runs on, and the project overrides.
+- `config/dispatch-rules.json`, the dispatch rules: the categories of work, with the model and effort each runs on, the project overrides, and the model and effort of the validation pipeline's agent.
 - `memory/`, the captain's memory (`profile.md`, `machine.md`, `learnings.md`) loaded into the primary at every start, its cold tier `archive.md`, never loaded, and the craftsmanship rules (`craft-rules.md`).
 - `config/publish-denylist`, the publish deny-list, which the example leaves out: terms that must never leave the machine in a commit, one per line.
 - `config/personal.yaml`, the word EDI addresses the captain by, the personality EDI speaks with and the presence settings.

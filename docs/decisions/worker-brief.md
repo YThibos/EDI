@@ -16,7 +16,7 @@ Until the time-booking tool's continuous capture is confirmed, a worker's report
 The task's notes are the captain's intent and the dispatch's `--spec` is the spec; `BriefSections` writes the variable sections: project rules, validation and delivery per kind and delivery mode, the definition of done, and a mechanical task's files and limits.
 A project with `craftRules: true` and no `memory/craft-rules.md` is refused at launch, and the definition of done asks for the `worked:` line only while the machine profile's `time.requireWorkedLine` is true.
 A ship's brief, when the project keeps a decision log, says to record each architecture or design decision in the project's log in its own form, and only those ([decision-log](decision-log.md)).
-`PipelineIntent.of` composes `intent.md` from a `## Captain's intent` section with the notes, a `## Spec` section with the brief's Spec section, and the craft rules block verbatim when the project is flagged; the brief gives the one command that passes it to the pipeline unchanged.
+`PipelineIntent.of` composes `intent.md` from a `## Captain's intent` section with the notes, a `## Spec` section with the brief's Spec section, a `## Commits` section that names the work key the pipeline puts in front of its own commit subjects and title ([pipeline-commit-keys](pipeline-commit-keys.md)), and the craft rules block verbatim when the project is flagged; the brief gives the one command that passes it to the pipeline unchanged.
 `WrittenBriefs` writes `brief.md`, and `intent.md` for a `draft-review` ship, at every launch and whenever the task is noted: `NoteTask` calls `RewriteBrief`, which rebuilds the facts for the task's latest worker and rewrites both while the task is in flight.
 `edi brief <task>` prints the brief as it stands, or with `--category` the brief a dispatch would write.
 
@@ -47,3 +47,4 @@ When the pipeline reads its intent from a file or standard input, or lets a runn
 - 17/10/2026: slice S6 made the worked line depend on the machine profile.
 - 22/10/2026: reviewers flagged requirements the spec stated as scope creep, so the intent carries the spec and follows every note (EDI-30).
 - 23/10/2026: the decision-log rule in the brief was limited to architecture and design decisions (EDI-42).
+- 23/10/2026: the intent tells the pipeline's agents that the work key is put in front of their commit summaries and title, so they leave it out (EDI-21).

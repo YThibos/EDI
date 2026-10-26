@@ -14,6 +14,7 @@ Tracked files hold generic code, defaults and documented examples with invented 
 Everything about a person, an employer or a machine lives in the EDI home (`$EDI_HOME`, default `~/.edi`): the machine profile `config/machine.yaml`, the project registry, the dispatch rules, the personal configuration, the publish deny-list, memory, the store and state; or in the checkout's gitignored `personal/` directory, which holds personal skills and addenda to the anchor and briefs.
 The EDI home is private, never a git repository and never shared between machines.
 Forge, tracker, ticket keys, worklog emission, secrets and paths are chosen from the machine profile and the registry at the moment of use, through hand-written selection such as `Forges` and `Trackers`.
+`MachineProfile` reads `config/machine.yaml` at every call and parses it again only when its content differs from the content it parsed last, so an edit applies at the next call and a malformed profile is refused at every call.
 No class or bean method uses `@Profile` or `@ConditionalOnProperty`, which `ArchitectureRulesTest` enforces.
 The core module's Surefire runs the whole suite twice in `./mvnw verify`, under a `laptop` fixture profile with JIRA, the fleet ledger and the worked line, and under a `desktop` one with none of them (`edi.test.machine`, `MachineFixture`); AT-37 checks the profiles differ only there.
 The publish guard keeps personal material from ever leaving the machine ([publish-guard](publish-guard.md)).
@@ -21,12 +22,14 @@ The publish guard keeps personal material from ever leaving the machine ([publis
 ## Why
 
 One codebase and one set of executables serve both machines and anyone else, and nothing personal can leak through the code itself.
+Parsing the profile took a YAML parse for every question asked of it, such as one for every event the fleet ledger follows, while the file rarely changes.
 A code path that assumes one machine fails the other profile's run, which a single run could never show.
 
 ## Alternatives rejected
 
 - Spring profiles per machine, or two builds - fixed at native build time, doubling the build and inviting drift.
 - Personal configuration in a private repository - ties the harness to one person and one employer.
+- Keeping the parsed profile until the file's modification time changes - two writes within the clock's resolution would keep the older one.
 - Parameterising every test by profile - every existing test would change.
 
 ## Consequences
@@ -43,3 +46,4 @@ When native images can evaluate conditions at runtime, or a third machine profil
 
 - 15/10/2026: the specification made the harness person- and employer-agnostic and chose machine differences at runtime, because native images fix Spring's conditions at build time.
 - 17/10/2026: slice S6 ran the suite under both fixture profiles.
+- 23/10/2026: a test that followed the log for every finished ship spent part of its time parsing the unchanged machine profile, so `MachineProfile` parses again only when the content changed (EDI-45).

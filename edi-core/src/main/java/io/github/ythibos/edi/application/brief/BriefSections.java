@@ -62,6 +62,9 @@ final class BriefSections {
                     + "When you report done, EDI fetches the branch into the captain's checkout by a ref-only fetch.";
             case LOCAL_APPLY -> "Commit on `" + facts.dispatch().branch() + "` and push nothing: "
                     + "EDI applies the change to the captain's checkout without committing it there.";
+            case REPORT -> "This work is delivered by its report: commit nothing, push nothing, and leave the isolated copy as `origin/" + facts.base()
+                    + "` holds it.\n"
+                    + "Write each change you made and the check that verified it to `" + facts.reportPath() + "`.";
         };
     }
 
@@ -134,6 +137,10 @@ final class BriefSections {
             case LOCAL_BRANCH, LOCAL_APPLY -> "Your last commit is on `" + facts.dispatch().branch() + "`, the project's tests pass, and `"
                     + facts.reportPath() + "` holds a short delivery note.\n"
                     + "Then run `edi status done -- <the head commit>`.";
+            case REPORT -> "`" + facts.reportPath() + "` records each change and the check that verified it.\n"
+                    + "Then run `edi status done -- <a one-line summary>`.\n"
+                    + "EDI accepts it only when the report exists and the copy holds no commit or change beyond `origin/" + facts.base()
+                    + "`, and then retires the task.";
         };
     }
 

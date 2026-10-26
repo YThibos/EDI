@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -47,6 +48,9 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 class DispatchAndEffortTest {
 
     private static final Route OPUS_HIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH);
+    private static final Set<CategoryId> EDIS_RESEARCH_AND_IMPLEMENTATION = Set.of(CategoryId.RESEARCH, CategoryId.IMPLEMENTATION,
+            CategoryId.IMPLEMENTATION_UNPLANNED, CategoryId.BUGFIX);
+    private static final String PIPELINE = "{\"use\": {\"model\": \"claude-opus-5-5\", \"effort\": \"high\"}, \"why\": \"The last judge.\"}";
 
     @TempDir
     private Path directory;
@@ -72,6 +76,10 @@ class DispatchAndEffortTest {
                     "needs a researcher at least as strong as the implementer");
             assertRefused(home, category("research", "claude-opus-5-5", null, "a reason", false), "without an effort");
             assertRefused(home, category("research", "claude-opus-6", "high", "a reason", false), "which the machine profile does not allow");
+            assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false).replace(PIPELINE, PIPELINE.replace("high", "max")),
+                    "high is EDI's ceiling, so not max");
+            assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false).replace(", \"pipeline\": " + PIPELINE, ""),
+                    "it names no pipeline entry, so the validation pipeline's agent would run at the harness default");
             assertThatThrownBy(() -> EffortLevel.named("xhigh")).hasMessageContaining("high is EDI's ceiling");
             assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), LaunchKind.DISPATCH, UUID.randomUUID(), null, directory, directory, directory, directory,
                     Map.of(), List.of(), PermissionMode.BYPASS, "brief")).hasMessageContaining("explicit model and effort");
@@ -82,23 +90,26 @@ class DispatchAndEffortTest {
     }
 
     @Nested
-    @DisplayName("I-15 EDI work runs on Opus 5.5 high")
+    @DisplayName("I-15 EDI's own research and implementation run on Opus 5.5 high")
     class EdiWorkRunsOnTheProjectOverride {
 
         @Test
-        @DisplayName("AT-15 a task on the EDI project resolves to the project override regardless of category")
+        @DisplayName("AT-15 a research or implementation task on the EDI project resolves to the project override, any other to its category")
         @Tag("adapter")
-        void anEdiTaskResolvesToTheProjectOverride() throws IOException {
+        void anEdiResearchOrImplementationTaskResolvesToTheProjectOverride() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             DispatchRules rules = home.dispatchRulesFile().validatedAgainst(home.machineProfile().workers().models());
 
             for (DispatchCategory category : rules.categories()) {
-                assertThat(rules.routeFor(List.of(new ProjectName("EDI")), category.id(), null)).as("EDI work as %s", category.id()).isEqualTo(OPUS_HIGH);
+                Route ediRoute = EDIS_RESEARCH_AND_IMPLEMENTATION.contains(category.id()) ? OPUS_HIGH : category.route();
+                assertThat(rules.routeFor(List.of(new ProjectName("EDI")), category.id(), null)).as("EDI work as %s", category.id()).isEqualTo(ediRoute);
                 assertThat(rules.routeFor(List.of(new ProjectName("harness")), category.id(), null)).isEqualTo(category.route());
             }
-            home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "EDI", "EDI-9")));
-            dispatch(home, "fit-horn", "documentation");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "EDI", "EDI-9"), WorkerFixtures.queuedShip("fit-bell", "EDI", "EDI-10")));
+            dispatch(home, "fit-horn", "implementation");
             assertThat(home.runtime().lastLaunch().route()).isEqualTo(OPUS_HIGH);
+            dispatch(home, "fit-bell", "documentation");
+            assertThat(home.runtime().lastLaunch().route()).isEqualTo(rules.category(new CategoryId("documentation")).route());
         }
     }
 
@@ -163,7 +174,7 @@ class DispatchAndEffortTest {
     }
 
     private static String rules(String... categories) {
-        return "{\"schema\": \"edi-dispatch.v2\", \"categories\": [" + String.join(",", categories) + "]}";
+        return "{\"schema\": \"edi-dispatch.v2\", \"categories\": [" + String.join(",", categories) + "], \"pipeline\": " + PIPELINE + "}";
     }
 
     private static String categoryEntry(String id, String model, String effort, String why, boolean researchFirst) {

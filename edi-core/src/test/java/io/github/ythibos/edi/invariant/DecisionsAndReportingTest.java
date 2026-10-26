@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.worker.HookAnswer;
@@ -68,6 +70,8 @@ import io.github.ythibos.edi.web.report.TurnItem;
 class DecisionsAndReportingTest {
 
     private static final int MIGRATED_DECISION_SEQUENCE = 57;
+    private static final int GOLDEN_REPORTS_LINTED = 16;
+    private static final int FIXED_KINDS_LINTED = 5;
 
     @TempDir
     private Path directory;
@@ -377,11 +381,8 @@ class DecisionsAndReportingTest {
     class TalkInOutcomes {
 
         @Test
-        @Tag("adapter")
-        @DisplayName("AT-22 a lint over captain-facing strings rejects the internal-label list")
-        void captainFacingStringsCarryNoInternalLabels() throws IOException {
-            List<String> generated = CaptainFacingStrings.everyKindEdiGenerates(directory);
-
+        @DisplayName("AT-22 the lint finds every internal label and passes a quoted name, a path and a link")
+        void theLintRejectsTheInternalLabelList() {
             assertThat(CaptainVoice.INTERNAL_LABELS).allSatisfy(label -> assertThat(CaptainVoice.internalLabelsIn("The " + label.label() + " is ready."))
                     .as(label.label()).contains(label));
             assertThat(CaptainVoice.internalLabelsIn("The `worktree` at /home/example/worktrees/lamp, \"Fix the worktree\" and https://example.org/wake"))
@@ -390,8 +391,23 @@ class DecisionsAndReportingTest {
                     .isInstanceOf(Refusal.class)
                     .hasMessage("A decision card speaks to the captain in outcomes: say \"isolated copy\" instead of \"worktree\", or quote a name in"
                             + " double quotes when it is one (I-22).");
-            assertThat(generated).hasSizeGreaterThan(40)
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("io.github.ythibos.edi.invariant.CaptainFacingStrings#everyKindEdiGenerates")
+        @Tag("adapter")
+        @DisplayName("AT-22 a lint over captain-facing strings rejects the internal-label list")
+        void captainFacingStringsCarryNoInternalLabels(CaptainFacingStrings.GeneratedStrings kind) throws IOException {
+            List<String> generated = kind.in(directory);
+
+            assertThat(generated).isNotEmpty()
                     .allSatisfy(text -> assertThat(CaptainVoice.internalLabelsIn(text)).as(text).isEmpty());
+        }
+
+        @Test
+        @DisplayName("AT-22 the lint covers every golden report and every fixed kind of captain-facing string")
+        void theLintCoversEveryKindEdiGenerates() {
+            assertThat(CaptainFacingStrings.everyKindEdiGenerates()).hasSizeGreaterThanOrEqualTo(GOLDEN_REPORTS_LINTED + FIXED_KINDS_LINTED);
         }
     }
 

@@ -8,6 +8,7 @@ import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public record BriefFacts(
@@ -44,6 +45,10 @@ public record BriefFacts(
 
     public DeliveryMode delivery() {
         return task.intake().deliveryOr(project.delivery());
+    }
+
+    public boolean deliversThroughThePipeline() {
+        return task.intake().kind() == TaskKind.SHIP && delivery() == DeliveryMode.DRAFT_REVIEW;
     }
 
     public boolean followsAPlan() {
