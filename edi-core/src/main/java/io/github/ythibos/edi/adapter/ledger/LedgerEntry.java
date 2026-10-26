@@ -22,7 +22,7 @@ public sealed interface LedgerEntry {
     record Merged(TaskId task, Instant at, String url) implements LedgerEntry {
     }
 
-    record Worked(TaskId task, Instant at, String key, long activeMinutes, long wallClockMinutes) implements LedgerEntry {
+    record Worked(TaskId task, Instant at, String key, long activeMinutes) implements LedgerEntry {
     }
 
     record CleanedUp(TaskId task, Instant at) implements LedgerEntry {

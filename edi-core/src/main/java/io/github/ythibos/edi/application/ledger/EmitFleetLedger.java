@@ -92,6 +92,6 @@ public class EmitFleetLedger {
 
     private LedgerEntry workedEntry(LoggedEvent cleanup, WorkedTime worked) {
         Intake intake = tasks.get(cleanup.task()).intake();
-        return new LedgerEntry.Worked(cleanup.task(), cleanup.at(), workKeyOf(intake), worked.activeMinutes(), worked.wallClockMinutes());
+        return new LedgerEntry.Worked(cleanup.task(), cleanup.at(), workKeyOf(intake), worked.activeMinutes());
     }
 }

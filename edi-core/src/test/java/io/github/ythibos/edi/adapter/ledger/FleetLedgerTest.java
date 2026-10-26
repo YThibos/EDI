@@ -32,7 +32,7 @@ class FleetLedgerTest {
         ledger.append(new LedgerEntry.Status(LAMP, AT.plusSeconds(1), "working", null, "set-up done"));
         ledger.append(new LedgerEntry.DraftReady(LAMP, AT.plusSeconds(2), "https://forge.example.org/team/service/merge_requests/7"));
         ledger.append(new LedgerEntry.Merged(LAMP, AT.plusSeconds(3), "https://forge.example.org/team/service/merge_requests/7"));
-        ledger.append(new LedgerEntry.Worked(LAMP, AT.plusSeconds(4), "SVC-40", 45, 75));
+        ledger.append(new LedgerEntry.Worked(LAMP, AT.plusSeconds(4), "SVC-40", 45));
         ledger.append(new LedgerEntry.CleanedUp(LAMP, AT.plusSeconds(4)));
 
         assertThat(Files.readAllLines(home.resolve("state/fleet-ledger.jsonl"))).containsExactly(
@@ -42,8 +42,7 @@ class FleetLedgerTest {
                 "{\"v\":1,\"ts\":1792227602,\"event\":\"task.pr_ready\",\"task\":\"fit-lamp\",\"pr\":\"https://forge.example.org/team/service/merge_requests/7\"}",
                 "{\"v\":1,\"ts\":1792227603,\"event\":\"task.merged\",\"task\":\"fit-lamp\",\"via\":\"pr\","
                         + "\"pr\":\"https://forge.example.org/team/service/merge_requests/7\"}",
-                "{\"v\":1,\"ts\":1792227604,\"event\":\"task.worked\",\"task\":\"fit-lamp\",\"key\":\"SVC-40\",\"active_minutes\":45,"
-                        + "\"wall_clock_minutes\":75}",
+                "{\"v\":1,\"ts\":1792227604,\"event\":\"task.worked\",\"task\":\"fit-lamp\",\"key\":\"SVC-40\",\"active_minutes\":45}",
                 "{\"v\":1,\"ts\":1792227604,\"event\":\"task.cleaned_up\",\"task\":\"fit-lamp\"}");
     }
 

@@ -55,8 +55,7 @@ public class FleetLedger {
             case LedgerEntry.DraftReady ready -> record.put("pr", ready.url());
             case LedgerEntry.Merged merged -> record.put("via", MERGED_THROUGH_ITS_DRAFT).put("pr", merged.url());
             case LedgerEntry.Worked worked -> record.put("key", worked.key())
-                    .put("active_minutes", worked.activeMinutes())
-                    .put("wall_clock_minutes", worked.wallClockMinutes());
+                    .put("active_minutes", worked.activeMinutes());
             case LedgerEntry.CleanedUp _ -> record;
         };
     }

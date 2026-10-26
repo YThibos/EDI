@@ -60,6 +60,33 @@ class TaskDetailQueryTest {
     }
 
     @Test
+    void leavesOutTheTimeAWorkerWaitsOnItsUsageLimit() {
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/HRN-40")
+                .reported(StatusState.WORKING, null, "HRN-40 set-up done")
+                .after(Duration.ofMinutes(20))
+                .reachedItsUsageLimitUntil(Duration.ofHours(3).plusMinutes(40))
+                .after(Duration.ofHours(3).plusMinutes(40))
+                .relaunched()
+                .after(Duration.ofMinutes(30))
+                .reported(StatusState.DONE, null, "HRN-40 delivered");
+
+        assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked())
+                .isEqualTo(new WorkedTime(Duration.ofMinutes(50), Duration.ofHours(4).plusMinutes(30)));
+    }
+
+    @Test
+    void leavesOutTheTimeAWorkerStandsStoppedOnAnError() {
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/HRN-40")
+                .reported(StatusState.WORKING, null, "HRN-40 set-up done")
+                .after(Duration.ofMinutes(20))
+                .stoppedOnAnError()
+                .after(Duration.ofHours(1));
+
+        assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked())
+                .isEqualTo(new WorkedTime(Duration.ofMinutes(20), Duration.ofMinutes(80)));
+    }
+
+    @Test
     void measuresNothingForATaskNotYetDispatched() {
         assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked()).isNull();
     }

@@ -17,10 +17,15 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public final class WorkEvents {
@@ -36,18 +41,34 @@ public final class WorkEvents {
         this.task = task;
     }
 
+    private static final Route ROUTE = new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH);
+
     public static WorkEvents of(TestHome home, String task) {
         return new WorkEvents(home, new TaskId(task));
     }
 
     public WorkEvents dispatchedTo(int incarnation, String branch) {
         return recorded(new TaskDispatched(task, new WorkerId(task, incarnation), CategoryId.IMPLEMENTATION,
-                new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), BranchName.parse(branch), null), Actor.PRIMARY);
+                ROUTE, BranchName.parse(branch), null), Actor.PRIMARY);
     }
 
     public WorkEvents reported(StatusState state, String key, String text) {
         StatusReport report = new StatusReport(state, key == null ? null : new StatusKey(key), null, text);
         return recorded(new StatusReported(task, WorkerId.first(task), report), Actor.worker(WorkerId.first(task)));
+    }
+
+    public WorkEvents reachedItsUsageLimitUntil(Duration reset) {
+        WorkerId worker = WorkerId.first(task);
+        return recorded(new UsageLimitReached(task, worker, new UsageLimit("session limit", home.clock().now().plus(reset))), Actor.worker(worker));
+    }
+
+    public WorkEvents stoppedOnAnError() {
+        WorkerId worker = WorkerId.first(task);
+        return recorded(new WorkerStoppedOnAnError(task, worker, "overloaded"), Actor.worker(worker));
+    }
+
+    public WorkEvents relaunched() {
+        return recorded(new WorkerRelaunched(task, WorkerId.first(task), LaunchKind.RESUME, ROUTE, "usage limit reset"), Actor.CORE);
     }
 
     public WorkEvents after(Duration pause) {

@@ -53,8 +53,7 @@ class EmitFleetLedgerTest {
                         + "\"text\":\"https://forge.example.org/team/service/merge_requests/7\"}",
                 "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.pr_ready\",\"task\":\"fix-lamps\",\"pr\":\"" + WorkEvents.DRAFT.url() + "\"}",
                 "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.merged\",\"task\":\"fix-lamps\",\"via\":\"pr\",\"pr\":\"" + WorkEvents.DRAFT.url() + "\"}",
-                "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.worked\",\"task\":\"fix-lamps\",\"key\":\"SVC-40\",\"active_minutes\":0,"
-                        + "\"wall_clock_minutes\":0}",
+                "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.worked\",\"task\":\"fix-lamps\",\"key\":\"SVC-40\",\"active_minutes\":0}",
                 "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.cleaned_up\",\"task\":\"fix-lamps\"}");
     }
 
@@ -75,7 +74,7 @@ class EmitFleetLedgerTest {
 
         assertThat(Files.readAllLines(home.home().fleetLedger())).contains(
                 "{\"v\":1,\"ts\":" + home.clock().now().getEpochSecond() + ",\"event\":\"task.worked\",\"task\":\"fix-lamps\",\"key\":\"SVC-40\","
-                        + "\"active_minutes\":45,\"wall_clock_minutes\":95}");
+                        + "\"active_minutes\":45}");
     }
 
     @Test
