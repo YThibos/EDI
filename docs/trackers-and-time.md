@@ -24,6 +24,8 @@ An evergreen ticket only gets worklogs: EDI never places it in a sprint, links a
 ## Time
 
 EDI writes the activity ledger the time-booking tool books from, `$EDI_HOME/state/fleet-ledger.jsonl`, when the machine profile's `time.fleetLedger` is on ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
+EDI measures each task's active time from its timeline: the stretches a worker spent working, without the time it waited on a decision, a hold or the captain.
+`edi task show` prints it as "Worked: active 2h19m of 3h11m" against the wall clock since the first dispatch, and cleanup books it in the ledger as `task.worked` with the work key and `active_minutes` ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
 It asks workers for the time they worked, as a `worked:` line in their report, while `time.requireWorkedLine` says so ([worker-brief](decisions/worker-brief.md)).
 
 ## Research first

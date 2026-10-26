@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.testing;
 
+import java.time.Duration;
+
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
@@ -46,6 +48,11 @@ public final class WorkEvents {
     public WorkEvents reported(StatusState state, String key, String text) {
         StatusReport report = new StatusReport(state, key == null ? null : new StatusKey(key), null, text);
         return recorded(new StatusReported(task, WorkerId.first(task), report), Actor.worker(WorkerId.first(task)));
+    }
+
+    public WorkEvents after(Duration pause) {
+        home.clock().advance(pause);
+        return this;
     }
 
     public WorkEvents deliveredAsADraft() {

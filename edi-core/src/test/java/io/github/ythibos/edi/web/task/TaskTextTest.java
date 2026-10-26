@@ -3,6 +3,7 @@ package io.github.ythibos.edi.web.task;
 import static io.github.ythibos.edi.web.PresenterFixtures.AT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.task.WorkedTime;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
@@ -62,14 +64,17 @@ class TaskTextTest {
     }
 
     @Test
-    void showsAShipsDraftItsPipelineRunAndItsCost() {
+    void showsAShipsDraftItsPipelineRunItsCostAndItsWorkedTime() {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         Delivery draft = Delivery.of(PresenterFixtures.lantern().id(),
                 new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null, null), AT);
         TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), null, draft, new PipelineRun("01RUN", "running", "ci", "1111", null),
-                new TaskCost(PresenterFixtures.lantern().id(), new TokenUsage(1, 20, 3, 4), null, AT), List.of());
+                new TaskCost(PresenterFixtures.lantern().id(), new TokenUsage(1, 20, 3, 4), null, AT),
+                new WorkedTime(Duration.ofMinutes(139), Duration.ofMinutes(191)), List.of());
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).contains("""
+                Worked: active 2h19m of 3h11m
+                """, """
                 Pipeline: run 01RUN running at ci
                 Draft: https://github.com/example-owner/harness/pull/7 open, a draft (seen 2026-10-15 09:30 UTC)
                 Cost: workers 28 tokens (1 in, 20 cache read, 3 cache write, 4 out); pipeline unknown
@@ -81,7 +86,7 @@ class TaskTextTest {
         Task item = PresenterFixtures.captainItem()
                 .noted("Ask before the season.")
                 .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask());
-        TaskDetail detail = new TaskDetail(item, List.of(), PresenterFixtures.openDecision(), null, null, null,
+        TaskDetail detail = new TaskDetail(item, List.of(), PresenterFixtures.openDecision(), null, null, null, null,
                 List.of(new RecordedEvent(1, AT, Actor.PRIMARY, "TaskAdded", item.id()), new RecordedEvent(2, AT, Actor.PRIMARY, "DecisionRaised", item.id())));
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).isEqualTo("""
