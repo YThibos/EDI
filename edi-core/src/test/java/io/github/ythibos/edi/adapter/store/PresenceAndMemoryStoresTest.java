@@ -53,7 +53,7 @@ class PresenceAndMemoryStoresTest {
         home.primaryHooks().sessionStarted(session, null, true);
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
         home.captainWords().recordTyped(session, Passage.allTypedIn("Drop the lamp.\nAnd the horn."), TestHome.START);
-        Authorisation word = new Authorisation(session, new TaskId("fit-lamp"), "Drop the lamp.", TestHome.START);
+        Authorisation word = new Authorisation(session, new TaskId("fit-lamp"), null, "Drop the lamp.", TestHome.START);
         home.captainWords().save(word);
 
         assertThat(home.captainWords().wasTyped(session, Passage.of("and the horn."))).isTrue();

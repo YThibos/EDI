@@ -6,13 +6,16 @@ import java.util.UUID;
 
 import io.github.ythibos.edi.domain.task.TaskId;
 
-public record Authorisation(UUID session, TaskId task, String verbatim, Instant saidAt) {
+public record Authorisation(UUID session, TaskId task, CaptainWordAct act, String verbatim, Instant saidAt) {
 
     public Authorisation {
         Objects.requireNonNull(session, "The captain's word is heard in a primary session.");
         Objects.requireNonNull(saidAt, "The captain's word records when it was given.");
         if (verbatim.isBlank()) {
             throw new IllegalArgumentException("The captain's word is the captain's own words.");
+        }
+        if (act != null && task == null) {
+            throw new IllegalArgumentException("The captain's word for " + act.word() + " is on one task.");
         }
     }
 
@@ -22,5 +25,13 @@ public record Authorisation(UUID session, TaskId task, String verbatim, Instant 
 
     public boolean concerns(TaskId other) {
         return other.equals(task);
+    }
+
+    public boolean isGeneral() {
+        return act == null;
+    }
+
+    public boolean isFor(CaptainWordAct other) {
+        return other == act;
     }
 }

@@ -409,21 +409,32 @@ class ApiTest {
     }
 
     @Test
-    void refusesADispatchAboveHighUntilTheCaptainsWordOnTheTaskIsRecordedAndWithoutAReason() throws Exception {
+    void refusesADispatchAboveHighUntilTheCaptainsWordOnTheTaskIsRecordedForItAndWithoutAReason() throws Exception {
         post("/api/tasks", "{\"id\":\"api-beacon\",\"kind\":\"scout\",\"projects\":[\"harness\"],\"title\":\"Map the beacon\",\"key\":\"HRN-8\"}", TEXT);
         UUID primary = UUID.randomUUID();
         primaryHook(primary, "session-start", "{}");
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Map the beacon at xhigh.\"}");
 
-        HttpResponse<String> withoutTheWord = dispatchInSession(primary, "api-beacon", "xhigh", "the captain asked for xhigh");
+        HttpResponse<String> aGeneralWord = captainSaidInSession(primary, "{\"text\":\"Map the beacon at xhigh.\",\"task\":\"api-beacon\"}");
+        HttpResponse<String> withoutTheWordForIt = dispatchInSession(primary, "api-beacon", "xhigh", "the captain asked for xhigh");
         HttpResponse<String> withoutAReason = dispatchInSession(primary, "api-beacon", "max", null);
         HttpResponse<String> beyondTheHarness = dispatchInSession(primary, "api-beacon", "ultra", "the captain asked for ultra");
+        HttpResponse<String> forAnotherAct = captainSaidInSession(primary, "{\"text\":\"Map the beacon at xhigh.\",\"task\":\"api-beacon\",\"for\":\"drop\"}");
+        HttpResponse<String> forTheHome = captainSaidInSession(primary, "{\"text\":\"Map the beacon at xhigh.\",\"for\":\"effort-above-high\"}");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
-        assertRefusal(withoutTheWord, 409, "To run one task above high, EDI's effort ceiling, EDI needs the captain's word on api-beacon in this session:"
-                + " record it with edi captain said --task api-beacon --text \"<their words>\".");
+        assertThat(aGeneralWord.statusCode()).isEqualTo(200);
+        assertRefusal(withoutTheWordForIt, 409, "To run one task above high, EDI's effort ceiling, EDI needs the captain's word on api-beacon in this session"
+                + " recorded for it: record it with edi captain said --task api-beacon --for effort-above-high --text \"<their words>\".");
+        assertRefusal(forAnotherAct, 400, "The captain's word is recorded for effort-above-high alone, not drop.");
+        assertRefusal(forTheHome, 400, "The captain's word for effort-above-high is on one task.");
         assertRefusal(withoutAReason, 400, "An override of the dispatch rules records the captain's reason for it.");
         assertRefusal(beyondTheHarness, 400, "Effort is low, medium or high, and high is EDI's ceiling, so not ultra;"
                 + " only the captain's word for one task lifts that task to xhigh or max.");
+    }
+
+    private static HttpResponse<String> captainSaidInSession(UUID session, String said) throws Exception {
+        return send(inSession(session, "/api/captain/said", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(said)));
     }
 
     private static HttpResponse<String> dispatchInSession(UUID session, String task, String effort, String reason) throws Exception {

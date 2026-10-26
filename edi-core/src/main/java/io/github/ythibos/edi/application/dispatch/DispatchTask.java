@@ -94,7 +94,7 @@ public class DispatchTask {
 
     private void requireTheCaptainsWordAboveTheEffortCeiling(TaskReference reference, DispatchRequest request, CallingSession calling) {
         if (request.liftsTheEffortCeiling()) {
-            captainsWord.requireSaidOnTask(calling, transaction.execute(_ -> tasks.get(reference)).id(), CaptainWordAct.RUN_ABOVE_THE_EFFORT_CEILING);
+            captainsWord.requireSaidForActOnTask(calling, transaction.execute(_ -> tasks.get(reference)).id(), CaptainWordAct.EFFORT_ABOVE_HIGH);
         }
     }
 

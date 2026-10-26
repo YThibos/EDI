@@ -49,12 +49,12 @@ public class CaptainsWordEvidence {
         this.transaction = transaction;
     }
 
-    public Authorisation record(CallingSession calling, String verbatim, TaskReference task, Actor actor) {
+    public Authorisation record(CallingSession calling, String verbatim, TaskReference task, CaptainWordAct act, Actor actor) {
         Exchange exchange = exchangeOf(calling);
         requireTyped(exchange, verbatim);
         return transaction.execute(_ -> {
             TaskId concerned = task == null ? null : tasks.get(task).id();
-            Authorisation word = new Authorisation(exchange.session(), concerned, verbatim.strip(), clock.now());
+            Authorisation word = new Authorisation(exchange.session(), concerned, act, verbatim.strip(), clock.now());
             words.save(word);
             if (concerned != null) {
                 events.record(new CaptainSaid(concerned, word.verbatim()), actor, word.saidAt());
@@ -84,11 +84,12 @@ public class CaptainsWordEvidence {
                         + " that authorises " + act.word() + "."));
     }
 
-    public CaptainsWord requireSaidOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
+    public CaptainsWord requireSaidForActOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
-        return transaction.execute(_ -> CaptainsAuthority.saidOnTask(task, exchange, words.heardIn(exchange.session())))
+        return transaction.execute(_ -> CaptainsAuthority.saidForActOnTask(task, act, exchange, words.heardIn(exchange.session())))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
-                        + " in this session: record it with edi captain said --task " + task + " --text \"<their words>\"."));
+                        + " in this session recorded for it: record it with edi captain said --task " + task + " --for " + act.word()
+                        + " --text \"<their words>\"."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {

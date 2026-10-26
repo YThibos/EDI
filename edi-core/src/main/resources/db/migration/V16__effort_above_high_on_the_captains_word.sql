@@ -68,3 +68,5 @@ drop table dispatch_kept;
 drop table worker_kept;
 
 create index worker_by_task on worker (task_id, incarnation);
+
+alter table captain_word add column act text check (act in ('effort-above-high'));

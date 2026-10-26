@@ -20,6 +20,7 @@ class CaptainController {
     @PostMapping("/api/captain/said")
     Confirmation said(@RequestBody SaidRequest request, Caller caller) {
         caller.requirePrimary("edi captain said");
-        return new Confirmation.CaptainHeard(evidence.record(caller.callingSession(), request.words(), request.concernedTask(), caller.actor()));
+        return new Confirmation.CaptainHeard(evidence.record(caller.callingSession(), request.words(), request.concernedTask(), request.act(),
+                caller.actor()));
     }
 }

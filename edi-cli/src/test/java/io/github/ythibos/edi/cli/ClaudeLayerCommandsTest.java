@@ -52,6 +52,19 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
+    void recordsTheCaptainsWordOnATaskForEffortAboveHighOnlyWithItsTask() {
+        int recorded = edi("", "captain", "said", "--task", "fit-lamp", "--for", "effort-above-high", "--text", "Fit the lamp at xhigh.");
+        StubCore.Request forTheLamp = core.received();
+        int refused = edi("", "captain", "said", "--for", "effort-above-high", "--text", "Everything at xhigh.");
+
+        assertThat(recorded).isZero();
+        assertThat(forTheLamp.body()).isEqualTo("{\"text\":\"Fit the lamp at xhigh.\",\"task\":\"fit-lamp\",\"for\":\"effort-above-high\"}");
+        assertThat(refused).isEqualTo(2);
+        assertThat(err.toString()).contains("A word for one act is on one task, so --for takes --task.");
+        assertThat(core.requests()).containsExactly(forTheLamp);
+    }
+
+    @Test
     void promotesDropsAndDiscardsOnTheCaptainsWord() {
         edi("", "task", "promote", "survey-lamps", "--title", "Fit the lamps");
         StubCore.Request promoted = core.received();

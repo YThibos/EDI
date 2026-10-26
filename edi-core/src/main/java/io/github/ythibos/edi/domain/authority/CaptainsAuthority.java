@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.authority;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -16,7 +17,7 @@ public final class CaptainsAuthority {
 
     public static Optional<CaptainsWord> onTask(TaskId task, CaptainWordAct act, Exchange exchange, List<Authorisation> words,
             List<Decision> decisions) {
-        return saidOnTask(task, exchange, words).or(() -> decisions.stream()
+        return latest(heardOnTask(task, exchange, words).filter(Authorisation::isGeneral)).or(() -> decisions.stream()
                 .filter(decision -> decision.authorises(act))
                 .map(Decision::answer)
                 .filter(exchange::holds)
@@ -25,15 +26,19 @@ public final class CaptainsAuthority {
                 .map(CaptainsWord::new));
     }
 
-    public static Optional<CaptainsWord> saidOnTask(TaskId task, Exchange exchange, List<Authorisation> words) {
-        return latest(words.stream().filter(word -> word.concerns(task)).filter(exchange::holds).toList());
+    public static Optional<CaptainsWord> saidForActOnTask(TaskId task, CaptainWordAct act, Exchange exchange, List<Authorisation> words) {
+        return latest(heardOnTask(task, exchange, words).filter(word -> word.isFor(act)));
     }
 
     public static Optional<CaptainsWord> onTheHome(Exchange exchange, List<Authorisation> words) {
-        return latest(words.stream().filter(Authorisation::concernsTheHome).filter(exchange::holds).toList());
+        return latest(words.stream().filter(Authorisation::concernsTheHome).filter(exchange::holds));
     }
 
-    private static Optional<CaptainsWord> latest(List<Authorisation> words) {
-        return words.stream().max(Comparator.comparing(Authorisation::saidAt)).map(Authorisation::verbatim).map(CaptainsWord::new);
+    private static Stream<Authorisation> heardOnTask(TaskId task, Exchange exchange, List<Authorisation> words) {
+        return words.stream().filter(word -> word.concerns(task)).filter(exchange::holds);
+    }
+
+    private static Optional<CaptainsWord> latest(Stream<Authorisation> words) {
+        return words.max(Comparator.comparing(Authorisation::saidAt)).map(Authorisation::verbatim).map(CaptainsWord::new);
     }
 }

@@ -27,16 +27,18 @@ class EffortMigrationTest {
 
     private static final String LAUNCHED = "2026-10-26T09:00:00Z";
     private static final TaskId LAMP = new TaskId("fit-lamp");
+    private static final UUID SESSION = UUID.randomUUID();
 
     @TempDir
     private Path directory;
 
     @Test
-    void keepsEveryDispatchAndWorkerWithWhatHangsOnThemAndStoresEffortAboveHigh() throws IOException {
+    void keepsEveryDispatchWorkerAndCaptainsWordWithWhatHangsOnThemAndStoresEffortAboveHigh() throws IOException {
         DataSource store = StoreFile.openedAt(directory.resolve("edi.db"));
         Flyway.configure().dataSource(store).target("15").load().migrate();
         JdbcClient jdbc = JdbcClient.create(store);
         storeALaunchedLampAtHigh(jdbc);
+        storeTheCaptainsWordOnTheLamp(jdbc);
 
         Flyway.configure().dataSource(store).load().migrate();
         DispatchStore dispatches = new DispatchStore(jdbc);
@@ -51,6 +53,10 @@ class EffortMigrationTest {
         assertThat(jdbc.sql("select count(*) from outage_entry").query(Integer.class).single()).isEqualTo(1);
         assertThat(jdbc.sql("pragma foreign_key_check").query((row, _) -> row.getString(1)).list()).isEqualTo(List.of());
         assertThatThrownBy(() -> jdbc.sql("update worker set effort = 'ultra'").update()).hasMessageContaining("CHECK constraint failed");
+        assertThat(new CaptainWordStore(jdbc).heardIn(SESSION)).singleElement()
+                .satisfies(word -> assertThat(word.isGeneral()).isTrue())
+                .satisfies(word -> assertThat(word.verbatim()).isEqualTo("Drop the lamp."));
+        assertThatThrownBy(() -> jdbc.sql("update captain_word set act = 'drop'").update()).hasMessageContaining("CHECK constraint failed");
     }
 
     private static void storeALaunchedLampAtHigh(JdbcClient jdbc) {
@@ -70,5 +76,12 @@ class EffortMigrationTest {
         jdbc.sql("insert into worker_notice (worker_id, kind, since, noticed_at) values ('fit-lamp#1', 'died', :at, :at)").param("at", LAUNCHED).update();
         jdbc.sql("insert into outage_entry (number, task_id, worker_id, cause, listed_at) values (1, 'fit-lamp', 'fit-lamp#1', 'window-closed', :at)")
                 .param("at", LAUNCHED).update();
+    }
+
+    private static void storeTheCaptainsWordOnTheLamp(JdbcClient jdbc) {
+        jdbc.sql("insert into primary_session (session_id, started_at) values (:session, :at)").param("session", SESSION.toString()).param("at", LAUNCHED)
+                .update();
+        jdbc.sql("insert into captain_word (session_id, task_id, verbatim, said_at) values (:session, 'fit-lamp', 'Drop the lamp.', :at)")
+                .param("session", SESSION.toString()).param("at", LAUNCHED).update();
     }
 }

@@ -8,7 +8,7 @@ public enum CaptainWordAct {
     PROMOTE("promote a scout to a ship", true),
     DROP("drop a task", true),
     DISCARD_WORK("discard work that has not landed", true),
-    RUN_ABOVE_THE_EFFORT_CEILING("run one task above high, EDI's effort ceiling", false),
+    EFFORT_ABOVE_HIGH("run one task above high, EDI's effort ceiling", false),
     TOUCH_A_SECRET("touch a secret", false),
     STOP_RUNNING_WORKERS("stop the workers that are running", false);
 
@@ -26,6 +26,13 @@ public enum CaptainWordAct {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("A decision option authorises " + wordsOfTheActsAnOptionAuthorises() + ", not "
                         + word + "."));
+    }
+
+    public static CaptainWordAct recordableForAWord(String word) {
+        if (!EFFORT_ABOVE_HIGH.word().equals(word)) {
+            throw new IllegalArgumentException("The captain's word is recorded for " + EFFORT_ABOVE_HIGH.word() + " alone, not " + word + ".");
+        }
+        return EFFORT_ABOVE_HIGH;
     }
 
     public String sentence() {

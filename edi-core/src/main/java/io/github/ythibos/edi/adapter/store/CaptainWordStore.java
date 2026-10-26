@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.authority.Authorisation;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.authority.Passage;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -44,16 +45,17 @@ public class CaptainWordStore {
     }
 
     public void save(Authorisation word) {
-        store.sql("insert into captain_word (session_id, task_id, verbatim, said_at) values (:session, :task, :verbatim, :said)")
+        store.sql("insert into captain_word (session_id, task_id, act, verbatim, said_at) values (:session, :task, :act, :verbatim, :said)")
                 .param("session", word.session().toString())
                 .param("task", Columns.textOf(word.task()))
+                .param("act", word.isGeneral() ? null : word.act().word())
                 .param("verbatim", word.verbatim())
                 .param("said", Columns.text(word.saidAt()))
                 .update();
     }
 
     public List<Authorisation> heardIn(UUID session) {
-        return store.sql("select session_id, task_id, verbatim, said_at from captain_word where session_id = :session order by number")
+        return store.sql("select session_id, task_id, act, verbatim, said_at from captain_word where session_id = :session order by number")
                 .param("session", session.toString())
                 .query((row, _) -> authorisation(row))
                 .list();
@@ -61,8 +63,9 @@ public class CaptainWordStore {
 
     private static Authorisation authorisation(ResultSet row) throws SQLException {
         String task = row.getString("task_id");
-        return new Authorisation(UUID.fromString(row.getString("session_id")), task == null ? null : new TaskId(task), row.getString("verbatim"),
-                Columns.instant(row.getString("said_at")));
+        String act = row.getString("act");
+        return new Authorisation(UUID.fromString(row.getString("session_id")), task == null ? null : new TaskId(task),
+                act == null ? null : CaptainWordAct.recordableForAWord(act), row.getString("verbatim"), Columns.instant(row.getString("said_at")));
     }
 
     private static String digestOf(Passage passage) {
