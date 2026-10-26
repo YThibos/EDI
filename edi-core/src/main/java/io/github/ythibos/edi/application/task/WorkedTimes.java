@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeTyped;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
@@ -37,7 +38,8 @@ public class WorkedTimes {
 
     private static final Set<String> STRETCH_STARTS = Set.of(
             WorkerRelaunched.class.getSimpleName(),
-            LimitResumeTyped.class.getSimpleName());
+            LimitResumeTyped.class.getSimpleName(),
+            SteerReceived.class.getSimpleName());
 
     private final EventLog events;
 

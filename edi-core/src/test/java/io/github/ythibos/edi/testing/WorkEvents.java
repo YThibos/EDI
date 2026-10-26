@@ -15,6 +15,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
+import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
@@ -65,6 +66,10 @@ public final class WorkEvents {
     public WorkEvents stoppedOnAnError() {
         WorkerId worker = WorkerId.first(task);
         return recorded(new WorkerStoppedOnAnError(task, worker, "overloaded"), Actor.worker(worker));
+    }
+
+    public WorkEvents receivedASteer() {
+        return recorded(new SteerReceived(task, 1, "stop hook"), Actor.worker(WorkerId.first(task)));
     }
 
     public WorkEvents relaunched() {

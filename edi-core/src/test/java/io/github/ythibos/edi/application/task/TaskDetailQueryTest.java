@@ -87,6 +87,22 @@ class TaskDetailQueryTest {
     }
 
     @Test
+    void countsTheWorkAWorkerResumesOnASteerAfterAnError() {
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/HRN-40")
+                .reported(StatusState.WORKING, null, "HRN-40 set-up done")
+                .after(Duration.ofMinutes(20))
+                .stoppedOnAnError()
+                .receivedASteer()
+                .after(Duration.ofMinutes(40))
+                .reported(StatusState.WORKING, null, "HRN-40 painting")
+                .after(Duration.ofMinutes(30))
+                .reported(StatusState.DONE, null, "HRN-40 delivered");
+
+        assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked())
+                .isEqualTo(new WorkedTime(Duration.ofMinutes(90), Duration.ofMinutes(90)));
+    }
+
+    @Test
     void measuresNothingForATaskNotYetDispatched() {
         assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked()).isNull();
     }
