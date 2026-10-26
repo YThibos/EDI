@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.application.board;
 
+import static java.util.function.Predicate.not;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -108,18 +110,31 @@ public class ArmBoard {
     }
 
     private DecisionNumber raised(BoardCard card, Task task, WorkerId worker, Optional<Board> listening) {
-        decisions.ofTask(task.id()).ifPresent(earlier -> requireRaisedAgainOnlyFromItsOwnBoard(earlier, card, listening));
+        requireNotYetAnswered(card, task);
+        decisions.ofTask(task.id()).filter(Decision::isOpen).ifPresent(open -> requireRaisedAgainOnlyFromItsOwnBoard(open, card, listening));
         return raiseDecision.raise(new TaskReference.ById(task.id()), card.card(), Actor.worker(worker));
     }
 
-    private static void requireRaisedAgainOnlyFromItsOwnBoard(Decision earlier, BoardCard card, Optional<Board> listening) {
-        if (!earlier.isOpen() && earlier.card().equals(card.card())) {
-            throw new Refusal(earlier.number() + " on " + earlier.task() + " already holds the captain's answer to this card (\""
-                    + earlier.answer().verbatim() + "\"), so a board round raises it no more; arm the round without --card.");
-        }
-        if (earlier.isOpen() && !earlier.card().equals(card.card())
-                && listening.filter(board -> board.bindings().contains(card.raisedAs(earlier.number()))).isEmpty()) {
-            throw new Refusal(earlier.number() + " already waits on the captain on " + earlier.task() + " (\"" + earlier.card().title()
+    private void requireNotYetAnswered(BoardCard card, Task task) {
+        answeredDecisionAsking(card, task).ifPresent(ArmBoard::refuseToAskAgain);
+    }
+
+    private Optional<Decision> answeredDecisionAsking(BoardCard card, Task task) {
+        return decisions.everyOneOfTask(task.id()).stream()
+                .filter(not(Decision::isOpen))
+                .filter(answered -> answered.card().asksTheSameAs(card.card()))
+                .findFirst();
+    }
+
+    private static void refuseToAskAgain(Decision answered) {
+        throw new Refusal(answered.number() + " on " + answered.task() + " already holds the captain's answer to \"" + answered.card().title() + "\" (\""
+                + answered.answer().verbatim() + "\"), so a board round raises it no more; arm the round without --card, or give a new question its own "
+                + "title.");
+    }
+
+    private static void requireRaisedAgainOnlyFromItsOwnBoard(Decision open, BoardCard card, Optional<Board> listening) {
+        if (!open.card().equals(card.card()) && listening.filter(board -> board.bindings().contains(card.raisedAs(open.number()))).isEmpty()) {
+            throw new Refusal(open.number() + " already waits on the captain on " + open.task() + " (\"" + open.card().title()
                     + "\"); if the board answers it, arm the round with that very card under --card, or report the new question to EDI with "
                     + "edi status needs-decision.");
         }

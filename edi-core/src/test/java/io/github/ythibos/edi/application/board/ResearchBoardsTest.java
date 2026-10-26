@@ -28,6 +28,7 @@ import io.github.ythibos.edi.domain.board.BoardPrompt;
 import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -193,9 +194,39 @@ class ResearchBoardsTest {
         DecisionNumber answered = armed.bound().getFirst();
 
         assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
-                .hasMessage(answered + " on lantern-research already holds the captain's answer to this card (\"Close-out decision: option A\"), so a "
-                        + "board round raises it no more; arm the round without --card.");
+                .hasMessage(answered + " on lantern-research already holds the captain's answer to \"Close the lantern work out?\" (\"Close-out "
+                        + "decision: option A\"), so a board round raises it no more; arm the round without --card, or give a new question its own title.");
         assertThat(home.decisions().get(answered).answer().option()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
+    void raisesNothingWhenARoundCarriesTheAnsweredCardWithNewContextAndTellsTheScout() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+        DecisionNumber answered = armed.bound().getFirst();
+        DecisionCard original = CLOSE_OUT_CARD.card();
+        BoardCard withNewEvidence = new BoardCard(CLOSE_OUT, new DecisionCard(original.title(), original.context() + " The 2026 data agrees.",
+                original.options(), original.recommendation()));
+        int raisedBefore = home.decisions().lastNumberIssued();
+
+        assertThatThrownBy(() -> armQuietlyCarrying(withNewEvidence)).isInstanceOf(Refusal.class)
+                .hasMessageStartingWith(answered + " on lantern-research already holds the captain's answer to \"Close the lantern work out?\"");
+        assertThat(home.decisions().lastNumberIssued()).isEqualTo(raisedBefore);
+        assertThat(home.decisions().ofTask(SCOUT).orElseThrow().number()).isEqualTo(answered);
+    }
+
+    @Test
+    void raisesNothingForAnAnsweredCardEvenAfterALaterQuestionOnItsTaskWasAnswered() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+        DecisionNumber answered = armed.bound().getFirst();
+        DecisionNumber later = armQuietlyCarrying(new BoardCard("spare-bulbs", Cards.card("Order spare bulbs?"))).bound().getLast();
+        home.answerDecision().answer(new TaskReference.ByDecision(later), new GivenAnswer(later + " A", new OptionKey('A'), "", AnswerChannel.CHAT),
+                Actor.PRIMARY);
+
+        assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
+                .hasMessageStartingWith(answered + " on lantern-research already holds the captain's answer");
+        assertThat(home.decisions().ofTask(SCOUT).orElseThrow().number()).isEqualTo(later);
     }
 
     @Test
