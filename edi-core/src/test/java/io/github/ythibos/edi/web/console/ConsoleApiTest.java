@@ -228,7 +228,7 @@ class ConsoleApiTest {
         assertThat(armed.statusCode()).isEqualTo(201);
         assertThat(armed.body()).matches("EDI listens to the research board " + Pattern.quote(board.toRealPath().toString()) + " for console-closer; "
                 + "its answers to D\\d+ \\(question close-out\\) are recorded as the captain's, and each round reaches your inbox; "
-                + "its bound decisions wait on the captain as their own cards\\.\n");
+                + "the sitrep puts its bound decisions before the captain under the board until a round answers them\\.\n");
     }
 
     @Test

@@ -254,7 +254,7 @@ class DecisionsAndReportingTest {
         @Test
         @Tag("adapter")
         @DisplayName("AT-19 the primary puts the new round of a board whose scout stopped before the captain, and a round that asks only bound decisions"
-                + " leaves them to their cards")
+                + " lists them under the board")
         void thePrimaryPutsAStoppedScoutsBoardBeforeTheCaptain() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
             Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-4"), CategoryId.RESEARCH);
@@ -268,8 +268,11 @@ class DecisionsAndReportingTest {
             home.postBoardRound().post(board, BoardRounds.LINK, 2, Actor.PRIMARY);
             String posted = captainReport(home, Turn.NONE);
 
-            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 1 open", "║  " + lamp + "   Which lamp?").doesNotContain("Board for");
-            assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open", "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK);
+            assertThat(boundOnly).contains("NEEDS YOUR DECISION ══ 2 open",
+                    "║  Board for Work on survey-lamps: 0 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
+            assertThat(boundOnly).doesNotContain("Both work", "(A)", "Recommended");
+            assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open",
+                    "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
         }
 
         @Test

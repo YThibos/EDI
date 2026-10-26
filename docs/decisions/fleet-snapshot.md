@@ -15,7 +15,7 @@ Each surface is a separate presenter over its `FleetSnapshot`.
 The snapshot's first part, `WaitingOnTheCaptain`, holds everything that waits on the captain:
 
 - `decisions`: every open decision in D-number order that no board in `boards` binds, whatever holds or blocks its task;
-- `boards`: every listening research board with open questions, each with the open decisions it binds (`WaitingBoard.decisions`), because the captain answers those on the board ([research-boards](research-boards.md));
+- `boards`: every listening research board with open questions or an open decision it binds, each with the open decisions it binds (`WaitingBoard.decisions`), because the captain answers those on the board ([research-boards](research-boards.md));
 - `reviews`: every task in flight whose done was accepted and whose request is still open (`ReadyForReview`), until EDI sees it merged or closed.
 
 Then come `ongoing` (in-flight tasks nothing holds, each an `OngoingTask` with its latest worker, pipeline run and delivery), `parked` (every held task except one that waits only for its decision, with its D number and the open tasks it waits for, `ParkedTask.whyParked`), and `queued`, each in the store's row order, plus the tasks landed in the last seven days and the answers of the last 24 hours.

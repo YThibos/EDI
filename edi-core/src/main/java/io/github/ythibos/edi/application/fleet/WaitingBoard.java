@@ -11,6 +11,10 @@ public record WaitingBoard(Board board, Task task, List<OpenDecision> decisions)
         decisions = List.copyOf(decisions);
     }
 
+    public boolean waitsOnTheCaptain() {
+        return board.waitsOnTheCaptain() || !decisions.isEmpty();
+    }
+
     public int count() {
         return 1 + decisions.size();
     }

@@ -130,7 +130,7 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void putsADecisionBoundToABoardWithQuestionsUnderThatBoardAndBackAmongTheCardsOnceTheBoardAsksNothing() {
+    void putsADecisionBoundToAListeningBoardUnderThatBoardEvenOnceTheBoardAsksNothingElse() {
         add(ship("lantern", "Rework the lantern"));
         add(captainItem("lamp-choice", "Choose the lamp"));
         raise("lamp-choice");
@@ -139,14 +139,33 @@ class FleetSnapshotQueryTest {
 
         WaitingOnTheCaptain asking = home.fleetSnapshot().snapshot().waiting();
         home.boards().update(armed.answeredOnceMore());
-        WaitingOnTheCaptain answered = home.fleetSnapshot().snapshot().waiting();
+        WaitingOnTheCaptain answeredAllButTheDecision = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(asking.decisions()).isEmpty();
         assertThat(asking.boards()).singleElement().satisfies(waiting -> assertThat(waiting.decisions()).extracting(open -> open.decision().number())
                 .containsExactly(lamp));
         assertThat(asking.count()).isEqualTo(2);
-        assertThat(answered.decisions()).extracting(open -> open.decision().number()).containsExactly(lamp);
-        assertThat(answered.boards()).isEmpty();
+        assertThat(answeredAllButTheDecision.decisions()).isEmpty();
+        assertThat(answeredAllButTheDecision.boards()).singleElement().satisfies(waiting -> {
+            assertThat(waiting.board().openQuestions()).isZero();
+            assertThat(waiting.decisions()).extracting(open -> open.decision().number()).containsExactly(lamp);
+        });
+    }
+
+    @Test
+    void putsADecisionBoundToABoardArmedWithNoOtherQuestionUnderThatBoard() {
+        add(ship("lantern", "Rework the lantern"));
+        add(captainItem("lamp-choice", "Choose the lamp"));
+        raise("lamp-choice");
+        DecisionNumber lamp = home.decisions().ofTask(new TaskId("lamp-choice")).orElseThrow().number();
+        home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.asking(0, lamp), TestHome.START);
+
+        WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(waiting.decisions()).isEmpty();
+        assertThat(waiting.boards()).singleElement().satisfies(board -> assertThat(board.decisions()).extracting(open -> open.decision().number())
+                .containsExactly(lamp));
+        assertThat(waiting.count()).isEqualTo(2);
     }
 
     @Test

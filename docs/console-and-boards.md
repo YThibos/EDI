@@ -38,7 +38,7 @@ The link is the one `lavish-axi` printed when the scout opened the board, and th
 A decision the board asks is a card on `--card`, in the format `edi decision raise` takes, with `question` naming the board question that answers it: the form's `data-lavish-question`, whose answer data is `{question, answer}`.
 EDI raises the card on the scout's task and binds it to the board when it is armed, so the captain's choice there is his word for it, promote included ([research-boards](decisions/research-boards.md)).
 `--bind D58,D59` binds decisions the primary raised already, which the board names by number.
-The count leaves out the card and the decisions the board binds, which wait as their own cards.
+The count leaves out the card and the decisions the board binds, which wait as one line each under the board while it listens.
 The board waits in the decision zone of the report, the sitrep page and the return brief until a round of the captain's answers arrives; arming it again posts a new round.
 When the scout cannot arm it again, the primary posts the round instead:
 

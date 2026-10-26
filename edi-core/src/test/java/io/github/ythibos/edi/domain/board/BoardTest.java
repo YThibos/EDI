@@ -71,7 +71,7 @@ class BoardTest {
     }
 
     @Test
-    void leavesARoundThatAsksOnlyItsBoundDecisionsToTheirCards() {
+    void countsNoQuestionOfItsOwnForARoundThatAsksOnlyItsBoundDecisions() {
         Board boundOnly = board.answeredOnceMore().posted(BoardRounds.asking(0, D58, D59));
 
         assertThat(boundOnly.waitsOnTheCaptain()).isFalse();
