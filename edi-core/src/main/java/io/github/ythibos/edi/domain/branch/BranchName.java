@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.domain.branch;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.OptionalInt;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -31,6 +33,14 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
         return new BranchName(kind, workKey, NO_FOLLOW_UP);
     }
 
+    public static BranchName forWorkBeside(BranchKind kind, WorkKey workKey, Collection<BranchName> branchesOfOtherTasks) {
+        OptionalInt highestFollowUp = branchesOfOtherTasks.stream()
+                .filter(branch -> branch.isFor(kind, workKey))
+                .mapToInt(BranchName::followUp)
+                .max();
+        return highestFollowUp.isPresent() ? new BranchName(kind, workKey, highestFollowUp.getAsInt() + 1) : forWork(kind, workKey);
+    }
+
     public static BranchName parse(String text) {
         refuseHarnessPrefixes(text);
         int kindEnd = text.indexOf(KIND_SEPARATOR);
@@ -45,6 +55,10 @@ public record BranchName(BranchKind kind, WorkKey workKey, int followUp) {
     public String toString() {
         String keyed = kind.word() + KIND_SEPARATOR + workKey;
         return followUp == NO_FOLLOW_UP ? keyed : keyed + NUMBER_SEPARATOR + followUp;
+    }
+
+    private boolean isFor(BranchKind otherKind, WorkKey otherKey) {
+        return kind == otherKind && workKey.equals(otherKey);
     }
 
     private static void refuseHarnessPrefixes(String text) {

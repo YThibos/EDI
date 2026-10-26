@@ -87,6 +87,41 @@ class DispatchTaskTest {
     }
 
     @Test
+    void givesEachTaskOnTheSameKeyItsOwnBranch() throws IOException {
+        home.storing(List.of(
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-bell", "harness", "HRN-3"),
+                WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-3")));
+
+        dispatch("fit-lamp", "implementation");
+        DispatchOutcome horn = dispatch("fit-horn", "implementation");
+        DispatchOutcome bell = dispatch("fit-bell", "implementation");
+
+        assertThat(horn.launched().branch()).hasToString("feature/HRN-3-1");
+        assertThat(home.git().currentBranch(horn.launched().worktree())).isEqualTo("feature/HRN-3-1");
+        assertThat(bell.launched().branch()).hasToString("feature/HRN-3-2");
+        assertThat(dispatch("map-caves", "research").launched().branch()).hasToString("research/HRN-3");
+    }
+
+    @Test
+    void keepsTheBranchOfALaunchThatFailedForItsOwnTask() throws IOException {
+        home.storing(List.of(
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-3")));
+        home.runtime().duringTheNextLaunch(() -> {
+            throw new IllegalStateException("The terminal multiplexer is gone.");
+        });
+        assertThatThrownBy(() -> dispatch("fit-lamp", "implementation")).hasMessageContaining("multiplexer is gone");
+
+        DispatchOutcome horn = dispatch("fit-horn", "implementation");
+
+        assertThat(horn.launched().branch()).hasToString("feature/HRN-3-1");
+        assertThat(home.git().currentBranch(horn.launched().worktree())).isEqualTo("feature/HRN-3-1");
+        assertThat(dispatch("fit-lamp", "implementation").launched().branch()).hasToString("feature/HRN-3");
+    }
+
+    @Test
     void refusesASecondWorkerWhileTheFirstIsLiveAndRelaunchesOnceItsWindowCloses() throws IOException {
         home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
         dispatch("fit-lamp", "implementation");

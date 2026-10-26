@@ -5,7 +5,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,7 +35,6 @@ import io.github.ythibos.edi.domain.task.TaskId;
 public class DeliverDraft {
 
     private static final String ORIGIN = "origin";
-    private static final String REPORT_FILE = "report.md";
 
     private final TaskStore tasks;
     private final WorkerContext context;
@@ -104,9 +102,8 @@ public class DeliverDraft {
     }
 
     private static String deliveryNoteOf(Workplace workplace) {
-        Path report = workplace.taskDirectory().resolve(REPORT_FILE);
         try {
-            return Files.readString(report, StandardCharsets.UTF_8);
+            return Files.readString(workplace.report(), StandardCharsets.UTF_8);
         } catch (NoSuchFileException absent) {
             return workplace.task().intake().title() + ".";
         } catch (IOException unreadable) {

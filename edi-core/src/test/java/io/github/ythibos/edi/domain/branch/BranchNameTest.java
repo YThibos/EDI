@@ -3,8 +3,13 @@ package io.github.ythibos.edi.domain.branch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import io.github.ythibos.edi.domain.project.WorkKey;
 
 class BranchNameTest {
 
@@ -24,5 +29,16 @@ class BranchNameTest {
     @ValueSource(strings = {"fm/EDI-5", "edi/EDI-5", "fm/feature/EDI-5"})
     void refusesTheHarnessPrefixesByName(String branch) {
         assertThatIllegalArgumentException().isThrownBy(() -> BranchName.parse(branch)).withMessageContaining("never starts with");
+    }
+
+    @Test
+    void numbersTheBranchOfAnotherTaskOnTheSameKindAndKeyAsTheNextFollowUp() {
+        WorkKey key = WorkKey.parse("JUSTMD-36");
+        List<BranchName> branchesOfOtherTasks = List.of(BranchName.parse("chore/JUSTMD-36"), BranchName.parse("chore/JUSTMD-36-1"),
+                BranchName.parse("research/JUSTMD-36-4"), BranchName.parse("chore/JUSTMD-37-6"));
+
+        assertThat(BranchName.forWorkBeside(BranchKind.CHORE, key, branchesOfOtherTasks)).hasToString("chore/JUSTMD-36-2");
+        assertThat(BranchName.forWorkBeside(BranchKind.FEATURE, key, branchesOfOtherTasks)).hasToString("feature/JUSTMD-36");
+        assertThat(BranchName.forWorkBeside(BranchKind.CHORE, key, List.of())).hasToString("chore/JUSTMD-36");
     }
 }
