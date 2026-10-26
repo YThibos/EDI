@@ -19,8 +19,9 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
    EDI raises the card on the scout's task, binds it to the board under its question, and prints its D number.
 4. `--bind D58,D59` binds decisions the primary already raised, on the scout's task or another, that the board also answers; the board names them by number.
 5. EDI's core listens to the board and restarts its listener if it stops; nobody else polls it.
-6. The board waits in the captain's decision zone with its link and question count until a round of his answers arrives, and its card waits there as its own decision.
+6. The board waits in the captain's decision zone with its link and question count until a round of his answers arrives, with its card and every decision it binds as one line each beneath it, because the captain answers them on the board.
 7. After posting a new round of questions on the board, arm it again with the new count, so the board waits on the captain once more; the board keeps the card bound under its question while it is open, so `--card` may be left out, and is left out once the card is answered.
+   EDI refuses a card whose title an answered decision of the task already carries, so a new question needs a title of its own.
 8. When the scout has stopped, or its board was armed before boards counted their questions, the primary puts the round before the captain with `edi board post <board.html> --link <url> --questions <n>`.
 
 ## Answers

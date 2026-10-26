@@ -32,7 +32,7 @@ An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`
 ## Reports
 
 One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report ([captain-report](decisions/captain-report.md)).
-What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
+What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions or bound decisions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
 A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 
 ```sh
