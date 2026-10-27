@@ -12,6 +12,7 @@ import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
@@ -93,6 +94,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -182,6 +184,22 @@ public class EventLog {
                         row.getString("type"),
                         task))
                 .list();
+    }
+
+    public boolean hadADoneAccepted(TaskId task) {
+        return store.sql("""
+                select exists (
+                    select 1 from event left join worker on worker.id = json_extract(event.payload, '$.worker')
+                    where event.task_id = :task
+                      and (event.type = :mechanicalAccepted
+                           or event.type = :reported and json_extract(event.payload, '$.state') = :done and worker.category <> :mechanical))""")
+                .param("task", task.value())
+                .param("mechanicalAccepted", MechanicalChangeAccepted.class.getSimpleName())
+                .param("reported", StatusReported.class.getSimpleName())
+                .param("done", StatusState.DONE.word())
+                .param("mechanical", CategoryId.MECHANICAL.value())
+                .query((row, _) -> row.getBoolean(1))
+                .single();
     }
 
     private ObjectNode payloadOf(DomainEvent event) {

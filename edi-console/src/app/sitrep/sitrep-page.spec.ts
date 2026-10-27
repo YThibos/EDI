@@ -126,6 +126,25 @@ describe('SitrepPage', () => {
     expect(page.querySelector('.sr-waiting-on-you > app-waiting-list')).not.toBeNull();
   });
 
+  it('counts a request still changing after its done and lists it in the zone, never as all clear', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        decisions: [],
+        answered: [],
+        changing: [
+          { task: 'fit-lamp', title: 'Fit the lamp', projects: ['harness'], url: 'https://github.com/example-owner/harness/pull/13', why: 'pipeline review' },
+        ],
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('1 waiting on you, Commander');
+    expect(page.querySelector('.sr-clear')).toBeNull();
+    expect(texts(page, '.sr-waiting-on-you .sr-badge')).toEqual(['changing']);
+  });
+
   it('shows a worker question as EDI\'s, in the calm tone, never as waiting on the captain', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush(

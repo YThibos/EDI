@@ -8,6 +8,7 @@ export interface Sitrep {
   decisions: DecisionCard[];
   boards: WaitingBoard[];
   reviews: ReadyForReview[];
+  changing: ChangingRequest[];
   answered: AnsweredDecision[];
   ongoing: OngoingTask[];
   landed: LandedTask[];
@@ -64,6 +65,14 @@ export interface ReadyForReview {
   title: string;
   projects: string[];
   url: string;
+}
+
+export interface ChangingRequest {
+  task: string;
+  title: string;
+  projects: string[];
+  url: string;
+  why: string;
 }
 
 export interface AnsweredDecision {

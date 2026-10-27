@@ -16,6 +16,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
+import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
@@ -23,6 +25,8 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.PipelineRun;
+import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -41,18 +45,22 @@ public class FleetSnapshotQuery {
     private final WorkerStore workers;
     private final PipelineRunStore pipelineRuns;
     private final DeliveryStore deliveries;
+    private final InboxStore inbox;
     private final BoardStore boards;
+    private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public FleetSnapshotQuery(TaskStore tasks, DecisionStore decisions, WorkerStore workers, PipelineRunStore pipelineRuns, DeliveryStore deliveries,
-            BoardStore boards, Clock clock, TransactionTemplate transaction) {
+            InboxStore inbox, BoardStore boards, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.decisions = decisions;
         this.workers = workers;
         this.pipelineRuns = pipelineRuns;
         this.deliveries = deliveries;
+        this.inbox = inbox;
         this.boards = boards;
+        this.events = events;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -78,7 +86,9 @@ public class FleetSnapshotQuery {
     private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight) {
         List<OpenDecision> open = decisionsOf(openDecisions);
         List<WaitingBoard> waitingBoards = waitingBoards(open);
-        return new WaitingOnTheCaptain(boundToNoWaitingBoard(open, waitingBoards), waitingBoards, readyForReviewAmong(inFlight));
+        List<HandedOverRequest> handedOver = handedOverRequestsAmong(inFlight);
+        return new WaitingOnTheCaptain(boundToNoWaitingBoard(open, waitingBoards), waitingBoards, readyForReviewAmong(handedOver),
+                stillChangingAmong(handedOver));
     }
 
     private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {
@@ -96,23 +106,45 @@ public class FleetSnapshotQuery {
         return open.stream().filter(decision -> board.bound().contains(decision.decision().number())).toList();
     }
 
+    private List<HandedOverRequest> handedOverRequestsAmong(List<Task> inFlight) {
+        return inFlight.stream()
+                .flatMap(task -> handedOverRequestOf(task, doneStands(task)).stream())
+                .toList();
+    }
+
+    private boolean doneStands(Task task) {
+        return workers.latestOf(task.id()).filter(Worker::hadItsDoneAccepted).isPresent();
+    }
+
+    private Optional<HandedOverRequest> handedOverRequestOf(Task task, boolean doneStands) {
+        return deliveries.of(task.id())
+                .filter(Delivery::isOpen)
+                .filter(_ -> hadADoneAccepted(task, doneStands))
+                .map(delivery -> new HandedOverRequest(task, delivery, doneStands, runningPipelineOf(task), unacknowledgedSteersOf(task)));
+    }
+
+    private boolean hadADoneAccepted(Task task, boolean doneStands) {
+        return doneStands || events.hadADoneAccepted(task.id());
+    }
+
+    private PipelineRun runningPipelineOf(Task task) {
+        return pipelineRuns.latestOf(task.id()).filter(PipelineRun::isRunning).orElse(null);
+    }
+
+    private List<Integer> unacknowledgedSteersOf(Task task) {
+        return inbox.unacknowledgedOf(task.id()).stream().map(InboxMessage::number).toList();
+    }
+
     private static List<OpenDecision> boundToNoWaitingBoard(List<OpenDecision> open, List<WaitingBoard> waitingBoards) {
         return open.stream().filter(decision -> waitingBoards.stream().noneMatch(board -> board.decisions().contains(decision))).toList();
     }
 
-    private List<ReadyForReview> readyForReviewAmong(List<Task> inFlight) {
-        return inFlight.stream()
-                .filter(this::hadItsDoneAccepted)
-                .flatMap(task -> openRequestOf(task).stream())
-                .toList();
+    private static List<ReadyForReview> readyForReviewAmong(List<HandedOverRequest> handedOver) {
+        return handedOver.stream().filter(HandedOverRequest::isSettled).map(HandedOverRequest::readyForReview).toList();
     }
 
-    private boolean hadItsDoneAccepted(Task task) {
-        return workers.latestOf(task.id()).filter(Worker::hadItsDoneAccepted).isPresent();
-    }
-
-    private Optional<ReadyForReview> openRequestOf(Task task) {
-        return deliveries.of(task.id()).filter(Delivery::isOpen).map(delivery -> new ReadyForReview(task, delivery));
+    private static List<ChangingRequest> stillChangingAmong(List<HandedOverRequest> handedOver) {
+        return handedOver.stream().filter(not(HandedOverRequest::isSettled)).map(HandedOverRequest::stillChanging).toList();
     }
 
     private static List<Task> unheld(List<Task> work) {
@@ -166,5 +198,20 @@ public class FleetSnapshotQuery {
 
     private static boolean waitsOnlyForItsDecision(Task heldTask, List<Task> unresolvedBlockers) {
         return heldTask.hold().awaitsADecision() && unresolvedBlockers.isEmpty();
+    }
+
+    private record HandedOverRequest(Task task, Delivery delivery, boolean doneStands, PipelineRun runningPipeline, List<Integer> unacknowledgedSteers) {
+
+        boolean isSettled() {
+            return doneStands && runningPipeline == null && unacknowledgedSteers.isEmpty();
+        }
+
+        ReadyForReview readyForReview() {
+            return new ReadyForReview(task, delivery);
+        }
+
+        ChangingRequest stillChanging() {
+            return new ChangingRequest(task, delivery, !doneStands, runningPipeline, unacknowledgedSteers);
+        }
     }
 }

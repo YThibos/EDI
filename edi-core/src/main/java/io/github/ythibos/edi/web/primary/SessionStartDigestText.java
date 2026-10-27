@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
+import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
@@ -119,6 +120,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         waiting.decisions().forEach(open -> lines.add("  " + decisionLine(open)));
         waiting.boards().forEach(board -> lines.addAll(boardLines(board)));
         waiting.reviews().forEach(ready -> lines.add("  " + reviewLine(ready)));
+        waiting.changing().forEach(changing -> lines.add("  " + changingLine(changing)));
         return lines;
     }
 
@@ -142,6 +144,10 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     private static String reviewLine(ReadyForReview ready) {
         return "review  " + ready.task().id() + "  " + ready.delivery().address().url();
+    }
+
+    private static String changingLine(ChangingRequest changing) {
+        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + "  hold the merge: " + changing.whyChanging();
     }
 
     private static List<String> parked(FleetSnapshot fleet) {
