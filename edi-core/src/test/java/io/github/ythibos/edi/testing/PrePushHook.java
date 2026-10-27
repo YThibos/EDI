@@ -16,14 +16,16 @@ public final class PrePushHook {
             #!/bin/sh
             range=
             remote_url=
+            excluded=
             while [ $# -gt 0 ]; do
                 case "$1" in
                     --range) range=$2; shift 2 ;;
+                    --excluding=*) excluded="$excluded ${1#--excluding=}"; shift ;;
                     --remote-url) remote_url=$2; shift 2 ;;
                     *) shift ;;
                 esac
             done
-            exec '%s' %s --enable-preview -cp '%s' io.github.ythibos.edi.application.publish.PublishGuard "$PWD" "$range" "$EDI_HOME" "$remote_url"
+            exec '%s' %s --enable-preview -cp '%s' io.github.ythibos.edi.application.publish.PublishGuard "$PWD" "$range" "$EDI_HOME" "$remote_url" $excluded
             """;
 
     private PrePushHook() {
@@ -34,15 +36,25 @@ public final class PrePushHook {
         return starts(worktree, ediHome, branch, remoteUrl, processes).finished();
     }
 
+    public static HookRun pushesOnto(String pushedHead, FixtureRepository worktree, Path ediHome, String branch, String remoteUrl,
+            TestProcesses processes) throws IOException, InterruptedException {
+        return starts(pushedHead, worktree, ediHome, branch, remoteUrl, processes).finished();
+    }
+
     public static RunningHook starts(FixtureRepository worktree, Path ediHome, String branch, String remoteUrl, TestProcesses processes)
             throws IOException {
+        return starts(NO_REMOTE_COMMIT, worktree, ediHome, branch, remoteUrl, processes);
+    }
+
+    private static RunningHook starts(String pushedHead, FixtureRepository worktree, Path ediHome, String branch, String remoteUrl,
+            TestProcesses processes) throws IOException {
         Path hook = Path.of(worktree.run("rev-parse", "--absolute-git-dir").strip()).resolve("edi-hooks/pre-push");
         ProcessBuilder push = new ProcessBuilder("sh", hook.toString(), "origin", remoteUrl).directory(worktree.root().toFile()).redirectErrorStream(true);
         push.environment().put("PATH", ediCommandIn(ediHome.resolveSibling("edi-on-the-jvm")) + ":" + System.getenv("PATH"));
         push.environment().put("EDI_HOME", ediHome.toString());
         Process process = processes.register(push.start());
         try (OutputStream refs = process.getOutputStream()) {
-            refs.write(("refs/heads/" + branch + " " + worktree.head() + " refs/heads/" + branch + " " + NO_REMOTE_COMMIT + "\n")
+            refs.write(("refs/heads/" + branch + " " + worktree.head() + " refs/heads/" + branch + " " + pushedHead + "\n")
                     .getBytes(StandardCharsets.UTF_8));
         }
         return new RunningHook(process);

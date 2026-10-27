@@ -42,7 +42,10 @@ A cleanup that finds unlanded work lists every uncommitted path and unlanded com
 The publish check refuses outgoing commits that carry a secret, a term of the publish deny-list, a personal path or a `-SNAPSHOT` version in a `pom.xml` ([publish-guard](decisions/publish-guard.md)).
 
 ```sh
-edi publish-check --range origin/main..HEAD         # the publish guard over outgoing commits
+edi publish-check --range origin/main..HEAD                                    # the publish guard over outgoing commits
+edi publish-check --range origin/main..HEAD --excluding origin/feature/EDI-3   # leaving out what the remote branch holds
 ```
+
+An isolated copy's `pre-push` hook checks only the commits a push adds to both its remote branch and the base, so a merged base or a rule tightened after an earlier push never strands the branch ([publish-guard](decisions/publish-guard.md)).
 
 A push from a project's isolated copy, and the check in the project's registered clone, may still name that project's own forge host and account and, for a project tracked on JIRA, the tracker's host and the name of its keys file ([publish-guard](decisions/publish-guard.md)); every other term applies to every project.

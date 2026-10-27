@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.publish;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import io.github.ythibos.edi.EdiHome;
@@ -22,12 +23,13 @@ public final class PublishGuard {
 
     private static final int REFUSED = 1;
     private static final int REMOTE_URL = 3;
+    private static final int EXCLUSIONS = 4;
 
     private PublishGuard() {
     }
 
     public static void main(String... arguments) {
-        RevisionRange outgoing = new RevisionRange(arguments[1]);
+        RevisionRange outgoing = outgoingOf(arguments);
         try {
             PublishVerdict verdict = verdictOn(arguments, outgoing);
             report(verdict, outgoing);
@@ -38,6 +40,10 @@ public final class PublishGuard {
             System.out.println(refused.getMessage());
             System.exit(REFUSED);
         }
+    }
+
+    private static RevisionRange outgoingOf(String[] arguments) {
+        return new RevisionRange(arguments[1], Arrays.stream(arguments).skip(EXCLUSIONS).toList());
     }
 
     private static PublishVerdict verdictOn(String[] arguments, RevisionRange outgoing) {

@@ -220,7 +220,10 @@ public class Git {
     }
 
     private List<String> commitIds(Path repository, RevisionRange outgoing) {
-        return git(repository, "rev-list", "--reverse", "--no-merges", outgoing.expression(), "--").lines().toList();
+        List<String> arguments = new ArrayList<>(List.of("rev-list", "--reverse", "--no-merges"));
+        arguments.addAll(outgoing.revisions());
+        arguments.add("--");
+        return git(repository, arguments.toArray(String[]::new)).lines().toList();
     }
 
     private OutgoingCommit commit(Path repository, String id) {

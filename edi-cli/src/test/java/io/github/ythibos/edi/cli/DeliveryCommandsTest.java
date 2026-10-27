@@ -83,6 +83,15 @@ class DeliveryCommandsTest {
         assertThat(core.received().body()).contains("\"delivery\":\"local-apply\"");
     }
 
+    @Test
+    void leavesTheExcludedRevisionsOutOfThePublishCheck() {
+        core.answering(200, "ok\n");
+
+        edi("publish-check", "--range", "origin/main..HEAD", "--excluding=abc1234", "--excluding", "origin/feature/HRN-3");
+
+        assertThat(core.received().body()).endsWith("\"range\":\"origin/main..HEAD\",\"excluding\":[\"abc1234\",\"origin/feature/HRN-3\"]}");
+    }
+
     private int edi(String... arguments) {
         return new CommandLine(new Edi(Map.copyOf(environment), new ByteArrayInputStream("".getBytes(StandardCharsets.UTF_8))))
                 .setOut(new PrintWriter(out, true))

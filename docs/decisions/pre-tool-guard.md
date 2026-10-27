@@ -6,7 +6,7 @@
 
 The `PreToolUse` hook must refuse pattern kills (I-30), tmux without a named socket and control of EDI's own server (I-31), forced pushes, pushes to a base and merges (I-03), and for workers any write outside their copy and task directory (I-07).
 Secrets are read only by EDI's adapters and never printed (I-32), and EDI's home token lets its holder act as the primary.
-The `commit-msg` and `pre-push` hooks an isolated copy runs through `core.hooksPath` hold the work key (I-10), the bar on trailers (I-09), the secret check (I-38) and the registered forge (I-39), and git skips them on `--no-verify` or another hooks path.
+The `commit-msg` and `pre-push` hooks an isolated copy runs through `core.hooksPath` hold the work key (I-10), the bar on trailers (I-09), the secret check (I-38), the SNAPSHOT check (I-11) and the registered forge (I-39), and git skips them on `--no-verify` or another hooks path.
 Claude Code passes a Bash call as one string, which a shell may nest in pipes, substitutions, `bash -c`, `eval`, `xargs`, `find -exec` and wrappers such as `sudo` or `timeout`.
 A primary whose core is down must still be able to bring it back.
 
@@ -49,3 +49,4 @@ When workers run as another user, or the captain wants workers kept from the key
 - 16/10/2026: slice S3 built the shell reader and the guard for workers.
 - 17/10/2026: slice S8 armed it for the primary, kept secrets from a shell and guarded branch deletions.
 - 26/10/2026: EDI-74 refused the flags and settings that skip the commit-msg and pre-push hooks.
+- 27/10/2026: the pre-push hook's publish check refuses a SNAPSHOT version, so a refusal for a skipped hook names that check too (EDI-78).
