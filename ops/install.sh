@@ -5,7 +5,7 @@ checkout="$(cd "$(dirname "$0")/.." && pwd)"
 home="${EDI_HOME:-${HOME}/.edi}"
 bin="${EDI_BIN:-${HOME}/.local/bin}"
 skills="${home}/.claude/skills"
-installed_build="${home}/state/installed-build"
+installed_build_record="${home}/state/installed-build"
 toolchain="${checkout}/mise.toml"
 
 require_the_pinned_toolchain() {
@@ -36,8 +36,8 @@ install_the_executables() {
 }
 
 record_the_installed_build() {
-  mkdir -p "$(dirname "${installed_build}")"
-  git -C "${checkout}" rev-parse HEAD > "${installed_build}"
+  mkdir -p "$(dirname "${installed_build_record}")"
+  git -C "${checkout}" rev-parse HEAD > "${installed_build_record}"
 }
 
 link_the_skills() {
@@ -52,6 +52,6 @@ link_the_skills() {
 require_the_pinned_toolchain
 build
 install_the_executables
-record_the_installed_build
 link_the_skills
-echo "EDI is installed: ${bin}/edi, ${bin}/edi-core and ${bin}/helloedi, built from $(<"${installed_build}"), with the skills linked into ${skills}."
+record_the_installed_build
+echo "EDI is installed: ${bin}/edi, ${bin}/edi-core and ${bin}/helloedi, built from $(<"${installed_build_record}"), with the skills linked into ${skills}."

@@ -17,7 +17,7 @@ A stopping core stops answering at once but keeps its lock while in-flight reque
 A core counts as stopped once it has let go of `state/core.pid`: `CorePidFile.isHeld` tries the same lock, and `LocalCore.awaitItsStop` waits for it for at most 90 seconds, naming the process and file when it runs out.
 `edi update` refuses a checkout that is not a clean clone, pulls fast-forward only, and runs `ops/install.sh`, which builds with `./mvnw -Pnative verify` through `mise exec` in the checkout, refusing first when mise or a pinned tool is missing, and installs `edi`, `edi-core`, the `helloedi` launcher and the skills' links into the EDI home, recording the commit it built in `state/installed-build`.
 On success it stops the running core without stopping a worker, waits for it to let go of the home, starts the new core, and names the commit and the anchor to re-read; on failure the installed EDI and the running core stay as they were.
-`helloedi`, from `ops/helloedi`, is the captain's way in: it checks that tmux, the checkout and `edi` are there, fetches the checkout, runs `edi update` from inside it when the recorded build is not `origin/main`, and ends in `edi up`; a failed fetch or update is reported and the installed EDI starts, and Ctrl-C stops it.
+`helloedi`, from `ops/helloedi`, is the captain's way in: it checks that tmux, the checkout and `edi` are there, fetches the checkout, runs `edi update` from inside it when the recorded build does not yet contain `origin/main`, and ends in `edi up`; a failed fetch or update is reported and the installed EDI starts, and Ctrl-C stops it.
 It updates EDI only, never the machine's own tools.
 `ops/edi-core.service` is an optional systemd user unit that restarts the core on failure.
 
@@ -37,6 +37,7 @@ EDI stands alone, so its launcher ships and installs with it, and the installed 
 - Letting `mise exec` install a missing tool - the update would download a JDK unasked.
 - A shell function the captain's shell set-up sources - EDI would depend on a repository outside it, and a function works in one shell only.
 - Comparing the checkout's `HEAD` with `origin/main` - a pulled but uninstalled checkout reads as current while an older build runs.
+- Updating whenever the installed build is not exactly `origin/main` - a build from a branch ahead of it would be rebuilt at every start.
 - Updating the machine's tools in the launcher - they belong to the machine's own set-up, not to EDI.
 
 ## Consequences
@@ -55,4 +56,4 @@ When releases are published as built executables, or something other than the co
 - 22/10/2026: `edi update` started the new core while the old one still held the home, leaving none running, so a stop is awaited on the lock (EDI-36).
 - 23/10/2026: the primary opens with the captain's opening prompt already submitted (EDI-43).
 - 27/10/2026: at the captain's request the primary opens with no prompt submitted and waits for the captain to type (EDI-101).
-- 27/10/2026: EDI ships its own `helloedi`, which updates EDI when the installed build is not `origin/main` (EDI-102).
+- 27/10/2026: EDI ships its own `helloedi`, which updates EDI when the installed build does not yet contain `origin/main` (EDI-102).

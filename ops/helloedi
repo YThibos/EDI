@@ -2,7 +2,7 @@
 set -uo pipefail
 
 checkout="${EDI_CHECKOUT:-${HOME}/EDI}"
-installed_build="${EDI_HOME:-${HOME}/.edi}/state/installed-build"
+installed_build_record="${EDI_HOME:-${HOME}/.edi}/state/installed-build"
 
 trap 'exit 130' INT
 
@@ -29,7 +29,7 @@ require_edi() {
   fi
 }
 
-update_edi_when_the_installed_build_is_not_origin_main() {
+update_edi_when_the_installed_build_lacks_origin_main() {
   if ! git -C "${checkout}" fetch --quiet origin; then
     echo "helloedi: could not fetch ${checkout}, starting the installed EDI" >&2
     return
@@ -37,16 +37,22 @@ update_edi_when_the_installed_build_is_not_origin_main() {
   local latest installed
   latest="$(git -C "${checkout}" rev-parse origin/main)"
   installed="$(installed_build)"
-  if [[ "${installed}" != "${latest}" ]]; then
+  if ! contains "${installed}" "${latest}"; then
     echo "helloedi: $(built_from "${installed}"), origin/main is at ${latest:0:7}, updating EDI"
     update_edi
   fi
 }
 
 installed_build() {
-  if [[ -f "${installed_build}" ]]; then
-    echo "$(<"${installed_build}")"
+  local commit=""
+  if [[ -f "${installed_build_record}" ]]; then
+    read -r commit < "${installed_build_record}"
   fi
+  echo "${commit}"
+}
+
+contains() {
+  [[ -n "$1" ]] && git -C "${checkout}" merge-base --is-ancestor "$2" "$1" 2>/dev/null
 }
 
 built_from() {
@@ -71,5 +77,5 @@ update_edi() {
 require_tmux
 require_the_checkout
 require_edi
-update_edi_when_the_installed_build_is_not_origin_main
+update_edi_when_the_installed_build_lacks_origin_main
 exec edi up

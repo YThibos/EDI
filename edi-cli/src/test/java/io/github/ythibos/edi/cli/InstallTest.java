@@ -121,6 +121,8 @@ class InstallTest {
         launch.environment().put("JAVA_HOME", Files.createDirectories(directory.resolve("a-java-without-native-image")).toString());
         launch.environment().put("EDI_HOME", directory.resolve("home").toString());
         launch.environment().put("EDI_BIN", directory.resolve("bin").toString());
+        launch.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
+        launch.environment().put("GIT_CONFIG_NOSYSTEM", "1");
         Process install = processes.register(launch.start());
         install.getOutputStream().close();
         String output = new String(install.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

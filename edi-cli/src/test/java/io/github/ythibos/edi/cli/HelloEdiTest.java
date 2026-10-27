@@ -104,6 +104,25 @@ class HelloEdiTest {
     }
 
     @Test
+    void startsEdiWithoutUpdatingItWhenTheInstalledBuildIsAheadOfOriginMain() throws IOException, InterruptedException {
+        recordTheInstalledBuild(checkout.branch("trial").write("README.md", "EDI, on trial\n").commit("Try EDI out").head());
+
+        Launch launch = helloedi(Map.of());
+
+        assertThat(launch.calls()).containsExactly("edi up in " + elsewhere);
+    }
+
+    @Test
+    void updatesEdiWhenTheInstalledBuildIsUnknownToTheCheckout() throws IOException, InterruptedException {
+        recordTheInstalledBuild("0123456789abcdef0123456789abcdef01234567");
+
+        Launch launch = helloedi(Map.of());
+
+        assertThat(launch.calls()).containsExactly("edi update in " + checkout.root(), "edi up in " + elsewhere);
+        assertThat(launch.output()).contains("the installed EDI is built from 0123456");
+    }
+
+    @Test
     void updatesEdiWhenTheInstallRecordsNoBuild() throws IOException, InterruptedException {
         Launch launch = helloedi(Map.of());
 
