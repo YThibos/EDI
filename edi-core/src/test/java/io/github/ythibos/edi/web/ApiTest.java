@@ -317,6 +317,10 @@ class ApiTest {
 
         HttpResponse<String> live = get("/api/primary/wait", TEXT);
         HttpResponse<String> forAWorker = send(as(workerTokenFor("api-primary-wait"), "/api/primary/wait", JSON).GET());
+        primaryHook(primary, "session-start", "{\"source\":\"compact\"}");
+        HttpResponse<String> compacted = get("/api/primary/wait", TEXT);
+        primaryHook(primary, "session-start", "{\"source\":\"resume\"}");
+        HttpResponse<String> resumed = get("/api/primary/wait", TEXT);
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(inTheTurn.body()).startsWith("The primary is in a turn since ").endsWith("; its stop checks that edi wait is live.\n");
@@ -324,6 +328,8 @@ class ApiTest {
         assertThat(live.body()).startsWith("edi wait is live: it was running when the primary's last turn ended, at ");
         assertThat(forAWorker.statusCode()).isEqualTo(200);
         assertThat(new JsonMapper().readTree(forAWorker.body()).path("sighting").asString()).isEqualTo("LIVE");
+        assertThat(compacted.body()).isEqualTo(live.body());
+        assertThat(resumed.body()).startsWith("No edi wait is live").contains(": the primary's last turn ended at ");
     }
 
     @Test

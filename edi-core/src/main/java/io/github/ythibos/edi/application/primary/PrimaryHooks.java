@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
 import io.github.ythibos.edi.domain.primary.Prompt;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.primary.TurnCircumstances;
@@ -66,17 +67,17 @@ public class PrimaryHooks {
         this.transaction = transaction;
     }
 
-    public SessionStart sessionStarted(UUID id, Long claudePid, boolean launched) {
+    public SessionStart sessionStarted(UUID id, Long claudePid, SessionSource source) {
         SessionProcess process = claudePid == null ? null : processes.identify(claudePid).orElse(null);
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Optional<PrimarySession> known = sessions.get(id);
-            PrimarySession session = known.map(earlier -> earlier.restarted(process, now)).orElseGet(() -> PrimarySession.started(id, process, now));
+            PrimarySession session = known.map(earlier -> earlier.restarted(process, source, now)).orElseGet(() -> PrimarySession.started(id, process, now));
             sessions.save(session);
             if (roles.role().isVacant()) {
                 claim(session, now);
             }
-            return new SessionStart(launched, known.isEmpty(), roles.role().standingOf(id));
+            return new SessionStart(source.isALaunch(), known.isEmpty(), roles.role().standingOf(id));
         });
     }
 
@@ -101,7 +102,7 @@ public class PrimaryHooks {
     }
 
     public HookAnswer stopFailed(UUID id, String transcript) {
-        Optional<PrimarySession> stopped = transaction.execute(_ -> sessions.get(id));
+        Optional<PrimarySession> stopped = transaction.execute(_ -> endTheFailedTurn(id));
         stopped.flatMap(session -> runtime.usageLimitStopIn(transcript, session.startedAt()))
                 .ifPresent(limit -> transaction.executeWithoutResult(_ -> sessions.get(id)
                         .ifPresent(session -> sessions.save(session.stoppedOn(limit, clock.now())))));
@@ -151,5 +152,11 @@ public class PrimaryHooks {
         }
         return TurnEnd.blockingReason(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), presenceNow.current().keepsTheChatQuiet(),
                 !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), waitIsLive));
+    }
+
+    private Optional<PrimarySession> endTheFailedTurn(UUID id) {
+        Optional<PrimarySession> failed = sessions.get(id).map(session -> session.turnFailed(clock.now()));
+        failed.ifPresent(sessions::save);
+        return failed;
     }
 }

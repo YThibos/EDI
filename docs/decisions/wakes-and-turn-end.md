@@ -20,7 +20,9 @@ Each prompt starts a turn and records the event log's latest sequence as its mar
 `TurnEnd.blockingReason` blocks the primary's stop when the turn changed state, the captain is present and no report was rendered, and when a task is in flight and no background job runs `edi wait`, which `BackgroundJob` finds with the guard's shell reader.
 A turn's stop is blocked at most three times, and a standby session's stop is never held.
 The stop that ends a turn records on it when it ended and whether a background job ran `edi wait` then; `PrimaryWait` reads that from the role holder's last turn: live, missing, unchecked while a turn runs, or missing because no session holds the role.
-A session start means a new Claude process whose background jobs are gone, so it ends any turn it finds without a wait, and a session with no turn yet reads as missing since it started.
+A session start other than a compaction starts a new Claude process whose background jobs are gone, so it ends the turn it finds without a wait.
+A compaction keeps the Claude process and its background jobs, so it keeps the turn as it was.
+A failed stop ends the turn without a wait, and a session with no turn yet reads as missing since it started.
 `GET /api/primary/wait` answers it to any caller, `edi health` prints it below the core's own line without changing its exit code, and the status line adds "Wait: none" in dark red while a task is in flight and the wait is missing.
 
 ## Why

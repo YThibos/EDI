@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.browser.CaptainsBrowser;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestHome;
@@ -24,8 +25,8 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 class OpenTheSitrepAtSessionStartTest {
 
     private static final URI CONSOLE = URI.create("http://127.0.0.1:47318/");
-    private static final boolean LAUNCHED = true;
-    private static final boolean RESUMED = false;
+    private static final SessionSource LAUNCHED = SessionSource.LAUNCH;
+    private static final SessionSource RESUMED = SessionSource.RESTART;
     private static final String NO_DESKTOP = "";
     private static final String CAPTAINS_FIRST_PROMPT = "/sitrep board";
 
@@ -145,8 +146,8 @@ class OpenTheSitrepAtSessionStartTest {
                 NO_DESKTOP);
     }
 
-    private SessionStart started(UUID session, boolean launched) {
-        return home.primaryHooks().sessionStarted(session, null, launched);
+    private SessionStart started(UUID session, SessionSource source) {
+        return home.primaryHooks().sessionStarted(session, null, source);
     }
 
     private CaptainsBrowser browserBesideNothing() {

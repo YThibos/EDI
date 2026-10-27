@@ -96,7 +96,11 @@ class PrimaryRulesTest {
         assertThat(PrimaryWait.of(Optional.of(inATurn), 2).sighting()).isEqualTo(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN);
         assertThat(PrimaryWait.of(Optional.of(inATurn), 2).seenAt()).isEqualTo(START.plusSeconds(10));
         assertThat(PrimaryWait.of(Optional.of(claimed), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING_SINCE_SESSION_START, START, 2));
-        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, START.plusSeconds(40))), 2))
+        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, SessionSource.RESTART, START.plusSeconds(40))), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(40), 2));
+        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, SessionSource.COMPACTION, START.plusSeconds(40))), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, START.plusSeconds(20), 2));
+        assertThat(PrimaryWait.of(Optional.of(inATurn.turnFailed(START.plusSeconds(40))), 2))
                 .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(40), 2));
         assertThat(PrimaryWait.of(Optional.empty(), 2).sighting()).isEqualTo(PrimaryWait.Sighting.NO_PRIMARY);
         assertThat(endedBlind.promptSubmitted(new Prompt("And now?"), 8, START.plusSeconds(30)).turn().hasEnded()).isFalse();

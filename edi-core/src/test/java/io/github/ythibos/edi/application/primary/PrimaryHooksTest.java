@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.testing.TestHome;
@@ -48,8 +49,8 @@ class PrimaryHooksTest {
         Process running = processes.register(new ProcessBuilder("sleep", "30").start());
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(first, running.pid(), true);
-        home.primaryHooks().sessionStarted(second, null, true);
+        home.primaryHooks().sessionStarted(first, running.pid(), SessionSource.LAUNCH);
+        home.primaryHooks().sessionStarted(second, null, SessionSource.LAUNCH);
 
         assertThat(home.primarySessions().standingOf(first)).isEqualTo(Standing.PRIMARY);
         assertThat(home.primarySessions().standingOf(second)).isEqualTo(Standing.STANDBY);
@@ -57,7 +58,7 @@ class PrimaryHooksTest {
         running.destroyForcibly();
         TestProcesses.awaitExit(running.toHandle());
         UUID third = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(third, null, true);
+        home.primaryHooks().sessionStarted(third, null, SessionSource.LAUNCH);
 
         assertThat(home.primarySessions().standingOf(third)).isEqualTo(Standing.PRIMARY);
         assertThat(home.primarySessions().standingOf(first)).isEqualTo(Standing.STANDBY);
@@ -67,7 +68,7 @@ class PrimaryHooksTest {
     void keepsTheRoleOfALiveSessionAcrossACoreRestartUntilAnotherProcessReusesItsId() throws IOException {
         Process claude = processes.register(new ProcessBuilder("sleep", "30").start());
         UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, claude.pid(), true);
+        home.primaryHooks().sessionStarted(primary, claude.pid(), SessionSource.LAUNCH);
         TestHome restarted = home.restarted();
 
         assertThat(restarted.primarySessions().standingOf(primary)).isEqualTo(Standing.PRIMARY);
@@ -83,9 +84,9 @@ class PrimaryHooksTest {
     void keepsTheRoleWhenTheSameSessionStartsAgainAndFreesItWhenTheSessionEnds() {
         UUID primary = UUID.randomUUID();
         UUID standby = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, true);
-        home.primaryHooks().sessionStarted(standby, null, true);
-        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().sessionStarted(standby, null, SessionSource.LAUNCH);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
 
         assertThat(home.primarySessions().standingOf(primary)).isEqualTo(Standing.PRIMARY);
 
@@ -98,7 +99,7 @@ class PrimaryHooksTest {
     void endsATurnWithWorkInFlightOnlyWhileAnEdiWaitIsLive() throws IOException {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
         HookAnswer blind = home.primaryHooks().stopping(primary, List.of());
@@ -113,7 +114,7 @@ class PrimaryHooksTest {
     void remembersWhetherAnEdiWaitRanWhenThePrimarysTurnEnded() {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
         Instant prompted = home.clock().now();
 
@@ -137,13 +138,13 @@ class PrimaryHooksTest {
     void forgetsTheWaitOfTheLastTurnWhenTheSameSessionStartsAgain() {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         Instant started = home.clock().now();
         PrimaryWait beforeAnyTurn = home.primaryWaits().current();
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
         home.primaryHooks().stopping(primary, A_LIVE_WAIT);
         home.clock().advance(Duration.ofMinutes(5));
-        home.primaryHooks().sessionStarted(primary, null, false);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.RESTART);
 
         PrimaryWait afterTheResume = home.primaryWaits().current();
 
@@ -153,12 +154,47 @@ class PrimaryHooksTest {
     }
 
     @Test
+    void keepsTheTurnAndItsWaitWhenTheSessionIsCompacted() {
+        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+        Instant prompted = home.clock().now();
+        home.clock().advance(Duration.ofMinutes(1));
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.COMPACTION);
+        PrimaryWait compactedInTheTurn = home.primaryWaits().current();
+        home.primaryHooks().stopping(primary, A_LIVE_WAIT);
+        Instant stopped = home.clock().now();
+        home.clock().advance(Duration.ofMinutes(5));
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.COMPACTION);
+
+        PrimaryWait compactedAfterTheTurn = home.primaryWaits().current();
+
+        assertThat(compactedInTheTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN, prompted, 1));
+        assertThat(compactedAfterTheTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, stopped, 1));
+    }
+
+    @Test
+    void endsATurnWhoseStopFailedWithoutAWait() {
+        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+        home.clock().advance(Duration.ofMinutes(1));
+        home.primaryHooks().stopFailed(primary, "/transcripts/failed.jsonl");
+
+        PrimaryWait afterTheFailure = home.primaryWaits().current();
+
+        assertThat(afterTheFailure).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, home.clock().now(), 1));
+    }
+
+    @Test
     void neverHoldsAStandbySessionsStopOrBlocksOneTurnMoreThanThreeTimes() {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
         UUID standby = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, true);
-        home.primaryHooks().sessionStarted(standby, null, true);
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().sessionStarted(standby, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(standby, "<task-notification>done</task-notification>");
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
@@ -174,16 +210,16 @@ class PrimaryHooksTest {
         Instant reset = home.clock().now().plus(Duration.ofHours(2));
         home.runtime().transcriptEndsOn(new UsageLimit("session limit", reset));
         UUID stopped = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(stopped, null, true);
+        home.primaryHooks().sessionStarted(stopped, null, SessionSource.LAUNCH);
         home.primaryHooks().stopFailed(stopped, "/transcripts/stopped.jsonl");
         home.primaryHooks().sessionEnded(stopped);
 
         home.clock().advance(Duration.ofMinutes(1));
         UUID next = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(next, null, true);
+        home.primaryHooks().sessionStarted(next, null, SessionSource.LAUNCH);
         home.clock().advance(Duration.ofMinutes(1));
         UUID later = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(later, null, true);
+        home.primaryHooks().sessionStarted(later, null, SessionSource.LAUNCH);
 
         assertThat(home.sessionStartDigest().digestFor(next).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
@@ -192,6 +228,6 @@ class PrimaryHooksTest {
     private static void recordTheStartOneTickLater(TestHome home, UUID session) {
         PrimarySession recorded = home.primarySessionStore().get(session).orElseThrow();
         SessionProcess reused = new SessionProcess(recorded.process().pid(), recorded.process().startTick() + 1);
-        home.primarySessionStore().save(recorded.restarted(reused, home.clock().now()));
+        home.primarySessionStore().save(recorded.restarted(reused, SessionSource.RESTART, home.clock().now()));
     }
 }

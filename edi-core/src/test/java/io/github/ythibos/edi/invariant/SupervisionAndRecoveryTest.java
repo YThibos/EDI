@@ -36,6 +36,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
@@ -84,14 +85,14 @@ class SupervisionAndRecoveryTest {
             home.raiseDecision().raise(new TaskReference.ById(new TaskId("choose-lamp")), Cards.card("Which lamp?"), Actor.PRIMARY);
             Process killedPrimary = processes.register(new ProcessBuilder("sleep", "30").start());
             UUID beforeTheCrash = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(beforeTheCrash, killedPrimary.pid(), true);
+            home.primaryHooks().sessionStarted(beforeTheCrash, killedPrimary.pid(), SessionSource.LAUNCH);
             String preCrashDigest = digestOf(home, beforeTheCrash);
 
             killedPrimary.destroyForcibly();
             assertThat(TestProcesses.awaitExit(killedPrimary.toHandle())).isTrue();
             TestHome restarted = home.restarted();
             UUID afterTheRestart = UUID.randomUUID();
-            restarted.primaryHooks().sessionStarted(afterTheRestart, null, true);
+            restarted.primaryHooks().sessionStarted(afterTheRestart, null, SessionSource.LAUNCH);
 
             assertThat(restarted.primarySessions().standingOf(afterTheRestart)).isEqualTo(Standing.PRIMARY);
             assertThat(digestOf(restarted, afterTheRestart)).isEqualTo(preCrashDigest)
@@ -106,7 +107,7 @@ class SupervisionAndRecoveryTest {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             Process primary = processes.register(new ProcessBuilder("sleep", "30").start());
             UUID session = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(session, primary.pid(), true);
+            home.primaryHooks().sessionStarted(session, primary.pid(), SessionSource.LAUNCH);
 
             TestHome restarted = home.restarted();
 
