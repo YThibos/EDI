@@ -147,6 +147,14 @@ Pasting about 1.7 million characters into the composer and submitting it filled 
 - Each further typed line fired `UserPromptSubmit` and failed the same way at once.
 - `--resume` of the session with a prompt after `--` fired `SessionStart` with `source: "resume"` and `UserPromptSubmit`, and failed again with "Context limit reached", so a full session cannot be resumed.
 
+## A session without a transcript, on 2.1.311
+
+Verified on Claude Code 2.1.311 on WSL2 Ubuntu 24.04, 27/10/2026, for the fresh start that replaces a resume ([recovery](../decisions/recovery.md)).
+An interactive session on a private tmux socket ran `claude --resume <uuid> -- "say hi"` with a session id that has no transcript in any session folder.
+
+- Claude Code printed "No conversation found with session ID: <uuid>" and exited with 1 at once, without firing a hook, so a worker window running it closes.
+- A worker stopped within seconds of its start leaves only the session's empty `tool-results` folder and no `<uuid>.jsonl`, as the incident of 27/10/2026 showed.
+
 ## A stop hook that cannot reach EDI, on 2.1.308 and 2.1.309
 
 Read on Claude Code 2.1.308 from the transcripts of four workers whose `Stop` hook ran during core outages on 22/10/2026, and verified on 2.1.309 on WSL2 Ubuntu 24.04, 23/10/2026, for the missed-stop notice ([supervision](../decisions/supervision.md)).

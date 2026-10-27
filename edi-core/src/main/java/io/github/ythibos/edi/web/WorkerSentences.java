@@ -24,9 +24,18 @@ final class WorkerSentences {
 
     static String relaunched(DispatchOutcome.Launched launched) {
         Worker worker = launched.worker();
-        String how = worker.launch().kind() == LaunchKind.RESUME ? "resuming session " + worker.session() : "with a fresh session and a handover";
-        return "Relaunched " + worker.id().task() + " as " + worker.id() + " (" + worker.category() + ", " + worker.route() + "), " + how
-                + ", in " + launched.worktree() + ".";
+        return "Relaunched " + worker.id().task() + " as " + worker.id() + " (" + worker.category() + ", " + worker.route() + "), "
+                + howItStarted(launched) + ", in " + launched.worktree() + ".";
+    }
+
+    private static String howItStarted(DispatchOutcome.Launched launched) {
+        Worker worker = launched.worker();
+        if (worker.launch().kind() == LaunchKind.RESUME) {
+            return "resuming session " + worker.session();
+        }
+        String fresh = "with a fresh session and a handover";
+        return launched.unresumableSession() == null ? fresh
+                : fresh + " because session " + launched.unresumableSession() + " left no transcript to resume";
     }
 
     static String deferred(DispatchOutcome.Deferred deferred) {

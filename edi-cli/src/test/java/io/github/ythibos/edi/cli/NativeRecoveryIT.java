@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,6 +117,29 @@ class NativeRecoveryIT {
     }
 
     @Test
+    void aResumeOfASessionThatLeftNoTranscriptStartsAfreshWithAHandoverInstead() throws Exception {
+        assumeTrue(answers("tmux", "-V"), "tmux is not installed");
+        dispatch("restart-buoy", "HRN-16", "stub-run: edi status working -- the buoy worker started");
+        awaitOutput(List.of("worker", "list"), "the buoy worker started");
+        String session = sessionOf(launchesOf("restart-buoy").getFirst());
+
+        simulateAMachineRestart();
+        deleteTheTranscriptOf(session);
+        edi(Map.of(), "", "recover");
+        CommandRun relaunched = edi(Map.of(), "", "recover", "1", "resume");
+        workerServer().ifPresent(server -> processes.register(server.pid()));
+        List<String> launches = awaitLaunches("restart-buoy", 2);
+        CommandRun workers = awaitOutput(List.of("worker", "list"), "restart-buoy#2");
+
+        assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high), with a fresh"
+                + " session and a handover because session " + session + " left no transcript to resume, in ");
+        assertThat(launches).hasSize(2);
+        assertThat(launches.get(1)).doesNotContain("--resume").doesNotContain(session)
+                .contains(" and session " + session + " left no transcript to resume: read the handover " + home.resolve("data/tasks/restart-buoy/handover.md"));
+        assertThat(workers.output()).contains("restart-buoy#2").doesNotContain("restart-buoy#2  dead");
+    }
+
+    @Test
     void aWorkerWhoseContextFillsWakesThePrimaryAtOnceAndStartsAfreshWithAHandover() throws Exception {
         assumeTrue(answers("tmux", "-V"), "tmux is not installed");
         stop(core);
@@ -178,7 +202,6 @@ class NativeRecoveryIT {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
-                "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
                 "--edi.pipeline.home=" + home.resolve("no-mistakes"),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
@@ -190,6 +213,7 @@ class NativeRecoveryIT {
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
+        launch.environment().put("CLAUDE_CONFIG_DIR", Files.createDirectories(home.resolve("claude-config")).toString());
         launch.environment().put("SERVER_PORT", "0");
         Process started = processes.register(launch.start());
         long startUp = System.nanoTime();
@@ -203,6 +227,16 @@ class NativeRecoveryIT {
         stopTheWorkerServer();
         Files.writeString(bootIdFile(), UUID.randomUUID().toString());
         core = startedCore();
+    }
+
+    private static void deleteTheTranscriptOf(String session) throws IOException {
+        try (Stream<Path> files = Files.walk(home.resolve("claude-config/projects"))) {
+            List<Path> transcripts = files.filter(file -> file.getFileName().toString().equals(session + ".jsonl")).toList();
+            assertThat(transcripts).as("the transcript of session %s", session).isNotEmpty();
+            for (Path transcript : transcripts) {
+                Files.delete(transcript);
+            }
+        }
     }
 
     private static void dispatch(String task, String key, String spec) throws Exception {

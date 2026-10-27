@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.dispatch;
 
 import java.nio.file.Path;
+import java.util.UUID;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -35,7 +36,7 @@ public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plann
         return plannedShip != null;
     }
 
-    public record Launched(Worker worker, BranchName branch, Path worktree) {
+    public record Launched(Worker worker, BranchName branch, Path worktree, UUID unresumableSession) {
     }
 
     public record Deferred(TaskId task, ProjectName project, int running, int capacity) {
