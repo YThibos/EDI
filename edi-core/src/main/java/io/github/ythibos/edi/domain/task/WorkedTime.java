@@ -2,6 +2,7 @@ package io.github.ythibos.edi.domain.task;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -11,7 +12,7 @@ public record WorkedTime(Duration active, Duration wallClock) {
     private static final Duration HALF_A_MINUTE = Duration.ofSeconds(30);
 
     public static Optional<WorkedTime> over(List<WorkMark> timeline, Instant until) {
-        List<WorkMark> marks = marksUntil(timeline, until);
+        List<WorkMark> marks = marksInTimeOrderUntil(timeline, until);
         return firstDispatchIn(marks).map(start -> new WorkedTime(activeIn(marks, until), Duration.between(start, until)));
     }
 
@@ -23,8 +24,8 @@ public record WorkedTime(Duration active, Duration wallClock) {
         return nearestMinutesOf(wallClock);
     }
 
-    private static List<WorkMark> marksUntil(List<WorkMark> timeline, Instant until) {
-        return timeline.stream().filter(mark -> !mark.at().isAfter(until)).toList();
+    private static List<WorkMark> marksInTimeOrderUntil(List<WorkMark> timeline, Instant until) {
+        return timeline.stream().filter(mark -> !mark.at().isAfter(until)).sorted(Comparator.comparing(WorkMark::at)).toList();
     }
 
     private static Optional<Instant> firstDispatchIn(List<WorkMark> marks) {

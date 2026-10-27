@@ -80,6 +80,17 @@ class WorkedTimeTest {
     }
 
     @Test
+    void measuresTheMarksInTimeOrderWhenAStopIsLoggedAfterALaterStart() {
+        List<WorkMark> timeline = List.of(
+                WorkMark.dispatched(at("10:00:00")),
+                WorkMark.working(at("10:00:00")),
+                WorkMark.working(at("12:00:00")),
+                WorkMark.stopped(at("10:30:00")));
+
+        assertThat(WorkedTime.over(timeline, at("12:15:00")).orElseThrow().activeMinutes()).isEqualTo(45);
+    }
+
+    @Test
     void measuresNothingForATaskNeverDispatched() {
         assertThat(WorkedTime.over(List.of(WorkMark.stopped(at("10:00:00"))), at("11:00:00"))).isEmpty();
     }

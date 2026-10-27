@@ -10,9 +10,12 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -49,6 +52,20 @@ class MissedStopTest {
         assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("WorkerStopMissed").doesNotContain("WorkerStale", "WorkerBusyTooLong");
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind() + " " + queued.wake().detail())
                 .containsExactly("STOP_MISSED 1");
+    }
+
+    @Test
+    void recordsTheEndOfAMissedTurnAtTheTimeTheTranscriptShows() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        Instant stopped = home.clock().now().plus(Duration.ofMinutes(30));
+        home.clock().advance(Duration.ofHours(2));
+
+        home.runtime().transcriptEndsOnAStopEdiMissedAt(stopped);
+        home.noticeMissedStops().notice();
+
+        assertThat(home.events().ofTask(lamp.id().task())).filteredOn(event -> event.isA(WorkerTurnEnded.class))
+                .extracting(LoggedEvent::at).containsExactly(stopped);
     }
 
     @Test
@@ -150,6 +167,8 @@ class MissedStopTest {
         assertThat(healthOf(home, lamp)).isEqualTo(new WorkerHealth.Idle(ended));
         assertThat(home.runtime().typedLines()).containsExactly("EDI_OP: message 1 waiting: run edi inbox");
         assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("WorkerStoppedOnAnError", "WorkerStopMissed");
+        assertThat(home.events().ofTask(lamp.id().task())).filteredOn(event -> event.isA(WorkerStoppedOnAnError.class))
+                .extracting(LoggedEvent::at).containsExactly(ended);
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.STOP_MISSED);
     }
 

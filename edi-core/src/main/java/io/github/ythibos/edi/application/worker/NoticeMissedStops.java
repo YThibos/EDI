@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -100,7 +101,7 @@ public class NoticeMissedStops {
     private Worker stoppedOnAnError(Worker worker, ErrorStop stop) {
         Worker idle = worker.turnEnded(stop.endedAt());
         workers.update(idle);
-        events.record(new WorkerStoppedOnAnError(idle.id().task(), idle.id(), stop.error()), Actor.CORE, clock.now());
+        events.record(new WorkerStoppedOnAnError(idle.id().task(), idle.id(), stop.error()), Actor.CORE, stop.endedAt());
         return idle;
     }
 
@@ -118,6 +119,7 @@ public class NoticeMissedStops {
     private Worker idle(Worker worker, Instant stoppedAt) {
         Worker idle = worker.turnEnded(stoppedAt);
         workers.update(idle);
+        events.record(new WorkerTurnEnded(idle.id().task(), idle.id()), Actor.CORE, stoppedAt);
         return idle;
     }
 }

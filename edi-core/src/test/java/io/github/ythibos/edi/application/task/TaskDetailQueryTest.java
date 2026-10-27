@@ -122,6 +122,18 @@ class TaskDetailQueryTest {
     }
 
     @Test
+    void endsTheStretchWhenATurnEndedThatEdiNoticedLate() {
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/HRN-40")
+                .reported(StatusState.WORKING, null, "HRN-40 set-up done")
+                .after(Duration.ofHours(2))
+                .endedItsTurnUnnoticedFor(Duration.ofMinutes(90))
+                .receivedASteer();
+
+        assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked())
+                .isEqualTo(new WorkedTime(Duration.ofMinutes(30), Duration.ofHours(2)));
+    }
+
+    @Test
     void measuresNothingForATaskNotYetDispatched() {
         assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked()).isNull();
     }

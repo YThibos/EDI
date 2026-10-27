@@ -77,6 +77,11 @@ public final class WorkEvents {
         return recorded(new WorkerTurnEnded(task, WorkerId.first(task)), Actor.worker(WorkerId.first(task)));
     }
 
+    public WorkEvents endedItsTurnUnnoticedFor(Duration unnoticed) {
+        home.events().record(new WorkerTurnEnded(task, WorkerId.first(task)), Actor.CORE, home.clock().now().minus(unnoticed));
+        return this;
+    }
+
     public WorkEvents relaunched() {
         return recorded(new WorkerRelaunched(task, WorkerId.first(task), LaunchKind.RESUME, ROUTE, "usage limit reset"), Actor.CORE);
     }
