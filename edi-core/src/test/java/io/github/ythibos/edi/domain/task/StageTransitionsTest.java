@@ -194,6 +194,14 @@ class StageTransitionsTest {
         }
 
         @Test
+        void raisesAFollowUpDecisionForACommitAfterTheHeadMergedWhileWorking() {
+            StageChange change = SHIP.move(TaskStage.WORKING, new RequestMerged(OLD_HEAD, List.of(THE_STEERS_COMMIT)));
+
+            assertThat(change.notLanded()).containsExactly(THE_STEERS_COMMIT);
+            assertThat(change.raisesAFollowUpDecision()).isTrue();
+        }
+
+        @Test
         void refusesAMergeWithoutItsHead() {
             assertThatIllegalArgumentException().isThrownBy(() -> new RequestMerged(" ", List.of()));
         }
@@ -364,11 +372,11 @@ class StageTransitionsTest {
         }
 
         @Test
-        void aSquashMergeLandsByItsMergedHeadWhateverTheBaseChangedSince() {
-            StageChange squashed = SHIP.move(TaskStage.READY, new RequestMerged(OLD_HEAD, List.of()));
+        void landsAMergeByItsMergedHeadAndKeepsALaterCommitUnlanded() {
+            StageChange merged = SHIP.move(TaskStage.READY, new RequestMerged(OLD_HEAD, List.of()));
 
-            assertThat(SHIP.move(squashed.to(), new LandingObserved(true, List.of())).to()).isEqualTo(TaskStage.LANDED);
-            assertThatThrownBy(() -> SHIP.move(squashed.to(), new LandingObserved(true, List.of(THE_STEERS_COMMIT))))
+            assertThat(SHIP.move(merged.to(), new LandingObserved(true, List.of())).to()).isEqualTo(TaskStage.LANDED);
+            assertThatThrownBy(() -> SHIP.move(merged.to(), new LandingObserved(true, List.of(THE_STEERS_COMMIT))))
                     .isInstanceOf(Refusal.class).hasMessage("fit-the-lamp stays merged: 1 commit not landed: b30e15a.");
         }
 

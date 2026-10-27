@@ -11,6 +11,6 @@ public record StageChange(TaskId task, TaskStage from, TaskStage to, String reas
     }
 
     public boolean raisesAFollowUpDecision() {
-        return from == TaskStage.CHANGING && to == TaskStage.MERGED && !notLanded.isEmpty();
+        return to == TaskStage.MERGED && !notLanded.isEmpty();
     }
 }

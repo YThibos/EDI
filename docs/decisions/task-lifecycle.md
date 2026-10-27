@@ -32,7 +32,7 @@ Dependants and plan slices wait on a named stage of another task: MERGED or LAND
 A hold added never replaces another, a hold of each kind is held once (a decision once per number), an answer removes only its own decision, and a decision is released only by its answer.
 `WorkerHealth` stays the worker's own condition, derived from the worker row as today; a stage transition may read it, but it is never a stage.
 `FleetSnapshotQuery` is to read the stage and the holds instead of combining the done check, the delivery and the run: Ongoing is WORKING and CHANGING (`TaskStage.isOngoing`), ready for review is READY, "report ready" is a delivered scout, and a MERGED task with a commit not landed shows in red with the commit named.
-A merge while the task was CHANGING with commits after the merged head (`StageChange.raisesAFollowUpDecision`) raises one decision on the task naming those commits: deliver them as a follow-up request from the same branch, or discard them, the option that authorises `discard-work`.
+A merge with commits after the merged head, whatever the stage before it (`StageChange.raisesAFollowUpDecision`), raises one decision on the task naming those commits: deliver them as a follow-up request from the same branch, or discard them, the option that authorises `discard-work`.
 The domain carries the stages, the transitions and the holds; until the stage is stored and every application service changes a task through `StageTransitions`, `TaskState` and `CaptainHold` are what the services read.
 
 ## Why
@@ -62,3 +62,4 @@ When a delivery mode appears whose work is neither merged nor reported, or when 
 
 - 26/10/2026: the EDI-74 scout traced four defects of week one to state inferred from several fields, and proposed the stages, the holds as a set and the worker's own machine; the captain chose it as D43.
 - 27/10/2026: `TaskStage`, `StageTransitions` and `Holds` entered the domain with the transition table and the four defects as tests, and a captain item's answer became its own transition to RETIRED, since a captain item never gets a worker (EDI-84).
+- 27/10/2026: the captain widened Q6 A so a merge while the task was still working also asks: any merge with commits after the merged head raises the follow-up decision, whatever the stage before it (EDI-84).
