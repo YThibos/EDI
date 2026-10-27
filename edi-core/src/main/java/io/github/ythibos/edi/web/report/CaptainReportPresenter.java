@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
@@ -83,7 +84,8 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return Stream.of(
                         waiting.decisions().stream().map(open -> call(open, wording)),
                         waiting.boards().stream().map(board -> boardQuestions(board, wording)),
-                        waiting.reviews().stream().map(ready -> review(ready, wording)))
+                        waiting.reviews().stream().map(ready -> review(ready, wording)),
+                        waiting.changing().stream().map(changing -> changing(changing, wording)))
                 .flatMap(Function.identity())
                 .toList();
     }
@@ -104,6 +106,11 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static DecisionZone.Entry review(ReadyForReview ready, TurnWording wording) {
         return new DecisionZone.Review(wording.projectsOf(ready.task()), wording.textOf(ready.task()), ready.delivery().address().url());
+    }
+
+    private static DecisionZone.Entry changing(ChangingRequest changing, TurnWording wording) {
+        return new DecisionZone.Changing(wording.projectsOf(changing.task()), wording.textOf(changing.task()), changing.delivery().address().url(),
+                changing.whyChanging());
     }
 
     private static List<String> countedSection(String title, List<ReportItem> items, String placeholder, int width) {

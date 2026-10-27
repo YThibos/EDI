@@ -69,6 +69,7 @@ final class DecisionZone {
             case Call call -> decisionLines(call, boxWidth);
             case BoardQuestions board -> boardLines(board, boxWidth);
             case Review review -> singleLine(WaitingWords.review(review.title(), review.url()), boxWidth);
+            case Changing changing -> singleLine(WaitingWords.changing(changing.title(), changing.url(), changing.why()), boxWidth);
         };
     }
 
@@ -154,5 +155,8 @@ final class DecisionZone {
     }
 
     record Review(ProjectSet projects, String title, String url) implements Entry {
+    }
+
+    record Changing(ProjectSet projects, String title, String url, String why) implements Entry {
     }
 }

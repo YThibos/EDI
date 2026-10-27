@@ -25,6 +25,7 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
     ],
     boards: [],
     reviews: [],
+    changing: [],
     answered: [
       {
         number: 'D57',

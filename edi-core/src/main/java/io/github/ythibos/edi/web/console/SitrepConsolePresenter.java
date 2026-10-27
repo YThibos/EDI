@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
@@ -36,6 +37,7 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Answer;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Board;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.BoardDecision;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Card;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.Changing;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Charted;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Landed;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Ongoing;
@@ -72,6 +74,7 @@ public class SitrepConsolePresenter {
                 fleet.waiting().decisions().stream().map(SitrepConsolePresenter::card).toList(),
                 fleet.waiting().boards().stream().map(SitrepConsolePresenter::board).toList(),
                 fleet.waiting().reviews().stream().map(SitrepConsolePresenter::review).toList(),
+                fleet.waiting().changing().stream().map(SitrepConsolePresenter::changing).toList(),
                 fleet.answered().stream().map(SitrepConsolePresenter::answer).toList(),
                 fleet.ongoing().stream().map(SitrepConsolePresenter::ongoing).toList(),
                 fleet.landed().stream().limit(LANDED_SHOWN).map(SitrepConsolePresenter::landed).toList(),
@@ -110,6 +113,11 @@ public class SitrepConsolePresenter {
     private static Review review(ReadyForReview ready) {
         Task task = ready.task();
         return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url());
+    }
+
+    private static Changing changing(ChangingRequest changing) {
+        Task task = changing.task();
+        return new Changing(task.id().value(), task.intake().title(), projectsOf(task), changing.delivery().address().url(), changing.whyChanging());
     }
 
     private static Answer answer(RecentAnswer recent) {
@@ -178,7 +186,7 @@ public class SitrepConsolePresenter {
     private static String doingOf(OngoingTask ongoing) {
         PipelineRun run = ongoing.pipelineRun();
         if (run != null && run.isRunning()) {
-            return "pipeline " + (run.activeStep() == null ? run.status() : run.activeStep());
+            return "pipeline " + run.currentStep();
         }
         Worker worker = ongoing.worker();
         if (worker == null) {
