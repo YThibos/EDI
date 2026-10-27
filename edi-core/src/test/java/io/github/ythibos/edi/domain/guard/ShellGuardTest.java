@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ShellGuardTest {
@@ -175,6 +176,62 @@ class ShellGuardTest {
         "gh api repos/owner/repo/pulls/12"})
     void allowsWhatOnlyObservesOrPreparesADraft(String command) {
         assertThat(GUARD.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "git commit --no-verify -m 'EDI-5 Fix the guard'",
+        "git commit -n -m 'EDI-5 Fix the guard'",
+        "git commit -anm 'EDI-5 Fix the guard'",
+        "git commit -m 'EDI-5 Fix the guard' --no-verify",
+        "git commit --no-veri -m 'EDI-5 Fix the guard'",
+        "git -C ../copy commit -n -F message.txt",
+        "git push --no-verify origin feature/EDI-5",
+        "git push -u origin feature/EDI-5 --no-verify",
+        "git merge --no-verify origin/main",
+        "git -c core.hooksPath=/dev/null commit -m 'EDI-5 Fix the guard'",
+        "git -C ../copy -c core.hooksPath= push origin feature/EDI-5",
+        "git -c Core.HooksPath=.githooks merge origin/main",
+        "git --config-env=core.hooksPath=EMPTY push origin feature/EDI-5",
+        "git --config-env core.hooksPath=EMPTY status",
+        "git config core.hooksPath /dev/null",
+        "git config --worktree core.hooksPath .git/no-hooks",
+        "git config --unset core.hooksPath",
+        "git config unset --worktree core.hooksPath",
+        "git add . && git commit --no-verify -m \"$(cat <<'EOF'\nEDI-5 Fix the guard\n\nCo-authored-by: Claude <noreply@anthropic.com>\nEOF\n)\""})
+    void refusesWhatSkipsTheGitHooks(String command) {
+        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.SKIPPED_HOOKS);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "git commit -m \"EDI-1 x\"",
+        "git commit -am 'EDI-1 x'",
+        "git commit -mn",
+        "git commit -m --no-verify",
+        "git commit -m 'EDI-1 Refuse --no-verify'",
+        "git commit -m 'EDI-1 x' -- -n",
+        "git push -n origin feature/EDI-5",
+        "git merge -n origin/main",
+        "git log --grep=no-verify",
+        "git -c user.name=Fixture commit -m 'EDI-1 x'",
+        "git config core.hooksPath",
+        "git config --get core.hooksPath",
+        "git config get core.hooksPath",
+        "git config --worktree user.name Fixture",
+        "grep -rn core.hooksPath docs/"})
+    void allowsGitThatRunsItsHooks(String command) {
+        assertThat(GUARD.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "git commit --no-verify -m 'EDI-5 x' | the commit-msg hook, which holds the work key at the head of the subject (I-10)",
+        "git merge --no-verify origin/main   | keeps every co-author, agent and \"Generated with\" trailer out (I-09)",
+        "git push --no-verify origin x       | the pre-push hook, whose publish check keeps secrets out of a push (I-38)",
+        "git -c core.hooksPath= commit       | leave core.hooksPath as the isolated copy sets it"})
+    void namesTheChecksASkippedHookHolds(String command, String named) {
+        assertThat(GUARD.check(command)).map(GuardRefusal::reason).hasValueSatisfying(reason -> assertThat(reason).contains(named));
     }
 
     @ParameterizedTest
