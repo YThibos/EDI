@@ -71,10 +71,11 @@ class ProcessTableTest {
 
     @Test
     void readsTheArgumentsOfAProcessAndEverythingBelowIt() throws IOException {
-        Process pane = processes.register(new ProcessBuilder("sh", "-c", "sleep 31 & echo forked; wait", "pane").start());
+        String forkOnceSleeping = "sleep 31 & until [ \"$(cat /proc/$!/comm)\" = sleep ]; do :; done; echo forked; wait";
+        Process pane = processes.register(new ProcessBuilder("sh", "-c", forkOnceSleeping, "pane").start());
         assertThat(pane.inputReader().readLine()).isEqualTo("forked");
 
-        assertThat(table.argumentsInTree(pane.pid())).containsExactly(List.of("-c", "sleep 31 & echo forked; wait", "pane"), List.of("31"));
+        assertThat(table.argumentsInTree(pane.pid())).containsExactly(List.of("-c", forkOnceSleeping, "pane"), List.of("31"));
         table.stopTree(pane.pid(), Duration.ofMillis(200));
         assertThat(TestProcesses.awaitExit(pane.toHandle())).isTrue();
         assertThat(table.argumentsInTree(pane.pid())).isEmpty();
