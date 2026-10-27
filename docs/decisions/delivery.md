@@ -14,7 +14,7 @@ A busy worker receives a steer only when its turn ends ([steering](steering.md))
 ## Decision
 
 A project's delivery mode is `draft-review`, `local-branch`, `local-apply` or `report`, and a task may carry its own; the registry refuses `local-apply` and `report` as defaults, so both are asked for per task (`DeliveryMode.registryDefault`).
-For `draft-review`, the worker runs the validation pipeline with the intent EDI wrote ([worker-brief](worker-brief.md)); the pipeline pushes the branch and opens the request as a draft, the worker marks it ready for review once its checks are green, and the captain merges.
+For `draft-review`, the worker runs the validation pipeline with the intent EDI wrote ([worker-brief](worker-brief.md)); the pipeline pushes the branch and opens the request as a draft, the worker marks it ready for review once its checks are green, or once the pipeline passes on a project whose CI does not run, where the local verification is the evidence ([pipeline-steps](pipeline-steps.md)), and the captain merges.
 `RecordStatus` asks `DoneClaims` before it records any `done`, and `DoneClaims` refuses first of all while the task's inbox holds a message the worker has not acknowledged, naming every such message's number, for a scout as for a ship.
 For a ship it then checks that the branch adds no `-SNAPSHOT` word to any `pom.xml` line since `origin/<base>` (`SnapshotVersions`), and for `draft-review` the open request from the task's branch, or else the latest merged one, comes from that branch, targets the base and shows the copy's head; it may be a draft, ready or merged, and only a request closed without a merge is a gap.
 For `report` the task directory holds `report.md` (`Workplace.report`) and the copy holds no change, which `LandedWorkCheck` decides as it does for cleanup: nothing uncommitted, no nested repository and no commit beyond what `origin/<base>` holds.
@@ -67,3 +67,4 @@ Never for the merge authority; the claims are revisited when the pipeline itself
 - 26/10/2026: a done reported inside a turn ran ahead of a steer that arrived at the turn's end, so a done waits until every message in the task's inbox is acknowledged, and the record now places the mechanical check after the claims, gating the delivery (EDI-52).
 - 26/10/2026: the EDI-74 review found a scout's done accepted without its report, which only its cleanup asked for, so the done claims the report (EDI-77).
 - 27/10/2026: the publish guard refuses a SNAPSHOT version at the push, and the done keeps its own check for deliveries that are never pushed (EDI-78).
+- 27/10/2026: a project whose CI does not run skips the pipeline's CI step, so its worker marks the request ready once the pipeline passes, on the local verification (EDI-104).
