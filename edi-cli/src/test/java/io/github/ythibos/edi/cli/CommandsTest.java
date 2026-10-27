@@ -163,7 +163,7 @@ class CommandsTest {
 
     @Test
     void checksTheOutgoingCommitsOfTheWorkingDirectory() {
-        core.answering(200, "Clear: no secret and no personal material in @{upstream}..HEAD\n");
+        core.answering(200, "Clear: no secret, no personal material and no -SNAPSHOT version in @{upstream}..HEAD\n");
 
         int exitCode = edi("", "publish-check");
 

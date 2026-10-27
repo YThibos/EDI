@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.presence.PresenceMode;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -69,7 +70,7 @@ class PresenceFollowingTest {
     void notifiesTheCaptainOnceOfEachDecisionAndFailureSinceTheQuietBegan() throws IOException {
         Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         home.storing(List.of(WorkerFixtures.queued("choose-lamp", TaskKind.CAPTAIN, "harness", null)));
-        home.recordStatus().report(worker.id(), StatusState.BLOCKED, null, null, "The forge login expired.");
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("forge"), null, "The forge login expired.");
         home.clock().advance(Duration.ofSeconds(1));
         home.changePresence().quiet();
         home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Fitting the lamp.");

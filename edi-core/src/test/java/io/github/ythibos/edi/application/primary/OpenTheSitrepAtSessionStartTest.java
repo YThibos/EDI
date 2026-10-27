@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,13 +16,10 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.browser.CaptainsBrowser;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
-import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.PresenterFixtures;
-import io.github.ythibos.edi.web.primary.SessionStartDigestText;
-import io.github.ythibos.edi.web.worker.WorkerListText;
 
 class OpenTheSitrepAtSessionStartTest {
 
@@ -31,7 +27,7 @@ class OpenTheSitrepAtSessionStartTest {
     private static final boolean LAUNCHED = true;
     private static final boolean RESUMED = false;
     private static final String NO_DESKTOP = "";
-    private static final String OPENING_PROMPT = "Hello EDI, SITREP board, please.";
+    private static final String CAPTAINS_FIRST_PROMPT = "/sitrep board";
 
     @TempDir
     private Path directory;
@@ -72,42 +68,18 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     @Test
-    void leavesOneSitrepPageOpenWhenTheOpeningTurnOfANewSessionAsksForTheBoard() throws IOException {
+    void opensASecondPageWhenTheCaptainsFirstPromptAsksForTheBoard() throws IOException {
         CaptainsBrowser browser = browserThatOpens();
         OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browser);
         OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
         UUID primary = UUID.randomUUID();
 
         sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
-        ConsoleOpening openingTurn = console.openFor(Optional.of(primary), CONSOLE);
-        List<String> pagesAfterTheOpeningTurn = Files.readAllLines(opened);
-        HookAnswer stopped = home.primaryHooks().stopping(primary, List.of());
-        home.primaryHooks().promptSubmitted(primary, "Show me the board again.");
-        ConsoleOpening laterTurn = console.openFor(Optional.of(primary), CONSOLE);
+        home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
+        ConsoleOpening firstTurn = console.openFor(Optional.of(primary), CONSOLE);
 
-        assertThat(openingTurn).isEqualTo(ConsoleOpening.openedAtSessionStart(CONSOLE));
-        assertThat(pagesAfterTheOpeningTurn).singleElement().asString().startsWith("/c start " + CONSOLE + "login#");
-        assertThat(stopped).isEqualTo(HookAnswer.PROCEED);
-        assertThat(laterTurn.opened()).isTrue();
-        assertThat(laterTurn.openedAtSessionStart()).isFalse();
-        assertThat(Files.readAllLines(opened)).hasSize(2);
-    }
-
-    @Test
-    void opensThePageAgainOnTheNextPromptAfterTheCaptainInterruptsTheOpeningTurn() throws IOException {
-        CaptainsBrowser browser = browserThatOpens();
-        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browser);
-        OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
-        UUID primary = UUID.randomUUID();
-
-        sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
-        home.primaryHooks().promptSubmitted(primary, "/sitrep board");
-        ConsoleOpening afterTheInterrupt = console.openFor(Optional.of(primary), CONSOLE);
-
-        assertThat(afterTheInterrupt.opened()).isTrue();
-        assertThat(afterTheInterrupt.openedAtSessionStart()).isFalse();
+        assertThat(firstTurn.opened()).isTrue();
+        assertThat(firstTurn.openedAtSessionStart()).isFalse();
         assertThat(Files.readAllLines(opened)).hasSize(2);
     }
 
@@ -136,7 +108,7 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
 
         sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
+        home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
         ConsoleOpening fromTheSession = console.openFor(Optional.of(primary), CONSOLE);
         ConsoleOpening fromATerminal = console.openFor(Optional.empty(), CONSOLE);
 

@@ -2,6 +2,7 @@ package io.github.ythibos.edi.domain.delivery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
 import java.util.List;
@@ -12,6 +13,10 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.publish.AddedLine;
+import io.github.ythibos.edi.domain.publish.OutgoingChanges;
+import io.github.ythibos.edi.domain.publish.OutgoingCommit;
+import io.github.ythibos.edi.domain.publish.PublishFinding;
+import io.github.ythibos.edi.domain.publish.PublishRule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -127,6 +132,20 @@ class DeliveryClaimsTest {
     }
 
     @Test
+    void findsEachOutgoingCommitsSnapshotVersionsAtTheirLines() {
+        OutgoingChanges changes = new OutgoingChanges(List.of(
+                commitAdding("aaaaaaa1", new AddedLine("pom.xml", 6, "      <version>1.2.0-SNAPSHOT</version>"), new AddedLine("README.md", 1, "1.2.0-SNAPSHOT")),
+                commitAdding("bbbbbbb2", new AddedLine("pom.xml", 6, "      <version>1.2.0</version>")),
+                commitAdding("ccccccc3", new AddedLine("module/pom.xml", 2, "  <version>2.0.0-SNAPSHOT</version>"))));
+
+        assertThat(SnapshotVersions.findIn(changes))
+                .extracting(PublishFinding::rule, PublishFinding::toString)
+                .containsExactly(
+                        tuple(PublishRule.SNAPSHOT_VERSION, "pom.xml:6 in commit aaaaaaa: a -SNAPSHOT version"),
+                        tuple(PublishRule.SNAPSHOT_VERSION, "module/pom.xml:2 in commit ccccccc: a -SNAPSHOT version"));
+    }
+
+    @Test
     void proposesADraftTitledByItsKeyWithAPlainBody() {
         DraftProposal proposal = DraftProposal.forWork(BRANCH, MAIN, "  Fit the lamp ", "The brass one.\n");
 
@@ -195,5 +214,9 @@ class DeliveryClaimsTest {
 
     private static MergeRequestView view(MergeRequestState state, boolean draft, String source, String target, String head) {
         return new MergeRequestView(ADDRESS, state, draft, source, target, head, null, null);
+    }
+
+    private static OutgoingCommit commitAdding(String id, AddedLine... lines) {
+        return new OutgoingCommit(id, "A <a@example.org>", "A <a@example.org>", "HRN-3 Bump the lamp", List.of("pom.xml"), List.of(lines));
     }
 }

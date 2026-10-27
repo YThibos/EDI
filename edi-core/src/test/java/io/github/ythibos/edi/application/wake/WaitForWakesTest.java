@@ -54,7 +54,7 @@ class WaitForWakesTest {
     @Test
     void acknowledgesADeliveryWhenTheSameSessionWaitsAgain() {
         UUID primary = primarySession();
-        home.recordStatus().report(worker.id(), StatusState.BLOCKED, null, null, "The lamp is missing.");
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
         home.waitForWakes().deliverTo(primary);
 
         assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
@@ -101,7 +101,7 @@ class WaitForWakesTest {
     void gathersWakesIntoOneBatchWhileTheCaptainKeepsTheChatQuiet() {
         UUID primary = primarySession();
         home.changePresence().quiet();
-        home.recordStatus().report(worker.id(), StatusState.BLOCKED, null, null, "The lamp is missing.");
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
 
         assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
         home.clock().advance(Duration.ofMinutes(29));

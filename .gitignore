@@ -1,5 +1,7 @@
 target/
 personal/
+# The captain's symlink to EDI's home, to browse it beside the source.
+/.edi
 
 node_modules/
 .angular/

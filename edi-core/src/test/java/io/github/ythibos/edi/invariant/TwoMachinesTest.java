@@ -127,7 +127,7 @@ class TwoMachinesTest {
                     .isInstanceOf(Refusal.class).hasMessageContaining("The publish check refuses").hasMessageNotContaining(TOKEN);
             HookRun refused = push.finished();
             assertThat(refused.refused()).isTrue();
-            assertThat(refused.output()).contains("Refused: the outgoing commits carry a secret or personal material.")
+            assertThat(refused.output()).contains("Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.")
                     .doesNotContain(TOKEN).doesNotContain(DENIED_HOST);
             assertThat(home.forge().openedDrafts()).isEmpty();
         }
