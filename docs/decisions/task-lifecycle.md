@@ -12,7 +12,7 @@ A task can wait on the captain, be parked for the night and have a dead worker a
 ## Decision
 
 `domain/task/TaskStage` holds where a task is in its life: QUEUED, WORKING, DELIVERED, CHANGING, READY, MERGED, LANDED, RETIRED and DROPPED, to be stored in `task.stage`.
-`domain/task/StageTransitions` is the only place a stage changes: `move` takes the stage and a `StageTrigger` carrying the facts its guard reads, and either refuses, naming every gap, or returns the `StageChange` the `StageChanged` event records, with the stage before and after and the reason.
+`domain/task/StageTransitions` is the only place a stage changes: `move` takes the stage and a `StageTrigger` carrying the facts its guard reads, and either refuses, naming every gap, or returns the `StageChange` a `StageChanged` event is to record, with the stage before and after and the reason.
 
 | From | To | Trigger | Guard |
 |---|---|---|---|
