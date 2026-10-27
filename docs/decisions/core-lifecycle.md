@@ -12,7 +12,7 @@ A stopping core stops answering at once but keeps its lock while in-flight reque
 ## Decision
 
 `CoreInstanceLock` takes an exclusive lock on `state/core.pid` and writes the core's process id before the store or the token is touched, so a second core on the same home fails to start, naming the file.
-`edi up` starts `edi-core` detached with `setsid -f`, its output appended to `state/logs/core.log`, waits up to a minute for its health, asks for the primary's launch ([primary-startup-context](primary-startup-context.md)) and opens a tmux session of that name in the EDI home running `claude` with the captain's opening prompt (`PrimaryWindow`, [opening-turn](opening-turn.md)); `--core-only` stops after the core.
+`edi up` starts `edi-core` detached with `setsid -f`, its output appended to `state/logs/core.log`, waits up to a minute for its health, asks for the primary's launch ([primary-startup-context](primary-startup-context.md)) and opens a tmux session of that name in the EDI home running `claude` with no prompt submitted, so it waits for the captain to type (`PrimaryWindow`, [opening-turn](opening-turn.md)); `--core-only` stops after the core.
 `edi down` asks the core to stop: `StopTheCore` refuses while workers run, or with `--force-stop-workers` needs the captain's word on the home and stops each recorded worker ([captains-word](captains-word.md)); a stopping core takes no new work but lets a running round finish.
 A core counts as stopped once it has let go of `state/core.pid`: `CorePidFile.isHeld` tries the same lock, and `LocalCore.awaitItsStop` waits for it for at most 90 seconds, naming the process and file when it runs out.
 `edi update` refuses a checkout that is not a clean clone, pulls fast-forward only, and runs `ops/install.sh`, which builds with `./mvnw -Pnative verify` through `mise exec` in the checkout, refusing first when mise or a pinned tool is missing, and installs `edi`, `edi-core` and the skills' links into the EDI home.
@@ -48,3 +48,4 @@ When releases are published as built executables, or something other than the co
 - 19/10/2026: a native build failed from a shell outside the checkout, so the install builds through `mise exec`.
 - 22/10/2026: `edi update` started the new core while the old one still held the home, leaving none running, so a stop is awaited on the lock (EDI-36).
 - 23/10/2026: the primary opens with the captain's opening prompt already submitted (EDI-43).
+- 27/10/2026: at the captain's request the primary opens with no prompt submitted and waits for the captain to type (EDI-101).

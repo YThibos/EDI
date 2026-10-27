@@ -20,10 +20,9 @@ public record StatusReport(StatusState state, StatusKey key, Instant until, Stri
 
     public static StatusReport fromWorker(StatusState state, StatusKey key, Instant until, String text, CaptainAddress address) {
         StatusReport report = new StatusReport(state, key, until, text);
-        if (address.opens(report.text())) {
-            throw new Refusal("A worker reports to EDI and never addresses the captain, so a status never opens with \""
-                    + address.vocative() + "\" or \"Captain,\"; say what happened instead.");
-        }
+        report.requireAddressedToEdi(address);
+        report.requireTheKeyOfAQuestion();
+        report.requireTheEndOfAPause();
         return report;
     }
 
@@ -41,5 +40,29 @@ public record StatusReport(StatusState state, StatusKey key, Instant until, Stri
 
     public boolean isDone() {
         return state == StatusState.DONE;
+    }
+
+    private void requireAddressedToEdi(CaptainAddress address) {
+        if (address.opens(text)) {
+            throw new Refusal("A worker reports to EDI and never addresses the captain, so a status never opens with \""
+                    + address.vocative() + "\" or \"Captain,\"; say what happened instead.");
+        }
+    }
+
+    private void requireTheKeyOfAQuestion() {
+        if (isForThePrimary() && key == null) {
+            throw new Refusal("A " + state.word() + " status names what it waits on with --key, so the message that answers it can settle it.");
+        }
+    }
+
+    private void requireTheEndOfAPause() {
+        if (isAPause() && until == null) {
+            throw new Refusal("A paused status says when the pause ends with --until, such as --until 2026-10-16T14:30:00Z, "
+                    + "so EDI notices a pause that overruns.");
+        }
+    }
+
+    private boolean isAPause() {
+        return state == StatusState.PAUSED;
     }
 }

@@ -52,8 +52,12 @@ public class WorkerContext {
             return task.intake().deliveryOr(project.delivery());
         }
 
+        public TaskKind kind() {
+            return task.intake().kind();
+        }
+
         public boolean isAShip() {
-            return task.intake().kind() == TaskKind.SHIP;
+            return kind() == TaskKind.SHIP;
         }
 
         public Path report() {

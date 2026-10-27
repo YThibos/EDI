@@ -150,12 +150,14 @@ class CleanUpTaskTest {
         Worker scout = dispatched.launched().worker();
         Path nested = Files.createDirectories(dispatched.launched().worktree().resolve("scratch/upstream-copy"));
         FixtureRepository.initialise(nested).write("a.txt", "a\n").commit("Start");
+        Path report = Files.writeString(home.home().taskDirectory(new TaskId("map-caves")).resolve("report.md"), "The caves run north.\n");
         home.recordStatus().report(scout.id(), StatusState.DONE, null, null, "The caves are mapped.");
+        Files.delete(report);
 
         assertThatThrownBy(() -> cleanUp("map-caves")).isInstanceOf(Refusal.class)
                 .hasMessageContaining("a scout is cleaned up only after its done was accepted and its report");
 
-        Files.writeString(home.home().taskDirectory(new TaskId("map-caves")).resolve("report.md"), "The caves run north.\n");
+        Files.writeString(report, "The caves run north.\n");
         cleanUp("map-caves");
 
         assertThat(dispatched.launched().worktree()).doesNotExist();
@@ -173,8 +175,8 @@ class CleanUpTaskTest {
         CountDownLatch polled = home.boardHost().expectPolls(1);
         home.armBoard().arm(scout.id(), TaskReference.parse("map-caves"), board, BoardRounds.binding());
         FakeBoardHost.await(polled);
-        home.recordStatus().report(scout.id(), StatusState.DONE, null, null, "The caves are mapped.");
         Files.writeString(taskDirectory.resolve("report.md"), "The caves run north.\n");
+        home.recordStatus().report(scout.id(), StatusState.DONE, null, null, "The caves are mapped.");
 
         cleanUp("map-caves");
 
