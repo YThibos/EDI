@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.project.NativeImageInput;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
@@ -95,14 +96,22 @@ final class BriefSections {
     }
 
     private static String jvmEvidenceOf(BriefFacts facts) {
-        return facts.project().verify() == null ? "the JVM build and its tests are" : "`" + facts.project().verify() + "` is";
+        return jvmVerificationOf(facts) + (facts.project().verify() == null ? " are" : " is");
+    }
+
+    private static String jvmVerificationOf(BriefFacts facts) {
+        return facts.project().verify() == null ? "the JVM build and its tests" : "`" + facts.project().verify() + "`";
     }
 
     private static String whereTheSkippedNativeBuildIsExplained(BriefFacts facts) {
         return switch (facts.delivery()) {
-            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why, and the full optimised native build is left to CI.";
+            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why" + whatIsLeftToCi(facts) + ".";
             case LOCAL_BRANCH, LOCAL_APPLY, REPORT -> "`" + facts.reportPath() + "` says the native build was not needed and why.";
         };
+    }
+
+    private static String whatIsLeftToCi(BriefFacts facts) {
+        return facts.project().ciRuns() ? ", and the full optimised native build is left to CI" : "";
     }
 
     private static String shipDelivery(BriefFacts facts) {
@@ -148,17 +157,33 @@ final class BriefSections {
     private static String draftReview(BriefFacts facts) {
         String craft = facts.project().craftRules() ? ", followed by the craftsmanship rules block, verbatim" : "";
         return "Commit on `" + facts.dispatch().branch() + "`, then validate and deliver through the no-mistakes pipeline from the isolated copy:\n\n"
-                + "```sh\nno-mistakes axi run --base-branch " + facts.base() + " --intent \"$(cat '" + facts.intentPath() + "')\"\n```\n\n"
+                + "```sh\nno-mistakes axi run --base-branch " + facts.base() + " --skip " + skippedSteps(facts) + " --intent \"$(cat '"
+                + facts.intentPath() + "')\"\n```\n\n"
+                + catchingUpWithTheBase(facts) + "\n"
                 + "EDI wrote that intent from the Captain's intent and Spec sections above" + craft
                 + "; it rewrites the intent when the task is noted, so pass it unchanged.\n"
                 + "Answer each gate yourself and never pass `--yes`; an ask-user finding is not yours to answer,"
                 + " so report it with `edi status needs-decision --key nm-<run>-<step>` and stop.\n"
-                + "The pipeline pushes the branch and opens the merge request as a draft; mark it ready for review once its checks are green.";
+                + "The pipeline pushes the branch and opens the merge request as a draft; mark it ready for review once " + whenItIsReadyForReview(facts) + ".";
+    }
+
+    private static String skippedSteps(BriefFacts facts) {
+        return facts.project().skippedPipelineSteps().stream().map(PipelineStep::word).collect(Collectors.joining(","));
+    }
+
+    private static String catchingUpWithTheBase(BriefFacts facts) {
+        String base = "origin/" + facts.base();
+        return "Before each run, fetch, and when the branch is behind `" + base + "` run `git merge --no-ff -m \"" + facts.dispatch().branch().workKey()
+                + " Merge " + base + " into " + facts.dispatch().branch() + "\" " + base + "`; never rebase.";
+    }
+
+    private static String whenItIsReadyForReview(BriefFacts facts) {
+        return facts.project().ciRuns() ? "its checks are green" : "the pipeline passes";
     }
 
     private static String shipDone(BriefFacts facts) {
         return switch (facts.delivery()) {
-            case DRAFT_REVIEW -> "CI is green on the merge request for your last commit, and `" + facts.reportPath() + "` holds a short delivery note.\n"
+            case DRAFT_REVIEW -> evidenceOfTheMergeRequest(facts) + "\n"
                     + "Then run `edi status done -- <the merge request's full URL>`.\n"
                     + "EDI accepts it only when the merge request from `" + facts.dispatch().branch() + "` to `" + facts.base()
                     + "` is open, as a draft or ready for review, or merged, at your last commit, and the branch adds no `-SNAPSHOT` version.";
@@ -170,6 +195,19 @@ final class BriefSections {
                     + "EDI accepts it only when the report exists and the copy holds no commit or change beyond `origin/" + facts.base()
                     + "`, and then retires the task.";
         };
+    }
+
+    private static String evidenceOfTheMergeRequest(BriefFacts facts) {
+        return facts.project().ciRuns()
+                ? "CI is green on the merge request for your last commit, and `" + facts.reportPath() + "` holds a short delivery note."
+                : "Your last commit passes the local verification (" + localVerificationOf(facts) + "), and `" + facts.reportPath()
+                        + "` holds a short delivery note with that evidence.";
+    }
+
+    private static String localVerificationOf(BriefFacts facts) {
+        return facts.project().buildsANativeImage()
+                ? jvmVerificationOf(facts) + ", plus `" + facts.project().nativeBuild() + "` when the change can reach the native image"
+                : jvmVerificationOf(facts);
     }
 
     private static String scoutDone(BriefFacts facts) {

@@ -8,6 +8,7 @@ import java.util.Set;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchKind;
+import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.project.AiScaffolding;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
@@ -31,6 +32,7 @@ public record ProjectEntry(
         String verify,
         String nativeBuild,
         boolean largeBuilds,
+        boolean ciRuns,
         List<ShipBriefRule> shipBriefRules) {
 
     public ProjectEntry {
@@ -64,5 +66,9 @@ public record ProjectEntry(
 
     public OptionalInt workerCapacity() {
         return capacity == null ? OptionalInt.empty() : OptionalInt.of(capacity);
+    }
+
+    public List<PipelineStep> skippedPipelineSteps() {
+        return ciRuns ? List.of(PipelineStep.REBASE) : List.of(PipelineStep.REBASE, PipelineStep.CI);
     }
 }

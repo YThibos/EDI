@@ -17,7 +17,7 @@ The why behind every rule is in [docs/decisions](docs/decisions/README.md); read
 - Every commit subject starts with the work key, for example `EDI-2 Add the port inventory`; dependency upkeep uses `EDI-1`.
 - No trailer of any kind: no `Co-authored-by`, no `Signed-off-by` naming a model or tool, no "Generated with" line.
 - No SNAPSHOT version anywhere; the enforcer plugin refuses one.
-- Never push to `main`, never force-push, never merge; deliveries are draft pull requests the captain merges.
+- Never push to `main`, never force-push, never merge into `main`; deliveries are draft pull requests the captain merges.
 
 ## Code
 
