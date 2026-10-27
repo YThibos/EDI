@@ -74,3 +74,4 @@ When the round's tmux calls show up in its time, Claude Code reports a pending p
 - 26/10/2026: the EDI-74 review found that the brief asked for a key and an end that `edi status` never required, so it refuses a status without them (EDI-77).
 - 27/10/2026: a stop the round notices late is dated at the time the transcript shows it, so the measure of a task's active time ends the stretch there ([trackers-and-time-booking](trackers-and-time-booking.md), EDI-54).
 - 27/10/2026: the round began noticing native builds and test runs that several workers run at once ([local-native-builds](local-native-builds.md), EDI-99).
+- 27/10/2026: EDI began naming the steps every pipeline run skips in the brief's pipeline call ([pipeline-steps](pipeline-steps.md), EDI-104).
