@@ -5,7 +5,6 @@ export type Levels = Record<Scale, number>;
 export interface PersonalityShown {
   address: string;
   chosen: boolean;
-  demoHolds: boolean;
   levels: Levels;
   presets: PresetShown[];
 }

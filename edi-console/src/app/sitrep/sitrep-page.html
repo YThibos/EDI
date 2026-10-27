@@ -28,7 +28,7 @@
   }
   @if (sitrep(); as sitrep) {
     @if (personalityOpen()) {
-      <app-personality-desk (closed)="personalityOpen.set(false)" />
+      <app-personality-desk [demoHolds]="sitrep.presence.demo" (closed)="personalityOpen.set(false)" />
     }
     <div class="sr-glance">
       <app-hud-strip [needYou]="waitingCount()" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />

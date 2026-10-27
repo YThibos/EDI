@@ -8,7 +8,6 @@ export function personalityFixture(changes: Partial<PersonalityShown> = {}): Per
   return {
     address: 'Commander',
     chosen: true,
-    demoHolds: false,
     levels: BALANCED,
     presets: [
       { name: 'Balanced', levels: BALANCED },

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { fromEvent } from 'rxjs';
 
 import { refusalOf } from './answer-sentence';
@@ -13,6 +13,7 @@ import { News, railChanges, sampleMessage } from './sample-message';
   styleUrl: './personality-desk.css',
 })
 export class PersonalityDesk {
+  readonly demoHolds = input(false);
   readonly closed = output<void>();
 
   private readonly api = inject(ConsoleApi);

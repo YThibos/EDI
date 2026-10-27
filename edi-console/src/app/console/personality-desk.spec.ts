@@ -112,7 +112,10 @@ describe('PersonalityDesk', () => {
   });
 
   it('says that the demo levels apply on top while a demo holds', async () => {
-    const desk = (await opened(personalityFixture({ demoHolds: true }))).nativeElement as HTMLElement;
+    const fixture = await opened();
+    fixture.componentRef.setInput('demoHolds', true);
+    await fixture.whenStable();
+    const desk = fixture.nativeElement as HTMLElement;
 
     expect(desk.textContent).toContain("While the demo holds, EDI speaks with the demo's levels on top of these.");
   });

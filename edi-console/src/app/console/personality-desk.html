@@ -58,7 +58,7 @@
         @if (kept()?.chosen === false) {
           <span class="sr-desk__note">No personality is chosen yet, so Balanced applies until you keep one.</span>
         }
-        @if (kept()?.demoHolds) {
+        @if (demoHolds()) {
           <span class="sr-desk__note">While the demo holds, EDI speaks with the demo's levels on top of these.</span>
         }
       </div>

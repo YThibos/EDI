@@ -242,6 +242,25 @@ describe('SitrepPage', () => {
     expect(latch.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('tells the open desk a demo holds once the header has asked EDI for one', async () => {
+    const fixture = await rendered();
+    const page = fixture.nativeElement as HTMLElement;
+
+    (page.querySelector('.sr-latch') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    http.expectOne('/api/personality').flush(personalityFixture());
+    await fixture.whenStable();
+
+    expect(page.textContent).not.toContain('While the demo holds');
+
+    (page.querySelectorAll('.sr-presence__button')[1] as HTMLButtonElement).click();
+    http.expectOne('/api/presence').flush('Presence: present for a demo until 2026-10-15 11:00 CEST.');
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'present', demo: true, words: 'present for a demo until 2026-10-15 11:00 CEST' } }));
+    await fixture.whenStable();
+
+    expect(text(page, 'app-personality-desk .sr-desk__foot')).toContain("While the demo holds, EDI speaks with the demo's levels on top of these.");
+  });
+
   it('asks the captain to sign in when the console has no session', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush('This call needs a console session.', { status: 401, statusText: 'Unauthorized' });
