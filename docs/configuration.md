@@ -59,7 +59,7 @@ An effort in the file is `low`, `medium` or `high`; only the captain's word reco
 Its `edi-personality:` section holds the personality EDI speaks with: humour, formality, verbosity, warmth, directness, initiative, depth, enthusiasm and flavour, each from 0 to 10, and under `demo:` the levels a demo overrides ([personality](decisions/personality.md)).
 A scale the section leaves out takes its Balanced level, and a demo override left out is formality 7, humour 3, verbosity 5 and flavour 7.
 Without the section EDI speaks Balanced and offers the presets in the next session.
-`edi personality` shows the personality, and `/personality` changes it in the primary session; the core rewrites only the section and keeps the rest of the file as written.
+`edi personality` shows the personality, and `/personality` changes it in the primary session, as the console's personality desk does ([console-and-boards](console-and-boards.md)); the core rewrites only the section and keeps the rest of the file as written.
 
 ```sh
 edi personality                           # the personality, the address word and the bad-news levels
