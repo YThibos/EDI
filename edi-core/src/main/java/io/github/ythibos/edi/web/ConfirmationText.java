@@ -96,8 +96,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
                 : "its next dispatch starts a fresh session there with its brief";
         if (!adopted.moved()) {
             return "Registered the old copy " + adopted.oldCopy() + " of " + adopted.task() + " in place as " + adopted.copy() + ", on "
-                    + adopted.branch() + " at " + adopted.head() + "; a process still works there, so you launch no worker in it: adopt again once"
-                    + " that process has stopped, and the copy moves under your worktrees with its uncommitted work.";
+                    + adopted.branch() + " at " + adopted.head() + "; a process still works there, so I launch no worker in it: adopt again once"
+                    + " that process has stopped, and the copy moves under my worktrees with its uncommitted work.";
         }
         return "Took over " + adopted.task() + ": the old copy " + adopted.oldCopy() + " moved to " + adopted.copy() + " with its uncommitted work, on "
                 + adopted.branch() + " at " + adopted.head() + ", and " + next + ".";

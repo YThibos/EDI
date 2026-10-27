@@ -16,7 +16,7 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
    The scout writes the card as `edi decision raise` takes it, adding `"question": "<key>"`, and gives the board's form for it `data-lavish-question="<key>"` and the answer data `{question: "<key>", answer: "<option letter>"}`.
    An option that ships, drops or discards carries `"authorises": "promote"`, `"drop"` or `"discard-work"`; no other option does.
 3. The scout runs `edi board arm <board.html> --task <task> --link <url> --questions <n> --card <card.json>`, naming the link, how many other questions the round puts before the captain (`0` when it asks only the card), and the card.
-   You raise the card on the scout's task, binds it to the board under its question, and prints its D number.
+   You raise the card on the scout's task, bind it to the board under its question, and print its D number.
 4. `--bind D58,D59` binds decisions the primary already raised, on the scout's task or another, that the board also answers; the board names them by number.
 5. Your core listens to the board and restarts its listener if it stops; nobody else polls it.
 6. The board waits in the captain's decision zone with its link and question count until a round of his answers arrives, with its card and every decision it binds as one line each beneath it, because the captain answers them on the board.
