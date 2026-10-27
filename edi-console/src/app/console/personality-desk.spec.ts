@@ -104,6 +104,20 @@ describe('PersonalityDesk', () => {
     expect(sliders(desk)[0].value).toBe('6');
   });
 
+  it('keeps a level the captain slides while the focus read is still on its way', async () => {
+    const fixture = await opened();
+    const desk = fixture.nativeElement as HTMLElement;
+
+    window.dispatchEvent(new Event('focus'));
+    const read = http.expectOne({ method: 'GET', url: '/api/personality' });
+    slide(sliders(desk)[0], 9);
+    read.flush(personalityFixture({ levels: PLAIN }));
+    await fixture.whenStable();
+
+    expect(sliders(desk)[0].value).toBe('9');
+    expect(button(desk, 'Keep').disabled).toBe(false);
+  });
+
   it('lets a captain who has chosen no personality keep Balanced as it stands', async () => {
     const desk = (await opened(personalityFixture({ chosen: false }))).nativeElement as HTMLElement;
 

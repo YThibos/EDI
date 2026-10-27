@@ -104,13 +104,21 @@ export class PersonalityDesk {
   }
 
   private shown(personality: PersonalityShown): void {
+    if (this.changed()) {
+      this.kept.set(personality);
+    } else {
+      this.settled(personality);
+    }
+  }
+
+  private settled(personality: PersonalityShown): void {
     this.kept.set(personality);
     this.draft.set({ ...personality.levels });
   }
 
   private landed(personality: PersonalityShown): void {
     this.sending.set(false);
-    this.shown(personality);
+    this.settled(personality);
     this.justKept.set(true);
   }
 
