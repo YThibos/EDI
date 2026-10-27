@@ -31,7 +31,7 @@ class OpenTheSitrepAtSessionStartTest {
     private static final boolean LAUNCHED = true;
     private static final boolean RESUMED = false;
     private static final String NO_DESKTOP = "";
-    private static final String OPENING_PROMPT = "Hello EDI, SITREP board, please.";
+    private static final String CAPTAINS_FIRST_PROMPT = "/sitrep board";
 
     @TempDir
     private Path directory;
@@ -79,7 +79,7 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
 
         sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
+        home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
         ConsoleOpening openingTurn = console.openFor(Optional.of(primary), CONSOLE);
         List<String> pagesAfterTheOpeningTurn = Files.readAllLines(opened);
         HookAnswer stopped = home.primaryHooks().stopping(primary, List.of());
@@ -102,7 +102,7 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
 
         sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
+        home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
         home.primaryHooks().promptSubmitted(primary, "/sitrep board");
         ConsoleOpening afterTheInterrupt = console.openFor(Optional.of(primary), CONSOLE);
 
@@ -136,7 +136,7 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
 
         sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        home.primaryHooks().promptSubmitted(primary, OPENING_PROMPT);
+        home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
         ConsoleOpening fromTheSession = console.openFor(Optional.of(primary), CONSOLE);
         ConsoleOpening fromATerminal = console.openFor(Optional.empty(), CONSOLE);
 

@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 record PrimaryLaunch(String session, Path directory, Path settings, Path systemPrompt) {
 
     private static final String SEPARATOR = ": ";
-    private static final String OPENING_PROMPT = "Hello EDI, SITREP board, please.";
 
     static PrimaryLaunch read(String text) {
         Map<String, String> fields = text.lines()
@@ -20,7 +19,7 @@ record PrimaryLaunch(String session, Path directory, Path settings, Path systemP
     }
 
     List<String> claude() {
-        return List.of("claude", "--settings", settings.toString(), "--append-system-prompt-file", systemPrompt.toString(), "--", OPENING_PROMPT);
+        return List.of("claude", "--settings", settings.toString(), "--append-system-prompt-file", systemPrompt.toString());
     }
 
     private static String required(Map<String, String> fields, String name) {
