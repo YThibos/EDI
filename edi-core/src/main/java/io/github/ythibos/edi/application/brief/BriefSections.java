@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.project.NativeImageInput;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
@@ -148,12 +149,24 @@ final class BriefSections {
     private static String draftReview(BriefFacts facts) {
         String craft = facts.project().craftRules() ? ", followed by the craftsmanship rules block, verbatim" : "";
         return "Commit on `" + facts.dispatch().branch() + "`, then validate and deliver through the no-mistakes pipeline from the isolated copy:\n\n"
-                + "```sh\nno-mistakes axi run --base-branch " + facts.base() + " --intent \"$(cat '" + facts.intentPath() + "')\"\n```\n\n"
+                + "```sh\nno-mistakes axi run --base-branch " + facts.base() + " --skip " + skippedSteps(facts) + " --intent \"$(cat '"
+                + facts.intentPath() + "')\"\n```\n\n"
+                + catchingUpWithTheBase(facts) + "\n"
                 + "EDI wrote that intent from the Captain's intent and Spec sections above" + craft
                 + "; it rewrites the intent when the task is noted, so pass it unchanged.\n"
                 + "Answer each gate yourself and never pass `--yes`; an ask-user finding is not yours to answer,"
                 + " so report it with `edi status needs-decision --key nm-<run>-<step>` and stop.\n"
                 + "The pipeline pushes the branch and opens the merge request as a draft; mark it ready for review once its checks are green.";
+    }
+
+    private static String skippedSteps(BriefFacts facts) {
+        return facts.project().skippedPipelineSteps().stream().map(PipelineStep::word).collect(Collectors.joining(","));
+    }
+
+    private static String catchingUpWithTheBase(BriefFacts facts) {
+        String base = "origin/" + facts.base();
+        return "Before each run, fetch, and when the branch is behind `" + base + "` run `git merge --no-ff -m \"" + facts.dispatch().branch().workKey()
+                + " Merge " + base + " into " + facts.dispatch().branch() + "\" " + base + "`; never rebase.";
     }
 
     private static String shipDone(BriefFacts facts) {

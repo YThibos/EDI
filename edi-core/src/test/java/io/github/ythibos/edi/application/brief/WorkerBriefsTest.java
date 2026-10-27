@@ -54,6 +54,22 @@ class WorkerBriefsTest {
     }
 
     @Test
+    void runsThePipelineWithoutItsRebaseStepAndWithoutItsCiStepWhereTheProjectsCiDoesNotRun() {
+        String intent = " --intent \"$(cat '/home/developer/.edi/data/tasks/fit-lamp/intent.md')\"";
+
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true))).contains("no-mistakes axi run --base-branch main --skip rebase" + intent);
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(false))).contains("no-mistakes axi run --base-branch main --skip rebase,ci" + intent);
+    }
+
+    @Test
+    void tellsTheWorkerToCatchUpWithTheBaseByAMergeCommitBeforeEachPipelineRun() {
+        String brief = briefs.briefFor(BriefFixtures.shipWhereCi(true));
+
+        assertThat(brief).contains("```\n\nBefore each run, fetch, and when the branch is behind `origin/main` run"
+                + " `git merge --no-ff -m \"HRN-3 Merge origin/main into feature/HRN-3\" origin/main`; never rebase.\n");
+    }
+
+    @Test
     void asksForTheReasonTheNativeBuildWasSkippedInTheReportWhenNoMergeRequestCarriesIt() {
         String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage(DeliveryMode.REPORT));
 

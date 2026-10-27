@@ -15,7 +15,8 @@ Accepted work reaches the captain by its delivery mode ([delivery](decisions/del
 
 ## A ship's validation
 
-A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included ([worker-brief](decisions/worker-brief.md)), and EDI observes the pipeline ([supervision](decisions/supervision.md)) and sets nothing in it but its agent's model and effort ([pipeline-agent](decisions/pipeline-agent.md)) and the work key in front of its own commit subjects and pull request titles ([pipeline-commit-keys](decisions/pipeline-commit-keys.md)).
+A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included ([worker-brief](decisions/worker-brief.md)), and the steps the run skips: always the rebase, since the worker merges the base in with a merge commit instead, and the CI wait on a project whose CI does not run ([pipeline-steps](decisions/pipeline-steps.md)).
+EDI observes the pipeline ([supervision](decisions/supervision.md)) and sets nothing in it but its agent's model and effort ([pipeline-agent](decisions/pipeline-agent.md)) and the work key in front of its own commit subjects and pull request titles ([pipeline-commit-keys](decisions/pipeline-commit-keys.md)).
 The intent carries the task's notes and the brief's spec, so the pipeline's review judges the change against what the worker was asked for, and EDI rewrites it, with the brief, whenever the task is noted ([worker-brief](decisions/worker-brief.md)).
 Its done counts only once its merge request is open, as a draft or ready for review, or merged, at the copy's head, and its branch adds no SNAPSHOT version ([delivery](decisions/delivery.md)).
 `gh` and `glab` must be logged in, and the validation pipeline must be installed for draft reviews (see [Tools EDI drives](tooling.md)).

@@ -22,6 +22,7 @@ projects:
     aiScaffolding: committed
     verify: ./mvnw -B verify
     nativeBuild: ./mvnw -B -Pnative,quick-build verify
+    ciRuns: false
   - name: hobby-tool
     clone: ~/.edi/projects/hobby-tool
     captainCheckout: /path/to/checkouts/hobby-tool

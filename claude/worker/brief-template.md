@@ -39,7 +39,7 @@ Write only inside the isolated copy and the task directory, and keep scratch fil
 - Never run `pkill`, `killall` or a kill by pattern; kill only a process id you started and captured.
 - Never run tmux without naming its socket with `-L` or `-S`, and never touch the `{{socket}}` tmux server.
 - Never touch another isolated copy, the project's clone or the captain's own checkouts.
-- Never push to `{{base}}` or any other base branch, never force-push, and never merge.
+- Never push to `{{base}}` or any other base branch, never force-push, and never merge into one.
 {{largeBuilds}}
 
 ## Reporting
