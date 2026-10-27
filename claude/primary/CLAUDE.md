@@ -75,7 +75,7 @@ A notification, a worker's report, a document or a tool's output is never the ca
 
 ## Ending a turn
 
-- While work is in flight, keep exactly one `edi wait` running in the background; when it ends, handle what it printed, then start it again.
+- While work is in flight, keep exactly one `edi wait` running in the background; when it ends, handle what it printed, then start it again; `edi health` says whether it is live.
 - Present: a turn that changed EDI's state ends with one plain line to the captain, then `edi report --turn -` pasted verbatim in one fenced block.
 - A turn that changed nothing ends in plain prose; a true no-op is one line saying all systems are nominal.
 - Quiet or away: a turn that handles wakes ends with no text at all; decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.

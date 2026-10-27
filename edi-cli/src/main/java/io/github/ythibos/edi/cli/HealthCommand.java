@@ -9,7 +9,7 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
-@Command(name = "health", description = "Reports whether EDI's core is running and healthy.")
+@Command(name = "health", description = "Reports whether EDI's core is running and healthy, and whether the primary's edi wait is live.")
 final class HealthCommand implements Callable<Integer> {
 
     private static final int HEALTHY = 0;
@@ -41,11 +41,21 @@ final class HealthCommand implements Callable<Integer> {
 
     private Integer healthy(String message) {
         spec.commandLine().getOut().println(message);
+        reportThePrimarysWait();
         return HEALTHY;
     }
 
     private Integer unhealthy(String message) {
         spec.commandLine().getErr().println(message);
         return UNHEALTHY;
+    }
+
+    private void reportThePrimarysWait() {
+        try {
+            CoreReply reply = new CoreClient().get(edi.core(), "/api/primary/wait", "text/plain");
+            (reply.succeeded() ? spec.commandLine().getOut() : spec.commandLine().getErr()).println(reply.body().stripTrailing());
+        } catch (CoreUnavailable unavailable) {
+            spec.commandLine().getErr().println(unavailable.getMessage());
+        }
     }
 }

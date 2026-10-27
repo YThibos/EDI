@@ -19,6 +19,8 @@ While the captain keeps the chat quiet, `WaitForWakes` delivers nothing until th
 Each prompt starts a turn and records the event log's latest sequence as its mark, and a captain report rendered with the session's header records its time on the turn.
 `TurnEnd.blockingReason` blocks the primary's stop when the turn changed state, the captain is present and no report was rendered, and when a task is in flight and no background job runs `edi wait`, which `BackgroundJob` finds with the guard's shell reader.
 A turn's stop is blocked at most three times, and a standby session's stop is never held.
+The stop that ends a turn records on it when it ended and whether a background job ran `edi wait` then; `PrimaryWait` reads that from the role holder's last turn: live, missing, unchecked while a turn runs, or missing because no session holds the role.
+`GET /api/primary/wait` answers it to any caller, `edi health` prints it below the core's own line without changing its exit code, and the status line adds "Wait: none" in dark red while a task is in flight and the wait is missing.
 
 ## Why
 
@@ -31,11 +33,14 @@ The turn-end rules read only the store, the presence and what Claude Code report
 - Acknowledging a wake as it is printed - a primary that crashed before handling it would lose it.
 - Requiring the report in quiet too - every routine wake would print into a chat nobody reads.
 - Asking the core whether a wait is polling - racy at the end of the very turn that starts it.
+- Checking for a live wait with `pgrep -f` - the pattern matches the checking shell itself.
+- Failing `edi health` when the wait is missing - scripts read its exit code as the core's health alone.
 
 ## Consequences
 
 - Good: a new event type must decide whether it wakes the primary, and a burst of events in quiet becomes one turn.
 - Bad: in quiet a worker's question waits up to `presence.quietBatch` for the primary, while a decision reaches the captain at once as a notification.
+- Bad: the wait's answer is what the last turn's stop saw, so it says nothing certain while a turn runs.
 
 ## When to revisit
 
@@ -45,3 +50,4 @@ When Claude Code stops listing background jobs on `Stop`, or a wake proves too u
 
 - 16/10/2026: slice S4 built durable wakes, `edi wait` and the turn-end rules.
 - 17/10/2026: slice S8 batched wakes in quiet and let a quiet turn end without a report.
+- 27/10/2026: EDI-95 let `edi health` and the status line say whether the wait is live, from what the turn's last stop saw.

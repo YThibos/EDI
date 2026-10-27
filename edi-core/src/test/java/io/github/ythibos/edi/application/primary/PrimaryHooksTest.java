@@ -18,6 +18,7 @@ import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
+import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
@@ -106,6 +107,30 @@ class PrimaryHooksTest {
         assertThat(blind.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
         assertThat(blind.reason()).isEqualTo("Work is in flight and no edi wait is live: start edi wait in the background, then stop.");
         assertThat(waiting).isEqualTo(HookAnswer.PROCEED);
+    }
+
+    @Test
+    void remembersWhetherAnEdiWaitRanWhenThePrimarysTurnEnded() {
+        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, true);
+        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+        Instant prompted = home.clock().now();
+
+        PrimaryWait inTheTurn = home.primaryWaits().current();
+        home.primaryHooks().stopping(primary, A_LIVE_WAIT);
+        PrimaryWait afterAWaitingStop = home.primaryWaits().current();
+        home.clock().advance(Duration.ofMinutes(5));
+        home.primaryHooks().promptSubmitted(primary, "<task-notification>done</task-notification>");
+        for (int block = 0; block < 4; block++) {
+            home.primaryHooks().stopping(primary, List.of());
+        }
+        PrimaryWait afterABlindStop = home.primaryWaits().current();
+
+        assertThat(inTheTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN, prompted, 1));
+        assertThat(afterAWaitingStop).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, prompted, 1));
+        assertThat(afterABlindStop).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, home.clock().now(), 1));
+        assertThat(afterABlindStop.needsAWait()).isTrue();
     }
 
     @Test

@@ -135,20 +135,21 @@ public class PrimaryHooks {
 
     private HookAnswer answeredStop(PrimarySession session, List<BackgroundJob> backgroundJobs) {
         boolean supervises = roles.role().standingOf(session.id()) == Standing.PRIMARY;
-        Optional<String> blocked = supervises ? blockingReason(session.turn(), backgroundJobs) : Optional.empty();
+        boolean waitIsLive = BackgroundJob.anyWaitsForEdi(backgroundJobs);
+        Optional<String> blocked = supervises ? blockingReason(session.turn(), waitIsLive) : Optional.empty();
         if (blocked.isPresent()) {
             sessions.save(session.stopBlocked());
             return HookAnswer.blockTheStop(blocked.get());
         }
-        sessions.save(session.turnEnded());
+        sessions.save(session.turnEnded(clock.now(), waitIsLive));
         return HookAnswer.PROCEED;
     }
 
-    private Optional<String> blockingReason(PrimaryTurn turn, List<BackgroundJob> backgroundJobs) {
+    private Optional<String> blockingReason(PrimaryTurn turn, boolean waitIsLive) {
         if (turn == null) {
             return Optional.empty();
         }
         return TurnEnd.blockingReason(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), presenceNow.current().keepsTheChatQuiet(),
-                !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), BackgroundJob.anyWaitsForEdi(backgroundJobs)));
+                !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), waitIsLive));
     }
 }

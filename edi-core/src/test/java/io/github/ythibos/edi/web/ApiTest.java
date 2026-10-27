@@ -307,6 +307,26 @@ class ApiTest {
     }
 
     @Test
+    void tellsAnyCallerWhetherThePrimarysLastTurnEndedWithAnEdiWait() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Watch the lamp.\"}");
+        HttpResponse<String> inTheTurn = get("/api/primary/wait", TEXT);
+        primaryHook(primary, "stop", "{\"stop_hook_active\":false,\"background_tasks\":"
+                + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}");
+
+        HttpResponse<String> live = get("/api/primary/wait", TEXT);
+        HttpResponse<String> forAWorker = send(as(workerTokenFor("api-primary-wait"), "/api/primary/wait", JSON).GET());
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(inTheTurn.body()).startsWith("The primary is in a turn since ").endsWith("; its stop checks that edi wait is live.\n");
+        assertThat(live.statusCode()).isEqualTo(200);
+        assertThat(live.body()).startsWith("edi wait is live: it was running when the primary's last turn ended, at ");
+        assertThat(forAWorker.statusCode()).isEqualTo(200);
+        assertThat(new JsonMapper().readTree(forAWorker.body()).path("sighting").asString()).isEqualTo("LIVE");
+    }
+
+    @Test
     void wakesThePrimaryWithWhatNeedsItAndListsTheOutageHoldList() throws Exception {
         String worker = workerTokenFor("api-wake");
         UUID primary = UUID.randomUUID();

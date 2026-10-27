@@ -58,8 +58,9 @@ public record PrimarySession(
         return withTurn(turn.stopBlocked());
     }
 
-    public PrimarySession turnEnded() {
-        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, null, null, endedAt, null);
+    public PrimarySession turnEnded(Instant at, boolean withAWait) {
+        return new PrimarySession(id, startedAt, process, claimedAt, turn == null ? null : turn.ended(at, withAWait), typedAt,
+                notification, notifiedAt, null, null, endedAt, null);
     }
 
     public PrimarySession notified(String kind, Instant at) {

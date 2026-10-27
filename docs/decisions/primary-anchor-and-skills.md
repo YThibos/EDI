@@ -17,7 +17,7 @@ Every command the anchor or a skill's trigger tells the captain to type is a use
 The procedures nobody types are skills with the `edi-` prefix: `edi-ship`, `edi-scout`, `edi-board`, `edi-presence`, `edi-upkeep`, `edi-recover`, `edi-decision-log`, `edi-personality` and `edi-voice`; each names only commands that exist.
 `ClaudeLayerTest` holds every command the anchor or a trigger names to a skill of that name, and every skill to a directory `ops/install.sh` links.
 `claude/primary/settings.json` holds the seven hooks ([worker-sessions](worker-sessions.md)) and the status line, and no permission rule.
-`edi statusline` posts the statusLine JSON to `/api/statusline` and prints the core's line, or why the core is not answering, always exiting 0; `StatusLineText` writes model and effort, context, session tokens, the two usage limits with their resets, the current directory's branch from one `git status --porcelain=v2 --branch`, and the cache hit ratio, refreshed every 60 seconds.
+`edi statusline` posts the statusLine JSON to `/api/statusline` and prints the core's line, or why the core is not answering, always exiting 0; `StatusLineText` writes model and effort, context, session tokens, the two usage limits with their resets, the current directory's branch from one `git status --porcelain=v2 --branch`, and the cache hit ratio, refreshed every 60 seconds, with "Wait: none" after them while work is in flight and no `edi wait` is live ([wakes-and-turn-end](wakes-and-turn-end.md)).
 
 ## Why
 
@@ -47,3 +47,4 @@ When the anchor nears its budget, Claude Code gives skills command aliases or ch
 - 19/10/2026: the status line joined the primary's settings at the captain's request.
 - 22/10/2026: six commands the anchor named answered "Unknown command", because no skill carried their names, so every typed command became a skill of its name (EDI-32).
 - 23/10/2026: the anchor gained a Character section, and the `personality` and `edi-personality` skills joined it (EDI-31).
+- 27/10/2026: EDI-95 marked a missing `edi wait` on the status line while work is in flight.

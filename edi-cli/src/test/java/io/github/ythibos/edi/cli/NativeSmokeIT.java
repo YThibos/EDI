@@ -153,11 +153,19 @@ class NativeSmokeIT {
     }
 
     @Test
-    void theCommandReportsTheCoreHealthy() throws Exception {
+    void theCommandReportsTheCoreHealthyAndThePrimarysLiveWait() throws Exception {
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+        String session = "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"";
+        ediIn(Path.of(""), primary, session + "}", "hook", "session-start");
+        ediIn(Path.of(""), primary, session + ",\"prompt\":\"How is the native lamp?\"}", "hook", "user-prompt-submit");
+        ediIn(Path.of(""), primary, session + ",\"background_tasks\":[{\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}",
+                "hook", "stop");
+
         CommandRun health = edi("", "health");
 
         assertThat(health.exitCode()).isZero();
-        assertThat(health.output()).isEqualTo("EDI core is up on 127.0.0.1:" + port + ".\n");
+        assertThat(health.output()).startsWith("EDI core is up on 127.0.0.1:" + port + ".\n"
+                + "edi wait is live: it was running when the primary's last turn ended, at ");
     }
 
     @Test

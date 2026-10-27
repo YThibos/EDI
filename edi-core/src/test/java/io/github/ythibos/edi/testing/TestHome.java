@@ -134,6 +134,7 @@ import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrepareThePrimary;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
+import io.github.ythibos.edi.application.primary.PrimaryWaitQuery;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
@@ -816,6 +817,10 @@ public final class TestHome {
 
     public PrimarySessions primarySessions() {
         return new PrimarySessions(primarySessions, processes, transaction);
+    }
+
+    public PrimaryWaitQuery primaryWaits() {
+        return new PrimaryWaitQuery(primarySessions(), tasks, transaction);
     }
 
     public PrimaryHooks primaryHooks() {
