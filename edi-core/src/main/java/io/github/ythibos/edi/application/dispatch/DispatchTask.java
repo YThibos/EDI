@@ -217,6 +217,7 @@ public class DispatchTask {
     }
 
     private DispatchOutcome carriedOut(Dispatching dispatching, Actor actor) {
+        launcher.requireABriefWithinItsLength(dispatching.dispatch());
         refreshes.requireFresh(dispatching.project());
         if (dispatching.researchFirst().queuesResearch()) {
             return researchFirst(dispatching.dispatch(), actor);
@@ -236,9 +237,14 @@ public class DispatchTask {
         DispatchRequest planRequest = research.researchRequestFor(shipDispatch);
         Dispatching planning = transaction.execute(_ -> {
             TaskId plan = research.queueThePlanOf(shipDispatch, actor);
-            return dispatching(new TaskReference.ById(plan), planRequest);
+            return withinItsLength(dispatching(new TaskReference.ById(plan), planRequest));
         });
         return carriedOut(planning, actor).planning(shipDispatch.task());
+    }
+
+    private Dispatching withinItsLength(Dispatching dispatching) {
+        launcher.requireABriefWithinItsLength(dispatching.dispatch());
+        return dispatching;
     }
 
     private DispatchOutcome deferred(Dispatching dispatching, Actor actor) {

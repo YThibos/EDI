@@ -54,4 +54,9 @@ public record BriefFacts(
     public boolean followsAPlan() {
         return plan != null;
     }
+
+    BriefFacts withoutTheCaptainsNotesOrResearchPlan() {
+        Task unnoted = new Task(task.id(), task.intake(), task.state(), "", task.hold(), task.created(), task.closed());
+        return new BriefFacts(unnoted, worker, project, dispatch, base, worktree, taskDirectory, ediSocket, craftRules, null, asksForTheTimeWorked);
+    }
 }

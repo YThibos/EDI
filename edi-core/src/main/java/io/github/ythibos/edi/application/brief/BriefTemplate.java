@@ -4,10 +4,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -16,6 +19,7 @@ final class BriefTemplate implements RuntimeHintsRegistrar {
 
     static final String RESOURCE = "claude/worker/brief-template.md";
 
+    private static final String SECTION_HEADING = "## ";
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-zA-Z]+)}}");
 
     @Override
@@ -24,10 +28,14 @@ final class BriefTemplate implements RuntimeHintsRegistrar {
     }
 
     static String rendered(Map<String, String> values) {
-        return template().lines()
-                .filter(line -> !isAPlaceholderRenderedEmpty(line, values))
-                .map(line -> filledIn(line, values))
-                .collect(Collectors.joining("\n", "", "\n"));
+        return renderedLines(template().lines().toList(), values).collect(Collectors.joining("\n", "", "\n"));
+    }
+
+    static List<BriefSection> sections(Map<String, String> values) {
+        return templateSections().stream()
+                .map(section -> new BriefSection(titleOf(filledIn(section.getFirst(), values)),
+                        renderedLines(section, values).mapToInt(BriefTemplate::physicalLinesOf).sum()))
+                .toList();
     }
 
     private static String template() {
@@ -39,6 +47,12 @@ final class BriefTemplate implements RuntimeHintsRegistrar {
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
+    }
+
+    private static Stream<String> renderedLines(List<String> lines, Map<String, String> values) {
+        return lines.stream()
+                .filter(line -> !isAPlaceholderRenderedEmpty(line, values))
+                .map(line -> filledIn(line, values));
     }
 
     private static boolean isAPlaceholderRenderedEmpty(String line, Map<String, String> values) {
@@ -56,5 +70,24 @@ final class BriefTemplate implements RuntimeHintsRegistrar {
             throw new IllegalStateException("The brief template names {{" + name + "}}, which the brief does not fill in.");
         }
         return value;
+    }
+
+    private static List<List<String>> templateSections() {
+        List<List<String>> sections = new ArrayList<>();
+        for (String line : template().lines().toList()) {
+            if (sections.isEmpty() || line.startsWith(SECTION_HEADING)) {
+                sections.add(new ArrayList<>());
+            }
+            sections.getLast().add(line);
+        }
+        return sections;
+    }
+
+    private static String titleOf(String heading) {
+        return heading.replaceFirst("^#+ ", "");
+    }
+
+    private static int physicalLinesOf(String renderedLine) {
+        return renderedLine.split("\n", -1).length;
     }
 }

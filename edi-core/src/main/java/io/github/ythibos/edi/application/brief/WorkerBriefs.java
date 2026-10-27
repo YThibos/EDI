@@ -12,7 +12,20 @@ import io.github.ythibos.edi.domain.delivery.PipelineIntent;
 public class WorkerBriefs {
 
     public String briefFor(BriefFacts facts) {
-        return BriefTemplate.rendered(Map.ofEntries(
+        return BriefTemplate.rendered(valuesOf(facts));
+    }
+
+    public void requireWithinItsLength(BriefFacts facts) {
+        BriefLength.requireWithinTheLimit(BriefTemplate.sections(valuesOf(facts.withoutTheCaptainsNotesOrResearchPlan())));
+    }
+
+    public PipelineIntent pipelineIntentFor(BriefFacts facts) {
+        return PipelineIntent.of(facts.dispatch().branch().workKey(), BriefSections.intent(facts), BriefSections.spec(facts),
+                facts.project().craftRules() ? facts.craftRules() : null);
+    }
+
+    private static Map<String, String> valuesOf(BriefFacts facts) {
+        return Map.ofEntries(
                 Map.entry("task", facts.task().id().value()),
                 Map.entry("worker", facts.worker().toString()),
                 Map.entry("kind", facts.task().intake().kind().word()),
@@ -29,11 +42,6 @@ public class WorkerBriefs {
                 Map.entry("projectRules", BriefSections.projectRules(facts)),
                 Map.entry("largeBuilds", BriefSections.largeBuilds(facts)),
                 Map.entry("delivery", BriefSections.delivery(facts)),
-                Map.entry("definitionOfDone", BriefSections.definitionOfDone(facts))));
-    }
-
-    public PipelineIntent pipelineIntentFor(BriefFacts facts) {
-        return PipelineIntent.of(facts.dispatch().branch().workKey(), BriefSections.intent(facts), BriefSections.spec(facts),
-                facts.project().craftRules() ? facts.craftRules() : null);
+                Map.entry("definitionOfDone", BriefSections.definitionOfDone(facts)));
     }
 }

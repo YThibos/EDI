@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,11 +17,13 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
+import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BriefFixtures;
@@ -164,6 +167,37 @@ class MemoryAndCraftTest {
             assertThat(brief).contains(longIntent.strip(), longSpec.strip());
             assertThat(BriefFixtures.everyKindOfBrief().map(briefs::briefFor).map(TheAnchorStaysSmall::linesOutsideTheTasksOwnSections))
                     .allSatisfy(lines -> assertThat(lines).isLessThanOrEqualTo(120));
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-35 a dispatch whose brief would run past 120 lines is refused, naming its longest section, before anything is saved or copied")
+        void aDispatchRefusesABriefPastItsBudget() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            int specLinesWithinTheBudget = 120 - previewedBrief(home, buildInstructions(1)).lines().toList().size() + 1;
+
+            assertThatThrownBy(() -> dispatch(home, buildInstructions(specLinesWithinTheBudget + 1)))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("121 lines").hasMessageContaining("its longest section is Spec");
+            assertThat(home.home().worktreeOf(new ProjectName("harness"), new TaskId("fit-lamp"))).doesNotExist();
+            assertThat(home.dispatches().of(new TaskId("fit-lamp"))).isEmpty();
+
+            dispatch(home, buildInstructions(specLinesWithinTheBudget));
+
+            assertThat(Files.readAllLines(home.home().taskDirectory(new TaskId("fit-lamp")).resolve("brief.md"))).hasSize(120);
+        }
+
+        private static String previewedBrief(TestHome home, String spec) {
+            return home.dispatchTask().previewBrief(TaskReference.parse("fit-lamp"), new DispatchRequest(CategoryId.IMPLEMENTATION, spec, List.of(), null));
+        }
+
+        private static String buildInstructions(int lines) {
+            return "Build instruction.\n".repeat(lines).strip();
+        }
+
+        private static void dispatch(TestHome home, String spec) {
+            home.dispatchTask().dispatch(TaskReference.parse("fit-lamp"), new DispatchRequest(CategoryId.IMPLEMENTATION, spec, List.of(), null),
+                    CallingSession.UNNAMED, Actor.PRIMARY);
         }
 
         private static long linesOutsideTheTasksOwnSections(String brief) {

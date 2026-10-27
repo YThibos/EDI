@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.dispatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -91,6 +93,26 @@ class CapacityTest {
         assertThat(home.dispatches().deferred()).isEmpty();
         assertThat(home.tasks().get(new TaskId("fit-horn")).state()).isEqualTo(TaskState.QUEUED);
         assertThat(home.eventTypesOf(new TaskId("fit-horn"))).containsExactly("DispatchDeferred", "DeferredLaunchFailed");
+    }
+
+    @Test
+    void refusesAnOverlongBriefInsteadOfDeferringIt() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory).registering("""
+                projects:
+                  - name: harness
+                    tracker: { kind: edi, projectKey: HRN }
+                    forge: { kind: github, path: example-owner/harness, account: example-owner }
+                    base: main
+                    capacity: 1
+                """);
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
+        dispatch(home, "fit-lamp");
+
+        assertThatThrownBy(() -> home.dispatchTask().dispatch(TaskReference.parse("fit-horn"),
+                new DispatchRequest(CategoryId.IMPLEMENTATION, "Build instruction.\n".repeat(150).strip(), List.of(), null), CallingSession.UNNAMED,
+                Actor.PRIMARY)).isInstanceOf(Refusal.class).hasMessageContaining("its longest section is Spec");
+        assertThat(home.dispatches().deferred()).isEmpty();
+        assertThat(home.eventTypesOf(new TaskId("fit-horn"))).isEmpty();
     }
 
     private static DispatchOutcome dispatch(TestHome home, String task) {

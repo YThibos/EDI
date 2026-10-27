@@ -133,7 +133,13 @@ public class LaunchWorker {
     }
 
     public String briefFor(Dispatch dispatch) {
-        return briefs.briefFor(transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief());
+        BriefFacts facts = dispatchedBriefFactsOf(dispatch);
+        briefs.requireWithinItsLength(facts);
+        return briefs.briefFor(facts);
+    }
+
+    public void requireABriefWithinItsLength(Dispatch dispatch) {
+        briefs.requireWithinItsLength(dispatchedBriefFactsOf(dispatch));
     }
 
     private void requireAnEmptyCopy(TaskId task) {
@@ -142,6 +148,10 @@ public class LaunchWorker {
         if (!holders.isEmpty()) {
             throw new Refusal("Processes " + holders + " still work in " + worktree + "; EDI relaunches a worker only in a copy nothing else holds.");
         }
+    }
+
+    private BriefFacts dispatchedBriefFactsOf(Dispatch dispatch) {
+        return transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief();
     }
 
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {

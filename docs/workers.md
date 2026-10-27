@@ -8,6 +8,7 @@ EDI dispatches it, steers it, supervises it and recovers it; the worker reports 
 `edi dispatch` routes a task by its dispatch category, makes its isolated copy on a keyed branch from the fresh origin base, writes its brief, and launches a Claude Code worker on EDI's own tmux server with its own token, its hooks and attribution off ([dispatch-routing](decisions/dispatch-routing.md), [work-keys-and-branches](decisions/work-keys-and-branches.md), [isolated-copies](decisions/isolated-copies.md), [worker-sessions](decisions/worker-sessions.md), [worker-brief](decisions/worker-brief.md)).
 A dispatch reads the machine profile, the registry, the dispatch rules and the craftsmanship rules from the EDI home (see [Configuration](configuration.md)).
 A dispatch beyond a project's `capacity` waits until a worker place on that project comes free ([dispatch-routing](decisions/dispatch-routing.md)).
+A dispatch whose brief would run past 120 lines is refused, naming its longest section, and `edi brief --category` refuses it the same way ([worker-brief](decisions/worker-brief.md)).
 
 ```sh
 edi brief fit-the-lamp --category implementation --spec - < spec.md   # the brief a dispatch would write
