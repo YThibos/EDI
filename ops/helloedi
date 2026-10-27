@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+checkout="${EDI_CHECKOUT:-${HOME}/EDI}"
+installed_build_record="${EDI_HOME:-${HOME}/.edi}/state/installed-build"
+
+trap 'exit 130' INT
+
+require_tmux() {
+  if ! command -v tmux >/dev/null; then
+    refuse "tmux is not installed. Install it with: sudo apt install tmux"
+  fi
+}
+
+refuse() {
+  echo "helloedi: $1" >&2
+  exit 1
+}
+
+require_the_checkout() {
+  if [[ ! -d "${checkout}" ]]; then
+    refuse "${checkout} does not exist on this machine. Clone it with: git clone git@github.com:YThibos/EDI.git ${checkout}"
+  fi
+}
+
+require_edi() {
+  if ! command -v edi >/dev/null; then
+    refuse "edi is not on PATH. Install it from ${checkout} with: ops/install.sh"
+  fi
+}
+
+update_edi_when_the_installed_build_lacks_origin_main() {
+  if ! git -C "${checkout}" fetch --quiet origin; then
+    echo "helloedi: could not fetch ${checkout}, starting the installed EDI" >&2
+    return
+  fi
+  local latest installed
+  latest="$(git -C "${checkout}" rev-parse origin/main)"
+  installed="$(installed_build)"
+  if ! contains "${installed}" "${latest}"; then
+    echo "helloedi: $(built_from "${installed}"), origin/main is at ${latest:0:7}, updating EDI"
+    update_edi
+  fi
+}
+
+installed_build() {
+  local commit=""
+  if [[ -f "${installed_build_record}" ]]; then
+    read -r commit < "${installed_build_record}"
+  fi
+  echo "${commit}"
+}
+
+contains() {
+  [[ -n "$1" ]] && git -C "${checkout}" merge-base --is-ancestor "$2" "$1" 2>/dev/null
+}
+
+built_from() {
+  if [[ -z "$1" ]]; then
+    echo "the installed EDI records no build commit"
+  else
+    echo "the installed EDI is built from ${1:0:7}"
+  fi
+}
+
+update_edi() {
+  local status=0
+  (cd "${checkout}" && edi update) || status=$?
+  if ((status == 130)); then
+    exit 130
+  fi
+  if ((status != 0)); then
+    echo "helloedi: edi update failed (exit ${status}), starting the installed EDI" >&2
+  fi
+}
+
+require_tmux
+require_the_checkout
+require_edi
+update_edi_when_the_installed_build_lacks_origin_main
+exec edi up
