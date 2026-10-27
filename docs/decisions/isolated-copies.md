@@ -17,7 +17,7 @@ Each task gets the worktree `$EDI_HOME/worktrees/<project>/<task-id>`, derived f
 No pool is kept, and a copy is removed only by cleanup after the landed-work test or on the captain's word ([cleanup](cleanup.md), [captains-word](captains-word.md)).
 `WorktreeHooks` writes a `commit-msg` and a `pre-push` hook from `edi-core`'s `git-hooks/` templates into the worktree's own git directory, sets `extensions.worktreeConfig` on the clone and `core.hooksPath` with `git config --worktree`, at every launch.
 The `commit-msg` hook is POSIX shell with the key filled in, refusing a subject without the key, any `Co-authored-by` line, a `Signed-off-by` naming a model, agent or tool, and a "Generated with" line.
-The `pre-push` hook runs `edi publish-check` on each pushed range with git's push URL, and refuses the push when `edi` is missing or the check fails ([publish-guard](publish-guard.md)).
+The `pre-push` hook runs `edi publish-check` with git's push URL on the commits each pushed ref adds to both its remote branch and the base, `origin/<base>..<local head>` excluding the remote branch's head, and refuses the push when `edi` is missing or the check fails ([publish-guard](publish-guard.md)).
 A task works on one project; the project's clone gets a credential helper bound to its forge account ([forge-adapters](forge-adapters.md)).
 
 ## Why
@@ -45,3 +45,4 @@ When a task needs copies of several projects at once, worktree creation becomes 
 
 - 15/10/2026: the specification replaced the slot pool with task-addressed worktrees.
 - 16/10/2026: slice S3 built the copies, their checks and the hooks through worktree configuration.
+- 27/10/2026: the `pre-push` hook judges only the commits new to both the remote branch and the base, so neither a merged base nor a tightened rule strands a push (EDI-78).

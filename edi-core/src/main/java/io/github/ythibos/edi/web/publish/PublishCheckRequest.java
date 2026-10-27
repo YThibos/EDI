@@ -1,12 +1,15 @@
 package io.github.ythibos.edi.web.publish;
 
+import static io.github.ythibos.edi.web.RequestValues.each;
 import static io.github.ythibos.edi.web.RequestValues.required;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.function.Function;
 
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 
-record PublishCheckRequest(String repository, String range, String remoteUrl) {
+record PublishCheckRequest(String repository, String range, List<String> excluding, String remoteUrl) {
 
     Path repositoryPath() {
         Path path = Path.of(required(repository, "repository"));
@@ -17,7 +20,7 @@ record PublishCheckRequest(String repository, String range, String remoteUrl) {
     }
 
     RevisionRange outgoing() {
-        return new RevisionRange(required(range, "range"));
+        return new RevisionRange(required(range, "range"), each(excluding, Function.identity()));
     }
 
     boolean namesThePushTarget() {

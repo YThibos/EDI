@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,18 @@ class GitTest {
         OutgoingChanges changes = git.outgoingChanges(repository.root(), new RevisionRange("main..work"));
 
         assertThat(changes.commits()).extracting(OutgoingCommit::message).containsExactly("Add a", "Add b");
+    }
+
+    @Test
+    void leavesOutTheCommitsOfEveryExcludedRevision() throws IOException {
+        repository.branch("pushed").write("a.txt", "a\n").commit("Add a")
+                .switchTo("main").write("base.txt", "base\n").commit("Move the base on")
+                .switchTo("pushed").branch("work").run("merge", "--quiet", "-m", "Merge the base", "main");
+        repository.write("b.txt", "b\n").commit("Add b");
+
+        OutgoingChanges changes = git.outgoingChanges(repository.root(), new RevisionRange("pushed..work", List.of("main")));
+
+        assertThat(changes.commits()).extracting(OutgoingCommit::message).containsExactly("Add b");
     }
 
     @Test

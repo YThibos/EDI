@@ -49,7 +49,7 @@ public class Gitleaks {
     private static List<String> scanArguments(RevisionRange outgoing, ScanWorkspace workspace) {
         return List.of(
                 "git",
-                "--log-opts=" + outgoing.expression(),
+                "--log-opts=" + String.join(" ", outgoing.revisions()),
                 "--config=" + workspace.rules(),
                 "--gitleaks-ignore-path=" + workspace.directory(),
                 "--ignore-gitleaks-allow",

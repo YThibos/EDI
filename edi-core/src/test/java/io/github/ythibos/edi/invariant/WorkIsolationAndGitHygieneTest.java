@@ -290,6 +290,48 @@ class WorkIsolationAndGitHygieneTest {
             assertThat(refused.output()).contains("pom.xml:6 in commit " + worktree.head().substring(0, 7) + ": a -SNAPSHOT version")
                     .contains("Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.");
         }
+
+        @Test
+        @DisplayName("AT-11 a worker's push of a merged base that gained a SNAPSHOT version judges only the branch's own new commits")
+        @Tag("adapter")
+        void pushOfAMergedBaseJudgesOnlyTheBranchsOwnCommits() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository upstream = FixtureRepository.at(directory.resolve("upstream/harness"))
+                    .write("pom.xml", BUILD_FILE.formatted("")).commit("Add the build file");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree())
+                    .write("lamp.txt", "A brass lamp.\n").commit("HRN-3 Describe the lamp");
+            String pushedHead = worktree.head();
+            upstream.write("module/pom.xml", "<project>\n  <version>2.0.0-SNAPSHOT</version>\n</project>\n").commit("Start the module");
+            worktree.run("fetch", "--quiet", "origin");
+            worktree.run("merge", "--quiet", "-m", "HRN-3 Merge the base", "origin/main");
+
+            HookRun push = PrePushHook.pushesOnto(pushedHead, worktree, home.home().root(), "feature/HRN-3", HARNESS_REMOTE, processes);
+
+            assertThat(push.refused()).as(push.output()).isFalse();
+            assertThat(push.output()).contains("Clear: no secret, no personal material and no -SNAPSHOT version in origin/main.."
+                    + worktree.head() + " excluding " + pushedHead);
+        }
+
+        @Test
+        @DisplayName("AT-11 a worker's push after the SNAPSHOT rule arrived leaves the branch's commits already pushed unjudged")
+        @Tag("adapter")
+        void pushAfterTheRuleArrivedLeavesPushedCommitsUnjudged() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository.at(directory.resolve("upstream/harness")).write("pom.xml", BUILD_FILE.formatted("")).commit("Add the build file");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree())
+                    .write("pom.xml", BUILD_FILE.formatted(LAMP_DEPENDENCY.formatted("1.2.0-SNAPSHOT")))
+                    .commit("HRN-3 Use the snapshot lamp");
+            String pushedHead = worktree.head();
+            worktree.write("pom.xml", BUILD_FILE.formatted(LAMP_DEPENDENCY.formatted("1.2.0"))).commit("HRN-3 Use the released lamp");
+
+            HookRun push = PrePushHook.pushesOnto(pushedHead, worktree, home.home().root(), "feature/HRN-3", HARNESS_REMOTE, processes);
+
+            assertThat(push.refused()).as(push.output()).isFalse();
+        }
     }
 
     @Nested

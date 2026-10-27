@@ -11,10 +11,10 @@ while read -r _ local_sha _ remote_sha; do
         *[!0]*) ;;
         *) continue ;;
     esac
+    pushed=
     case "$remote_sha" in
-        *[!0]*) range="$remote_sha..$local_sha" ;;
-        *) range="$base_ref..$local_sha" ;;
+        *[!0]*) pushed="--excluding=$remote_sha" ;;
     esac
-    edi publish-check --range "$range" --remote-url "$remote_url" || exit 1
+    edi publish-check --range "$base_ref..$local_sha" $pushed --remote-url "$remote_url" || exit 1
 done
 exit 0
