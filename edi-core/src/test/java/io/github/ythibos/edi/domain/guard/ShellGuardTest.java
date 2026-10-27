@@ -220,7 +220,7 @@ class ShellGuardTest {
     @CsvSource(delimiter = '|', value = {
         "git commit --no-verify -m 'EDI-5 x' | the commit-msg hook, which holds the work key at the head of the subject (I-10)",
         "git merge --no-verify origin/main   | keeps every co-author, agent and \"Generated with\" trailer out (I-09)",
-        "git push --no-verify origin x       | the pre-push hook, whose publish check keeps secrets out of a push (I-38)",
+        "git push --no-verify origin x       | the pre-push hook, whose publish check keeps secrets (I-38) and -SNAPSHOT versions (I-11)",
         "git -c core.hooksPath= commit       | leave core.hooksPath as the isolated copy sets it"})
     void namesTheChecksASkippedHookHolds(String command, String named) {
         assertThat(GUARD.check(command)).map(GuardRefusal::reason).hasValueSatisfying(reason -> assertThat(reason).contains(named));

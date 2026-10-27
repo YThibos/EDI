@@ -24,10 +24,10 @@ final class SkippedHooks {
     private static final OptionGrammar PUSH = new OptionGrammar(GitPushes.PUSH_OPTIONS_WITH_VALUES, "o", "o");
     private static final String COMMIT_MSG_CHECKS = "the commit-msg hook, which holds the work key at the head of the subject (I-10)"
             + " and keeps every co-author, agent and \"Generated with\" trailer out (I-09)";
-    private static final String PRE_PUSH_CHECKS = "the pre-push hook, whose publish check keeps secrets out of a push (I-38)"
-            + " and pushes only to the registered forge (I-39)";
+    private static final String PRE_PUSH_CHECKS = "the pre-push hook, whose publish check keeps secrets (I-38) and -SNAPSHOT versions (I-11)"
+            + " out of a push and pushes only to the registered forge (I-39)";
     private static final String EVERY_CHECK = "the commit-msg and pre-push hooks, which hold the work key (I-10), the bar on trailers (I-09),"
-            + " the secret check (I-38) and the registered forge (I-39)";
+            + " the secret check (I-38), the SNAPSHOT check (I-11) and the registered forge (I-39)";
     private static final String WITHOUT_THE_FLAG = "run it without " + NO_VERIFY + " and fix what the hook names.";
     private static final String KEEP_THE_HOOKS_PATH = "leave core.hooksPath as the isolated copy sets it.";
 
