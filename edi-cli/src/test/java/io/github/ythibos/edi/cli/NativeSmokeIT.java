@@ -244,7 +244,7 @@ class NativeSmokeIT {
         CommandRun promoted = ediIn(Path.of(""), primary, "", "task", "promote", "native-survey", "--title", "Ship natively");
 
         assertThat(refused.exitCode()).isOne();
-        assertThat(refused.output()).contains("needs the captain's word on native-survey in this session");
+        assertThat(refused.output()).contains("you need the captain's word on native-survey in this session");
         assertThat(heard.output()).isEqualTo("Recorded the captain's word on native-survey for this session: \"Ship the native survey.\"\n");
         assertThat(promoted.output()).isEqualTo("Promoted the scout native-survey to the ship ship-natively, queued on the captain's word.\n");
     }
