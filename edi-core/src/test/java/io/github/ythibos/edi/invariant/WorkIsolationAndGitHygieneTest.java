@@ -2,6 +2,7 @@ package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,11 +21,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.application.worker.HookAnswer;
+import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
@@ -42,7 +46,11 @@ import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.FixtureRepository;
+import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.PrePushHook;
+import io.github.ythibos.edi.testing.PrePushHook.HookRun;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -165,14 +173,16 @@ class WorkIsolationAndGitHygieneTest {
     class NoAgentTrailer {
 
         @Test
-        @DisplayName("AT-09 the commit-msg hook rejects each forbidden trailer form and launch settings carry the attribution block")
+        @DisplayName("AT-09 the commit-msg hook rejects each forbidden trailer form, the guard refuses a commit that would skip it,"
+                + " and launch settings carry the attribution block")
         @Tag("adapter")
         void theCommitHookRejectsAgentTrailers() throws IOException, InterruptedException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             FixtureRepository.at(home.home().root().resolve("projects/harness"))
                     .configure("credential.https://forge.example.org.helper", "!f() { echo username=worker; echo password=scoped-secret; }; f");
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
-            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+            DispatchOutcome.Launched launched = dispatch(home, "fit-lamp").launched();
+            FixtureRepository worktree = FixtureRepository.at(launched.worktree());
 
             for (String trailer : List.of(
                     "Co-authored-by: Claude <noreply@anthropic.com>",
@@ -187,6 +197,8 @@ class WorkIsolationAndGitHygieneTest {
             }
             worktree.write("lamp.txt", "accepted");
             worktree.commit("HRN-3 Fit the lamp\n\nFiles generated with protoc stay as they are.\n\nSigned-off-by: Fixture Author <fixture@example.org>");
+            assertRefusedBeforeGitRuns(guarded(home, launched, "git commit --no-verify -m 'HRN-3 Fit the lamp\n\nCo-authored-by: Claude <noreply@anthropic.com>'"),
+                    "trailer out (I-09)");
 
             JsonNode settings = new JsonMapper().readTree(resource("claude/worker/settings.json"));
             assertThat(settings.path("attribution").path("commit").asString()).isEmpty();
@@ -201,12 +213,13 @@ class WorkIsolationAndGitHygieneTest {
     class EveryCommitCarriesItsKey {
 
         @Test
-        @DisplayName("AT-10 the commit-msg hook rejects a subject without the task's key")
+        @DisplayName("AT-10 the commit-msg hook rejects a subject without the task's key, and the guard refuses a commit that would skip it")
         @Tag("adapter")
         void theCommitHookRejectsASubjectWithoutTheKey() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
-            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+            DispatchOutcome.Launched launched = dispatch(home, "fit-lamp").launched();
+            FixtureRepository worktree = FixtureRepository.at(launched.worktree());
 
             for (String subject : List.of("Fit the lamp", "HRN-4 Fit the lamp", "HRN-30 Fit the lamp", "fit-lamp HRN-3", "# HRN-3 commented out")) {
                 worktree.write("lamp.txt", subject);
@@ -217,12 +230,16 @@ class WorkIsolationAndGitHygieneTest {
                 worktree.commit(subject);
             }
             assertThat(worktree.run("log", "--format=%s", "-2")).isEqualTo("HRN-3: Fit the horn\nHRN-3 Fit the lamp\n");
+            assertRefusedBeforeGitRuns(guarded(home, launched, "git commit -n -m 'Fit the lamp'"), "head of the subject (I-10)");
         }
     }
 
     @Nested
     @DisplayName("I-11 No SNAPSHOT in push-bound work")
     class NoSnapshotInPushBoundWork {
+
+        @RegisterExtension
+        private final TestProcesses processes = new TestProcesses();
 
         @Test
         @DisplayName("AT-11 a branch adding a SNAPSHOT dependency makes edi status done refuse with the file and line")
@@ -253,6 +270,25 @@ class WorkIsolationAndGitHygieneTest {
 
             assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
             assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("StatusReported", "DraftRecorded");
+        }
+
+        @Test
+        @DisplayName("AT-11 a worker's push of a commit adding a SNAPSHOT version is refused with the file and line")
+        @Tag("adapter")
+        void pushRefusesASnapshotVersion() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository.at(directory.resolve("upstream/harness")).write("pom.xml", BUILD_FILE.formatted("")).commit("Add the build file");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree())
+                    .write("pom.xml", BUILD_FILE.formatted(LAMP_DEPENDENCY.formatted("1.2.0-SNAPSHOT")))
+                    .commit("HRN-3 Use the snapshot lamp");
+
+            HookRun refused = PrePushHook.pushes(worktree, home.home().root(), "feature/HRN-3", HARNESS_REMOTE, processes);
+
+            assertThat(refused.refused()).isTrue();
+            assertThat(refused.output()).contains("pom.xml:6 in commit " + worktree.head().substring(0, 7) + ": a -SNAPSHOT version")
+                    .contains("Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.");
         }
     }
 
@@ -322,6 +358,7 @@ class WorkIsolationAndGitHygieneTest {
         }
     }
 
+    private static final String HARNESS_REMOTE = "https://github.com/example-owner/harness.git";
     private static final String BUILD_FILE = """
             <project>
               <version>3.1.0-SNAPSHOT</version>
@@ -350,6 +387,15 @@ class WorkIsolationAndGitHygieneTest {
             contents.put(Path.of(".git/index"), HexFormat.of().formatHex(Files.readAllBytes(checkout.resolve(".git/index"))));
             return contents;
         }
+    }
+
+    private static HookAnswer guarded(TestHome home, DispatchOutcome.Launched launched, String command) {
+        return home.guardToolCall().checkForWorker(launched.worker().id(), new ToolCall("Bash", command, null, launched.worktree()));
+    }
+
+    private static void assertRefusedBeforeGitRuns(HookAnswer answer, String reason) {
+        assertThat(answer.verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
+        assertThat(answer.reason()).contains("skips the commit-msg hook", reason);
     }
 
     private static String credentialAnsweredIn(Path worktree) throws IOException, InterruptedException {

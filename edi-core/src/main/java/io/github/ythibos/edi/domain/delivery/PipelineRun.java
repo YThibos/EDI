@@ -19,4 +19,8 @@ public record PipelineRun(String id, String status, String activeStep, String he
     public boolean isRunning() {
         return !FINISHED.contains(status);
     }
+
+    public String currentStep() {
+        return activeStep == null ? status : activeStep;
+    }
 }

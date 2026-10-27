@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ReadyForReview, WaitingBoard } from './sitrep';
+import { ChangingRequest, ReadyForReview, WaitingBoard } from './sitrep';
 import { WaitingList } from './waiting-list';
 
 const LAMP_BOARD: WaitingBoard = {
@@ -17,6 +17,14 @@ const BUOY_REVIEW: ReadyForReview = {
   title: 'Paint the buoy',
   projects: [],
   url: 'https://github.com/example-owner/harness/pull/14',
+};
+
+const LAMP_CHANGING: ChangingRequest = {
+  task: 'fit-lamp',
+  title: 'Fit the lamp',
+  projects: ['harness'],
+  url: 'https://github.com/example-owner/harness/pull/13',
+  why: 'pipeline review; steer 2 not acknowledged',
 };
 
 describe('WaitingList', () => {
@@ -57,9 +65,20 @@ describe('WaitingList', () => {
     expect(texts(list, '.sr-row__sub')).toEqual(['harness']);
   });
 
-  async function listed(boards: WaitingBoard[], reviews: ReadyForReview[]): Promise<HTMLElement> {
+  it('shows a request still changing with a danger badge and why, in place of the review badge', async () => {
+    const list = await listed([], [], [LAMP_CHANGING]);
+
+    expect(texts(list, '.sr-row__title')).toEqual(['Fit the lamp']);
+    expect(texts(list, '.sr-row__sub')).toEqual(['changing, hold the merge: pipeline review; steer 2 not acknowledged · harness']);
+    expect(texts(list, '.sr-waiting__link')).toEqual([LAMP_CHANGING.url]);
+    expect(texts(list, '.sr-badge')).toEqual(['changing']);
+    expect(list.querySelector('.sr-badge')?.classList).toContain('sr-badge--danger');
+  });
+
+  async function listed(boards: WaitingBoard[], reviews: ReadyForReview[], changing: ChangingRequest[] = []): Promise<HTMLElement> {
     fixture.componentRef.setInput('boards', boards);
     fixture.componentRef.setInput('reviews', reviews);
+    fixture.componentRef.setInput('changing', changing);
     await fixture.whenStable();
     return fixture.nativeElement;
   }

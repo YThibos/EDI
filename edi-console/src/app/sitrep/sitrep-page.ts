@@ -33,7 +33,7 @@ export class SitrepPage {
   protected readonly shipMoment = shipMoment;
   protected readonly waitingCount = computed(() => {
     const sitrep = this.sitrep();
-    return sitrep ? sitrep.decisions.length + openOnBoards(sitrep.boards) + sitrep.reviews.length : 0;
+    return sitrep ? sitrep.decisions.length + openOnBoards(sitrep.boards) + sitrep.reviews.length + sitrep.changing.length : 0;
   });
   protected readonly waitingOnTheCaptain = computed(() => {
     const sitrep = this.sitrep();

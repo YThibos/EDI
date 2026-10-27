@@ -7,7 +7,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
-@Command(name = "publish-check", description = "Checks the outgoing commits of this repository for secrets and personal material before a push.")
+@Command(name = "publish-check", description = "Checks the outgoing commits of this repository for secrets, personal material and -SNAPSHOT versions before a push.")
 final class PublishCheckCommand implements Callable<Integer> {
 
     private static final String UPSTREAM_TO_HEAD = "@{upstream}..HEAD";

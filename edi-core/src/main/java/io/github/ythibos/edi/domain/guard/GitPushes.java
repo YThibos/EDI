@@ -9,7 +9,7 @@ import java.util.Set;
 final class GitPushes {
 
     private static final Set<String> GLOBAL_OPTIONS_WITH_VALUES = Set.of("-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--config-env");
-    private static final Set<String> PUSH_OPTIONS_WITH_VALUES = Set.of("-o", "--push-option", "--repo", "--receive-pack", "--exec");
+    static final Set<String> PUSH_OPTIONS_WITH_VALUES = Set.of("-o", "--push-option", "--repo", "--receive-pack", "--exec");
     private static final Set<String> PUSH_OPTION_FLAGS = Set.of("-o", "--push-option");
     private static final Set<String> FORCING_OPTIONS = Set.of("--force", "--force-if-includes", "--mirror");
     private static final Set<String> EVERY_BRANCH_OPTIONS = Set.of("--all", "--branches");

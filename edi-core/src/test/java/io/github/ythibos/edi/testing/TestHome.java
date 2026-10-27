@@ -437,7 +437,7 @@ public final class TestHome {
     }
 
     public FleetSnapshotQuery fleetSnapshot() {
-        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, boards, clock, transaction);
+        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, inbox, boards, events, clock, transaction);
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {
@@ -649,7 +649,7 @@ public final class TestHome {
     }
 
     public DoneClaims doneClaims() {
-        return new DoneClaims(workerContext(), git, deliveryRecords(), landedWork(), events, clock, transaction);
+        return new DoneClaims(workerContext(), git, inbox, deliveryRecords(), landedWork(), events, clock, transaction);
     }
 
     public DeliverAcceptedWork deliverAcceptedWork() {

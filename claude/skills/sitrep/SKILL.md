@@ -18,7 +18,7 @@ The situation report is read-only: it never dispatches, steers, answers, cleans 
 
 ## `/sitrep board`
 
-1. Run `edi sitrep --board`: it prints the same report, opens the console's sitrep page in the captain's browser and prints its address; in a session's opening turn it names the page the session's start opened instead of opening another.
+1. Run `edi sitrep --board`: it prints the same report, opens the console's sitrep page in the captain's browser and prints its address.
 2. Answer with one plain line, the report verbatim in one fenced block, then the page's address on its own line.
 3. If the page could not be opened, say so and give the sign-in address it printed.
 
