@@ -12,6 +12,7 @@ import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
@@ -100,7 +101,6 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeRule;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
-import io.github.ythibos.edi.domain.worker.WorkerId;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -186,15 +186,20 @@ public class EventLog {
                 .list();
     }
 
-    public List<WorkerId> workersThatReportedDone(TaskId task) {
+    public boolean hadADoneAccepted(TaskId task) {
         return store.sql("""
-                select distinct json_extract(payload, '$.worker') from event
-                where task_id = :task and type = :type and json_extract(payload, '$.state') = :state""")
+                select exists (
+                    select 1 from event left join worker on worker.id = json_extract(event.payload, '$.worker')
+                    where event.task_id = :task
+                      and (event.type = :mechanicalAccepted
+                           or event.type = :reported and json_extract(event.payload, '$.state') = :done and worker.category <> :mechanical))""")
                 .param("task", task.value())
-                .param("type", StatusReported.class.getSimpleName())
-                .param("state", StatusState.DONE.word())
-                .query((row, _) -> WorkerId.parse(row.getString(1)))
-                .list();
+                .param("mechanicalAccepted", MechanicalChangeAccepted.class.getSimpleName())
+                .param("reported", StatusReported.class.getSimpleName())
+                .param("done", StatusState.DONE.word())
+                .param("mechanical", CategoryId.MECHANICAL.value())
+                .query((row, _) -> row.getBoolean(1))
+                .single();
     }
 
     private ObjectNode payloadOf(DomainEvent event) {

@@ -33,6 +33,8 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -264,6 +266,28 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void remembersAnAcceptedMechanicalDoneWhileItsWorkerIsCheckedAgainAndRefused() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.MECHANICAL);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        report(lamp, StatusState.DONE);
+        checkTheMechanicalDone(lamp, true);
+
+        WaitingOnTheCaptain accepted = home.fleetSnapshot().snapshot().waiting();
+        report(lamp, StatusState.WORKING);
+        report(lamp, StatusState.DONE);
+        WaitingOnTheCaptain checkedAgain = home.fleetSnapshot().snapshot().waiting();
+        checkTheMechanicalDone(lamp, false);
+        WaitingOnTheCaptain refused = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(accepted.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(checkedAgain.reviews()).isEmpty();
+        assertThat(checkedAgain.changing()).extracting(ChangingRequest::whyChanging).containsExactly("worker back at work");
+        assertThat(refused.reviews()).isEmpty();
+        assertThat(refused.changing()).extracting(ChangingRequest::whyChanging).containsExactly("worker back at work");
+    }
+
+    @Test
     void keepsAnAnsweredDecisionOutOfALaterHold() {
         add(ship("lamp-fitting", "Fit the lamp"));
         raise("lamp-fitting");
@@ -349,6 +373,13 @@ class FleetSnapshotQueryTest {
         Worker reported = home.workers().latestOf(task.id()).orElseThrow().reported(report, TestHome.START);
         home.workers().update(reported);
         home.events().record(new StatusReported(task.id(), reported.id(), report), Actor.worker(reported.id()), TestHome.START);
+    }
+
+    private void checkTheMechanicalDone(Task task, boolean accepted) {
+        Worker checked = home.workers().latestOf(task.id()).orElseThrow().doneChecked(accepted);
+        home.workers().update(checked);
+        home.events().record(accepted ? new MechanicalChangeAccepted(task.id(), checked.id())
+                : new MechanicalChangeRefused(task.id(), checked.id(), "the verify command failed"), Actor.CORE, TestHome.START);
     }
 
     private static MergeRequestView firstPassDraft() {

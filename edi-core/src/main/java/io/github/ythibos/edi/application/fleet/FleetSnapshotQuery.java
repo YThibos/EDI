@@ -108,30 +108,23 @@ public class FleetSnapshotQuery {
 
     private List<HandedOverRequest> handedOverRequestsAmong(List<Task> inFlight) {
         return inFlight.stream()
-                .filter(this::hadADoneAccepted)
-                .flatMap(task -> openRequestOf(task).stream())
+                .flatMap(task -> handedOverRequestOf(task, doneStands(task)).stream())
                 .toList();
-    }
-
-    private boolean hadADoneAccepted(Task task) {
-        return doneStands(task) || hadAnEarlierDoneAccepted(task);
     }
 
     private boolean doneStands(Task task) {
         return workers.latestOf(task.id()).filter(Worker::hadItsDoneAccepted).isPresent();
     }
 
-    private boolean hadAnEarlierDoneAccepted(Task task) {
-        return events.workersThatReportedDone(task.id()).stream()
-                .map(workers::get)
-                .flatMap(Optional::stream)
-                .anyMatch(not(Worker::awaitsOrFailedItsDoneCheck));
-    }
-
-    private Optional<HandedOverRequest> openRequestOf(Task task) {
+    private Optional<HandedOverRequest> handedOverRequestOf(Task task, boolean doneStands) {
         return deliveries.of(task.id())
                 .filter(Delivery::isOpen)
-                .map(delivery -> new HandedOverRequest(task, delivery, doneStands(task), runningPipelineOf(task), unacknowledgedSteersOf(task)));
+                .filter(_ -> hadADoneAccepted(task, doneStands))
+                .map(delivery -> new HandedOverRequest(task, delivery, doneStands, runningPipelineOf(task), unacknowledgedSteersOf(task)));
+    }
+
+    private boolean hadADoneAccepted(Task task, boolean doneStands) {
+        return doneStands || events.hadADoneAccepted(task.id());
     }
 
     private PipelineRun runningPipelineOf(Task task) {

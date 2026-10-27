@@ -163,10 +163,6 @@ public record Worker(
         return doneCheck == DoneCheck.ACCEPTED;
     }
 
-    public boolean awaitsOrFailedItsDoneCheck() {
-        return doneCheck == DoneCheck.CHECKING || doneCheck == DoneCheck.REFUSED;
-    }
-
     public boolean handedItsWorkOver() {
         return doneCheck == DoneCheck.ACCEPTED || doneCheck == DoneCheck.REFUSED;
     }
