@@ -17,12 +17,12 @@ import java.util.stream.Stream;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.TestProcesses;
 import tools.jackson.databind.json.JsonMapper;
 
 public final class PrivateTmuxServer implements AutoCloseable {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration POLL = Duration.ofMillis(50);
     private static final String STANDBY = "standby";
 
@@ -55,7 +55,8 @@ public final class PrivateTmuxServer implements AutoCloseable {
 
     public TmuxClaudeRuntime runtime(Path claudeConfiguration, String claudeCode) {
         JsonMapper json = new JsonMapper();
-        return new TmuxClaudeRuntime(tmux, new TmuxPaneProbe(), new ClaudeWorkspaceTrust(claudeConfiguration, json), json, claudeCode);
+        return new TmuxClaudeRuntime(tmux, new TmuxPaneProbe(), new ClaudeWorkspaceTrust(claudeConfiguration, json),
+                new ClaudeSessions(claudeConfiguration.resolve("projects")), json, claudeCode);
     }
 
     public WorkerWindow windowShowing(String fixture, Path directory, Path received) throws IOException {
@@ -76,7 +77,7 @@ public final class PrivateTmuxServer implements AutoCloseable {
     }
 
     public static String awaitContent(Path file, String expected) throws IOException {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         while (System.nanoTime() < deadline) {
             if (Files.exists(file) && Files.readString(file, StandardCharsets.UTF_8).contains(expected)) {
                 return Files.readString(file, StandardCharsets.UTF_8);
@@ -115,7 +116,7 @@ public final class PrivateTmuxServer implements AutoCloseable {
         Process tmuxRun = processes.register(launch.start());
         String output = new String(tmuxRun.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         try {
-            tmuxRun.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS);
+            tmuxRun.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         }
@@ -123,7 +124,7 @@ public final class PrivateTmuxServer implements AutoCloseable {
     }
 
     public List<String> awaitLines(WorkerWindow window, Predicate<List<String>> shown) {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         List<String> lines = visibleLines(window);
         while (System.nanoTime() < deadline && !shown.test(lines)) {
             pause();

@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -20,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
@@ -27,7 +27,6 @@ import io.github.ythibos.edi.testing.TestProcesses;
 class InstallTest {
 
     private static final Path REPOSITORY = Path.of(System.getProperty("edi.repository.root", "..")).toAbsolutePath().normalize();
-    private static final Duration PATIENCE = Duration.ofSeconds(20);
     private static final String MAVEN_NOTING_ITS_JAVA = """
             #!/bin/sh
             echo "$JAVA_HOME" > java-home-of-the-build
@@ -107,7 +106,7 @@ class InstallTest {
             Process listing = new ProcessBuilder("mise", "ls", "--local", "--missing", "--no-header").directory(checkout.toFile())
                     .redirectError(ProcessBuilder.Redirect.DISCARD).start();
             String missing = new String(listing.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            return listing.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS) && listing.exitValue() == 0 && missing.isBlank();
+            return listing.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS) && listing.exitValue() == 0 && missing.isBlank();
         } catch (IOException miseIsMissing) {
             return false;
         }
@@ -126,9 +125,9 @@ class InstallTest {
         Process install = processes.register(launch.start());
         install.getOutputStream().close();
         String output = new String(install.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        if (!install.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!install.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             install.destroyForcibly();
-            throw new IOException("ops/install.sh did not finish within " + PATIENCE.toSeconds() + " seconds");
+            throw new IOException("ops/install.sh did not finish within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds");
         }
         return new InstallRun(install.exitValue(), output);
     }

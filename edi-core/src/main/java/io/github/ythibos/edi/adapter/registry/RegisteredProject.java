@@ -36,6 +36,7 @@ record RegisteredProject(
         String verify,
         String nativeBuild,
         Boolean largeBuilds,
+        Boolean ciRuns,
         List<String> shipBriefRules) {
 
     private static final String HOME_MARK = "~/";
@@ -61,6 +62,7 @@ record RegisteredProject(
                 commandOrNone(verify),
                 commandOrNone(nativeBuild),
                 Boolean.TRUE.equals(largeBuilds),
+                !Boolean.FALSE.equals(ciRuns),
                 Objects.requireNonNullElse(shipBriefRules, List.<String>of()).stream().map(ShipBriefRule::named).toList());
     }
 

@@ -44,6 +44,7 @@ A project's entry names:
 - its `tracker`, `{ kind: jira|edi|none, projectKey: KEY }`;
 - `craftRules: true` when its briefs carry the craftsmanship rules;
 - `nativeBuild`, the command of its local native build, when its briefs say when a change needs one ([local-native-builds](decisions/local-native-builds.md)).
+- `ciRuns: false` when its forge's CI does not run, so its validation pipeline runs skip the CI step as well as the rebase step every run skips ([pipeline-steps](decisions/pipeline-steps.md)).
 
 ## The dispatch rules
 

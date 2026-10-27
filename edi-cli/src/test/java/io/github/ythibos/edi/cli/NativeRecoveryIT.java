@@ -19,24 +19,22 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @DisplayName("The native core supervises the primary and recovers workers after a simulated machine restart")
-@Timeout(value = 3, unit = TimeUnit.MINUTES)
 class NativeRecoveryIT {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(20);
-    private static final Duration START_UP_PATIENCE = Duration.ofSeconds(60);
     private static final Duration OWN_WORK = Duration.ofSeconds(30);
     private static final String REGISTRY = """
             projects:
@@ -67,7 +65,6 @@ class NativeRecoveryIT {
     private static long startUpsWaitedFor;
 
     @BeforeEach
-    @Timeout(value = 90, unit = TimeUnit.SECONDS)
     void startTheNativeCoreInAFreshHome() throws Exception {
         home = Files.createTempDirectory(homes, "home-");
         Files.createDirectories(home.resolve("config"));
@@ -113,6 +110,30 @@ class NativeRecoveryIT {
         assertThat(launchesOf("restart-lamp")).hasSize(1);
         assertThat(remaining.output()).contains("Outage hold list (1)", "1   restart-lamp").doesNotContain("restart-horn  harness");
         assertThat(workers.output()).contains("restart-lamp#1  dead: the machine restarted").doesNotContain("restart-horn#1");
+    }
+
+    @Test
+    void aResumeOfASessionThatLeftNoTranscriptStartsAfreshWithAHandoverInstead() throws Exception {
+        assumeTrue(answers("tmux", "-V"), "tmux is not installed");
+        dispatch("restart-buoy", "HRN-16", "stub-run: edi status working -- the buoy worker started");
+        awaitOutput(List.of("worker", "list"), "the buoy worker started");
+        String session = sessionOf(launchesOf("restart-buoy").getFirst());
+
+        simulateAMachineRestart();
+        deleteTheTranscriptOf(session);
+        edi(Map.of(), "", "recover");
+        CommandRun relaunched = edi(Map.of(), "", "recover", "1", "resume");
+        workerServer().ifPresent(server -> processes.register(server.pid()));
+        List<String> launches = awaitLaunches("restart-buoy", 2);
+        CommandRun workers = awaitOutput(List.of("worker", "list"), "restart-buoy#2");
+
+        assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high), with a fresh"
+                + " session and a handover because session " + session + " left no transcript to resume, in ");
+        assertThat(launches).hasSize(2);
+        assertThat(sessionOf(launches.get(1))).isNotEqualTo(session);
+        assertThat(launches.get(1)).doesNotContain("--resume")
+                .contains(" and session " + session + " left no transcript to resume: read the handover " + home.resolve("data/tasks/restart-buoy/handover.md"));
+        assertThat(workers.output()).contains("restart-buoy#2").doesNotContain("restart-buoy#2  dead");
     }
 
     @Test
@@ -178,7 +199,6 @@ class NativeRecoveryIT {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
-                "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
                 "--edi.pipeline.home=" + home.resolve("no-mistakes"),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
@@ -190,6 +210,7 @@ class NativeRecoveryIT {
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
+        launch.environment().put("CLAUDE_CONFIG_DIR", Files.createDirectories(home.resolve("claude-config")).toString());
         launch.environment().put("SERVER_PORT", "0");
         Process started = processes.register(launch.start());
         long startUp = System.nanoTime();
@@ -203,6 +224,16 @@ class NativeRecoveryIT {
         stopTheWorkerServer();
         Files.writeString(bootIdFile(), UUID.randomUUID().toString());
         core = startedCore();
+    }
+
+    private static void deleteTheTranscriptOf(String session) throws IOException {
+        try (Stream<Path> files = Files.walk(home.resolve("claude-config/projects"))) {
+            List<Path> transcripts = files.filter(file -> file.getFileName().toString().equals(session + ".jsonl")).toList();
+            assertThat(transcripts).as("the transcript of session %s", session).isNotEmpty();
+            for (Path transcript : transcripts) {
+                Files.delete(transcript);
+            }
+        }
     }
 
     private static void dispatch(String task, String key, String spec) throws Exception {
@@ -225,7 +256,7 @@ class NativeRecoveryIT {
     }
 
     private static List<String> awaitLaunches(String task, int count) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         List<String> launches = launchesOf(task);
         while (launches.size() < count && System.nanoTime() < deadline) {
             Thread.sleep(100);
@@ -246,7 +277,7 @@ class NativeRecoveryIT {
     }
 
     private static CommandRun awaitOutput(List<String> command, String expected) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         CommandRun run = edi(Map.of(), "", command.toArray(String[]::new));
         while (!run.output().contains(expected) && System.nanoTime() < deadline) {
             Thread.sleep(100);
@@ -290,7 +321,7 @@ class NativeRecoveryIT {
     }
 
     private static void awaitThePortOf(Process started) throws Exception {
-        long deadline = System.nanoTime() + START_UP_PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         while (CoreAddress.recordedIn(home.resolve("state/core.port")).isEmpty()) {
             assertThat(started.isAlive()).as("the native core is running; its log:%n%s", Files.readString(home.resolve("core.log"))).isTrue();
             assertThat(System.nanoTime()).as("the native core recorded its port in time").isLessThan(deadline);
@@ -303,7 +334,7 @@ class NativeRecoveryIT {
             return;
         }
         running.destroy();
-        if (!running.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!running.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             running.destroyForcibly();
         }
     }
@@ -354,7 +385,7 @@ class NativeRecoveryIT {
         try (OutputStream standardInput = command.getOutputStream()) {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
         }
-        if (!command.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!command.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             command.destroyForcibly().waitFor();
         }
         return new CommandRun(command.exitValue(), Files.readString(output, StandardCharsets.UTF_8));

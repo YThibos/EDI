@@ -49,7 +49,7 @@ The machine profile's `supervision` section sets when an idle worker has waited 
 ## Recovery
 
 Two or more dead workers go on a numbered outage hold list that `edi recover` answers one number at a time, resuming the recorded session in the task's own copy ([recovery](decisions/recovery.md)).
-A worker whose context is full cannot be resumed, so once it is stopped, `edi worker relaunch` starts it afresh in its own copy; every fresh start writes `handover.md` beside the brief with the branch, the commits, the uncommitted changes, the pipeline, the plan and the last status ([recovery](decisions/recovery.md)).
+A worker whose context is full, or whose session left no transcript, cannot be resumed, so `edi worker relaunch` and `edi recover <n> resume` start it afresh in its own copy and say so; every fresh start writes `handover.md` beside the brief with the branch, the commits, the uncommitted changes, the pipeline, the plan and the last status ([recovery](decisions/recovery.md)).
 
 ```sh
 edi worker relaunch fit-lamp                        # resume a dead or stopped worker's session in its own copy, or start a full context afresh

@@ -74,6 +74,13 @@ public final class BriefFixtures {
                 false);
     }
 
+    public static BriefFacts shipWhereCi(boolean ciRuns) {
+        Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
+        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, NATIVE_BUILD, ciRuns),
+                dispatch(CategoryId.IMPLEMENTATION, ""), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                false);
+    }
+
     private static BriefFacts facts(TaskKind kind, DeliveryMode delivery, CategoryId category, String spec, AiScaffolding aiScaffolding) {
         Task task = Task.queued(TASK, intake(kind), "Fit the lamp in the hall; offline verification is accepted.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding, null), dispatch(category, spec), new BaseBranch("main"),
@@ -85,9 +92,13 @@ public final class BriefFixtures {
     }
 
     private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild) {
+        return project(delivery, aiScaffolding, nativeBuild, true);
+    }
+
+    private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild, boolean ciRuns) {
         return new ProjectEntry(new Project(new ProjectName("harness"), new ProjectKey("HRN")), TrackerKind.EDI, HOME.resolve("projects/harness"),
                 Path.of("/checkouts/harness"), new BaseBranch("main"), FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
-                "./mvnw -B verify", nativeBuild, true, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS));
+                "./mvnw -B verify", nativeBuild, true, ciRuns, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS));
     }
 
     private static Dispatch dispatch(CategoryId category, String spec) {

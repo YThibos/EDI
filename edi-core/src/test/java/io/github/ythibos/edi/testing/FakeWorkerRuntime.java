@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -25,6 +26,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final List<Launch> launches = new ArrayList<>();
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
+    private final Set<UUID> sessionsWithoutATranscript = new HashSet<>();
     private PaneState pane = PaneState.IDLE_PROMPT;
     private boolean paneFails;
     private boolean serverRunning = true;
@@ -103,6 +105,11 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
+    public synchronized boolean hasATranscriptOf(UUID session) {
+        return !sessionsWithoutATranscript.contains(session);
+    }
+
+    @Override
     public synchronized Optional<LimitStop> usageLimitStopIn(String transcript, Instant since) {
         return Optional.ofNullable(limitStopInTheTranscript).filter(stop -> !stop.endedAt().isBefore(since));
     }
@@ -133,6 +140,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void failingEveryKeystroke() {
         paneFails = true;
+    }
+
+    public synchronized void leaveNoTranscriptOf(UUID session) {
+        sessionsWithoutATranscript.add(session);
     }
 
     public synchronized void closeEveryWindow() {

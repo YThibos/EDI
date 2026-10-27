@@ -10,7 +10,7 @@ Each program is started only from the adapter that owns it ([ports-and-architect
 | `claude` | Claude Code, for the primary session and every worker | [claude-code.md](verification/claude-code.md) |
 | `gh` | drafts, merges and checks on GitHub, under the project's bound account | [gh.md](verification/gh.md) |
 | `glab` | the same on GitLab | [glab.md](verification/glab.md) |
-| `no-mistakes` | the validation pipeline a ship's worker runs before its draft opens; EDI reads its state and sets its agent's model and effort and the work key of its commits and titles | [no-mistakes.md](verification/no-mistakes.md) |
+| `no-mistakes` | the validation pipeline a ship's worker runs before its draft opens; EDI reads its state and sets its agent's model and effort, the work key of its commits and titles, and the steps its runs skip | [no-mistakes.md](verification/no-mistakes.md) |
 | `lavish-axi` | research boards, read through `lavish-axi poll` | [lavish.md](verification/lavish.md) |
 | `gitleaks` | the publish check's secret scan | - |
 | `powershell.exe`, `cmd.exe` | on WSL, Windows notifications, the Outlook calendar and opening the console in the browser | [windows.md](verification/windows.md) |

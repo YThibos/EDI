@@ -15,6 +15,7 @@ import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectKey;
@@ -122,6 +123,19 @@ class ProjectRegistryTest {
         register("projects:\n  - name: service\n    tracker: { projectKey: SVC }\n");
         assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
                 .hasMessageContaining("A project's tracker names its kind: jira, edi or none.");
+    }
+
+    @Test
+    void skipsThePipelinesRebaseForEveryProjectAndItsCiForAProjectWhoseCiDoesNotRun() throws IOException {
+        register("""
+                projects:
+                  - name: service
+                  - name: harness
+                    ciRuns: false
+                """);
+
+        assertThat(registry().entryOf(new ProjectName("service")).skippedPipelineSteps()).containsExactly(PipelineStep.REBASE);
+        assertThat(registry().entryOf(new ProjectName("harness")).skippedPipelineSteps()).containsExactly(PipelineStep.REBASE, PipelineStep.CI);
     }
 
     private ProjectRegistry registry() {

@@ -19,8 +19,6 @@ import io.github.ythibos.edi.testing.TestProcesses;
 @Tag("adapter")
 class ProcessTableTest {
 
-    private static final long TEN_SECONDS_OF_TICKS = 1000;
-
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
 
@@ -46,16 +44,16 @@ class ProcessTableTest {
 
     @Test
     void readsTheStartTickOfAProcessWhoseNameLooksLikeMoreFields() throws IOException {
-        Process plain = processes.register(new ProcessBuilder("sleep", "30").start());
         Path oddlyNamed = Files.createSymbolicLink(directory.resolve("sl) S 1 2 3"), Path.of(executableOf("sleep")));
+        Process before = processes.register(new ProcessBuilder("sleep", "30").start());
         Process odd = processes.register(new ProcessBuilder(oddlyNamed.toString(), "30").start());
+        Process after = processes.register(new ProcessBuilder("sleep", "30").start());
 
-        long plainStart = table.identify(plain.pid()).orElseThrow().startTick();
-        assertThat(table.identify(odd.pid()).orElseThrow().startTick()).isBetween(plainStart, plainStart + TEN_SECONDS_OF_TICKS);
-        plain.destroyForcibly();
-        odd.destroyForcibly();
-        assertThat(TestProcesses.awaitExit(plain.toHandle())).isTrue();
-        assertThat(TestProcesses.awaitExit(odd.toHandle())).isTrue();
+        assertThat(startTickOf(odd)).isBetween(startTickOf(before), startTickOf(after));
+        for (Process started : List.of(before, odd, after)) {
+            started.destroyForcibly();
+            assertThat(TestProcesses.awaitExit(started.toHandle())).isTrue();
+        }
     }
 
     @Test
@@ -71,10 +69,11 @@ class ProcessTableTest {
 
     @Test
     void readsTheArgumentsOfAProcessAndEverythingBelowIt() throws IOException {
-        Process pane = processes.register(new ProcessBuilder("sh", "-c", "sleep 31 & echo forked; wait", "pane").start());
+        String forkOnceSleeping = "sleep 31 & until [ \"$(cat /proc/$!/comm)\" = sleep ]; do :; done; echo forked; wait";
+        Process pane = processes.register(new ProcessBuilder("sh", "-c", forkOnceSleeping, "pane").start());
         assertThat(pane.inputReader().readLine()).isEqualTo("forked");
 
-        assertThat(table.argumentsInTree(pane.pid())).containsExactly(List.of("-c", "sleep 31 & echo forked; wait", "pane"), List.of("31"));
+        assertThat(table.argumentsInTree(pane.pid())).containsExactly(List.of("-c", forkOnceSleeping, "pane"), List.of("31"));
         table.stopTree(pane.pid(), Duration.ofMillis(200));
         assertThat(TestProcesses.awaitExit(pane.toHandle())).isTrue();
         assertThat(table.argumentsInTree(pane.pid())).isEmpty();
@@ -96,5 +95,9 @@ class ProcessTableTest {
     private static String executableOf(String program) throws IOException {
         Process which = new ProcessBuilder("sh", "-c", "command -v " + program).start();
         return new String(which.getInputStream().readAllBytes()).strip();
+    }
+
+    private long startTickOf(Process process) {
+        return table.identify(process.pid()).orElseThrow().startTick();
     }
 }

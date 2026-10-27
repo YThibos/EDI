@@ -47,6 +47,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.PrePushHook;
 import io.github.ythibos.edi.testing.PrePushHook.HookRun;
 import io.github.ythibos.edi.testing.TestHome;
@@ -447,7 +448,7 @@ class WorkIsolationAndGitHygieneTest {
         credential.getOutputStream().write("protocol=https\nhost=forge.example.org\n\n".getBytes(StandardCharsets.UTF_8));
         credential.getOutputStream().close();
         String answer = new String(credential.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        credential.waitFor(10, TimeUnit.SECONDS);
+        credential.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
         return answer;
     }
 

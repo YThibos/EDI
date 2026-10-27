@@ -24,7 +24,7 @@ public final class InstalledPrograms {
         try {
             Process process = new ProcessBuilder(versionCommand).directory(WHERE_FIXTURES_LIVE).redirectErrorStream(true).start();
             process.getInputStream().transferTo(OutputStream.nullOutputStream());
-            return process.waitFor(10, TimeUnit.SECONDS) && process.exitValue() == 0;
+            return process.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS) && process.exitValue() == 0;
         } catch (IOException missing) {
             return false;
         } catch (InterruptedException interrupted) {

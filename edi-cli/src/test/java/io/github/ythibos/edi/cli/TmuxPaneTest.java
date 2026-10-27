@@ -10,7 +10,6 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -25,13 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.TestProcesses;
 import picocli.CommandLine;
 
 @Tag("adapter")
 class TmuxPaneTest {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final int PANE_COLUMNS = 90;
 
     @RegisterExtension
@@ -105,9 +104,9 @@ class TmuxPaneTest {
     private ProgramRun run(List<String> commandLine) throws IOException, InterruptedException {
         Process program = processes.register(new ProcessBuilder(commandLine).redirectErrorStream(true).start());
         program.getOutputStream().close();
-        if (!program.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!program.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             program.destroyForcibly();
-            throw new IOException(String.join(" ", commandLine) + " did not finish within " + PATIENCE.toSeconds() + " seconds");
+            throw new IOException(String.join(" ", commandLine) + " did not finish within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds");
         }
         return new ProgramRun(program.exitValue(), new String(program.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
     }
