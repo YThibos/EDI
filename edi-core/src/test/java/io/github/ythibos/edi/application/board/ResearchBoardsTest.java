@@ -261,7 +261,7 @@ class ResearchBoardsTest {
 
         assertThatThrownBy(() -> armQuietlyCarrying(CLOSE_OUT_CARD)).isInstanceOf(Refusal.class)
                 .hasMessage(held + " already waits on the captain on lantern-research (\"Drop the lantern work?\"); if the board answers it, arm the "
-                        + "round with that very card under --card, or report the new question to EDI with edi status needs-decision.");
+                        + "round with that very card under --card, or report the new question to EDI with edi status needs-decision --key <question>.");
         assertThat(home.decisions().get(held).card().title()).isEqualTo("Drop the lantern work?");
         assertThat(home.boards().listening()).isEmpty();
     }

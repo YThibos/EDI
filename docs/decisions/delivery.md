@@ -18,7 +18,8 @@ For `draft-review`, the worker runs the validation pipeline with the intent EDI 
 `RecordStatus` asks `DoneClaims` before it records any `done`, and `DoneClaims` refuses first of all while the task's inbox holds a message the worker has not acknowledged, naming every such message's number, for a scout as for a ship.
 For a ship it then checks that the branch adds no `-SNAPSHOT` word to any `pom.xml` line since `origin/<base>` (`SnapshotVersions`), and for `draft-review` the open request from the task's branch, or else the latest merged one, comes from that branch, targets the base and shows the copy's head; it may be a draft, ready or merged, and only a request closed without a merge is a gap.
 For `report` the task directory holds `report.md` (`Workplace.report`) and the copy holds no change, which `LandedWorkCheck` decides as it does for cleanup: nothing uncommitted, no nested repository and no commit beyond what `origin/<base>` holds.
-A refused done names every gap in one sentence, is recorded as `DeliveryRefused`, and leaves the worker's status as it was; a scout's done carries no other claim.
+A scout's done claims only its findings: the task directory holds `report.md`, or the done is refused naming that path.
+A refused done names every gap in one sentence, is recorded as `DeliveryRefused`, and leaves the worker's status as it was.
 These claims are checked when the done is reported, and for a mechanical task the mechanical check then gates the delivery ([mechanical-tasks](mechanical-tasks.md)).
 `DeliverAcceptedWork` then delivers by mode, and for `report` runs `CleanUpTask` at once, since the report is the whole delivery and nothing waits for the captain.
 `local-branch` runs `git -C <captainCheckout> fetch <worktree> <branch>:<branch>`, which moves one ref forward or is refused, and records `BranchDeliveredToCaptain` only when the checkout's branch holds the copy's head (`CaptainCheckouts`).
@@ -63,3 +64,4 @@ Never for the merge authority; the claims are revisited when the pipeline itself
 - 21/10/2026: a done was refused because the captain had marked or merged its request first, so the done stopped demanding a draft (EDI-23).
 - 23/10/2026: an operation with nothing to push could not report done, so the `report` delivery finishes a task on its report and a copy that holds no change, and the captain kept it out of the registry's defaults (EDI-41).
 - 26/10/2026: a done reported inside a turn ran ahead of a steer that arrived at the turn's end, so a done waits until every message in the task's inbox is acknowledged, and the record now places the mechanical check after the claims, gating the delivery (EDI-52).
+- 26/10/2026: the EDI-74 review found a scout's done accepted without its report, which only its cleanup asked for, so the done claims the report (EDI-77).

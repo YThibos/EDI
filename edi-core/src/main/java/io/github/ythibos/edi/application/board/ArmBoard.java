@@ -136,7 +136,7 @@ public class ArmBoard {
         if (!open.card().equals(card.card()) && listening.filter(board -> board.bindings().contains(card.raisedAs(open.number()))).isEmpty()) {
             throw new Refusal(open.number() + " already waits on the captain on " + open.task() + " (\"" + open.card().title()
                     + "\"); if the board answers it, arm the round with that very card under --card, or report the new question to EDI with "
-                    + "edi status needs-decision.");
+                    + "edi status needs-decision --key <question>.");
         }
     }
 

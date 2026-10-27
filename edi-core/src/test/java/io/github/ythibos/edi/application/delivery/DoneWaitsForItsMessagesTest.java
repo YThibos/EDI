@@ -82,7 +82,7 @@ class DoneWaitsForItsMessagesTest {
     }
 
     @Test
-    void holdsAScoutsDoneToTheSameRule() {
+    void holdsAScoutsDoneToTheSameRule() throws IOException {
         Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued(SURVEY.value(), TaskKind.SCOUT, "harness", "HRN-4"),
                 CategoryId.RESEARCH);
         steer(SURVEY, "Survey the oil lamps too.");
@@ -91,6 +91,7 @@ class DoneWaitsForItsMessagesTest {
                 .hasMessageContaining("message 1 waits unacknowledged");
 
         home.workerInbox().acknowledge(scout.id(), 1);
+        Files.writeString(Files.createDirectories(home.home().taskDirectory(SURVEY)).resolve("report.md"), "Brass lamps outlast oil lamps.\n");
         Worker reported = report(scout, StatusState.DONE, "The survey is in the report.");
 
         assertThat(reported.lastStatus().report().state()).isEqualTo(StatusState.DONE);

@@ -50,23 +50,17 @@ public class DoneClaims {
     public Optional<MergeRequestView> verify(WorkerId worker) {
         requireEveryMessageAcknowledged(worker);
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
-        if (!workplace.isAShip()) {
-            return Optional.empty();
-        }
-        requireTheCopy(workplace);
-        Optional<MergeRequestView> request = requestOf(workplace);
-        List<String> gaps = new ArrayList<>(snapshotGapsOf(workplace));
-        gaps.addAll(deliveryGapsOf(workplace, request));
-        if (!gaps.isEmpty()) {
-            refuse(worker, gaps);
-        }
-        return request;
+        return switch (workplace.kind()) {
+            case SHIP -> verifyTheShip(worker, workplace);
+            case SCOUT -> verifyTheScout(worker, workplace);
+            case CAPTAIN -> Optional.empty();
+        };
     }
 
     private void requireEveryMessageAcknowledged(WorkerId worker) {
         List<Integer> waiting = numbersWaitingIn(worker);
         if (!waiting.isEmpty()) {
-            refuse(worker, List.of(unacknowledgedGapOf(waiting)));
+            refuseAnyOf(worker, List.of(unacknowledgedGapOf(waiting)));
         }
     }
 
@@ -88,9 +82,21 @@ public class DoneClaims {
         return String.join(", ", numbers.subList(0, numbers.size() - 1)) + " and " + numbers.getLast();
     }
 
-    private void refuse(WorkerId worker, List<String> gaps) {
+    private void refuseAnyOf(WorkerId worker, List<String> gaps) {
+        if (gaps.isEmpty()) {
+            return;
+        }
         transaction.executeWithoutResult(_ -> events.record(new DeliveryRefused(worker.task(), worker, gaps), Actor.CORE, clock.now()));
         throw new Refusal("EDI accepts this done once its claims hold: " + String.join("; ", gaps) + ".");
+    }
+
+    private Optional<MergeRequestView> verifyTheShip(WorkerId worker, Workplace workplace) {
+        requireTheCopy(workplace);
+        Optional<MergeRequestView> request = requestOf(workplace);
+        List<String> gaps = new ArrayList<>(snapshotGapsOf(workplace));
+        gaps.addAll(deliveryGapsOf(workplace, request));
+        refuseAnyOf(worker, gaps);
+        return request;
     }
 
     private static void requireTheCopy(Workplace workplace) {
@@ -126,14 +132,22 @@ public class DoneClaims {
     }
 
     private List<String> reportGapsOf(Workplace workplace) {
-        List<String> gaps = new ArrayList<>();
-        if (!Files.isRegularFile(workplace.report())) {
-            gaps.add("the report " + workplace.report() + " does not exist, and it is all a report delivery delivers");
-        }
+        List<String> gaps = new ArrayList<>(missingReportGapsOf(workplace, "it is all a report delivery delivers"));
         List<String> changes = landedWork.of(workplace).findings();
         if (!changes.isEmpty()) {
             gaps.add("a report delivery carries no change, yet " + String.join(" and ", changes));
         }
         return gaps;
+    }
+
+    private static List<String> missingReportGapsOf(Workplace workplace, String whyItIsNeeded) {
+        return Files.isRegularFile(workplace.report())
+                ? List.of()
+                : List.of("the report " + workplace.report() + " does not exist, and " + whyItIsNeeded);
+    }
+
+    private Optional<MergeRequestView> verifyTheScout(WorkerId worker, Workplace workplace) {
+        refuseAnyOf(worker, missingReportGapsOf(workplace, "a scout delivers its findings there"));
+        return Optional.empty();
     }
 }
