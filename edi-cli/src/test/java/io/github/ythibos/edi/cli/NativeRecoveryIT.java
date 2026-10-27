@@ -24,19 +24,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @DisplayName("The native core supervises the primary and recovers workers after a simulated machine restart")
-@Timeout(value = 3, unit = TimeUnit.MINUTES)
 class NativeRecoveryIT {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(20);
-    private static final Duration START_UP_PATIENCE = Duration.ofSeconds(60);
     private static final Duration OWN_WORK = Duration.ofSeconds(30);
     private static final String REGISTRY = """
             projects:
@@ -67,7 +64,6 @@ class NativeRecoveryIT {
     private static long startUpsWaitedFor;
 
     @BeforeEach
-    @Timeout(value = 90, unit = TimeUnit.SECONDS)
     void startTheNativeCoreInAFreshHome() throws Exception {
         home = Files.createTempDirectory(homes, "home-");
         Files.createDirectories(home.resolve("config"));
@@ -225,7 +221,7 @@ class NativeRecoveryIT {
     }
 
     private static List<String> awaitLaunches(String task, int count) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         List<String> launches = launchesOf(task);
         while (launches.size() < count && System.nanoTime() < deadline) {
             Thread.sleep(100);
@@ -246,7 +242,7 @@ class NativeRecoveryIT {
     }
 
     private static CommandRun awaitOutput(List<String> command, String expected) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         CommandRun run = edi(Map.of(), "", command.toArray(String[]::new));
         while (!run.output().contains(expected) && System.nanoTime() < deadline) {
             Thread.sleep(100);
@@ -290,7 +286,7 @@ class NativeRecoveryIT {
     }
 
     private static void awaitThePortOf(Process started) throws Exception {
-        long deadline = System.nanoTime() + START_UP_PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         while (CoreAddress.recordedIn(home.resolve("state/core.port")).isEmpty()) {
             assertThat(started.isAlive()).as("the native core is running; its log:%n%s", Files.readString(home.resolve("core.log"))).isTrue();
             assertThat(System.nanoTime()).as("the native core recorded its port in time").isLessThan(deadline);
@@ -303,7 +299,7 @@ class NativeRecoveryIT {
             return;
         }
         running.destroy();
-        if (!running.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!running.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             running.destroyForcibly();
         }
     }
@@ -354,7 +350,7 @@ class NativeRecoveryIT {
         try (OutputStream standardInput = command.getOutputStream()) {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
         }
-        if (!command.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!command.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             command.destroyForcibly().waitFor();
         }
         return new CommandRun(command.exitValue(), Files.readString(output, StandardCharsets.UTF_8));

@@ -30,7 +30,7 @@ The why behind every rule is in [docs/decisions](docs/decisions/README.md); read
 
 ## Tests
 
-- Tests are fast and deterministic: time comes from the `Clock` port, no `Thread.sleep` except in a helper that waits for a real child process with a hard timeout, and every test class finishes within the 30-second default timeout.
+- Tests are fast and deterministic: time comes from the `Clock` port, no `Thread.sleep` except in a helper that waits for a real child process with a hard timeout, a wait for real work waits on its event up to `Patience.FOR_REAL_WORK` and never asserts how soon it came, and a test does a few seconds of work at most on an idle machine; the 3-minute default timeout only catches a hang.
 - A test that needs an external tool skips with a reason when the tool is missing; it never fails for that.
 - Git tests use temporary repositories isolated from the user's git configuration (`FixtureRepository`).
 - The invariant catalogue lives in `edi-core`'s test package `invariant`; a slice makes an acceptance test pass by replacing its `Pending.until` call with the real test ([invariant-catalogue](docs/decisions/invariant-catalogue.md)).

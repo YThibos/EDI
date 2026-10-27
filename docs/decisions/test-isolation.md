@@ -5,12 +5,14 @@
 ## Context
 
 The old harness's suites leaked watcher children that wedged the runner, and a leaked process must fail the build (AT-40).
-Test classes run concurrently in one JVM, one thread per processor, and every test must finish within the 30-second default timeout.
+Test classes run concurrently in one JVM, one thread per processor, and JUnit fails a test that outlives the default timeout.
 A tmux server daemonises, so it is neither a descendant of the JVM nor of the client that started it.
 The developer's global git configuration, such as `insteadOf` rewrites, `core.hooksPath` or an include on a slow mounted file system, can change what a test proves and how long it takes, and git 2.47 and later leave a background maintenance process behind ordinary commands.
 On a busy laptop the full suite ran its longest tests at three to five times their solo time, and a recording showed the optimising Graal compiler, a Flyway migration per test home and repeated YAML mapping taking most of the processors.
 With several workers building at once, a recording of a test that overran showed most of its time in SQLite's native calls: `StoreFile` opens a connection for every statement and leaves `synchronous` at its default, `FULL`, so every commit and every checkpoint waits for the disk, and a test home writes hundreds of commits, one for each event a follower handles.
 At a load average of about 20, one write and one read through the store took 27 to 59 ms, and 1 to 3 ms with `synchronous` off.
+After all of that, `edi update` still failed while several workers built at once, when AT-32's canary test and AT-47's import outlived a 30-second timeout; alone each takes about 2 seconds.
+With 80 busy loops and six disk writers beside two builds of edi-core on 16 processors, at a load average of 114 to 127, 28 tests of the suite as it was timed out at 30 seconds over two runs, these two among them, while beside them every test passed once the timeout was generous, the slowest in 37 seconds.
 
 ## Decision
 
@@ -29,6 +31,11 @@ A test that builds many homes checks each in a case of its own, as AT-22's `capt
 A `TestHome` helper that reads and writes several rows does so in one transaction, as `markDone` and `putInFlight` do, and a test that stores several rows for one step of its story stores them through `TestHome.inOneTransaction`, as the research-first pilot's test stores each finished ship, so one step of the test's story is one transaction, as one command is in the core.
 A test that follows the log several times holds one `EventFollowers` for its home, as the core holds one, instead of building the followers and their trackers again for every round.
 A test that needs an external tool skips with a reason when the tool is missing, time comes only from the `Clock` port, and nothing sleeps except a helper waiting for a real child with a hard timeout.
+The root `pom.xml` sets JUnit's default timeout to 3 minutes, which catches a test that hangs, while a test's speed is judged by its time on an idle machine, a few seconds of work at most.
+Every helper that waits for real work, a child process, a tmux pane, a listener thread or an event stream, waits up to `Patience.FOR_REAL_WORK`, one minute, so a stuck child fails with its own message before the test's timeout ends it; among them are `TestProcesses`, `StandInScripts`, `FixtureRepository`, `PrePushHook`, `PrivateTmuxServer`, `FakeBoardHost` and `InstalledPrograms`.
+A test asserts what an event shows, not how soon it came, as `ProcessTableTest` reads a process's start between the starts of two processes started around it.
+`NativeSmokeIT` and `NativeRecoveryIT` wait up to `Patience.FOR_REAL_WORK` for each native command, start-up of the core, poll and event stream, and run under the default timeout.
+`NativeRecoveryIT`'s own-work limit and AT-39's round-trip budget measure the native executables' speed and stay as [native-smoke-test](native-smoke-test.md) sets them.
 
 ## Why
 
@@ -40,12 +47,16 @@ Under load a test's time follows the processor work it and its children ask for,
 AT-22 rendered sixteen golden reports and built three more homes in one test, about 24 seconds of work at a load average of 39 to 54, where none of its cases now takes more than 9 seconds and a failing case names the kind of string that carries the label.
 Opening a connection took about 11 ms at a load average of about 20, and the research-first pilot's `raisesTheComparisonOnlyOnce` opened 408, seven in each call of `markDone`, about nine for each finished ship and four in each follow round only to find the log empty, and built its four followers again for each of its eleven rounds; under the same synthetic load, at a load average of 30 to 45, it went from 14 to 21 seconds to 5 to 10.
 At a load average of about 46, opening a connection and writing a row took 1.9 to 5.6 ms, holding one connection open beside the store 0.6 to 1.5 ms, and a pooled connection 0.06 to 0.3 ms; `EventFollowersTest`'s test of 101 events went from 4 to 5 seconds alone, and 22 in a loaded full build, to 1, and the full build's slowest test stayed at 22 seconds at a load average of 43 to 64.
+A test's time on a busy machine follows the work every other build asks for, which no test controls, so any limit near the slowest test's loaded time fails a build for a reason outside the change, and only a limit far above it tells a hang from a crowd.
 
 ## Alternatives rejected
 
 - Diffing the JVM's descendants before and after each test - concurrent classes would blame each other, and a daemonised server is never a descendant.
 - Isolating git in `ExternalPrograms` - EDI itself must read the captain's configuration for proxies and credentials.
-- Fewer test threads, a longer timeout, or the slowest classes run alone - slower everywhere, a hidden cost that keeps growing, or the suite stopped while they run.
+- Fewer test threads, or the slowest classes run alone - slower everywhere, or the suite stopped while they run.
+- A long timeout only for the tests tagged `adapter` - application tests on a test home and the architecture scans overran as often, and they read and write the disk too.
+- A timeout scaled by the machine's load average - the limit would still depend on what other builds do, measured a minute late.
+- Making the slowest tests faster once more - every round so far left a test that the next busier machine pushed past the limit.
 - One connection held open beside each test home's store - three times cheaper than opening one for every statement, but never closed, so every home would keep its files open until the JVM ends.
 - A pool in the core as well - the core's store is the store record's concern, and its `StoreConfiguration` stays as it is.
 - A store in memory - the adapters and AT-32 read the store's files on disk.
@@ -55,7 +66,8 @@ At a load average of about 46, opening a connection and writing a row took 1.9 t
 
 ## Consequences
 
-- Good: a leaking test fails with its pid and command, and the longest tests keep about half their timeout in hand.
+- Good: a leaking test fails with its pid and command, and a test fails on a busy machine only when it hangs.
+- Bad: a hung test holds its thread for up to 3 minutes, and a test that grows slow passes until someone reads its time in the reports.
 - Bad: a process started without registration is outside the extension's reach, hot code runs slower without the optimising compiler, and a test of a migration migrates a store of its own.
 - Bad: a crash of the machine could leave a test home's store corrupt, and the Spring tests that start the core keep the core's waits for the disk.
 - Bad: each AT-38 case pays for its own home and clone of the project.
@@ -63,7 +75,7 @@ At a load average of about 46, opening a connection and writing a row took 1.9 t
 
 ## When to revisit
 
-When JUnit offers process tracking, a test needs the developer's git configuration or long CPU-bound code, a test checks what the store keeps across a crash of the machine, or the pinned toolchain changes compiler.
+When JUnit offers process tracking, a test needs the developer's git configuration or long CPU-bound code, a test checks what the store keeps across a crash of the machine, the pinned toolchain changes compiler, or a test that hangs costs the suite more than the limit saves.
 
 ## How we got here
 
@@ -75,3 +87,4 @@ When JUnit offers process tracking, a test needs the developer's git configurati
 - 23/10/2026: AT-22 still overran at a load average of 39, so each kind of captain-facing string is checked in a case of its own (EDI-45).
 - 23/10/2026: the research-first pilot's test took 24 seconds at a load average of 30 to 46, so `TestHome` helpers and each finished ship use one transaction, the test holds one `EventFollowers`, a follower's run ends at a short batch and the machine profile is parsed again only when it changed (EDI-45).
 - 23/10/2026: the follower test written for the short batch took 22 seconds in a loaded full build, nearly all of it opening connections, so a test home's store keeps its connections in a pool (EDI-45).
+- 27/10/2026: AT-32's canary test and AT-47's import still outlived 30 seconds with several workers building at once, so the default timeout is 3 minutes, helpers and the native tests wait a minute for real work and `ProcessTableTest` no longer reads a start against a fixed window (EDI-106).

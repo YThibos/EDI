@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
@@ -39,7 +40,6 @@ import io.github.ythibos.edi.testing.TestProcesses;
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
 class NativeSmokeIT {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(20);
     private static final RoundTripBudget ROUND_TRIP_BUDGET = new RoundTripBudget(200);
     private static final RoundTripBudget PROOF_BUDGET = new RoundTripBudget(50);
     private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
@@ -109,7 +109,7 @@ class NativeSmokeIT {
             return;
         }
         core.destroy();
-        if (!core.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!core.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             core.descendants().forEach(ProcessHandle::destroyForcibly);
             core.destroyForcibly();
         }
@@ -411,7 +411,7 @@ class NativeSmokeIT {
     }
 
     private static CommandRun awaitOutput(List<String> command, String expected) throws Exception {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         CommandRun run = edi("", command.toArray(String[]::new));
         while (!run.output().contains(expected) && System.nanoTime() < deadline) {
             Thread.sleep(200);
@@ -448,7 +448,7 @@ class NativeSmokeIT {
     }
 
     private static CoreAddress awaitRecordedAddress(Path portFile) throws IOException {
-        long deadline = System.nanoTime() + PATIENCE.toNanos();
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         Optional<CoreAddress> recorded = CoreAddress.recordedIn(portFile);
         while (recorded.isEmpty()) {
             assertThat(core.isAlive()).as("the native core is running; its log:%n%s", log()).isTrue();
@@ -486,8 +486,8 @@ class NativeSmokeIT {
         HttpClient http = HttpClient.newHttpClient();
         try {
             HttpResponse<Stream<String>> stream = http.sendAsync(withTheCookie("/api/stream", cookie).header("Accept", "text/event-stream")
-                    .GET().build(), BodyHandlers.ofLines()).get(PATIENCE.toSeconds(), TimeUnit.SECONDS);
-            return CompletableFuture.supplyAsync(() -> stream.body().limit(2).toList()).get(PATIENCE.toSeconds(), TimeUnit.SECONDS);
+                    .GET().build(), BodyHandlers.ofLines()).get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
+            return CompletableFuture.supplyAsync(() -> stream.body().limit(2).toList()).get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
         } finally {
             http.shutdownNow();
         }
@@ -562,7 +562,7 @@ class NativeSmokeIT {
             standardInput.write(input.getBytes(StandardCharsets.UTF_8));
         }
         String output = new String(command.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        if (!command.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!command.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             command.destroyForcibly();
         }
         return new CommandRun(command.exitValue(), output);
