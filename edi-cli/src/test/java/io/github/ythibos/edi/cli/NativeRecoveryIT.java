@@ -134,7 +134,8 @@ class NativeRecoveryIT {
         assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high), with a fresh"
                 + " session and a handover because session " + session + " left no transcript to resume, in ");
         assertThat(launches).hasSize(2);
-        assertThat(launches.get(1)).doesNotContain("--resume").doesNotContain(session)
+        assertThat(sessionOf(launches.get(1))).isNotEqualTo(session);
+        assertThat(launches.get(1)).doesNotContain("--resume")
                 .contains(" and session " + session + " left no transcript to resume: read the handover " + home.resolve("data/tasks/restart-buoy/handover.md"));
         assertThat(workers.output()).contains("restart-buoy#2").doesNotContain("restart-buoy#2  dead");
     }
