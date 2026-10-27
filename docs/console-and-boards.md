@@ -19,6 +19,8 @@ Every time the page shows is in the machine's own time zone, which the core name
 The header clock reads as a stardate, such as "SD 2026.295 · 11:14 CEST", and on a screen 350 CSS pixels wide or narrower it keeps only the time.
 
 Each decision card takes an option, the captain's own words, or both, and records them verbatim as the captain's answer; Reconcile asks the primary to re-check the decision against reality instead of answering it ([captain-decisions](decisions/captain-decisions.md)).
+The Personality button in the header opens the personality desk above the sitrep: the Balanced, Plain and Demo presets, a slider from 0 to 10 for each of the nine scales, and a sample of good or bad news worded at the chosen levels ([personality](decisions/personality.md)).
+Keep stores the levels exactly as `edi personality` or `/personality` would, so the page and the command always show the same personality; Undo goes back to what is kept.
 The console opens through `cmd.exe /c start` from `/mnt/c` on WSL, and through `xdg-open` on a Linux desktop; elsewhere, or when that fails, the command prints the sign-in link instead ([console](decisions/console.md)).
 
 Every new primary session opens the sitrep page in the browser by itself, signed in, as `edi console` does ([console](decisions/console.md)).

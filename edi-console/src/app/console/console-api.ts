@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { Levels, PersonalityShown, personalityChange } from './personality';
 import { GivenAnswer, PresenceChoice, Sitrep } from './sitrep';
 
 const CONSOLE_REQUEST = new HttpHeaders({ 'X-EDI-Console': '1' });
@@ -24,6 +25,14 @@ export class ConsoleApi {
 
   choosePresence(mode: PresenceChoice): Observable<string> {
     return this.http.post('/api/presence', { mode }, { headers: CONSOLE_REQUEST, responseType: 'text' });
+  }
+
+  personality(): Observable<PersonalityShown> {
+    return this.http.get<PersonalityShown>('/api/personality');
+  }
+
+  keepPersonality(levels: Levels): Observable<PersonalityShown> {
+    return this.http.post<PersonalityShown>('/api/personality', { change: personalityChange(levels) }, { headers: CONSOLE_REQUEST });
   }
 
   signIn(token: string): Observable<unknown> {

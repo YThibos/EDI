@@ -12,11 +12,12 @@ On the captain's 1920 by 1080 laptop screen, at 100% and 125% scaling, the first
 
 The console uses the approved skin: deep-space navy, an ion-blue signal colour, amber for anything waiting on the captain, green for nominal and red for trouble, with Exo 2, Inter and JetBrains Mono; dark only, its colour tokens fixed in `edi-console/src/styles.css`.
 Dark-proofing is the `color-scheme` and `darkreader-lock` meta tags, `data-theme="dark"` and `:root { color-scheme: dark }`, and nothing more.
-The console is a zoneless Angular application of standalone components driven by signals; the sitrep page is composed of `ConsoleHeader`, `HudStrip`, `DecisionDeck` with `DecisionCardView` and `AnsweredCard`, `OngoingList`, `ChartedList`, `LandedList` and the waiting list, every class prefixed `sr-`.
+The console is a zoneless Angular application of standalone components driven by signals; the sitrep page is composed of `ConsoleHeader`, `HudStrip`, `DecisionDeck` with `DecisionCardView` and `AnsweredCard`, `OngoingList`, `ChartedList`, `LandedList`, the waiting list and `PersonalityDesk`, every class prefixed `sr-`.
+The personality desk opens from a Personality latch beside the presence buttons and sits above the HUD strip while it is open, pushing the glance down the page; its sliders take the ion-blue fill up to the thumb's centre over a line-coloured track, and below 761 pixels its sample moves under the sliders.
 The three font families are bundled from the open-source `@fontsource` packages, latin subsets of the weights used, and served by the core.
 The page shows the HUD strip, then three columns side by side, needs your decision, ongoing and charted next, with recently landed below at full width; from 1200 CSS pixels wide the strip and columns fit the viewport's height, and a column taller than its share scrolls inside itself.
 Narrower, the deck takes the left column and the lists stack on the right; below 761 pixels everything is one column, and at phone width the gutters drop to 16 pixels with no horizontal scroll.
-The charted list has no dispatch picker, because the console's only writes are answers, re-checks and presence ([console](console.md)).
+The charted list has no dispatch picker, because the console's only writes are answers, re-checks, presence and the personality ([console](console.md)).
 
 ## Why
 
@@ -44,3 +45,4 @@ When the captain asks for a different look, reads the sitrep on a screen of anot
 - 15/10/2026: the captain approved the dark skin.
 - 17/10/2026: slice S7 ported the prototype into Angular components with bundled fonts, in two columns.
 - 21/10/2026: the page was relaid in three columns above what landed so it fits one laptop screen, checked at 1920 by 950, 1536 by 730, 1280 by 720 and 390 CSS pixels ([docs/images/sitrep/](../images/sitrep/)).
+- 27/10/2026: the personality desk opens above the glance from a latch in the header (EDI-98).

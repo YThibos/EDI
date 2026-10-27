@@ -16,7 +16,7 @@ At each launch it draws a worker token, writes it owner-only to the worker's sta
 `ApiTokenFilter` decides on the decoded servlet path: the home token is `Caller.Primary`, or `Caller.Standby` when another session holds the primary role ([primary-role](primary-role.md)); a live worker's token is `Caller.WorkerCaller`; anything else gets a 401, and only `/api/health` and the console's files stay open.
 Controllers take the `Caller`: `requirePrimary` refuses a worker the commands that add, hold, steer, dispatch or answer, and `requireWorker` refuses the primary `edi status` and the inbox; every event records its real actor.
 The captain signs in to the console with a one-time link: `ConsoleAccess` issues 32 random bytes, keeps only their digest, and a link signs in once within two minutes; `POST /api/console/session` with the header `X-EDI-Console: 1` answers with the cookie `EDI-Console`, HttpOnly, SameSite=Strict and twelve hours long.
-A request with an open session's cookie and no bearer token is `Caller.Captain`, which may read, answer decisions and ask for re-checks; a console request that changes state without the header gets a 403, and minting a link needs the home token.
+A request with an open session's cookie and no bearer token is `Caller.Captain`, which may read, answer decisions, ask for re-checks, set presence to present or a demo, and change the personality; a console request that changes state without the header gets a 403, and minting a link needs the home token.
 
 ## Why
 
@@ -43,3 +43,4 @@ When workers run as another user or on another machine, or the core serves more 
 - 15/10/2026: slice S1 served the API under one home token, since only the primary called it.
 - 16/10/2026: slice S3 gave each worker its own token and checked every call against its caller.
 - 17/10/2026: slice S7 added the captain's console session; slice S8 added standby sessions.
+- 27/10/2026: the console session may change the personality, as the primary may (EDI-98).

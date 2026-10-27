@@ -10,6 +10,7 @@ import { FleetStream, FleetStreamEvent } from '../console/fleet-stream';
 import { HudStrip } from '../console/hud-strip';
 import { LandedList } from '../console/landed-list';
 import { OngoingList } from '../console/ongoing-list';
+import { PersonalityDesk } from '../console/personality-desk';
 import { PresenceChoice, Sitrep, WaitingBoard } from '../console/sitrep';
 import { shipMoment } from '../console/stardate';
 import { WaitingList } from '../console/waiting-list';
@@ -20,7 +21,7 @@ const SIGNED_OUT = 401;
 
 @Component({
   selector: 'app-sitrep-page',
-  imports: [ConsoleHeader, HudStrip, DecisionDeck, WaitingList, OngoingList, LandedList, ChartedList],
+  imports: [ConsoleHeader, PersonalityDesk, HudStrip, DecisionDeck, WaitingList, OngoingList, LandedList, ChartedList],
   templateUrl: './sitrep-page.html',
   styleUrl: './sitrep-page.css',
 })
@@ -30,6 +31,7 @@ export class SitrepPage {
   protected readonly sitrep = signal<Sitrep | null>(null);
   protected readonly access = signal<Access>('loading');
   protected readonly live = signal(false);
+  protected readonly personalityOpen = signal(false);
   protected readonly shipMoment = shipMoment;
   protected readonly waitingCount = computed(() => {
     const sitrep = this.sitrep();
