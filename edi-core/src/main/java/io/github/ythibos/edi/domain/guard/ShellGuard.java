@@ -36,6 +36,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
     private Optional<GuardRefusal> refusalFor(ShellCommand command) {
         return TmuxSockets.refusalFor(command, ediSocket)
                 .or(() -> GitPushes.refusalFor(command, baseBranches))
+                .or(() -> SkippedHooks.refusalFor(command))
                 .or(() -> BranchDeletions.refusalFor(command, unlandedBranches))
                 .or(() -> MergingCommands.refusalFor(command))
                 .or(() -> SecretReads.refusalFor(command, secrets));
