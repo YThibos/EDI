@@ -1,6 +1,5 @@
 package io.github.ythibos.edi.testing;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -15,8 +14,6 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 public final class TestProcesses implements BeforeEachCallback, AfterEachCallback, AfterAllCallback {
-
-    private static final Duration PATIENCE = Duration.ofSeconds(10);
 
     private final List<ProcessHandle> ofTheClass = new CopyOnWriteArrayList<>();
     private final List<ProcessHandle> ofTheTest = new CopyOnWriteArrayList<>();
@@ -33,7 +30,7 @@ public final class TestProcesses implements BeforeEachCallback, AfterEachCallbac
 
     public static boolean awaitExit(ProcessHandle process) {
         try {
-            process.onExit().get(PATIENCE.toMillis(), TimeUnit.MILLISECONDS);
+            process.onExit().get(Patience.FOR_REAL_WORK.toMillis(), TimeUnit.MILLISECONDS);
             return true;
         } catch (TimeoutException | ExecutionException stillRunning) {
             return false;

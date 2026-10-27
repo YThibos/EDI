@@ -10,7 +10,6 @@ import java.util.concurrent.TimeUnit;
 public final class PrePushHook {
 
     private static final String NO_REMOTE_COMMIT = "0".repeat(40);
-    private static final long PATIENCE_SECONDS = 25;
     private static final String QUICK_STARTING_JVM = "-XX:TieredStopAtLevel=1 -XX:+UseSerialGC";
     private static final String EDI_ON_THE_JVM = """
             #!/bin/sh
@@ -79,7 +78,7 @@ public final class PrePushHook {
 
         public HookRun finished() throws IOException, InterruptedException {
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            if (!process.waitFor(PATIENCE_SECONDS, TimeUnit.SECONDS)) {
+            if (!process.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 throw new IOException("The pre-push hook did not finish.");
             }
