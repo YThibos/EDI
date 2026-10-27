@@ -34,6 +34,7 @@ A test that needs an external tool skips with a reason when the tool is missing,
 The root `pom.xml` sets JUnit's default timeout to 3 minutes, which catches a test that hangs, while a test's speed is judged by its time on an idle machine, a few seconds of work at most.
 Every helper that waits for real work, a child process, a tmux pane, a listener thread or an event stream, waits up to `Patience.FOR_REAL_WORK`, one minute, so a stuck child fails with its own message before the test's timeout ends it; among them are `TestProcesses`, `StandInScripts`, `FixtureRepository`, `PrePushHook`, `PrivateTmuxServer`, `FakeBoardHost` and `InstalledPrograms`.
 A test asserts what an event shows, not how soon it came, as `ProcessTableTest` reads a process's start between the starts of two processes started around it.
+`NativeSmokeIT` and `NativeRecoveryIT` wait up to `Patience.FOR_REAL_WORK` for each native command, start-up of the core, poll and event stream, and run under the default timeout.
 `NativeRecoveryIT`'s own-work limit and AT-39's round-trip budget measure the native executables' speed and stay as [native-smoke-test](native-smoke-test.md) sets them.
 
 ## Why
@@ -86,4 +87,4 @@ When JUnit offers process tracking, a test needs the developer's git configurati
 - 23/10/2026: AT-22 still overran at a load average of 39, so each kind of captain-facing string is checked in a case of its own (EDI-45).
 - 23/10/2026: the research-first pilot's test took 24 seconds at a load average of 30 to 46, so `TestHome` helpers and each finished ship use one transaction, the test holds one `EventFollowers`, a follower's run ends at a short batch and the machine profile is parsed again only when it changed (EDI-45).
 - 23/10/2026: the follower test written for the short batch took 22 seconds in a loaded full build, nearly all of it opening connections, so a test home's store keeps its connections in a pool (EDI-45).
-- 27/10/2026: AT-32's canary test and AT-47's import still outlived 30 seconds with several workers building at once, so the default timeout is 3 minutes, helpers wait a minute for real work and `ProcessTableTest` no longer reads a start against a fixed window (EDI-106).
+- 27/10/2026: AT-32's canary test and AT-47's import still outlived 30 seconds with several workers building at once, so the default timeout is 3 minutes, helpers and the native tests wait a minute for real work and `ProcessTableTest` no longer reads a start against a fixed window (EDI-106).
