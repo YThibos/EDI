@@ -51,7 +51,7 @@ class TmuxClaudeRuntimeTest {
             """;
     private static final String RECORDING_MISE = """
             #!/bin/sh
-            printf '%s %s %s auto-install=%s\\n' "$1" "$2" "$3" "$MISE_EXEC_AUTO_INSTALL" > "$EDI_HOME/mise-was-entered"
+            printf '%s %s %s auto-install=%s trusted=%s\\n' "$1" "$2" "$3" "$MISE_EXEC_AUTO_INSTALL" "$MISE_TRUSTED_CONFIG_PATHS" > "$EDI_HOME/mise-was-entered"
             shift 2
             exec "$@"
             """;
@@ -125,14 +125,14 @@ class TmuxClaudeRuntimeTest {
     }
 
     @Test
-    void startsClaudeCodeOnTheCopysPinnedToolchainWithoutInstallingAMissingTool() throws IOException {
+    void startsClaudeCodeOnTheToolchainItsCopyPinsTrustedAndWithoutInstallingAMissingTool() throws IOException {
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
             TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
 
             runtime.launch(launch(UUID.randomUUID(), List.of()));
 
             assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
-                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false");
+                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=" + worktree);
             assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
         }
     }
