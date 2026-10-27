@@ -133,7 +133,9 @@ public class LaunchWorker {
     }
 
     public String briefFor(Dispatch dispatch) {
-        return briefs.briefFor(transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief());
+        BriefFacts facts = transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief();
+        briefs.requireWithinItsLength(facts);
+        return briefs.briefFor(facts);
     }
 
     private void requireAnEmptyCopy(TaskId task) {
@@ -146,6 +148,7 @@ public class LaunchWorker {
 
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
+        requireADispatchedBriefWithinItsLength(incarnation);
         Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
@@ -155,6 +158,12 @@ public class LaunchWorker {
         prepareThePipelineFor(incarnation);
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
+    }
+
+    private void requireADispatchedBriefWithinItsLength(Incarnation incarnation) {
+        if (incarnation.kind() == LaunchKind.DISPATCH) {
+            briefs.requireWithinItsLength(incarnation.brief());
+        }
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {

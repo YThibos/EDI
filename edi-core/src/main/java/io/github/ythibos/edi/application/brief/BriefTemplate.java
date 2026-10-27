@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,6 +16,7 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 final class BriefTemplate implements RuntimeHintsRegistrar {
 
     static final String RESOURCE = "claude/worker/brief-template.md";
+    static final String SECTION_HEADING = "## ";
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-zA-Z]+)}}");
 
@@ -28,6 +30,10 @@ final class BriefTemplate implements RuntimeHintsRegistrar {
                 .filter(line -> !isAPlaceholderRenderedEmpty(line, values))
                 .map(line -> filledIn(line, values))
                 .collect(Collectors.joining("\n", "", "\n"));
+    }
+
+    static List<String> sectionHeadings() {
+        return template().lines().filter(line -> line.startsWith(SECTION_HEADING)).toList();
     }
 
     private static String template() {

@@ -54,4 +54,8 @@ public record BriefFacts(
     public boolean followsAPlan() {
         return plan != null;
     }
+
+    public BriefFacts withoutTheResearchPlan() {
+        return new BriefFacts(task, worker, project, dispatch, base, worktree, taskDirectory, ediSocket, craftRules, null, asksForTheTimeWorked);
+    }
 }

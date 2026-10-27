@@ -32,6 +32,10 @@ public class WorkerBriefs {
                 Map.entry("definitionOfDone", BriefSections.definitionOfDone(facts))));
     }
 
+    public void requireWithinItsLength(BriefFacts facts) {
+        BriefLength.requireWithinTheLimit(briefFor(facts.withoutTheResearchPlan()));
+    }
+
     public PipelineIntent pipelineIntentFor(BriefFacts facts) {
         return PipelineIntent.of(facts.dispatch().branch().workKey(), BriefSections.intent(facts), BriefSections.spec(facts),
                 facts.project().craftRules() ? facts.craftRules() : null);
