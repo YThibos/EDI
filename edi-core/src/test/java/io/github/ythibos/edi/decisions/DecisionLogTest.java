@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DecisionLogTest {
 
@@ -55,15 +56,24 @@ class DecisionLogTest {
 
     @Test
     void everyLinkToARecordResolves() {
-        assertThat(repositoryTexts()).allSatisfy((file, text) ->
+        assertThat(textsUnder(REPOSITORY)).allSatisfy((file, text) ->
                 assertThat(recordsCitedBy(file, text)).as("records cited by %s", REPOSITORY.relativize(file)).allSatisfy(cited ->
                         assertThat(cited).exists()));
     }
 
     @Test
     void nothingCitesARecordByNumber() {
-        assertThat(repositoryTexts()).allSatisfy((file, text) ->
+        assertThat(textsUnder(REPOSITORY)).allSatisfy((file, text) ->
                 assertThat(NUMBERED_RECORD.matcher(text).find()).as("a numbered record cited in %s", REPOSITORY.relativize(file)).isFalse());
+    }
+
+    @Test
+    void aLinkToAFolderInTheCheckoutIsNotReadAsText(@TempDir Path directory) throws IOException {
+        Path checkout = Files.createDirectory(directory.resolve("checkout"));
+        Path readme = Files.writeString(checkout.resolve("README.md"), "A checkout.");
+        Files.createSymbolicLink(checkout.resolve(".edi"), Files.createDirectory(directory.resolve("edi-home")));
+
+        assertThat(textsUnder(checkout)).containsOnlyKeys(readme);
     }
 
     private static List<Path> records() {
@@ -78,10 +88,10 @@ class DecisionLogTest {
         return lines.stream().filter(line -> line.startsWith("## ")).map(line -> line.substring(3)).toList();
     }
 
-    private static Map<Path, String> repositoryTexts() {
+    private static Map<Path, String> textsUnder(Path checkout) {
         Map<Path, String> texts = new TreeMap<>();
         try {
-            Files.walkFileTree(REPOSITORY, new SimpleFileVisitor<>() {
+            Files.walkFileTree(checkout, new SimpleFileVisitor<>() {
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
@@ -90,7 +100,9 @@ class DecisionLogTest {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-                    textIfStillThere(file).ifPresent(text -> texts.put(file, text));
+                    if (attributes.isRegularFile()) {
+                        textIfStillThere(file).ifPresent(text -> texts.put(file, text));
+                    }
                     return FileVisitResult.CONTINUE;
                 }
 
