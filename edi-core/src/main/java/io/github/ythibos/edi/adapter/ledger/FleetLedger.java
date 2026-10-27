@@ -54,6 +54,8 @@ public class FleetLedger {
             case LedgerEntry.Status status -> record.put("state", status.state()).put("key", status.key()).put("text", capped(status.text()));
             case LedgerEntry.DraftReady ready -> record.put("pr", ready.url());
             case LedgerEntry.Merged merged -> record.put("via", MERGED_THROUGH_ITS_DRAFT).put("pr", merged.url());
+            case LedgerEntry.Worked worked -> record.put("key", worked.key())
+                    .put("active_minutes", worked.activeMinutes());
             case LedgerEntry.CleanedUp _ -> record;
         };
     }
@@ -64,6 +66,7 @@ public class FleetLedger {
             case LedgerEntry.Status _ -> "task.status";
             case LedgerEntry.DraftReady _ -> "task.pr_ready";
             case LedgerEntry.Merged _ -> "task.merged";
+            case LedgerEntry.Worked _ -> "task.worked";
             case LedgerEntry.CleanedUp _ -> "task.cleaned_up";
         };
     }

@@ -19,8 +19,9 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
-import io.github.ythibos.edi.domain.worker.UsageLimit;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerHealth;
 
@@ -59,9 +60,9 @@ public class NoticeMissedStops {
     }
 
     private Optional<Worker> missedStopRecorded(Worker worker) {
-        Optional<UsageLimit> limit = usageLimitOf(worker);
-        if (limit.isPresent()) {
-            return recordedInTheTurnRead(worker, current -> parked(current, limit.get()));
+        Optional<LimitStop> limitStop = limitStopOf(worker);
+        if (limitStop.isPresent()) {
+            return recordedInTheTurnRead(worker, current -> parked(current, limitStop.get()));
         }
         Optional<ErrorStop> errorStop = errorStopPastTheHookGraceOf(worker);
         if (errorStop.isPresent()) {
@@ -70,7 +71,7 @@ public class NoticeMissedStops {
         return missedStopOf(worker).flatMap(at -> recordedInTheTurnRead(worker, current -> idle(current, at))).map(this::woken);
     }
 
-    private Optional<UsageLimit> usageLimitOf(Worker worker) {
+    private Optional<LimitStop> limitStopOf(Worker worker) {
         return runtime.usageLimitStopIn(worker.transcript(), worker.activitySince());
     }
 
@@ -81,11 +82,10 @@ public class NoticeMissedStops {
         });
     }
 
-    private Worker parked(Worker worker, UsageLimit limit) {
-        Instant now = clock.now();
-        Worker parked = worker.parkedOn(limit, now);
+    private Worker parked(Worker worker, LimitStop stop) {
+        Worker parked = worker.parkedOn(stop.limit(), clock.now());
         workers.update(parked);
-        events.record(new UsageLimitReached(parked.id().task(), parked.id(), limit), Actor.CORE, now);
+        events.record(new UsageLimitReached(parked.id().task(), parked.id(), stop.limit()), Actor.CORE, stop.endedAt());
         return parked;
     }
 
@@ -100,7 +100,7 @@ public class NoticeMissedStops {
     private Worker stoppedOnAnError(Worker worker, ErrorStop stop) {
         Worker idle = worker.turnEnded(stop.endedAt());
         workers.update(idle);
-        events.record(new WorkerStoppedOnAnError(idle.id().task(), idle.id(), stop.error()), Actor.CORE, clock.now());
+        events.record(new WorkerStoppedOnAnError(idle.id().task(), idle.id(), stop.error()), Actor.CORE, stop.endedAt());
         return idle;
     }
 
@@ -118,6 +118,7 @@ public class NoticeMissedStops {
     private Worker idle(Worker worker, Instant stoppedAt) {
         Worker idle = worker.turnEnded(stoppedAt);
         workers.update(idle);
+        events.record(new WorkerTurnEnded(idle.id().task(), idle.id()), Actor.CORE, stoppedAt);
         return idle;
     }
 }

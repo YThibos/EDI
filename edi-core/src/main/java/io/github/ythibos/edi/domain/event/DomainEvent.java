@@ -114,6 +114,9 @@ public sealed interface DomainEvent {
     record WorkerSessionEnded(TaskId task, WorkerId worker, String reason) implements DomainEvent {
     }
 
+    record WorkerTurnEnded(TaskId task, WorkerId worker) implements DomainEvent {
+    }
+
     record WorkerStoppedOnAnError(TaskId task, WorkerId worker, String error) implements DomainEvent {
     }
 

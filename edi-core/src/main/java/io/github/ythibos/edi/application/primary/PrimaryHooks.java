@@ -32,6 +32,7 @@ import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.primary.TurnCircumstances;
 import io.github.ythibos.edi.domain.primary.TurnEnd;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 
 @Service
 public class PrimaryHooks {
@@ -103,6 +104,7 @@ public class PrimaryHooks {
     public HookAnswer stopFailed(UUID id, String transcript) {
         Optional<PrimarySession> stopped = transaction.execute(_ -> sessions.get(id));
         stopped.flatMap(session -> runtime.usageLimitStopIn(transcript, session.startedAt()))
+                .map(LimitStop::limit)
                 .ifPresent(limit -> transaction.executeWithoutResult(_ -> sessions.get(id)
                         .ifPresent(session -> sessions.save(session.stoppedOn(limit, clock.now())))));
         return HookAnswer.PROCEED;

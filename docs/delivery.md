@@ -34,7 +34,7 @@ edi cleanup fit-the-lamp                            # retire a landed task's cop
 ```
 
 `edi deliver` opens the draft the pipeline could not ([delivery](decisions/delivery.md)).
-`edi task show` names a ship's draft, its latest pipeline run and, once cleaned up, what it cost.
+`edi task show` names a ship's draft, its latest pipeline run, its active time and, once cleaned up, what it cost.
 A cleanup that finds unlanded work lists every uncommitted path and unlanded commit and changes nothing.
 
 ## The publish check

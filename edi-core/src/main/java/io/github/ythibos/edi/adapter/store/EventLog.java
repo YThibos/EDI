@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.adapter.store;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -92,6 +94,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -137,30 +140,25 @@ public class EventLog {
         return store.sql("select sequence, at, actor, type, task_id, payload from event where sequence > :sequence order by sequence limit :most")
                 .param("sequence", sequence)
                 .param("most", most)
-                .query((row, _) -> new LoggedEvent(
-                        row.getLong("sequence"),
-                        Columns.instant(row.getString("at")),
-                        new Actor(row.getString("actor")),
-                        row.getString("type"),
-                        new TaskId(row.getString("task_id")),
-                        json.readTree(row.getString("payload"))))
+                .query((row, _) -> loggedEvent(row))
                 .list();
     }
 
     public List<LoggedEvent> ofTypesSince(Set<String> types, Instant since) {
         return store.sql("select sequence, at, actor, type, task_id, payload from event where type in (:types) order by sequence")
                 .param("types", List.copyOf(types))
-                .query((row, _) -> new LoggedEvent(
-                        row.getLong("sequence"),
-                        Columns.instant(row.getString("at")),
-                        new Actor(row.getString("actor")),
-                        row.getString("type"),
-                        new TaskId(row.getString("task_id")),
-                        json.readTree(row.getString("payload"))))
+                .query((row, _) -> loggedEvent(row))
                 .list()
                 .stream()
                 .filter(event -> !event.at().isBefore(since))
                 .toList();
+    }
+
+    public List<LoggedEvent> ofTask(TaskId task) {
+        return store.sql("select sequence, at, actor, type, task_id, payload from event where task_id = :task order by sequence")
+                .param("task", task.value())
+                .query((row, _) -> loggedEvent(row))
+                .list();
     }
 
     public long latestSequence() {
@@ -242,6 +240,7 @@ public class EventLog {
                     .put("because", relaunched.because());
             case WorkerNotified notified -> payload.put("worker", notified.worker().toString()).put("kind", notified.kind());
             case WorkerSessionEnded ended -> payload.put("worker", ended.worker().toString()).put("reason", ended.reason());
+            case WorkerTurnEnded ended -> payload.put("worker", ended.worker().toString());
             case WorkerStoppedOnAnError stopped -> payload.put("worker", stopped.worker().toString()).put("error", stopped.error());
             case UsageLimitReached reached -> payload.put("worker", reached.worker().toString())
                     .put("limit", reached.limit().name())
@@ -315,6 +314,16 @@ public class EventLog {
     private void queue(long sequence, Wake wake, Instant at) {
         wakes.enqueue(sequence, wake, at);
         publisher.publishEvent(new WakeQueued(sequence));
+    }
+
+    private LoggedEvent loggedEvent(ResultSet row) throws SQLException {
+        return new LoggedEvent(
+                row.getLong("sequence"),
+                Columns.instant(row.getString("at")),
+                new Actor(row.getString("actor")),
+                row.getString("type"),
+                new TaskId(row.getString("task_id")),
+                json.readTree(row.getString("payload")));
     }
 
     private static ObjectNode withEach(ObjectNode payload, String field, List<String> values) {

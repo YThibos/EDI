@@ -17,9 +17,9 @@ import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
-import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import tools.jackson.databind.json.JsonMapper;
@@ -100,7 +100,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
-    public Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since) {
+    public Optional<LimitStop> usageLimitStopIn(String transcript, Instant since) {
         return transcript == null ? Optional.empty() : transcripts.usageLimitStop(Path.of(transcript), since);
     }
 

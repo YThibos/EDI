@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -70,7 +71,7 @@ class RecoverFromOutageTest {
         Worker bell = WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5");
         home.workerHooks().sessionStarted(bell.id(), bell.session(), null);
         home.workerHooks().promptSubmitted(bell.id(), "Ring the bell.", null);
-        home.runtime().transcriptEndsOn(new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(1))));
+        home.runtime().transcriptEndsOn(new LimitStop(home.clock().now(), new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(1)))));
         home.workerHooks().stopFailed(bell.id(), "rate_limit", null);
 
         assertThatThrownBy(() -> home.recoverFromOutage().answer(2, RecoveryAction.RESUME, null, Actor.PRIMARY))

@@ -20,6 +20,7 @@ import java.util.stream.StreamSupport;
 
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import tools.jackson.core.JacksonException;
@@ -42,11 +43,11 @@ final class ClaudeTranscript {
         this.json = json;
     }
 
-    Optional<UsageLimit> usageLimitStop(Path transcript, Instant since) {
+    Optional<LimitStop> usageLimitStop(Path transcript, Instant since) {
         return lastConversationalRecord(transcript)
                 .filter(ClaudeTranscript::isAnApiError)
                 .filter(record -> writtenAtOrAfter(record, since))
-                .flatMap(ClaudeTranscript::usageLimitIn);
+                .flatMap(ClaudeTranscript::limitStopIn);
     }
 
     Optional<Instant> contextLimitStop(Path transcript, Instant since) {
@@ -118,6 +119,10 @@ final class ClaudeTranscript {
         } catch (DateTimeException unreadable) {
             return Optional.empty();
         }
+    }
+
+    private static Optional<LimitStop> limitStopIn(JsonNode record) {
+        return writtenAt(record).flatMap(endedAt -> usageLimitIn(record).map(limit -> new LimitStop(endedAt, limit)));
     }
 
     private static Optional<UsageLimit> usageLimitIn(JsonNode record) {

@@ -154,6 +154,7 @@ import io.github.ythibos.edi.application.task.PromoteScout;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
+import io.github.ythibos.edi.application.task.WorkedTimes;
 import io.github.ythibos.edi.application.tracker.FollowTickets;
 import io.github.ythibos.edi.application.tracker.TaskKeys;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
@@ -428,7 +429,11 @@ public final class TestHome {
     }
 
     public TaskDetailQuery taskDetail() {
-        return new TaskDetailQuery(tasks, decisions, deliveries, pipelineRuns, taskCosts, events, transaction);
+        return new TaskDetailQuery(tasks, decisions, deliveries, pipelineRuns, taskCosts, workedTimes(), events, clock, transaction);
+    }
+
+    public WorkedTimes workedTimes() {
+        return new WorkedTimes(events);
     }
 
     public DecisionListQuery decisionList() {
@@ -727,7 +732,7 @@ public final class TestHome {
     }
 
     public EventFollowers eventFollowers() {
-        EmitFleetLedger fleetLedger = new EmitFleetLedger(machineProfile(), new FleetLedger(home, json), tasks, transaction);
+        EmitFleetLedger fleetLedger = new EmitFleetLedger(machineProfile(), new FleetLedger(home, json), tasks, workedTimes(), transaction);
         FollowTickets tickets = new FollowTickets(tasks, registry, trackers(), events, clock, transaction);
         ResearchFirstPilot pilot = new ResearchFirstPilot(unplannedShips, tasks, taskCosts, reviews, dispatches, raiseDecision(), events, clock,
                 transaction);

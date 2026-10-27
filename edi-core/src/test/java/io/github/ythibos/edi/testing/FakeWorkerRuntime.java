@@ -12,9 +12,9 @@ import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
-import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
@@ -30,7 +30,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private boolean serverRunning = true;
     private long serverPid = 4242;
     private Instant serverStartedAt = Instant.parse("2026-10-15T08:00:00Z");
-    private UsageLimit limitInTheTranscript;
+    private LimitStop limitStopInTheTranscript;
     private Instant contextFullInTheTranscript;
     private Instant missedStopInTheTranscript;
     private ErrorStop errorStopInTheTranscript;
@@ -103,8 +103,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
-    public synchronized Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since) {
-        return Optional.ofNullable(limitInTheTranscript);
+    public synchronized Optional<LimitStop> usageLimitStopIn(String transcript, Instant since) {
+        return Optional.ofNullable(limitStopInTheTranscript).filter(stop -> !stop.endedAt().isBefore(since));
     }
 
     @Override
@@ -154,8 +154,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
         duringTheNextLaunch = meanwhile;
     }
 
-    public synchronized void transcriptEndsOn(UsageLimit limit) {
-        limitInTheTranscript = limit;
+    public synchronized void transcriptEndsOn(LimitStop stop) {
+        limitStopInTheTranscript = stop;
     }
 
     public synchronized void transcriptEndsOnAFullContextAt(Instant at) {

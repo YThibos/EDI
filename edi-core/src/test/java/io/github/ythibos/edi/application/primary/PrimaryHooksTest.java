@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
@@ -128,7 +129,7 @@ class PrimaryHooksTest {
     @Test
     void tellsTheNextSessionThatThePreviousPrimaryStoppedOnItsUsageLimit() throws IOException {
         Instant reset = home.clock().now().plus(Duration.ofHours(2));
-        home.runtime().transcriptEndsOn(new UsageLimit("session limit", reset));
+        home.runtime().transcriptEndsOn(new LimitStop(home.clock().now(), new UsageLimit("session limit", reset)));
         UUID stopped = UUID.randomUUID();
         home.primaryHooks().sessionStarted(stopped, null, true);
         home.primaryHooks().stopFailed(stopped, "/transcripts/stopped.jsonl");

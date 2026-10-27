@@ -70,6 +70,19 @@ class SteeringTest {
     }
 
     @Test
+    void recordsTheEndOfATurnOnlyAtAStopNoMessageHoldsBack() {
+        home.workerHooks().promptSubmitted(worker.id(), "the brief", null);
+        steer("Use the brass lamp.", null);
+
+        home.workerHooks().stopping(worker.id());
+        List<String> afterTheBlockedStop = home.eventTypesOf(TASK);
+        home.workerHooks().stopping(worker.id());
+
+        assertThat(afterTheBlockedStop).doesNotContain("WorkerTurnEnded");
+        assertThat(home.eventTypesOf(TASK)).containsOnlyOnce("WorkerTurnEnded").endsWith("WorkerTurnEnded");
+    }
+
+    @Test
     void keepsAWorkerBusyWhileItsBlockedStopSendsItToTheInbox() {
         home.workerHooks().promptSubmitted(worker.id(), "the brief", null);
         steer("Use the brass lamp.", null);
