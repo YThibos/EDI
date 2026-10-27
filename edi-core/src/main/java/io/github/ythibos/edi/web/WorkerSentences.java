@@ -36,7 +36,7 @@ final class WorkerSentences {
 
     static String statusRecorded(Worker worker) {
         String recorded = "Recorded " + worker.lastStatus().report().state().word() + " for " + worker.id() + ".";
-        return worker.doneCheck() == DoneCheck.CHECKING ? recorded + " You check the mechanical change before you accept the done." : recorded;
+        return worker.doneCheck() == DoneCheck.CHECKING ? recorded + " The mechanical change is checked before the done is accepted." : recorded;
     }
 
     static String steered(SteerWorker.Steered steered) {
