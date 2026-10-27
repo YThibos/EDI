@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -40,7 +41,7 @@ class UsageLimitsTest {
         Worker horn = busyWorker("tune-horn", "HRN-4");
 
         home.workerHooks().stopFailed(horn.id(), "server_error", "/transcripts/horn.jsonl");
-        home.runtime().transcriptEndsOn(new UsageLimit("session limit", reset));
+        home.runtime().transcriptEndsOn(new LimitStop(home.clock().now(), new UsageLimit("session limit", reset)));
         home.workerHooks().stopFailed(lamp.id(), "rate_limit", "/transcripts/lamp.jsonl");
 
         assertThat(healthOf(lamp)).isEqualTo(new WorkerHealth.LimitParked(new UsageLimit("session limit", reset)));
@@ -102,7 +103,7 @@ class UsageLimitsTest {
 
     private Worker parkedWorker(String task, String key) {
         Worker worker = busyWorker(task, key);
-        home.runtime().transcriptEndsOn(new UsageLimit("session limit", reset));
+        home.runtime().transcriptEndsOn(new LimitStop(home.clock().now(), new UsageLimit("session limit", reset)));
         home.workerHooks().stopFailed(worker.id(), "rate_limit", null);
         return worker;
     }

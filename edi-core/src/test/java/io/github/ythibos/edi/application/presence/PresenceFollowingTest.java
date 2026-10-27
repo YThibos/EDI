@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.presence.PresenceMode;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -141,7 +142,7 @@ class PresenceFollowingTest {
 
     private UUID typed(String prompt) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(session, prompt);
         return session;
     }

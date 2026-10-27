@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -52,7 +53,28 @@ class EmitFleetLedgerTest {
                         + "\"text\":\"https://forge.example.org/team/service/merge_requests/7\"}",
                 "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.pr_ready\",\"task\":\"fix-lamps\",\"pr\":\"" + WorkEvents.DRAFT.url() + "\"}",
                 "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.merged\",\"task\":\"fix-lamps\",\"via\":\"pr\",\"pr\":\"" + WorkEvents.DRAFT.url() + "\"}",
+                "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.worked\",\"task\":\"fix-lamps\",\"key\":\"SVC-40\",\"active_minutes\":0}",
                 "{\"v\":1,\"ts\":" + at + ",\"event\":\"task.cleaned_up\",\"task\":\"fix-lamps\"}");
+    }
+
+    @Test
+    void recordsTheActiveMinutesAtCleanupWithoutTheTimeSpentWaiting() throws IOException {
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/SVC-40")
+                .reported(StatusState.WORKING, null, "SVC-40 set-up done")
+                .after(Duration.ofMinutes(30))
+                .reported(StatusState.NEEDS_DECISION, "lamp-colour", "Which colour?")
+                .after(Duration.ofMinutes(30))
+                .reported(StatusState.WORKING, null, "SVC-40 painting")
+                .after(Duration.ofMinutes(15))
+                .reported(StatusState.DONE, null, "https://forge.example.org/team/service/merge_requests/7")
+                .after(Duration.ofMinutes(20))
+                .cleanedUp();
+
+        home.eventFollowers().followTheLog();
+
+        assertThat(Files.readAllLines(home.home().fleetLedger())).contains(
+                "{\"v\":1,\"ts\":" + home.clock().now().getEpochSecond() + ",\"event\":\"task.worked\",\"task\":\"fix-lamps\",\"key\":\"SVC-40\","
+                        + "\"active_minutes\":45}");
     }
 
     @Test
@@ -63,7 +85,7 @@ class EmitFleetLedgerTest {
         WorkEvents.of(home, "fix-lamps").cleanedUp();
         home.eventFollowers().followTheLog();
 
-        assertThat(Files.readAllLines(home.home().fleetLedger())).hasSize(2);
+        assertThat(Files.readAllLines(home.home().fleetLedger())).hasSize(3);
     }
 
     @Test

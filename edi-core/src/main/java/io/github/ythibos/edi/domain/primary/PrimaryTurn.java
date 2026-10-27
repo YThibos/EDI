@@ -3,7 +3,7 @@ package io.github.ythibos.edi.domain.primary;
 import java.time.Instant;
 import java.util.Objects;
 
-public record PrimaryTurn(Instant startedAt, long eventMark, Instant reportedAt, int stopsBlocked) {
+public record PrimaryTurn(Instant startedAt, long eventMark, Instant reportedAt, int stopsBlocked, Instant endedAt, boolean endedWithAWait) {
 
     public PrimaryTurn {
         Objects.requireNonNull(startedAt, "A turn records when its prompt arrived.");
@@ -13,18 +13,26 @@ public record PrimaryTurn(Instant startedAt, long eventMark, Instant reportedAt,
     }
 
     public static PrimaryTurn startedAt(Instant at, long eventMark) {
-        return new PrimaryTurn(at, eventMark, null, 0);
+        return new PrimaryTurn(at, eventMark, null, 0, null, false);
     }
 
     public PrimaryTurn reported(Instant at) {
-        return new PrimaryTurn(startedAt, eventMark, at, stopsBlocked);
+        return new PrimaryTurn(startedAt, eventMark, at, stopsBlocked, endedAt, endedWithAWait);
     }
 
     public PrimaryTurn stopBlocked() {
-        return new PrimaryTurn(startedAt, eventMark, reportedAt, stopsBlocked + 1);
+        return new PrimaryTurn(startedAt, eventMark, reportedAt, stopsBlocked + 1, endedAt, endedWithAWait);
+    }
+
+    public PrimaryTurn ended(Instant at, boolean withAWait) {
+        return new PrimaryTurn(startedAt, eventMark, reportedAt, stopsBlocked, at, withAWait);
     }
 
     public boolean renderedTheReport() {
         return reportedAt != null && !reportedAt.isBefore(startedAt);
+    }
+
+    public boolean hasEnded() {
+        return endedAt != null;
     }
 }

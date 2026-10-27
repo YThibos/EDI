@@ -11,6 +11,7 @@ import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.WorkedTime;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.web.decision.DecisionLines;
 import io.github.ythibos.edi.web.text.Moments;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.web.text.Words;
 class TaskDetailText implements TextPresenter<TaskDetail> {
 
     private static final String INDENT = "  ";
+    private static final int MINUTES_PER_HOUR = 60;
 
     private final Moments moments;
     private final DecisionLines decisionLines;
@@ -39,6 +41,9 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
     @Override
     public String text(TaskDetail detail) {
         List<String> lines = new ArrayList<>(summaryOf(detail.task()));
+        if (detail.worked() != null) {
+            lines.add(workedLineOf(detail.worked()));
+        }
         if (!detail.blockers().isEmpty()) {
             lines.add(capitalised(BacklogText.blockersOf(detail.blockers())));
         }
@@ -80,6 +85,14 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
             lines.add(capitalised(task.state().word()) + ": " + moments.day(task.closed()));
         }
         return lines;
+    }
+
+    private static String workedLineOf(WorkedTime worked) {
+        return "Worked: active " + hoursAndMinutesOf(worked.activeMinutes()) + " of " + hoursAndMinutesOf(worked.wallClockMinutes());
+    }
+
+    private static String hoursAndMinutesOf(long minutes) {
+        return "%dh%02dm".formatted(minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR);
     }
 
     private List<String> deliveryLinesOf(TaskDetail detail) {

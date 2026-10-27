@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -81,5 +82,39 @@ class PrimaryRulesTest {
         assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("subagent", "running", "edi wait")))).isFalse();
         assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "running", "edi wait | tee wake.txt")))).isTrue();
         assertThat(BackgroundJob.anyWaitsForEdi(List.of())).isFalse();
+    }
+
+    @Test
+    void tellsWhetherTheWaitIsLiveFromWhatThePrimarysLastStopSaw() {
+        PrimarySession claimed = PrimarySession.started(UUID.randomUUID(), null, START).claimed(START);
+        PrimarySession inATurn = claimed.promptSubmitted(new Prompt("How is the lamp?"), 7, START.plusSeconds(10));
+        PrimarySession endedWaiting = inATurn.turnEnded(START.plusSeconds(20), true);
+        PrimarySession endedBlind = inATurn.turnEnded(START.plusSeconds(20), false);
+
+        assertThat(PrimaryWait.of(Optional.of(endedWaiting), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, START.plusSeconds(20), 2));
+        assertThat(PrimaryWait.of(Optional.of(endedBlind), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(20), 2));
+        assertThat(PrimaryWait.of(Optional.of(inATurn), 2).sighting()).isEqualTo(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN);
+        assertThat(PrimaryWait.of(Optional.of(inATurn), 2).seenAt()).isEqualTo(START.plusSeconds(10));
+        assertThat(PrimaryWait.of(Optional.of(claimed), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING_SINCE_SESSION_START, START, 2));
+        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, SessionSource.RESTART, START.plusSeconds(40))), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(40), 2));
+        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, SessionSource.COMPACTION, START.plusSeconds(40))), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, START.plusSeconds(20), 2));
+        assertThat(PrimaryWait.of(Optional.of(inATurn.turnFailed(START.plusSeconds(40))), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(40), 2));
+        assertThat(PrimaryWait.of(Optional.empty(), 2).sighting()).isEqualTo(PrimaryWait.Sighting.NO_PRIMARY);
+        assertThat(endedBlind.promptSubmitted(new Prompt("And now?"), 8, START.plusSeconds(30)).turn().hasEnded()).isFalse();
+    }
+
+    @Test
+    void needsAWaitOnlyWhileWorkIsInFlightAndTheLastStopSawNone() {
+        PrimarySession inATurn = PrimarySession.started(UUID.randomUUID(), null, START).claimed(START)
+                .promptSubmitted(new Prompt("How is the lamp?"), 7, START.plusSeconds(10));
+
+        assertThat(PrimaryWait.of(Optional.of(inATurn.turnEnded(START.plusSeconds(20), false)), 1).needsAWait()).isTrue();
+        assertThat(PrimaryWait.of(Optional.empty(), 1).needsAWait()).isTrue();
+        assertThat(PrimaryWait.of(Optional.of(inATurn.turnEnded(START.plusSeconds(20), false)), 0).needsAWait()).isFalse();
+        assertThat(PrimaryWait.of(Optional.of(inATurn.turnEnded(START.plusSeconds(20), true)), 1).needsAWait()).isFalse();
+        assertThat(PrimaryWait.of(Optional.of(inATurn), 1).needsAWait()).isFalse();
     }
 }

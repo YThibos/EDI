@@ -9,6 +9,7 @@ import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.WorkedTime;
 
 public record TaskDetail(
         Task task,
@@ -17,6 +18,7 @@ public record TaskDetail(
         Delivery delivery,
         PipelineRun pipelineRun,
         TaskCost cost,
+        WorkedTime worked,
         List<RecordedEvent> timeline) {
 
     public TaskDetail {

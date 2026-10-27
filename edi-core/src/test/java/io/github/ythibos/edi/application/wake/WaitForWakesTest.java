@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -90,7 +91,7 @@ class WaitForWakesTest {
     void servesOnlyThePrimarySession() {
         UUID primary = primarySession();
         UUID standby = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(standby, null, true);
+        home.primaryHooks().sessionStarted(standby, null, SessionSource.LAUNCH);
 
         home.waitForWakes().requireThePrimary(primary);
         assertThatThrownBy(() -> home.waitForWakes().requireThePrimary(standby)).isInstanceOf(Refusal.class).hasMessageContaining("serves the primary session");
@@ -116,7 +117,7 @@ class WaitForWakesTest {
 
     private UUID primarySession() {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(session, "Carry on.");
         return session;
     }

@@ -75,6 +75,7 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -149,9 +150,9 @@ class AuthorityAndInterfaceTest {
             TestHome home = TestHome.in(directory);
             UUID first = UUID.randomUUID();
             UUID second = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(first, null, true);
+            home.primaryHooks().sessionStarted(first, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(first, "What is waiting on me?");
-            home.primaryHooks().sessionStarted(second, null, true);
+            home.primaryHooks().sessionStarted(second, null, SessionSource.LAUNCH);
 
             assertThat(standingOf(home, first)).isEqualTo(Standing.PRIMARY);
             assertThat(standingOf(home, second)).isEqualTo(Standing.STANDBY);
@@ -513,7 +514,7 @@ class AuthorityAndInterfaceTest {
 
     private static CallingSession primarySessionIn(TestHome home, String typed) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(session, typed);
         return new CallingSession(session);
     }
