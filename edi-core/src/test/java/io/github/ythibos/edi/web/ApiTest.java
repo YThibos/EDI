@@ -206,10 +206,10 @@ class ApiTest {
         HttpResponse<String> refused = post("/api/publish-checks", "{\"repository\":\"" + repository.root() + "\",\"range\":\"main..secrets\"}", TEXT);
 
         assertThat(clear.statusCode()).isEqualTo(200);
-        assertThat(clear.body()).isEqualTo("Clear: no secret and no personal material in main..main\n");
+        assertThat(clear.body()).isEqualTo("Clear: no secret, no personal material and no -SNAPSHOT version in main..main\n");
         assertThat(refused.statusCode()).isEqualTo(409);
         assertThat(refused.body()).isEqualTo("config/app.properties:1 in commit " + repository.head().substring(0, 7) + ": gitleaks rule aws-access-token\n"
-                + "Refused: the outgoing commits carry a secret or personal material.\n");
+                + "Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.\n");
     }
 
     @Test

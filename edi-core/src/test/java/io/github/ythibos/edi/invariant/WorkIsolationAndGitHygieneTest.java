@@ -2,6 +2,7 @@ package io.github.ythibos.edi.invariant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
@@ -44,7 +46,11 @@ import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.FixtureRepository;
+import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.PrePushHook;
+import io.github.ythibos.edi.testing.PrePushHook.HookRun;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -232,6 +238,9 @@ class WorkIsolationAndGitHygieneTest {
     @DisplayName("I-11 No SNAPSHOT in push-bound work")
     class NoSnapshotInPushBoundWork {
 
+        @RegisterExtension
+        private final TestProcesses processes = new TestProcesses();
+
         @Test
         @DisplayName("AT-11 a branch adding a SNAPSHOT dependency makes edi status done refuse with the file and line")
         @Tag("adapter")
@@ -261,6 +270,25 @@ class WorkIsolationAndGitHygieneTest {
 
             assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
             assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("StatusReported", "DraftRecorded");
+        }
+
+        @Test
+        @DisplayName("AT-11 a worker's push of a commit adding a SNAPSHOT version is refused with the file and line")
+        @Tag("adapter")
+        void pushRefusesASnapshotVersion() throws IOException, InterruptedException {
+            assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository.at(directory.resolve("upstream/harness")).write("pom.xml", BUILD_FILE.formatted("")).commit("Add the build file");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree())
+                    .write("pom.xml", BUILD_FILE.formatted(LAMP_DEPENDENCY.formatted("1.2.0-SNAPSHOT")))
+                    .commit("HRN-3 Use the snapshot lamp");
+
+            HookRun refused = PrePushHook.pushes(worktree, home.home().root(), "feature/HRN-3", HARNESS_REMOTE, processes);
+
+            assertThat(refused.refused()).isTrue();
+            assertThat(refused.output()).contains("pom.xml:6 in commit " + worktree.head().substring(0, 7) + ": a -SNAPSHOT version")
+                    .contains("Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.");
         }
     }
 
@@ -330,6 +358,7 @@ class WorkIsolationAndGitHygieneTest {
         }
     }
 
+    private static final String HARNESS_REMOTE = "https://github.com/example-owner/harness.git";
     private static final String BUILD_FILE = """
             <project>
               <version>3.1.0-SNAPSHOT</version>
