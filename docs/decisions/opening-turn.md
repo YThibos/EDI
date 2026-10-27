@@ -30,7 +30,7 @@ A typed request for the board is the captain asking to see the page, and the cor
 - Telling the `sitrep` skill to skip `--board` when the digest says the page is open - nothing guarantees the model follows it, and the rule belongs to the core.
 - Refusing every second opening for the whole session - a page the captain closed could not be brought back with `/sitrep board`.
 - Keeping the mark through the captain's first prompt - with no opening prompt the first prompt may come long after the start, when the captain has closed the page, and nothing would open.
-- Keeping the mark in the core's memory - a core restarted during the opening turn would forget it, while the store keeps all of a session's state.
+- Keeping the mark in the core's memory - a core restarted before the captain's first prompt would forget it, while the store keeps all of a session's state.
 
 ## Consequences
 
