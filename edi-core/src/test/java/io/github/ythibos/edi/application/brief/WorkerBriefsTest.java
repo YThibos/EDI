@@ -50,14 +50,15 @@ class WorkerBriefsTest {
 
     @Test
     void refusesABriefPastItsBudgetNamingItsLongestSection() {
-        int specLinesWithinTheBudget = 120 - (int) briefs.briefFor(BriefFixtures.shipFollowing(null, buildInstructions(1), false)).lines().count() + 1;
+        int specLinesWithinTheBudget = specLinesThatFillTheBudget();
 
         assertThatCode(() -> briefs.requireWithinItsLength(BriefFixtures.shipFollowing(null, buildInstructions(specLinesWithinTheBudget), false)))
                 .doesNotThrowAnyException();
         assertThatThrownBy(() -> briefs.requireWithinItsLength(BriefFixtures.shipFollowing(null, buildInstructions(specLinesWithinTheBudget + 1), false)))
                 .isInstanceOf(Refusal.class)
-                .hasMessage("The brief would run to 121 lines, over the 120 a brief holds; its longest section is Spec, at "
-                        + (specLinesWithinTheBudget + 4) + " lines: shorten it, or point the worker to a file in the task directory.");
+                .hasMessage("Counting the captain's intent as one line and leaving out any research plan, the brief would run to 121 lines, over the"
+                        + " 120 a brief holds; its longest section is Spec, at " + (specLinesWithinTheBudget + 4)
+                        + " lines: shorten it, or point the worker to a file in the task directory.");
     }
 
     @Test
@@ -66,7 +67,26 @@ class WorkerBriefsTest {
 
         assertThatCode(() -> briefs.requireWithinItsLength(BriefFixtures.shipFollowing(longPlan, "Keep the old bracket.", false))).doesNotThrowAnyException();
         assertThatThrownBy(() -> briefs.requireWithinItsLength(BriefFixtures.shipFollowing(longPlan, buildInstructions(200), false)))
-                .isInstanceOf(Refusal.class).hasMessageContaining("its longest section is Spec");
+                .isInstanceOf(Refusal.class).hasMessageContaining("its longest section is Spec, at 203 lines");
+    }
+
+    @Test
+    void leavesTheCaptainsIntentOutOfTheBriefsLength() {
+        String longIntent = "The captain's words, one per line.\n".repeat(400);
+
+        assertThatCode(() -> briefs.requireWithinItsLength(BriefFixtures.largestShip(longIntent, "Rename Lamp to Lantern."))).doesNotThrowAnyException();
+    }
+
+    @Test
+    void attributesLinesToTheTemplatesSectionsWhateverHeadingsTheSpecHolds() {
+        String spec = "## Reporting\n\n" + buildInstructions(200);
+
+        assertThatThrownBy(() -> briefs.requireWithinItsLength(BriefFixtures.shipFollowing(null, spec, false)))
+                .isInstanceOf(Refusal.class).hasMessageContaining("its longest section is Spec, at 205 lines");
+    }
+
+    private int specLinesThatFillTheBudget() {
+        return 120 - (int) briefs.briefFor(BriefFixtures.shipFollowing(null, buildInstructions(1), false)).lines().count() + 1;
     }
 
     private static String buildInstructions(int lines) {

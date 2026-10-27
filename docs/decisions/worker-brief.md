@@ -18,7 +18,9 @@ A project with `craftRules: true` and no `memory/craft-rules.md` is refused at l
 A ship's brief, when the project keeps a decision log, says to record each architecture or design decision in the project's log in its own form, and only those ([decision-log](decision-log.md)).
 `PipelineIntent.of` composes `intent.md` from a `## Captain's intent` section with the notes, a `## Spec` section with the brief's Spec section, a `## Commits` section that names the work key the pipeline puts in front of its own commit subjects and title ([pipeline-commit-keys](pipeline-commit-keys.md)), and the craft rules block verbatim when the project is flagged; the brief gives the one command that passes it to the pipeline unchanged.
 `WrittenBriefs` writes `brief.md`, and `intent.md` for a `draft-review` ship, at every launch and whenever the task is noted: `NoteTask` calls `RewriteBrief`, which rebuilds the facts for the task's latest worker and rewrites both while the task is in flight.
-A dispatch refuses a brief over 120 lines before it prepares the isolated copy, naming the longest of the template's sections, so the primary shortens that section or points the worker to a file (`BriefLength`); the plan a piloted ship carries in from its research task is left out of the count ([research-first](research-first.md)), and a relaunch or a rewrite after a note is never refused.
+`DispatchTask` refuses a dispatch whose brief would run past 120 lines before it saves or defers it, naming the longest of the template's sections as each renders, so the primary shortens that section or points the worker to a file (`BriefLength`).
+The count takes the captain's intent as one line and leaves out the plan a piloted ship carries in from its research task ([research-first](research-first.md)), since the primary can shorten neither.
+A relaunch or a rewrite after a note is never refused.
 `edi brief <task>` prints the brief as it stands, or with `--category` the brief a dispatch would write, refused as that dispatch would be.
 
 ## Why
@@ -32,12 +34,13 @@ Turning the worked line off is one edit of the profile, with no change to the ha
 - Building the brief in code, or a template language with conditional sections - wording scattered across literals, or a second language for a handful of variants.
 - Passing every steer into the intent - most steers answer a gate and say nothing about scope.
 - An `edi intent` command the worker calls, or rewriting from an event follower - a new endpoint for what one file already does, or an intent that changes after the pipeline started.
+- Counting the captain's intent - notes only grow, so a task could become impossible to dispatch, and refusing it would refuse the captain's words.
 
 ## Consequences
 
 - Good: the template leaves room within the 120 lines AT-35 counts, a spec that would push a brief past them is refused when it is written rather than found by a test, and AT-34 reads the very file the worker passes.
 - Bad: a note recorded after a pipeline run started does not reach that run, and the intent travels as one argument, fine for a task's spec but not for fleet-sized data.
-- Bad: a note recorded after dispatch can still carry a brief past 120 lines, since refusing it would refuse the captain's words.
+- Bad: a written brief can still run past 120 lines on the captain's intent or a research plan, which the count leaves out.
 
 ## When to revisit
 
@@ -50,4 +53,4 @@ When the pipeline reads its intent from a file or standard input, or lets a runn
 - 22/10/2026: reviewers flagged requirements the spec stated as scope creep, so the intent carries the spec and follows every note (EDI-30).
 - 23/10/2026: the decision-log rule in the brief was limited to architecture and design decisions (EDI-42).
 - 23/10/2026: the intent tells the pipeline's agents that the work key is put in front of their commit summaries and title, so they leave it out (EDI-21).
-- 26/10/2026: only a test held the brief to 120 lines, and three of 70 written briefs ran past them, so a dispatch now refuses an overlong brief, the research plan aside (EDI-79).
+- 26/10/2026: only a test held the brief to 120 lines, and three of 70 written briefs ran past them, so a dispatch now refuses an overlong brief, counting neither the captain's intent nor a research plan (EDI-79).

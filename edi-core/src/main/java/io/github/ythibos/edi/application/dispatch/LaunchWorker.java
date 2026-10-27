@@ -133,9 +133,13 @@ public class LaunchWorker {
     }
 
     public String briefFor(Dispatch dispatch) {
-        BriefFacts facts = transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief();
+        BriefFacts facts = dispatchedBriefFactsOf(dispatch);
         briefs.requireWithinItsLength(facts);
         return briefs.briefFor(facts);
+    }
+
+    public void requireABriefWithinItsLength(Dispatch dispatch) {
+        briefs.requireWithinItsLength(dispatchedBriefFactsOf(dispatch));
     }
 
     private void requireAnEmptyCopy(TaskId task) {
@@ -146,9 +150,12 @@ public class LaunchWorker {
         }
     }
 
+    private BriefFacts dispatchedBriefFactsOf(Dispatch dispatch) {
+        return transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief();
+    }
+
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
-        requireADispatchedBriefWithinItsLength(incarnation);
         Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
@@ -158,12 +165,6 @@ public class LaunchWorker {
         prepareThePipelineFor(incarnation);
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
         return transaction.execute(_ -> recorded(incarnation, window, token, worktree, because, actor));
-    }
-
-    private void requireADispatchedBriefWithinItsLength(Incarnation incarnation) {
-        if (incarnation.kind() == LaunchKind.DISPATCH) {
-            briefs.requireWithinItsLength(incarnation.brief());
-        }
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {

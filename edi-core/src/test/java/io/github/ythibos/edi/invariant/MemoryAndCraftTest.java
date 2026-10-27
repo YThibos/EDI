@@ -171,7 +171,7 @@ class MemoryAndCraftTest {
 
         @Test
         @Tag("adapter")
-        @DisplayName("AT-35 a dispatch whose brief would run past 120 lines is refused, naming its longest section, before its copy is made")
+        @DisplayName("AT-35 a dispatch whose brief would run past 120 lines is refused, naming its longest section, before anything is saved or copied")
         void aDispatchRefusesABriefPastItsBudget() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
@@ -180,6 +180,7 @@ class MemoryAndCraftTest {
             assertThatThrownBy(() -> dispatch(home, buildInstructions(specLinesWithinTheBudget + 1)))
                     .isInstanceOf(Refusal.class).hasMessageContaining("121 lines").hasMessageContaining("its longest section is Spec");
             assertThat(home.home().worktreeOf(new ProjectName("harness"), new TaskId("fit-lamp"))).doesNotExist();
+            assertThat(home.dispatches().of(new TaskId("fit-lamp"))).isEmpty();
 
             dispatch(home, buildInstructions(specLinesWithinTheBudget));
 
