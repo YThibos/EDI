@@ -169,7 +169,7 @@ class SitrepConsolePresenterTest {
         Task lamp = ship("fit-lamp", "Fit the lamp");
         PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url());
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
-                List.of(new ChangingRequest(lamp, delivery(lamp), running, List.of(2))));
+                List.of(new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2))));
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
 

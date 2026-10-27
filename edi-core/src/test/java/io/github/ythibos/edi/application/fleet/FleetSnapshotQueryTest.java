@@ -33,6 +33,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.HoldKind;
@@ -227,6 +228,42 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void holdsARequestAsChangingOnceItsWorkerIsBackAtWorkButNeverAFirstPassDraft() {
+        Task lamp = handedOverWithAnOpenRequest();
+        Task shade = WorkerFixtures.queuedShip("hang-shade", "harness", "HRN-4");
+        WorkerFixtures.servingWorkerOn(home, shade, CategoryId.IMPLEMENTATION);
+        home.deliveries().save(Delivery.of(shade.id(), firstPassDraft(), TestHome.START));
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
+        home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
+        report(lamp, StatusState.WORKING);
+
+        WaitingOnTheCaptain backAtWork = home.fleetSnapshot().snapshot().waiting();
+        report(lamp, StatusState.DONE);
+        WaitingOnTheCaptain doneAgain = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(backAtWork.reviews()).isEmpty();
+        assertThat(backAtWork.changing()).singleElement().satisfies(changing -> {
+            assertThat(changing.task().id()).isEqualTo(lamp.id());
+            assertThat(changing.whyChanging()).isEqualTo("worker back at work");
+        });
+        assertThat(doneAgain.changing()).isEmpty();
+        assertThat(doneAgain.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void keepsARequestWhoseMechanicalDoneAwaitsItsCheckOutOfTheZone() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.MECHANICAL);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        report(lamp, StatusState.DONE);
+
+        WaitingOnTheCaptain checking = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(checking.reviews()).isEmpty();
+        assertThat(checking.changing()).isEmpty();
+    }
+
+    @Test
     void keepsAnAnsweredDecisionOutOfALaterHold() {
         add(ship("lamp-fitting", "Fit the lamp"));
         raise("lamp-fitting");
@@ -301,10 +338,22 @@ class FleetSnapshotQueryTest {
 
     private Task handedOverWithAnOpenRequest() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
-        Worker worker = WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
         home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
-        home.workers().update(worker.reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), TestHome.START));
+        report(lamp, StatusState.DONE);
         return lamp;
+    }
+
+    private void report(Task task, StatusState state) {
+        StatusReport report = new StatusReport(state, null, null, "Fitting the lamp.");
+        Worker reported = home.workers().latestOf(task.id()).orElseThrow().reported(report, TestHome.START);
+        home.workers().update(reported);
+        home.events().record(new StatusReported(task.id(), reported.id(), report), Actor.worker(reported.id()), TestHome.START);
+    }
+
+    private static MergeRequestView firstPassDraft() {
+        MergeRequestAddress draft = new MergeRequestAddress(REQUEST.repository(), 6);
+        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", null, null);
     }
 
     private void add(NewTask task) {

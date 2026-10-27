@@ -93,12 +93,14 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeRule;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
+import io.github.ythibos.edi.domain.worker.WorkerId;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -181,6 +183,17 @@ public class EventLog {
                         new Actor(row.getString("actor")),
                         row.getString("type"),
                         task))
+                .list();
+    }
+
+    public List<WorkerId> workersThatReportedDone(TaskId task) {
+        return store.sql("""
+                select distinct json_extract(payload, '$.worker') from event
+                where task_id = :task and type = :type and json_extract(payload, '$.state') = :state""")
+                .param("task", task.value())
+                .param("type", StatusReported.class.getSimpleName())
+                .param("state", StatusState.DONE.word())
+                .query((row, _) -> WorkerId.parse(row.getString(1)))
                 .list();
     }
 

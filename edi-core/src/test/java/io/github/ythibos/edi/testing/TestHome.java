@@ -436,7 +436,7 @@ public final class TestHome {
     }
 
     public FleetSnapshotQuery fleetSnapshot() {
-        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, inbox, boards, clock, transaction);
+        return new FleetSnapshotQuery(tasks, decisions, workers, pipelineRuns, deliveries, inbox, boards, events, clock, transaction);
     }
 
     public ForkMigrationPlanner forkMigrationPlanner() {

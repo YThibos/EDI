@@ -9,14 +9,18 @@ import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.task.Task;
 
-public record ChangingRequest(Task task, Delivery delivery, PipelineRun runningPipeline, List<Integer> unacknowledgedSteers) {
+public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAtWork, PipelineRun runningPipeline, List<Integer> unacknowledgedSteers) {
 
     public ChangingRequest {
         unacknowledgedSteers = List.copyOf(unacknowledgedSteers);
     }
 
     public String whyChanging() {
-        return Stream.of(pipelineStillRunning(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
+        return Stream.of(workerStillAtWork(), pipelineStillRunning(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
+    }
+
+    private Optional<String> workerStillAtWork() {
+        return workerBackAtWork ? Optional.of("worker back at work") : Optional.empty();
     }
 
     private Optional<String> pipelineStillRunning() {
