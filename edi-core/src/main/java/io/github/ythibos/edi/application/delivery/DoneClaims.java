@@ -10,6 +10,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
@@ -18,6 +19,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
+import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -26,16 +28,18 @@ public class DoneClaims {
 
     private final WorkerContext context;
     private final Git git;
+    private final InboxStore inbox;
     private final DeliveryRecords records;
     private final LandedWorkCheck landedWork;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DoneClaims(WorkerContext context, Git git, DeliveryRecords records, LandedWorkCheck landedWork, EventLog events, Clock clock,
-            TransactionTemplate transaction) {
+    public DoneClaims(WorkerContext context, Git git, InboxStore inbox, DeliveryRecords records, LandedWorkCheck landedWork, EventLog events,
+            Clock clock, TransactionTemplate transaction) {
         this.context = context;
         this.git = git;
+        this.inbox = inbox;
         this.records = records;
         this.landedWork = landedWork;
         this.events = events;
@@ -44,6 +48,7 @@ public class DoneClaims {
     }
 
     public Optional<MergeRequestView> verify(WorkerId worker) {
+        requireEveryMessageAcknowledged(worker);
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
         if (!workplace.isAShip()) {
             return Optional.empty();
@@ -56,6 +61,36 @@ public class DoneClaims {
             refuse(worker, gaps);
         }
         return request;
+    }
+
+    private void requireEveryMessageAcknowledged(WorkerId worker) {
+        List<Integer> waiting = numbersWaitingIn(worker);
+        if (!waiting.isEmpty()) {
+            refuse(worker, List.of(unacknowledgedGapOf(waiting)));
+        }
+    }
+
+    private List<Integer> numbersWaitingIn(WorkerId worker) {
+        return transaction.execute(_ -> inbox.unacknowledgedOf(worker.task())).stream().map(InboxMessage::number).toList();
+    }
+
+    private static String unacknowledgedGapOf(List<Integer> waiting) {
+        if (waiting.size() == 1) {
+            return "message " + waiting.getFirst() + " waits unacknowledged, so read it with edi inbox, act on it"
+                    + " and acknowledge it with edi inbox ack " + waiting.getFirst();
+        }
+        return "messages " + numbersOf(waiting) + " wait unacknowledged, so read them with edi inbox, act on each"
+                + " and acknowledge each with edi inbox ack <n>";
+    }
+
+    private static String numbersOf(List<Integer> waiting) {
+        List<String> numbers = waiting.stream().map(String::valueOf).toList();
+        return String.join(", ", numbers.subList(0, numbers.size() - 1)) + " and " + numbers.getLast();
+    }
+
+    private void refuse(WorkerId worker, List<String> gaps) {
+        transaction.executeWithoutResult(_ -> events.record(new DeliveryRefused(worker.task(), worker, gaps), Actor.CORE, clock.now()));
+        throw new Refusal("EDI accepts this done once its claims hold: " + String.join("; ", gaps) + ".");
     }
 
     private static void requireTheCopy(Workplace workplace) {
@@ -100,10 +135,5 @@ public class DoneClaims {
             gaps.add("a report delivery carries no change, yet " + String.join(" and ", changes));
         }
         return gaps;
-    }
-
-    private void refuse(WorkerId worker, List<String> gaps) {
-        transaction.executeWithoutResult(_ -> events.record(new DeliveryRefused(worker.task(), worker, gaps), Actor.CORE, clock.now()));
-        throw new Refusal("EDI accepts this done once its claims hold: " + String.join("; ", gaps) + ".");
     }
 }
