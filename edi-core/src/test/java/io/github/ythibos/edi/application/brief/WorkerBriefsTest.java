@@ -70,6 +70,35 @@ class WorkerBriefsTest {
     }
 
     @Test
+    void marksTheMergeRequestReadyForReviewOnceThePipelinePassesWhereTheProjectsCiDoesNotRun() {
+        String draft = "The pipeline pushes the branch and opens the merge request as a draft; mark it ready for review once ";
+
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true))).contains(draft + "its checks are green.\n");
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(false))).contains(draft + "the pipeline passes.\n").doesNotContain("checks are green");
+    }
+
+    @Test
+    void takesTheLocalVerificationAsTheEvidenceOfDoneWhereTheProjectsCiDoesNotRun() {
+        String report = "`/home/developer/.edi/data/tasks/fit-lamp/report.md`";
+
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true)))
+                .contains("## Definition of done\n\nCI is green on the merge request for your last commit, and " + report + " holds a short delivery note.\n");
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(false)))
+                .contains("## Definition of done\n\nYour last commit passes the local verification (`./mvnw -B verify`, plus"
+                        + " `./mvnw -B -Pnative,quick-build verify` when the change can reach the native image), and " + report
+                        + " holds a short delivery note with that evidence.\n")
+                .doesNotContain("CI is green");
+    }
+
+    @Test
+    void leavesNoNativeBuildToCiWhereTheProjectsCiDoesNotRun() {
+        String skipped = "Otherwise `./mvnw -B verify` is the local evidence: the merge request body says the native build was not needed and why";
+
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true))).contains(skipped + ", and the full optimised native build is left to CI.\n");
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(false))).contains(skipped + ".\n").doesNotContain("left to CI");
+    }
+
+    @Test
     void asksForTheReasonTheNativeBuildWasSkippedInTheReportWhenNoMergeRequestCarriesIt() {
         String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage(DeliveryMode.REPORT));
 

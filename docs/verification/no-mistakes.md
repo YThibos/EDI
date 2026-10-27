@@ -56,6 +56,17 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from the documented global and repos
 | Does the entry EDI writes load and render? | Yes. The configuration package loaded the file, kept the agent route, and rendered `JUSTMD-50 Cover the empty basket` and `JUSTMD-50 Show the basket` for a GitLab remote written `git@host:group/repo.git`, `EDI-21 ...` for a follow-up branch on a GitHub remote, and the default `no-mistakes(test): ...` for a remote EDI had not written. |
 | Consequence for EDI | EDI sets the commit and title keys in the repository's entry at every draft-review launch ([pipeline-commit-keys](../decisions/pipeline-commit-keys.md)). |
 
+## Skipped steps
+
+Verified on no-mistakes 1.84.0, 27/10/2026, from `axi run --help`, a run started with `--skip`, and the no-mistakes skill text installed with it.
+
+| Question | Result on 1.84.0 |
+|---|---|
+| Can a run leave steps out? | Yes. `axi run --help` lists `--skip string comma-separated pipeline steps to skip`. |
+| Does a skipped step stay out of the run? | Yes. Run `01M5Z6VVRA9TSN4N77YGWP42GH`, started with `--skip rebase,ci`, showed the `rebase` step as skipped. |
+| Does the `ci` step rebase? | The installed skill says that when its CI monitor sees an actual conflict with the base, it rebases onto the base, resolves the conflict, revalidates from the review and pushes the branch again. |
+| Consequence for EDI | Every run a worker starts skips `rebase`, and `ci` as well on a project whose CI does not run ([pipeline-steps](../decisions/pipeline-steps.md)). |
+
 ## Account binding
 
 | Question | Result on 1.84.0 |

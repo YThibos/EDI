@@ -6,7 +6,7 @@ EDI never merges: every change reaches the captain as a draft the captain merges
 
 A project's registry entry sets its `delivery` (see [Configuration](configuration.md#the-project-registry)):
 
-- `draft-review`, the default: the validation pipeline pushes the branch and opens a draft merge or pull request, which the worker marks ready for review once its checks are green.
+- `draft-review`, the default: the validation pipeline pushes the branch and opens a draft merge or pull request, which the worker marks ready for review once its checks are green, or once the pipeline passes on a project whose CI does not run ([pipeline-steps](decisions/pipeline-steps.md)).
 - `local-branch`: the work arrives in the project's `captainCheckout` by a ref-only fetch ([delivery](decisions/delivery.md)).
 - `local-apply`, which one task may ask for with `--delivery local-apply`: the work arrives in the captain's checkout as an uncommitted patch.
 - `report`, which one task may ask for with `--delivery report`, for an operation on the machine with nothing to commit: the worker's report in the task directory is the delivery, its done counts once the report exists and the copy holds no change, and EDI then retires the task.
