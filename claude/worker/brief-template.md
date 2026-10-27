@@ -17,7 +17,7 @@ Everything you write is read by EDI, by tools and by reviewers, so write it plai
 - Isolated copy: `{{worktree}}`
 - Task directory: `{{taskDirectory}}`
 
-Before anything else run `pwd -P`; if it does not print `{{worktree}}`, stop and run `edi status blocked -- launched outside the isolated copy`.
+Before anything else run `pwd -P`; if it does not print `{{worktree}}`, stop and run `edi status blocked --key outside-the-copy -- launched outside the isolated copy`.
 Write only inside the isolated copy and the task directory, and keep scratch files in the task directory.
 
 ## Captain's intent
