@@ -51,6 +51,7 @@ public class NoticeHeavyRunsAtOnce {
 
     private HeavyRuns heavyRunsOf(List<Worker> serving) {
         return new HeavyRuns(serving.stream()
+                .filter(worker -> processes.isStillThePaneOf(worker.window()))
                 .flatMap(worker -> heaviestRunOf(worker).map(run -> new WorkerRun(worker.id(), run)).stream())
                 .toList());
     }

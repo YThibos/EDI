@@ -67,9 +67,9 @@ public final class BriefFixtures {
                 asksForTheTimeWorked);
     }
 
-    public static BriefFacts shipBuildingANativeImage() {
+    public static BriefFacts shipBuildingANativeImage(DeliveryMode delivery) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
-        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, NATIVE_BUILD),
+        return new BriefFacts(task, WorkerId.first(TASK), project(delivery, AiScaffolding.COMMITTED, NATIVE_BUILD),
                 dispatch(CategoryId.IMPLEMENTATION, ""), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
                 false);
     }

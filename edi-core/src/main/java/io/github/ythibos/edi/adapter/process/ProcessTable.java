@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 @Component
 public class ProcessTable implements AutoCloseable {
@@ -46,6 +47,11 @@ public class ProcessTable implements AutoCloseable {
 
     public OptionalLong parentOf(long pid) {
         return ProcessHandle.of(pid).flatMap(ProcessHandle::parent).map(parent -> OptionalLong.of(parent.pid())).orElseGet(OptionalLong::empty);
+    }
+
+    public boolean isStillThePaneOf(WorkerWindow window) {
+        OptionalLong parent = parentOf(window.panePid());
+        return parent.isPresent() && parent.getAsLong() == window.serverPid();
     }
 
     public List<Long> workingIn(Path directory) {

@@ -71,6 +71,19 @@ class HeavyRunsAtOnceTest {
         stop(lamp);
     }
 
+    @Test
+    void leavesOutAWorkerWhosePaneIdNowBelongsToAnotherProcess() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = workerRunning(home, "fit-lamp", "HRN-3", "-Pnative", "verify");
+        WorkerFixtures.servingWorkerIn(home.runtime().openWindowOf(lamp.window().panePid(), 1), home,
+                WorkerFixtures.queuedShip("tune-horn", "harness", "HRN-4"), CategoryId.IMPLEMENTATION);
+        home.noticeHeavyRunsAtOnce().notice();
+
+        assertThat(home.noticeHeavyRunsAtOnce().atOnce()).isEmpty();
+        assertThat(home.wakes().unacknowledged()).isEmpty();
+        stop(lamp);
+    }
+
     private TestHome homeWithAHarness() throws IOException {
         return TestHome.in(directory).registering("projects:\n  - name: harness\n    base: main\n");
     }

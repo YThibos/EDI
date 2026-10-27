@@ -86,8 +86,7 @@ final class BriefSections {
     private static String nativeBuildRule(BriefFacts facts) {
         return "Run the local native build `" + facts.project().nativeBuild() + "` only when the change can reach the native image: it touches "
                 + whatReachesTheNativeImage() + ".\n"
-                + "Otherwise " + jvmEvidenceOf(facts) + " the local evidence: the merge request body says the native build was not needed and why,"
-                + " and the full optimised native build is left to CI.";
+                + "Otherwise " + jvmEvidenceOf(facts) + " the local evidence: " + whereTheSkippedNativeBuildIsExplained(facts);
     }
 
     private static String whatReachesTheNativeImage() {
@@ -97,6 +96,13 @@ final class BriefSections {
 
     private static String jvmEvidenceOf(BriefFacts facts) {
         return facts.project().verify() == null ? "the JVM build and its tests are" : "`" + facts.project().verify() + "` is";
+    }
+
+    private static String whereTheSkippedNativeBuildIsExplained(BriefFacts facts) {
+        return switch (facts.delivery()) {
+            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why, and the full optimised native build is left to CI.";
+            case LOCAL_BRANCH, LOCAL_APPLY, REPORT -> "`" + facts.reportPath() + "` says the native build was not needed and why.";
+        };
     }
 
     private static String shipDelivery(BriefFacts facts) {
