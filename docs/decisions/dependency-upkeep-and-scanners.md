@@ -12,7 +12,7 @@ Vulnerabilities and quality regressions should show as a red build like any othe
 
 Renovate runs in this repository's GitHub Actions (`renovatebot/github-action`), nightly and on demand, with its policy in `renovate.json`:
 
-- managers for Maven, the wrapper, npm, GitHub Actions, mise and the local SonarQube compose file, plus regex managers for the Node the frontend plugin downloads, `tomcat.version`, and GraalVM Community in `mise.toml`;
+- managers for Maven, the wrapper, npm, GitHub Actions, mise and the local SonarQube compose file, plus regex managers for the Node the frontend plugin downloads, `tomcat.version`, and the version of GraalVM Community in `mise.toml`, read from its `graal-` release tags, whose archive names and checksums are then moved by hand ([java-toolchain-and-build](java-toolchain-and-build.md));
 - minor, patch, pin and digest updates share a budget of ten pull requests, while each major is its own pull request within a separate budget of three;
 - Spring Boot, Angular and the console's Node are grouped, and a release must be three days old;
 - every pull request is a draft, nothing is automerged, and subjects and titles start with `EDI-1` ([work-keys-and-branches](work-keys-and-branches.md)).
@@ -25,6 +25,7 @@ CI runs on every push and pull request:
 - gitleaks and the publish guard ([publish-guard](publish-guard.md)).
 
 A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, which a Renovate regex manager keeps current.
+Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, which Renovate's npm manager keeps current.
 The `edi-upkeep` skill lists Renovate's pull requests with their checks, raises one decision per green batch, and turns a red major into a migration task.
 
 ## Why
@@ -43,12 +44,13 @@ Security and quality are part of green, and the gate exists to fail on exactly w
 ## Consequences
 
 - Good: dependencies, plugins, actions, the wrapper and the toolchain stay current.
-- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and the Tomcat override must be removed by hand once Spring Boot catches up.
+- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and the Tomcat and Vite overrides must be removed by hand once Spring Boot and Angular catch up.
 
 ## When to revisit
 
-When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, Spring Boot manages a fixed Tomcat, EDI ships a container image, or coverage becomes a gate.
+When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, Spring Boot manages a fixed Tomcat, Angular's build depends on a fixed Vite, EDI ships a container image, or coverage becomes a gate.
 
 ## How we got here
 
 - 15/10/2026: the captain asked for automatic dependency upgrades, a vulnerability scanner and a code-quality scanner; slice S0 set up Renovate and the four scans, and overrode Tomcat for nine CVEs the scanner found.
+- 27/10/2026: GraalVM Community moved to mise's `http` backend and its `graal-` release tags, so its regex manager followed, and `npm audit` found a high-severity Vite the Angular build pinned, which the console overrides (EDI-100).

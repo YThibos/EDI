@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns="http://maven.apache.org/POM/4.1.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
+    <modelVersion>4.1.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -20,11 +20,11 @@
     <description>Enhanced Development Intelligence: a development harness for one developer across machines</description>
     <url>https://github.com/YThibos/EDI</url>
 
-    <modules>
-        <module>edi-console</module>
-        <module>edi-core</module>
-        <module>edi-cli</module>
-    </modules>
+    <subprojects>
+        <subproject>edi-console</subproject>
+        <subproject>edi-core</subproject>
+        <subproject>edi-cli</subproject>
+    </subprojects>
 
     <properties>
         <java.version>25</java.version>
@@ -41,20 +41,15 @@
         <picocli.version>4.7.7</picocli.version>
         <dependency-check-maven.version>13.0.0</dependency-check-maven.version>
         <sonar-maven-plugin.version>5.8.0.7211</sonar-maven-plugin.version>
-        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
-        <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
-        <node.version>v24.22.0</node.version>
+        <exec-maven-plugin.version>3.6.4</exec-maven-plugin.version>
+        <node.version>v26.12.1</node.version>
         <native.optimisation>-O2</native.optimisation>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>io.github.ythibos</groupId>
-                <artifactId>edi-console</artifactId>
-                <version>${project.version}</version>
-            </dependency>
             <dependency>
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli</artifactId>
@@ -187,7 +182,7 @@
                                     <version>[${java.version},)</version>
                                 </requireJavaVersion>
                                 <requireMavenVersion>
-                                    <version>[3.9,)</version>
+                                    <version>[4.0.0-rc-7,)</version>
                                 </requireMavenVersion>
                                 <requireReleaseVersion/>
                                 <requireReleaseDeps/>
@@ -227,7 +222,7 @@
                 <sonar.projectName>EDI</sonar.projectName>
                 <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
                 <sonar.java.enablePreview>true</sonar.java.enablePreview>
-                <sonar.coverage.jacoco.xmlReportPaths>${maven.multiModuleProjectDirectory}/edi-core/target/site/jacoco/jacoco.xml,${maven.multiModuleProjectDirectory}/edi-cli/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+                <sonar.coverage.jacoco.xmlReportPaths>${session.rootDirectory}/edi-core/target/site/jacoco/jacoco.xml,${session.rootDirectory}/edi-cli/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
             </properties>
             <build>
                 <plugins>
