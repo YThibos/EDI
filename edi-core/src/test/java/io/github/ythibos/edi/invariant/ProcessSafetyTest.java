@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -166,6 +167,48 @@ class ProcessSafetyTest {
             said.add(catchThrowable(() -> home.addTask().add(TrackerFixtures.ship("fit-buoy", "service", "Fit the buoy", "SVC-40"), Actor.PRIMARY))
                     .getMessage());
             said.addAll(home.jdbc().sql("select coalesce(detail, '') from wake").query(String.class).list());
+        }
+
+        @Test
+        @DisplayName("AT-32 a Read of the keys file named in the machine profile is refused to a worker and the primary, and a Read of a source file is allowed")
+        void aReadOfTheKeysFileIsRefused() throws IOException {
+            prepareAWorker();
+            Path keysFile = keysFileNamedInTheMachineProfile();
+            Path worktree = Files.createDirectories(home.home().worktreeOf(new ProjectName("harness"), new TaskId("fit-lamp")));
+            Path linkedKeys = Files.createSymbolicLink(worktree.resolve("keys.yml"), keysFile);
+            Path source = worktree.resolve("src/Lamp.java");
+
+            for (Path secret : List.of(keysFile, linkedKeys, home.home().coreTokenFile())) {
+                assertDenied(readByTheWorker(secret, worktree), "this read touches a secret");
+                assertDenied(readByThePrimary(secret), "this read touches a secret");
+            }
+            assertThat(readByTheWorker(source, worktree)).isEqualTo(HookAnswer.PROCEED);
+            assertThat(readByThePrimary(source)).isEqualTo(HookAnswer.PROCEED);
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).filteredOn("ToolCallRefused"::equals).hasSize(3);
+            assertThat(guardedToolsIn("claude/worker/settings.json")).contains("Read", "Bash");
+            assertThat(guardedToolsIn("claude/primary/settings.json")).contains("Read", "Bash");
+        }
+
+        private Path keysFileNamedInTheMachineProfile() throws IOException {
+            Path keysFile = home.home().root().resolve("keys/tracker-keys.yml");
+            home.writing("keys/tracker-keys.yml", "TRACKER:\n  API-key: " + SyntheticSecrets.canary() + "\n")
+                    .writing("config/machine.yaml", MachineFixture.LAPTOP.profile().replace("/nonexistent/tracker-keys.yml", keysFile.toString()));
+            return keysFile;
+        }
+
+        private HookAnswer readByTheWorker(Path file, Path workingDirectory) {
+            return home.guardToolCall().checkForWorker(worker.id(), new ToolCall("Read", null, file.toString(), workingDirectory));
+        }
+
+        private HookAnswer readByThePrimary(Path file) {
+            return home.guardToolCall().checkForPrimary(new ToolCall("Read", null, file.toString(), home.home().root()), CallingSession.UNNAMED);
+        }
+
+        private static List<String> guardedToolsIn(String settings) throws IOException {
+            try (InputStream content = ProcessSafetyTest.class.getClassLoader().getResourceAsStream(settings)) {
+                String matcher = new JsonMapper().readTree(content).path("hooks").path("PreToolUse").path(0).path("matcher").asString();
+                return List.of(matcher.split("\\|"));
+            }
         }
     }
 }

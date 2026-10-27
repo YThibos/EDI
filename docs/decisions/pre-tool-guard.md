@@ -7,7 +7,7 @@
 The `PreToolUse` hook must refuse pattern kills (I-30), tmux without a named socket and control of EDI's own server (I-31), forced pushes, pushes to a base and merges (I-03), and for workers any write outside their copy and task directory (I-07).
 Secrets are read only by EDI's adapters and never printed (I-32), and EDI's home token lets its holder act as the primary.
 The `commit-msg` and `pre-push` hooks an isolated copy runs through `core.hooksPath` hold the work key (I-10), the bar on trailers (I-09), the secret check (I-38), the SNAPSHOT check (I-11) and the registered forge (I-39), and git skips them on `--no-verify` or another hooks path.
-Claude Code passes a Bash call as one string, which a shell may nest in pipes, substitutions, `bash -c`, `eval`, `xargs`, `find -exec` and wrappers such as `sudo` or `timeout`.
+Claude Code's `Read` tool shows a file to the model without a shell, and passes a Bash call as one string, which a shell may nest in pipes, substitutions, `bash -c`, `eval`, `xargs`, `find -exec` and wrappers such as `sudo` or `timeout`.
 A primary whose core is down must still be able to bring it back.
 
 ## Decision
@@ -16,8 +16,10 @@ A primary whose core is down must still be able to bring it back.
 `ShellGuard` refuses with one reason naming the invariant: `pkill`, `killall` and kin, kills fed from process lookups or aimed at groups, tmux without `-L` or `-S`, `kill-*`, `send-*` and `respawn-*` on the `edi` socket, any forced push, a push of every branch or to a base, and merges through `gh`, `glab`, a forge API or push options.
 `SkippedHooks` refuses `git commit` with `--no-verify` or `-n`, `git push` and `git merge` with `--no-verify`, and `-c` or `--config-env` setting `core.hooksPath` on any git command, naming the checks the skipped hook holds.
 `BranchDeletions` refuses deleting the recorded branch of a task still queued or in flight, locally or on the remote; the primary may on the captain's word ([captains-word](captains-word.md)).
-`SecretReads` refuses a command whose words end in a secret file's path, or that prints a forge token; `GuardToolCall` keeps the home token from every worker always, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
+`SecretReads` refuses a command whose words end in a secret file's path, or that prints a forge token, and a `Read` of a file whose path or real path ends in one.
+`GuardToolCall` keeps the home token from a worker's shell, the home token and the tracker's keys file from a worker's `Read`, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
 `GuardToolCall` keeps a worker's `Write`, `Edit`, `MultiEdit` and `NotebookEdit` calls inside its copy and task directory on real paths, and records every refusal of a worker as `ToolCallRefused` with its rule, never the command.
+The worker's settings send `Bash`, `Read` and the file-writing tools to the guard, the primary's `Bash` and `Read`.
 `edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`).
 
 ## Why
@@ -30,14 +32,17 @@ Failing closed keeps the invariants when the core is down, while a plain `edi up
 
 - Regular expressions over the raw command - quoting and nesting defeat them in both directions.
 - Containing Bash writes by reading redirections and `cd` - a shell can write anywhere in too many ways; the brief states the rule and the file tools are contained.
-- Keeping the keys file from workers too - project tooling a worker runs gets its path by design.
+- Keeping the keys file from a worker's shell too - project tooling a worker runs gets its path by design, while a `Read` only ever shows the file to the model.
 - Running the landed-work test inside the guard - it fetches, too slow for every command, while the task's state already says whether its work landed.
 
 ## Consequences
 
 - Good: AT-30, AT-31 and the secret half of AT-06 pass for workers and the primary.
+- Good: a `Read` of the keys file or the home token is refused to a worker and to the primary without the captain's word, also through a link, so AT-32 holds for the file tools.
 - Good: a commit with `--no-verify` or `-n`, a push or merge with `--no-verify`, and a `-c` or `--config-env` override of `core.hooksPath` are refused, so AT-09 and AT-10 hold for a commit that asks to skip the hooks.
 - Bad: a command the guard cannot read is refused, while a process id, a branch, a secret or a hooks path reached through a variable or after a `cd` passes; the brief and the anchor state those rules.
+- Bad: while the core is down the guard refuses every `Read` as it refuses a shell, so the primary brings the core back before it reads a file.
+- Bad: a `Grep` of a secret file, or of a folder that holds one, still shows its lines; it is a known gap.
 - Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
 
 ## When to revisit
@@ -50,3 +55,4 @@ When workers run as another user, or the captain wants workers kept from the key
 - 17/10/2026: slice S8 armed it for the primary, kept secrets from a shell and guarded branch deletions.
 - 26/10/2026: EDI-74 refused the flags and settings that skip the commit-msg and pre-push hooks.
 - 27/10/2026: the pre-push hook's publish check refuses a SNAPSHOT version, so a refusal for a skipped hook names that check too (EDI-78).
+- 27/10/2026: the guard refuses a `Read` of a secret file as it refuses a shell's read of it, and keeps the keys file from a worker's `Read` (EDI-80).

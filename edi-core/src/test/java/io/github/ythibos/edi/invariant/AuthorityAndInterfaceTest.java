@@ -464,6 +464,7 @@ class AuthorityAndInterfaceTest {
                     .isInstanceOf(Refusal.class).hasMessageContaining("on fit-hinge in this session");
             assertThat(guardedRead(home, current).verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
             assertThat(guardedRead(home, earlier).reason()).contains("touches a secret", "edi captain said");
+            assertThat(guardedFileRead(home, earlier).reason()).contains("touches a secret", "edi captain said");
             assertThat(guarded(home, current, "git branch -D feature/HRN-3").reason()).contains("has not landed", "edi captain said");
             assertThat(guarded(home, current, "git -C projects/harness push origin --delete feature/HRN-6").verdict())
                     .isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
@@ -482,6 +483,7 @@ class AuthorityAndInterfaceTest {
             assertThat(home.discardWork().discard(TaskReference.parse("fit-hinge"), current, Actor.PRIMARY).discarded())
                     .singleElement().asString().contains("HRN-7 Fit the hinge");
             assertThat(guardedRead(home, current)).isEqualTo(HookAnswer.PROCEED);
+            assertThat(guardedFileRead(home, current)).isEqualTo(HookAnswer.PROCEED);
             assertThat(guarded(home, current, "git branch -D feature/HRN-3")).isEqualTo(HookAnswer.PROCEED);
             assertThat(lampCopy).doesNotExist();
             assertThat(doorCopy).doesNotExist();
@@ -505,6 +507,10 @@ class AuthorityAndInterfaceTest {
 
         private static HookAnswer guardedRead(TestHome home, CallingSession session) {
             return guarded(home, session, "cat ~/.edi/state/core.token");
+        }
+
+        private static HookAnswer guardedFileRead(TestHome home, CallingSession session) {
+            return home.guardToolCall().checkForPrimary(new ToolCall("Read", null, home.home().coreTokenFile().toString(), home.home().root()), session);
         }
 
         private static HookAnswer guarded(TestHome home, CallingSession session, String command) {
