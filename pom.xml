@@ -45,6 +45,7 @@
         <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
         <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
         <node.version>v24.22.0</node.version>
+        <native.optimisation>-O2</native.optimisation>
     </properties>
 
     <dependencyManagement>
@@ -123,6 +124,7 @@
                     <configuration>
                         <buildArgs>
                             <buildArg>--enable-preview</buildArg>
+                            <buildArg>${native.optimisation}</buildArg>
                         </buildArgs>
                     </configuration>
                 </plugin>
@@ -203,6 +205,12 @@
             <id>fast</id>
             <properties>
                 <test.excludedGroups>adapter,live</test.excludedGroups>
+            </properties>
+        </profile>
+        <profile>
+            <id>quick-build</id>
+            <properties>
+                <native.optimisation>-Ob</native.optimisation>
             </properties>
         </profile>
         <profile>

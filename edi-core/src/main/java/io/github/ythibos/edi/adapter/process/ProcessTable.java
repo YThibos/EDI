@@ -61,6 +61,12 @@ public class ProcessTable implements AutoCloseable {
         return holders;
     }
 
+    public List<List<String>> argumentsInTree(long pid) {
+        return ProcessHandle.of(pid)
+                .map(root -> Stream.concat(Stream.of(root), root.descendants()).map(ProcessTable::argumentsOf).toList())
+                .orElseGet(List::of);
+    }
+
     public void stopTree(long pid, Duration grace) {
         ProcessHandle.of(pid).ifPresent(root -> {
             List<ProcessHandle> tree = Stream.concat(root.descendants(), Stream.of(root)).toList();
@@ -105,6 +111,10 @@ public class ProcessTable implements AutoCloseable {
         } catch (IOException | SecurityException | UnsupportedOperationException unreadable) {
             return Optional.empty();
         }
+    }
+
+    private static List<String> argumentsOf(ProcessHandle process) {
+        return process.info().arguments().map(List::of).orElseGet(List::of);
     }
 
     private static void killWhatOutlives(List<ProcessHandle> tree, Duration grace) {

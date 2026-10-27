@@ -87,7 +87,7 @@ final class ReportGoldenCases {
     }
 
     static String rendered(TestHome home, Turn turn, ReportWidth width) {
-        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width, Presence.presentSince(TestHome.START), null));
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width, Presence.presentSince(TestHome.START), null, null));
     }
 
     static Shown queuedBacklog(TestHome home, int tasks, int noteWords) {

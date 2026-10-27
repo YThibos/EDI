@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -66,6 +67,17 @@ class ProcessTableTest {
         assertThat(table.workingIn(Files.createDirectories(directory.resolve("worktrees/harness/tune-horn")))).isEmpty();
         inside.destroyForcibly();
         assertThat(TestProcesses.awaitExit(inside.toHandle())).isTrue();
+    }
+
+    @Test
+    void readsTheArgumentsOfAProcessAndEverythingBelowIt() throws IOException {
+        Process pane = processes.register(new ProcessBuilder("sh", "-c", "sleep 31 & echo forked; wait", "pane").start());
+        assertThat(pane.inputReader().readLine()).isEqualTo("forked");
+
+        assertThat(table.argumentsInTree(pane.pid())).containsExactly(List.of("-c", "sleep 31 & echo forked; wait", "pane"), List.of("31"));
+        table.stopTree(pane.pid(), Duration.ofMillis(200));
+        assertThat(TestProcesses.awaitExit(pane.toHandle())).isTrue();
+        assertThat(table.argumentsInTree(pane.pid())).isEmpty();
     }
 
     @Test

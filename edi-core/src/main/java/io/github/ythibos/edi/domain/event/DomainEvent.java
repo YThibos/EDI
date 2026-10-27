@@ -26,6 +26,8 @@ import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.DeathCause;
+import io.github.ythibos.edi.domain.worker.HeavyRun;
+import io.github.ythibos.edi.domain.worker.HeavyRuns.WorkerRun;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -142,6 +144,13 @@ public sealed interface DomainEvent {
     }
 
     record WorkerBusyTooLong(TaskId task, WorkerId worker, Instant busySince) implements DomainEvent {
+    }
+
+    record HeavyRunsAtOnce(TaskId task, WorkerId worker, HeavyRun run, List<WorkerRun> beside) implements DomainEvent {
+
+        public HeavyRunsAtOnce {
+            beside = List.copyOf(beside);
+        }
     }
 
     record DeclaredWaitEnded(TaskId task, WorkerId worker, StatusReport pause) implements DomainEvent {

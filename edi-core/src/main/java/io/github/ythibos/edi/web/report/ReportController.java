@@ -10,6 +10,7 @@ import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.presence.MeetingCalendar;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
+import io.github.ythibos.edi.application.worker.NoticeHeavyRunsAtOnce;
 import io.github.ythibos.edi.domain.voice.CaptainVoice;
 import io.github.ythibos.edi.web.access.Caller;
 import tools.jackson.databind.JsonNode;
@@ -21,12 +22,15 @@ class ReportController {
     private final PresenceQuery presence;
     private final MeetingCalendar calendar;
     private final PrimaryHooks primaryHooks;
+    private final NoticeHeavyRunsAtOnce heavyRuns;
 
-    ReportController(FleetSnapshotQuery fleet, PresenceQuery presence, MeetingCalendar calendar, PrimaryHooks primaryHooks) {
+    ReportController(FleetSnapshotQuery fleet, PresenceQuery presence, MeetingCalendar calendar, PrimaryHooks primaryHooks,
+            NoticeHeavyRunsAtOnce heavyRuns) {
         this.fleet = fleet;
         this.presence = presence;
         this.calendar = calendar;
         this.primaryHooks = primaryHooks;
+        this.heavyRuns = heavyRuns;
     }
 
     @GetMapping("/api/report")
@@ -43,7 +47,7 @@ class ReportController {
 
     private CaptainReport reportOf(Turn turn, Integer paneWidth, Caller caller) {
         CaptainReport report = new CaptainReport(fleet.snapshot(), turn, paneWidth == null ? ReportWidth.standard() : ReportWidth.forPane(paneWidth),
-                presence.current(), calendar.unreadable().orElse(null));
+                presence.current(), calendar.unreadable().orElse(null), heavyRuns.atOnce().orElse(null));
         caller.claudeSession().ifPresent(primaryHooks::reportRendered);
         return report;
     }

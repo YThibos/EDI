@@ -8,7 +8,8 @@ The why behind every rule is in [docs/decisions](docs/decisions/README.md); read
 - `mise install` installs the pinned toolchain: GraalVM Community Edition for Java 25, Node for the console build, gitleaks.
 - `./mvnw verify` runs the JVM build and every test; run it before every commit.
 - `./mvnw test -Pfast` runs the domain, application and architecture tests only.
-- `./mvnw -Pnative verify` builds both native executables and runs the native smoke test; run it when a change touches Spring configuration, reflection, resources or the command.
+- `./mvnw -Pnative,quick-build verify` builds both native executables in GraalVM's quick-build mode and runs the native smoke test; run it only when the change can reach the native image, as `NativeImageInput` lists, and otherwise say in the pull request why it was not needed ([local-native-builds](docs/decisions/local-native-builds.md)).
+- `./mvnw -Pnative verify` builds the full optimised executables, as CI and the install do.
 
 ## Commits and branches
 

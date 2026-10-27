@@ -34,6 +34,7 @@ public final class BriefFixtures {
 
     private static final Path HOME = Path.of("/home/developer/.edi");
     private static final TaskId TASK = new TaskId("fit-lamp");
+    private static final String NATIVE_BUILD = "./mvnw -B -Pnative,quick-build verify";
     private static final RegisteredForge FORGE = new RegisteredForge(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"),
             "example-owner");
 
@@ -54,21 +55,28 @@ public final class BriefFixtures {
 
     public static BriefFacts largestShip(String intent, String spec) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), intent, TestHome.START);
-        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.LOCAL_ONLY),
+        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.LOCAL_ONLY, NATIVE_BUILD),
                 dispatch(CategoryId.MECHANICAL, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
                 true);
     }
 
     public static BriefFacts shipFollowing(String plan, String spec, boolean asksForTheTimeWorked) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
-        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED),
+        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, null),
                 dispatch(CategoryId.IMPLEMENTATION, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, plan,
                 asksForTheTimeWorked);
     }
 
+    public static BriefFacts shipBuildingANativeImage() {
+        Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
+        return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, NATIVE_BUILD),
+                dispatch(CategoryId.IMPLEMENTATION, ""), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                false);
+    }
+
     private static BriefFacts facts(TaskKind kind, DeliveryMode delivery, CategoryId category, String spec, AiScaffolding aiScaffolding) {
         Task task = Task.queued(TASK, intake(kind), "Fit the lamp in the hall; offline verification is accepted.", TestHome.START);
-        return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding), dispatch(category, spec), new BaseBranch("main"),
+        return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding, null), dispatch(category, spec), new BaseBranch("main"),
                 worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null, false);
     }
 
@@ -76,10 +84,10 @@ public final class BriefFixtures {
         return new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), WorkKey.parse("HRN-3"), null, List.of(), null);
     }
 
-    private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding) {
+    private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild) {
         return new ProjectEntry(new Project(new ProjectName("harness"), new ProjectKey("HRN")), TrackerKind.EDI, HOME.resolve("projects/harness"),
                 Path.of("/checkouts/harness"), new BaseBranch("main"), FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
-                "./mvnw -B verify", true, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS));
+                "./mvnw -B verify", nativeBuild, true, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS));
     }
 
     private static Dispatch dispatch(CategoryId category, String spec) {

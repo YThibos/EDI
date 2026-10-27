@@ -22,6 +22,7 @@ import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
@@ -66,10 +67,19 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         if (report.showsTheUnreadableCalendar()) {
             lines.addAll(standing("Calendar: " + presenceWords.ofTheUnreadableCalendar(report.unreadableCalendar()), width));
         }
+        if (report.showsTheHeavyRunsAtOnce()) {
+            lines.addAll(standing("Builds: " + heavyRunsOf(report.heavyRunsAtOnce()), width));
+        }
         if (!lines.isEmpty()) {
             lines.add("");
         }
         return lines;
+    }
+
+    private static String heavyRunsOf(HeavyRuns atOnce) {
+        List<String> runs = atOnce.runs().stream().map(run -> run.worker().task() + "'s " + run.run().words()).toList();
+        return String.join(", ", runs.subList(0, runs.size() - 1)) + " and " + runs.getLast()
+                + " run at once; I cap none of them, so each is slower until they finish.";
     }
 
     private static List<String> standing(String line, int width) {

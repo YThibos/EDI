@@ -39,6 +39,20 @@ class WorkerBriefsTest {
     }
 
     @Test
+    void asksForTheLocalNativeBuildOnlyWhenTheChangeCanReachTheNativeImage() {
+        String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage());
+
+        assertThat(brief).contains("## Validation and delivery\n\n"
+                + "Run the local native build `./mvnw -B -Pnative,quick-build verify` only when the change can reach the native image: it touches"
+                + " reflection or serialisation-bound types, resources the image reads, Spring configuration, native-image configuration, dependencies"
+                + " or build files.\n"
+                + "Otherwise `./mvnw -B verify` is the local evidence: the merge request body says the native build was not needed and why,"
+                + " and the full optimised native build is left to CI.\n\n"
+                + "Commit on `feature/HRN-3`");
+        assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).doesNotContain("native");
+    }
+
+    @Test
     void tellsAScoutToPassItsBoardsDecisionCardWhenItArmsTheBoard() {
         String brief = briefs.briefFor(BriefFixtures.scout());
 

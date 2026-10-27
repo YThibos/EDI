@@ -29,6 +29,7 @@ public record ProjectEntry(
         AiScaffolding aiScaffolding,
         Integer capacity,
         String verify,
+        String nativeBuild,
         boolean largeBuilds,
         List<ShipBriefRule> shipBriefRules) {
 
@@ -55,6 +56,10 @@ public record ProjectEntry(
             throw new Refusal(project.name() + " registers no forge, so EDI has no repository to deliver its work to; add forge: to its entry.");
         }
         return forge;
+    }
+
+    public boolean buildsANativeImage() {
+        return nativeBuild != null;
     }
 
     public OptionalInt workerCapacity() {

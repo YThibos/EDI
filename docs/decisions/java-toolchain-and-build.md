@@ -13,7 +13,7 @@ Module sprawl is one of the ways complexity creeps in, the command must stay fre
 
 EDI builds and runs on Java 25 with GraalVM Community Edition, pinned in `mise.toml` and set as `java.version` in `pom.xml`.
 The `edi` command is always a native executable, and the core is installed as one; development and tests run on the JVM.
-The Maven profile `native` compiles both executables and runs the native tests ([native-smoke-test](native-smoke-test.md)); if a native problem blocks a release, the core may run on the JVM until it is fixed, and the command never falls back.
+The Maven profile `native` compiles both executables and runs the native tests ([native-smoke-test](native-smoke-test.md)), with the full optimisation unless the `quick-build` profile asks for GraalVM's quick-build mode ([local-native-builds](local-native-builds.md)); if a native problem blocks a release, the core may run on the JVM until it is fixed, and the command never falls back.
 `--enable-preview` is passed to the compiler, the tests, the Spring Boot plugin and `native-image`, and a preview feature EDI starts to use is recorded here with its JEP, in the change that first uses it; none is in use yet.
 
 There are exactly three Maven modules under one parent POM that inherits `spring-boot-starter-parent` and pins every other plugin:
@@ -53,3 +53,4 @@ When GraalVM Community Edition publishes a build on a newer JDK that Spring Boot
 ## How we got here
 
 - 15/10/2026: the captain chose the newest JDK and native images for fast start-up; the toolchain check found no native toolchain beyond JDK 25, so the specification's fallback to Java 25 applied, and slice S0 set up the modules, the build baseline and the native profile.
+- 27/10/2026: a worker's local native check moved to quick-build mode through the `quick-build` profile, while CI and the install keep the optimised build (EDI-99).

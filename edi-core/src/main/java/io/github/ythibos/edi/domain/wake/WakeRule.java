@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.wake;
 
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
@@ -28,6 +29,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.HeavyRunsAtOnce;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeTyped;
@@ -108,6 +110,7 @@ public final class WakeRule {
             case LostInOutage lost -> wake(WakeKind.LOST_IN_OUTAGE, lost, lost.worker(), lost.number() + ": " + lost.cause().sentence());
             case WorkerStale stale -> Optional.of(new Wake(WakeKind.WORKER_STALE, stale.task(), stale.worker(), "", stale.quietSince()));
             case WorkerBusyTooLong busy -> Optional.of(new Wake(WakeKind.BUSY_TOO_LONG, busy.task(), busy.worker(), "", busy.busySince()));
+            case HeavyRunsAtOnce atOnce -> wake(WakeKind.HEAVY_RUNS_AT_ONCE, atOnce, atOnce.worker(), runsOf(atOnce));
             case DeclaredWaitEnded ended -> Optional.of(new Wake(WakeKind.WAIT_ENDED, ended.task(), ended.worker(),
                     ended.pause().text(), ended.pause().until()));
             case HoldDateArrived due -> wake(WakeKind.HOLD_DUE, due, null, due.until().toString());
@@ -139,6 +142,12 @@ public final class WakeRule {
 
     private static WakeKind stopMissedKindOf(WorkerStopMissed missed) {
         return missed.noticeTyped() ? WakeKind.STOP_MISSED : WakeKind.STOP_MISSED_NOTICE_WAITING;
+    }
+
+    private static String runsOf(HeavyRunsAtOnce atOnce) {
+        return "a " + atOnce.run().words() + " while " + atOnce.beside().stream()
+                .map(other -> other.worker() + " runs a " + other.run().words())
+                .collect(Collectors.joining(" and "));
     }
 
     private static String recheckOf(RecheckAsked asked) {

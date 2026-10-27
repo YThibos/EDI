@@ -34,6 +34,10 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.worker.HeavyRun;
+import io.github.ythibos.edi.domain.worker.HeavyRuns;
+import io.github.ythibos.edi.domain.worker.HeavyRuns.WorkerRun;
+import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.PresenterFixtures;
@@ -127,7 +131,7 @@ class CaptainReportPresenterTest {
                 research)))), List.of(), List.of());
 
         String report = presenter.text(new CaptainReport(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE,
-                ReportWidth.forPane(64), Presence.presentSince(TestHome.START), null));
+                ReportWidth.forPane(64), Presence.presentSince(TestHome.START), null, null));
 
         assertThat(report).startsWith("""
                 ╔══ NEEDS YOUR DECISION ══ 2 open ════════════════════════════
@@ -143,13 +147,30 @@ class CaptainReportPresenterTest {
                 """).doesNotContain("A long context", "Fit first", "Recommended");
     }
 
+    @Test
+    void headsTheReportWithTheHeavyRunsThatRunAtOnce() {
+        HeavyRuns atOnce = new HeavyRuns(List.of(new WorkerRun(WorkerId.first(new TaskId("fit-lamp")), HeavyRun.NATIVE_BUILD),
+                new WorkerRun(WorkerId.first(new TaskId("tune-horn")), HeavyRun.TEST_RUN),
+                new WorkerRun(WorkerId.first(new TaskId("mend-sail")), HeavyRun.NATIVE_BUILD)));
+
+        String report = presenter.text(new CaptainReport(new FleetSnapshot(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), List.of(), List.of(), List.of(), List.of(), List.of()),
+                Turn.NONE, ReportWidth.forPane(64), Presence.presentSince(TestHome.START), null, atOnce));
+
+        assertThat(report).startsWith("""
+                Builds: fit-lamp's native build, tune-horn's test run and
+                  mend-sail's native build run at once; I cap none of them, so
+                  each is slower until they finish.
+
+                """);
+    }
+
     private static WaitingOnTheCaptain waitingFor(Decision decision) {
         return new WaitingOnTheCaptain(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of());
     }
 
     private String rendered(FleetSnapshot fleet, Turn turn) {
         return presenter.text(new CaptainReport(fleet, turn, ReportWidth.standard(), Presence.presentSince(TestHome.START),
-                null));
+                null, null));
     }
 
     private static Task filed(String item, int daysLater) {

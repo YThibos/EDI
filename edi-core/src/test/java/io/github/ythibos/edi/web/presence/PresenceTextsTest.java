@@ -117,6 +117,6 @@ class PresenceTextsTest {
     }
 
     private static String report(TestHome home, Presence presence, UnreadableCalendar unreadable) {
-        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(), presence, unreadable));
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), Turn.NONE, ReportWidth.standard(), presence, unreadable, null));
     }
 }

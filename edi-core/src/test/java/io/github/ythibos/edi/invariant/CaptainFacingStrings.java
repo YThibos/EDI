@@ -86,11 +86,11 @@ final class CaptainFacingStrings {
     private static List<String> fleetInEveryView(Path directory) throws IOException {
         FleetSnapshot fleet = fleetIn(directory).fleetSnapshot().snapshot();
         List<String> views = new ArrayList<>(presences().stream().map(presence -> PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE,
-                ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer.")))).toList());
+                ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer."), null))).toList());
         views.add(PresenterFixtures.returnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
                 fleet.waiting(), fleet.landed(), List.of(), fleet.ongoing())));
         views.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE, ReportWidth.standard(),
-                Presence.presentSince(TestHome.START), null)));
+                Presence.presentSince(TestHome.START), null, null)));
         views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
         return views;
