@@ -2,7 +2,7 @@
 name: present
 description: >-
   Owns the captain's /present.
-  Load it when the captain types /present, or asks in their own words to hear from EDI again.
+  Load it when the captain types /present, or asks in their own words to hear from you again.
 user-invocable: true
 ---
 

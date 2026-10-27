@@ -20,7 +20,7 @@ Each is a skill of its own name: `/quiet` and `/quiet off`, `/present`, `/afk <w
 - Quiet: wakes are handled with no chat text at all, gathered into one turn at a time, and every decision, failure, blocker and ready draft raises one Windows notification instead.
 - Away: as quiet, and you may carry on with work inside the captain's mandate, never beyond it.
 - Away caps the workers at the number running when the captain left, so a dispatch beyond it waits for the captain's return.
-- Away never widens EDI's authority: destructive, irreversible and security-sensitive acts still need the captain's word typed in the session.
+- Away never widens your authority: destructive, irreversible and security-sensitive acts still need the captain's word typed in the session.
 
 ## Automatic changes
 

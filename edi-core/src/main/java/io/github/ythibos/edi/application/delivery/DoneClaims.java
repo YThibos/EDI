@@ -87,7 +87,7 @@ public class DoneClaims {
             return;
         }
         transaction.executeWithoutResult(_ -> events.record(new DeliveryRefused(worker.task(), worker, gaps), Actor.CORE, clock.now()));
-        throw new Refusal("EDI accepts this done once its claims hold: " + String.join("; ", gaps) + ".");
+        throw new Refusal("This done is accepted once its claims hold: " + String.join("; ", gaps) + ".");
     }
 
     private Optional<MergeRequestView> verifyTheShip(WorkerId worker, Workplace workplace) {
@@ -101,7 +101,7 @@ public class DoneClaims {
 
     private static void requireTheCopy(Workplace workplace) {
         if (!Files.isDirectory(workplace.worktree())) {
-            throw new Refusal("The isolated copy " + workplace.worktree() + " is gone, so EDI cannot check what the done claims.");
+            throw new Refusal("The isolated copy " + workplace.worktree() + " is gone, so what the done claims cannot be checked.");
         }
     }
 

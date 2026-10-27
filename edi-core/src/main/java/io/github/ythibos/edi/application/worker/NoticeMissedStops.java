@@ -28,8 +28,8 @@ import io.github.ythibos.edi.domain.worker.WorkerHealth;
 @Service
 public class NoticeMissedStops {
 
-    static final String CARRY_ON = "EDI could not take your stop hook when your last turn ended, and it refused your edi calls and guarded tools"
-            + " while it was unreachable; it answers again now, so retry what it refused, then carry on with the task.";
+    static final String CARRY_ON = "Your stop hook went unanswered when your last turn ended, and your edi calls and guarded tools were refused while the core"
+            + " was unreachable; it answers again now, so retry what was refused, then carry on with the task.";
     static final Duration HOOK_GRACE = Duration.ofMinutes(2);
 
     private final WorkerListQuery workerList;

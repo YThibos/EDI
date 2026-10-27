@@ -88,7 +88,7 @@ final class GitPushes {
             }
             if (forced || refspecs.stream().anyMatch(refspec -> refspec.startsWith("+"))) {
                 return Optional.of(new GuardRefusal(GuardRule.FORCED_PUSH,
-                        "a forced push rewrites published history, and EDI never force-pushes; push new commits on top instead."));
+                        "a forced push rewrites published history, so none is made; push new commits on top instead."));
             }
             if (everyBranch) {
                 return Optional.of(baseBranchPush("every branch"));

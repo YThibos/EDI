@@ -53,7 +53,7 @@ class CaptainsWordTest {
         assertThatThrownBy(() -> home.captainsWord().record(CallingSession.UNNAMED, "Drop it.", null, null, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("No session holds the primary role");
         assertThatThrownBy(() -> home.captainsWord().requireTyped(new CallingSession(UUID.randomUUID()), "Drop it."))
-                .isInstanceOf(Refusal.class).hasMessageContaining("is not a primary session EDI knows");
+                .isInstanceOf(Refusal.class).hasMessageContaining("is not a known primary session");
     }
 
     @Test

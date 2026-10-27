@@ -1,7 +1,7 @@
 ---
 name: edi-board
 description: >-
-  Owns research boards: arming a Lavish board through EDI and routing its answers to their decisions and to the scout.
+  Owns research boards: arming a Lavish board through your core and routing its answers to their decisions and to the scout.
   Load it before arming a research board or when handling a board's answer.
 ---
 
@@ -16,12 +16,12 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
    The scout writes the card as `edi decision raise` takes it, adding `"question": "<key>"`, and gives the board's form for it `data-lavish-question="<key>"` and the answer data `{question: "<key>", answer: "<option letter>"}`.
    An option that ships, drops or discards carries `"authorises": "promote"`, `"drop"` or `"discard-work"`; no other option does.
 3. The scout runs `edi board arm <board.html> --task <task> --link <url> --questions <n> --card <card.json>`, naming the link, how many other questions the round puts before the captain (`0` when it asks only the card), and the card.
-   EDI raises the card on the scout's task, binds it to the board under its question, and prints its D number.
+   You raise the card on the scout's task, binds it to the board under its question, and prints its D number.
 4. `--bind D58,D59` binds decisions the primary already raised, on the scout's task or another, that the board also answers; the board names them by number.
-5. EDI's core listens to the board and restarts its listener if it stops; nobody else polls it.
+5. Your core listens to the board and restarts its listener if it stops; nobody else polls it.
 6. The board waits in the captain's decision zone with its link and question count until a round of his answers arrives, with its card and every decision it binds as one line each beneath it, because the captain answers them on the board.
 7. After posting a new round of questions on the board, arm it again with the new count, so the board waits on the captain once more; the board keeps the card bound under its question while it is open, so `--card` may be left out, and is left out once the card is answered.
-   EDI refuses a card whose title an answered decision of the task already carries, so a new question needs a title of its own.
+   You refuse a card whose title an answered decision of the task already carries, so a new question needs a title of its own.
 8. When the scout has stopped, or its board was armed before boards counted their questions, the primary puts the round before the captain with `edi board post <board.html> --link <url> --questions <n>`.
 
 ## Answers
@@ -30,7 +30,7 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
 - A prompt that names a bound decision, by its D number, in the board's `decision` field or by its card's `question`, answers that decision as the captain's own word, verbatim.
 - That answer authorises exactly the act its chosen option names, as an answer in the console does; nobody records it again with `edi captain said`.
 - A board answer arrives as a notification through `edi wait`; carry it to the work, and never answer the same decision again in chat.
-- An answer EDI could not apply, such as one to a decision already answered, comes back to the scout's inbox as a refusal naming the decision, the reason and the captain's words, and to the primary, who puts it before the captain once more.
+- An answer you could not apply, such as one to a decision already answered, comes back to the scout's inbox as a refusal naming the decision, the reason and the captain's words, and to you, to put before the captain once more.
 - An empty close of the board is not news; a round with content is.
 
 ## When the scout's worker is dead

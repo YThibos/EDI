@@ -36,7 +36,7 @@ final class PipelineConfiguration {
         } catch (IOException unwritable) {
             throw new Refusal("The pipeline configuration " + globalConfiguration + " cannot be read or replaced: " + unwritable.getClass().getSimpleName() + ".");
         } catch (JacksonException malformed) {
-            throw new Refusal("The pipeline configuration " + globalConfiguration + " is not YAML EDI can read: " + malformed.getOriginalMessage());
+            throw new Refusal("The pipeline configuration " + globalConfiguration + " is not readable YAML: " + malformed.getOriginalMessage());
         }
     }
 

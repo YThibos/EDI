@@ -38,7 +38,7 @@ final class SecretReads {
 
     private static Optional<GuardRefusal> refused(String why) {
         return Optional.of(new GuardRefusal(GuardRule.SECRET, "this command touches a secret, because " + why
-                + "; secrets are read only by EDI's adapters, at the moment of the call (I-32), and anything else that touches one needs"
+                + "; secrets are read only by the core's adapters, at the moment of the call (I-32), and anything else that touches one needs"
                 + " the captain's word in this session (I-06)."));
     }
 }

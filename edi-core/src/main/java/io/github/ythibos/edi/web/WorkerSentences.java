@@ -36,7 +36,7 @@ final class WorkerSentences {
 
     static String statusRecorded(Worker worker) {
         String recorded = "Recorded " + worker.lastStatus().report().state().word() + " for " + worker.id() + ".";
-        return worker.doneCheck() == DoneCheck.CHECKING ? recorded + " EDI checks the mechanical change before it accepts the done." : recorded;
+        return worker.doneCheck() == DoneCheck.CHECKING ? recorded + " You check the mechanical change before you accept the done." : recorded;
     }
 
     static String steered(SteerWorker.Steered steered) {
@@ -44,7 +44,7 @@ final class WorkerSentences {
         return switch (steered.delivery()) {
             case TYPED_INTO_THE_IDLE_PROMPT -> waiting + "; its idle prompt was told to run edi inbox.";
             case AT_THE_NEXT_STOP -> waiting + "; it is busy, so its next stop delivers the message.";
-            case WAITING_FOR_THE_PANE -> waiting + "; its pane shows no idle prompt, so EDI typed nothing and waits for its next stop.";
+            case WAITING_FOR_THE_PANE -> waiting + "; its pane shows no idle prompt, so you typed nothing and wait for its next stop.";
             case WAITING_FOR_A_LIVE_WORKER -> waiting + ", whose window is closed; the message waits in its inbox.";
             case WAITING_FOR_A_FRESH_SESSION -> waiting + ", whose context is full; the message waits in its inbox for the fresh session that edi worker"
                     + " relaunch starts.";

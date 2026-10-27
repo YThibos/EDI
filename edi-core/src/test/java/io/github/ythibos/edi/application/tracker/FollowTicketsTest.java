@@ -91,7 +91,7 @@ class FollowTicketsTest {
 
     @Test
     void wakesThePrimaryWhenTheTrackerRefusesAnUpdate() {
-        home.jira().failsNextWith(new Refusal("several SVC sprints are active (Sprint 7, Hotfixes), so EDI adds SVC-40 to none of them"));
+        home.jira().failsNextWith(new Refusal("several SVC sprints are active (Sprint 7, Hotfixes), so SVC-40 joins none of them"));
         WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/SVC-40");
 
         home.eventFollowers().followTheLog();
@@ -99,8 +99,8 @@ class FollowTicketsTest {
         assertThat(home.eventTypesOf(LAMPS)).endsWith("TicketUpdateRefused");
         assertThat(home.wakes().unacknowledged()).singleElement().satisfies(queued -> {
             assertThat(queued.wake().kind()).isEqualTo(WakeKind.TICKET_REFUSED);
-            assertThat(queued.wake().detail()).isEqualTo("the sprint placement of SVC-40: several SVC sprints are active (Sprint 7, Hotfixes), so EDI"
-                    + " adds SVC-40 to none of them");
+            assertThat(queued.wake().detail()).isEqualTo("the sprint placement of SVC-40: several SVC sprints are active (Sprint 7, Hotfixes), so SVC-40"
+                    + " joins none of them");
         });
     }
 

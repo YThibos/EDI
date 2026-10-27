@@ -80,7 +80,7 @@ public class DispatchRulesFile {
 
     private RulesDocument document() {
         String content = ConfigurationFile.contentOf(file)
-                .orElseThrow(() -> new InvalidConfiguration(file, "it is missing, and EDI dispatches only by written categories."));
+                .orElseThrow(() -> new InvalidConfiguration(file, "it is missing, and every dispatch goes by a written category."));
         try {
             return json.readValue(content, RulesDocument.class);
         } catch (JacksonException unreadable) {
@@ -90,7 +90,7 @@ public class DispatchRulesFile {
 
     private static void requireSchema(RulesDocument document) {
         if (!SCHEMA.equals(document.schema())) {
-            throw new IllegalArgumentException("its schema is " + document.schema() + ", and EDI reads " + SCHEMA + ".");
+            throw new IllegalArgumentException("its schema is " + document.schema() + ", and only " + SCHEMA + " is read.");
         }
     }
 

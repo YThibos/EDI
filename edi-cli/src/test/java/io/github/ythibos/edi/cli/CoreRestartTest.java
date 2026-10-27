@@ -72,7 +72,7 @@ class CoreRestartTest {
         int updated = edi("update");
 
         assertThat(updated).as(err.toString()).isZero();
-        assertThat(out.toString()).startsWith("EDI is updated to ");
+        assertThat(out.toString()).startsWith("Updated to ");
         assertThat(Files.readString(home.resolve("state/logs/core.log"))).doesNotContain("Another EDI core runs on this home");
         assertThat(new LocalCore(home, coreExecutable.toString()).health()).isEqualTo(CoreHealth.UP);
         assertThat(CorePidFile.in(home).recordedProcess()).isNotEqualTo(Long.toString(oldCore));

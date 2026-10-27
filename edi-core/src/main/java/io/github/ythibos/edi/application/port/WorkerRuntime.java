@@ -65,7 +65,7 @@ public interface WorkerRuntime {
         public Launch {
             Objects.requireNonNull(worker, "A launch is for a worker.");
             Objects.requireNonNull(kind, () -> worker + " is launched by a dispatch, a resume or a fresh start.");
-            Objects.requireNonNull(session, () -> worker + " is launched with the session id EDI chose.");
+            Objects.requireNonNull(session, () -> worker + " is launched with the session id chosen for it.");
             Objects.requireNonNull(route, () -> worker + " is launched with an explicit model and effort.");
             Objects.requireNonNull(worktree, () -> worker + " is launched in its isolated copy.");
             Objects.requireNonNull(projectClone, () -> worker + " is launched in a copy of a known clone.");

@@ -64,7 +64,7 @@ final class RegistryImport {
 
     private RegisteredForge forgeOf(ProjectName name, CloneOrigin origin) {
         if (!origin.cloned()) {
-            notes.add(name.value(), "has no clone in the old home, so EDI does not know its forge; add forge: to its entry in " + REGISTRY);
+            notes.add(name.value(), "has no clone in the old home, so I do not know its forge; add forge: to its entry in " + REGISTRY);
             return null;
         }
         return origin.remote() == null ? null : registeredForgeAt(name, origin.remote());
@@ -99,7 +99,7 @@ final class RegistryImport {
         ForgeRepository repository = new ForgeRepository(forgeKindOf(address), address.host(), address.path());
         Optional<String> account = accountOn(address);
         if (account.isEmpty()) {
-            notes.add(name.value(), "lives at " + repository + ", but no registered project there names the account EDI works under;"
+            notes.add(name.value(), "lives at " + repository + ", but no registered project there names the account I work under;"
                     + " add forge: { kind: " + repository.kind().word() + ", host: " + repository.host() + ", path: " + repository.path()
                     + ", account: <account> } to its entry in " + REGISTRY);
             return null;

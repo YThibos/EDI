@@ -25,7 +25,7 @@ public class PresenceWords {
     }
 
     public String ofTheUnreadableCalendar(UnreadableCalendar unreadable) {
-        return "unreadable since " + moments.minute(unreadable.since()) + ", so a meeting added since the last reading does not turn your presence quiet: \""
+        return "I can't read your calendar since " + moments.minute(unreadable.since()) + ", so a meeting added since won't switch me to quiet: \""
                 + unreadable.reason() + "\"";
     }
 

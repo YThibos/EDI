@@ -5,7 +5,7 @@ import java.util.Optional;
 public final class TurnEnd {
 
     static final int MOST_BLOCKED_STOPS = 3;
-    static final String RENDER_THE_REPORT = "This turn changed EDI's state: render the captain report with edi report and paste it verbatim, then stop.";
+    static final String RENDER_THE_REPORT = "This turn changed state: render the captain report with edi report and paste it verbatim, then stop.";
     static final String START_THE_WAIT = "Work is in flight and no edi wait is live: start edi wait in the background, then stop.";
 
     private TurnEnd() {

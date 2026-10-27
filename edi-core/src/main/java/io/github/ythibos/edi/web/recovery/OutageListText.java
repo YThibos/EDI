@@ -37,7 +37,7 @@ class OutageListText implements TextPresenter<OutageList> {
             lines.add(Words.counted("Outage hold list", list.entries().size()));
             list.entries().forEach(entry -> lines.addAll(entryLines(entry)));
             lines.add("Answer with one number and resume or fresh, such as edi recover 2 resume or edi recover 4 fresh --effort medium;"
-                    + " EDI acts on one number at a time.");
+                    + " you act on one number at a time.");
         }
         lines.add(recoverySoFar(list.recoveries()));
         return String.join("\n", lines) + "\n";

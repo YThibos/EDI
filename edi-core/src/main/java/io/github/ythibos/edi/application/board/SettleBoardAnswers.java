@@ -91,7 +91,7 @@ public class SettleBoardAnswers {
     }
 
     private static String refusalWords(BoardAnswer answer, String because) {
-        return "EDI refused the captain's board answer to " + answer.decision() + " (\"" + answer.verbatim() + "\"): " + because;
+        return "The captain's board answer to " + answer.decision() + " (\"" + answer.verbatim() + "\") was refused: " + because;
     }
 
     private record RefusalNotice(InboxMessage message, Worker worker) {

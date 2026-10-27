@@ -302,9 +302,9 @@ class DecisionsAndReportingTest {
 
             assertThat(report).contains("nothing open").doesNotContain("review finding");
             assertThat(brief).contains("Needs your decision (0)");
-            assertThat(asked).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("with EDI", "EDI is settling a question");
-            assertThat(steered.state()).isEqualTo("with EDI");
-            assertThat(settled).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("working", "back at work; EDI settled its question");
+            assertThat(asked).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("with me", "I am settling a question");
+            assertThat(steered.state()).isEqualTo("with me");
+            assertThat(settled).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("working", "back at work; I settled its question");
         }
 
         @Test
@@ -450,7 +450,7 @@ class DecisionsAndReportingTest {
 
             assertThat(quietTurn).isEqualTo(HookAnswer.PROCEED);
             assertThat(unreported.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
-            assertThat(unreported.reason()).isEqualTo("This turn changed EDI's state: render the captain report with edi report and paste it verbatim, then stop.");
+            assertThat(unreported.reason()).isEqualTo("This turn changed state: render the captain report with edi report and paste it verbatim, then stop.");
             assertThat(reported).isEqualTo(HookAnswer.PROCEED);
         }
     }
@@ -484,10 +484,32 @@ class DecisionsAndReportingTest {
         }
 
         @Test
+        @DisplayName("AT-22 the persona check finds EDI named in the third person in a message template, and passes a work key, a command and quoted text")
+        void thePersonaCheckFindsEdiInTheThirdPerson() {
+            assertThat(thirdPersonIn("case DECISION_RAISED -> wake.task() + \": EDI raised \" + wake.detail() + \"; put it before the captain.\";"))
+                    .containsExactly("EDI raised");
+            assertThat(thirdPersonIn("case DECISION_RAISED -> wake.task() + \": You raised \" + wake.detail() + \"; put it before the captain.\";"))
+                    .isEmpty();
+            assertThat(thirdPersonIn("return \"EDI-74 merged; run edi report, or `edi report`, as \\\"EDI raised D43\\\" says.\";")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("AT-22 no message template the primary or the captain reads names EDI in the third person")
+        void messageTemplatesSpeakAsEdi() {
+            assertThat(MessageTemplates.readByThePrimaryOrTheCaptain()).isNotEmpty()
+                    .filteredOn(template -> !ThirdPersonSelf.in(template.text()).isEmpty())
+                    .isEmpty();
+        }
+
+        @Test
         @DisplayName("AT-22 the lint covers every golden report and every fixed kind of captain-facing string")
         void theLintCoversEveryKindEdiGenerates() {
             assertThat(CaptainFacingStrings.everyKindEdiGenerates()).hasSizeGreaterThanOrEqualTo(GOLDEN_REPORTS_LINTED + FIXED_KINDS_LINTED);
         }
+    }
+
+    private static List<String> thirdPersonIn(String code) {
+        return MessageTemplates.javaTemplatesIn("WakeDigestText.java", code).stream().flatMap(template -> ThirdPersonSelf.in(template.text()).stream()).toList();
     }
 
     private static String captainReport(TestHome home, Turn turn) {

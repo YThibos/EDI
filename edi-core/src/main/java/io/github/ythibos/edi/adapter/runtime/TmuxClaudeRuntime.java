@@ -127,7 +127,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private void typeIntoTheIdlePrompt(WorkerWindow window, Keystroke.Line line) {
         PaneState state = peek(window).state();
         if (!state.acceptsALine()) {
-            throw new Refusal("The worker's pane shows " + state.word() + ", not the idle prompt, so EDI types nothing into it.");
+            throw new Refusal("The worker's pane shows " + state.word() + ", not the idle prompt, so nothing is typed into it.");
         }
         tmux.typeLiterally(window.windowId(), line.text());
         submit(window, line.text());
@@ -143,7 +143,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
                 return;
             }
             if (probe.classify(lines).isADialog()) {
-                throw new Refusal("A dialog opened over the worker's composer, so EDI presses nothing more.");
+                throw new Refusal("A dialog opened over the worker's composer, so nothing more is pressed.");
             }
         }
         throw new Refusal("The worker's composer kept the line after " + SUBMIT_ATTEMPTS + " presses of Enter.");
@@ -154,7 +154,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
             Thread.sleep(SETTLE);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new Refusal("EDI was interrupted while it typed into the worker's pane.");
+            throw new Refusal("Typing into the worker's pane was interrupted.");
         }
     }
 

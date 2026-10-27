@@ -20,6 +20,6 @@ public class Forges {
         return forges.stream()
                 .filter(forge -> forge.kind() == registered.kind())
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("EDI has no adapter for " + registered.kind().word() + " forges."));
+                .orElseThrow(() -> new IllegalStateException("No adapter serves " + registered.kind().word() + " forges."));
     }
 }

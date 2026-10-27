@@ -28,7 +28,7 @@ final class TmuxSockets {
         }
         if (tmux.isOn(ediSocket) && tmux.controlsTheServer()) {
             return Optional.of(new GuardRefusal(GuardRule.EDI_SERVER_CONTROL,
-                    "the " + ediSocket + " tmux server and its windows belong to EDI's core: message a worker with edi steer and never send it keys or kill its windows (I-28, I-31)."));
+                    "the " + ediSocket + " tmux server and its windows belong to the core: message a worker with edi steer and never send it keys or kill its windows (I-28, I-31)."));
         }
         return Optional.empty();
     }

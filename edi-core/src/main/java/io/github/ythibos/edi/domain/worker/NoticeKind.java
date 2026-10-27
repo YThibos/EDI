@@ -15,7 +15,7 @@ public enum NoticeKind {
         return Arrays.stream(values())
                 .filter(kind -> kind.word().equals(word))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("EDI notices a worker that died, went stale, stayed busy too long, ended its wait, or met its limit's reset, not " + word + "."));
+                .orElseThrow(() -> new IllegalArgumentException("A notice is of a worker that died, went stale, stayed busy too long, ended its wait, or met its limit's reset, not " + word + "."));
     }
 
     public String word() {

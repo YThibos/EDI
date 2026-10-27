@@ -153,16 +153,16 @@ describe('SitrepPage', () => {
         decisions: [],
         answered: [],
         ongoing: [
-          { task: 'fit-lamp', key: null, title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with EDI', doing: 'EDI is settling a question', draft: null },
+          { task: 'fit-lamp', key: null, title: 'Fit the lamp', kind: 'ship', projects: ['harness'], state: 'with me', doing: 'I am settling a question', draft: null },
         ],
       }),
     );
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    expect(text(page, '.sr-row .sr-badge')).toBe('with EDI');
+    expect(text(page, '.sr-row .sr-badge')).toBe('with me');
     expect(page.querySelector('.sr-row .sr-badge')?.classList).toContain('sr-badge--info');
-    expect(text(page, '.sr-row__sub')).toContain('EDI is settling a question');
+    expect(text(page, '.sr-row__sub')).toContain('I am settling a question');
     expect(text(page, '.sr-section__head .sr-sub')).toBe('all clear, Commander');
   });
 
@@ -195,7 +195,7 @@ describe('SitrepPage', () => {
     await fixture.whenStable();
 
     expect(text(fixture.nativeElement, '.sr-section__head .sr-sub')).toBe('all clear, Commander');
-    expect(text(fixture.nativeElement, '.sr-foot .sr-meta-mono:last-child')).toBe('live · answers go straight to EDI');
+    expect(text(fixture.nativeElement, '.sr-foot .sr-meta-mono:last-child')).toBe('live · answers go straight to me');
   });
 
   it('shows the presence and asks EDI for present or a demo from the header', async () => {
@@ -258,7 +258,7 @@ describe('SitrepPage', () => {
     http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'present', demo: true, words: 'present for a demo until 2026-10-15 11:00 CEST' } }));
     await fixture.whenStable();
 
-    expect(text(page, 'app-personality-desk .sr-desk__foot')).toContain("While the demo holds, EDI speaks with the demo's levels on top of these.");
+    expect(text(page, 'app-personality-desk .sr-desk__foot')).toContain("While the demo holds, I speak with the demo's levels on top of these.");
   });
 
   it('asks the captain to sign in when the console has no session', async () => {

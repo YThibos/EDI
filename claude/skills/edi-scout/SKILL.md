@@ -32,5 +32,5 @@ Its report, diagnosis or recommendation authorises nothing (I-05).
 3. A decision on the scout counts as their go when the captain chooses, since this session opened, an option that names `"authorises": "promote"`, in the chat, in the console or on the scout's board.
    The scout's board card carries it (load `edi-board`); otherwise raise such a card with `edi decision raise <scout> --card -`, putting `"authorises": "promote"` on the option that ships the plan and on no other.
    Never ask the captain to retype a choice made on the console or the board.
-4. Run `edi task promote <scout> [--title "<ship title>"]`: EDI queues a ship with the scout's projects, key, base and notes, and the captain's words.
+4. Run `edi task promote <scout> [--title "<ship title>"]`: you queue a ship with the scout's projects, key, base and notes, and the captain's words.
 5. Dispatch the ship as usual (load `edi-ship`), with the report's plan in the spec.

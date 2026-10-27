@@ -23,7 +23,7 @@ description: >-
 3. A bugfix with an unknown cause is research first: `--cause-unknown`.
 4. Review the brief with `edi brief <task> --category <id> --spec -` when it matters, then run `edi dispatch <task> --category <id> --spec -`.
 5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; effort is never above high, unless the captain explicitly asks it for this one task: record their words with `edi captain said --task <task> --for effort-above-high` first, then `--override-effort xhigh` or `max` with `--reason`; it never goes into the dispatch rules.
-6. EDI makes the isolated copy on the keyed branch from the fresh origin base, writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
+6. Your core makes the isolated copy on the keyed branch from the fresh origin base, writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
 
 ## Supervision
 
@@ -34,17 +34,17 @@ description: >-
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
 - Carry the captain's answer back with `edi steer <task> --resolves <key>`.
 - A steer that changes a task's scope is first recorded with `edi task note <task>`, which rewrites the brief and the pipeline intent, so the pipeline's review counts it as asked for.
-- Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as EDI's until the worker acknowledges the steer that resolves it.
+- Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as yours until the worker acknowledges the steer that resolves it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.
 
 ## Done, delivery and landing
 
 - A ship's done counts once its merge request is open, as a draft or ready for review, or already merged, at the copy's head, and its branch adds no SNAPSHOT version.
 - `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report, as "Changing, hold the merge" while its pipeline still runs, a steer waits unacknowledged, or its worker is back at work after a done.
-- EDI records a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
-- `local-branch`: EDI fetches the ready branch into the captain's checkout by ref only.
-- `local-apply`: on the captain's request only, EDI applies the change to the captain's checkout without a commit.
-- `report`: for an operation on the machine with nothing to commit, give the task `--delivery report`; its done counts once its report exists and its copy holds no change, and EDI then retires the task.
+- You record a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
+- `local-branch`: you fetch the ready branch into the captain's checkout by ref only.
+- `local-apply`: on the captain's request only, you apply the change to the captain's checkout without a commit.
+- `report`: for an operation on the machine with nothing to commit, give the task `--delivery report`; its done counts once its report exists and its copy holds no change, and you then retire the task.
 - When the pipeline could not open the draft, `edi deliver <task>` opens it under the project's bound account.
-- When the captain says they merged, run `edi merged <task>` or `edi merged <url>`; EDI asks the forge for the task's request even when it never recorded it, and also sees merges itself, refreshes the clone and cleans up.
+- When the captain says they merged, run `edi merged <task>` or `edi merged <url>`; you ask the forge for the task's request even when you never recorded it, and you also see merges yourself, refresh the clone and clean up.
 - `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work, and nothing is discarded without the captain's word.

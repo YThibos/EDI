@@ -91,7 +91,7 @@ class LavishResultTest {
     @Test
     void failsClosedOnAStatusItDoesNotKnowOrFeedbackWithoutPrompts() {
         assertThat(results.feedbackIn("session:\n  file: board.html\n  status: rehearsing\n"))
-                .isEqualTo(new BoardFeedback.Failed("Lavish answered with a session status EDI does not know: rehearsing."));
+                .isEqualTo(new BoardFeedback.Failed("Lavish answered with an unknown session status: rehearsing."));
         assertThat(results.feedbackIn("session:\n  file: board.html\n  status: feedback\n")).isInstanceOf(BoardFeedback.Failed.class);
     }
 

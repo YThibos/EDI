@@ -20,7 +20,7 @@
     @case ('unreachable') {
       <div class="sr-panel sr-notice">
         <div class="sr-notice__pad">
-          <h2 class="sr-notice__title">EDI's core is not answering</h2>
+          <h2 class="sr-notice__title">My core is not answering</h2>
           <p class="sr-notice__detail">The page reloads the sitrep as soon as the core is back; <code>edi health</code> tells whether it is running.</p>
         </div>
       </div>
@@ -70,7 +70,7 @@
     </section>
     <footer class="sr-foot">
       <span class="sr-meta-mono">{{ sitrep.schema }} · {{ shipMoment(sitrep.generated, sitrep.zone) }}</span>
-      <span class="sr-meta-mono">{{ live() ? 'live · answers go straight to EDI' : 'reconnecting · answers go straight to EDI' }}</span>
+      <span class="sr-meta-mono">{{ live() ? 'live · answers go straight to me' : 'reconnecting · answers go straight to me' }}</span>
     </footer>
   }
 </main>

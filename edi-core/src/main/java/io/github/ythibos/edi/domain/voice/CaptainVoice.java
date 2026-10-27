@@ -32,7 +32,7 @@ public final class CaptainVoice {
             new InternalLabel("fail loudly", "reports the missing requirement"),
             new InternalLabel("status file", "the record"),
             new InternalLabel("task id", "the task's name"),
-            new InternalLabel("EDI_OP", "nothing: EDI's own marker never reaches the captain"));
+            new InternalLabel("EDI_OP", "nothing: your own marker never reaches the captain"));
 
     private static final Pattern SPOKEN_AS_IS = Pattern.compile("`[^`]*`|\"[^\"]*\"|“[^”]*”|https?://\\S+|\\S*/\\S*");
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
@@ -41,8 +41,12 @@ public final class CaptainVoice {
     }
 
     public static List<InternalLabel> internalLabelsIn(String captainFacing) {
-        String comparable = WHITESPACE.matcher(SPOKEN_AS_IS.matcher(captainFacing).replaceAll(" ")).replaceAll(" ").toLowerCase(Locale.ROOT);
+        String comparable = ownWording(captainFacing).toLowerCase(Locale.ROOT);
         return INTERNAL_LABELS.stream().filter(label -> label.isIn(comparable)).toList();
+    }
+
+    public static String ownWording(String text) {
+        return WHITESPACE.matcher(SPOKEN_AS_IS.matcher(text).replaceAll(" ")).replaceAll(" ");
     }
 
     public static void requireOutcomes(String what, String captainFacing) {

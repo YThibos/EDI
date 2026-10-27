@@ -158,11 +158,11 @@ class BeyondTheInvariantsTest {
                 tuple("fog-horn", "appears again on line 31 of the backlog; only its first entry is imported"),
                 tuple("gull-survey", "is blocked by bird-census, which is not in the backlog; the dependency is dropped"),
                 tuple("loose-end", "names no project; the captain sets one"),
-                tuple("relay-mast", "is not imported: its kind secondmate has no counterpart in EDI"),
-                tuple("boat-paint", "waits on something outside EDI (\"waiting on supplies\"); EDI holds a task only for the captain, so the wait is not"
+                tuple("relay-mast", "is not imported: its kind secondmate has no counterpart of mine"),
+                tuple("boat-paint", "waits on something outside me (\"waiting on supplies\"); I hold a task only for the captain, so the wait is not"
                         + " carried"),
-                tuple("Gate-Repair", "is not imported: EDI names a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout"),
-                tuple("night-watch", "waits until 2026-11-15 on something outside EDI (\"waits for a stormy night to test the lamp\"); EDI holds a task"
+                tuple("Gate-Repair", "is not imported: I name a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout"),
+                tuple("night-watch", "waits until 2026-11-15 on something outside me (\"waits for a stormy night to test the lamp\"); I hold a task"
                         + " only for the captain, so the wait is not carried"),
                 tuple("polish-follow-up", "is blocked by old-harness-polish, which is not imported; the dependency is dropped"),
                 tuple("D54", "on silent-choice was settled, but no answer was recorded; it is not carried"),
@@ -170,7 +170,7 @@ class BeyondTheInvariantsTest {
         assertThat(new MigrationReportText().text(report)).contains(
                 "Dry run of the import from " + oldHome + "; nothing was changed.", "Tasks to import (17)", "in-flight  3 (2 held)",
                 "queued     10 (1 held)", "done       4", "open      D57", "answered  D55, D56", "the first new decision is D58", "the next is EDI-10",
-                "Set aside, as they improve the old harness EDI replaces (1)", "For the captain (" + plan.notes().size() + ")")
+                "Set aside, as they improve the old harness I replace (1)", "For the captain (" + plan.notes().size() + ")")
                 .doesNotContain("kind null", "of kind");
         assertThat(changesTo(oldHome, before)).as("the old home after the dry run").isEmpty();
     }

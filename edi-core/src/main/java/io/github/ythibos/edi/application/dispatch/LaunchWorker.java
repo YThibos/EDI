@@ -146,7 +146,7 @@ public class LaunchWorker {
         Path worktree = home.worktreeOf(transaction.execute(_ -> tasks.get(task)).intake().projects().getFirst(), task);
         List<Long> holders = processes.workingIn(worktree);
         if (!holders.isEmpty()) {
-            throw new Refusal("Processes " + holders + " still work in " + worktree + "; EDI relaunches a worker only in a copy nothing else holds.");
+            throw new Refusal("Processes " + holders + " still work in " + worktree + "; a worker is relaunched only in a copy nothing else holds.");
         }
     }
 

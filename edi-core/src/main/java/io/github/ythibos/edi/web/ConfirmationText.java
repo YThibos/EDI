@@ -70,7 +70,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Acknowledged acknowledged -> "Acknowledged message " + acknowledged.message().number() + ".";
             case Steered steered -> WorkerSentences.steered(steered.steered());
             case Relaunched relaunched -> WorkerSentences.relaunched(relaunched.launched());
-            case StopRequested stopped -> "Stopping " + stopped.worker().id() + ": EDI signalled its processes, and those still running in "
+            case StopRequested stopped -> "Stopping " + stopped.worker().id() + ": you signalled its processes, and those still running in "
                     + "ten seconds are killed; edi worker relaunch " + stopped.worker().id().task() + relaunchOutcomeOf(stopped.worker()) + ".";
             case DraftDelivered delivered -> DeliverySentences.delivered(delivered.delivered());
             case MergedWorkFollowedUp followed -> DeliverySentences.followedUp(followed.work());
@@ -78,7 +78,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case BoardArmed armed -> boardArmed(armed.board());
             case BoardRoundPosted posted -> "Posted a new round on the research board " + posted.board().file() + " for " + posted.board().task() + ";"
                     + whatTheSitrepPutsBeforeTheCaptain(posted.board());
-            case RecheckAsked asked -> "Asked EDI to re-check " + asked.number() + " against reality; it stays open until it is answered.";
+            case RecheckAsked asked -> "You asked for a re-check of " + asked.number() + " against reality; it stays open until it is answered.";
             case CaptainHeard heard -> captainHeard(heard);
             case Promoted promoted -> "Promoted the scout " + promoted.promoted().scout() + " to the ship " + promoted.promoted().ship().id()
                     + ", queued on the captain's word.";
@@ -96,8 +96,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
                 : "its next dispatch starts a fresh session there with its brief";
         if (!adopted.moved()) {
             return "Registered the old copy " + adopted.oldCopy() + " of " + adopted.task() + " in place as " + adopted.copy() + ", on "
-                    + adopted.branch() + " at " + adopted.head() + "; a process still works there, so EDI launches no worker in it: adopt again once"
-                    + " that process has stopped, and the copy moves under EDI's worktrees with its uncommitted work.";
+                    + adopted.branch() + " at " + adopted.head() + "; a process still works there, so you launch no worker in it: adopt again once"
+                    + " that process has stopped, and the copy moves under your worktrees with its uncommitted work.";
         }
         return "Took over " + adopted.task() + ": the old copy " + adopted.oldCopy() + " moved to " + adopted.copy() + " with its uncommitted work, on "
                 + adopted.branch() + " at " + adopted.head() + ", and " + next + ".";
@@ -128,7 +128,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
                 ? "; it answers no decision"
                 : "; its answers to " + board.bindings().stream().map(ConfirmationText::boundDecision).collect(Collectors.joining(", "))
                         + " are recorded as the captain's";
-        return "EDI listens to the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox;"
+        return "Armed the research board " + board.file() + " for " + board.task() + bound + ", and each round reaches your inbox;"
                 + whatTheSitrepPutsBeforeTheCaptain(board);
     }
 
@@ -162,11 +162,11 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String ticketOf(TicketSettlement ticket) {
         return switch (ticket) {
             case TicketSettlement.Unasked _ -> "";
-            case TicketSettlement.Keyed keyed -> " It books its work on " + keyed.key() + (keyed.created() ? ", the ticket EDI created." : ".");
+            case TicketSettlement.Keyed keyed -> " It books its work on " + keyed.key() + (keyed.created() ? ", the ticket you created." : ".");
             case TicketSettlement.CreatedWithoutItsFields created -> " It books its work on " + created.key()
-                    + ", the ticket EDI created, but the tracker refused its fields: " + created.because();
-            case TicketSettlement.Pending pending -> " Its ticket is not settled yet: " + pending.because() + " EDI tries again every 30 seconds.";
-            case TicketSettlement.AskedAgain asked -> " EDI could not carry out the answer, so it raised the decision again: " + asked.because();
+                    + ", the ticket you created, but the tracker refused its fields: " + created.because();
+            case TicketSettlement.Pending pending -> " Its ticket is not settled yet: " + pending.because() + " You try again every 30 seconds.";
+            case TicketSettlement.AskedAgain asked -> " You could not carry out the answer, so you raised the decision again: " + asked.because();
         };
     }
 }

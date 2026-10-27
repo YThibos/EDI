@@ -50,7 +50,7 @@ public record RegisteredForge(ForgeRepository repository, String account) {
     }
 
     private Refusal unregistered(String target) {
-        return new Refusal("EDI publishes this work only to " + repository + ", the repository its project registers, and the push goes to "
+        return new Refusal("This work is published only to " + repository + ", the repository its project registers, and the push goes to "
                 + target + ".");
     }
 }

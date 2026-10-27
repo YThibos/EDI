@@ -78,7 +78,7 @@ public class JiraCalls implements AutoCloseable {
             return bodyOf(response);
         }
         if (status == 401 || status == 403) {
-            throw new Refusal("JIRA refused EDI's access token for " + what + " (HTTP " + status + "); renew the token in the "
+            throw new Refusal("JIRA refused the access token for " + what + " (HTTP " + status + "); renew the token in the "
                     + settings.credentials().section() + " section of the keys file.");
         }
         if (status == 404) {

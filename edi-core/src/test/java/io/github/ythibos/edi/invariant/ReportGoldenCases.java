@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
@@ -55,6 +56,7 @@ final class ReportGoldenCases {
     private static final String REVIEW_LINK = "https://github.com/example-organisation/example-repository-with-a-long-name/pull/12345";
     private static final LocalDate AFTER_THE_DEMO = LocalDate.of(2026, 10, 20);
     private static final Instant FILED_IN_JULY = Instant.parse("2026-07-01T00:00:00Z");
+    private static final Instant CALENDAR_LOST = Instant.parse("2026-10-15T14:02:00Z");
     private static final JsonMapper JSON = new JsonMapper();
 
     private ReportGoldenCases() {
@@ -78,6 +80,7 @@ final class ReportGoldenCases {
                 new GoldenCase("pane-318", home -> reviewLink(home, ReportWidth.forPane(318))),
                 new GoldenCase("latin-text", ReportGoldenCases::latinText),
                 new GoldenCase("wrapping", ReportGoldenCases::wrapping),
+                new GoldenCase("unreadable-calendar", ReportGoldenCases::unreadableCalendar),
                 new GoldenCase("large-backlog", home -> queuedBacklog(home, 60, 300)),
                 new GoldenCase("two-megabyte-backlog", home -> queuedBacklog(home, TWO_MEGABYTE_TASKS, TWO_MEGABYTE_NOTE_WORDS)));
     }
@@ -87,7 +90,12 @@ final class ReportGoldenCases {
     }
 
     static String rendered(TestHome home, Turn turn, ReportWidth width) {
-        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, width, Presence.presentSince(TestHome.START), null, null));
+        return rendered(home, new Shown(turn, width));
+    }
+
+    private static String rendered(TestHome home, Shown shown) {
+        return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), shown.turn(), shown.width(),
+                Presence.presentSince(TestHome.START), shown.calendar(), null));
     }
 
     static Shown queuedBacklog(TestHome home, int tasks, int noteWords) {
@@ -185,6 +193,11 @@ final class ReportGoldenCases {
         return new Shown(turn("{\"done\": [{\"text\": \"Café – naïve “quoted” …\"}]}"), ReportWidth.standard());
     }
 
+    private static Shown unreadableCalendar(TestHome home) {
+        inFlight(home, "backfill", "Finish the backfill", "HarbourMaster");
+        return new Shown(Turn.NONE, ReportWidth.standard(), new UnreadableCalendar(CALENDAR_LOST, "Outlook did not answer."));
+    }
+
     private static Shown wrapping(TestHome home) {
         home.continuingDecisionsFrom(57);
         heldForDecision(home, "ledger-call", ledgerCard(), "HarbourMaster", "A-project-title-of-forty-one-characters-x");
@@ -280,7 +293,11 @@ final class ReportGoldenCases {
         Shown played(TestHome home);
     }
 
-    record Shown(Turn turn, ReportWidth width) {
+    record Shown(Turn turn, ReportWidth width, UnreadableCalendar calendar) {
+
+        Shown(Turn turn, ReportWidth width) {
+            this(turn, width, null);
+        }
 
         static Shown withoutTurn(ReportWidth width) {
             return new Shown(Turn.NONE, width);
@@ -295,8 +312,7 @@ final class ReportGoldenCases {
 
         String rendered(Path directory) throws IOException {
             TestHome home = homeIn(directory.resolve(name));
-            Shown shown = scenario.played(home);
-            return ReportGoldenCases.rendered(home, shown.turn(), shown.width());
+            return ReportGoldenCases.rendered(home, scenario.played(home));
         }
     }
 }

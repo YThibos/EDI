@@ -126,7 +126,7 @@ class OpenTheSitrepAtSessionStartTest {
         ConsoleOpening failed = sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE).orElseThrow();
 
         assertThat(failed.opened()).isFalse();
-        assertThat(digestTelling(primary, failed)).contains("\nEDI could not open the console's sitrep page in the captain's browser; it is at " + CONSOLE
+        assertThat(digestTelling(primary, failed)).contains("\nYou could not open the console's sitrep page in the captain's browser; it is at " + CONSOLE
                 + ", and edi console opens it signed in.\n");
     }
 

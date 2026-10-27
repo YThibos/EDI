@@ -8,7 +8,7 @@ import java.util.Set;
 public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets) {
 
     public ShellGuard {
-        Objects.requireNonNull(ediSocket, "The guard knows the name of EDI's tmux socket.");
+        Objects.requireNonNull(ediSocket, "The guard knows the name of the core's tmux socket.");
         baseBranches = Set.copyOf(baseBranches);
         unlandedBranches = Set.copyOf(unlandedBranches);
         Objects.requireNonNull(secrets, "The guard knows which secrets it keeps from a shell.");
@@ -24,7 +24,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
             commands = ShellScript.commandsIn(script);
         } catch (UnreadableCommand unreadable) {
             return Optional.of(new GuardRefusal(GuardRule.UNREADABLE_COMMAND,
-                    unreadable.getMessage() + " EDI's guard refuses what it cannot read; run it as plainer commands."));
+                    unreadable.getMessage() + " The guard refuses what it cannot read; run it as plainer commands."));
         }
         return ProcessSignals.refusalFor(commands).or(() -> firstRefusalAmong(commands));
     }

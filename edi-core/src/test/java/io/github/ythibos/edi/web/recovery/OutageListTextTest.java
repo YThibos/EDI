@@ -57,7 +57,7 @@ class OutageListTextTest {
                        ran on claude-sonnet-5-5 at high; its category gives claude-opus-5-5 at high now
                        unpushed work: 2 commits on no remote and uncommitted changes
                        resume: session 0f0e0d0c-0b0a-4908-8706-050403020100 in /home/edi/worktrees/harness/tune-horn
-                Answer with one number and resume or fresh, such as edi recover 2 resume or edi recover 4 fresh --effort medium; EDI acts on one number at a time.
+                Answer with one number and resume or fresh, such as edi recover 2 resume or edi recover 4 fresh --effort medium; you act on one number at a time.
                 Recovery so far: 1 relaunches counted (1 resumed, 0 fresh), 10 tokens (input 1, cache read 2, cache write 3, output 4).
                 """);
     }
