@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.statusline.StatusLine;
 import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
+import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.testing.ManualClock;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -19,6 +20,7 @@ class StatusLineTextTest {
 
     private static final CheckedOutBranch CHANGED = new CheckedOutBranch("feature/HRN-3", true);
     private static final CheckedOutBranch CLEAN = new CheckedOutBranch("main", false);
+    private static final PrimaryWait LIVE = new PrimaryWait(PrimaryWait.Sighting.LIVE, Instant.EPOCH, 2);
 
     private final StatusLineText presenter = new StatusLineText(new ManualClock(Instant.EPOCH, ZoneId.of("Europe/Brussels")));
 
@@ -78,9 +80,29 @@ class StatusLineTextTest {
         assertThat(Shade.theOtherWay(90)).isEqualTo(Shade.of(10));
     }
 
+    @Test
+    void marksAMissingWaitInDarkRedOnlyWhileWorkIsInFlight() throws IOException {
+        PrimaryWait missing = new PrimaryWait(PrimaryWait.Sighting.MISSING, Instant.EPOCH, 3);
+        PrimaryWait missingWithNothingInFlight = new PrimaryWait(PrimaryWait.Sighting.MISSING, Instant.EPOCH, 0);
+        PrimaryWait inATurn = new PrimaryWait(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN, Instant.EPOCH, 3);
+
+        assertThat(withoutColours(rendered("without-limits-or-cache.json", Optional.of(CLEAN), missing)))
+                .isEqualTo("Opus 5.5 -- Context: 0% -- Session tokens: 9k (C 0k/!C 9k) -- 5-hour: -- -- Week: -- -- Branch: main -- Cache: 0%"
+                        + " -- Wait: none (3 in flight)\n");
+        assertThat(withVisibleColours(rendered("without-limits-or-cache.json", Optional.of(CLEAN), missing)))
+                .endsWith("<95,175,175>Wait:</> <160,40,40>none</> <128,128,128>(3 in flight)</>\n");
+        assertThat(withoutColours(rendered("without-limits-or-cache.json", Optional.of(CLEAN), missingWithNothingInFlight))).doesNotContain("Wait");
+        assertThat(withoutColours(rendered("without-limits-or-cache.json", Optional.of(CLEAN), inATurn))).doesNotContain("Wait");
+        assertThat(withoutColours(rendered("without-limits-or-cache.json", Optional.of(CLEAN)))).doesNotContain("Wait");
+    }
+
     private String rendered(String fixture, Optional<CheckedOutBranch> branch) throws IOException {
+        return rendered(fixture, branch, LIVE);
+    }
+
+    private String rendered(String fixture, Optional<CheckedOutBranch> branch, PrimaryWait wait) throws IOException {
         try (InputStream payload = StatusLineTextTest.class.getResourceAsStream("/statusline/" + fixture)) {
-            return presenter.text(new StatusLine(StatusLinePayload.sessionIn(new JsonMapper().readTree(payload)), branch));
+            return presenter.text(new StatusLine(StatusLinePayload.sessionIn(new JsonMapper().readTree(payload)), branch, wait));
         }
     }
 

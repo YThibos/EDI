@@ -47,6 +47,7 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -368,7 +369,7 @@ class DecisionsAndReportingTest {
 
         private static CallingSession captainSays(TestHome home, String words, String task) {
             UUID session = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(session, null, true);
+            home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(session, words);
             CallingSession calling = new CallingSession(session);
             home.captainsWord().record(calling, words, TaskReference.parse(task), null, Actor.PRIMARY);
@@ -437,7 +438,7 @@ class DecisionsAndReportingTest {
         void theStopHookWaitsForTheReport() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             UUID primary = UUID.randomUUID();
-            home.primaryHooks().sessionStarted(primary, null, true);
+            home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(primary, "What is waiting on me?");
             HookAnswer quietTurn = home.primaryHooks().stopping(primary, List.of());
 

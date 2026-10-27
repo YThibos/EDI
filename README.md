@@ -61,7 +61,7 @@ Make sure `~/.local/bin` is on the `PATH`.
 edi up                     # start the core unless it runs, then open the primary session in tmux
 edi up --core-only         # start only the core
 edi console                # open the EDI console in the browser, signed in
-edi health                 # check that the core answers
+edi health                 # check that the core answers and the primary's edi wait is live
 edi down                   # stop the core when no worker runs
 edi update                 # pull the repository, build, test and install it, restart the core, re-read the anchor
 ```

@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -28,7 +29,12 @@ class HealthCommandTest {
     @TempDir
     private Path home;
 
+    private static final String LIVE_WAIT = "edi wait is live: it was running when the primary's last turn ended, at 2026-10-26 20:31 CET.\n";
+    private static final String MISSING_WAIT = "No edi wait is live while 2 tasks are in flight: the primary's last turn ended at 2026-10-26 20:31 CET"
+            + " without one.\n";
+
     private HttpServer core;
+    private String primaryWait = LIVE_WAIT;
     private final StringWriter out = new StringWriter();
     private final StringWriter err = new StringWriter();
 
@@ -40,14 +46,38 @@ class HealthCommandTest {
     }
 
     @Test
-    void reportsACoreThatAnswersHealthy() throws IOException {
+    void reportsACoreThatAnswersHealthyAndThePrimarysLiveWait() throws IOException {
         int port = startStubCoreAnswering(200);
 
         int exitCode = edi("health");
 
         assertThat(exitCode).isZero();
-        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n");
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT);
         assertThat(err.toString()).isEmpty();
+    }
+
+    @Test
+    void saysSoWhenWorkIsInFlightAndNoWaitIsLive() throws IOException {
+        primaryWait = MISSING_WAIT;
+        int port = startStubCoreAnswering(200);
+
+        int exitCode = edi("health");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + MISSING_WAIT);
+    }
+
+    @Test
+    void namesWhyItCannotAskAboutTheWaitOfAHealthyCore() throws IOException {
+        int port = startStubCoreAnswering(200);
+        Files.delete(home.resolve("state/core.token"));
+
+        int exitCode = edi("health");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n");
+        assertThat(err).hasToString("Cannot ask whether the primary's edi wait is live: EDI core is not running: "
+                + home.resolve("state/core.token") + " holds no token.\n");
     }
 
     @Test
@@ -119,8 +149,15 @@ class HealthCommandTest {
             exchange.sendResponseHeaders(status, -1);
             exchange.close();
         });
+        core.createContext("/api/primary/wait", exchange -> {
+            byte[] body = primaryWait.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
         core.start();
         recordCorePort(core.getAddress().getPort());
+        Files.writeString(home.resolve("state/core.token"), "home-token");
         return core.getAddress().getPort();
     }
 

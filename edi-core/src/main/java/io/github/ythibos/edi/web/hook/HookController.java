@@ -24,6 +24,7 @@ import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.web.access.Caller;
@@ -41,6 +42,7 @@ import jakarta.servlet.http.HttpServletRequest;
 class HookController {
 
     private static final String LAUNCH = "startup";
+    private static final String COMPACTION = "compact";
 
     private final WorkerHooks workerHooks;
     private final PrimaryHooks primaryHooks;
@@ -88,7 +90,7 @@ class HookController {
 
     private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid, URI console) {
         return switch (hook) {
-            case SESSION_START -> sessionStarted(sessionIn(payload), claudePid, isALaunch(payload), console);
+            case SESSION_START -> sessionStarted(sessionIn(payload), claudePid, sourceOf(payload), console);
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case STOP -> rendered(primaryHooks.stopping(sessionIn(payload), backgroundJobsIn(payload)));
@@ -98,8 +100,8 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, boolean launched, URI console) {
-        SessionStart start = primaryHooks.sessionStarted(session, claudePid, launched);
+    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, SessionSource source, URI console) {
+        SessionStart start = primaryHooks.sessionStarted(session, claudePid, source);
         SessionStartDigest digest = digests.digestFor(session);
         SessionStartDigest told = sitrep.openFor(session, start, console).map(digest::withSitrep).orElse(digest);
         return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
@@ -111,8 +113,12 @@ class HookController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    private static boolean isALaunch(JsonNode payload) {
-        return LAUNCH.equals(textIn(payload, "source"));
+    private static SessionSource sourceOf(JsonNode payload) {
+        return switch (String.valueOf(textIn(payload, "source"))) {
+            case LAUNCH -> SessionSource.LAUNCH;
+            case COMPACTION -> SessionSource.COMPACTION;
+            default -> SessionSource.RESTART;
+        };
     }
 
     private static CallingSession callingSessionIn(JsonNode payload) {

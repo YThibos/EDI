@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.authority.Passage;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
@@ -50,7 +51,7 @@ class PresenceAndMemoryStoresTest {
     @Test
     void keepsTypedPassagesAsDigestsAndTheCaptainsWordPerSession() {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
         home.captainWords().recordTyped(session, Passage.allTypedIn("Drop the lamp.\nAnd the horn."), TestHome.START);
         Authorisation word = new Authorisation(session, new TaskId("fit-lamp"), null, "Drop the lamp.", TestHome.START);

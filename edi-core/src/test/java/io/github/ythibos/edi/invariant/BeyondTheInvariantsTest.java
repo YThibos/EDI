@@ -69,6 +69,7 @@ import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.presence.PresenceCause;
 import io.github.ythibos.edi.domain.presence.PresenceMode;
 import io.github.ythibos.edi.domain.primary.BackgroundJob;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -327,7 +328,7 @@ class BeyondTheInvariantsTest {
                 .writing("config/machine.yaml", "notify:\n  windowsToast: true\npresence:\n  calendar: outlook\n")
                 .writing("config/personal.yaml", "presence:\n  calendarIgnore: [Example at the office]\n");
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(session, "Fit the brass lamp.");
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
 

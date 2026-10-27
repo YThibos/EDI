@@ -3,9 +3,9 @@ package io.github.ythibos.edi.web.statusline;
 final class Shade {
 
     static final TerminalColour DARK_AMBER = new TerminalColour(160, 120, 40);
+    static final TerminalColour DARK_RED = new TerminalColour(160, 40, 40);
 
     private static final TerminalColour DARK_GREEN = new TerminalColour(40, 130, 40);
-    private static final TerminalColour DARK_RED = new TerminalColour(160, 40, 40);
     private static final int NONE = 0;
     private static final int HALF = 50;
     private static final int ALL = 100;
