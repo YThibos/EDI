@@ -55,6 +55,7 @@ Three modules keep the boundaries that matter without one module per layer, and 
 - Bad: EDI stays two releases behind the newest JDK, and class files that use a preview feature run only on the JDK that compiled them.
 - Bad: every release needs an explicit version change.
 - Bad: a GraalVM upgrade changes each platform's archive name and checksum by hand, since a feature release's archive name carries its JDK version; Renovate proposes the version, and the install fails until the archives match ([dependency-upkeep-and-scanners](dependency-upkeep-and-scanners.md)).
+- Bad: mise installs from a URL and sets `JAVA_HOME` only for a `mise.toml` it trusts, so a clone needs `mise trust` once, and a worker's copy is trusted by its launch ([worker-sessions](worker-sessions.md)).
 - Bad: Maven 4 is still a release candidate, and the build is Maven 4 only, so a Maven 3 on the `PATH` cannot build EDI; `./mvnw` always can.
 
 ## When to revisit

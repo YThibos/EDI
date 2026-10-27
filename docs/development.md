@@ -10,6 +10,7 @@ Maven 4 runs through its wrapper, since the POMs use model 4.1.0 that Maven 3 ca
 ## Build and test
 
 ```sh
+mise trust                  # once per clone, see java-toolchain-and-build
 mise install
 ./mvnw verify               # the JVM build and every test
 ./mvnw test -Pfast          # domain, application and architecture tests only
