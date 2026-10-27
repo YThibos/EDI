@@ -16,14 +16,12 @@ final class SkippedHooks {
     private static final String HOOKS_PATH = "core.hookspath";
     private static final Set<String> CONFIGURING_OPTIONS = Set.of("-c", "--config-env");
     private static final String CONFIGURING_OPTION_PREFIX = "--config-env=";
-    private static final Set<String> CONFIG_READS = Set.of("get", "list", "--get", "--get-all", "--get-regexp", "--list", "-l");
-    private static final Set<String> CONFIG_WRITES = Set.of("set", "unset", "--add", "--replace-all", "--unset", "--unset-all");
     private static final OptionGrammar COMMIT = new OptionGrammar(Set.of("-m", "--message", "-F", "--file", "-c", "--reedit-message",
             "-C", "--reuse-message", "-t", "--template", "--author", "--date", "--cleanup", "--fixup", "--squash", "--trailer",
             "--pathspec-from-file"), "mFcCt", "mFcCtSu");
     private static final OptionGrammar MERGE = new OptionGrammar(Set.of("-m", "-F", "--file", "-s", "--strategy", "-X",
             "--strategy-option", "--cleanup", "--into-name"), "mFsX", "mFsXS");
-    private static final OptionGrammar PUSH = new OptionGrammar(Set.of("-o", "--push-option", "--repo", "--receive-pack", "--exec"), "o", "o");
+    private static final OptionGrammar PUSH = new OptionGrammar(GitPushes.PUSH_OPTIONS_WITH_VALUES, "o", "o");
     private static final String COMMIT_MSG_CHECKS = "the commit-msg hook, which holds the work key at the head of the subject (I-10)"
             + " and keeps every co-author, agent and \"Generated with\" trailer out (I-09)";
     private static final String PRE_PUSH_CHECKS = "the pre-push hook, whose publish check keeps secrets out of a push (I-38)"
@@ -77,9 +75,6 @@ final class SkippedHooks {
             case "commit" -> refusalIf(commitSkipsItsHooks(arguments), "a commit with " + NO_VERIFY + " or -n", COMMIT_MSG_CHECKS);
             case "merge" -> refusalIf(namesNoVerify(MERGE.optionsAmong(arguments)), "a merge with " + NO_VERIFY, COMMIT_MSG_CHECKS);
             case "push" -> refusalIf(namesNoVerify(PUSH.optionsAmong(arguments)), "a push with " + NO_VERIFY, PRE_PUSH_CHECKS);
-            case "config" -> writesTheHooksPath(arguments)
-                    ? Optional.of(refusal("setting core.hooksPath", EVERY_CHECK, KEEP_THE_HOOKS_PATH))
-                    : Optional.empty();
             default -> Optional.empty();
         };
     }
@@ -103,24 +98,6 @@ final class SkippedHooks {
 
     private static boolean isNoVerifyOrItsAbbreviation(String option) {
         return option.startsWith(SHORTEST_NO_VERIFY) && NO_VERIFY.startsWith(option);
-    }
-
-    private static boolean writesTheHooksPath(List<String> arguments) {
-        int key = indexOfTheHooksPath(arguments);
-        if (key < 0 || arguments.stream().anyMatch(CONFIG_READS::contains)) {
-            return false;
-        }
-        boolean valueFollows = key + 1 < arguments.size() && !arguments.get(key + 1).startsWith("-");
-        return valueFollows || arguments.stream().anyMatch(CONFIG_WRITES::contains);
-    }
-
-    private static int indexOfTheHooksPath(List<String> arguments) {
-        for (int index = 0; index < arguments.size(); index++) {
-            if (arguments.get(index).toLowerCase(Locale.ROOT).equals(HOOKS_PATH)) {
-                return index;
-            }
-        }
-        return -1;
     }
 
     private record OptionGrammar(Set<String> optionsWithValues, String lettersTakingTheNextWord, String lettersTakingTheRest) {

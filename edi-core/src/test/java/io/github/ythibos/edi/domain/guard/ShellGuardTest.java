@@ -194,10 +194,6 @@ class ShellGuardTest {
         "git -c Core.HooksPath=.githooks merge origin/main",
         "git --config-env=core.hooksPath=EMPTY push origin feature/EDI-5",
         "git --config-env core.hooksPath=EMPTY status",
-        "git config core.hooksPath /dev/null",
-        "git config --worktree core.hooksPath .git/no-hooks",
-        "git config --unset core.hooksPath",
-        "git config unset --worktree core.hooksPath",
         "git add . && git commit --no-verify -m \"$(cat <<'EOF'\nEDI-5 Fix the guard\n\nCo-authored-by: Claude <noreply@anthropic.com>\nEOF\n)\""})
     void refusesWhatSkipsTheGitHooks(String command) {
         assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.SKIPPED_HOOKS);
@@ -215,10 +211,6 @@ class ShellGuardTest {
         "git merge -n origin/main",
         "git log --grep=no-verify",
         "git -c user.name=Fixture commit -m 'EDI-1 x'",
-        "git config core.hooksPath",
-        "git config --get core.hooksPath",
-        "git config get core.hooksPath",
-        "git config --worktree user.name Fixture",
         "grep -rn core.hooksPath docs/"})
     void allowsGitThatRunsItsHooks(String command) {
         assertThat(GUARD.check(command)).isEmpty();

@@ -14,7 +14,7 @@ A primary whose core is down must still be able to bring it back.
 
 `ShellScript` reads a command string into every command it would run, without running anything: quoting, escapes, substitutions, process substitution, here-documents, comments, keywords, assignments, wrappers, and shells read by their shared option grammar (`ShellInvocation`); it refuses more than twelve levels of nesting and anything it cannot read.
 `ShellGuard` refuses with one reason naming the invariant: `pkill`, `killall` and kin, kills fed from process lookups or aimed at groups, tmux without `-L` or `-S`, `kill-*`, `send-*` and `respawn-*` on the `edi` socket, any forced push, a push of every branch or to a base, and merges through `gh`, `glab`, a forge API or push options.
-`SkippedHooks` refuses `git commit` with `--no-verify` or `-n`, `git push` and `git merge` with `--no-verify`, `-c` or `--config-env` setting `core.hooksPath` on any git command, and `git config` writing it, naming the checks the skipped hook holds.
+`SkippedHooks` refuses `git commit` with `--no-verify` or `-n`, `git push` and `git merge` with `--no-verify`, and `-c` or `--config-env` setting `core.hooksPath` on any git command, naming the checks the skipped hook holds.
 `BranchDeletions` refuses deleting the recorded branch of a task still queued or in flight, locally or on the remote; the primary may on the captain's word ([captains-word](captains-word.md)).
 `SecretReads` refuses a command whose words end in a secret file's path, or that prints a forge token; `GuardToolCall` keeps the home token from every worker always, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
 `GuardToolCall` keeps a worker's `Write`, `Edit`, `MultiEdit` and `NotebookEdit` calls inside its copy and task directory on real paths, and records every refusal of a worker as `ToolCallRefused` with its rule, never the command.
@@ -36,8 +36,9 @@ Failing closed keeps the invariants when the core is down, while a plain `edi up
 ## Consequences
 
 - Good: AT-30, AT-31 and the secret half of AT-06 pass for workers and the primary.
-- Good: a worker's commit or push cannot step around the hooks, so AT-09 and AT-10 hold for a commit that asks to skip them.
+- Good: a commit with `--no-verify` or `-n`, a push or merge with `--no-verify`, and a `-c` or `--config-env` override of `core.hooksPath` are refused, so AT-09 and AT-10 hold for a commit that asks to skip the hooks.
 - Bad: a command the guard cannot read is refused, while a process id, a branch, a secret or a hooks path reached through a variable or after a `cd` passes; the brief and the anchor state those rules.
+- Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
 
 ## When to revisit
 
