@@ -35,11 +35,6 @@ install_the_executables() {
   install -m 755 "${checkout}/ops/helloedi" "${bin}/helloedi"
 }
 
-record_the_installed_build() {
-  mkdir -p "$(dirname "${installed_build_record}")"
-  git -C "${checkout}" rev-parse HEAD > "${installed_build_record}"
-}
-
 link_the_skills() {
   mkdir -p "${skills}"
   find "${skills}" -maxdepth 1 -type l -lname "${checkout}/*" -delete
@@ -47,6 +42,11 @@ link_the_skills() {
     [[ -d "${skill}" ]] || continue
     ln -sfn "${skill%/}" "${skills}/$(basename "${skill}")"
   done
+}
+
+record_the_installed_build() {
+  mkdir -p "$(dirname "${installed_build_record}")"
+  git -C "${checkout}" rev-parse HEAD > "${installed_build_record}"
 }
 
 require_the_pinned_toolchain
