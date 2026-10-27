@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
+import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.publish.DenyList;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.PersonalPaths;
@@ -47,7 +48,8 @@ public class PublishCheck {
         return PublishVerdict.of(
                         gitleaks.secretsIn(repository, outgoing),
                         denyList.sparing(targets.ownNamesOf(repository)).findIn(changes),
-                        personalPathsOf(repository).findIn(changes))
+                        personalPathsOf(repository).findIn(changes),
+                        SnapshotVersions.findIn(changes))
                 .hidingPathsDeniedBy(denyList, changes);
     }
 

@@ -32,6 +32,11 @@ class PublishCheckTest {
 
             acme-corp.example
             """;
+    private static final String POM = """
+            <project>
+              <version>%s</version>
+            </project>
+            """;
 
     @TempDir
     private Path workspace;
@@ -144,6 +149,35 @@ class PublishCheckTest {
                 .containsExactlyInAnyOrder(
                         tuple(PublishRule.PERSONAL_PATH, "personal/anchor.local.md in commit " + shortHead(), "inside the personal layer"),
                         tuple(PublishRule.PERSONAL_PATH, ".edi/config/personal.yaml in commit " + shortHead(), "inside the EDI home"));
+    }
+
+    @Test
+    void refusesACommitAddingASnapshotVersionToABuildFileNamingTheFile() throws IOException {
+        repository.write("pom.xml", POM.formatted("1.1.0"))
+                .commit("Release the project")
+                .branch("snapshot")
+                .write("pom.xml", POM.formatted("1.2.0-SNAPSHOT"))
+                .commit("Start the next version");
+
+        PublishVerdict verdict = check("main..snapshot", elsewhereHome);
+
+        assertThat(verdict.allowsPush()).isFalse();
+        assertThat(verdict.findings())
+                .extracting(PublishFinding::rule, PublishFinding::toString)
+                .containsExactly(tuple(PublishRule.SNAPSHOT_VERSION, "pom.xml:2 in commit " + shortHead() + ": a -SNAPSHOT version"));
+    }
+
+    @Test
+    void allowsACommitAddingAReleaseVersionToABuildFile() throws IOException {
+        repository.write("pom.xml", POM.formatted("1.1.0"))
+                .commit("Release the project")
+                .branch("release")
+                .write("pom.xml", POM.formatted("1.2.0"))
+                .commit("Release the next version");
+
+        PublishVerdict verdict = check("main..release", elsewhereHome);
+
+        assertThat(verdict.allowsPush()).isTrue();
     }
 
     @Test

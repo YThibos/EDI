@@ -21,6 +21,7 @@ A refused done names every gap in one sentence, is recorded as `DeliveryRefused`
 `local-branch` runs `git -C <captainCheckout> fetch <worktree> <branch>:<branch>`, which moves one ref forward or is refused, and records `BranchDeliveredToCaptain` only when the checkout's branch holds the copy's head (`CaptainCheckouts`).
 `local-apply` merges the base and the branch in memory with `git merge-tree`, writes the diff from the base to the result as `change.patch`, and applies it with `git apply` only when it touches no file with uncommitted work and deletes, renames or changes the mode of nothing; otherwise it records `ChangeNotApplied` with the patch's path.
 When the pipeline could not open the request, `edi deliver <task>` does it behind the same guards: the push checks of `PublishCheck.checkPush` ([publish-guard](publish-guard.md)), a draft only, the key and title as its title, a body without agent attribution (`DraftProposal`), and every claim above.
+The push itself is refused a SNAPSHOT version in any outgoing commit ([publish-guard](publish-guard.md)); the done checks the branch again, since a `local-branch` or `local-apply` delivery is never pushed.
 
 ## Why
 
@@ -48,7 +49,7 @@ An operation finishes on what proves it, its report and a copy with nothing in i
 
 ## When to revisit
 
-Never for the merge authority; the claims are revisited when the pipeline itself marks requests ready or refuses SNAPSHOT versions.
+Never for the merge authority; the claims are revisited when the pipeline itself marks requests ready.
 
 ## How we got here
 
@@ -56,3 +57,4 @@ Never for the merge authority; the claims are revisited when the pipeline itself
 - 16/10/2026: slice S3 fetched a `local-branch` ship into the captain's checkout by its ref; slice S5 added the claims of a done, `local-apply` and `edi deliver`.
 - 21/10/2026: a done was refused because the captain had marked or merged its request first, so the done stopped demanding a draft (EDI-23).
 - 23/10/2026: an operation with nothing to push could not report done, so the `report` delivery finishes a task on its report and a copy that holds no change, and the captain kept it out of the registry's defaults (EDI-41).
+- 27/10/2026: the publish guard refuses a SNAPSHOT version at the push, and the done keeps its own check for deliveries that are never pushed (EDI-78).
