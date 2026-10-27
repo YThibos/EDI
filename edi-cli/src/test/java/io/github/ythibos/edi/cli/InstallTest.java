@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
@@ -57,6 +58,18 @@ class InstallTest {
     }
 
     @Test
+    void installsTheLauncherAndRecordsTheCommitItBuilt() throws IOException, InterruptedException {
+        Path checkout = checkoutPinning(Files.readString(REPOSITORY.resolve("mise.toml")));
+        assumeTrue(everyPinnedToolIsInstalled(checkout), "mise or a tool the checkout pins is not installed");
+
+        InstallRun install = install(checkout, System.getenv("PATH"));
+
+        assertThat(install.exitCode()).as(install.output()).isZero();
+        assertThat(directory.resolve("bin/helloedi")).isExecutable();
+        assertThat(directory.resolve("home/state/installed-build")).hasContent(FixtureRepository.at(checkout).head());
+    }
+
+    @Test
     void refusesToBuildWhenThePinnedToolchainIsNotInstalled() throws IOException, InterruptedException {
         assumeTrue(InstalledPrograms.answers("mise", "--version"), "mise is not installed");
         Path checkout = checkoutPinning(UNINSTALLED_TOOLCHAIN);
@@ -81,9 +94,11 @@ class InstallTest {
 
     private Path checkoutPinning(String toolchain) throws IOException {
         Path checkout = directory.resolve("EDI");
-        StandInScripts.installed(checkout.resolve("ops/install.sh"), Files.readString(REPOSITORY.resolve("ops/install.sh")));
+        for (String script : List.of("ops/install.sh", "ops/helloedi")) {
+            StandInScripts.installed(checkout.resolve(script), Files.readString(REPOSITORY.resolve(script)));
+        }
         StandInScripts.installed(checkout.resolve("mvnw"), MAVEN_NOTING_ITS_JAVA);
-        Files.writeString(checkout.resolve("mise.toml"), toolchain);
+        FixtureRepository.initialise(checkout).write("mise.toml", toolchain).commit("Pin the toolchain");
         return checkout;
     }
 

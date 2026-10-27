@@ -16,7 +16,7 @@ Everything that differs between machines or people lives in the EDI home, never 
 | `projects/<name>` | a project's clone, unless its registry entry names another |
 | `worktrees/<project>/<task-id>` | a task's isolated copy |
 | `data/tasks/<task-id>/` | a task's brief and report |
-| `state/` | the core's port, token, lock, logs and activity ledger |
+| `state/` | the core's port, token, lock, logs and activity ledger, and the commit the installed build was built from |
 | `.claude/skills/` | the skills `ops/install.sh` links in |
 
 The session-start digest lists any of the machine profile, the personal configuration, the registry, the dispatch rules, the craftsmanship rules and the three startup memory files that the home still lacks.
@@ -83,7 +83,7 @@ The publish check refuses outgoing commits that carry any of them (see [Delivery
 | Variable | Default | Names |
 |---|---|---|
 | `EDI_HOME` | `~/.edi` | the EDI home |
-| `EDI_CHECKOUT` | `~/EDI` | the EDI repository `edi up` and `edi update` use |
+| `EDI_CHECKOUT` | `~/EDI` | the EDI repository `helloedi`, `edi up` and `edi update` use |
 | `EDI_CORE` | `edi-core` next to `edi` | the core executable |
 | `EDI_BIN` | `~/.local/bin` | where `ops/install.sh` installs the executables |
 | `SERVER_PORT` | `47318` | the core's port |

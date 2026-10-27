@@ -52,12 +52,13 @@ mise install
 ops/install.sh
 ```
 
-`ops/install.sh` refuses to run until mise and the pinned toolchain are installed; it builds the native executables and runs every test with that toolchain, installs `edi` and `edi-core` in `~/.local/bin`, and links the skills into the EDI home at `~/.edi`.
+`ops/install.sh` refuses to run until mise and the pinned toolchain are installed; it builds the native executables and runs every test with that toolchain, installs `edi`, `edi-core` and the `helloedi` launcher in `~/.local/bin`, records the commit it built, and links the skills into the EDI home at `~/.edi`.
 Make sure `~/.local/bin` is on the `PATH`.
 
 ### Running
 
 ```sh
+helloedi                   # update EDI when the installed build is not origin/main, then edi up
 edi up                     # start the core unless it runs, then open the primary session in tmux
 edi up --core-only         # start only the core
 edi console                # open the EDI console in the browser, signed in
