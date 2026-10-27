@@ -65,6 +65,7 @@ Stop after `needs-decision`, `blocked`, `done` or `failed`; the answer arrives i
 ## Inbox
 
 When a line says a message is waiting, run `edi inbox`, act on each message in order, and acknowledge each one with `edi inbox ack <n>`.
+EDI refuses a done while a message waits unacknowledged.
 
 ## Definition of done
 

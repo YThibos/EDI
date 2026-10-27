@@ -33,6 +33,9 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
+import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.HoldKind;
@@ -189,6 +192,102 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void holdsAHandedOverRequestAsChangingWhileItsPipelineRuns() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST.url()), TestHome.START);
+
+        WaitingOnTheCaptain running = home.fleetSnapshot().snapshot().waiting();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST.url()), TestHome.START);
+        WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(running.reviews()).isEmpty();
+        assertThat(running.changing()).singleElement().satisfies(changing -> {
+            assertThat(changing.task().id()).isEqualTo(lamp.id());
+            assertThat(changing.delivery().address().url()).isEqualTo(REQUEST.url());
+            assertThat(changing.whyChanging()).isEqualTo("pipeline review");
+        });
+        assertThat(running.count()).isEqualTo(1);
+        assertThat(finished.changing()).isEmpty();
+        assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingWhileASteerWaitsUnacknowledged() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "And its history line.", null, Actor.PRIMARY);
+
+        WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
+        Worker worker = home.workers().latestOf(lamp.id()).orElseThrow();
+        home.workerInbox().acknowledge(worker.id(), 1);
+        home.workerInbox().acknowledge(worker.id(), 2);
+        WaitingOnTheCaptain acknowledged = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(steered.reviews()).isEmpty();
+        assertThat(steered.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("steers 1, 2 not acknowledged"));
+        assertThat(acknowledged.changing()).isEmpty();
+        assertThat(acknowledged.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsARequestAsChangingOnceItsWorkerIsBackAtWorkButNeverAFirstPassDraft() {
+        Task lamp = handedOverWithAnOpenRequest();
+        Task shade = WorkerFixtures.queuedShip("hang-shade", "harness", "HRN-4");
+        WorkerFixtures.servingWorkerOn(home, shade, CategoryId.IMPLEMENTATION);
+        home.deliveries().save(Delivery.of(shade.id(), firstPassDraft(), TestHome.START));
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
+        home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
+        report(lamp, StatusState.WORKING);
+
+        WaitingOnTheCaptain backAtWork = home.fleetSnapshot().snapshot().waiting();
+        report(lamp, StatusState.DONE);
+        WaitingOnTheCaptain doneAgain = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(backAtWork.reviews()).isEmpty();
+        assertThat(backAtWork.changing()).singleElement().satisfies(changing -> {
+            assertThat(changing.task().id()).isEqualTo(lamp.id());
+            assertThat(changing.whyChanging()).isEqualTo("worker back at work");
+        });
+        assertThat(doneAgain.changing()).isEmpty();
+        assertThat(doneAgain.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void keepsARequestWhoseMechanicalDoneAwaitsItsCheckOutOfTheZone() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.MECHANICAL);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        report(lamp, StatusState.DONE);
+
+        WaitingOnTheCaptain checking = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(checking.reviews()).isEmpty();
+        assertThat(checking.changing()).isEmpty();
+    }
+
+    @Test
+    void remembersAnAcceptedMechanicalDoneWhileItsWorkerIsCheckedAgainAndRefused() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.MECHANICAL);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        report(lamp, StatusState.DONE);
+        checkTheMechanicalDone(lamp, true);
+
+        WaitingOnTheCaptain accepted = home.fleetSnapshot().snapshot().waiting();
+        report(lamp, StatusState.WORKING);
+        report(lamp, StatusState.DONE);
+        WaitingOnTheCaptain checkedAgain = home.fleetSnapshot().snapshot().waiting();
+        checkTheMechanicalDone(lamp, false);
+        WaitingOnTheCaptain refused = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(accepted.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(checkedAgain.reviews()).isEmpty();
+        assertThat(checkedAgain.changing()).extracting(ChangingRequest::whyChanging).containsExactly("worker back at work");
+        assertThat(refused.reviews()).isEmpty();
+        assertThat(refused.changing()).extracting(ChangingRequest::whyChanging).containsExactly("worker back at work");
+    }
+
+    @Test
     void keepsAnAnsweredDecisionOutOfALaterHold() {
         add(ship("lamp-fitting", "Fit the lamp"));
         raise("lamp-fitting");
@@ -259,6 +358,33 @@ class FleetSnapshotQueryTest {
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
         return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+    }
+
+    private Task handedOverWithAnOpenRequest() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        report(lamp, StatusState.DONE);
+        return lamp;
+    }
+
+    private void report(Task task, StatusState state) {
+        StatusReport report = new StatusReport(state, null, null, "Fitting the lamp.");
+        Worker reported = home.workers().latestOf(task.id()).orElseThrow().reported(report, TestHome.START);
+        home.workers().update(reported);
+        home.events().record(new StatusReported(task.id(), reported.id(), report), Actor.worker(reported.id()), TestHome.START);
+    }
+
+    private void checkTheMechanicalDone(Task task, boolean accepted) {
+        Worker checked = home.workers().latestOf(task.id()).orElseThrow().doneChecked(accepted);
+        home.workers().update(checked);
+        home.events().record(accepted ? new MechanicalChangeAccepted(task.id(), checked.id())
+                : new MechanicalChangeRefused(task.id(), checked.id(), "the verify command failed"), Actor.CORE, TestHome.START);
+    }
+
+    private static MergeRequestView firstPassDraft() {
+        MergeRequestAddress draft = new MergeRequestAddress(REQUEST.repository(), 6);
+        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", null, null);
     }
 
     private void add(NewTask task) {

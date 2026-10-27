@@ -40,7 +40,7 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 
 class CaptainReportPresenterTest {
 
-    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of());
+    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of());
     private static final Instant FIRST_DAY = Instant.parse("2026-10-13T08:00:00Z");
 
     private final CaptainReportPresenter presenter = PresenterFixtures.captainReportPresenter();
@@ -101,7 +101,7 @@ class CaptainReportPresenterTest {
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 1, FIRST_DAY, null, null);
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of())),
-                List.of(new ReadyForReview(lamp, new Delivery(lamp.id(), request, true, "abc123", MergeRequestState.OPEN, null, FIRST_DAY, FIRST_DAY))));
+                List.of(new ReadyForReview(lamp, new Delivery(lamp.id(), request, true, "abc123", MergeRequestState.OPEN, null, FIRST_DAY, FIRST_DAY))), List.of());
 
         String report = rendered(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
 
@@ -124,7 +124,7 @@ class CaptainReportPresenterTest {
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", "http://127.0.0.1:4387/s/1", List.of(BoardBinding.byNumber(
                 decision.number())), 0, 4, FIRST_DAY, null, null);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of(new OpenDecision(decision,
-                research)))), List.of());
+                research)))), List.of(), List.of());
 
         String report = presenter.text(new CaptainReport(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE,
                 ReportWidth.forPane(64), Presence.presentSince(TestHome.START), null));
@@ -144,7 +144,7 @@ class CaptainReportPresenterTest {
     }
 
     private static WaitingOnTheCaptain waitingFor(Decision decision) {
-        return new WaitingOnTheCaptain(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of());
+        return new WaitingOnTheCaptain(List.of(new OpenDecision(decision, PresenterFixtures.captainItem())), List.of(), List.of(), List.of());
     }
 
     private String rendered(FleetSnapshot fleet, Turn turn) {

@@ -27,6 +27,8 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.dispatch.DispatchRequest;
+import io.github.ythibos.edi.application.worker.HookAnswer;
+import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
@@ -171,14 +173,16 @@ class WorkIsolationAndGitHygieneTest {
     class NoAgentTrailer {
 
         @Test
-        @DisplayName("AT-09 the commit-msg hook rejects each forbidden trailer form and launch settings carry the attribution block")
+        @DisplayName("AT-09 the commit-msg hook rejects each forbidden trailer form, the guard refuses a commit that would skip it,"
+                + " and launch settings carry the attribution block")
         @Tag("adapter")
         void theCommitHookRejectsAgentTrailers() throws IOException, InterruptedException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             FixtureRepository.at(home.home().root().resolve("projects/harness"))
                     .configure("credential.https://forge.example.org.helper", "!f() { echo username=worker; echo password=scoped-secret; }; f");
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
-            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+            DispatchOutcome.Launched launched = dispatch(home, "fit-lamp").launched();
+            FixtureRepository worktree = FixtureRepository.at(launched.worktree());
 
             for (String trailer : List.of(
                     "Co-authored-by: Claude <noreply@anthropic.com>",
@@ -193,6 +197,8 @@ class WorkIsolationAndGitHygieneTest {
             }
             worktree.write("lamp.txt", "accepted");
             worktree.commit("HRN-3 Fit the lamp\n\nFiles generated with protoc stay as they are.\n\nSigned-off-by: Fixture Author <fixture@example.org>");
+            assertRefusedBeforeGitRuns(guarded(home, launched, "git commit --no-verify -m 'HRN-3 Fit the lamp\n\nCo-authored-by: Claude <noreply@anthropic.com>'"),
+                    "trailer out (I-09)");
 
             JsonNode settings = new JsonMapper().readTree(resource("claude/worker/settings.json"));
             assertThat(settings.path("attribution").path("commit").asString()).isEmpty();
@@ -207,12 +213,13 @@ class WorkIsolationAndGitHygieneTest {
     class EveryCommitCarriesItsKey {
 
         @Test
-        @DisplayName("AT-10 the commit-msg hook rejects a subject without the task's key")
+        @DisplayName("AT-10 the commit-msg hook rejects a subject without the task's key, and the guard refuses a commit that would skip it")
         @Tag("adapter")
         void theCommitHookRejectsASubjectWithoutTheKey() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
-            FixtureRepository worktree = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+            DispatchOutcome.Launched launched = dispatch(home, "fit-lamp").launched();
+            FixtureRepository worktree = FixtureRepository.at(launched.worktree());
 
             for (String subject : List.of("Fit the lamp", "HRN-4 Fit the lamp", "HRN-30 Fit the lamp", "fit-lamp HRN-3", "# HRN-3 commented out")) {
                 worktree.write("lamp.txt", subject);
@@ -223,6 +230,7 @@ class WorkIsolationAndGitHygieneTest {
                 worktree.commit(subject);
             }
             assertThat(worktree.run("log", "--format=%s", "-2")).isEqualTo("HRN-3: Fit the horn\nHRN-3 Fit the lamp\n");
+            assertRefusedBeforeGitRuns(guarded(home, launched, "git commit -n -m 'Fit the lamp'"), "head of the subject (I-10)");
         }
     }
 
@@ -379,6 +387,15 @@ class WorkIsolationAndGitHygieneTest {
             contents.put(Path.of(".git/index"), HexFormat.of().formatHex(Files.readAllBytes(checkout.resolve(".git/index"))));
             return contents;
         }
+    }
+
+    private static HookAnswer guarded(TestHome home, DispatchOutcome.Launched launched, String command) {
+        return home.guardToolCall().checkForWorker(launched.worker().id(), new ToolCall("Bash", command, null, launched.worktree()));
+    }
+
+    private static void assertRefusedBeforeGitRuns(HookAnswer answer, String reason) {
+        assertThat(answer.verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
+        assertThat(answer.reason()).contains("skips the commit-msg hook", reason);
     }
 
     private static String credentialAnsweredIn(Path worktree) throws IOException, InterruptedException {
