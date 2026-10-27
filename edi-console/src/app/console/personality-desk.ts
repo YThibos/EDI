@@ -104,6 +104,7 @@ export class PersonalityDesk {
   }
 
   private shown(personality: PersonalityShown): void {
+    this.refusal.set(null);
     if (this.changed()) {
       this.kept.set(personality);
     } else {

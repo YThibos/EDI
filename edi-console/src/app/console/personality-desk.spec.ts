@@ -118,6 +118,22 @@ describe('PersonalityDesk', () => {
     expect(button(desk, 'Keep').disabled).toBe(false);
   });
 
+  it('drops the refusal once a later read of the personality succeeds', async () => {
+    const fixture = TestBed.createComponent(PersonalityDesk);
+    const desk = fixture.nativeElement as HTMLElement;
+    http.expectOne({ method: 'GET', url: '/api/personality' }).flush('', { status: 503, statusText: 'Service Unavailable' });
+    await fixture.whenStable();
+
+    expect(text(desk, '.sr-desk__refusal')).toBe('EDI did not answer; its core may be restarting, so try again in a moment.');
+
+    window.dispatchEvent(new Event('focus'));
+    http.expectOne({ method: 'GET', url: '/api/personality' }).flush(personalityFixture());
+    await fixture.whenStable();
+
+    expect(sliders(desk)).toHaveLength(9);
+    expect(desk.querySelector('.sr-desk__refusal')).toBeNull();
+  });
+
   it('lets a captain who has chosen no personality keep Balanced as it stands', async () => {
     const desk = (await opened(personalityFixture({ chosen: false }))).nativeElement as HTMLElement;
 
