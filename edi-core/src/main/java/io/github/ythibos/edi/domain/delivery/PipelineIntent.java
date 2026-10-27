@@ -29,8 +29,9 @@ public record PipelineIntent(String text) {
     }
 
     private static String keyedCommits(WorkKey workKey) {
-        return "The pipeline starts every commit subject it writes, and the pull request's title, with the work key `" + workKey
-                + "`, so a fix summary or a title it asks for is one short line that leaves the key out.";
+        return "The pipeline starts every commit subject it writes, and the pull request's title, with the work key `" + workKey + "`.\n"
+                + "A fix summary or a title it asks for is one short line that never starts with a work key: not `" + workKey
+                + "`, which the pipeline would then write twice, and no other key either.";
     }
 
     private static String section(String heading, String body) {

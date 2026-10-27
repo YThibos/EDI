@@ -164,8 +164,9 @@ class DeliveryClaimsTest {
     @Test
     void composesThePipelineIntentFromTheCaptainsIntentTheSpecAndTheKeyedCommitsWithTheCraftRulesVerbatim() {
         WorkKey key = WorkKey.parse("HRN-3");
-        String commits = "## Commits\n\nThe pipeline starts every commit subject it writes, and the pull request's title, with the work key `HRN-3`,"
-                + " so a fix summary or a title it asks for is one short line that leaves the key out.";
+        String commits = "## Commits\n\nThe pipeline starts every commit subject it writes, and the pull request's title, with the work key `HRN-3`.\n"
+                + "A fix summary or a title it asks for is one short line that never starts with a work key: not `HRN-3`,"
+                + " which the pipeline would then write twice, and no other key either.";
         assertThat(PipelineIntent.of(key, "Fit the lamp.\nAcceptance: it lights.\n", "\nThe switch also dims it.\n", "  Craft rules:\n- Short methods.\n").text())
                 .isEqualTo("## Captain's intent\n\nFit the lamp.\nAcceptance: it lights.\n\n## Spec\n\nThe switch also dims it.\n\n" + commits
                         + "\n\nCraft rules:\n- Short methods.");
