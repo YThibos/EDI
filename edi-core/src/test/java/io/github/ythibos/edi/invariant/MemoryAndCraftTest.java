@@ -125,8 +125,9 @@ class MemoryAndCraftTest {
         }
 
         private static String keyedCommits(String key) {
-            return "## Commits\n\nThe pipeline starts every commit subject it writes, and the pull request's title, with the work key `" + key
-                    + "`, so a fix summary or a title it asks for is one short line that leaves the key out.";
+            return "## Commits\n\nThe pipeline starts every commit subject it writes, and the pull request's title, with the work key `" + key + "`.\n"
+                    + "A fix summary or a title it asks for is one short line that never starts with a work key: not `" + key
+                    + "`, which the pipeline would then write twice, and no other key either.";
         }
     }
 

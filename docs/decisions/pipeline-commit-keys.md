@@ -20,7 +20,7 @@ The entry is keyed by the clone's own remote URL because the pipeline matches ov
 Where two spellings set the same field, the entry under the exact URL wins, because it is the one the pipeline applied to the clone.
 EDI owns those three fields of each repository it launches work on, so a hand edit to them lasts only until the next launch; every other field of the entry stays as it is written, so a field a later no-mistakes version adds to an override survives, and a repository's own `.no-mistakes.yaml` still wins over it.
 `PipelineConfiguration` carries the rules both writers share: it rewrites only one top-level entry, keeps every other line of the file, comments included, replaces the file atomically with its permissions, writes nothing when the entry already holds, never creates the file, and refuses the launch, naming the file, when it cannot read or replace it.
-The pipeline intent ends its task sections with `## Commits`, which tells the pipeline's agents that the key is put in front of every commit subject and the title, so a summary or a title they write is one short line without it (`PipelineIntent.of`).
+The pipeline intent ends its task sections with `## Commits`, which tells the pipeline's agents that the key is put in front of every commit subject and the title, so a summary or a title they write is one short line that never starts with a work key, neither the task's own, which would then appear twice, nor another (`PipelineIntent.of`).
 
 ## Why
 
@@ -42,14 +42,16 @@ The branch pattern comes from the same domain type that names the branches, so a
 - Good: tests use `FakePipeline`, and the test clones' remotes are local paths no forge serves, so no test writes a developer's pipeline configuration.
 - Bad: EDI writes a second entry into another tool's configuration, so a change to `repository_overrides` on a later no-mistakes version needs `CommitKeys` to follow.
 - Bad: a fix the pipeline makes on a branch without a key fails safely instead of committing, which matters only for work the captain runs through the pipeline by hand on such a branch.
-- Bad: the intent can only ask the fix agent for a short summary; a summary that still repeats the key reaches the subject.
+- Bad: the intent can only ask the fix agent for a summary without a key; a summary that still starts with the task's key reaches the subject with the key twice, and one that starts with another key reaches it behind the task's key.
+  The template cannot skip a key the summary already carries, because the pipeline accepts only literal text and bare placeholders in `commit.fix_message` and commits with every git hook switched off ([docs/verification/no-mistakes.md](../verification/no-mistakes.md)), so a subject is keyed exactly once only when EDI writes it itself (EDI-105).
 - Bad: whenever the `repository_overrides` block changes, EDI re-serialises the whole block, so a comment inside it is dropped, including one in another repository's entry.
 
 ## When to revisit
 
-When no-mistakes takes a commit or title format per run, or keys its commits from a work key it is given.
+When no-mistakes takes a commit or title format per run, or keys its commits from a work key it is given, or when EDI makes the pipeline's commits itself (EDI-105).
 
 ## How we got here
 
 - 23/10/2026: a shadow run's fixes were committed as `no-mistakes(test): ...` and `no-mistakes(document): ...`, and earlier subjects on main repeated the key or held a whole report; the captain chose to have EDI write a repository override at every draft-review launch, alongside the pipeline's agent route, and to add the commits line to the intent (EDI-21).
 - 23/10/2026: a review found that replacing the whole entry would delete any other field the captain set in it; the captain chose to have EDI set only its three fields, remove `commit.branch_replacement`, and merge the other spellings' entries under the exact URL, with the entry under the exact URL winning a field both set (EDI-21).
+- 27/10/2026: on PR 46 two fix commits were titled `EDI-49 EDI-49 ...`, because the fix agent began its summary with the key; the captain chose to keep the fix inside EDI, with no change to no-mistakes and no wrapper around its agent, so the intent now says a summary never starts with a work key and the remaining gap waits for EDI's own pipeline (EDI-50, EDI-105).
