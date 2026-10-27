@@ -16,12 +16,14 @@ final class ClaudeCommandLine {
     private static final String CLAUDE_CODE_CONFIGURATION = "CLAUDE_CONFIG_DIR";
     private static final List<String> GIT_COMMAND_SCOPE_SWITCHES = List.of("GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS");
     private static final List<String> GIT_COMMAND_SCOPE_ENTRIES = List.of("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_");
+    private static final String NO_TOOL_INSTALLS_AT_LAUNCH = "MISE_EXEC_AUTO_INSTALL=false";
 
     private ClaudeCommandLine() {
     }
 
-    static List<String> of(String claudeCode, Launch launch, Path settings, String systemPrompt, Set<String> inheritedVariables) {
+    static List<String> of(String claudeCode, String mise, Launch launch, Path settings, String systemPrompt, Set<String> inheritedVariables) {
         List<String> words = new ArrayList<>(withoutInheritedOverrides(inheritedVariables));
+        words.addAll(onTheCopysPinnedToolchain(mise));
         words.add(claudeCode);
         if (!launch.disallowedTools().isEmpty()) {
             words.add("--disallowedTools");
@@ -50,6 +52,10 @@ final class ClaudeCommandLine {
 
     private static boolean isAGitConfigurationEntry(String variable) {
         return GIT_COMMAND_SCOPE_ENTRIES.stream().anyMatch(variable::startsWith);
+    }
+
+    private static List<String> onTheCopysPinnedToolchain(String mise) {
+        return List.of(NO_TOOL_INSTALLS_AT_LAUNCH, mise, "exec", "--");
     }
 
     private static List<String> modelAndEffort(Route route) {

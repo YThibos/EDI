@@ -199,6 +199,7 @@ class NativeRecoveryIT {
         List<String> commandLine = new ArrayList<>(List.of(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
+                "--edi.workers.mise=" + stubMise(),
                 "--edi.pipeline.home=" + home.resolve("no-mistakes"),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
@@ -289,6 +290,12 @@ class NativeRecoveryIT {
     private static String stubClaudeCode() throws IOException {
         try (InputStream script = NativeRecoveryIT.class.getResourceAsStream("/edi-test-claude")) {
             return StandInScripts.installed(home.resolve("edi-test-claude"), new String(script.readAllBytes(), StandardCharsets.UTF_8)).toString();
+        }
+    }
+
+    private static String stubMise() throws IOException {
+        try (InputStream script = NativeRecoveryIT.class.getResourceAsStream("/edi-test-mise")) {
+            return StandInScripts.installed(home.resolve("edi-test-mise"), new String(script.readAllBytes(), StandardCharsets.UTF_8)).toString();
         }
     }
 

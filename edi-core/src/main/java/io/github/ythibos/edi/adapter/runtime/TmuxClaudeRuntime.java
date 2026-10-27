@@ -39,9 +39,10 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final ClaudeTranscript transcripts;
     private final ClaudeSessions sessions;
     private final String claudeCode;
+    private final String mise;
 
     public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, JsonMapper json,
-            @Value("${edi.workers.claude-code:}") String claudeCode) {
+            @Value("${edi.workers.claude-code:}") String claudeCode, @Value("${edi.workers.mise:}") String mise) {
         this.tmux = tmux;
         this.probe = probe;
         this.trust = trust;
@@ -49,6 +50,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.transcripts = new ClaudeTranscript(json);
         this.sessions = sessions;
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
+        this.mise = mise.isBlank() ? Program.MISE.executable() : mise;
     }
 
     @Override
@@ -61,7 +63,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         LocalHooks.refuseHooksIn(launch.worktree(), json);
         trust.trust(launch.projectClone());
         Path settings = WorkerSettingsFile.writtenInto(launch.stateDirectory());
-        List<String> claude = ClaudeCommandLine.of(claudeCode, launch, settings, ClaudeLayer.read(ClaudeLayer.WORKER_SYSTEM_PROMPT),
+        List<String> claude = ClaudeCommandLine.of(claudeCode, mise, launch, settings, ClaudeLayer.read(ClaudeLayer.WORKER_SYSTEM_PROMPT),
                 System.getenv().keySet());
         OpenedWindow opened = tmux.openWindow(launch.worker().task().value(), launch.worktree(), launch.environment(), claude);
         ServerIdentity server = tmux.server();
