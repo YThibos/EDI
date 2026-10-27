@@ -88,7 +88,6 @@ class NativeSmokeIT {
         ProcessBuilder launch = new ProcessBuilder(binary("edi.core.binary").toString(),
                 "--edi.workers.socket=" + WORKER_SOCKET,
                 "--edi.workers.claude-code=" + stubClaudeCode(),
-                "--edi.workers.claude-config=" + Files.createDirectories(home.resolve("claude-config")),
                 "--edi.pipeline.home=" + pipelineHome(),
                 "--edi.console.browser=" + stubBrowser(),
                 "--edi.console.windows-directory=" + home)
@@ -97,6 +96,7 @@ class NativeSmokeIT {
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
+        launch.environment().put("CLAUDE_CONFIG_DIR", Files.createDirectories(home.resolve("claude-config")).toString());
         launch.environment().put("SERVER_PORT", "0");
         core = processes.register(launch.start());
         port = awaitRecordedAddress(home.resolve("state/core.port")).port();

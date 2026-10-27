@@ -2,6 +2,7 @@ package io.github.ythibos.edi.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -10,9 +11,11 @@ import org.junit.jupiter.api.Test;
 import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.FollowMerges.CleanUp;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
+import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
 import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -98,6 +101,22 @@ class ConfirmationTextTest {
     }
 
     @Test
+    void confirmsWhetherARelaunchResumedItsSessionOrStartedAfresh() {
+        UUID lost = UUID.fromString("4d532fb2-0000-4000-8000-000000000001");
+        Worker resumed = relaunchedAs(LaunchKind.RESUME);
+        Worker fresh = relaunchedAs(LaunchKind.FRESH);
+        BranchName branch = BranchName.parse("feature/HRN-3");
+        Path copy = Path.of("/edi/worktrees/harness/lantern");
+
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(resumed, branch, copy, null)))).isEqualTo("Relaunched lantern as lantern#2"
+                + " (implementation, claude-opus-5-5 at high), resuming session " + resumed.session() + ", in /edi/worktrees/harness/lantern.\n");
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, null))))
+                .contains(", with a fresh session and a handover, in /edi/worktrees/harness/lantern.\n");
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, lost)))).contains(", with a fresh session and a handover"
+                + " because session 4d532fb2-0000-4000-8000-000000000001 left no transcript to resume, in /edi/worktrees/harness/lantern.\n");
+    }
+
+    @Test
     void confirmsADeliveryAMergeAndACleanUp() {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         MergeRequestView merged = new MergeRequestView(address, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "1111", "3333", Instant.parse("2026-10-16T10:00:00Z"));
@@ -120,5 +139,11 @@ class ConfirmationTextTest {
                 .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask())
                 .decisionAnswered(Instant.parse("2026-10-15T10:00:00Z"));
         return text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, ticket));
+    }
+
+    private static Worker relaunchedAs(LaunchKind kind) {
+        return Worker.launched(WorkerId.first(LANTERN).next(), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
+                new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@2", 3L),
+                new WorkerLaunch(kind, PresenterFixtures.AT, new BootId("boot")));
     }
 }

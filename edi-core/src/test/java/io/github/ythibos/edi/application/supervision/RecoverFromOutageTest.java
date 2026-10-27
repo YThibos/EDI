@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.supervision.RecoverFromOutage.RouteChange;
 import io.github.ythibos.edi.domain.Refusal;
@@ -64,6 +65,31 @@ class RecoverFromOutageTest {
         assertThat(fresh.firstPrompt()).contains("fresh start after its tmux server changed: read the handover ");
         assertThat(home.dispatches().of(new TaskId("fit-lamp")).orElseThrow().captainsOverride().reason())
                 .isEqualTo("the captain's answer to number 1 on the outage hold list");
+    }
+
+    @Test
+    void resumesAnEntryWhoseSessionKeptItsTranscript() {
+        Launched relaunched = home.recoverFromOutage().answer(2, RecoveryAction.RESUME, null, Actor.PRIMARY);
+
+        Launch resumed = home.runtime().lastLaunch();
+        assertThat(resumed.kind()).isEqualTo(LaunchKind.RESUME);
+        assertThat(resumed.session()).isEqualTo(horn.session());
+        assertThat(relaunched.unresumableSession()).isNull();
+    }
+
+    @Test
+    void startsAnEntryAfreshWithAHandoverWhenItsSessionLeftNoTranscriptToResume() {
+        home.runtime().leaveNoTranscriptOf(horn.session());
+
+        Launched relaunched = home.recoverFromOutage().answer(2, RecoveryAction.RESUME, null, Actor.PRIMARY);
+
+        Launch fresh = home.runtime().lastLaunch();
+        assertThat(fresh.kind()).isEqualTo(LaunchKind.FRESH);
+        assertThat(fresh.session()).isNotEqualTo(horn.session());
+        assertThat(fresh.firstPrompt()).contains("fresh start after its tmux server changed and session " + horn.session()
+                + " left no transcript to resume: read the handover ");
+        assertThat(relaunched.unresumableSession()).isEqualTo(horn.session());
+        assertThat(home.outages().open()).extracting(entry -> entry.task().value()).containsExactly("fit-lamp");
     }
 
     @Test

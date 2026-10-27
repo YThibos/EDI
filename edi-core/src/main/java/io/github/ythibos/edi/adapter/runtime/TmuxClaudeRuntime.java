@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportRuntimeHints;
@@ -36,15 +37,17 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final ClaudeWorkspaceTrust trust;
     private final JsonMapper json;
     private final ClaudeTranscript transcripts;
+    private final ClaudeSessions sessions;
     private final String claudeCode;
 
-    public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, JsonMapper json,
+    public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, JsonMapper json,
             @Value("${edi.workers.claude-code:}") String claudeCode) {
         this.tmux = tmux;
         this.probe = probe;
         this.trust = trust;
         this.json = json;
         this.transcripts = new ClaudeTranscript(json);
+        this.sessions = sessions;
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
     }
 
@@ -97,6 +100,11 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         if (isRunning(window)) {
             tmux.closeWindow(window.windowId());
         }
+    }
+
+    @Override
+    public boolean hasATranscriptOf(UUID session) {
+        return sessions.transcriptOf(session).isPresent();
     }
 
     @Override
