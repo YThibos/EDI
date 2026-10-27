@@ -166,6 +166,7 @@ import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.InboxNotice;
 import io.github.ythibos.edi.application.worker.NoticeFullContexts;
+import io.github.ythibos.edi.application.worker.NoticeHeavyRunsAtOnce;
 import io.github.ythibos.edi.application.worker.NoticeMissedStops;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
@@ -233,6 +234,7 @@ public final class TestHome {
     private WindowsStandIn windowsSide;
     private MeetingCalendar meetingCalendar;
     private BoardListeners boardListeners;
+    private NoticeHeavyRunsAtOnce heavyRunsAtOnce;
 
     private TestHome(EdiHome home, DataSource store, FakeWorkerRuntime runtime, ManualClock clock) {
         this.home = home;
@@ -869,6 +871,13 @@ public final class TestHome {
 
     public NoticeFullContexts noticeFullContexts() {
         return new NoticeFullContexts(workerList(), workers, runtime, events, clock, transaction);
+    }
+
+    public synchronized NoticeHeavyRunsAtOnce noticeHeavyRunsAtOnce() {
+        if (heavyRunsAtOnce == null) {
+            heavyRunsAtOnce = new NoticeHeavyRunsAtOnce(workers, processes, events, clock, transaction);
+        }
+        return heavyRunsAtOnce;
     }
 
     public NoticeMissedStops noticeMissedStops() {

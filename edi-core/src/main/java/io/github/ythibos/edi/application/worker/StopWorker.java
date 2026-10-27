@@ -2,7 +2,6 @@ package io.github.ythibos.edi.application.worker;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.OptionalLong;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -62,8 +61,7 @@ public class StopWorker {
         if (!runtime.isRunning(window)) {
             throw new Refusal(worker.id() + " is not running, so there is nothing to stop.");
         }
-        OptionalLong parent = processes.parentOf(window.panePid());
-        if (parent.isEmpty() || parent.getAsLong() != window.serverPid()) {
+        if (!processes.isStillThePaneOf(window)) {
             throw new Refusal("Process " + window.panePid() + " no longer belongs to " + worker.id()
                     + "'s tmux server, and EDI signals only processes it recorded.");
         }

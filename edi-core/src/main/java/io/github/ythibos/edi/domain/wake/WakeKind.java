@@ -19,6 +19,7 @@ public enum WakeKind {
     LOST_IN_OUTAGE,
     WORKER_STALE,
     BUSY_TOO_LONG,
+    HEAVY_RUNS_AT_ONCE,
     WAIT_ENDED,
     HOLD_DUE,
     DRAFT_MERGED,

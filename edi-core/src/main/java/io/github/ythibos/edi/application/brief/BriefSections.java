@@ -1,10 +1,12 @@
 package io.github.ythibos.edi.application.brief;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.NativeImageInput;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
 import io.github.ythibos.edi.domain.task.TaskKind;
 
@@ -56,16 +58,7 @@ final class BriefSections {
                     + "Write the report to `" + facts.reportPath() + "`; a report never authorises implementation.\n"
                     + researchBoard(facts);
         }
-        return switch (facts.delivery()) {
-            case DRAFT_REVIEW -> draftReview(facts);
-            case LOCAL_BRANCH -> "Commit on `" + facts.dispatch().branch() + "` and push nothing, because the project has no remote.\n"
-                    + "When you report done, EDI fetches the branch into the captain's checkout by a ref-only fetch.";
-            case LOCAL_APPLY -> "Commit on `" + facts.dispatch().branch() + "` and push nothing: "
-                    + "EDI applies the change to the captain's checkout without committing it there.";
-            case REPORT -> "This work is delivered by its report: commit nothing, push nothing, and leave the isolated copy as `origin/" + facts.base()
-                    + "` holds it.\n"
-                    + "Write each change you made and the check that verified it to `" + facts.reportPath() + "`.";
-        };
+        return facts.project().buildsANativeImage() ? nativeBuildRule(facts) + "\n\n" + shipDelivery(facts) : shipDelivery(facts);
     }
 
     static String definitionOfDone(BriefFacts facts) {
@@ -88,6 +81,41 @@ final class BriefSections {
                 + "A decision the board asks is a card you pass with `--card <card.json>`, never one you only draw: the card as `edi decision raise --help`"
                 + " describes it, plus `question`, the `data-lavish-question` of its form, whose answer data is `{question, answer}` with the option's letter.\n"
                 + "EDI raises the card on your task and binds it before the captain sees the board, so his choice there is his word for it.";
+    }
+
+    private static String nativeBuildRule(BriefFacts facts) {
+        return "Run the local native build `" + facts.project().nativeBuild() + "` only when the change can reach the native image: it touches "
+                + whatReachesTheNativeImage() + ".\n"
+                + "Otherwise " + jvmEvidenceOf(facts) + " the local evidence: " + whereTheSkippedNativeBuildIsExplained(facts);
+    }
+
+    private static String whatReachesTheNativeImage() {
+        List<String> inputs = Arrays.stream(NativeImageInput.values()).map(NativeImageInput::words).toList();
+        return String.join(", ", inputs.subList(0, inputs.size() - 1)) + " or " + inputs.getLast();
+    }
+
+    private static String jvmEvidenceOf(BriefFacts facts) {
+        return facts.project().verify() == null ? "the JVM build and its tests are" : "`" + facts.project().verify() + "` is";
+    }
+
+    private static String whereTheSkippedNativeBuildIsExplained(BriefFacts facts) {
+        return switch (facts.delivery()) {
+            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why, and the full optimised native build is left to CI.";
+            case LOCAL_BRANCH, LOCAL_APPLY, REPORT -> "`" + facts.reportPath() + "` says the native build was not needed and why.";
+        };
+    }
+
+    private static String shipDelivery(BriefFacts facts) {
+        return switch (facts.delivery()) {
+            case DRAFT_REVIEW -> draftReview(facts);
+            case LOCAL_BRANCH -> "Commit on `" + facts.dispatch().branch() + "` and push nothing, because the project has no remote.\n"
+                    + "When you report done, EDI fetches the branch into the captain's checkout by a ref-only fetch.";
+            case LOCAL_APPLY -> "Commit on `" + facts.dispatch().branch() + "` and push nothing: "
+                    + "EDI applies the change to the captain's checkout without committing it there.";
+            case REPORT -> "This work is delivered by its report: commit nothing, push nothing, and leave the isolated copy as `origin/" + facts.base()
+                    + "` holds it.\n"
+                    + "Write each change you made and the check that verified it to `" + facts.reportPath() + "`.";
+        };
     }
 
     private static String aiScaffoldingRule(BriefFacts facts) {

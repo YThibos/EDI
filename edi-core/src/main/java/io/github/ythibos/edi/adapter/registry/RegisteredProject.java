@@ -34,6 +34,7 @@ record RegisteredProject(
         String aiScaffolding,
         Integer capacity,
         String verify,
+        String nativeBuild,
         Boolean largeBuilds,
         List<String> shipBriefRules) {
 
@@ -57,7 +58,8 @@ record RegisteredProject(
                 Boolean.TRUE.equals(craftRules),
                 aiScaffolding == null ? AiScaffolding.ASK : AiScaffolding.named(aiScaffolding),
                 capacity,
-                verify == null || verify.isBlank() ? null : verify.strip(),
+                commandOrNone(verify),
+                commandOrNone(nativeBuild),
                 Boolean.TRUE.equals(largeBuilds),
                 Objects.requireNonNullElse(shipBriefRules, List.<String>of()).stream().map(ShipBriefRule::named).toList());
     }
@@ -75,6 +77,10 @@ record RegisteredProject(
             return EnumSet.allOf(BranchKind.class);
         }
         return branchKinds.stream().map(BranchKind::named).collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static String commandOrNone(String command) {
+        return command == null || command.isBlank() ? null : command.strip();
     }
 
     private static Path expanded(String path) {

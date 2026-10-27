@@ -13,7 +13,7 @@ When a worker's conversation fills up with auto-compact off, Claude Code fires n
 
 ## Decision
 
-`SupervisionRound` runs every `edi.supervision.round` (30 seconds), each part guarded so one failing part does not stop the others: overdue steers, missed launches, full contexts, missed stops, judging workers, usage-limit resets ([recovery](recovery.md)), due holds, deferred dispatches, mechanical checks, presence and the calendar ([presence](presence.md)).
+`SupervisionRound` runs every `edi.supervision.round` (30 seconds), each part guarded so one failing part does not stop the others: overdue steers, missed launches, full contexts, missed stops, judging workers, usage-limit resets ([recovery](recovery.md)), due holds, deferred dispatches, mechanical checks, presence, the calendar ([presence](presence.md)) and heavy runs at once ([local-native-builds](local-native-builds.md)).
 Each rule is a use case that tests call directly with a controllable clock.
 `NoticeMissedLaunches` records `WorkerLaunchFailed` once for a worker with no `SessionStart` or `UserPromptSubmit` hook two minutes after launch, with what the pane probe reads.
 `SupervisionRules` derives `WorkerHealth` afresh from the worker row, `WorkerRuntime.check` and the current `BootId`: stopped, failed to launch, finished, dead because the machine restarted, dead because its tmux server is gone or changed or its window closed, parked on a usage limit, starting, busy, idle, or waiting until a declared pause ends.
@@ -73,3 +73,4 @@ When the round's tmux calls show up in its time, Claude Code reports a pending p
 - 26/10/2026: a handed-over task's stored run stayed running after its pipeline finished, so the round keeps reading a handed-over ship's pipeline while its stored run is running (EDI-53).
 - 26/10/2026: the EDI-74 review found that the brief asked for a key and an end that `edi status` never required, so it refuses a status without them (EDI-77).
 - 27/10/2026: a stop the round notices late is dated at the time the transcript shows it, so the measure of a task's active time ends the stretch there ([trackers-and-time-booking](trackers-and-time-booking.md), EDI-54).
+- 27/10/2026: the round began noticing native builds and test runs that several workers run at once ([local-native-builds](local-native-builds.md), EDI-99).

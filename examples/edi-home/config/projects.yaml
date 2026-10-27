@@ -20,6 +20,8 @@ projects:
     tracker: { kind: edi, projectKey: EDI }
     craftRules: true
     aiScaffolding: committed
+    verify: ./mvnw -B verify
+    nativeBuild: ./mvnw -B -Pnative,quick-build verify
   - name: hobby-tool
     clone: ~/.edi/projects/hobby-tool
     captainCheckout: /path/to/checkouts/hobby-tool

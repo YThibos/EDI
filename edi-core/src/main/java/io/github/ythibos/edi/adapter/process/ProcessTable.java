@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 @Component
 public class ProcessTable implements AutoCloseable {
@@ -48,6 +49,11 @@ public class ProcessTable implements AutoCloseable {
         return ProcessHandle.of(pid).flatMap(ProcessHandle::parent).map(parent -> OptionalLong.of(parent.pid())).orElseGet(OptionalLong::empty);
     }
 
+    public boolean isStillThePaneOf(WorkerWindow window) {
+        OptionalLong parent = parentOf(window.panePid());
+        return parent.isPresent() && parent.getAsLong() == window.serverPid();
+    }
+
     public List<Long> workingIn(Path directory) {
         Path inside = realPathOf(directory);
         List<Long> holders = new ArrayList<>();
@@ -59,6 +65,12 @@ public class ProcessTable implements AutoCloseable {
             throw new ProgramFailure("The process table cannot be read: " + unreadable.getMessage(), unreadable);
         }
         return holders;
+    }
+
+    public List<List<String>> argumentsInTree(long pid) {
+        return ProcessHandle.of(pid)
+                .map(root -> Stream.concat(Stream.of(root), root.descendants()).map(ProcessTable::argumentsOf).toList())
+                .orElseGet(List::of);
     }
 
     public void stopTree(long pid, Duration grace) {
@@ -105,6 +117,10 @@ public class ProcessTable implements AutoCloseable {
         } catch (IOException | SecurityException | UnsupportedOperationException unreadable) {
             return Optional.empty();
         }
+    }
+
+    private static List<String> argumentsOf(ProcessHandle process) {
+        return process.info().arguments().map(List::of).orElseGet(List::of);
     }
 
     private static void killWhatOutlives(List<ProcessHandle> tree, Duration grace) {

@@ -58,6 +58,15 @@ class WakeDigestTextTest {
     }
 
     @Test
+    void tellsThePrimaryToWarnTheCaptainOfHeavyRunsAtOnce() {
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.HEAVY_RUNS_AT_ONCE, LAMP, WorkerId.first(LAMP),
+                "a native build while tune-horn#1 runs a test run", null))), 0, 2, 0, PRESENT);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp#1 started a native build while tune-horn#1 runs a test run; nothing caps them, so each runs"
+                + " slower until they finish: tell the captain, whose report warns while they overlap.\n");
+    }
+
+    @Test
     void tellsThePrimaryThatEdiWokeAWorkerWhoseStopItMissed() {
         Wake missed = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, true), Actor.CORE).orElseThrow();
         Wake untyped = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, false), Actor.CORE).orElseThrow();

@@ -41,6 +41,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.HeavyRunsAtOnce;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeTyped;
@@ -253,6 +254,8 @@ public class EventLog {
             case WorkerDied died -> payload.put("worker", died.worker().toString()).put("cause", died.cause().word());
             case WorkerStale stale -> payload.put("worker", stale.worker().toString()).put("quietSince", Columns.text(stale.quietSince()));
             case WorkerBusyTooLong busy -> payload.put("worker", busy.worker().toString()).put("busySince", Columns.text(busy.busySince()));
+            case HeavyRunsAtOnce atOnce -> withEach(payload.put("worker", atOnce.worker().toString()).put("run", atOnce.run().words()), "beside",
+                    atOnce.beside().stream().map(other -> other.worker() + " " + other.run().words()).toList());
             case DeclaredWaitEnded ended -> withStatus(payload.put("worker", ended.worker().toString()), ended.pause());
             case LostInOutage lost -> payload.put("worker", lost.worker().toString()).put("number", lost.number()).put("cause", lost.cause().word());
             case RecoveryChosen chosen -> payload.put("number", chosen.number()).put("action", chosen.action().word());

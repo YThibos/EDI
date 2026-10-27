@@ -62,6 +62,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case LOST_IN_OUTAGE -> who + " is on the outage hold list as number " + wake.detail() + "; edi recover shows the list.";
             case WORKER_STALE -> who + " has been idle without a declared wait since " + moments.minute(wake.moment()) + "; look once, then steer or mark it.";
             case BUSY_TOO_LONG -> who + " has been busy since " + moments.minute(wake.moment()) + ", past the three-hour ceiling.";
+            case HEAVY_RUNS_AT_ONCE -> who + " started " + wake.detail() + "; nothing caps them, so each runs slower until they finish:"
+                    + " tell the captain, whose report warns while they overlap.";
             case WAIT_ENDED -> who + "'s declared wait has ended; verify what it waited for: " + wake.detail();
             case HOLD_DUE -> wake.task() + ": its hold until " + wake.detail() + " has come due.";
             case DRAFT_MERGED -> wake.task() + ": the captain merged " + wake.detail() + "; EDI refreshes the clone and cleans up.";

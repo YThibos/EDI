@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.testing.BriefFixtures;
 
 class WorkerBriefsTest {
@@ -36,6 +37,30 @@ class WorkerBriefsTest {
 
         assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", true))).contains("Before you report done, " + worked);
         assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).doesNotContain("worked:");
+    }
+
+    @Test
+    void asksForTheLocalNativeBuildOnlyWhenTheChangeCanReachTheNativeImage() {
+        String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage(DeliveryMode.DRAFT_REVIEW));
+
+        assertThat(brief).contains("## Validation and delivery\n\n"
+                + "Run the local native build `./mvnw -B -Pnative,quick-build verify` only when the change can reach the native image: it touches"
+                + " reflection or serialisation-bound types, resources the image reads, Spring configuration, native-image configuration, dependencies"
+                + " or build files.\n"
+                + "Otherwise `./mvnw -B verify` is the local evidence: the merge request body says the native build was not needed and why,"
+                + " and the full optimised native build is left to CI.\n\n"
+                + "Commit on `feature/HRN-3`");
+        assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).doesNotContain("native");
+    }
+
+    @Test
+    void asksForTheReasonTheNativeBuildWasSkippedInTheReportWhenNoMergeRequestCarriesIt() {
+        String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage(DeliveryMode.REPORT));
+
+        assertThat(brief).contains("Otherwise `./mvnw -B verify` is the local evidence:"
+                + " `/home/developer/.edi/data/tasks/fit-lamp/report.md` says the native build was not needed and why.\n\n"
+                + "This work is delivered by its report")
+                .doesNotContain("merge request body", "left to CI");
     }
 
     @Test

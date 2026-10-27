@@ -14,11 +14,13 @@ mise install
 ./mvnw verify               # the JVM build and every test
 ./mvnw test -Pfast          # domain, application and architecture tests only
 ./mvnw -Pnative verify      # both native executables, then the native smoke test
+./mvnw -Pnative,quick-build verify   # the same in GraalVM's quick-build mode, the local native check
 ```
 
 `./mvnw verify` runs the whole invariant catalogue; an acceptance test a later slice owns would be reported as skipped ([invariant-catalogue](decisions/invariant-catalogue.md)).
 The suite runs under both machine profiles ([machine-and-person-specifics](decisions/machine-and-person-specifics.md)), Claude Code is replaced by a stand-in in the tests ([native-smoke-test](decisions/native-smoke-test.md)), and tests stop every process they start ([test-isolation](decisions/test-isolation.md)).
 The native smoke test runs the built executables end to end ([native-smoke-test](decisions/native-smoke-test.md)).
+A local native check runs in quick-build mode, and only when the change can reach the native image; CI and the install build the optimised image ([local-native-builds](decisions/local-native-builds.md)).
 
 ## Continuous integration
 
