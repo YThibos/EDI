@@ -14,12 +14,14 @@ import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -105,7 +107,7 @@ class MissedStopTest {
         Worker lamp = busyWorker(home);
         UsageLimit limit = new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(2)));
 
-        home.runtime().transcriptEndsOn(limit);
+        home.runtime().transcriptEndsOn(new LimitStop(home.clock().now(), limit));
         assertThat(home.noticeMissedStops().notice()).extracting(Worker::id).containsExactly(lamp.id());
         assertThat(home.noticeMissedStops().notice()).isEmpty();
 
@@ -117,6 +119,20 @@ class MissedStopTest {
         home.clock().advance(Duration.ofHours(2));
         assertThat(home.resumeAfterUsageLimits().resumeTheNextOneDue()).map(Worker::id).contains(lamp.id());
         assertThat(home.eventTypesOf(lamp.id().task())).containsOnlyOnce("LimitResumeTyped");
+    }
+
+    @Test
+    void recordsAMissedUsageLimitAtTheTimeTheTranscriptShows() throws IOException {
+        TestHome home = homeWithAHarness();
+        Worker lamp = busyWorker(home);
+        Instant stopped = home.clock().now().plus(Duration.ofMinutes(30));
+        home.runtime().transcriptEndsOn(new LimitStop(stopped, new UsageLimit("session limit", stopped.plus(Duration.ofHours(4)))));
+        home.clock().advance(Duration.ofHours(2));
+
+        home.noticeMissedStops().notice();
+
+        assertThat(home.events().ofTask(lamp.id().task())).filteredOn(event -> event.isA(UsageLimitReached.class))
+                .extracting(LoggedEvent::at).containsExactly(stopped);
     }
 
     @Test
@@ -142,7 +158,7 @@ class MissedStopTest {
         TestHome home = homeWithAHarness();
         Worker lamp = busyWorker(home);
         UsageLimit limit = new UsageLimit("session limit", home.clock().now().plus(Duration.ofHours(2)));
-        home.runtime().transcriptEndsOn(limit);
+        home.runtime().transcriptEndsOn(new LimitStop(home.clock().now(), limit));
 
         home.noticeMissedStops().notice();
         home.clock().advance(Duration.ofSeconds(1));

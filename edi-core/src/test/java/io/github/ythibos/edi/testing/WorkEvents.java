@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.testing;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -62,6 +63,13 @@ public final class WorkEvents {
     public WorkEvents reachedItsUsageLimitUntil(Duration reset) {
         WorkerId worker = WorkerId.first(task);
         return recorded(new UsageLimitReached(task, worker, new UsageLimit("session limit", home.clock().now().plus(reset))), Actor.worker(worker));
+    }
+
+    public WorkEvents reachedItsUsageLimitUnnoticedFor(Duration unnoticed) {
+        WorkerId worker = WorkerId.first(task);
+        Instant stopped = home.clock().now().minus(unnoticed);
+        home.events().record(new UsageLimitReached(task, worker, new UsageLimit("session limit", stopped.plus(Duration.ofHours(4)))), Actor.CORE, stopped);
+        return this;
     }
 
     public WorkEvents stoppedOnAnError() {

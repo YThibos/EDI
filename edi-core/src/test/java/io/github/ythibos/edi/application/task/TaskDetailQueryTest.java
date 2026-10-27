@@ -134,6 +134,17 @@ class TaskDetailQueryTest {
     }
 
     @Test
+    void endsTheStretchWhenAUsageLimitStoppedTheWorkerThatEdiNoticedLate() {
+        WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/HRN-40")
+                .reported(StatusState.WORKING, null, "HRN-40 set-up done")
+                .after(Duration.ofHours(2))
+                .reachedItsUsageLimitUnnoticedFor(Duration.ofMinutes(90));
+
+        assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked())
+                .isEqualTo(new WorkedTime(Duration.ofMinutes(30), Duration.ofHours(2)));
+    }
+
+    @Test
     void measuresNothingForATaskNotYetDispatched() {
         assertThat(home.taskDetail().detail(TaskReference.parse("fix-lamps")).worked()).isNull();
     }

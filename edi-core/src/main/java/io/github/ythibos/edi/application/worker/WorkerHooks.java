@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -91,7 +92,8 @@ public class WorkerHooks {
 
     public HookAnswer stopFailed(WorkerId id, String error, String transcript) {
         Worker stopped = transaction.execute(_ -> WorkerLookup.serving(workers, id));
-        Optional<UsageLimit> limit = runtime.usageLimitStopIn(transcript == null ? stopped.transcript() : transcript, stopped.launchedAt());
+        Optional<UsageLimit> limit = runtime.usageLimitStopIn(transcript == null ? stopped.transcript() : transcript, stopped.launchedAt())
+                .map(LimitStop::limit);
         transaction.executeWithoutResult(_ -> {
             Instant now = clock.now();
             Worker worker = WorkerLookup.serving(workers, id);
