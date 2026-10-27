@@ -128,6 +128,30 @@ class ResearchBeforeImplementationTest {
     }
 
     @Test
+    void leavesTheShipUntouchedWhenOnlyItsResearchScoutsBriefRunsPastItsLength() throws IOException {
+        home.registering("""
+                projects:
+                  - name: harness
+                    tracker: { kind: edi, projectKey: HRN }
+                    base: main
+                    delivery: local-branch
+                """);
+        String spec = "Build instruction.\n".repeat(41).strip();
+
+        assertThatThrownBy(() -> dispatch("fit-lamp", "implementation-unplanned", spec, false)).isInstanceOf(Refusal.class)
+                .hasMessageContaining("its longest section is Spec");
+
+        assertThat(home.tasks().contains(PLAN)).isFalse();
+        assertThat(home.tasks().get(LAMP).intake().blockedBy()).isEmpty();
+        assertThat(home.dispatches().of(LAMP)).isEmpty();
+        assertThat(home.unplannedShips().of(LAMP)).isEmpty();
+        assertThat(home.eventTypesOf(LAMP)).isEmpty();
+        home.writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"));
+        assertThat(dispatch("fit-lamp", "implementation-unplanned", spec, false).launched().worker().category())
+                .isEqualTo(CategoryId.IMPLEMENTATION_UNPLANNED);
+    }
+
+    @Test
     void leavesTheEdiProjectOutOfThePilot() {
         home.storing(List.of(WorkerFixtures.queuedShip("tune-core", "EDI", "EDI-20")));
 
