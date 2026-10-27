@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +23,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
@@ -31,7 +31,6 @@ import io.github.ythibos.edi.testing.TestProcesses;
 class HelloEdiTest {
 
     private static final Path REPOSITORY = Path.of(System.getProperty("edi.repository.root", "..")).toAbsolutePath().normalize();
-    private static final Duration PATIENCE = Duration.ofSeconds(20);
     private static final String EDI_NOTING_ITS_CALLS = """
             #!/bin/bash
             echo "edi $1 in ${PWD}" >> "${HOME}/calls"
@@ -226,9 +225,9 @@ class HelloEdiTest {
         Process helloedi = processes.register(launch.start());
         helloedi.getOutputStream().close();
         String output = new String(helloedi.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        if (!helloedi.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+        if (!helloedi.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             helloedi.destroyForcibly();
-            throw new IOException("helloedi did not finish within " + PATIENCE.toSeconds() + " seconds");
+            throw new IOException("helloedi did not finish within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds");
         }
         return new Launch(helloedi.exitValue(), output, callsToEdi());
     }

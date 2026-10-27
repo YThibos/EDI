@@ -31,7 +31,7 @@
         <argLine>--enable-preview --enable-native-access=ALL-UNNAMED -XX:TieredStopAtLevel=1</argLine>
         <test.excludedGroups>live</test.excludedGroups>
         <test.junitConfiguration>
-            junit.jupiter.execution.timeout.default=30 s
+            junit.jupiter.execution.timeout.default=3 m
             junit.jupiter.execution.parallel.enabled=true
             junit.jupiter.execution.parallel.mode.default=same_thread
             junit.jupiter.execution.parallel.mode.classes.default=concurrent

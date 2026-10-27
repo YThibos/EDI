@@ -11,7 +11,6 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,6 +50,7 @@ import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Intakes;
+import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 
 @Tag("adapter")
@@ -61,7 +61,6 @@ class ConsoleApiTest {
     private static final String TEXT = "text/plain";
     private static final String JSON = "application/json";
     private static final String CONSOLE_HEADER = "X-EDI-Console";
-    private static final Duration STREAM_PATIENCE = Duration.ofSeconds(10);
 
     @TempDir
     private static Path home;
@@ -254,14 +253,14 @@ class ConsoleApiTest {
         HttpClient http = HttpClient.newHttpClient();
         try {
             HttpResponse<Stream<String>> stream = http.sendAsync(withTheCookie("/api/stream", cookie, "text/event-stream").GET().build(),
-                    BodyHandlers.ofLines()).get(STREAM_PATIENCE.toSeconds(), TimeUnit.SECONDS);
+                    BodyHandlers.ofLines()).get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
             CompletableFuture<Optional<String>> firstSignal = CompletableFuture.supplyAsync(
                     () -> stream.body().filter(line -> line.startsWith("event:")).findFirst());
 
             post(withTheHomeToken("/api/tasks", TEXT), "{\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Raise the signal\"}");
 
             assertThat(stream.statusCode()).isEqualTo(200);
-            assertThat(firstSignal.get(STREAM_PATIENCE.toSeconds(), TimeUnit.SECONDS)).contains("event:fleet");
+            assertThat(firstSignal.get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)).contains("event:fleet");
         } finally {
             http.shutdownNow();
         }

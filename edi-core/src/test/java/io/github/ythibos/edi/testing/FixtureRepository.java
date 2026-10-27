@@ -12,7 +12,6 @@ import java.util.stream.Stream;
 public final class FixtureRepository {
 
     private static final String DEFAULT_IDENTITY = "Fixture Author <fixture@example.org>";
-    private static final long PATIENCE_SECONDS = 20;
     private static final String WITHOUT_BACKGROUND_MAINTENANCE = "maintenance.auto=false";
 
     private final Path root;
@@ -127,7 +126,7 @@ public final class FixtureRepository {
 
     private static void awaitSuccess(Process process, String[] arguments, String output) throws IOException {
         try {
-            if (!process.waitFor(PATIENCE_SECONDS, TimeUnit.SECONDS)) {
+            if (!process.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 throw new IOException("git " + String.join(" ", arguments) + " did not finish");
             }

@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.testing;
 
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -13,8 +12,6 @@ import io.github.ythibos.edi.application.port.ResearchBoardHost;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
 
 public final class FakeBoardHost implements ResearchBoardHost {
-
-    private static final Duration PATIENCE = Duration.ofSeconds(10);
 
     private final Deque<BoardFeedback> rounds = new ArrayDeque<>();
     private final List<String> listeners = new ArrayList<>();
@@ -57,14 +54,14 @@ public final class FakeBoardHost implements ResearchBoardHost {
     }
 
     public void awaitStopOfTheHeldPoll() throws InterruptedException {
-        if (!stopped.await(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
-            throw new AssertionError("The held poll was not stopped within " + PATIENCE.toSeconds() + " seconds.");
+        if (!stopped.await(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
+            throw new AssertionError("The held poll was not stopped within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds.");
         }
     }
 
     public static void await(CountDownLatch polls) throws InterruptedException {
-        if (!polls.await(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
-            throw new AssertionError("The board host was not polled as expected within " + PATIENCE.toSeconds() + " seconds.");
+        if (!polls.await(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
+            throw new AssertionError("The board host was not polled as expected within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds.");
         }
     }
 

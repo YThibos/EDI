@@ -5,12 +5,10 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public final class StandInScripts {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final String WRITE_AND_MARK_EXECUTABLE = "cat > \"$1\" && chmod 755 \"$1\"";
 
     private StandInScripts() {
@@ -28,9 +26,9 @@ public final class StandInScripts {
 
     private static void awaitWritten(Process writer, Path script) throws IOException {
         try {
-            if (!writer.waitFor(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
+            if (!writer.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
                 writer.destroyForcibly();
-                throw new IOException(script + " was not written within " + PATIENCE.toSeconds() + " seconds.");
+                throw new IOException(script + " was not written within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds.");
             }
         } catch (InterruptedException interrupted) {
             writer.destroyForcibly();
