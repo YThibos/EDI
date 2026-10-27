@@ -27,11 +27,13 @@ import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
 import io.github.ythibos.edi.domain.primary.Prompt;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.primary.TurnCircumstances;
 import io.github.ythibos.edi.domain.primary.TurnEnd;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 
 @Service
 public class PrimaryHooks {
@@ -66,17 +68,17 @@ public class PrimaryHooks {
         this.transaction = transaction;
     }
 
-    public SessionStart sessionStarted(UUID id, Long claudePid, boolean launched) {
+    public SessionStart sessionStarted(UUID id, Long claudePid, SessionSource source) {
         SessionProcess process = claudePid == null ? null : processes.identify(claudePid).orElse(null);
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Optional<PrimarySession> known = sessions.get(id);
-            PrimarySession session = known.map(earlier -> earlier.restarted(process)).orElseGet(() -> PrimarySession.started(id, process, now));
+            PrimarySession session = known.map(earlier -> earlier.restarted(process, source, now)).orElseGet(() -> PrimarySession.started(id, process, now));
             sessions.save(session);
             if (roles.role().isVacant()) {
                 claim(session, now);
             }
-            return new SessionStart(launched, known.isEmpty(), roles.role().standingOf(id));
+            return new SessionStart(source.isALaunch(), known.isEmpty(), roles.role().standingOf(id));
         });
     }
 
@@ -101,8 +103,9 @@ public class PrimaryHooks {
     }
 
     public HookAnswer stopFailed(UUID id, String transcript) {
-        Optional<PrimarySession> stopped = transaction.execute(_ -> sessions.get(id));
+        Optional<PrimarySession> stopped = transaction.execute(_ -> endTheFailedTurn(id));
         stopped.flatMap(session -> runtime.usageLimitStopIn(transcript, session.startedAt()))
+                .map(LimitStop::limit)
                 .ifPresent(limit -> transaction.executeWithoutResult(_ -> sessions.get(id)
                         .ifPresent(session -> sessions.save(session.stoppedOn(limit, clock.now())))));
         return HookAnswer.PROCEED;
@@ -135,20 +138,27 @@ public class PrimaryHooks {
 
     private HookAnswer answeredStop(PrimarySession session, List<BackgroundJob> backgroundJobs) {
         boolean supervises = roles.role().standingOf(session.id()) == Standing.PRIMARY;
-        Optional<String> blocked = supervises ? blockingReason(session.turn(), backgroundJobs) : Optional.empty();
+        boolean waitIsLive = BackgroundJob.anyWaitsForEdi(backgroundJobs);
+        Optional<String> blocked = supervises ? blockingReason(session.turn(), waitIsLive) : Optional.empty();
         if (blocked.isPresent()) {
             sessions.save(session.stopBlocked());
             return HookAnswer.blockTheStop(blocked.get());
         }
-        sessions.save(session.turnEnded());
+        sessions.save(session.turnEnded(clock.now(), waitIsLive));
         return HookAnswer.PROCEED;
     }
 
-    private Optional<String> blockingReason(PrimaryTurn turn, List<BackgroundJob> backgroundJobs) {
+    private Optional<String> blockingReason(PrimaryTurn turn, boolean waitIsLive) {
         if (turn == null) {
             return Optional.empty();
         }
         return TurnEnd.blockingReason(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), presenceNow.current().keepsTheChatQuiet(),
-                !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), BackgroundJob.anyWaitsForEdi(backgroundJobs)));
+                !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), waitIsLive));
+    }
+
+    private Optional<PrimarySession> endTheFailedTurn(UUID id) {
+        Optional<PrimarySession> failed = sessions.get(id).map(session -> session.turnFailed(clock.now()));
+        failed.ifPresent(sessions::save);
+        return failed;
     }
 }

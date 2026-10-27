@@ -12,10 +12,10 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
-import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
@@ -38,7 +38,7 @@ public interface WorkerRuntime {
 
     void close(WorkerWindow window);
 
-    Optional<UsageLimit> usageLimitStopIn(String transcript, Instant since);
+    Optional<LimitStop> usageLimitStopIn(String transcript, Instant since);
 
     Optional<Instant> contextLimitStopIn(String transcript, Instant since);
 

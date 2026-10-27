@@ -38,6 +38,7 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
@@ -255,7 +256,7 @@ class DispatchAndEffortTest {
 
     private static CallingSession primarySession(TestHome home) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         return new CallingSession(session);
     }
 

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.worker.ErrorStop;
+import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import tools.jackson.databind.json.JsonMapper;
@@ -20,6 +21,7 @@ class ClaudeTranscriptTest {
 
     private static final Instant LAUNCHED = Instant.parse("2026-10-16T09:00:00Z");
     private static final Instant RESET = Instant.ofEpochSecond(1792160400);
+    private static final Instant LIMIT_HIT = Instant.parse("2026-10-16T10:15:00Z");
 
     @TempDir
     private Path directory;
@@ -27,12 +29,15 @@ class ClaudeTranscriptTest {
     private final ClaudeTranscript transcripts = new ClaudeTranscript(new JsonMapper());
 
     @Test
-    void readsTheUsageLimitASessionStoppedOnAndWhenItResets() throws IOException {
-        assertThat(transcripts.usageLimitStop(fixture("session-limit.jsonl"), LAUNCHED)).contains(new UsageLimit("session limit", RESET));
-        assertThat(transcripts.usageLimitStop(fixture("session-limit-error-params.jsonl"), LAUNCHED)).contains(new UsageLimit("session limit", RESET));
+    void readsTheUsageLimitASessionStoppedOnWhenItStoppedAndWhenItResets() throws IOException {
+        assertThat(transcripts.usageLimitStop(fixture("session-limit.jsonl"), LAUNCHED))
+                .contains(new LimitStop(LIMIT_HIT, new UsageLimit("session limit", RESET)));
+        assertThat(transcripts.usageLimitStop(fixture("session-limit-error-params.jsonl"), LAUNCHED))
+                .contains(new LimitStop(LIMIT_HIT, new UsageLimit("session limit", RESET)));
         assertThat(transcripts.usageLimitStop(fixture("weekly-limit.jsonl"), LAUNCHED))
-                .contains(new UsageLimit("weekly limit", Instant.ofEpochSecond(1792360800)));
-        assertThat(transcripts.usageLimitStop(fixture("spend-limit.jsonl"), LAUNCHED)).contains(new UsageLimit("monthly spend limit", null));
+                .contains(new LimitStop(Instant.parse("2026-10-16T11:00:00Z"), new UsageLimit("weekly limit", Instant.ofEpochSecond(1792360800))));
+        assertThat(transcripts.usageLimitStop(fixture("spend-limit.jsonl"), LAUNCHED))
+                .contains(new LimitStop(Instant.parse("2026-10-16T11:00:00Z"), new UsageLimit("monthly spend limit", null)));
     }
 
     @Test
@@ -99,7 +104,7 @@ class ClaudeTranscriptTest {
         Files.writeString(transcript, filler.repeat(400) + Files.readString(fixture("session-limit.jsonl")));
 
         assertThat(Files.size(transcript)).isGreaterThan(256 * 1024);
-        assertThat(transcripts.usageLimitStop(transcript, LAUNCHED)).contains(new UsageLimit("session limit", RESET));
+        assertThat(transcripts.usageLimitStop(transcript, LAUNCHED)).contains(new LimitStop(LIMIT_HIT, new UsageLimit("session limit", RESET)));
     }
 
     @Test

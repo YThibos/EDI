@@ -27,6 +27,7 @@ Each session starts from a digest the core rebuilds from the store ([primary-sta
 
 [claude/primary/settings.json](../claude/primary/settings.json) also runs `edi statusline` as the session's status line, after every update and once a minute ([primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 It shows the model and effort, the context used, the session tokens with the cached and uncached split, the 5-hour and weekly limits with their resets, the branch of the working directory and the cache hit ratio.
+While work is in flight and no `edi wait` is live, it ends with "Wait: none" in dark red; `edi health` says the same in words.
 
 ## Workers
 

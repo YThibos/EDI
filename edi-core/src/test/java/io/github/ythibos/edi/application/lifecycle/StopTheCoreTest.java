@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
@@ -93,7 +94,7 @@ class StopTheCoreTest {
 
     private CallingSession session(String typed) {
         UUID session = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(session, null, true);
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(session, typed);
         return new CallingSession(session);
     }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.statusline.StatusLine;
 import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
+import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.domain.statusline.ClaudeSessionStatus;
 import io.github.ythibos.edi.domain.statusline.SessionTokens;
 import io.github.ythibos.edi.domain.statusline.UsageLimit;
@@ -49,7 +50,7 @@ class StatusLineText implements TextPresenter<StatusLine> {
                 field("5-hour", limit(session.fiveHourLimit())),
                 field("Week", limit(session.weeklyLimit())),
                 field("Branch", branch(line.branch())),
-                field("Cache", cacheHitRatio(session.tokens()))) + "\n";
+                field("Cache", cacheHitRatio(session.tokens()))) + missingWaitMark(line.primaryWait()) + "\n";
     }
 
     private static String modelAndEffort(ClaudeSessionStatus session) {
@@ -100,5 +101,13 @@ class StatusLineText implements TextPresenter<StatusLine> {
     private static String cacheHitRatio(SessionTokens tokens) {
         OptionalInt ratio = tokens.cacheHitRatio();
         return ratio.isPresent() ? Shade.theOtherWay(ratio.getAsInt()).paint(ratio.getAsInt() + "%") : ABSENT;
+    }
+
+    private static String missingWaitMark(PrimaryWait wait) {
+        return wait.needsAWait() ? SEPARATOR + field("Wait", noWaitWithWorkInFlight(wait.tasksInFlight())) : "";
+    }
+
+    private static String noWaitWithWorkInFlight(int tasksInFlight) {
+        return Shade.DARK_RED.paint("none") + " " + SECONDARY.paint("(" + tasksInFlight + " in flight)");
     }
 }
