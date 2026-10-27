@@ -13,7 +13,9 @@ export class ConsoleHeader {
   readonly zone = input<string | null>(null);
   readonly machine = input<string | null>(null);
   readonly presence = input<PresenceShown | null>(null);
+  readonly personalityOpen = input(false);
   readonly presenceChosen = output<PresenceChoice>();
+  readonly personalityToggled = output<void>();
 
   protected readonly day = computed(() => shipDay(this.generated() ?? '', this.zone() ?? ''));
   protected readonly time = computed(() => shipTime(this.generated() ?? '-', this.zone() ?? ''));

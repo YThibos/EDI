@@ -20,6 +20,8 @@ At formality 8-10 the word opens the message or a later sentence; at 0-7 it may 
 Bad news runs on a fixed rail, not a setting: `Personality.forBadNews()` sets humour and enthusiasm to 0, flavour to at most 3, directness to at least 7 and verbosity to at least 3.
 The session-start digest ([primary-startup-context](primary-startup-context.md)) and `edi personality` print the personality line, the address line and the bad-news line from these domain rules (`PersonalityText`), so the primary has its character from session start.
 `/personality` is the `personality` skill, which runs `edi personality` with a preset or scales and levels (`PersonalityCommand`, `ChangePersonality`, `PersonalityController`); the core is the one writer of the section, rewrites only it and keeps the rest of the file as written, and every change is kept: there is no change for one session only.
+The console's sitrep page offers the same change: the header's Personality latch opens `PersonalityDesk`, the Balanced, Plain and Demo presets above nine sliders from 0 to 10, which reads `GET /api/personality` as a `PersonalityView` (the address word, whether a personality is chosen, whether a demo holds, the captain's own levels and the presets) and keeps the levels through `ChangePersonality`, the path `edi personality` takes; `PersonalityController` admits the captain's console session there as it admits the primary, and serves the same path as text to the command.
+Beside the sliders a sample message (`sample-message.ts`) tells the EDI-25 board's invented good or bad news at the chosen levels, restating the bad-news rail and the address-word curve for the sample only, and names each level the rail moves.
 The `edi-personality` skill beside `edi-voice` holds what each level means, the guard rails and the presets, and `edi-voice` keeps the register and the translation of internal labels ([captain-facing-voice](captain-facing-voice.md)).
 The anchor's Character section names the scales and the honesty no scale touches, and its voice rules defer to the personality.
 The captain report, boards, decision cards, worker statuses and everything others read carry no personality, which `ArchitectureRulesTest` holds; notifications stay plain, and the console greeting keeps the address word.
@@ -36,6 +38,8 @@ The repository keeps the meaning of each level and no captain's numbers, which l
 - A curve that reaches every statement at formality 10 - it would bring back the repetition the captain named.
 - A `/personality ... for now` change that lasts one session - the captain chose to keep every change.
 - Bad news as a setting - the captain chose a fixed rail.
+- The personality in the sitrep document - `ArchitectureRulesTest` keeps the personality packages out of everything others read, the sitrep among them, and the desk needs the levels only while it is open.
+- The sample message composed in the core - the sliders would wait on a request at every step, for a sample that carries no rule of its own.
 - An output style, or a `CLAUDE.md` in the EDI home - the captain ruled both out; the anchor and the skills are the primary's only instructions.
 - A new port for the personal configuration - application services already read `PersonalConfiguration`, so the six ports stay six.
 
@@ -45,6 +49,7 @@ The repository keeps the meaning of each level and no captain's numbers, which l
 - Good: honesty, the bad-news rail and the plain artefacts hold at every level.
 - Bad: nine scales are a lot to tune; the presets and the samples in `edi-personality` carry a new captain until they choose.
 - Bad: the personality is per machine, like the rest of the EDI home, so a captain with two machines sets it on each.
+- Bad: the console's sample restates the bad-news rail and the address-word curve, so a change to either in `Personality` or `Addressing` is made in `sample-message.ts` too.
 
 ## When to revisit
 
@@ -53,3 +58,4 @@ When the captain asks to collapse scales, a new preset ships, or the anchor near
 ## How we got here
 
 - 23/10/2026: scout EDI-25 settled the scales, the address-word curve and the bad-news rail with the captain over three board rounds, and EDI-31 replaced the fixed voice with them.
+- 27/10/2026: the console's sitrep page gained the personality desk, modelled on the EDI-25 board's mixing desk (EDI-98).

@@ -20,6 +20,7 @@
         } @else {
           <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo')">Demo</button>
         }
+        <button type="button" class="sr-latch" [attr.aria-expanded]="personalityOpen()" (click)="personalityToggled.emit()">Personality</button>
       </span>
     }
     <span class="sr-clock">

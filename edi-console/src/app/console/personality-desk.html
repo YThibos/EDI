@@ -1,0 +1,70 @@
+<section class="sr-section" aria-labelledby="sr-personality-sign">
+  <div class="sr-section__head">
+    <h2 class="sr-sign" id="sr-personality-sign">Personality</h2>
+    <span class="sr-sub">every change is kept, as with /personality</span>
+  </div>
+  <form class="sr-panel sr-desk" (submit)="keep($event)">
+    @if (draft(); as draft) {
+      <div class="sr-desk__grid">
+        <div class="sr-desk__levels">
+          <div class="sr-chips" role="group" aria-label="Presets">
+            @for (preset of kept()?.presets; track preset.name) {
+              <button type="button" class="sr-chip" [attr.aria-pressed]="isChosen(preset)" (click)="choose(preset)">{{ preset.name }}</button>
+            }
+          </div>
+          <div class="sr-sliders">
+            @for (entry of scales; track entry.scale) {
+              <div class="sr-slider" [class.sr-slider--railed]="isRailed(entry.scale)">
+                <label class="sr-slider__name" [for]="'sr-scale-' + entry.scale">{{ entry.name }}</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  [id]="'sr-scale-' + entry.scale"
+                  [value]="draft[entry.scale]"
+                  [style.--level]="draft[entry.scale] / 10"
+                  (input)="slide(entry.scale, $any($event.target).value)"
+                />
+                <output class="sr-slider__level" [attr.for]="'sr-scale-' + entry.scale">{{ draft[entry.scale] }}</output>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="sr-desk__preview">
+          <div class="sr-chips" role="group" aria-label="Which news">
+            <button type="button" class="sr-chip" [attr.aria-pressed]="news() === 'good'" (click)="news.set('good')">Good news</button>
+            <button type="button" class="sr-chip" [attr.aria-pressed]="news() === 'bad'" (click)="news.set('bad')">Bad news</button>
+          </div>
+          <p class="sr-bubble" [class.sr-bubble--bad]="news() === 'bad'" aria-live="polite">
+            <span class="sr-bubble__who">EDI · {{ news() }} news</span>{{ sample() }}
+          </p>
+          @if (railWords(); as words) {
+            <p class="sr-desk__rails">{{ words }}</p>
+          }
+          <p class="sr-desk__note">A sample of how EDI words its news at these levels; the news and the link are invented.</p>
+        </div>
+      </div>
+      <div class="sr-desk__foot">
+        <button type="submit" class="sr-btn" [disabled]="!canKeep()">Keep</button>
+        <button type="button" class="sr-desk__quiet" [disabled]="!changed()" (click)="undo()">Undo</button>
+        <button type="button" class="sr-desk__quiet" (click)="closed.emit()">Close</button>
+        @if (justKept()) {
+          <span class="sr-queued">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            kept
+          </span>
+        }
+        @if (kept()?.chosen === false) {
+          <span class="sr-desk__note">No personality is chosen yet, so Balanced applies until you keep one.</span>
+        }
+        @if (kept()?.demoHolds) {
+          <span class="sr-desk__note">While the demo holds, EDI speaks with the demo's levels on top of these.</span>
+        }
+      </div>
+    }
+    @if (refusal(); as sentence) {
+      <p class="sr-desk__refusal" role="alert">{{ sentence }}</p>
+    }
+  </form>
+</section>

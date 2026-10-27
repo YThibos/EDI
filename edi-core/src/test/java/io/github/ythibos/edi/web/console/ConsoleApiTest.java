@@ -287,6 +287,30 @@ class ConsoleApiTest {
         assertThat(demoOff.body()).isEqualTo("Presence: present.\n");
     }
 
+    @Test
+    void showsAndKeepsThePersonalityFromTheConsoleThroughTheSameCoreAsEdiPersonality() throws Exception {
+        String cookie = signedInCookie();
+        String change = "{\"change\":[\"humour\",\"2\",\"formality\",\"10\"]}";
+
+        HttpResponse<String> shown = send(withTheCookie("/api/personality", cookie, JSON).GET());
+        HttpResponse<String> withoutHeader = send(withTheCookie("/api/personality", cookie, JSON).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString(change)));
+        HttpResponse<String> kept = send(withTheCookie("/api/personality", cookie, JSON).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString(change)));
+        HttpResponse<String> told = send(withTheHomeToken("/api/personality", TEXT).GET());
+        HttpResponse<String> toAnyone = send(withTheHomeToken("/api/personality", "*/*").GET());
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.body()).startsWith("{\"address\":\"Commander\",\"chosen\":false,\"demoHolds\":false,\"levels\":{\"humour\":3,\"formality\":5,"
+                + "\"verbosity\":5,\"warmth\":4,\"directness\":6,\"initiative\":5,\"depth\":5,\"enthusiasm\":3,\"flavour\":5},")
+                .contains("\"presets\":[{\"name\":\"Balanced\",", "{\"name\":\"Plain\",\"levels\":{\"humour\":0,", "{\"name\":\"Demo\",");
+        assertThat(withoutHeader.statusCode()).isEqualTo(403);
+        assertThat(kept.statusCode()).isEqualTo(200);
+        assertThat(kept.body()).contains("\"chosen\":true", "\"levels\":{\"humour\":2,\"formality\":10,\"verbosity\":5,");
+        assertThat(told.body()).startsWith("Personality: humour 2, formality 10, verbosity 5,");
+        assertThat(toAnyone.statusCode()).isEqualTo(200);
+    }
+
     private String raisedDecision(String task) throws Exception {
         post(withTheHomeToken("/api/tasks", TEXT), "{\"id\":\"" + task + "\",\"kind\":\"captain\",\"title\":\"Choose the lamp\"}");
         return post(withTheHomeToken("/api/tasks/" + task + "/decision", TEXT), """

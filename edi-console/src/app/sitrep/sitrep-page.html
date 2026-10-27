@@ -3,7 +3,9 @@
   [zone]="sitrep()?.zone ?? null"
   [machine]="sitrep()?.machine ?? null"
   [presence]="sitrep()?.presence ?? null"
+  [personalityOpen]="personalityOpen()"
   (presenceChosen)="choosePresence($event)"
+  (personalityToggled)="personalityOpen.set(!personalityOpen())"
 />
 <main class="sr-main">
   @switch (access()) {
@@ -25,6 +27,9 @@
     }
   }
   @if (sitrep(); as sitrep) {
+    @if (personalityOpen()) {
+      <app-personality-desk (closed)="personalityOpen.set(false)" />
+    }
     <div class="sr-glance">
       <app-hud-strip [needYou]="waitingCount()" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
       <div class="sr-cols">

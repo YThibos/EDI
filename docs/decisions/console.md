@@ -13,6 +13,7 @@ The reproducible build stamps every jar entry with the same date in 1980.
 
 The console is an Angular single-page application in `edi-console`, compiled into static resources that `edi-core` serves on its loopback port, with a sign-in page and the sitrep page ([console-look](console-look.md)).
 The sitrep page reads `GET /api/sitrep` ([fleet-snapshot](fleet-snapshot.md)) and posts answers and re-checks under the captain's console session ([api-access](api-access.md), [captain-decisions](captain-decisions.md)).
+Its header's Personality latch opens the personality desk above the sitrep, which reads and keeps the personality through `/api/personality`, the path `edi personality` takes, and reads it again on focus while no change waits to be kept ([personality](personality.md)).
 `ConsoleStream` keeps one `SseEmitter` per open page and, on every `EventRecorded`, sends a `fleet` event carrying only the event's sequence; the page reads the sitrep again on every signal, on every reconnect and on focus, and every stream is completed when the core begins to shut down.
 `application.yaml` sends every console file with `Cache-Control: no-cache` and without `Last-Modified`, so the browser fetches it again on every load.
 `CaptainsBrowser` opens a sign-in link from `OpenConsole`: through `cmd.exe /c start` from `edi.console.windows-directory` (`/mnt/c`) when it exists, else through `xdg-open` when `edi.console.desktop-display` names a display; an opener gets 15 seconds, and one still running then counts as opened and is never stopped.
@@ -49,3 +50,4 @@ When the console must run without the core, more than a few pages stay open, the
 - 21/10/2026: the sitrep page opens at every new primary session, `xdg-open` serves a Linux desktop, and a browser that kept showing an old layout led to no-cache serving.
 - 23/10/2026: a fresh `edi up` leaves one sitrep page open, since the opening turn names the page its session's start opened (EDI-43).
 - 27/10/2026: at the captain's request the primary's first typed prompt clears the session-start mark, so a `/sitrep board` always opens the page and a fresh `edi up` may leave two pages open (EDI-101).
+- 27/10/2026: the personality desk joined the sitrep page behind a latch in its header (EDI-98).

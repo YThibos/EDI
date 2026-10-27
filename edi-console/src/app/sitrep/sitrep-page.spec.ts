@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { EVENT_SOURCES } from '../console/fleet-stream';
+import { personalityFixture } from '../console/personality.fixture';
 import { sitrepFixture } from '../console/sitrep.fixture';
 import { SitrepPage } from './sitrep-page';
 
@@ -215,6 +216,30 @@ describe('SitrepPage', () => {
 
     expect(text(page, '.sr-presence__mode')).toBe('demo');
     expect(texts(page, '.sr-presence__button')).toEqual(['End demo']);
+  });
+
+  it('opens the personality desk from the header and closes it again', async () => {
+    const fixture = await rendered();
+    const page = fixture.nativeElement as HTMLElement;
+    const latch = page.querySelector('.sr-latch') as HTMLButtonElement;
+
+    expect(page.querySelector('app-personality-desk')).toBeNull();
+    expect(latch.getAttribute('aria-expanded')).toBe('false');
+
+    latch.click();
+    await fixture.whenStable();
+    http.expectOne('/api/personality').flush(personalityFixture());
+    await fixture.whenStable();
+
+    expect(latch.getAttribute('aria-expanded')).toBe('true');
+    expect(page.querySelector('.sr-main > app-personality-desk + .sr-glance')).not.toBeNull();
+    expect(page.querySelectorAll('app-personality-desk .sr-slider')).toHaveLength(9);
+
+    (Array.from(page.querySelectorAll('app-personality-desk button')).find((button) => button.textContent?.trim() === 'Close') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(page.querySelector('app-personality-desk')).toBeNull();
+    expect(latch.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('asks the captain to sign in when the console has no session', async () => {
