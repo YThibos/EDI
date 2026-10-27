@@ -34,6 +34,8 @@ class PrimaryWaitTextTest {
                 .isEqualTo("No edi wait is live: the primary's last turn ended at 2026-10-26 20:31 CET without one.\n");
         assertThat(presenter.text(new PrimaryWait(Sighting.NO_PRIMARY, null, 2)))
                 .isEqualTo("No edi wait is live while 2 tasks are in flight: no session holds the primary role.\n");
+        assertThat(presenter.text(new PrimaryWait(Sighting.MISSING_SINCE_SESSION_START, TURN_END, 2)))
+                .isEqualTo("No edi wait is live while 2 tasks are in flight: the primary's session started at 2026-10-26 20:31 CET and has not started one.\n");
     }
 
     @Test

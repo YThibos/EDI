@@ -134,6 +134,25 @@ class PrimaryHooksTest {
     }
 
     @Test
+    void forgetsTheWaitOfTheLastTurnWhenTheSameSessionStartsAgain() {
+        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, true);
+        Instant started = home.clock().now();
+        PrimaryWait beforeAnyTurn = home.primaryWaits().current();
+        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+        home.primaryHooks().stopping(primary, A_LIVE_WAIT);
+        home.clock().advance(Duration.ofMinutes(5));
+        home.primaryHooks().sessionStarted(primary, null, false);
+
+        PrimaryWait afterTheResume = home.primaryWaits().current();
+
+        assertThat(beforeAnyTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING_SINCE_SESSION_START, started, 1));
+        assertThat(afterTheResume).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, home.clock().now(), 1));
+        assertThat(afterTheResume.needsAWait()).isTrue();
+    }
+
+    @Test
     void neverHoldsAStandbySessionsStopOrBlocksOneTurnMoreThanThreeTimes() {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
@@ -173,6 +192,6 @@ class PrimaryHooksTest {
     private static void recordTheStartOneTickLater(TestHome home, UUID session) {
         PrimarySession recorded = home.primarySessionStore().get(session).orElseThrow();
         SessionProcess reused = new SessionProcess(recorded.process().pid(), recorded.process().startTick() + 1);
-        home.primarySessionStore().save(recorded.restarted(reused));
+        home.primarySessionStore().save(recorded.restarted(reused, home.clock().now()));
     }
 }

@@ -71,7 +71,7 @@ public class PrimaryHooks {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Optional<PrimarySession> known = sessions.get(id);
-            PrimarySession session = known.map(earlier -> earlier.restarted(process)).orElseGet(() -> PrimarySession.started(id, process, now));
+            PrimarySession session = known.map(earlier -> earlier.restarted(process, now)).orElseGet(() -> PrimarySession.started(id, process, now));
             sessions.save(session);
             if (roles.role().isVacant()) {
                 claim(session, now);

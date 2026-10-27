@@ -29,9 +29,9 @@ public record PrimarySession(
         return new PrimarySession(id, at, process, null, null, null, null, null, null, null, null, null);
     }
 
-    public PrimarySession restarted(SessionProcess restartedProcess) {
-        return new PrimarySession(id, startedAt, restartedProcess == null ? process : restartedProcess, claimedAt, turn, typedAt,
-                notification, notifiedAt, limit, limitReachedAt, null, null);
+    public PrimarySession restarted(SessionProcess restartedProcess, Instant at) {
+        return new PrimarySession(id, startedAt, restartedProcess == null ? process : restartedProcess, claimedAt,
+                turn == null ? null : turn.ended(at, false), typedAt, notification, notifiedAt, limit, limitReachedAt, null, null);
     }
 
     public PrimarySession claimed(Instant at) {

@@ -8,6 +8,7 @@ public record PrimaryWait(Sighting sighting, Instant seenAt, int tasksInFlight) 
     public enum Sighting {
         LIVE,
         MISSING,
+        MISSING_SINCE_SESSION_START,
         UNCHECKED_IN_A_TURN,
         NO_PRIMARY
     }
@@ -24,7 +25,7 @@ public record PrimaryWait(Sighting sighting, Instant seenAt, int tasksInFlight) 
     private static PrimaryWait seenAtTheTurnEndOf(PrimarySession session, int tasksInFlight) {
         PrimaryTurn turn = session.turn();
         if (turn == null) {
-            return new PrimaryWait(Sighting.UNCHECKED_IN_A_TURN, session.startedAt(), tasksInFlight);
+            return new PrimaryWait(Sighting.MISSING_SINCE_SESSION_START, session.startedAt(), tasksInFlight);
         }
         if (!turn.hasEnded()) {
             return new PrimaryWait(Sighting.UNCHECKED_IN_A_TURN, turn.startedAt(), tasksInFlight);
@@ -33,6 +34,6 @@ public record PrimaryWait(Sighting sighting, Instant seenAt, int tasksInFlight) 
     }
 
     private boolean isNotLive() {
-        return sighting == Sighting.MISSING || sighting == Sighting.NO_PRIMARY;
+        return sighting == Sighting.MISSING || sighting == Sighting.MISSING_SINCE_SESSION_START || sighting == Sighting.NO_PRIMARY;
     }
 }

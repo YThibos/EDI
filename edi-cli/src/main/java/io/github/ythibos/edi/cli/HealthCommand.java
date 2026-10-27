@@ -53,9 +53,17 @@ final class HealthCommand implements Callable<Integer> {
     private void reportThePrimarysWait() {
         try {
             CoreReply reply = new CoreClient().get(edi.core(), "/api/primary/wait", "text/plain");
-            (reply.succeeded() ? spec.commandLine().getOut() : spec.commandLine().getErr()).println(reply.body().stripTrailing());
+            if (reply.succeeded()) {
+                spec.commandLine().getOut().println(reply.body().stripTrailing());
+            } else {
+                cannotAskAboutTheWait(reply.body().stripTrailing());
+            }
         } catch (CoreUnavailable unavailable) {
-            spec.commandLine().getErr().println(unavailable.getMessage());
+            cannotAskAboutTheWait(unavailable.getMessage());
         }
+    }
+
+    private void cannotAskAboutTheWait(String reason) {
+        spec.commandLine().getErr().println("Cannot ask whether the primary's edi wait is live: " + reason);
     }
 }

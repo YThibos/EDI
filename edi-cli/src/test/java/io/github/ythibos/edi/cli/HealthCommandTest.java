@@ -76,7 +76,8 @@ class HealthCommandTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n");
-        assertThat(err).hasToString("EDI core is not running: " + home.resolve("state/core.token") + " holds no token.\n");
+        assertThat(err).hasToString("Cannot ask whether the primary's edi wait is live: EDI core is not running: "
+                + home.resolve("state/core.token") + " holds no token.\n");
     }
 
     @Test
