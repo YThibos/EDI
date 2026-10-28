@@ -57,6 +57,10 @@ import picocli.CommandLine.Spec;
             MigrateCommand.class})
 public final class Edi implements Runnable {
 
+    private static final String TOKEN_FILE = "EDI_TOKEN_FILE";
+    private static final String WORKER = "EDI_WORKER";
+    private static final String WORKER_ROLE = "worker";
+
     private final Map<String, String> environment;
     private final InputStream input;
 
@@ -105,12 +109,18 @@ public final class Edi implements Runnable {
     }
 
     boolean runsForAWorker() {
-        String workerToken = environment.get("EDI_TOKEN_FILE");
-        return workerToken != null && !workerToken.isBlank();
+        return isSet(TOKEN_FILE) || runsInAWorkersWindow();
     }
 
     Path tokenFile() {
-        return runsForAWorker() ? Path.of(environment.get("EDI_TOKEN_FILE")) : home().resolve("state").resolve("core.token");
+        if (isSet(TOKEN_FILE)) {
+            return Path.of(environment.get(TOKEN_FILE));
+        }
+        if (runsInAWorkersWindow()) {
+            throw new CoreUnavailable("This shell is " + whoseWindow() + ", yet " + TOKEN_FILE + " names no token file, so edi does not fall back"
+                    + " to the home token: a worker calls the core only as itself.");
+        }
+        return home().resolve("state").resolve("core.token");
     }
 
     ClaudeSession claudeSession() {
@@ -123,5 +133,18 @@ public final class Edi implements Runnable {
 
     OptionalInt paneWidth() {
         return TmuxPane.ofEnvironment(environment).map(TmuxPane::width).orElseGet(OptionalInt::empty);
+    }
+
+    private boolean isSet(String variable) {
+        String value = environment.get(variable);
+        return value != null && !value.isBlank();
+    }
+
+    private boolean runsInAWorkersWindow() {
+        return WORKER_ROLE.equals(environment.get("EDI_ROLE")) || isSet(WORKER) || isSet("EDI_TASK_ID");
+    }
+
+    private String whoseWindow() {
+        return isSet(WORKER) ? "worker " + environment.get(WORKER) + "'s" : "a worker's";
     }
 }
