@@ -4,6 +4,8 @@
 
 The captain's memory is the files `profile.md`, `machine.md` and `learnings.md` in `$EDI_HOME/memory/`, which the primary reads in its system prompt at every start (see [The Claude layer](claude-layer.md#the-primary-session)).
 `edi memory check` holds that startup memory to its budget, set by the machine profile's `memory.startupBudgetTokens` ([primary-startup-context](decisions/primary-startup-context.md)).
+A learning is either a fact, dated with the day it was last confirmed, or a workaround that ends with the key of the ticket that removes it, such as "until EDI-69".
+`edi memory stow-list` lists a workaround as expired once its ticket has landed and as unticketed when no task or ticket carries its key, and the session-start digest counts both.
 
 ```sh
 edi memory check                                    # startup memory against its budget; exits 1 when it fails

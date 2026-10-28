@@ -12,10 +12,14 @@ A hook's `additionalContext` reaches the model in full only up to 10,000 charact
 
 `POST /api/primary/launch` runs `PrepareThePrimary`, which writes `state/primary/system-prompt.md` and `state/primary/settings.json` and answers their paths and a session name for `edi up` ([core-lifecycle](core-lifecycle.md)).
 `PrimaryPrompt` composes the prompt from the anchor bundled in the core, the checkout's `personal/anchor.local.md`, and each non-empty memory file loaded at session start, and refuses an anchor and addendum above 10,000 bytes.
-`SessionStartDigestQuery` reads, from the store, the home and tmux, the session's standing, the address word, the personality ([personality](personality.md)), the previous primary's usage-limit stop, the fleet snapshot, every serving worker's health, the open outage list, the unacknowledged wakes, the presence, the memory check, the files missing from the EDI home (`HomeSetup`), the sitrep page's opening ([console](console.md)) and whether the weekly upkeep is due, which it is on Mondays (`WeeklyUpkeep`).
+`SessionStartDigestQuery` reads, from the store, the home and tmux, the session's standing, the address word, the personality ([personality](personality.md)), the previous primary's usage-limit stop, the fleet snapshot, every serving worker's health, the open outage list, the unacknowledged wakes, the presence, the memory check, the count of expired and unticketed workarounds, the files missing from the EDI home (`HomeSetup`), the sitrep page's opening ([console](console.md)) and whether the weekly upkeep is due, which it is on Mondays (`WeeklyUpkeep`).
 `SessionStartDigestText` writes it as plain lines, the primary's `SessionStart` hook answers it as `additionalContext`, and it ends by asking for one background `edi wait` while work is in flight, except in a standby session.
 `MemoryFiles` reads `memory/profile.md`, `machine.md` and `learnings.md`; `StartupMemory` estimates tokens as characters divided by four against `memory.startupBudgetTokens` (18,000 when absent) and fails above the budget or on a heading repeated across the files.
 `edi memory check` answers that check, `edi memory stow-list` lists repeated headings, undated entries and learnings unconfirmed for 90 days for `/stow`, and `DailyMemoryCheck` raises one notification when the memory first grows past its budget.
+A learning is a fact, dated with the day it was last confirmed, or a workaround, which ends with "until" and the key of the ticket that removes it, such as "until EDI-69", and needs no date.
+`WorkaroundTickets` resolves each key: one whose prefix belongs to a registered project on an external tracker through the `Tracker` port, where a ticket at or past `tracker.mergedStatus` has landed, and any other through the task store, where a task carrying the key has landed when `Task.hasLanded` holds, which is DONE until the lifecycle stages are stored.
+`edi memory stow-list` lists a workaround whose ticket has landed as expired, to delete, one whose key no task or ticket carries as unticketed, to ticket or turn into a dated fact, and one the tracker cannot answer for as unchecked.
+The digest's memory line counts expired and unticketed workarounds from the task store alone, so a workaround keyed on an external tracker counts as expired only when a task carrying its key has landed, and otherwise as neither.
 
 ## Why
 
@@ -29,6 +33,8 @@ A measured budget and a list of what to curate keep memory a map rather than a j
 - Telling the primary to read the memory files, or to run `edi sitrep` at its start - nothing makes it, and the hook does.
 - The captain report as the digest - shaped for the captain, without worker health or the outage list.
 - Counting tokens with a tokenizer - exact for one model and a dependency for an estimate that only needs to be stable.
+- The digest asking the tracker about workarounds keyed on it - the session start would wait on JIRA, up to 40 seconds a call, and the digest would vary with its answers.
+- Recording the resolved workarounds daily for the digest - a new table for counts up to a day old.
 
 ## Consequences
 
@@ -44,3 +50,4 @@ When Claude Code raises the limit on hook context or offers a reloadable system 
 - 16/10/2026: slice S4 built the session-start digest from the store.
 - 17/10/2026: slice S8 composed the system prompt at launch, measured memory against its budget, and added presence, memory, setup and the weekly upkeep to the digest.
 - 23/10/2026: the digest gained the personality, address and bad-news lines (EDI-31).
+- 28/10/2026: a workaround names the ticket that removes it, `edi memory stow-list` flags it once that ticket lands or when no ticket exists, and the digest counts both from the store, as the captain chose (EDI-81).

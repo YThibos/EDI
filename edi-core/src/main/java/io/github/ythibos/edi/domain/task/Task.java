@@ -139,6 +139,10 @@ public record Task(TaskId id, Intake intake, TaskState state, String notes, Capt
         return state.isClosed();
     }
 
+    public boolean hasLanded() {
+        return state == TaskState.DONE;
+    }
+
     private void refuseWhenClosed() {
         if (isClosed()) {
             throw new Refusal(id + " is " + state.word() + ", so it waits for nobody.");

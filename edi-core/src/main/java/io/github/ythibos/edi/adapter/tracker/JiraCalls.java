@@ -82,7 +82,7 @@ public class JiraCalls implements AutoCloseable {
                     + settings.credentials().section() + " section of the keys file.");
         }
         if (status == 404) {
-            throw new Refusal("JIRA found nothing for " + what + " (HTTP 404).");
+            throw new NothingFound("JIRA found nothing for " + what + " (HTTP 404).");
         }
         String reasons = hidden(reasonsIn(response), token);
         if (status < 500) {

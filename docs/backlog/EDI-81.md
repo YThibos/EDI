@@ -8,7 +8,7 @@
 | Source | EDI-74 plan, step 7 |
 | Size | S |
 | Blocked by | nothing |
-| Status | open |
+| Status | delivered |
 | Cloud session | ok |
 
 ## Goal
@@ -42,6 +42,11 @@ The EDI-74 plan fixes the format and the flagging in step 7; the research behind
 - The primary writes the keys on today's workarounds (EDI-74 step 1, done by the primary on the captain's machine); this item does not edit memory.
 - The digest and every new message template follow the persona rule: a text the primary reads says "you", a text that reaches the captain says "I", and EDI in the third person names only the project.
   The persona test in the invariant package scans every message template and fails the build on a breach.
+- The captain chose A on the pull request: the session-start digest stays built from the store, the home and tmux ([primary-startup-context](../decisions/primary-startup-context.md)).
+  The digest resolves every key through the task store, so a JIRA-keyed workaround counts as expired when a task carrying its key has landed and as neither otherwise; only `edi memory stow-list` also asks the `Tracker` port.
+- A key is EDI-native or JIRA-style by the registered project whose work keys carry its prefix and that project's tracker; a prefix no registered project carries is resolved through the task store.
+- A JIRA ticket has landed when its status is at or past the machine profile's `tracker.mergedStatus` in `tracker.workflow`; a ticket JIRA finds nothing for is unticketed, and one JIRA cannot be asked about is listed as unchecked, never as expired or unticketed, and never fails the list.
+- A workaround needs no date, so it is not listed as undated; workarounds are read from `learnings.md` only.
 
 ## Research and measurements
 

@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.tracker;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -40,6 +41,11 @@ public class NoTracker implements Tracker {
     @Override
     public Ticket verified(WorkKey key) {
         return Ticket.keyedOnly(key);
+    }
+
+    @Override
+    public Optional<Ticket> found(WorkKey key) {
+        return Optional.of(verified(key));
     }
 
     @Override

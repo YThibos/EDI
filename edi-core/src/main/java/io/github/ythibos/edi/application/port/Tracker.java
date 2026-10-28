@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.port;
 
 import java.util.List;
+import java.util.Optional;
 
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
@@ -21,6 +22,8 @@ public interface Tracker {
     void fill(WorkKey key, TicketDraft draft);
 
     Ticket verified(WorkKey key);
+
+    Optional<Ticket> found(WorkKey key);
 
     TicketMove transition(WorkKey key, String target);
 

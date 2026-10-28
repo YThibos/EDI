@@ -59,7 +59,7 @@ public class SessionStartDigestQuery {
     public SessionStartDigest digestFor(UUID session) {
         return new SessionStartDigest(roles.standingOf(session), personality.current(), transaction.execute(_ -> limitStopToTell(session)),
                 fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()), transaction.execute(_ -> wakes.unacknowledged().size()),
-                presence.current(), memory.check(), WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), clock.zone())),
+                presence.current(), memory.check(), memory.workarounds(), WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), clock.zone())),
                 home.missing(), null);
     }
 
