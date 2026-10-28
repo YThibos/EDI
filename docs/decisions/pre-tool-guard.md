@@ -25,6 +25,7 @@ A worker's `Glob` is refused when its pattern, rooted at its path or the working
 `GuardToolCall` keeps the home token from a worker's shell, the home token and the tracker's keys file from a worker's `Read`, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
 `WorkerIdentity` refuses a worker's shell command that unsets or reassigns `EDI_TOKEN_FILE`, `EDI_ROLE`, `EDI_WORKER` or `EDI_TASK_ID`, which tell `edi` and the core which worker is calling ([api-access](api-access.md)): through `unset`, `env -u`, `env -i` or an assignment given to `env`, through `export`, `declare`, `typeset`, `local` or `readonly`, or through an assignment before a command or on its own; `ShellScript` reads those assignments, and the primary's environment stays its own.
 `GuardToolCall` keeps a worker's `Write`, `Edit`, `MultiEdit` and `NotebookEdit` calls inside its copy and task directory on real paths, and records every refusal of a worker as `ToolCallRefused` with its rule, never the command.
+It also refuses a worker any write under its copy's `.claude` directory, as written or on real paths, through those tools and through a shell (`SettingsWrites`): a redirection, `tee`, `touch` or `truncate`, the destination of `cp`, `mv`, `install`, `ln` or `rsync`, `sed -i`, and `dd of=`, because a settings file there can switch off the hooks that guard it ([worker-sessions](worker-sessions.md)).
 The worker's settings send `Bash`, `Read`, `Glob` and the file-writing tools to the guard, the primary's `Bash` and `Read`.
 `edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`).
 
@@ -58,6 +59,7 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 - Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
 - Bad: workers run as the captain's own user, so a script file the guard does not open, or a program that speaks tmux's protocol to the socket itself, can still type into the primary's pane, and a worker may still kill a pane or the whole server on the captain's default socket; the guard is a denylist for a misled worker, not a boundary.
 - Bad: `read`, `printf -v`, `mapfile`, a `for` loop or a script file the guard does not open can still change a worker's identity variables; the `edi` command's own refusal in a worker's window is the second line ([api-access](api-access.md)).
+- Bad: a write under `.claude` after a `cd`, by a program the guard does not read, such as `python3 -c`, or by a script file still passes; the `disableAllHooks: false` the settings state is what keeps the hooks on even then, and it is a Claude Code precedence rule, verified on 2.1.312, that EDI relies on.
 
 ## When to revisit
 
@@ -73,3 +75,4 @@ When the captain chooses one of the stronger options above, workers run as anoth
 - 28/10/2026: the guard keeps a worker's shell from unsetting or reassigning the variables that say which worker is calling (EDI-122).
 - 28/10/2026: the guard refuses a worker every tmux command that sends input to a pane, on any socket, and compares a socket path on its real path (EDI-123).
 - 28/10/2026: the guard matches a secret on the normalised, glob-expanded real paths a shell word leads to, guards a worker's `Glob`, and states what a denylist cannot contain (EDI-124).
+- 28/10/2026: the guard refuses a worker any write under its copy's `.claude` directory, after a verification showed a settings file there could switch its hooks off (EDI-125).
