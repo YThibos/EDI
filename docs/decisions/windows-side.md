@@ -44,3 +44,4 @@ When WSL renames its interop servers, the calendar export becomes a file EDI can
 
 - 17/10/2026: slice S8 ran notifications and the calendar through `powershell.exe`, reading the calendar at most every fifteen minutes.
 - 22/10/2026: every read had failed for three days from an elevated terminal with only a log warning, so the read moved to WSL's own interop server, every two minutes, and an unreadable calendar is told to the captain once (EDI-34).
+- 28/10/2026: the unreadable calendar's line is carried by both the sitrep and the turn report (EDI-133).

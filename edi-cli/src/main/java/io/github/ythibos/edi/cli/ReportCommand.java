@@ -12,7 +12,7 @@ import picocli.CommandLine.ParentCommand;
         + " and what this turn did and does next; edi sitrep prints the overview.")
 final class ReportCommand implements Callable<Integer> {
 
-    private static final String REPORT = "/api/report";
+    static final String REPORT = "/api/report";
 
     @ParentCommand
     private Edi edi;
@@ -27,11 +27,11 @@ final class ReportCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        String report = sizedForThePane(edi.paneWidth());
+        String report = sizedForThePane(REPORT, edi.paneWidth());
         return turn == null ? core.post(report, new JsonBody()) : core.post(report, core.contentOf(turn));
     }
 
-    static String sizedForThePane(OptionalInt paneWidth) {
-        return paneWidth.isPresent() ? REPORT + "?paneWidth=" + paneWidth.getAsInt() : REPORT;
+    static String sizedForThePane(String report, OptionalInt paneWidth) {
+        return paneWidth.isPresent() ? report + "?paneWidth=" + paneWidth.getAsInt() : report;
     }
 }

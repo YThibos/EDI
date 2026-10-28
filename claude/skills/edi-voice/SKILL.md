@@ -29,7 +29,8 @@ The register you keep at every personality is in your anchor's Voice section; th
 ## The turn report
 
 - The turn report is the captain's attention list: done and next say, in their words, what changed for them and what comes next.
-- Ongoing, parked and queued work and running builds are state the sitrep shows; never restate them as the turn's items.
+- Routine ongoing, parked and queued work and running builds are state the sitrep shows; never restate them as the turn's items.
+- A failure or blocker that needs the captain is never left to the sitrep: raise it as a decision or say it as a done item.
 
 ## What your core checks
 

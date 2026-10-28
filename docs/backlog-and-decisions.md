@@ -41,6 +41,7 @@ A task that is dropped or finished no longer blocks any other task ([task-intake
 ```sh
 edi report --turn - < turn.json                     # the turn report: only what needs the captain
 edi sitrep                                          # the boxed overview, read-only and without a turn
+edi sitrep --turn - < turn.json                     # the boxed overview with a state-changing turn's items
 ```
 
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional.

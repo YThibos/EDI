@@ -40,20 +40,29 @@ class ReportController {
 
     @GetMapping("/api/report")
     CaptainReport sitrep(@RequestParam(required = false) Integer paneWidth, Caller caller) {
-        CaptainReport sitrep = new CaptainReport(fleet.snapshot(), Turn.NONE, widthFor(paneWidth), presence.current(), calendar.unreadable().orElse(null),
-                heavyRuns.atOnce().orElse(null));
+        CaptainReport sitrep = sitrepWith(Turn.NONE, paneWidth);
+        recordTheReportShownTo(caller);
+        return sitrep;
+    }
+
+    @PostMapping("/api/report/sitrep")
+    CaptainReport sitrepWithTheTurn(@RequestBody JsonNode turn, @RequestParam(required = false) Integer paneWidth, Caller caller) {
+        CaptainReport sitrep = sitrepWith(checked(turn), paneWidth);
         recordTheReportShownTo(caller);
         return sitrep;
     }
 
     @PostMapping("/api/report")
     TurnReport turnReport(@RequestBody JsonNode turn, @RequestParam(required = false) Integer paneWidth, Caller caller) {
-        Turn read = TurnDocument.read(turn);
-        CaptainVoice.requireOutcomes("The turn's wording in the captain report", read.wording());
-        TurnReport report = new TurnReport(fleet.snapshot().waiting(), read, widthFor(paneWidth), calendar.unreadable().orElse(null),
+        TurnReport report = new TurnReport(fleet.snapshot().waiting(), checked(turn), widthFor(paneWidth), calendar.unreadable().orElse(null),
                 previousReportShownTo(caller));
         recordTheReportShownTo(caller);
         return report;
+    }
+
+    private CaptainReport sitrepWith(Turn turn, Integer paneWidth) {
+        return new CaptainReport(fleet.snapshot(), turn, widthFor(paneWidth), presence.current(), calendar.unreadable().orElse(null),
+                heavyRuns.atOnce().orElse(null));
     }
 
     private static ReportWidth widthFor(Integer paneWidth) {
@@ -62,6 +71,12 @@ class ReportController {
 
     private void recordTheReportShownTo(Caller caller) {
         caller.claudeSession().ifPresent(primaryHooks::reportRendered);
+    }
+
+    private static Turn checked(JsonNode turn) {
+        Turn read = TurnDocument.read(turn);
+        CaptainVoice.requireOutcomes("The turn's wording in the captain report", read.wording());
+        return read;
     }
 
     private Instant previousReportShownTo(Caller caller) {

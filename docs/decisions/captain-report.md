@@ -19,6 +19,7 @@ Three old inputs have no counterpart in EDI and are adapted openly: a hold that 
 Text keeps every character the old renderer accepted, and replaces any other with `?` (`Glyphs`), so stored data can never stop a report.
 The zone draws a decision bound to a listening research board as one line under that board, its number and title only, because the captain answers it on the board; every other decision keeps its full card, and the zone's count counts each decision, review, changing request and board with questions of its own once ([fleet-snapshot](fleet-snapshot.md)).
 The turn's own wording arrives as `edi report --turn -` for the turn report, which `TurnDocument` reads strictly, with only `done`, `next` and `tasks`; it can reword a task but never add or remove a decision.
+`edi sitrep --turn -` carries a state-changing turn's items into the sitrep, through `POST /api/report/sitrep`, which draws them in its done and next sections.
 The command measures its own pane: `TmuxPane` asks tmux, naming the socket from `TMUX` with `-S` and waiting at most two seconds, and sends `paneWidth`; `ReportWidth.forPane` applies the rule, and without a width the report is 120 columns.
 The report heads itself with the presence when it is not plainly present, with an unreadable calendar's line while one lasts ([presence](presence.md)), and with a `Builds:` line while several workers run native builds or test runs at once ([local-native-builds](local-native-builds.md)).
 
@@ -49,4 +50,4 @@ When the captain asks for a change to the report's layout, or the report is read
 - 26/10/2026: a scout's board decisions showed their full cards beside the board, so a board-bound decision became one line under its board (EDI-51).
 - 26/10/2026: a request still changing after its done joined the zone as "Changing, hold the merge" with why, counted like a review (EDI-53).
 - 27/10/2026: the report began heading itself with the heavy runs that several workers run at once (EDI-99).
-- 28/10/2026: `edi report` became the turn report, the captain's attention list, and this layout stayed the sitrep's (EDI-133).
+- 28/10/2026: `edi report` became the turn report, the captain's attention list, and this layout stayed the sitrep's, which `edi sitrep --turn -` gives a state-changing turn's items (EDI-133).

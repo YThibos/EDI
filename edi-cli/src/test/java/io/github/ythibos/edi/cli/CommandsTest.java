@@ -288,6 +288,32 @@ class CommandsTest {
     }
 
     @Test
+    void sendsTheTurnFromStandardInputForTheSitrep() {
+        core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n");
+        String turn = "{\"done\":[{\"projects\":[],\"text\":\"Fitted the lamp\"}],\"next\":[],\"tasks\":{}}";
+
+        int exitCode = edi(turn, "sitrep", "--turn", "-");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\n");
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report/sitrep", "Bearer stub-token", "text/plain", null, null, turn));
+    }
+
+    @Test
+    void printsTheSitrepWithTheTurnAndThenOpensItsBoardInTheConsole() {
+        core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n").thenAnswering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n")
+                .thenAnswering(200, "EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
+        String turn = "{\"next\":[{\"text\":\"Fit the lamp\"}]}";
+
+        int exitCode = edi(turn, "sitrep", "--board", "--turn", "-");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\nEDI console: http://127.0.0.1:5490/ is open in your browser.\n");
+        assertThat(core.requests()).extracting(StubCore.Request::method, StubCore.Request::target, StubCore.Request::body)
+                .containsExactly(tuple("POST", "/api/report/sitrep", turn), tuple("POST", "/api/console/open", "{}"));
+    }
+
+    @Test
     void opensNoBoardWhenTheSitrepItselfFailed() {
         core.answering(503, "EDI core is starting.\n");
 

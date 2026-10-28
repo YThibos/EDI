@@ -192,6 +192,17 @@ class ApiTest {
     }
 
     @Test
+    void carriesTheTurnsItemsIntoTheSitrepWhenTheTurnIsPosted() throws Exception {
+        HttpResponse<String> sitrep = post("/api/report/sitrep", """
+                {"done":[{"projects":["harness"],"text":"Moored the buoy"}],"next":[],"tasks":{}}""", TEXT);
+
+        assertThat(sitrep.statusCode()).isEqualTo(200);
+        assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(120);
+        assertThat(sitrep.body()).contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Moored the buoy\n", "\nONGOING  (")
+                .doesNotContain("Nothing finished this turn");
+    }
+
+    @Test
     void drawsADecisionCardInFullInTheTurnItIsRaisedAndOnOneLineInTheTurnsAfter() throws Exception {
         UUID primary = UUID.randomUUID();
         primaryHook(primary, "session-start", "{}");

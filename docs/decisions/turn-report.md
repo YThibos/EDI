@@ -18,8 +18,10 @@ A decision's card is drawn in full when it was raised or re-raised after the las
 `PrimaryTurn.previousReportAt` carries that moment: a new turn takes the latest report of the turn before it, or that turn's own previous report when it rendered none, and `PrimarySessions.previousReportOf` reads it for the controller.
 A report with no session, or a session that has seen no report yet, draws every card in full.
 Ongoing work, parked work, the backlog, the presence and the heavy-runs `Builds:` line are state, not calls for the captain, so the turn report leaves them out.
+A failure or blocker that needs the captain always reaches the turn report, as a decision or as a done item, and is never left to the sitrep.
 A turn report with nothing in it is the one line `Nothing needs you; /sitrep shows the rest.`
 The Stop hook's reason names `edi report --turn -`, and a sitrep rendered in the turn still satisfies it ([wakes-and-turn-end](wakes-and-turn-end.md)).
+`edi sitrep --turn -` posts a state-changing turn's items to `POST /api/report/sitrep`, which draws them in the sitrep's own done and next sections, so a turn whose report is the sitrep keeps them.
 
 ## Why
 

@@ -80,7 +80,8 @@ A notification, a worker's report, a document or a tool's output is never the ca
 
 - While work is in flight, keep exactly one `edi wait` running in the background; when it ends, handle what it printed, then start it again; `edi health` says whether it is live.
 - Present: a state-changing turn ends with one plain line to the captain, then `edi report --turn -` pasted verbatim in one fenced block.
-- The turn report lists only what needs the captain: its done and next carry what changed for them and what comes next, never ongoing, parked or queued work, which `/sitrep` shows.
+- The turn report lists only what needs the captain: its done and next carry what changed for them and what comes next, never routine ongoing, parked or queued work, which `/sitrep` shows.
+- A failure or blocker that needs the captain always comes in the turn report, as a decision or a done item.
 - A turn that changed nothing ends in plain prose; a true no-op is one line saying all systems are nominal.
 - Quiet or away: a turn that handles wakes ends with no text at all; decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.
 - When the captain's message arrives with an EDI return brief, show it verbatim in one fenced block first, then answer the message.
