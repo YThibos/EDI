@@ -27,7 +27,7 @@ A session takes one item at a time, in this order.
 
 1. Fetch `origin/main` and read the index below.
 2. Pick the first item, in index order, whose status is `open`, whose blockers are all merged into `main`, and that has no open pull request and no claim on its issue.
-   Skip every item that is held, parked or needs the captain's machine; the status column says which.
+   Skip every item that is held, parked, in flight or needs the captain's machine; the status column says which.
    Until the issues exist, an open pull request or a pushed branch for the item is the claim.
 3. Claim it before doing any work:
    1. comment on the item's issue that you are taking it;
@@ -76,6 +76,7 @@ A session never guesses an ambiguous or scope-changing call.
 | `open` | ready to pick up once its blockers are merged |
 | `delivered` | its pull request is ready for review or merged |
 | `held` | the captain asked to wait; skip it until the captain releases it on its issue and changes its status to `open` |
+| `in-flight` | running on the captain's machine when the backlog was written; skip it if its pull request exists or has merged |
 | `parked` | waiting for a named event, given in its reason; skip it until that event and the captain's word |
 | `needs-captain-machine` | cannot run without the captain's machine, for the reason given; not for a cloud session |
 
@@ -85,7 +86,7 @@ One GitHub issue per open or held item, opened after the pull request that adds 
 
 - Title: `EDI-<n> <the item's title>`.
 - Body: a short line linking the item's file on `main`, the blockers as issue references, and nothing else; the criteria stay in the file.
-- Labels: `wave-1` to `wave-6`, `cloud-ok` or `needs-captain-machine`, and `parked` where an item is held or parked.
+- Labels: `wave-1` to `wave-6` (the security findings carry `security` instead), `cloud-ok` or `needs-captain-machine`, and `parked` where an item is held or parked.
 - The index below names each item's issue number once the issues exist.
 - A session claims an item by commenting on its issue; the pull request's `Closes #<issue>` links issue, branch and pull request, and GitHub closes the issue when the pull request merges.
 
@@ -162,6 +163,26 @@ The Issue column shows `-` until the issues are opened.
 | 35 | [EDI-97](EDI-97.md) | Effort and review yield recorded per task, shown in the Week view | M | EDI-62 | open | - |
 | 36 | [EDI-76](EDI-76.md) | Introspect again after a week of the EDI-52 and EDI-74 changes | M | EDI-93 | needs-captain-machine: the measurement reads the primary's transcripts and EDI's store, which exist only on the captain's machine. | - |
 
+### Security findings, to land before the public mirror
+
+The findings of the read-only security review of 28 October 2026, held on the captain's machine for the cloud session.
+The four worker-escape items come first, then the pinned actions the captain named alongside them, then the low findings.
+Each must land before the public mirror ([EDI-121](EDI-121.md)), which waits on all of them.
+The section sits after the six waves; the captain may move it up.
+
+| Order | Item | Title | Size | Severity | Blocked by | Status | Issue |
+|---|---|---|---|---|---|---|---|
+| 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | open, before EDI-121 | - |
+| 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | open, before EDI-121 | - |
+| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-121 | - |
+| 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | open, before EDI-121 | - |
+| 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | open, before EDI-121 | - |
+| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-121 | - |
+| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | open, before EDI-121 | - |
+| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-121 | - |
+| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-121 | - |
+| 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-121 | - |
+
 ### Held, parked and needs the captain's machine, no wave
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
@@ -174,9 +195,12 @@ The Issue column shows `-` until the issues are opened.
 | - | [EDI-109](EDI-109.md) | Worker builds get NVD_API_KEY from the captain's secrets file at call time | M | - | needs-captain-machine: the feature reads a secrets file that exists only on the captain's machine; it is held until his word. | - |
 | - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. | - |
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
+| - | [EDI-121](EDI-121.md) | A public read-only mirror of EDI that follows main after every landing | L | EDI-122 to EDI-131 | needs-captain-machine: it creates a repository and tokens on the captain's personal account, and it is held on decisions D59, D60 and D61 | - |
+| - | [EDI-119](EDI-119.md) | The core listens on port 5490 by default, outside the ephemeral ranges | XS | - | in-flight: on the captain's machine when the backlog was written; skip it if its pull request exists or has merged | - |
+| - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake | S | - | in-flight: on the captain's machine when the backlog was written; skip it if its pull request exists or has merged | - |
 
 ## Not in the backlog
 
 - Work on other projects (the integration, container, branding and notification items of registered projects) belongs to those projects, not to this repository.
-- EDI-119 (the core's default port) is in flight on the captain's machine and is not for pickup.
+- Two captain decisions on the public mirror, the licence and how history is published, are restated inside [EDI-121](EDI-121.md) as open questions, not as items.
 - Work already delivered is in git history and the decision records, not here.
