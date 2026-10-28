@@ -51,6 +51,10 @@ class TmuxClaudeRuntimeTest {
             """;
     private static final String RECORDING_MISE = """
             #!/bin/sh
+            if [ "$1" = trust ]; then
+                printf '%s: %s\\n' "$(pwd -P)" "$(cat "$(dirname "$0")/mise-trust")"
+                exit 0
+            fi
             printf '%s %s %s auto-install=%s trusted=%s\\n' "$1" "$2" "$3" "$MISE_EXEC_AUTO_INSTALL" "$MISE_TRUSTED_CONFIG_PATHS" > "$EDI_HOME/mise-was-entered"
             shift 2
             exec "$@"
@@ -83,6 +87,8 @@ class TmuxClaudeRuntimeTest {
         Files.writeString(claudeConfiguration.resolve(".claude.json"), "{\"numStartups\": 3, \"projects\": {\"/elsewhere\": {\"allowedTools\": []}}}");
         executable(directory.resolve("claude"), RECORDING_CLAUDE);
         executable(directory.resolve("mise"), RECORDING_MISE);
+        Files.createDirectories(projectClone());
+        Files.writeString(directory.resolve("mise-trust"), "untrusted");
     }
 
     @Test
@@ -125,7 +131,8 @@ class TmuxClaudeRuntimeTest {
     }
 
     @Test
-    void startsClaudeCodeOnTheToolchainItsCopyPinsTrustedAndWithoutInstallingAMissingTool() throws IOException {
+    void trustsTheCopysPinnedToolchainWhenMiseTrustsTheProjectsCloneAndInstallsNoMissingTool() throws IOException {
+        Files.writeString(directory.resolve("mise-trust"), "trusted");
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
             TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
 
@@ -133,6 +140,19 @@ class TmuxClaudeRuntimeTest {
 
             assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
                     .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=" + worktree);
+            assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
+        }
+    }
+
+    @Test
+    void startsClaudeCodeThroughMiseWithoutTrustingTheCopyWhenMiseDoesNotTrustTheProjectsClone() throws IOException {
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+
+            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
+                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=");
             assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
         }
     }

@@ -56,7 +56,7 @@ public final class PrivateTmuxServer implements AutoCloseable {
     public TmuxClaudeRuntime runtime(Path claudeConfiguration, String claudeCode, String mise) {
         JsonMapper json = new JsonMapper();
         return new TmuxClaudeRuntime(tmux, new TmuxPaneProbe(), new ClaudeWorkspaceTrust(claudeConfiguration, json),
-                new ClaudeSessions(claudeConfiguration.resolve("projects")), json, claudeCode, mise);
+                new ClaudeSessions(claudeConfiguration.resolve("projects")), json, new ExternalPrograms(), claudeCode, mise);
     }
 
     public WorkerWindow windowShowing(String fixture, Path directory, Path received) throws IOException {

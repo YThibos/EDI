@@ -22,9 +22,10 @@ final class ClaudeCommandLine {
     private ClaudeCommandLine() {
     }
 
-    static List<String> of(String claudeCode, String mise, Launch launch, Path settings, String systemPrompt, Set<String> inheritedVariables) {
+    static List<String> of(String claudeCode, String mise, boolean cloneTrustedByMise, Launch launch, Path settings, String systemPrompt,
+            Set<String> inheritedVariables) {
         List<String> words = new ArrayList<>(withoutInheritedOverrides(inheritedVariables));
-        words.addAll(onTheCopysPinnedToolchain(mise, launch.worktree()));
+        words.addAll(onTheCopysPinnedToolchain(mise, cloneTrustedByMise, launch.worktree()));
         words.add(claudeCode);
         if (!launch.disallowedTools().isEmpty()) {
             words.add("--disallowedTools");
@@ -55,8 +56,13 @@ final class ClaudeCommandLine {
         return GIT_COMMAND_SCOPE_ENTRIES.stream().anyMatch(variable::startsWith);
     }
 
-    private static List<String> onTheCopysPinnedToolchain(String mise, Path copy) {
-        return List.of(TRUSTED_TOOLCHAIN_PIN + copy, NO_TOOL_INSTALLS_AT_LAUNCH, mise, "exec", "--");
+    private static List<String> onTheCopysPinnedToolchain(String mise, boolean cloneTrustedByMise, Path copy) {
+        List<String> words = new ArrayList<>();
+        if (cloneTrustedByMise) {
+            words.add(TRUSTED_TOOLCHAIN_PIN + copy);
+        }
+        words.addAll(List.of(NO_TOOL_INSTALLS_AT_LAUNCH, mise, "exec", "--"));
+        return words;
     }
 
     private static List<String> modelAndEffort(Route route) {

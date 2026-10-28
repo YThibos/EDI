@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.Program;
 import io.github.ythibos.edi.adapter.runtime.Tmux.OpenedWindow;
 import io.github.ythibos.edi.adapter.runtime.Tmux.ServerIdentity;
@@ -40,8 +41,9 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final ClaudeSessions sessions;
     private final String claudeCode;
     private final String mise;
+    private final MiseTrust miseTrust;
 
-    public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, JsonMapper json,
+    public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, JsonMapper json, ExternalPrograms programs,
             @Value("${edi.workers.claude-code:}") String claudeCode, @Value("${edi.workers.mise:}") String mise) {
         this.tmux = tmux;
         this.probe = probe;
@@ -51,6 +53,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.sessions = sessions;
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
         this.mise = mise.isBlank() ? Program.MISE.executable() : mise;
+        this.miseTrust = new MiseTrust(programs, this.mise);
     }
 
     @Override
@@ -63,8 +66,8 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         LocalHooks.refuseHooksIn(launch.worktree(), json);
         trust.trust(launch.projectClone());
         Path settings = WorkerSettingsFile.writtenInto(launch.stateDirectory());
-        List<String> claude = ClaudeCommandLine.of(claudeCode, mise, launch, settings, ClaudeLayer.read(ClaudeLayer.WORKER_SYSTEM_PROMPT),
-                System.getenv().keySet());
+        List<String> claude = ClaudeCommandLine.of(claudeCode, mise, miseTrust.trusts(launch.projectClone()), launch, settings,
+                ClaudeLayer.read(ClaudeLayer.WORKER_SYSTEM_PROMPT), System.getenv().keySet());
         OpenedWindow opened = tmux.openWindow(launch.worker().task().value(), launch.worktree(), launch.environment(), claude);
         ServerIdentity server = tmux.server();
         return new WorkerWindow(tmux.socket(), server.pid(), server.startedAt(), opened.windowId(), opened.panePid());
