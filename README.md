@@ -33,6 +33,7 @@ The captain sees the whole fleet at a glance as a boxed report in the chat or as
 EDI runs on Linux and is developed on WSL2 Ubuntu.
 
 - [mise](https://mise.jdx.dev), which installs the toolchain the checkout pins in [mise.toml](mise.toml): GraalVM Community Edition for Java 25, the Node that builds the console, and gitleaks.
+  EDI also starts every worker through mise, on the toolchain its copy pins, so mise must be on the core's `PATH`.
 - A C compiler and the zlib headers, which GraalVM Native Image needs to build the native executables (`build-essential` and `zlib1g-dev` on Ubuntu).
 - `git` and `tmux`.
 - [Claude Code](https://github.com/anthropics/claude-code), signed in.
@@ -148,6 +149,7 @@ EDI stands on the ideas and the work of others.
 ### Tools EDI drives
 
 - [Claude Code](https://github.com/anthropics/claude-code), for the primary session and every worker.
+- [mise](https://mise.jdx.dev), which starts every worker on the toolchain its copy pins.
 - [no-mistakes](https://github.com/kunchenguid/no-mistakes), the validation pipeline every ship runs before its draft opens.
 - [Lavish](https://github.com/kunchenguid/lavish-axi), the research boards scouts share with the captain.
 - [gh-axi](https://github.com/kunchenguid/gh-axi), which the upkeep skill reads the open Renovate pull requests with.
