@@ -173,3 +173,21 @@ An interactive session on a private tmux socket ran `claude --settings <recordin
 - `SessionStart` fired first with `source: "startup"`, then `UserPromptSubmit` with the prompt exactly as passed, then `Stop`.
 - The `additionalContext` that the `UserPromptSubmit` hook answered reached the transcript, so a return brief given on that hook arrives with the first turn.
 - The model loaded the `sitrep` skill and ran `edi sitrep --board`.
+
+## Local settings that switch hooks off, on 2.1.312
+
+Verified on Claude Code 2.1.312 in a Linux cloud sandbox, 28/10/2026, for the guard on a worker's `.claude` directory ([pre-tool-guard](../decisions/pre-tool-guard.md), [worker-sessions](../decisions/worker-sessions.md)).
+A settings file passed with `--settings` defined a `SessionStart` hook that recorded its payload and a `PreToolUse` hook on `Bash` that recorded its payload and denied the call.
+Headless runs (`claude -p`, `claude-haiku-5-5`, `--allowedTools Bash`) in throwaway directories asked the model to run `echo` and report what it printed.
+
+| The run's directory held | The hooks from `--settings` |
+|---|---|
+| nothing | Fired: `SessionStart` recorded, the `Bash` call was denied. |
+| `.claude/settings.local.json` with `{"disableAllHooks": true}` | Did not fire: nothing recorded, the `Bash` call ran. |
+| `.claude/settings.json` with `{"disableAllHooks": true}` | Did not fire: nothing recorded, the `Bash` call ran. |
+| `.claude/settings.local.json` with `{"disableAllHooks": true}`, and `"disableAllHooks": false` in the `--settings` file | Fired: `SessionStart` recorded, the `Bash` call was denied. |
+
+- A settings file in the session's working directory can switch off every hook given with `--settings`, and a value the `--settings` file states for the same key wins over it.
+- With `--allowedTools Write`, Claude Code held the model's `Write` of `.claude/settings.local.json` for a permission prompt; whether a file written in the middle of a session under `--dangerously-skip-permissions` takes effect in that session was not verified, because the sandbox's own permission check refused that run.
+- User settings in `~/.claude/` were not tried, so as not to change the sandbox's own Claude Code; Claude Code documents them below the command line in precedence, as local and project settings are.
+
