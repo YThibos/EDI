@@ -102,7 +102,7 @@ The Issue column shows `-` until the issues are opened.
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| 1 | [EDI-81](EDI-81.md) | Learnings name their ticket | S | - | open | - |
+| 1 | [EDI-81](EDI-81.md) | Learnings name their ticket | S | - | delivered | - |
 | 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |

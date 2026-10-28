@@ -108,6 +108,12 @@ class JiraTrackerTest {
     }
 
     @Test
+    void findsATicketAndFindsNoneWhereJiraHasNothing() {
+        assertThat(tracker.found(LAMPS)).contains(new Ticket(LAMPS, "Harbour lamps", "To Do"));
+        assertThat(tracker.found(WorkKey.parse("SVC-9"))).isEmpty();
+    }
+
+    @Test
     void walksTheWorkflowToTheTargetAndLeavesATicketAlreadyThere() {
         TicketMove moved = tracker.transition(LAMPS, "Testing");
 
