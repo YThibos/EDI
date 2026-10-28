@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.guard.GuardRefusal;
 import io.github.ythibos.edi.domain.guard.GuardRule;
+import io.github.ythibos.edi.domain.guard.SecretReads;
 import io.github.ythibos.edi.domain.guard.Secrets;
 import io.github.ythibos.edi.domain.guard.ShellGuard;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -69,20 +70,38 @@ public class GuardToolCall {
     }
 
     public HookAnswer checkForWorker(WorkerId worker, ToolCall call) {
-        Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
-        Optional<GuardRefusal> refusal = call.writesAFile()
-                ? outsideTheWorkplace(call.writtenFile(), workplace)
-                : shellRefusal(call, basesOf(workplace), secretsKeptFromWorkers());
+        Optional<GuardRefusal> refusal = refusalForWorker(worker, call);
         refusal.ifPresent(refused -> transaction.executeWithoutResult(_ ->
                 events.record(new ToolCallRefused(worker.task(), worker, refused.rule()), Actor.worker(worker), clock.now())));
         return refusal.map(GuardToolCall::denial).orElse(HookAnswer.PROCEED);
     }
 
     public HookAnswer checkForPrimary(ToolCall call, CallingSession calling) {
-        return shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary())
+        return refusalForPrimary(call)
                 .filter(refused -> !allowedOnTheCaptainsWord(refused, calling))
                 .map(GuardToolCall::denialToThePrimary)
                 .orElse(HookAnswer.PROCEED);
+    }
+
+    private Optional<GuardRefusal> refusalForWorker(WorkerId worker, ToolCall call) {
+        if (call.readsAFile()) {
+            return secretRead(call.file(), secretsKeptFromAWorkersRead());
+        }
+        Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
+        return call.writesAFile()
+                ? outsideTheWorkplace(call.file(), workplace)
+                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell());
+    }
+
+    private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
+        return call.readsAFile()
+                ? secretRead(call.file(), secretsKeptFromThePrimary())
+                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary());
+    }
+
+    private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
+        return SecretReads.refusalForReading(file.toString(), secrets)
+                .or(() -> SecretReads.refusalForReading(realised(file).toString(), secrets));
     }
 
     private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets) {
@@ -93,12 +112,20 @@ public class GuardToolCall {
         return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets).check(call.command());
     }
 
-    private Secrets secretsKeptFromWorkers() {
+    private Secrets secretsKeptFromAWorkersRead() {
+        return new Secrets(secretFileEndings(), false);
+    }
+
+    private Secrets secretsKeptFromAWorkersShell() {
         return new Secrets(List.of(homeTokenEnding()), false);
     }
 
     private Secrets secretsKeptFromThePrimary() {
-        return new Secrets(Stream.concat(Stream.of(homeTokenEnding()), keysFileEnding().stream()).toList(), true);
+        return new Secrets(secretFileEndings(), true);
+    }
+
+    private List<String> secretFileEndings() {
+        return Stream.concat(Stream.of(homeTokenEnding()), keysFileEnding().stream()).toList();
     }
 
     private Optional<String> keysFileEnding() {
