@@ -53,7 +53,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.sessions = sessions;
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
         this.mise = mise.isBlank() ? Program.MISE.executable() : mise;
-        this.miseTrust = new MiseTrust(programs, this.mise);
+        this.miseTrust = new MiseTrust(programs, this.mise, Path.of(System.getProperty("user.home")));
     }
 
     @Override

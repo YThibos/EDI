@@ -17,37 +17,46 @@ import io.github.ythibos.edi.testing.StandInScripts;
 class MiseTrustTest {
 
     @TempDir
-    private Path directory;
+    private Path home;
 
     @Test
-    void trustsACloneWhoseEveryConfigurationMiseTrusts() throws IOException {
-        assertThat(miseShowing("~/projects: trusted\n~/projects/harness: trusted\n").trusts(projectClone())).isTrue();
+    void trustsACloneWhoseOwnConfigurationsMiseTrustsWhateverItsParentsTrust() throws IOException {
+        String shown = "~/projects: untrusted\n~/projects/harness: trusted\n" + home.resolve("projects/harness/tools") + ": trusted\n";
+
+        assertThat(miseShowing(shown).trusts(projectClone())).isTrue();
     }
 
     @Test
-    void doesNotTrustACloneWithAnUntrustedConfigurationUnderATrustedParent() throws IOException {
-        assertThat(miseShowing("~/projects: trusted\n~/projects/harness: untrusted\n").trusts(projectClone())).isFalse();
+    void doesNotTrustACloneWithAnUntrustedConfigurationOfItsOwn() throws IOException {
+        assertThat(miseShowing("~/projects: trusted\n~/projects/harness: trusted\n~/projects/harness/tools: untrusted\n").trusts(projectClone())).isFalse();
     }
 
     @Test
-    void doesNotTrustACloneWithoutATrustedConfiguration() throws IOException {
-        assertThat(miseShowing("mise No trusted config files found.\n").trusts(projectClone())).isFalse();
+    void doesNotTrustACloneWithoutAConfigurationOfItsOwnUnderATrustedParent() throws IOException {
+        assertThat(miseShowing("~/projects: trusted\n~/projects/harness-lamp: trusted\n").trusts(projectClone())).isFalse();
+    }
+
+    @Test
+    void doesNotTrustACloneWhereMiseFindsNoConfiguration() throws IOException {
+        Path mise = StandInScripts.installed(home.resolve("quiet-mise"), "#!/bin/sh\necho 'mise No trusted config files found.' >&2\n");
+
+        assertThat(new MiseTrust(new ExternalPrograms(), mise.toString(), home).trusts(projectClone())).isFalse();
     }
 
     @Test
     void doesNotTrustACloneWhenMiseFailsOrIsMissing() throws IOException {
-        Path failing = StandInScripts.installed(directory.resolve("failing-mise"), "#!/bin/sh\necho '~/projects/harness: trusted'\nexit 1\n");
+        Path failing = StandInScripts.installed(home.resolve("failing-mise"), "#!/bin/sh\necho '~/projects/harness: trusted'\nexit 1\n");
 
-        assertThat(new MiseTrust(new ExternalPrograms(), failing.toString()).trusts(projectClone())).isFalse();
-        assertThat(new MiseTrust(new ExternalPrograms(), directory.resolve("no-mise").toString()).trusts(projectClone())).isFalse();
+        assertThat(new MiseTrust(new ExternalPrograms(), failing.toString(), home).trusts(projectClone())).isFalse();
+        assertThat(new MiseTrust(new ExternalPrograms(), home.resolve("no-mise").toString(), home).trusts(projectClone())).isFalse();
     }
 
     private MiseTrust miseShowing(String shown) throws IOException {
-        Path mise = StandInScripts.installed(directory.resolve("mise"), "#!/bin/sh\n[ \"$*\" = 'trust --show' ] && printf '%s' '" + shown + "'\n");
-        return new MiseTrust(new ExternalPrograms(), mise.toString());
+        Path mise = StandInScripts.installed(home.resolve("mise"), "#!/bin/sh\n[ \"$*\" = 'trust --show' ] && printf '%s' '" + shown + "'\n");
+        return new MiseTrust(new ExternalPrograms(), mise.toString(), home);
     }
 
     private Path projectClone() throws IOException {
-        return Files.createDirectories(directory.resolve("projects/harness"));
+        return Files.createDirectories(home.resolve("projects/harness"));
     }
 }
