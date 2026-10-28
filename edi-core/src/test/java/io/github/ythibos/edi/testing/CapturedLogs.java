@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.testing;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,7 @@ public final class CapturedLogs implements AutoCloseable {
     public List<String> lines() {
         return List.copyOf(appender.list).stream()
                 .flatMap(event -> Stream.of(event.getFormattedMessage(), event.getThrowableProxy() == null ? "" : event.getThrowableProxy().getMessage()))
+                .map(line -> Objects.requireNonNullElse(line, ""))
                 .toList();
     }
 
