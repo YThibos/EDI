@@ -28,6 +28,7 @@ A session takes one item at a time, in this order.
 1. Fetch `origin/main` and read the index below.
 2. Pick the first item, in index order, whose status is `open`, whose blockers are all merged into `main`, and that has no open pull request and no claim on its issue.
    Skip every item that is held, parked or needs the captain's machine; the status column says which.
+   Until the issues exist, an open pull request or a pushed branch for the item is the claim.
 3. Claim it before doing any work:
    1. comment on the item's issue that you are taking it;
    2. create the branch `feature/EDI-<n>`, `chore/EDI-<n>` or `research/EDI-<n>`, as the item's header names, from a fresh `origin/main`; never use the platform's default branch name, never `fm/` or `edi/`, and never stack on another unmerged branch;
