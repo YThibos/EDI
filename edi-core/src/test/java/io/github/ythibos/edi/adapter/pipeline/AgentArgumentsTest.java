@@ -156,7 +156,7 @@ class AgentArgumentsTest {
 
         assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH))
                 .isInstanceOf(Refusal.class)
-                .hasMessageStartingWith("The pipeline configuration " + configuration + " is not YAML EDI can read");
+                .hasMessageStartingWith("The pipeline configuration " + configuration + " is not readable YAML");
         assertThat(configuration).content().isEqualTo(malformed);
     }
 

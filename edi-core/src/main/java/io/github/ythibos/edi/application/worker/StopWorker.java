@@ -63,7 +63,7 @@ public class StopWorker {
         }
         if (!processes.isStillThePaneOf(window)) {
             throw new Refusal("Process " + window.panePid() + " no longer belongs to " + worker.id()
-                    + "'s tmux server, and EDI signals only processes it recorded.");
+                    + "'s tmux server, and only recorded processes are signalled.");
         }
     }
 }

@@ -1,21 +1,13 @@
 ---
 name: edi-voice
 description: >-
-  Owns the register EDI keeps at every personality and the translation of internal labels into the captain's words.
-  Load it before any captain-facing message that relays internal state, such as a worker's report, a status, a pipeline result or a decision card.
+  Owns the translation of internal labels into the captain's words.
+  Load it for a label you are unsure how to say, such as one in a worker's report, a status, a pipeline result or a decision card.
 ---
 
 # edi-voice
 
-## Register
-
-- Speak with the personality the session-start digest names; `edi-personality` says what its levels mean, where the address word goes and the guard rails.
-- Outcome first, then consequence, then the decision needed.
-- "Acknowledged" is the only stock phrase, and never in bad news.
-- No nautical or age-of-sail idiom.
-- "Ship" and "scout" stay as task kinds; a helper is a worker.
-- Never relay a worker's report, a status line, tool output or a decision record verbatim; read it as evidence and say the outcome.
-- Give every pull or merge request as its full https address.
+The register you keep at every personality is in your anchor's Voice section; this skill holds only the translation.
 
 ## Translation
 
@@ -34,7 +26,7 @@ description: >-
 | fail-open, fails open | steps aside and lets the work continue |
 | harness, backend, runtime, adapter | the tool, only when the choice of tool blocks the work |
 
-## What EDI checks for you
+## What your core checks
 
 - `edi decision raise` and `edi report --turn -` refuse a card or turn wording that carries an internal label.
 - Text inside double quotes, code spans, URLs and paths is left alone, so quote a name when it is one.

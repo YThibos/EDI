@@ -66,12 +66,12 @@ class RegistryImportTest {
                         true));
         assertThat(notes.all()).extracting(MigrationNote::subject).containsExactly("harbour", "beacon", "beacon", "beacon", "ledger", "ledger", "EDI");
         assertThat(notes.all()).extracting(MigrationNote::subject, MigrationNote::note).contains(
-                tuple("beacon", "lives at https://forge.example.org/other-team/beacon, but no registered project there names the account EDI works"
+                tuple("beacon", "lives at https://forge.example.org/other-team/beacon, but no registered project there names the account I work"
                         + " under; add forge: { kind: gitlab, host: forge.example.org, path: other-team/beacon, account: <account> } to its entry in"
                         + " config/projects.yaml"),
                 tuple("beacon", "names no base branch; add base: to its entry in config/projects.yaml"),
                 tuple("ledger", "has no remote, so its work arrives as a branch in your checkout; add captainCheckout: to its entry in config/projects.yaml"),
-                tuple("EDI", "lives at https://github.com/example-owner/EDI, but no registered project there names the account EDI works under; add"
+                tuple("EDI", "lives at https://github.com/example-owner/EDI, but no registered project there names the account I work under; add"
                         + " forge: { kind: github, host: github.com, path: example-owner/EDI, account: <account> } to its entry in config/projects.yaml"));
     }
 

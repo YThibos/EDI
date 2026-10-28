@@ -145,7 +145,7 @@ class WorkerCommandsTest {
         int stopped = edi("{}", "hook", "stop");
 
         assertThat(guarded).isEqualTo(2);
-        assertThat(guardError).startsWith("EDI's guard could not check this tool call, so it is refused: EDI core is not answering");
+        assertThat(guardError).startsWith("The guard could not check this tool call, so it is refused: EDI core is not answering");
         assertThat(stopped).isOne();
     }
 

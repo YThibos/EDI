@@ -78,7 +78,7 @@ public class CaptainsWordEvidence {
         Exchange exchange = exchangeOf(calling);
         return transaction.execute(_ -> CaptainsAuthority.onTask(task, act, exchange, words.heardIn(exchange.session()),
                         decisions.everyOneOfTask(task)))
-                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
+                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
                         + " --text \"<their words>\", or have the captain choose, here, in the console or on a research board, the option of a decision on it"
                         + " that authorises " + act.word() + "."));
@@ -87,14 +87,14 @@ public class CaptainsWordEvidence {
     public CaptainsWord requireSaidForActOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
         return transaction.execute(_ -> CaptainsAuthority.saidForActOnTask(task, act, exchange, words.heardIn(exchange.session())))
-                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", EDI needs the captain's word on " + task
+                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session recorded for it: record it with edi captain said --task " + task + " --for " + act.word()
                         + " --text \"<their words>\"."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {
         return onTheHome(exchangeOf(calling)).orElseThrow(() -> new Refusal("To " + act.sentence()
-                + ", EDI needs the captain's word in this session: record it with edi captain said --text \"<their words>\"."));
+                + ", you need the captain's word in this session: record it with edi captain said --text \"<their words>\"."));
     }
 
     public Optional<CaptainsWord> onTheHome(CallingSession calling) {
@@ -103,8 +103,8 @@ public class CaptainsWordEvidence {
 
     private Exchange exchangeOf(CallingSession calling) {
         return currentExchange(calling).orElseThrow(() -> new Refusal(calling.namesItself()
-                ? "Session " + calling.id() + " is not a primary session EDI knows, so it cannot hear the captain's word there."
-                : "No session holds the primary role, so EDI cannot hear the captain's word; the captain gives it in the primary session or the console."));
+                ? "Session " + calling.id() + " is not a known primary session, so the captain's word cannot be heard there."
+                : "No session holds the primary role, so the captain's word cannot be heard; the captain gives it in the primary session or the console."));
     }
 
     private Optional<Exchange> currentExchange(CallingSession calling) {

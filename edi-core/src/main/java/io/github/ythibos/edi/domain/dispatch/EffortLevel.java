@@ -38,7 +38,7 @@ public enum EffortLevel {
     }
 
     private static String beyondTheCeiling(String word) {
-        return "Effort is low, medium or high, and high is EDI's ceiling, so not " + word;
+        return "Effort is low, medium or high, and high is the ceiling, so not " + word;
     }
 
     private static String wordsAboveTheCeiling() {

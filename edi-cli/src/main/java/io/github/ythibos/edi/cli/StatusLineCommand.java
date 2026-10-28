@@ -48,7 +48,7 @@ final class StatusLineCommand implements Callable<Integer> {
 
     private int notShown(String reason) {
         PrintWriter err = spec.commandLine().getErr();
-        err.println("EDI could not write the status line: " + reason.stripTrailing());
+        err.println("The status line could not be written: " + reason.stripTrailing());
         err.flush();
         return NOT_SHOWN;
     }

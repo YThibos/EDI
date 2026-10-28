@@ -11,7 +11,7 @@ final class DeliverySentences {
 
     static String delivered(DeliveredDraft delivered) {
         String how = delivered.opened() ? "Opened the draft " : "Recorded the open draft ";
-        return how + delivered.delivery().address() + " for " + delivered.delivery().task() + "; EDI watches it until the captain merges it.";
+        return how + delivered.delivery().address() + " for " + delivered.delivery().task() + "; you watch it until the captain merges it.";
     }
 
     static String followedUp(MergedWork work) {

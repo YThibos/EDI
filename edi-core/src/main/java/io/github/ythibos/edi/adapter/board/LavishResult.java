@@ -38,7 +38,7 @@ final class LavishResult {
             case FEEDBACK -> prompts.isEmpty() ? withoutPrompts(ended) : new BoardFeedback.Answered(prompts, ended);
             case ENDED -> prompts.isEmpty() ? new BoardFeedback.ClosedEmpty() : new BoardFeedback.Answered(prompts, true);
             case DISCONNECTED -> new BoardFeedback.Disconnected();
-            case String status -> new BoardFeedback.Failed("Lavish answered with a session status EDI does not know: " + quoted(status) + ".");
+            case String status -> new BoardFeedback.Failed("Lavish answered with an unknown session status: " + quoted(status) + ".");
         };
     }
 

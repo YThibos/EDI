@@ -85,7 +85,7 @@ public class CloneRefreshes {
         git.fetchOrigin(registry.entryOf(project).projectClone());
         pending.stream().filter(refresh -> !verified(refresh)).findFirst().ifPresent(waiting -> {
             throw new Refusal("Follow-up work on " + project + " waits until its clone holds commit " + waiting.expectedCommit() + " on "
-                    + waiting.baseRef() + ", which the merge of " + waiting.task() + " landed; EDI fetches again on the next dispatch.");
+                    + waiting.baseRef() + ", which the merge of " + waiting.task() + " landed; the next dispatch fetches again.");
         });
     }
 

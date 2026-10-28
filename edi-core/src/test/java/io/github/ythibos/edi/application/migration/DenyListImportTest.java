@@ -34,7 +34,7 @@ class DenyListImportTest {
                 RemoteAddress.of("https://github.com/example-owner/lamp.git").orElseThrow()), TRACKER);
 
         assertThat(list.content()).isEqualTo("""
-                # Terms EDI never publishes, one per line, matched whatever their case.
+                # Terms never published, one per line, matched whatever their case.
                 forge.example.org
                 keeper
                 quay.example.net

@@ -58,7 +58,7 @@ class AdoptForkTaskTest {
         assertThatThrownBy(() -> adoption.adopt(new TaskId("ferry-timetable"), oldHome, BranchName.parse("feature/EDI-8"), copy, null, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessage("ferry-timetable books its work on EDI-7, but feature/EDI-8 carries EDI-8.");
         assertThatThrownBy(() -> adoption.adopt(new TaskId("relay-mast"), oldHome, BranchName.parse("feature/LHT-3"), copy, null, Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessageContaining("is not a task EDI imports from " + oldHome + ": it is not imported");
+                .isInstanceOf(Refusal.class).hasMessageContaining("is not a task I import from " + oldHome + ": it is not imported");
         assertThatThrownBy(() -> adoption.adopt(new TaskId("harbour-wall"), oldHome, BranchName.parse("chore/LHT-4"), copy, null, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessage("harbour is not a registered project; add it to the project registry first.");
     }

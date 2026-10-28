@@ -86,7 +86,7 @@ public class MigrationReportText implements TextPresenter<MigrationReport> {
                 .map(kind -> kind.word() + " " + tasks.stream().filter(task -> task.intake().kind() == kind).count())
                 .collect(Collectors.joining(", ")));
         if (!backlog.alreadyInEdi().isEmpty()) {
-            table.row("already in EDI", backlog.alreadyInEdi().size() + ": " + idsOf(backlog.alreadyInEdi()));
+            table.row("already mine", backlog.alreadyInEdi().size() + ": " + idsOf(backlog.alreadyInEdi()));
         }
         return table.text();
     }
@@ -111,7 +111,7 @@ public class MigrationReportText implements TextPresenter<MigrationReport> {
     private static String sequenceOf(DecisionSequenceSeed seed, int lastIssuedByEdi) {
         String sequence = "Decision sequence: " + seed.highest() + ", the highest in " + seed.source();
         if (lastIssuedByEdi > seed.highest()) {
-            return sequence + "; EDI has already issued " + new DecisionNumber(lastIssuedByEdi) + ", so the first new decision is "
+            return sequence + "; I have already issued " + new DecisionNumber(lastIssuedByEdi) + ", so the first new decision is "
                     + new DecisionNumber(lastIssuedByEdi + 1) + ".";
         }
         return sequence + "; the first new decision is " + seed.firstNewNumber() + ".";
@@ -134,7 +134,7 @@ public class MigrationReportText implements TextPresenter<MigrationReport> {
 
     private static String oldHarnessWorkOf(List<String> work) {
         return new Table(INDENT)
-                .line(Words.counted("Set aside, as they improve the old harness EDI replaces", work.size()))
+                .line(Words.counted("Set aside, as they improve the old harness I replace", work.size()))
                 .line(INDENT + String.join(", ", work))
                 .text();
     }
@@ -162,7 +162,7 @@ public class MigrationReportText implements TextPresenter<MigrationReport> {
 
     private static String ediOwnWorkOf(BacklogSurvey backlog) {
         return new Table(INDENT)
-                .line("EDI's own work, which the import leaves as it is")
+                .line("My own work, which the import leaves as it is")
                 .row("tasks", backlog.ediOwnTasks().isEmpty() ? NONE : idsOf(backlog.ediOwnTasks()))
                 .row("decisions", backlog.ediOwnDecisions().isEmpty() ? NONE
                         : backlog.ediOwnDecisions().stream().map(DecisionNumber::toString).collect(Collectors.joining(", ")))

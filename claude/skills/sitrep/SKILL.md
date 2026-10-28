@@ -12,7 +12,7 @@ The situation report is read-only: it never dispatches, steers, answers, cleans 
 
 ## Plain `/sitrep`
 
-1. If this turn changed EDI's state, the turn's single report is `edi report --turn -` with the turn's items on standard input; use that instead of a second report.
+1. If this turn changed state, the turn's single report is `edi report --turn -` with the turn's items on standard input; use that instead of a second report.
 2. Otherwise run `edi sitrep`.
 3. Answer with one plain line to the captain, then the output verbatim in one fenced block.
 

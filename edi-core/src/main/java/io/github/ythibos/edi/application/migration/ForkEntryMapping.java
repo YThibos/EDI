@@ -64,7 +64,7 @@ final class ForkEntryMapping {
 
     Optional<MigratedEntry> migrated(ForkEntry entry) {
         if (!TaskId.isWritten(entry.id())) {
-            notes.add(entry.id(), "is not imported: EDI names a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout");
+            notes.add(entry.id(), "is not imported: I name a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout");
             return Optional.empty();
         }
         try {
@@ -140,8 +140,8 @@ final class ForkEntryMapping {
             return decision.holdOnItsTask();
         }
         if (!hold.isForTheCaptain()) {
-            notes.add(id.value(), "waits" + untilWords(hold) + " on something outside EDI (\"" + shortened(hold.reason())
-                    + "\"); EDI holds a task only for the captain, so the wait is not carried");
+            notes.add(id.value(), "waits" + untilWords(hold) + " on something outside me (\"" + shortened(hold.reason())
+                    + "\"); I hold a task only for the captain, so the wait is not carried");
             return null;
         }
         return new CaptainHold(HoldKind.DEFERRAL, hold.reason(), untilOf(hold), heldSince(entry));
@@ -163,7 +163,7 @@ final class ForkEntryMapping {
     private static TaskKind kindOf(String forkKind) {
         String kind = kindWordOf(forkKind);
         if (!KINDS.containsKey(kind)) {
-            throw new IllegalArgumentException("its kind " + kind + " has no counterpart in EDI");
+            throw new IllegalArgumentException("its kind " + kind + " has no counterpart of mine");
         }
         return KINDS.get(kind);
     }
@@ -174,7 +174,7 @@ final class ForkEntryMapping {
             notes.add(id.value(), "names no project; the captain sets one");
         }
         if (named.contains(ForkHome.HARNESS_PROJECT)) {
-            notes.add(id.value(), "also names the old harness itself; EDI keeps only its other projects");
+            notes.add(id.value(), "also names the old harness itself; I keep only its other projects");
         }
         return named.stream().filter(name -> !name.equals(ForkHome.HARNESS_PROJECT)).flatMap(name -> projectNamed(name, id)).distinct().toList();
     }
@@ -223,7 +223,7 @@ final class ForkEntryMapping {
         try {
             return Stream.of(new ProjectName(name));
         } catch (IllegalArgumentException unusable) {
-            notes.add(id.value(), "names the project \"" + name + "\", which is not a project name EDI accepts; it is dropped");
+            notes.add(id.value(), "names the project \"" + name + "\", which is not a project name I accept; it is dropped");
             return Stream.empty();
         }
     }
@@ -238,7 +238,7 @@ final class ForkEntryMapping {
 
     private String reasonNotToCarry(ForkDependency dependency, TaskId id) {
         if (!dependency.blocks()) {
-            return "has a " + dependency.type() + " link to " + dependency.id() + ", which EDI does not carry";
+            return "has a " + dependency.type() + " link to " + dependency.id() + ", which I do not carry";
         }
         if (dependency.id().equals(id.value())) {
             return "is blocked by itself; the dependency is dropped";

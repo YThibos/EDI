@@ -62,11 +62,11 @@ final class HookCommand implements Callable<Integer> {
     private int unanswered(String reason) {
         PrintWriter err = spec.commandLine().getErr();
         if (event.equals(GUARD)) {
-            err.println("EDI's guard could not check this tool call, so it is refused: " + reason);
+            err.println("The guard could not check this tool call, so it is refused: " + reason);
             err.flush();
             return BLOCKED;
         }
-        err.println("EDI could not take the " + event + " hook: " + reason);
+        err.println("The " + event + " hook could not be taken: " + reason);
         err.flush();
         return NOT_ANSWERED;
     }

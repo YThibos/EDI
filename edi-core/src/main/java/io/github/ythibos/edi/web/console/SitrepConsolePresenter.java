@@ -53,7 +53,7 @@ public class SitrepConsolePresenter {
     static final int LANDED_SHOWN = 10;
     static final int CHARTED_SHOWN = 20;
     private static final String WITHOUT_A_WORKER = "waiting";
-    private static final String WITH_EDI = "with EDI";
+    private static final String WITH_ME = "with me";
     private static final String AFTER_A_LEADING_KEY = "\\b[\\s:|-]*";
 
     private final PresenceWords presenceWords;
@@ -177,7 +177,7 @@ public class SitrepConsolePresenter {
             return worker.activity().word();
         }
         if (worker.waitsOnThePrimary()) {
-            return WITH_EDI;
+            return WITH_ME;
         }
         StatusState reported = worker.lastStatus().report().state();
         return reported == StatusState.RESOLVED ? StatusState.WORKING.word() : reported.word();
@@ -199,11 +199,11 @@ public class SitrepConsolePresenter {
         if (report.isForThePrimary()) {
             return whatEdiIsSettling(report);
         }
-        return report.state() == StatusState.RESOLVED ? "back at work; EDI settled its question" : report.text();
+        return report.state() == StatusState.RESOLVED ? "back at work; I settled its question" : report.text();
     }
 
     private static String whatEdiIsSettling(StatusReport report) {
-        return report.state() == StatusState.BLOCKED ? "EDI is helping it past a block" : "EDI is settling a question";
+        return report.state() == StatusState.BLOCKED ? "I am helping it past a block" : "I am settling a question";
     }
 
     private static String draftOf(Delivery delivery) {

@@ -29,7 +29,7 @@ class TicketProposalTest {
 
         assertThat(card.title()).isEqualTo("Ticket for \"Fit the harbour lamp\"");
         assertThat(card.context()).isEqualTo("""
-                fit-lamp books its work on a ticket, and EDI creates a new ticket only on your answer.
+                fit-lamp books its work on a ticket, and I create a new ticket only on your answer.
                 These open SVC tickets match its words.""");
         assertThat(card.options()).extracting(DecisionOption::text).containsExactly(
                 "Book it on SVC-40: Harbour lamps (In Progress)",
@@ -58,7 +58,7 @@ class TicketProposalTest {
     @Test
     void namesWhyAnEarlierAnswerCouldNotBeCarriedOut() {
         assertThat(PROPOSAL.cardAfterRefusal("JIRA found nothing for the ticket SVC-12 (HTTP 404).").context())
-                .startsWith("EDI could not carry out the earlier answer: JIRA found nothing for the ticket SVC-12 (HTTP 404).\nfit-lamp books its work");
+                .startsWith("I could not carry out the earlier answer: JIRA found nothing for the ticket SVC-12 (HTTP 404).\nfit-lamp books its work");
     }
 
     @Test

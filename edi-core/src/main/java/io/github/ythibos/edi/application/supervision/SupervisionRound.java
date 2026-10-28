@@ -67,7 +67,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("notice overdue steers", overdueSteers::notice);
         attempt("notice missed launches", missedLaunches::notice);
         attempt("notice workers whose context is full", fullContexts::notice);
-        attempt("wake workers whose stop EDI missed", missedStops::notice);
+        attempt("wake workers whose stop was missed", missedStops::notice);
         attempt("judge the workers", judgeWorkers::judge);
         attempt("resume a worker after its usage limit", usageLimits::resumeTheNextOneDue);
         attempt("notice holds whose date arrived", dueHolds::notice);

@@ -8,7 +8,7 @@ public enum CaptainWordAct {
     PROMOTE("promote a scout to a ship", true),
     DROP("drop a task", true),
     DISCARD_WORK("discard work that has not landed", true),
-    EFFORT_ABOVE_HIGH("run one task above high, EDI's effort ceiling", false),
+    EFFORT_ABOVE_HIGH("run one task above high, the effort ceiling", false),
     TOUCH_A_SECRET("touch a secret", false),
     STOP_RUNNING_WORKERS("stop the workers that are running", false);
 

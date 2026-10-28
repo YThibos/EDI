@@ -59,7 +59,7 @@ final class UpdateCommand implements Callable<Integer> {
 
     private void report(EdiCheckout checkout) {
         PrintWriter out = spec.commandLine().getOut();
-        out.println("EDI is updated to " + checkout.head() + " and its core runs the new build.");
+        out.println("Updated to " + checkout.head() + "; the core runs the new build.");
         out.println("Re-read " + checkout.primaryAnchor() + ": the primary's rules may have changed, and a new session loads them.");
         out.flush();
     }

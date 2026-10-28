@@ -145,7 +145,7 @@ class TmuxClaudeRuntimeTest {
             TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
 
             assertThatThrownBy(() -> runtime.launch(launch(UUID.randomUUID(), List.of())))
-                    .isInstanceOf(Refusal.class).hasMessageContaining("defines hooks, which Claude Code would run beside EDI's own");
+                    .isInstanceOf(Refusal.class).hasMessageContaining("defines hooks, which Claude Code would run beside the hooks a worker gets at launch");
         }
     }
 

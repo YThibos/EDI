@@ -95,7 +95,7 @@ class TicketProposalsTest {
         assertThat(raisedAgain.isOpen()).isTrue();
         assertThat(raisedAgain.number()).isEqualTo(new DecisionNumber(answered.decision().number().value() + 1));
         assertThat(home.decisions().get(answered.decision().number()).answer().verbatim()).isEqualTo("D58 A");
-        assertThat(raisedAgain.card().context()).startsWith("EDI could not carry out the earlier answer: JIRA found nothing for the ticket SVC-40");
+        assertThat(raisedAgain.card().context()).startsWith("I could not carry out the earlier answer: JIRA found nothing for the ticket SVC-40");
         assertThat(home.tasks().get(LAMPS).isHeld()).isTrue();
         assertThat(home.eventTypesOf(LAMPS)).endsWith("DecisionAnswered", "TicketChoiceRefused", "DecisionRaised");
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.DECISION_RAISED);

@@ -8,7 +8,7 @@ const TONES: Record<string, Tone> = {
   blocked: 'danger',
   failed: 'danger',
   starting: 'info',
-  'with EDI': 'info',
+  'with me': 'info',
   busy: 'online',
   idle: 'neutral',
 };

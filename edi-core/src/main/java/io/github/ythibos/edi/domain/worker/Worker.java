@@ -36,7 +36,7 @@ public record Worker(
 
     public Worker {
         Objects.requireNonNull(id, "A worker has an id.");
-        Objects.requireNonNull(session, () -> id + " has the Claude session id EDI chose for it.");
+        Objects.requireNonNull(session, () -> id + " has the Claude session id chosen for it.");
         Objects.requireNonNull(route, () -> id + " runs on an explicit model.");
         Objects.requireNonNull(window, () -> id + " lives in a recorded tmux window.");
         Objects.requireNonNull(launch, () -> id + " records how and when it was launched.");

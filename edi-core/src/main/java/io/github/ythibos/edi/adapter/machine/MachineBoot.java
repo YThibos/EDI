@@ -27,7 +27,7 @@ public class MachineBoot {
         try {
             return new BootId(Files.readString(bootIdFile));
         } catch (IOException unreadable) {
-            throw new UncheckedIOException("EDI tells a machine restart by its boot id, but " + bootIdFile + " cannot be read.", unreadable);
+            throw new UncheckedIOException("A machine restart is told by its boot id, but " + bootIdFile + " cannot be read.", unreadable);
         }
     }
 }

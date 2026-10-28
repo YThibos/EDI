@@ -128,7 +128,7 @@ public class JiraTracker implements Tracker {
     private TrackerSettings settings() {
         TrackerSettings settings = machine.tracker();
         if (!settings.isJira()) {
-            throw new Refusal("This machine's profile names no JIRA tracker, so EDI cannot reach one.");
+            throw new Refusal("This machine's profile names no JIRA tracker to reach.");
         }
         return settings;
     }
@@ -201,7 +201,7 @@ public class JiraTracker implements Tracker {
     private static JsonNode theOnlyOne(List<JsonNode> active, WorkKey key) {
         if (active.size() > 1) {
             throw new Refusal("several " + key.project() + " sprints are active (" + active.stream().map(JiraTracker::nameOf).collect(Collectors.joining(", "))
-                    + "), so EDI adds " + key + " to none of them");
+                    + "), so " + key + " joins none of them");
         }
         return active.getFirst();
     }

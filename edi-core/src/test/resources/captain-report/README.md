@@ -18,3 +18,4 @@ Since everything waiting on the captain joined the decision zone ([fleet-snapsho
 | `large-backlog` | a fleet snapshot past the argument limit still renders |
 | `two-megabyte-backlog` | the 2 MB backlog of AT-42, 512 queued tasks with 4 KB of notes each |
 | `wrapping` | added for EDI: every kind of line wraps, at 72 columns |
+| `unreadable-calendar` | added for EDI: the calendar line, in the first person, while the calendar cannot be read |

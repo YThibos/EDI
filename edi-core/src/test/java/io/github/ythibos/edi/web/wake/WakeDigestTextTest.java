@@ -40,7 +40,7 @@ class WakeDigestTextTest {
                 EDI wake: 4 waiting.
                 1. fit-lamp#1 needs a decision: (lamp) Brass or oil?
                 2. fit-lamp#1 died: its tmux server changed; edi worker relaunch fit-lamp resumes its session.
-                3. fit-lamp#1 stopped on the session limit; EDI types one resume line after 2026-10-16 14:10 UTC.
+                3. fit-lamp#1 stopped on the session limit; you type one resume line after 2026-10-16 14:10 UTC.
                 4. tune-horn is on the outage hold list as number 2: the machine restarted; edi recover shows the list.
                 Fleet: 1 open decisions, 3 tasks in flight, 1 on the outage hold list.
                 Handle these, then start edi wait in the background again.
@@ -72,9 +72,9 @@ class WakeDigestTextTest {
         Wake untyped = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, false), Actor.CORE).orElseThrow();
         WakeDelivery delivery = new WakeDelivery(List.of(queued(1, missed), queued(2, untyped)), 0, 1, 0, PRESENT);
 
-        assertThat(digest.text(delivery)).contains("1. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while EDI could not take its stop hook, so EDI"
+        assertThat(digest.text(delivery)).contains("1. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while you could not take its stop hook, so you"
                 + " sent it a message to carry on: message 2 was typed into its idle prompt.\n")
-                .contains("2. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while EDI could not take its stop hook, so EDI sent it a message to"
+                .contains("2. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while you could not take its stop hook, so you sent it a message to"
                         + " carry on: message 2 waits, as its pane did not take the notice; edi worker peek fit-lamp shows the pane.\n");
     }
 
@@ -87,7 +87,7 @@ class WakeDigestTextTest {
                 queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0, PRESENT);
 
         assertThat(digest.text(delivery)).contains("""
-                1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; EDI refreshes the clone and cleans up.
+                1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; you refresh the clone and clean up.
                 2. fit-lamp: https://github.com/example-owner/harness/pull/7 was closed without a merge; its work waits for the captain's word.
                 3. fit-lamp: its delivery to the captain's checkout failed: the captain's checkout has uncommitted work in lamp.txt
                 4. fit-lamp was not cleaned up after its merge: notes.txt is not committed

@@ -74,14 +74,14 @@ class ConfirmationTextTest {
                 .isEqualTo("Queued lantern on SVC-40: Harbour lamps.\n");
         assertThat(text.text(new Confirmation.Queued(new AddedTask(LANTERN, null, new DecisionNumber(59)))))
                 .isEqualTo("Queued lantern; D59 asks which ticket it books on, and it waits for that answer.\n");
-        assertThat(answerWith(new TicketSettlement.Keyed(lamps, true))).endsWith(" It books its work on SVC-40, the ticket EDI created.\n");
+        assertThat(answerWith(new TicketSettlement.Keyed(lamps, true))).endsWith(" It books its work on SVC-40, the ticket you created.\n");
         assertThat(answerWith(new TicketSettlement.Keyed(lamps, false))).endsWith(" It books its work on SVC-40.\n");
         assertThat(answerWith(new TicketSettlement.CreatedWithoutItsFields(lamps, "the epic link is not allowed")))
-                .endsWith(" It books its work on SVC-40, the ticket EDI created, but the tracker refused its fields: the epic link is not allowed\n");
+                .endsWith(" It books its work on SVC-40, the ticket you created, but the tracker refused its fields: the epic link is not allowed\n");
         assertThat(answerWith(new TicketSettlement.Pending("JIRA cannot be reached.")))
-                .endsWith(" Its ticket is not settled yet: JIRA cannot be reached. EDI tries again every 30 seconds.\n");
+                .endsWith(" Its ticket is not settled yet: JIRA cannot be reached. You try again every 30 seconds.\n");
         assertThat(answerWith(new TicketSettlement.AskedAgain("JIRA found nothing for the ticket SVC-77 (HTTP 404).")))
-                .endsWith(" EDI could not carry out the answer, so it raised the decision again: JIRA found nothing for the ticket SVC-77 (HTTP 404).\n");
+                .endsWith(" You could not carry out the answer, so you raised the decision again: JIRA found nothing for the ticket SVC-77 (HTTP 404).\n");
     }
 
     @Test
@@ -91,7 +91,7 @@ class ConfirmationTextTest {
                 new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
         Instant stopped = PresenterFixtures.AT.plusSeconds(60);
 
-        assertThat(text.text(new Confirmation.StopRequested(lamp.stopRequested(stopped)))).isEqualTo("Stopping lantern#1: EDI signalled its processes,"
+        assertThat(text.text(new Confirmation.StopRequested(lamp.stopRequested(stopped)))).isEqualTo("Stopping lantern#1: you signalled its processes,"
                 + " and those still running in ten seconds are killed; edi worker relaunch lantern resumes its session.\n");
         assertThat(text.text(new Confirmation.StopRequested(lamp.promptSubmitted(stopped).contextFilled(stopped).stopRequested(stopped))))
                 .endsWith("; edi worker relaunch lantern starts a fresh session with a handover, since its context is full.\n");
@@ -124,7 +124,7 @@ class ConfirmationTextTest {
                 Instant.parse("2026-10-16T09:00:00Z"));
 
         assertThat(text.text(new Confirmation.DraftDelivered(new DeliveredDraft(delivery, true)))).isEqualTo(
-                "Opened the draft https://github.com/example-owner/harness/pull/7 for lantern; EDI watches it until the captain merges it.\n");
+                "Opened the draft https://github.com/example-owner/harness/pull/7 for lantern; you watch it until the captain merges it.\n");
         assertThat(text.text(new Confirmation.DraftDelivered(new DeliveredDraft(delivery, false)))).startsWith("Recorded the open draft ");
         assertThat(text.text(new Confirmation.MergedWorkFollowedUp(new MergedWork(LANTERN, delivery.observed(merged, Instant.parse("2026-10-16T10:00:00Z")), new CleanUp(true, null, false))))).isEqualTo(
                 "Recorded the merge of https://github.com/example-owner/harness/pull/7 as 3333; lantern is cleaned up and done.\n");

@@ -15,20 +15,20 @@ description: >-
 
 ## A worker whose context is full
 
-1. EDI raises it the moment its transcript shows the full context; `edi worker list` reads `context full since <time>`.
+1. You raise it the moment its transcript shows the full context; `edi worker list` reads `context full since <time>`.
 2. Never type into its pane and never resume it: every prompt fails the same way, and a resume reopens the full conversation.
 3. `edi worker stop <task>`, then `edi worker relaunch <task>` starts a fresh session in the same copy, briefed with `handover.md` beside the brief.
 4. Messages sent meanwhile wait in its inbox; the fresh session reads them first.
 
 ## Two or more dead workers
 
-1. Run `edi recover`: EDI holds every dead worker's task, relaunches none and prints one numbered list.
+1. Run `edi recover`: you hold every dead worker's task, relaunch none and print one numbered list.
 2. Show the list to the captain with each entry's outcome so far, what it waits on, its recorded model and effort, those its category gives now, and unpushed work.
 3. Act only on the numbers the captain names, one at a time:
    - `edi recover <n> resume` resumes the recorded session;
    - `edi recover <n> fresh [--model <model>] [--effort <effort>]` starts a new one;
    - `edi recover <n> drop [--discard-work]` drops the task, only on the captain's word recorded first with `edi captain said --task <task> --text "<their words>"`.
-4. EDI refuses a relaunch while a usage limit still holds; answer the list once it has reset.
+4. You refuse a relaunch while a usage limit still holds; answer the list once it has reset.
 
 ## After an outage
 
@@ -38,7 +38,7 @@ description: >-
 
 ## Usage limits
 
-- A worker parked on a limit resumes on its own after the reset; EDI types its one resume line into an idle prompt.
+- A worker parked on a limit resumes on its own after the reset; you type its one resume line into an idle prompt.
 - Never press a key into a limit, spend-cap or continue dialog; Escape only, and only when the captain asks.
-- Credits stay off: EDI never raises a spend cap or accepts an upgrade.
+- Credits stay off: you never raise a spend cap or accept an upgrade.
 - When your own session stopped on a limit, the next session's digest says so and lists the parked work.

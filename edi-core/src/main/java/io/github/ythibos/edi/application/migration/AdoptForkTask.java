@@ -119,7 +119,7 @@ public class AdoptForkTask {
     private static ProjectName onlyProjectOf(Task task) {
         List<ProjectName> projects = task.intake().projects();
         if (projects.size() != 1) {
-            throw new Refusal(task.id() + " works on " + projects.size() + " projects, and EDI takes over the isolated copy of exactly one.");
+            throw new Refusal(task.id() + " works on " + projects.size() + " projects, and I take over the isolated copy of exactly one.");
         }
         return projects.getFirst();
     }
@@ -129,7 +129,7 @@ public class AdoptForkTask {
             return Optional.empty();
         }
         return Optional.of(sessions.transcriptOf(session).orElseThrow(() -> new Refusal("No Claude Code transcript of session " + session
-                + " exists on this machine, so EDI could not resume it; adopt without --session to start the next worker afresh.")));
+                + " exists on this machine, so I could not resume it; adopt without --session to start the next worker afresh.")));
     }
 
     private RegisteredCopy registeredCopyOf(ProjectEntry project, Task task, BranchName branch, Path oldCopy) {
@@ -229,7 +229,7 @@ public class AdoptForkTask {
 
     private static void requireNoCopyAt(Path copy) {
         if (Files.exists(copy, LinkOption.NOFOLLOW_LINKS)) {
-            throw new Refusal("EDI already holds an isolated copy at " + copy + ", so the old copy cannot take its place.");
+            throw new Refusal("I already hold an isolated copy at " + copy + ", so the old copy cannot take its place.");
         }
     }
 
@@ -247,7 +247,7 @@ public class AdoptForkTask {
         try {
             git.fetchBranchInto(project.projectClone(), oldCopy, branch);
         } catch (ProgramFailure diverged) {
-            throw new Refusal(project.project().name() + "'s clone holds " + branch + " at a commit the old copy does not build on, so EDI cannot take it"
+            throw new Refusal(project.project().name() + "'s clone holds " + branch + " at a commit the old copy does not build on, so I cannot take it"
                     + " over: " + diverged.getMessage());
         }
     }

@@ -44,12 +44,12 @@ class MigrateFirstofficerTest {
         home.migrateFirstofficer().run(oldHome, true, Actor.PRIMARY);
 
         assertThat(dryRun.backlog().conflicts()).extracting(MigrationNote::subject, MigrationNote::note).containsExactly(
-                tuple("D57", "is already EDI's decision on fit-lamp, so beacon-colour and its decision are not imported"));
+                tuple("D57", "is already my decision on fit-lamp, so beacon-colour and its decision are not imported"));
         assertThat(dryRun.backlog()).extracting(BacklogSurvey::ediOwnTasks, BacklogSurvey::ediOwnDecisions)
                 .containsExactly(List.of(new TaskId("fit-lamp")), List.of(new DecisionNumber(57)));
         assertThat(new MigrationReportText().text(dryRun)).contains(
-                "Decision sequence: 57, the highest in data/decision-seq; EDI has already issued D80, so the first new decision is D81.",
-                "EDI's own work, which the import leaves as it is", "D57                         is already EDI's decision on fit-lamp");
+                "Decision sequence: 57, the highest in data/decision-seq; I have already issued D80, so the first new decision is D81.",
+                "My own work, which the import leaves as it is", "D57                         is already my decision on fit-lamp");
         assertThat(home.tasks().contains(new TaskId("beacon-colour"))).isFalse();
         assertThat(home.decisions().get(new DecisionNumber(57)).task()).isEqualTo(new TaskId("fit-lamp"));
         assertThat(home.decisions().lastNumberIssued()).isEqualTo(80);

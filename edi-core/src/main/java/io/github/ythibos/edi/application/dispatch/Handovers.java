@@ -82,7 +82,7 @@ public class Handovers {
         try {
             return git.commitsBeyond(worktree, baseRef, HEAD).stream().map(Handovers::commitLine).toList();
         } catch (ProgramFailure unreadable) {
-            return List.of("EDI could not read them; run `git log " + baseRef + "..HEAD`.");
+            return List.of("They could not be read; run `git log " + baseRef + "..HEAD`.");
         }
     }
 
@@ -94,7 +94,7 @@ public class Handovers {
         try {
             return git.uncommittedPaths(worktree);
         } catch (ProgramFailure unreadable) {
-            return List.of("EDI could not read them; run `git status`.");
+            return List.of("They could not be read; run `git status`.");
         }
     }
 

@@ -43,7 +43,7 @@ public class MigrateFirstofficer {
     private void requireAFreshHomeUnless(boolean overwrite, MigrationReport surveyed) {
         if (!overwrite && surveyed.meetsAHomeInUse()) {
             throw new Refusal(home.root() + " already holds " + String.join(" and ", whatTheHomeHolds(surveyed))
-                    + "; the dry run lists them, and --overwrite imports beside EDI's own work, keeping each replaced file as <file>"
+                    + "; the dry run lists them, and --overwrite imports beside my own work, keeping each replaced file as <file>"
                     + HomeWriter.KEPT_SUFFIX + ".");
         }
     }

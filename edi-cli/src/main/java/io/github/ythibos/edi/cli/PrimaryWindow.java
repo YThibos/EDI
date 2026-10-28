@@ -15,20 +15,25 @@ final class PrimaryWindow {
 
     int open(PrimaryLaunch launch) {
         if (insideTmux) {
-            int opened = LocalPrograms.runAttached(newSession(launch, true), launch.directory(), Map.of());
+            int opened = LocalPrograms.runAttached(newSession(launch), launch.directory(), Map.of());
             return opened == 0 ? switchTo(launch) : opened;
         }
-        return LocalPrograms.runAttached(newSession(launch, false), launch.directory(), Map.of());
+        return LocalPrograms.runAttached(newSession(launch), launch.directory(), Map.of());
     }
 
-    private static List<String> newSession(PrimaryLaunch launch, boolean detached) {
+    List<String> newSession(PrimaryLaunch launch) {
         List<String> command = new ArrayList<>(List.of("tmux", "new-session"));
-        if (detached) {
+        if (insideTmux) {
             command.add("-d");
         }
         command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString()));
         command.addAll(launch.claude());
+        command.addAll(terminalTitledBySessionName(launch.session()));
         return command;
+    }
+
+    private static List<String> terminalTitledBySessionName(String session) {
+        return List.of(";", "set-option", "-t", session, "set-titles", "on", ";", "set-option", "-t", session, "set-titles-string", "#S");
     }
 
     private static int switchTo(PrimaryLaunch launch) {

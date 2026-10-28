@@ -1,8 +1,8 @@
 ---
 name: personality
 description: >-
-  Owns the captain's /personality, which shows or changes the personality EDI speaks with.
-  Load it when the captain types /personality, or asks in their own words to change how EDI speaks to them.
+  Owns the captain's /personality, which shows or changes the personality you speak with.
+  Load it when the captain types /personality, or asks in their own words to change how you speak to them.
 user-invocable: true
 ---
 

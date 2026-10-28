@@ -183,11 +183,11 @@ public class GuardToolCall {
     }
 
     private static HookAnswer denial(GuardRefusal refusal) {
-        return HookAnswer.denyTheTool("EDI's guard refuses this: " + refusal.reason());
+        return HookAnswer.denyTheTool("The guard refuses this: " + refusal.reason());
     }
 
     private static HookAnswer denialToThePrimary(GuardRefusal refusal) {
         String remedy = ALLOWED_ON_THE_CAPTAINS_WORD.contains(refusal.rule()) ? AFTER_THE_CAPTAINS_WORD : "";
-        return HookAnswer.denyTheTool("EDI's guard refuses this: " + refusal.reason() + remedy);
+        return HookAnswer.denyTheTool("The guard refuses this: " + refusal.reason() + remedy);
     }
 }

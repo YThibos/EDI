@@ -19,8 +19,8 @@ public record Delivery(
         Objects.requireNonNull(task, "A delivery is the delivery of a task.");
         Objects.requireNonNull(address, () -> "The delivery of " + task + " names its merge request.");
         Objects.requireNonNull(state, () -> "The delivery of " + task + " is open, merged or closed.");
-        Objects.requireNonNull(recordedAt, () -> "The delivery of " + task + " records when EDI first saw it.");
-        Objects.requireNonNull(observedAt, () -> "The delivery of " + task + " records when EDI last looked at it.");
+        Objects.requireNonNull(recordedAt, () -> "The delivery of " + task + " records when it was first seen.");
+        Objects.requireNonNull(observedAt, () -> "The delivery of " + task + " records when it was last looked at.");
     }
 
     public static Delivery of(TaskId task, MergeRequestView view, Instant at) {

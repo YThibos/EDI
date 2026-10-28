@@ -42,7 +42,7 @@ final class ForkDecisionMapping {
         try {
             return Optional.of(Decision.raised(number, task, cardOf(decision.card()), raisedAt));
         } catch (IllegalArgumentException unusable) {
-            notes.add(number.toString(), "on " + task + " has a card EDI cannot carry: " + unusable.getMessage());
+            notes.add(number.toString(), "on " + task + " has a card I cannot carry: " + unusable.getMessage());
             return Optional.empty();
         }
     }

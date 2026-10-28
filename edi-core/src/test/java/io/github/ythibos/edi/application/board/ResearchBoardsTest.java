@@ -149,7 +149,7 @@ class ResearchBoardsTest {
                   attachment: /tmp/capture.png (image/png)
                 Prompt 3 (choice, at section#s2 > form): %s: option=B
                   context: decision=%s, option=B
-                EDI hands these to their decisions as the captain's answers: %s option B.""".formatted(boardFile, decision, decision, decision));
+                These go to their decisions as the captain's answers: %s option B.""".formatted(boardFile, decision, decision, decision));
         CaptainAnswer recorded = home.decisions().get(decision).answer();
         assertThat(recorded.verbatim()).isEqualTo(decision + ": option=B");
         assertThat(recorded.option()).isEqualTo(new OptionKey('B'));
@@ -338,7 +338,7 @@ class ResearchBoardsTest {
         assertThat(afterLastWords).isFalse();
         assertThat(afterEmptyClose).isFalse();
         assertThat(home.boards().listening()).isEmpty();
-        assertThat(message(1).body()).endsWith("The captain ended the board session, so EDI no longer listens to it.");
+        assertThat(message(1).body()).endsWith("The captain ended the board session, so its answers no longer reach you.");
         assertThat(home.inbox().get(SCOUT, 2)).isEmpty();
         assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardClosed");
     }
@@ -374,9 +374,9 @@ class ResearchBoardsTest {
 
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed(decision + " B")), false));
 
-        assertThat(message(1).body()).doesNotContain("records").endsWith("EDI hands these to their decisions as the captain's answers: %s option B."
+        assertThat(message(1).body()).doesNotContain("records").endsWith("These go to their decisions as the captain's answers: %s option B."
                 .formatted(decision));
-        assertThat(message(2).body()).isEqualTo("EDI refused the captain's board answer to %s (\"%s B\"): %s is already answered: %s A"
+        assertThat(message(2).body()).isEqualTo("The captain's board answer to %s (\"%s B\") was refused: %s is already answered: %s A"
                 .formatted(decision, decision, decision, decision));
         assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('A'));
     }
@@ -390,7 +390,7 @@ class ResearchBoardsTest {
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(choice), false));
 
         assertThat(home.decisions().get(decision).isOpen()).isTrue();
-        assertThat(message(2).body()).isEqualTo("EDI refused the captain's board answer to %s (\"%s: option=Z\"): %s offers no option Z."
+        assertThat(message(2).body()).isEqualTo("The captain's board answer to %s (\"%s: option=Z\") was refused: %s offers no option Z."
                 .formatted(decision, decision, decision));
         assertThat(home.boards().answersOf(board.id())).singleElement()
                 .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(decision + " offers no option Z."));

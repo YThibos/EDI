@@ -371,7 +371,7 @@ class AuthorityAndInterfaceTest {
             CallingSession session = primarySessionIn(home, "Ship the lamp survey's plan.");
 
             assertThatThrownBy(() -> promote(home, "survey-lamps", session))
-                    .isInstanceOf(Refusal.class).hasMessageContaining("needs the captain's word on survey-lamps in this session");
+                    .isInstanceOf(Refusal.class).hasMessageContaining("need the captain's word on survey-lamps in this session");
             assertThatThrownBy(() -> home.captainsWord().record(session, "Ship it all.", TaskReference.parse("survey-lamps"), null, Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("did not type");
             home.captainsWord().record(session, "ship the lamp survey\u2019s   plan.", TaskReference.parse("survey-doors"), null, Actor.PRIMARY);
@@ -455,7 +455,7 @@ class AuthorityAndInterfaceTest {
             answerOnTask(home, "fit-hinge", Cards.authorising("Discard the work on fit-hinge?", CaptainWordAct.DISCARD_WORK), "D61 B");
 
             assertThatThrownBy(() -> home.discardWork().discard(TaskReference.parse("fit-lamp"), current, Actor.PRIMARY))
-                    .isInstanceOf(Refusal.class).hasMessageContaining("To discard work that has not landed, EDI needs the captain's word on fit-lamp");
+                    .isInstanceOf(Refusal.class).hasMessageContaining("To discard work that has not landed, you need the captain's word on fit-lamp");
             assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), true, current, Actor.PRIMARY))
                     .isInstanceOf(Refusal.class).hasMessageContaining("on fit-door in this session");
             assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("fit-door"), false, current, Actor.PRIMARY))

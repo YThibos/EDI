@@ -130,7 +130,7 @@ class JiraTrackerTest {
         assertThat(tracker.addToCurrentSprint(LAMPS)).isEqualTo(new SprintPlacement.NoActiveSprint());
 
         jira.withActiveSprints(Map.of(7L, "Sprint 7", 8L, "Hotfixes"));
-        assertThatThrownBy(() -> tracker.addToCurrentSprint(LAMPS)).isInstanceOf(Refusal.class).hasMessageContaining("so EDI adds SVC-40 to none of them");
+        assertThatThrownBy(() -> tracker.addToCurrentSprint(LAMPS)).isInstanceOf(Refusal.class).hasMessageContaining("so SVC-40 joins none of them");
     }
 
     @Test
@@ -151,7 +151,7 @@ class JiraTrackerTest {
 
         jira.answersNextWith(401, "");
         assertThatThrownBy(() -> tracker.verified(LAMPS)).isInstanceOf(Refusal.class)
-                .hasMessage("JIRA refused EDI's access token for the ticket SVC-40 (HTTP 401); renew the token in the TRACKER section of the keys file.");
+                .hasMessage("JIRA refused the access token for the ticket SVC-40 (HTTP 401); renew the token in the TRACKER section of the keys file.");
 
         jira.answersNextWith(503, "{\"errorMessages\":[\"Down for maintenance\"]}");
         assertThatThrownBy(() -> tracker.verified(LAMPS)).isInstanceOf(TrackerUnavailable.class)
@@ -167,6 +167,6 @@ class JiraTrackerTest {
         Files.writeString(home.resolve("config/machine.yaml"), "tracker:\n  kind: none\n");
 
         assertThatThrownBy(() -> tracker.verified(LAMPS)).isInstanceOf(Refusal.class)
-                .hasMessage("This machine's profile names no JIRA tracker, so EDI cannot reach one.");
+                .hasMessage("This machine's profile names no JIRA tracker to reach.");
     }
 }

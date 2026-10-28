@@ -38,7 +38,7 @@ public class StopTheCore {
         }
         if (stop != CoreStop.WITH_ITS_WORKERS) {
             throw new Refusal(workersRunning(running) + " (" + running.stream().map(worker -> worker.id().toString())
-                    .collect(Collectors.joining(", ")) + "), so EDI stays up; edi down --force-stop-workers stops them too, on the captain's word.");
+                    .collect(Collectors.joining(", ")) + "), so the core stays up; edi down --force-stop-workers stops them too, on the captain's word.");
         }
         captainsWord.requireOnTheHome(calling, CaptainWordAct.STOP_RUNNING_WORKERS);
         running.forEach(worker -> stopWorker.stop(new TaskReference.ById(worker.id().task()), actor));

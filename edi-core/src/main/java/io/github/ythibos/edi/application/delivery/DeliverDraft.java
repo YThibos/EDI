@@ -77,7 +77,7 @@ public class DeliverDraft {
 
     private String requireTheCopy(Workplace workplace) {
         if (!Files.isDirectory(workplace.worktree())) {
-            throw new Refusal("The isolated copy " + workplace.worktree() + " is gone, so EDI has no head to deliver.");
+            throw new Refusal("The isolated copy " + workplace.worktree() + " is gone, so there is no head to deliver.");
         }
         return git.head(workplace.worktree());
     }
@@ -114,7 +114,7 @@ public class DeliverDraft {
     private static void requireTheDeliveryOf(Workplace workplace, MergeRequestView draft, String head) {
         List<String> gaps = draft.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), head);
         if (!gaps.isEmpty()) {
-            throw new Refusal("EDI records no delivery of " + workplace.task().id() + ": " + String.join("; ", gaps) + ".");
+            throw new Refusal("No delivery of " + workplace.task().id() + " is recorded: " + String.join("; ", gaps) + ".");
         }
     }
 

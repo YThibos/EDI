@@ -68,7 +68,7 @@ class ProcessSafetyTest {
 
     private void assertDenied(HookAnswer answer, String reason) {
         assertThat(answer.verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
-        assertThat(answer.reason()).startsWith("EDI's guard refuses this: ").contains(reason);
+        assertThat(answer.reason()).startsWith("The guard refuses this: ").contains(reason);
     }
 
     @Nested
@@ -105,8 +105,8 @@ class ProcessSafetyTest {
                 assertDenied(forThePrimary(command), "name the socket with -L or -S (I-31)");
             }
             for (String command : List.of("tmux -L edi kill-server", "tmux -L edi kill-window -t @2", "tmux -L edi send-keys -t @2 Enter")) {
-                assertDenied(forTheWorker(command), "belong to EDI's core");
-                assertDenied(forThePrimary(command), "belong to EDI's core");
+                assertDenied(forTheWorker(command), "belong to the core");
+                assertDenied(forThePrimary(command), "belong to the core");
             }
             assertThat(forTheWorker("tmux -L edi-test-42 kill-server").verdict()).isEqualTo(HookAnswer.Verdict.PROCEED);
             assertThat(forTheWorker("tmux -L edi list-windows").verdict()).isEqualTo(HookAnswer.Verdict.PROCEED);
