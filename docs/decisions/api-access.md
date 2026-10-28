@@ -32,7 +32,7 @@ A token never appears in a command line, a tmux environment or a log, because on
 ## Consequences
 
 - Good: the authority classes are enforced at one boundary, and the timeline shows which worker did what.
-- Bad: each request with a worker token costs one indexed read, and a worker can still read the home token from the home it shares, which the guard keeps from its shell ([pre-tool-guard](pre-tool-guard.md)).
+- Bad: each request with a worker token costs one indexed read, and a worker can still read the home token from the home it shares, which the guard keeps from its shell and its `Read` ([pre-tool-guard](pre-tool-guard.md)).
 
 ## When to revisit
 
