@@ -18,9 +18,9 @@ Any feature that will take more than one pull request goes through a scout's res
 ## Context
 
 The first measured comparison of EDI against the previous harness found that the two features specified through a board first reached a sliced plan within a working day.
-The SAP roundtrip took 7 hours 1 minute from request to a sliced plan and the console sitrep work took 1 hour 27 minutes, against 18 hours 27 minutes for a comparable feature in the previous harness.
+A registered project's large integration feature took 7 hours 1 minute from request to a sliced plan and the console sitrep work took 1 hour 27 minutes, against 18 hours 27 minutes for a comparable feature in the previous harness.
 Their scouts cost 25.3M and 5.6M weighted tokens, between 1% and 5% of a week.
-Specified slices then ran with few steers: the SAP slices took 0 to 2 steers each.
+Specified slices then ran with few steers: that feature's slices took 0 to 2 steers each.
 This item makes that practice the default.
 [The EDI-75 measurements](research/EDI-75-measurements.md) hold the full comparison.
 
@@ -42,7 +42,7 @@ This item makes that practice the default.
 
 ## Research and measurements
 
-- Request to a sliced plan: the SAP roundtrip 7h01, the console sitrep plan 1h27, the previous harness's requester identity feature 18h27.
+- Request to a sliced plan: a registered project's large integration feature 7h01, the console sitrep plan 1h27, the previous harness's requester identity feature 18h27.
 - A board round carries a median of six answers (mean 9.2) where a chat message carries 1.1.
 - The scouts' cost: 25.3M and 5.6M weighted tokens.
 

@@ -45,7 +45,7 @@ The research is in [the EDI-74 plan](research/EDI-74-plan.md), section 7.
 ## Research and measurements
 
 - The EDI-52 plan: twenty slices keyed EDI-52 to EDI-73, none with a recorded dependency.
-- The SAP roundtrip plan: eleven slices, the order only in prose.
+- A registered project's integration plan: eleven slices, the order only in prose.
 - The effort word was said once for eleven slices but held per task.
 
 ## Read first

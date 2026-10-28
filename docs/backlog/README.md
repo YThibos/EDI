@@ -30,9 +30,9 @@ A session takes one item at a time, in this order.
    Skip every item that is held, parked, in flight or needs the captain's machine; the status column says which.
    Until the issues exist, an open pull request or a pushed branch for the item is the claim.
 3. Claim it before doing any work:
-   1. comment on the item's issue that you are taking it;
+   1. comment on the item's issue that you are taking it, once the issues exist;
    2. create the branch `feature/EDI-<n>`, `chore/EDI-<n>` or `research/EDI-<n>`, as the item's header names, from a fresh `origin/main`; never use the platform's default branch name, never `fm/` or `edi/`, and never stack on another unmerged branch;
-   3. push it and open a draft pull request early, titled `EDI-<n> <the item's title>`, whose body names the item, links its file and says `Closes #<issue>`; opening it first is what keeps another session from taking the same item.
+   3. push it and open a draft pull request early, titled `EDI-<n> <the item's title>`, whose body names the item, links its file and, once the issue exists, says `Closes #<issue>`; opening it first is what keeps another session from taking the same item.
 4. Build it as [AGENTS.md](../../AGENTS.md) says:
    - every commit subject starts with the work key, for example `EDI-81 Name the ticket a learning waits on`;
    - no trailer of any kind: no `Co-authored-by`, no `Signed-off-by` naming a model or tool, no "Generated with" line and no session link, in a commit or in the pull request body; the platform may add one by default, so read each commit message and the pull request body before pushing;
@@ -55,7 +55,7 @@ A session takes one item at a time, in this order.
 
 A session never guesses an ambiguous or scope-changing call.
 
-- A question before any code goes on the item's issue; a question about code already written goes on the pull request.
+- A question before any code goes on the item's issue, or in the draft pull request's description until the issues exist; a question about code already written goes on the pull request.
 - It carries lettered options and a recommendation, each option on its own line, with the recommended one marked as such and the reason given.
 - The session then stops until the captain answers there; it never continues on its own recommendation.
 - When an answer changes the item, the item's file is updated in the same pull request, so the file stays the single source of truth.
@@ -93,7 +93,7 @@ One GitHub issue per open or held item, opened after the pull request that adds 
 ## The index
 
 Order follows the waves the captain set.
-A wave starts only when the item it waits for has merged, and the blockers column lists the hard dependencies inside and across waves.
+The waves set the order only: an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
 Sizes: XS under two hours, S about half a day, M about a day, L several days of research.
 The Issue column shows `-` until the issues are opened.
 
@@ -172,16 +172,16 @@ The section sits after the six waves; the captain may move it up.
 
 | Order | Item | Title | Size | Severity | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|---|
-| 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | open, before EDI-121 | - |
-| 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | open, before EDI-121 | - |
-| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-121 | - |
-| 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | open, before EDI-121 | - |
-| 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | open, before EDI-121 | - |
-| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-121 | - |
-| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | open, before EDI-121 | - |
-| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-121 | - |
-| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-121 | - |
-| 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-121 | - |
+| 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | open | - |
+| 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | open | - |
+| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open | - |
+| 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | open | - |
+| 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | open | - |
+| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open | - |
+| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | open | - |
+| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open | - |
+| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open | - |
+| 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open | - |
 
 ### Held, parked and needs the captain's machine, no wave
 
@@ -202,5 +202,5 @@ The section sits after the six waves; the captain may move it up.
 ## Not in the backlog
 
 - Work on other projects (the integration, container, branding and notification items of registered projects) belongs to those projects, not to this repository.
-- Two captain decisions on the public mirror, the licence and how history is published, are restated inside [EDI-121](EDI-121.md) as open questions, not as items.
+- Three captain decisions on the public mirror, how `main` reaches it, the licence and how history is published, are restated inside [EDI-121](EDI-121.md) as open questions, not as items.
 - Work already delivered is in git history and the decision records, not here.

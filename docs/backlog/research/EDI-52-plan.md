@@ -155,7 +155,7 @@ Each finding gives what happened, the cause in the code, the fix and its accepta
 
 - The `worked:` line is each worker's own wall-clock estimate (`application/brief/BriefSections`, gated by `time.requireWorkedLine`); the fleet ledger relays statuses only (`application/ledger/EmitFleetLedger`); `task_cost` holds tokens only.
 - The event log has every status change with its time (this week 297 working, 86 needs-decision, 69 paused, 60 resolved, 54 done, 10 blocked), plus decisions raised and answered, holds and releases.
-- Fix: a domain `WorkedTime` over a task's timeline that sums the stretches in working, each ending at the next non-working status, a decision raised, a hold or the worker's end; shown in `edi task show`, on the task panel, and written as a `task.worked` ledger record at cleanup for Timesheet Mate.
+- Fix: a domain `WorkedTime` over a task's timeline that sums the stretches in working, each ending at the next non-working status, a decision raised, a hold or the worker's end; shown in `edi task show`, on the task panel, and written as a `task.worked` ledger record at cleanup for the timesheet tool.
 - Acceptance: a timeline working 10:00 to 10:30, needs-decision until 11:00 and working until 11:15 gives 45 minutes; `edi task show` prints it; the ledger record carries it.
 - Once it exists, the brief's own `worked:` line can quote EDI's number instead of the worker's estimate.
 
@@ -311,7 +311,7 @@ Sizes: XS under two hours, S about half a day, M about a day.
     - With no `edi wait` live while a task is in flight, the strip says so in red.
     - The usage meters show the reading's time and turn grey when it is older than ten minutes.
 11. **The Week view (F3), S.**
-    Active and wall-clock time per task per day from slice 3, with the work key and a control that copies a task's line for Timesheet Mate.
+    Active and wall-clock time per task per day from slice 3, with the work key and a control that copies a task's line for the timesheet tool.
     - The figures equal `edi task show` for the same task and day.
     - Time on an EDI key shows against the evergreen tooling ticket the ledger books it on.
 12. **Tab title and browser notification (Q7 a), S.**
