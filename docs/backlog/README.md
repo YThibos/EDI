@@ -93,7 +93,8 @@ One GitHub issue per open or held item, opened after the pull request that adds 
 ## The index
 
 Order follows the waves the captain set.
-The waves set the order only: an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
+The waves set the order, and an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
+Wave 5 is the captain's console plan and report chain, which starts once EDI-89 (the plan dispatches its slices) has merged, so every wave 5 item lists EDI-89 or an item that itself waits for it.
 Sizes: XS under two hours, S about half a day, M about a day, L several days of research.
 The Issue column shows `-` until the issues are opened.
 
@@ -138,21 +139,21 @@ The Issue column shows `-` until the issues are opened.
 | 15 | [EDI-90](EDI-90.md) | The captain's last look and the delta | S | EDI-65 | open | - |
 | 16 | [EDI-91](EDI-91.md) | The report's new layout | M | EDI-90 | open | - |
 | 17 | [EDI-92](EDI-92.md) | The stop hook's new rule | S | EDI-90 | open | - |
-| 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | - | open | - |
-| 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | - | open | - |
-| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | - | open | - |
-| 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | - | open | - |
+| 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | EDI-89 | open | - |
+| 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | EDI-89 | open | - |
+| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | EDI-89 | open | - |
+| 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | EDI-89 | open | - |
 | 22 | [EDI-59](EDI-59.md) | The task panel | M | EDI-57, EDI-58 | open | - |
 | 23 | [EDI-60](EDI-60.md) | Live check-in on a worker | M | EDI-59 | open | - |
 | 24 | [EDI-61](EDI-61.md) | The Fleet view | M | EDI-58, EDI-60 | open | - |
 | 25 | [EDI-62](EDI-62.md) | The Week view | S | EDI-58 | open | - |
-| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | - | open | - |
-| 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | - | open | - |
+| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | EDI-89 | open | - |
+| 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | EDI-89 | open | - |
 | 28 | [EDI-66](EDI-66.md) | edi board show | S | EDI-59 | open | - |
-| 29 | [EDI-68](EDI-68.md) | edi park and edi resume | M | EDI-87 | open | - |
-| 30 | [EDI-69](EDI-69.md) | A standing CI note per project | S | - | open | - |
-| 31 | [EDI-72](EDI-72.md) | Spike: a steer at the next tool call | S | - | needs-captain-machine: the spike needs a real Claude Code worker session in a private tmux socket and a real long turn, which only the captain's machine gives. | - |
-| 32 | [EDI-73](EDI-73.md) | EDI's concept art in the repository | S | - | needs-captain-machine: the two source images exist only on the captain's machine and are not in the repository. | - |
+| 29 | [EDI-68](EDI-68.md) | edi park and edi resume | M | EDI-87, EDI-89 | open | - |
+| 30 | [EDI-69](EDI-69.md) | A standing CI note per project | S | EDI-89 | open | - |
+| 31 | [EDI-72](EDI-72.md) | Spike: a steer at the next tool call | S | EDI-89 | needs-captain-machine: the spike needs a real Claude Code worker session in a private tmux socket and a real long turn, which only the captain's machine gives. | - |
+| 32 | [EDI-73](EDI-73.md) | EDI's concept art in the repository | S | EDI-89 | needs-captain-machine: the two source images exist only on the captain's machine and are not in the repository. | - |
 | 33 | [EDI-93](EDI-93.md) | Plans on the page and in the report | S | EDI-89, EDI-91, EDI-59 | open | - |
 | 34 | [EDI-96](EDI-96.md) | Ship-raised decisions batched into console rounds | M | EDI-59 | open | - |
 
@@ -172,16 +173,16 @@ The section sits after the six waves; the captain may move it up.
 
 | Order | Item | Title | Size | Severity | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|---|
-| 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | open | - |
-| 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | open | - |
-| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open | - |
-| 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | open | - |
-| 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | open | - |
-| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open | - |
-| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | open | - |
-| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open | - |
-| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open | - |
-| 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open | - |
+| 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | open, before EDI-121 | - |
+| 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | open, before EDI-121 | - |
+| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-121 | - |
+| 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | open, before EDI-121 | - |
+| 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | open, before EDI-121 | - |
+| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-121 | - |
+| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | open, before EDI-121 | - |
+| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-121 | - |
+| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-121 | - |
+| 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-121 | - |
 
 ### Held, parked and needs the captain's machine, no wave
 

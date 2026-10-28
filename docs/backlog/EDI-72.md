@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 31 |
 | Source | EDI-52 plan, slice 19 |
 | Size | S |
-| Blocked by | nothing |
+| Blocked by | [EDI-89](EDI-89.md) |
 | Status | needs-captain-machine: the spike needs a real Claude Code worker session in a private tmux socket and a real long turn, which only the captain's machine gives. |
 | Cloud session | not yet: see the status |
 

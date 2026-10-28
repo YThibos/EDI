@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 32 |
 | Source | EDI-52 plan, slice 20 |
 | Size | S |
-| Blocked by | nothing |
+| Blocked by | [EDI-89](EDI-89.md) |
 | Status | needs-captain-machine: the two source images exist only on the captain's machine and are not in the repository. |
 | Cloud session | not yet: see the status |
 

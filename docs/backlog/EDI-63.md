@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 26 |
 | Source | EDI-52 plan, slice 12 |
 | Size | S |
-| Blocked by | nothing |
+| Blocked by | [EDI-89](EDI-89.md) |
 | Status | open |
 | Cloud session | ok |
 
