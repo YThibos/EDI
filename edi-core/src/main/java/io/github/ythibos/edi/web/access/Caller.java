@@ -42,7 +42,7 @@ public sealed interface Caller {
         return switch (this) {
             case WorkerCaller caller -> caller.worker();
             case Primary _, Standby _, Captain _ ->
-                    throw new NotPermitted(command + " is a worker's command: it runs under the token EDI gives a worker at launch.");
+                    throw new NotPermitted(command + " is a worker's command: it runs under the token a worker gets at launch.");
         };
     }
 

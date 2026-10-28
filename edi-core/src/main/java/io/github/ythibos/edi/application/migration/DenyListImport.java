@@ -16,7 +16,7 @@ final class DenyListImport {
 
     static final String DENY_LIST = "config/publish-denylist";
     private static final Set<String> PUBLIC_FORGES = Set.of("github.com", "gitlab.com", "bitbucket.org");
-    private static final String HEADER = "# Terms EDI never publishes, one per line, matched whatever their case.\n";
+    private static final String HEADER = "# Terms never published, one per line, matched whatever their case.\n";
 
     private DenyListImport() {
     }

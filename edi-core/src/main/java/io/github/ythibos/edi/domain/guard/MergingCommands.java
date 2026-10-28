@@ -28,7 +28,7 @@ final class MergingCommands {
     }
 
     static GuardRefusal refusal() {
-        return new GuardRefusal(GuardRule.MERGE, "EDI never merges and never arms a merge: the captain merges every change himself (I-03).");
+        return new GuardRefusal(GuardRule.MERGE, "Only the captain merges a change or arms a merge (I-03).");
     }
 
     private static boolean isAForgeMergeCall(List<String> arguments, Set<String> merges) {

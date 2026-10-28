@@ -21,7 +21,7 @@ The decision log lives in the project's repository; a worker writes or updates i
 2. Name the log's path, the README that holds its rules, and the records to read first.
 3. On a project with no explanatory comments, say that the record carries the why and names the classes it governs.
 
-## A topic-named log, such as EDI's
+## A topic-named log, such as the EDI project's
 
 - One record per decision, in a file named by a stable topic slug, such as `docs/decisions/publish-guard.md`, with no number and no index to edit.
 - A changed decision rewrites its record in place and adds a dated line to its How we got here; a new decision is a new file.

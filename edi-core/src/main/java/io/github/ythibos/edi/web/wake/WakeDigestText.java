@@ -57,7 +57,7 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case STOP_MISSED -> stopMissedBy(who, wake) + " was typed into its idle prompt.";
             case STOP_MISSED_NOTICE_WAITING -> stopMissedBy(who, wake) + " waits, as its pane did not take the notice; edi worker peek " + wake.task()
                     + " shows the pane.";
-            case LIMIT_RESUME_HELD_BACK -> who + ": its usage limit reset, but its pane shows " + wake.detail() + ", so EDI typed nothing.";
+            case LIMIT_RESUME_HELD_BACK -> who + ": its usage limit reset, but its pane shows " + wake.detail() + ", so you typed nothing.";
             case WORKER_DIED -> who + " died: " + wake.detail() + "; edi worker relaunch " + wake.task() + " resumes its session.";
             case LOST_IN_OUTAGE -> who + " is on the outage hold list as number " + wake.detail() + "; edi recover shows the list.";
             case WORKER_STALE -> who + " has been idle without a declared wait since " + moments.minute(wake.moment()) + "; look once, then steer or mark it.";
@@ -66,11 +66,11 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
                     + " tell the captain, whose report warns while they overlap.";
             case WAIT_ENDED -> who + "'s declared wait has ended; verify what it waited for: " + wake.detail();
             case HOLD_DUE -> wake.task() + ": its hold until " + wake.detail() + " has come due.";
-            case DRAFT_MERGED -> wake.task() + ": the captain merged " + wake.detail() + "; EDI refreshes the clone and cleans up.";
+            case DRAFT_MERGED -> wake.task() + ": the captain merged " + wake.detail() + "; you refresh the clone and clean up.";
             case DRAFT_CLOSED -> wake.task() + ": " + wake.detail() + " was closed without a merge; its work waits for the captain's word.";
             case DELIVERY_FAILED -> wake.task() + ": its delivery to the captain's checkout failed: " + wake.detail();
             case CLEANUP_REFUSED -> wake.task() + " was not cleaned up after its merge: " + wake.detail();
-            case DECISION_RAISED -> wake.task() + ": EDI raised " + wake.detail() + "; put it before the captain.";
+            case DECISION_RAISED -> wake.task() + ": you raised " + wake.detail() + "; put it before the captain.";
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";
             case TICKET_REFUSED -> wake.task() + ": the tracker refused " + wake.detail();
             case DECISION_ANSWERED -> wake.task() + ": the captain answered " + wake.detail() + "; carry the answer to its work.";
@@ -84,11 +84,11 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     private String resumeOf(Wake wake) {
         return wake.moment() == null
                 ? "; it has no reset time, so it waits for the captain."
-                : "; EDI types one resume line after " + moments.minute(wake.moment()) + ".";
+                : "; you type one resume line after " + moments.minute(wake.moment()) + ".";
     }
 
     private String stopMissedBy(String who, Wake wake) {
-        return who + " ended its turn at " + moments.minute(wake.moment()) + " while EDI could not take its stop hook, so EDI sent it a message to carry on:"
+        return who + " ended its turn at " + moments.minute(wake.moment()) + " while you could not take its stop hook, so you sent it a message to carry on:"
                 + " message " + wake.detail();
     }
 }

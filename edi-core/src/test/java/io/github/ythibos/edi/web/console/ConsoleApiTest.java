@@ -158,7 +158,7 @@ class ConsoleApiTest {
         HttpResponse<String> primaryRecheck = post(withTheHomeToken("/api/decisions/" + number + "/recheck", TEXT), "{}");
 
         assertThat(recheck.statusCode()).isEqualTo(200);
-        assertThat(recheck.body()).isEqualTo("Asked EDI to re-check " + number + " against reality; it stays open until it is answered.\n");
+        assertThat(recheck.body()).isEqualTo("You asked for a re-check of " + number + " against reality; it stays open until it is answered.\n");
         assertThat(addTask.statusCode()).isEqualTo(403);
         assertThat(addTask.body()).isEqualTo("edi task add is the primary's to run; the console answers decisions and asks for re-checks.\n");
         assertThat(openAnother.statusCode()).isEqualTo(403);
@@ -205,7 +205,7 @@ class ConsoleApiTest {
         assertThat(uncounted.statusCode()).isEqualTo(400);
         assertThat(uncounted.body()).isEqualTo("Arming a board counts the questions it puts before the captain.\n");
         assertThat(armed.statusCode()).isEqualTo(201);
-        assertThat(armed.body()).isEqualTo("EDI listens to the research board " + board.toRealPath() + " for console-scout; it answers no decision, "
+        assertThat(armed.body()).isEqualTo("Armed the research board " + board.toRealPath() + " for console-scout; it answers no decision, "
                 + "and each round reaches your inbox; the sitrep puts 2 questions before the captain until a round answers them.\n");
         assertThat(byThePrimary.statusCode()).isEqualTo(403);
     }
@@ -225,7 +225,7 @@ class ConsoleApiTest {
         assertThat(unnamed.statusCode()).isEqualTo(400);
         assertThat(unnamed.body()).startsWith("A decision card on a board names the board question that answers it");
         assertThat(armed.statusCode()).isEqualTo(201);
-        assertThat(armed.body()).matches("EDI listens to the research board " + Pattern.quote(board.toRealPath().toString()) + " for console-closer; "
+        assertThat(armed.body()).matches("Armed the research board " + Pattern.quote(board.toRealPath().toString()) + " for console-closer; "
                 + "its answers to D\\d+ \\(question close-out\\) are recorded as the captain's, and each round reaches your inbox; "
                 + "the sitrep puts its bound decisions before the captain under the board until a round answers them\\.\n");
     }

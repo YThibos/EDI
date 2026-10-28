@@ -136,14 +136,14 @@ class ClaudeLayerCommandsTest {
 
     @Test
     void staysUpWhenTheCoreRefusesToStop() {
-        core.answering(409, "1 worker is running (fit-lamp#1), so EDI stays up.\n");
+        core.answering(409, "1 worker is running (fit-lamp#1), so the core stays up.\n");
 
         int refused = edi("", "down", "--force-stop-workers");
 
         assertThat(refused).isOne();
         assertThat(core.received().target()).isEqualTo("/api/core/stop");
         assertThat(core.received().body()).isEqualTo("{\"forceStopWorkers\":true}");
-        assertThat(err).hasToString("1 worker is running (fit-lamp#1), so EDI stays up.\n");
+        assertThat(err).hasToString("1 worker is running (fit-lamp#1), so the core stays up.\n");
     }
 
     @Test
@@ -191,7 +191,7 @@ class ClaudeLayerCommandsTest {
         assertThat(request.body()).isEqualTo("{\"model\":{\"display_name\":\"Opus 5.5\"}}");
         assertThat(out).hasToString("\u001b[38;2;200;200;200mOpus 5.5\u001b[0m\n");
         assertThat(refused).isOne();
-        assertThat(err).hasToString("EDI could not write the status line: A status line names its working directory in workspace.current_dir or cwd.\n");
+        assertThat(err).hasToString("The status line could not be written: A status line names its working directory in workspace.current_dir or cwd.\n");
     }
 
     @Test

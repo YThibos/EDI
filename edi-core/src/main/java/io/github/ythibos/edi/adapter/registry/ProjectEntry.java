@@ -55,7 +55,7 @@ public record ProjectEntry(
 
     public RegisteredForge requireForge() {
         if (forge == null) {
-            throw new Refusal(project.name() + " registers no forge, so EDI has no repository to deliver its work to; add forge: to its entry.");
+            throw new Refusal(project.name() + " registers no forge, so its work has no repository to go to; add forge: to its entry.");
         }
         return forge;
     }

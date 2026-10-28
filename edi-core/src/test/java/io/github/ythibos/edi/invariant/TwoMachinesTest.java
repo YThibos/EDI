@@ -249,11 +249,11 @@ class TwoMachinesTest {
 
             assertThatThrownBy(() -> home.deliverDraft().deliver(TaskReference.parse("fit-lamp"), Actor.PRIMARY))
                     .isInstanceOf(Refusal.class)
-                    .hasMessage("EDI publishes this work only to https://github.com/example-owner/harness, the repository its project registers,"
+                    .hasMessage("This work is published only to https://github.com/example-owner/harness, the repository its project registers,"
                             + " and the push goes to github.com/someone-else/harness.");
             HookRun push = PrePushHook.pushes(copy, home.home().root(), "feature/HRN-3", elsewhere, processes);
             assertThat(push.refused()).isTrue();
-            assertThat(push.output()).contains("EDI publishes this work only to https://github.com/example-owner/harness")
+            assertThat(push.output()).contains("This work is published only to https://github.com/example-owner/harness")
                     .doesNotContain(elsewhere.substring(elsewhere.indexOf(':', 6) + 1, elsewhere.indexOf('@')));
             assertThat(home.forge().openedDrafts()).isEmpty();
             assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();

@@ -34,7 +34,7 @@ class PlainTextConverter extends AbstractHttpMessageConverter<Object> {
 
     @Override
     protected Object readInternal(Class<?> type, HttpInputMessage input) {
-        throw new HttpMessageNotReadableException("EDI reads requests as JSON, not plain text.", input);
+        throw new HttpMessageNotReadableException("Requests are read as JSON, not plain text.", input);
     }
 
     @Override

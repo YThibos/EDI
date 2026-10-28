@@ -10,7 +10,7 @@ public record PresenceSettings(Duration autoQuietAfter, Duration quietBatch, Lis
     public static final Duration QUIET_BATCH = Duration.ofMinutes(30);
 
     public PresenceSettings {
-        Objects.requireNonNull(autoQuietAfter, "presence.autoQuietAfter says after how long without a typed prompt EDI turns quiet.");
+        Objects.requireNonNull(autoQuietAfter, "presence.autoQuietAfter says after how long without a typed prompt presence turns quiet.");
         Objects.requireNonNull(quietBatch, "presence.quietBatch says how long quiet wakes are gathered.");
         calendarIgnore = List.copyOf(calendarIgnore);
         if (autoQuietAfter.isNegative() || autoQuietAfter.isZero() || quietBatch.isNegative()) {

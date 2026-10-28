@@ -26,7 +26,7 @@ public class Trackers {
         return trackers.stream()
                 .filter(tracker -> tracker.kind() == project.tracker())
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("EDI has no adapter for " + project.tracker().word() + " trackers."));
+                .orElseThrow(() -> new IllegalStateException("No adapter serves " + project.tracker().word() + " trackers."));
     }
 
     public TrackedProject tracked(ProjectEntry project) {

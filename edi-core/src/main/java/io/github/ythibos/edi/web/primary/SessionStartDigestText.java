@@ -83,7 +83,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         }
         return List.of(opening.opened()
                 ? "The console's sitrep page is open in the captain's browser at " + opening.console() + "."
-                : "EDI could not open the console's sitrep page in the captain's browser; it is at " + opening.console()
+                : "You could not open the console's sitrep page in the captain's browser; it is at " + opening.console()
                         + ", and edi console opens it signed in.");
     }
 
@@ -169,7 +169,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     private static List<String> upkeepOf(SessionStartDigest digest) {
         return digest.upkeepSuggested() && digest.standing() != Standing.STANDBY
-                ? List.of("It is the start of the week: offer the captain the weekly upkeep check, whether EDI and its tools are up to date (edi-upkeep).")
+                ? List.of("It is the start of the week: offer the captain the weekly upkeep check, whether you and your tools are up to date (edi-upkeep).")
                 : List.of();
     }
 

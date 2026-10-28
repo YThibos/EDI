@@ -97,7 +97,7 @@ class ApiTest {
         HttpResponse<String> refused = send(HttpRequest.newBuilder(uri("/api/backlog")).GET());
 
         assertThat(refused.statusCode()).isEqualTo(401);
-        assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, the token EDI gave a worker at launch, "
+        assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, the token a worker got at launch, "
                 + "or a console session opened through edi console.\n");
         assertThat(send(HttpRequest.newBuilder(uri("/api/health")).GET()).statusCode()).isEqualTo(200);
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("state/core.token")))).isEqualTo("rw-------");
@@ -233,7 +233,7 @@ class ApiTest {
                 .POST(BodyPublishers.ofString("{\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Sneak in\"}"))),
                 403, "edi task add is the primary's to run; a worker reports through edi status and reads edi inbox.");
         assertRefusal(post("/api/status", "{\"state\":\"working\",\"text\":\"x\"}", TEXT),
-                403, "edi status is a worker's command: it runs under the token EDI gives a worker at launch.");
+                403, "edi status is a worker's command: it runs under the token a worker gets at launch.");
         assertThat(send(as("not-a-token", "/api/inbox", TEXT).GET()).statusCode()).isEqualTo(401);
         assertThat(send(as(worker, "/api/inbox", TEXT).GET()).body()).isEqualTo("No message waits for you.\n");
         assertThat(get("/api/tasks/api-worker", TEXT).body()).contains("worker:api-worker#1");
@@ -254,7 +254,7 @@ class ApiTest {
         assertRefusal(post("/api/tasks/api-nowhere/deliver", "{}", TEXT), 404, "No task is called api-nowhere.");
         assertRefusal(post("/api/merged", "{}", TEXT), 400, "The call needs its reference.");
         assertRefusal(post("/api/merged", "{\"reference\":\"https://github.com/example-owner/harness/pull/9\"}", TEXT), 409,
-                "EDI delivered nothing at https://github.com/example-owner/harness/pull/9.");
+                "Nothing was delivered at https://github.com/example-owner/harness/pull/9.");
     }
 
     @Test
@@ -267,10 +267,10 @@ class ApiTest {
 
         assertThat(denied.statusCode()).isEqualTo(200);
         assertThat(denied.body()).startsWith("{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\","
-                + "\"permissionDecisionReason\":\"EDI's guard refuses this: pkill signals every process");
+                + "\"permissionDecisionReason\":\"The guard refuses this: pkill signals every process");
         assertThat(allowed.statusCode()).isEqualTo(204);
         assertThat(stopped.statusCode()).isEqualTo(204);
-        assertRefusal(hook(worker, "teleport", "{}"), 400, "EDI answers the hooks session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification and session-end, not teleport.");
+        assertRefusal(hook(worker, "teleport", "{}"), 400, "The hooks answered are session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification and session-end, not teleport.");
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"tmux kill-server\"}}"))).body())
                 .contains("\"permissionDecision\":\"deny\"", "name the socket with -L or -S");
@@ -301,7 +301,7 @@ class ApiTest {
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
         assertThat(queued.statusCode()).isEqualTo(201);
-        assertThat(unreported.body()).isEqualTo("{\"decision\":\"block\",\"reason\":\"This turn changed EDI's state: render the captain report with "
+        assertThat(unreported.body()).isEqualTo("{\"decision\":\"block\",\"reason\":\"This turn changed state: render the captain report with "
                 + "edi report and paste it verbatim, then stop.\"}");
         assertThat(reported.statusCode()).isEqualTo(204);
     }
@@ -450,12 +450,12 @@ class ApiTest {
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(aGeneralWord.statusCode()).isEqualTo(200);
-        assertRefusal(withoutTheWordForIt, 409, "To run one task above high, EDI's effort ceiling, EDI needs the captain's word on api-beacon in this session"
+        assertRefusal(withoutTheWordForIt, 409, "To run one task above high, the effort ceiling, you need the captain's word on api-beacon in this session"
                 + " recorded for it: record it with edi captain said --task api-beacon --for effort-above-high --text \"<their words>\".");
         assertRefusal(forAnotherAct, 400, "The captain's word is recorded for effort-above-high alone, not drop.");
         assertRefusal(forTheHome, 400, "The captain's word for effort-above-high is on one task.");
         assertRefusal(withoutAReason, 400, "An override of the dispatch rules records the captain's reason for it.");
-        assertRefusal(beyondTheHarness, 400, "Effort is low, medium or high, and high is EDI's ceiling, so not ultra;"
+        assertRefusal(beyondTheHarness, 400, "Effort is low, medium or high, and high is the ceiling, so not ultra;"
                 + " only the captain's word for one task lifts that task to xhigh or max.");
     }
 

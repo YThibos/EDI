@@ -23,11 +23,11 @@ final class BoardRoundMessage {
         lines.add("The captain answered on your research board " + board.file() + ", round " + board.rounds() + ".");
         round.prompts().forEach(prompt -> lines.addAll(promptLines(prompt)));
         if (!answers.isEmpty()) {
-            lines.add("EDI hands these to their decisions as the captain's answers: "
+            lines.add("These go to their decisions as the captain's answers: "
                     + answers.stream().map(BoardRoundMessage::answerWords).collect(Collectors.joining("; ")) + ".");
         }
         if (round.sessionEnded()) {
-            lines.add("The captain ended the board session, so EDI no longer listens to it.");
+            lines.add("The captain ended the board session, so its answers no longer reach you.");
         }
         return String.join("\n", lines);
     }

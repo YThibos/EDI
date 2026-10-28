@@ -137,7 +137,7 @@ class FollowMergesTest {
         clone.run("worktree", "lock", copy.root().toString());
 
         MergedWork stopped = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
-        assertThat(stopped.cleanUp().refusal()).startsWith("the clean-up stopped: ").endsWith("; EDI tries again in the next round");
+        assertThat(stopped.cleanUp().refusal()).startsWith("the clean-up stopped: ").endsWith("; the next round tries again");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.cloneRefreshes().after(LAMP)).hasValueSatisfying(refresh -> assertThat(refresh.cleanUpTriedAt()).isNull());
 
@@ -187,9 +187,9 @@ class FollowMergesTest {
         Delivery delivery = home.deliveries().of(LAMP).orElseThrow();
 
         assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
-                .hasMessage("The forge shows " + delivery.address() + " open, not merged, so EDI keeps watching it.");
+                .hasMessage("The forge shows " + delivery.address() + " open, not merged, so it is still watched.");
         assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("https://github.com/example-owner/harness/pull/99", Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessage("EDI delivered nothing at https://github.com/example-owner/harness/pull/99.");
+                .isInstanceOf(Refusal.class).hasMessage("Nothing was delivered at https://github.com/example-owner/harness/pull/99.");
 
         String landed = squashedOntoMain(copy);
         home.forge().merges(delivery.address(), landed);
@@ -207,7 +207,7 @@ class FollowMergesTest {
         MergeRequestView ready = home.forge().marksReady(WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker()).address());
 
         assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain(ready.address().url(), Actor.PRIMARY)).isInstanceOf(Refusal.class)
-                .hasMessage("The forge shows " + ready.address() + " open, not merged, so EDI keeps watching it.");
+                .hasMessage("The forge shows " + ready.address() + " open, not merged, so it is still watched.");
         assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(delivery -> assertThat(delivery.state()).isEqualTo(MergeRequestState.OPEN));
         assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftRecorded").doesNotContain("DraftMerged");
     }
@@ -255,7 +255,7 @@ class FollowMergesTest {
 
         assertThat(home.deliveries().of(LAMP)).isEmpty();
         assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
-                .hasMessageStartingWith("EDI has no merge request to follow");
+                .hasMessageStartingWith("There is no merge request to follow");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isTrue();
     }
@@ -284,7 +284,7 @@ class FollowMergesTest {
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
 
         assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
-                .hasMessage("EDI has no merge request to follow: no merge request from feature/HRN-3 is open or merged on"
+                .hasMessage("There is no merge request to follow: no merge request from feature/HRN-3 is open or merged on"
                         + " https://github.com/example-owner/harness.");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
     }

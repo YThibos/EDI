@@ -31,7 +31,7 @@ final class KeysFile {
         } catch (IOException unreadable) {
             throw new Refusal("The keys file " + credentials.keysFile() + " cannot be read: " + unreadable.getClass().getSimpleName() + ".");
         } catch (JacksonException malformed) {
-            throw new Refusal("The keys file " + credentials.keysFile() + " is not YAML EDI can read.");
+            throw new Refusal("The keys file " + credentials.keysFile() + " is not readable YAML.");
         }
     }
 }

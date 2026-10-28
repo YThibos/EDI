@@ -1,0 +1,18 @@
+Calendar: I can't read your calendar since 2026-10-15 14:02 UTC, so a meeting added since won't switch me to quiet:
+  "Outlook did not answer."
+
+╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════════════════════════════════════════════════════
+║  Nothing waiting on you
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+DONE THIS TURN  (0)
+───────────────────
+  Nothing finished this turn
+
+ONGOING  (1)
+────────────
+  HarbourMaster     • Finish the backfill
+
+NEXT
+────
+  Nothing planned

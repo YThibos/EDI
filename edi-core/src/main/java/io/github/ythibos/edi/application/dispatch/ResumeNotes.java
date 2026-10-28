@@ -45,7 +45,7 @@ public class ResumeNotes {
         try {
             return git.headSummary(worktree);
         } catch (ProgramFailure unreadable) {
-            return "a head EDI could not read";
+            return "an unreadable head";
         }
     }
 

@@ -28,6 +28,6 @@ class MachineBootTest {
     @Test
     void refusesToStartWithoutABootId() {
         assertThatThrownBy(() -> new MachineBoot(directory.resolve("absent")))
-                .isInstanceOf(UncheckedIOException.class).hasMessageContaining("tells a machine restart by its boot id");
+                .isInstanceOf(UncheckedIOException.class).hasMessageContaining("A machine restart is told by its boot id");
     }
 }

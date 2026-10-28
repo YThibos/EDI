@@ -15,7 +15,7 @@ record EdiCheckout(Path root) {
         }
         String changes = git("status", "--porcelain").strip();
         if (!changes.isEmpty()) {
-            throw new CommandFailure(root + " has local changes, so EDI is not updated over them:\n" + changes);
+            throw new CommandFailure(root + " has local changes, so no update runs over them:\n" + changes);
         }
     }
 
@@ -27,7 +27,7 @@ record EdiCheckout(Path root) {
         int installed = LocalPrograms.runAttached(List.of(root.resolve("ops").resolve("install.sh").toString()), root,
                 Map.of("EDI_HOME", home.toString()));
         if (installed != 0) {
-            throw new CommandFailure("ops/install.sh failed with " + installed + ", so the installed EDI is unchanged and the core keeps running.");
+            throw new CommandFailure("ops/install.sh failed with " + installed + ", so the installed build is unchanged and the core keeps running.");
         }
     }
 

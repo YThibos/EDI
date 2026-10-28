@@ -73,7 +73,7 @@ public class FollowTickets {
         try {
             return transaction.execute(_ -> ticketOf(tasks.get(id)));
         } catch (Refusal unfollowable) {
-            LOG.warn("EDI does not follow the ticket of {}: {}", id, unfollowable.getMessage());
+            LOG.warn("Not following the ticket of {}: {}", id, unfollowable.getMessage());
             return Optional.empty();
         }
     }

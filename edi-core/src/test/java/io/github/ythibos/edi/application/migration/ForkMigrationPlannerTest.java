@@ -68,10 +68,10 @@ class ForkMigrationPlannerTest {
         assertThat(plan.decisions()).isEmpty();
         assertThat(plan.notes()).extracting(MigrationNote::subject).containsExactly("card-alone", "D5", "D6", "child", "spaced");
         assertThat(plan.notes().get(1).note()).startsWith("on broken-card has no readable card (");
-        assertThat(plan.notes().get(2).note()).isEqualTo("on odd-card has a card EDI cannot carry: it recommends no option");
+        assertThat(plan.notes().get(2).note()).isEqualTo("on odd-card has a card I cannot carry: it recommends no option");
         assertThat(plan.notes()).extracting(MigrationNote::subject, MigrationNote::note).contains(
-                tuple("child", "has a parent link to card-alone, which EDI does not carry"),
-                tuple("spaced", "names the project \"two words\", which is not a project name EDI accepts; it is dropped"));
+                tuple("child", "has a parent link to card-alone, which I do not carry"),
+                tuple("spaced", "names the project \"two words\", which is not a project name I accept; it is dropped"));
     }
 
     @Test
@@ -85,7 +85,7 @@ class ForkMigrationPlannerTest {
         assertThat(plan.tasks()).extracting(task -> task.id().value()).containsExactly("waiting");
         assertThat(plan.tasks().getFirst().intake().blockedBy()).isEmpty();
         assertThat(plan.notes()).extracting(MigrationNote::subject, MigrationNote::note).containsExactly(
-                tuple("Odd-Id", "is not imported: EDI names a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout"),
+                tuple("Odd-Id", "is not imported: I name a task in at most 64 lower-case letters, digits and dashes, such as fix-login-timeout"),
                 tuple("waiting", "is blocked by Odd-Id, which is not imported; the dependency is dropped"),
                 tuple("waiting", "is blocked by itself; the dependency is dropped"));
     }

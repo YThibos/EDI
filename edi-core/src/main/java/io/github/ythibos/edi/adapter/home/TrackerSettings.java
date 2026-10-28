@@ -34,7 +34,7 @@ public record TrackerSettings(
             requireAJiraConnection(baseUrl, credentials);
             requireAWorkflowFor(workflow, mergedStatus);
             if (issueType == null || issueType.isBlank()) {
-                throw new IllegalArgumentException("tracker.issueType names the issue type of the tickets EDI creates, such as Story.");
+                throw new IllegalArgumentException("tracker.issueType names the issue type of new tickets, such as Story.");
             }
         }
     }
@@ -53,7 +53,7 @@ public record TrackerSettings(
 
     public String requireEpicLinkField() {
         if (epicLinkField == null || epicLinkField.isBlank()) {
-            throw new Refusal("The machine profile names no tracker.epicLinkField, so EDI cannot set a ticket's epic.");
+            throw new Refusal("The machine profile names no tracker.epicLinkField, so a ticket's epic cannot be set.");
         }
         return epicLinkField.strip();
     }

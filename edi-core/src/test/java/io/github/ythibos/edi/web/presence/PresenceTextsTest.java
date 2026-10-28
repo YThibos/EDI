@@ -50,7 +50,7 @@ class PresenceTextsTest {
                 .isEqualTo("away since 2026-10-17 11:30 CEST, on the words \"Carry on with the lamp.\", with at most 2 workers at a time");
         assertThat(words.of(PRESENT.demo(NOW, NOW.plus(Duration.ofHours(1))))).isEqualTo("present for a demo until 2026-10-17 12:30 CEST");
         assertThat(words.ofTheUnreadableCalendar(new UnreadableCalendar(NOW, "Outlook did not answer."))).isEqualTo(
-                "unreadable since 2026-10-17 11:30 CEST, so a meeting added since the last reading does not turn your presence quiet: \"Outlook did not answer.\"");
+                "I can't read your calendar since 2026-10-17 11:30 CEST, so a meeting added since won't switch me to quiet: \"Outlook did not answer.\"");
     }
 
     @Test
@@ -92,14 +92,14 @@ class PresenceTextsTest {
         String quiet = report(home, PRESENT.quiet(NOW), unreadable);
 
         assertThat(present).startsWith("""
-                Calendar: unreadable since 2026-10-17 09:30 UTC, so a meeting added since the last reading does not turn your presence
-                  quiet: "Outlook did not answer."
+                Calendar: I can't read your calendar since 2026-10-17 09:30 UTC, so a meeting added since won't switch me to quiet:
+                  "Outlook did not answer."
 
                 ╔══ NEEDS YOUR DECISION""");
         assertThat(quiet).startsWith("""
                 Presence: quiet since 2026-10-17 09:30 UTC, on request
-                Calendar: unreadable since 2026-10-17 09:30 UTC, so a meeting added since the last reading does not turn your presence
-                  quiet: "Outlook did not answer."
+                Calendar: I can't read your calendar since 2026-10-17 09:30 UTC, so a meeting added since won't switch me to quiet:
+                  "Outlook did not answer."
 
                 ╔══ NEEDS YOUR DECISION""");
     }

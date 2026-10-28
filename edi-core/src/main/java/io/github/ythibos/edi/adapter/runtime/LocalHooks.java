@@ -23,7 +23,7 @@ final class LocalHooks {
             return;
         }
         if (definesHooks(localSettings, json)) {
-            throw new Refusal(localSettings + " defines hooks, which Claude Code would run beside EDI's own; remove them before launching a worker there.");
+            throw new Refusal(localSettings + " defines hooks, which Claude Code would run beside the hooks a worker gets at launch; remove them before launching a worker there.");
         }
     }
 
@@ -32,7 +32,7 @@ final class LocalHooks {
             JsonNode hooks = json.readTree(Files.readString(localSettings)).path("hooks");
             return !hooks.isMissingNode() && !hooks.isEmpty();
         } catch (JacksonException unreadable) {
-            throw new Refusal(localSettings + " is not JSON Claude Code can read, so EDI cannot tell whether it defines hooks; fix or remove it.");
+            throw new Refusal(localSettings + " is not JSON Claude Code can read, so whether it defines hooks is unclear; fix or remove it.");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

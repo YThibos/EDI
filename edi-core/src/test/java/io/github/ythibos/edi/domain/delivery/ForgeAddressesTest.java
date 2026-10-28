@@ -69,7 +69,7 @@ class ForgeAddressesTest {
         forge.requirePublicationAt("git@github.com:example-owner/harness.git");
         assertThatThrownBy(() -> forge.requirePublicationAt("https://someone:a-token@github.com/someone-else/harness.git"))
                 .isInstanceOf(Refusal.class)
-                .hasMessage("EDI publishes this work only to https://github.com/example-owner/harness, the repository its project registers,"
+                .hasMessage("This work is published only to https://github.com/example-owner/harness, the repository its project registers,"
                         + " and the push goes to github.com/someone-else/harness.");
         assertThatThrownBy(() -> forge.requirePublicationAt("/srv/git/harness.git")).isInstanceOf(Refusal.class)
                 .hasMessageEndingWith("the push goes to a remote outside every forge.");

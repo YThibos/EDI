@@ -58,7 +58,7 @@ public record StatusReport(StatusState state, StatusKey key, Instant until, Stri
     private void requireTheEndOfAPause() {
         if (isAPause() && until == null) {
             throw new Refusal("A paused status says when the pause ends with --until, such as --until 2026-10-16T14:30:00Z, "
-                    + "so EDI notices a pause that overruns.");
+                    + "so a pause that overruns is noticed.");
         }
     }
 

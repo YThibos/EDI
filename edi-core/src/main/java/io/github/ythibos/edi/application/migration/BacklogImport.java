@@ -97,7 +97,7 @@ public class BacklogImport {
     private static List<MigrationNote> conflictsOf(List<Decision> planned, Map<DecisionNumber, TaskId> held) {
         return planned.stream()
                 .filter(decision -> held.containsKey(decision.number()) && !held.get(decision.number()).equals(decision.task()))
-                .map(decision -> new MigrationNote(decision.number().toString(), "is already EDI's decision on " + held.get(decision.number())
+                .map(decision -> new MigrationNote(decision.number().toString(), "is already my decision on " + held.get(decision.number())
                         + ", so " + decision.task() + " and its decision are not imported"))
                 .toList();
     }

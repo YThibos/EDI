@@ -58,7 +58,7 @@ class DispatchAndEffortTest {
     private static final Route OPUS_XHIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH);
     private static final Route OPUS_MAX = new Route(new ModelId("claude-opus-5-5"), EffortLevel.MAX);
     private static final Route SONNET_HIGH = new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH);
-    private static final String THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD = "To run one task above high, EDI's effort ceiling, EDI needs the captain's"
+    private static final String THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD = "To run one task above high, the effort ceiling, you need the captain's"
             + " word on fit-lamp in this session recorded for it: record it with edi captain said --task fit-lamp --for effort-above-high"
             + " --text \"<their words>\".";
 
@@ -75,7 +75,7 @@ class DispatchAndEffortTest {
             TestHome home = TestHome.in(directory);
 
             for (String effort : List.of("xhigh", "max", "ultra")) {
-                assertRefused(home, category("research", "claude-opus-5-5", effort, "a reason", false), "high is EDI's ceiling, so not " + effort);
+                assertRefused(home, category("research", "claude-opus-5-5", effort, "a reason", false), "high is the ceiling, so not " + effort);
             }
             assertRefused(home, category("research", "claude-opus-5-5", "high", "", false), "The category research states no why");
             assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false)
@@ -87,10 +87,10 @@ class DispatchAndEffortTest {
             assertRefused(home, category("research", "claude-opus-5-5", null, "a reason", false), "without an effort");
             assertRefused(home, category("research", "claude-opus-6", "high", "a reason", false), "which the machine profile does not allow");
             assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false).replace(PIPELINE, PIPELINE.replace("high", "max")),
-                    "high is EDI's ceiling, so not max");
+                    "high is the ceiling, so not max");
             assertRefused(home, category("research", "claude-opus-5-5", "high", "a reason", false).replace(", \"pipeline\": " + PIPELINE, ""),
                     "it names no pipeline entry, so the validation pipeline's agent would run at the harness default");
-            assertThatThrownBy(() -> EffortLevel.withinTheCeiling("xhigh")).hasMessageContaining("high is EDI's ceiling");
+            assertThatThrownBy(() -> EffortLevel.withinTheCeiling("xhigh")).hasMessageContaining("high is the ceiling");
             assertThatThrownBy(() -> EffortLevel.named("ultra")).hasMessageContaining("lifts that task to xhigh or max");
             assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), LaunchKind.DISPATCH, UUID.randomUUID(), null, directory, directory, directory, directory,
                     Map.of(), List.of(), PermissionMode.BYPASS, "brief")).hasMessageContaining("explicit model and effort");

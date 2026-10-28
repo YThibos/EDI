@@ -56,5 +56,5 @@ Every command the captain types in the primary, such as `/sitrep` or `/quiet`, i
 | [stow](../claude/skills/stow/SKILL.md) | curating the captain's memory files within their startup budget |
 | [personality](../claude/skills/personality/SKILL.md) | `/personality`, which shows or changes the personality |
 | [edi-personality](../claude/skills/edi-personality/SKILL.md) | the nine personality scales, the address word, the guard rails, the presets and the demo override |
-| [edi-voice](../claude/skills/edi-voice/SKILL.md) | the register EDI keeps at every personality, and translating internal labels into the captain's words |
+| [edi-voice](../claude/skills/edi-voice/SKILL.md) | translating internal labels into the captain's words; the register is in the anchor's Voice section |
 | [update](../claude/skills/update/SKILL.md) | updating EDI itself |

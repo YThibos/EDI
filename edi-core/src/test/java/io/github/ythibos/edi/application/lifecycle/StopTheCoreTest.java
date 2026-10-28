@@ -49,7 +49,7 @@ class StopTheCoreTest {
         assertThatThrownBy(() -> home.stopTheCore().stopFor(CoreStop.WHEN_NO_WORKER_RUNS, session, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("1 worker is running (fit-lamp#1)");
         assertThatThrownBy(() -> home.stopTheCore().stopFor(CoreStop.WITH_ITS_WORKERS, session, Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessageContaining("To stop the workers that are running, EDI needs the captain's word");
+                .isInstanceOf(Refusal.class).hasMessageContaining("To stop the workers that are running, you need the captain's word");
 
         home.captainsWord().record(session, "Stop everything, the workers too.", null, null, Actor.PRIMARY);
 

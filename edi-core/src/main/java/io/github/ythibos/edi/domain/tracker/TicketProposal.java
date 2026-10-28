@@ -30,7 +30,7 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
     }
 
     public DecisionCard cardAfterRefusal(String because) {
-        return new DecisionCard(title(), "EDI could not carry out the earlier answer: " + because + "\n" + context(), options(), recommendation());
+        return new DecisionCard(title(), "I could not carry out the earlier answer: " + because + "\n" + context(), options(), recommendation());
     }
 
     public TicketChoice choiceFor(CaptainAnswer answer) {
@@ -59,7 +59,7 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
         String found = candidates.isEmpty()
                 ? "No open " + draft.project() + " ticket matches its words."
                 : "These open " + draft.project() + " tickets match its words.";
-        return task + " books its work on a ticket, and EDI creates a new ticket only on your answer.\n" + found;
+        return task + " books its work on a ticket, and I create a new ticket only on your answer.\n" + found;
     }
 
     private List<DecisionOption> options() {

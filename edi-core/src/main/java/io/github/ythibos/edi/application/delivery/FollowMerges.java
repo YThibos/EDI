@@ -77,7 +77,7 @@ public class FollowMerges {
         try {
             followedOnceItExists(transaction.execute(_ -> context.of(task)));
         } catch (Refusal | ProgramFailure unfollowable) {
-            LOG.warn("EDI could not look up the merge request of {}: {}", task, unfollowable.getMessage());
+            LOG.warn("Could not look up the merge request of {}: {}", task, unfollowable.getMessage());
         }
     }
 
@@ -143,7 +143,7 @@ public class FollowMerges {
         RegisteredForge forge = project.requireForge();
         if (!forge.repository().equals(delivery.address().repository())) {
             throw new Refusal(delivery.address() + " is not in " + forge.repository() + ", the repository " + project.project().name()
-                    + " registers now, so EDI no longer watches it.");
+                    + " registers now, so it is no longer watched.");
         }
         return forge;
     }
@@ -160,8 +160,8 @@ public class FollowMerges {
     }
 
     private static Refusal notMerged(MergeRequestView view) {
-        return new Refusal("The forge shows " + view.address() + " " + view.state().word() + ", not merged, so EDI keeps "
-                + (view.state() == MergeRequestState.OPEN ? "watching it." : "the work and waits for the captain."));
+        return new Refusal("The forge shows " + view.address() + " " + view.state().word() + ", not merged, so "
+                + (view.state() == MergeRequestState.OPEN ? "it is still watched." : "the work is kept for the captain."));
     }
 
     private MergedWork followed(Delivery delivery, MergeRequestView view, Actor actor) {
@@ -193,7 +193,7 @@ public class FollowMerges {
     }
 
     private MergedWork requestFollowedAt(String url, Actor actor) {
-        FoundRequest found = requestAt(url).orElseThrow(() -> new Refusal("EDI delivered nothing at " + url + "."));
+        FoundRequest found = requestAt(url).orElseThrow(() -> new Refusal("Nothing was delivered at " + url + "."));
         return requestFollowedOnTheCaptainsWord(found.task(), found.request(), actor);
     }
 
@@ -211,7 +211,7 @@ public class FollowMerges {
                             .map(request -> new FoundRequest(task, request))
                     : Optional.empty();
         } catch (Refusal | ProgramFailure unfollowable) {
-            LOG.warn("EDI could not look up the merge request of {}: {}", task, unfollowable.getMessage());
+            LOG.warn("Could not look up the merge request of {}: {}", task, unfollowable.getMessage());
             return Optional.empty();
         }
     }
@@ -269,7 +269,7 @@ public class FollowMerges {
         try {
             observed(delivery);
         } catch (Refusal | ProgramFailure unobservable) {
-            LOG.warn("EDI could not watch the draft of {}: {}", delivery.task(), unobservable.getMessage());
+            LOG.warn("Could not watch the draft of {}: {}", delivery.task(), unobservable.getMessage());
         }
     }
 
@@ -327,7 +327,7 @@ public class FollowMerges {
         }
 
         static CleanUp awaitingTheRefresh() {
-            return new CleanUp(false, "the clone has not fetched the merge yet; EDI cleans up once it has", false);
+            return new CleanUp(false, "the clone has not fetched the merge yet; the cleanup follows once it has", false);
         }
 
         boolean countsAsTheAttempt() {
@@ -335,7 +335,7 @@ public class FollowMerges {
         }
 
         CleanUp triedAgainInTheNextRound() {
-            return continuedWith("EDI tries again in the next round");
+            return continuedWith("the next round tries again");
         }
 
         CleanUp triedAgainOnTheCaptainsWord() {

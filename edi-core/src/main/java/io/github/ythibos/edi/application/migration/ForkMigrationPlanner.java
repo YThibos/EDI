@@ -63,12 +63,12 @@ public class ForkMigrationPlanner {
         MigrationNotes notes = new MigrationNotes();
         MappedBacklog backlog = mapped(ForkHome.at(oldHome), notes);
         if (backlog.oldHarnessWork().contains(task.value())) {
-            throw new Refusal(task + " improves the old harness itself, which EDI replaces, so EDI does not take it over.");
+            throw new Refusal(task + " improves the old harness itself, which I replace, so I do not take it over.");
         }
         return backlog.migrated().stream()
                 .filter(entry -> entry.task().id().equals(task))
                 .findFirst()
-                .orElseThrow(() -> new Refusal(task + " is not a task EDI imports from " + oldHome + whyNot(task, notes) + "."));
+                .orElseThrow(() -> new Refusal(task + " is not a task I import from " + oldHome + whyNot(task, notes) + "."));
     }
 
     private MappedBacklog mapped(ForkHome home, MigrationNotes notes) {

@@ -22,7 +22,7 @@ public class AwayLimit {
 
     public void requireRoomForAnotherWorker() {
         mandateAtItsCap().ifPresent(mandate -> {
-            throw new Refusal("The captain is away, and meanwhile EDI runs at most " + mandate.workerCap()
+            throw new Refusal("The captain is away, and meanwhile you run at most " + mandate.workerCap()
                     + " workers, as many as ran when the captain left; this dispatch waits for the captain's return or for a running worker to finish.");
         });
     }

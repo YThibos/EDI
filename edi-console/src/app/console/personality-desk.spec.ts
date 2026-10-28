@@ -124,7 +124,7 @@ describe('PersonalityDesk', () => {
     http.expectOne({ method: 'GET', url: '/api/personality' }).flush('', { status: 503, statusText: 'Service Unavailable' });
     await fixture.whenStable();
 
-    expect(text(desk, '.sr-desk__refusal')).toBe('EDI did not answer; its core may be restarting, so try again in a moment.');
+    expect(text(desk, '.sr-desk__refusal')).toBe('I did not answer; my core may be restarting, so try again in a moment.');
 
     window.dispatchEvent(new Event('focus'));
     http.expectOne({ method: 'GET', url: '/api/personality' }).flush(personalityFixture());
@@ -147,7 +147,7 @@ describe('PersonalityDesk', () => {
     await fixture.whenStable();
     const desk = fixture.nativeElement as HTMLElement;
 
-    expect(desk.textContent).toContain("While the demo holds, EDI speaks with the demo's levels on top of these.");
+    expect(desk.textContent).toContain("While the demo holds, I speak with the demo's levels on top of these.");
   });
 
   it('shows the core’s refusal when it does not keep the change', async () => {

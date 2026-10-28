@@ -45,7 +45,7 @@ public class RelaunchWorker {
     private static String lossOf(WorkerHealth health, Worker worker) {
         return switch (health) {
             case WorkerHealth.Dead dead -> worker.hasAFullContext() ? FULL_CONTEXT : dead.cause().sentence();
-            case WorkerHealth.Stopped _ -> worker.hasAFullContext() ? FULL_CONTEXT : "EDI stopped it";
+            case WorkerHealth.Stopped _ -> worker.hasAFullContext() ? FULL_CONTEXT : "it was stopped";
             case WorkerHealth.LaunchFailed _ -> "its launch failed";
             case WorkerHealth.Finished _ -> "its session ended";
             case WorkerHealth.ContextFull _ -> throw new Refusal(worker.id() + "'s context is full and its session still runs; stop it first with edi worker"

@@ -17,7 +17,7 @@ enum HookEvent {
         return Arrays.stream(values())
                 .filter(event -> event.word().equals(word))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("EDI answers the hooks session-start, user-prompt-submit, pre-tool-use, stop,"
+                .orElseThrow(() -> new IllegalArgumentException("The hooks answered are session-start, user-prompt-submit, pre-tool-use, stop,"
                         + " stop-failure, notification and session-end, not " + word + "."));
     }
 
