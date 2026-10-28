@@ -190,4 +190,3 @@ Headless runs (`claude -p`, `claude-haiku-5-5`, `--allowedTools Bash`) in throwa
 - A settings file in the session's working directory can switch off every hook given with `--settings`, and a value the `--settings` file states for the same key wins over it.
 - With `--allowedTools Write`, Claude Code held the model's `Write` of `.claude/settings.local.json` for a permission prompt; whether a file written in the middle of a session under `--dangerously-skip-permissions` takes effect in that session was not verified, because the sandbox's own permission check refused that run.
 - User settings in `~/.claude/` were not tried, so as not to change the sandbox's own Claude Code; Claude Code documents them below the command line in precedence, as local and project settings are.
-
