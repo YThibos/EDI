@@ -14,6 +14,8 @@ edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-
 edi release fit-the-lamp
 ```
 
+The queued and held work is also kept in the repository as one self-contained spec per item, with an ordered index and a pickup protocol for a session that has only the repository ([docs/backlog](backlog/README.md), [backlog-in-the-repository](decisions/backlog-in-the-repository.md)).
+
 Every ship and scout gets its work key at intake ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)); [Trackers and time](trackers-and-time.md) explains where the key comes from.
 
 ## Decisions
