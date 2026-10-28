@@ -87,16 +87,19 @@ public class GuardToolCall {
         if (call.readsAFile()) {
             return secretRead(call.file(), secretsKeptFromAWorkersRead());
         }
+        if (call.searchesForFiles()) {
+            return searchReachingASecret(call);
+        }
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
         return call.writesAFile()
                 ? outsideTheWorkplace(call.file(), workplace)
-                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell());
+                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell(call));
     }
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
         return call.readsAFile()
-                ? secretRead(call.file(), secretsKeptFromThePrimary())
-                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary());
+                ? secretRead(call.file(), secretsKeptFromThePrimary(call))
+                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(call));
     }
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
@@ -112,16 +115,30 @@ public class GuardToolCall {
         return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets).check(call.command());
     }
 
+    private Optional<GuardRefusal> searchReachingASecret(ToolCall call) {
+        Path directory = call.searchedDirectory();
+        boolean reaches = directory != null && secretFiles().stream().anyMatch(secret -> SecretSearches.reach(directory, call.pattern(), secret));
+        return reaches ? SecretReads.refusalForSearching() : Optional.empty();
+    }
+
     private Secrets secretsKeptFromAWorkersRead() {
         return new Secrets(secretFileEndings(), false);
     }
 
-    private Secrets secretsKeptFromAWorkersShell() {
-        return new Secrets(List.of(homeTokenEnding()), false);
+    private Secrets secretsKeptFromAWorkersShell(ToolCall call) {
+        return new Secrets(List.of(homeTokenEnding()), false, pathsFrom(call));
     }
 
-    private Secrets secretsKeptFromThePrimary() {
-        return new Secrets(secretFileEndings(), true);
+    private Secrets secretsKeptFromThePrimary(ToolCall call) {
+        return new Secrets(secretFileEndings(), true, pathsFrom(call));
+    }
+
+    private ShellWordPaths pathsFrom(ToolCall call) {
+        return new ShellWordPaths(call.workingDirectory(), Path.of(System.getProperty("user.home")), home.root());
+    }
+
+    private List<Path> secretFiles() {
+        return Stream.concat(Stream.of(home.coreTokenFile()), keysFile().stream()).toList();
     }
 
     private List<String> secretFileEndings() {
@@ -129,8 +146,12 @@ public class GuardToolCall {
     }
 
     private Optional<String> keysFileEnding() {
+        return keysFile().map(file -> "/" + file.getFileName());
+    }
+
+    private Optional<Path> keysFile() {
         try {
-            return Optional.ofNullable(machine.tracker().credentials()).map(Credentials::keysFile).map(file -> "/" + file.getFileName());
+            return Optional.ofNullable(machine.tracker().credentials()).map(Credentials::keysFile);
         } catch (InvalidConfiguration unreadable) {
             return Optional.empty();
         }

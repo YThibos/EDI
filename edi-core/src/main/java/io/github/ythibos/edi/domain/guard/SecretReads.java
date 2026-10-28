@@ -9,6 +9,7 @@ public final class SecretReads {
     private static final Set<String> SHOW_TOKEN_OPTIONS = Set.of("-t", "--show-token");
     private static final String A_COMMAND = "this command";
     private static final String A_FILE_READ = "this read";
+    private static final String A_SEARCH = "this file search";
     private static final String NAMES_A_SECRET_FILE = "it names a file that holds a secret";
 
     private SecretReads() {
@@ -16,6 +17,10 @@ public final class SecretReads {
 
     public static Optional<GuardRefusal> refusalForReading(String file, Secrets secrets) {
         return secrets.areNamedIn(file) ? refused(A_FILE_READ, NAMES_A_SECRET_FILE) : Optional.empty();
+    }
+
+    public static Optional<GuardRefusal> refusalForSearching() {
+        return refused(A_SEARCH, NAMES_A_SECRET_FILE);
     }
 
     static Optional<GuardRefusal> refusalFor(ShellCommand command, Secrets secrets) {

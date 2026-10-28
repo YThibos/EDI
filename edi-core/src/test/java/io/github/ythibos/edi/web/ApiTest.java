@@ -265,12 +265,15 @@ class ApiTest {
         HttpResponse<String> denied = hook(worker, "pre-tool-use", "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"pkill -f java\"},\"cwd\":\"/tmp\"}");
         HttpResponse<String> allowed = hook(worker, "pre-tool-use", "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"},\"cwd\":\"/tmp\"}");
         HttpResponse<String> stopped = hook(worker, "stop", "{\"hook_event_name\":\"Stop\"}");
+        HttpResponse<String> searched = hook(worker, "pre-tool-use",
+                "{\"tool_name\":\"Glob\",\"tool_input\":{\"pattern\":\"core.tok*\",\"path\":\"" + home.resolve("state") + "\"},\"cwd\":\"/tmp\"}");
 
         assertThat(denied.statusCode()).isEqualTo(200);
         assertThat(denied.body()).startsWith("{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\","
                 + "\"permissionDecisionReason\":\"The guard refuses this: pkill signals every process");
         assertThat(allowed.statusCode()).isEqualTo(204);
         assertThat(stopped.statusCode()).isEqualTo(204);
+        assertThat(searched.body()).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
         assertRefusal(hook(worker, "teleport", "{}"), 400, "The hooks answered are session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification and session-end, not teleport.");
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"tmux kill-server\"}}"))).body())
