@@ -7,5 +7,5 @@ public interface PathLookup {
 
     PathLookup AS_WRITTEN = _ -> List.of();
 
-    List<String> pathsOf(String word);
+    List<String> pathsOf(String pattern);
 }

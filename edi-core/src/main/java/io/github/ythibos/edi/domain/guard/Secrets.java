@@ -17,23 +17,27 @@ public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup 
         this(fileEndings, forgeTokens, PathLookup.AS_WRITTEN);
     }
 
-    boolean areNamedIn(String word) {
-        return !fileEndings.isEmpty() && (endsInASecret(word) || leadsToASecret(word));
+    boolean areNamedIn(String file) {
+        return !fileEndings.isEmpty() && endsInASecret(file);
     }
 
-    private boolean leadsToASecret(String word) {
-        return pathIn(word).stream().flatMap(path -> paths.pathsOf(path).stream()).anyMatch(this::endsInASecret);
+    boolean areNamedIn(ShellWord word) {
+        return !fileEndings.isEmpty() && (endsInASecret(word.text()) || leadsToASecret(word.pattern()));
     }
 
     private boolean endsInASecret(String path) {
         return fileEndings.stream().anyMatch(path::endsWith);
     }
 
-    private static Optional<String> pathIn(String word) {
-        if (!word.startsWith("-")) {
-            return word.isBlank() ? Optional.empty() : Optional.of(word);
+    private boolean leadsToASecret(String pattern) {
+        return pathIn(pattern).stream().flatMap(path -> paths.pathsOf(path).stream()).anyMatch(this::endsInASecret);
+    }
+
+    private static Optional<String> pathIn(String pattern) {
+        if (!pattern.startsWith("-")) {
+            return pattern.isBlank() ? Optional.empty() : Optional.of(pattern);
         }
-        int equals = word.indexOf('=');
-        return equals > 0 ? Optional.of(word.substring(equals + 1)) : Optional.empty();
+        int equals = pattern.indexOf('=');
+        return equals > 0 ? Optional.of(pattern.substring(equals + 1)) : Optional.empty();
     }
 }

@@ -124,8 +124,8 @@ public class GuardToolCall {
 
     private Optional<GuardRefusal> searchReachingASecret(ToolCall call) {
         Path directory = call.searchedDirectory();
-        boolean reaches = directory != null && secretFiles().stream().anyMatch(secret -> SecretSearches.reach(directory, call.pattern(), secret));
-        return reaches ? SecretReads.refusalForSearching() : Optional.empty();
+        return SecretReads.refusalForSearching(
+                () -> directory != null && secretFiles().stream().anyMatch(secret -> SecretSearches.reach(directory, call.pattern(), secret)));
     }
 
     private Secrets secretsKeptFromAWorkersRead() {
@@ -141,7 +141,7 @@ public class GuardToolCall {
     }
 
     private ShellWordPaths pathsFrom(ToolCall call) {
-        return new ShellWordPaths(call.workingDirectory(), Path.of(System.getProperty("user.home")), home.root());
+        return new ShellWordPaths(call.workingDirectory(), Path.of(System.getProperty("user.home")), System.getProperty("user.name"), home.root());
     }
 
     private List<Path> secretFiles() {
