@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -55,7 +56,7 @@ class StartupMemoryTest {
 
     @Test
     void listsWhatStowShouldCurate() {
-        StowList list = StowList.of(new StartupMemory(List.of(PROFILE, LEARNINGS), 20), LocalDate.of(2026, 10, 17));
+        StowList list = StowList.of(new StartupMemory(List.of(PROFILE, LEARNINGS), 20), LocalDate.of(2026, 10, 17), Map.of());
 
         assertThat(list.findings()).extracting(StowFinding::file, StowFinding::entry).containsExactly(
                 tuple("", "commits"),

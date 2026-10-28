@@ -12,7 +12,7 @@ The time-booking tool books worklogs from the old harness's activity ledger, one
 
 ## Decision
 
-`Tracker` offers `kind`, `findExisting`, `create`, `fill`, `verified`, `transition`, `addToCurrentSprint` and `link`.
+`Tracker` offers `kind`, `findExisting`, `create`, `fill`, `verified`, `found`, `transition`, `addToCurrentSprint` and `link`; `found` answers no ticket where `verified` refuses one JIRA has nothing for.
 Each registry entry names its tracker with `tracker.kind` (`jira`, `edi` or `none`), and `Trackers` refuses a project on an external tracker the machine profile does not name.
 The profile's `tracker` section holds everything a JIRA instance differs in, such as its URL, credentials, evergreen tickets, workflow statuses, merged status and issue type.
 `JiraTracker` speaks REST version 2 and the agile API through `JiraCalls`, with the proxies the environment names (`EnvironmentProxies`); `EdiNativeTracker` issues keys and keeps no tickets; `NoTracker` issues none.
@@ -60,3 +60,4 @@ When EDI talks to a second external tracker, JIRA retires REST version 2, or the
 - 17/10/2026: slice S6 built the tracker port, keying at intake, ticket follow-ups, hidden secrets and the fleet ledger, choosing the old harness's `task.pr_ready` over the specification's shorthand `task.ready`.
 - 22/10/2026: a refused ticket choice is asked again as a new decision, since an answered decision is never rewritten ([captain-decisions](captain-decisions.md), EDI-40).
 - 26/10/2026: EDI measures each task's active minutes from its timeline, shows them in `edi task show` and books them as `task.worked` at cleanup (EDI-54).
+- 28/10/2026: the port gained `found`, so `edi memory stow-list` tells a ticket JIRA has nothing for from one it cannot be asked about ([primary-startup-context](primary-startup-context.md), EDI-81).

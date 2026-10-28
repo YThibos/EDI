@@ -114,6 +114,10 @@ public class TaskStore {
                 .param("since", Columns.text(since)));
     }
 
+    public List<Task> keyedOn(WorkKey key) {
+        return tasks(store.sql(SELECT_TASKS + "where work_key = :key order by rowid").param("key", key.toString()));
+    }
+
     public List<Task> waitingFor(TaskId blocker) {
         return tasks(store.sql(SELECT_TASKS + "where id in (select task_id from task_dependency where blocked_by = :blocker) order by rowid")
                 .param("blocker", blocker.value()));

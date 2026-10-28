@@ -25,6 +25,11 @@ public record Workflow(List<String> forward) {
         }
     }
 
+    public boolean hasReached(String status, String target) {
+        int now = positionOf(status);
+        return now >= 0 && now >= positionOf(target);
+    }
+
     public WorkflowStep stepToward(String target, String current, List<AvailableTransition> available) {
         requireStatus(target);
         int goal = positionOf(target);
