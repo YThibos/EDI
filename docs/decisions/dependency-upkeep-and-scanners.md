@@ -24,7 +24,7 @@ CI runs on every push and pull request:
 - SonarQube Community Build as a service container, with a quality gate on overall code: reliability, security and maintainability rated A and at most 3% duplication;
 - gitleaks and the publish guard ([publish-guard](publish-guard.md)).
 
-A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, which a Renovate regex manager keeps current.
+A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, which a Renovate regex manager keeps current, and when `@angular/build` pinned a Vite release with high advisories, the console's `package.json` overrode `vite`.
 The `edi-upkeep` skill lists Renovate's pull requests with their checks, raises one decision per green batch, and turns a red major into a migration task.
 
 ## Why
@@ -43,12 +43,13 @@ Security and quality are part of green, and the gate exists to fail on exactly w
 ## Consequences
 
 - Good: dependencies, plugins, actions, the wrapper and the toolchain stay current.
-- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and the Tomcat override must be removed by hand once Spring Boot catches up.
+- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and the Tomcat and Vite overrides must be removed by hand once Spring Boot and Angular catch up.
 
 ## When to revisit
 
-When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, Spring Boot manages a fixed Tomcat, EDI ships a container image, or coverage becomes a gate.
+When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, Spring Boot manages a fixed Tomcat, Angular's build pins a fixed Vite, EDI ships a container image, or coverage becomes a gate.
 
 ## How we got here
 
 - 15/10/2026: the captain asked for automatic dependency upgrades, a vulnerability scanner and a code-quality scanner; slice S0 set up Renovate and the four scans, and overrode Tomcat for nine CVEs the scanner found.
+- 28/10/2026: `@angular/build` 22.2.4 pinned Vite 8.3.0, which `npm audit` rated high, so the console overrides `vite` (EDI-116).

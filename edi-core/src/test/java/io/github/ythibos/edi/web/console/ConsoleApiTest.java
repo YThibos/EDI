@@ -9,6 +9,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -61,6 +63,7 @@ class ConsoleApiTest {
     private static final String TEXT = "text/plain";
     private static final String JSON = "application/json";
     private static final String CONSOLE_HEADER = "X-EDI-Console";
+    private static final int PNG_WIDTH_OFFSET = 16;
 
     @TempDir
     private static Path home;
@@ -189,6 +192,24 @@ class ConsoleApiTest {
             assertThat(page.headers().firstValue("Cache-Control")).contains("no-cache");
             assertThat(page.headers().firstValue("Last-Modified")).isEmpty();
         });
+    }
+
+    @Test
+    void namesTheHologramIconsOnEveryPageAndServesThemBeforeTheSignIn() throws Exception {
+        HttpResponse<String> signIn = send(HttpRequest.newBuilder(uri("/login")).GET());
+        HttpResponse<byte[]> drawing = fetched("/favicon.svg");
+        HttpResponse<byte[]> tab = fetched("/favicon-32.png");
+        HttpResponse<byte[]> homeScreen = fetched("/apple-touch-icon.png");
+
+        assertThat(signIn.body()).contains(
+                "<link rel=\"icon\" href=\"favicon-32.png\" type=\"image/png\" sizes=\"32x32\">",
+                "<link rel=\"icon\" href=\"favicon.svg\" type=\"image/svg+xml\" sizes=\"any\">",
+                "<link rel=\"apple-touch-icon\" href=\"apple-touch-icon.png\">");
+        assertThat(drawing.headers().firstValue("Content-Type")).contains("image/svg+xml");
+        assertThat(new String(drawing.body(), StandardCharsets.UTF_8)).startsWith("<svg ");
+        assertThat(Stream.of(tab, homeScreen).map(png -> png.headers().firstValue("Content-Type").orElseThrow())).containsOnly("image/png");
+        assertThat(widthOf(tab.body())).isEqualTo(32);
+        assertThat(widthOf(homeScreen.body())).isEqualTo(180);
     }
 
     @Test
@@ -370,6 +391,16 @@ class ConsoleApiTest {
         try (HttpClient http = HttpClient.newHttpClient()) {
             return http.send(request.build(), BodyHandlers.ofString());
         }
+    }
+
+    private static HttpResponse<byte[]> fetched(String path) throws Exception {
+        try (HttpClient http = HttpClient.newHttpClient()) {
+            return http.send(HttpRequest.newBuilder(uri(path)).GET().build(), BodyHandlers.ofByteArray());
+        }
+    }
+
+    private static int widthOf(byte[] png) {
+        return ByteBuffer.wrap(png, PNG_WIDTH_OFFSET, Integer.BYTES).getInt();
     }
 
     private static String console() throws IOException {
