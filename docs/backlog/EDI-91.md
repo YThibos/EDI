@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 16 |
 | Source | EDI-74 plan, step 21 |
 | Size | M |
-| Blocked by | [EDI-90](EDI-90.md) |
+| Blocked by | [EDI-90](EDI-90.md), [EDI-133](EDI-133.md) |
 | Status | open |
 | Cloud session | ok |
 
@@ -20,6 +20,8 @@ The boxed report takes its new layout: a header, what waits on the captain, what
 The report was built to reproduce the previous harness byte for byte, and its purpose is stated that way in the decision record.
 The console sitrep page now holds the full picture, so the chat report can answer two questions only: what changed since the captain last looked, and what waits on him.
 In the first week the report was 30.2% of the primary's output tokens, run five times as often per day as in the previous harness.
+[EDI-133](EDI-133.md) turns the turn report into the session's attention list before this item starts: the ongoing and parked lines, the heavy-runs line and every other line of state leave it, and a decision card is shown in full once, then as one line.
+This item builds its layout on that report.
 The research is in [the EDI-74 plan](research/EDI-74-plan.md), section 8, and [the EDI-75 measurements](research/EDI-75-measurements.md), section 7.
 
 ## Acceptance criteria
