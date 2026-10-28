@@ -137,7 +137,7 @@ The Issue column shows `-` until the issues are opened.
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
 | 15 | [EDI-90](EDI-90.md) | The captain's last look and the delta | S | EDI-65 | open | - |
-| 16 | [EDI-91](EDI-91.md) | The report's new layout | M | EDI-90 | open | - |
+| 16 | [EDI-91](EDI-91.md) | The report's new layout | M | EDI-90, EDI-133 | open | - |
 | 17 | [EDI-92](EDI-92.md) | The stop hook's new rule | S | EDI-90 | open | - |
 | 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | EDI-89 | open | - |
 | 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | EDI-89 | open | - |
@@ -198,7 +198,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | in-flight: on the captain's machine, a worker is delivering it; not for the cloud session, skip it if its pull request exists or has merged | - |
 | - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | in-flight: on the captain's machine, a worker is delivering it; not for the cloud session, skip it if its pull request exists or has merged | - |
-| - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the cloud session once the captain changes its status to `open`. | - |
+| - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the captain's Pro cloud session; skip it until the captain changes its status to `open` on its issue. | - |
 | - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the switch of the default branch, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
 
 ## Not in the backlog

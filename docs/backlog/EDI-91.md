@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 16 |
 | Source | EDI-74 plan, step 21 |
 | Size | M |
-| Blocked by | [EDI-90](EDI-90.md) |
+| Blocked by | [EDI-90](EDI-90.md), [EDI-133](EDI-133.md) |
 | Status | open |
 | Cloud session | ok |
 
