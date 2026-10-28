@@ -24,7 +24,7 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 
 class OpenTheSitrepAtSessionStartTest {
 
-    private static final URI CONSOLE = URI.create("http://127.0.0.1:47318/");
+    private static final URI CONSOLE = URI.create("http://127.0.0.1:5490/");
     private static final SessionSource LAUNCHED = SessionSource.LAUNCH;
     private static final SessionSource RESUMED = SessionSource.RESTART;
     private static final String NO_DESKTOP = "";

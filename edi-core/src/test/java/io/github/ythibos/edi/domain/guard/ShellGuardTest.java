@@ -264,7 +264,7 @@ class ShellGuardTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "cat ~/.edi/state/core.token",
-        "curl -H \"Authorization: Bearer $(cat \"$EDI_HOME\"/state/core.token)\" http://127.0.0.1:47318/api/backlog",
+        "curl -H \"Authorization: Bearer $(cat \"$EDI_HOME\"/state/core.token)\" http://127.0.0.1:5490/api/backlog",
         "grep JIRA /path/to/tracker-keys.yml",
         "less < /mnt/c/tmp/tracker-keys.yml",
         "gh auth token --user example-owner",
