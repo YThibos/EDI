@@ -13,11 +13,12 @@ Most of the core's work blocks: on a child process such as git, tmux or gh, on t
 `spring.threads.virtual.enabled: true` in `edi-core/src/main/resources/application.yaml` puts Spring's threads on virtual threads too.
 Tomcat handles each request on its own virtual thread, named `tomcat-handler-<n>`.
 Spring Boot replaces the platform `ThreadPoolTaskScheduler` with a `SimpleAsyncTaskScheduler` on virtual threads, which runs every fixed-delay round on its one fixed-delay thread, so rounds still run one at a time and never overlap, as before.
-`spring.task.scheduling.shutdown` still makes a stopping core wait up to 30 seconds for a running round ([core-lifecycle](core-lifecycle.md)).
+A stopping core still waits for a running round ([core-lifecycle](core-lifecycle.md)): the `SimpleAsyncTaskScheduler`'s lifecycle stop completes only once the round on its fixed-delay thread ends, and Spring waits for it up to `spring.lifecycle.timeout-per-shutdown-phase`, 30 seconds, before closing the scheduler interrupts the round.
+`spring.task.scheduling.shutdown` no longer bounds that wait, as it only reaches the scheduler's trigger, fixed-rate and one-off tasks, which the core does not use, so `application.yaml` sets the shutdown phase timeout instead.
 The setting lives in `application.yaml` because ahead-of-time processing fixes the conditional beans at build time, so the native image carries it, and it is no machine difference ([machine-and-person-specifics](machine-and-person-specifics.md)).
 `edi wait` holds no thread while it waits: `WaitController` returns a `DeferredResult`, which a worker's wake completes from `WakeSignal`.
 `CoreExit` keeps its own single-thread scheduler: the setting does not reach it, and it runs one delayed `System.exit` per core life, after the answer to `edi down` is sent, so a virtual thread would change nothing there.
-`EdiCoreApplicationTest` pins that a request and a scheduled job run on a virtual thread, and `ApiTest` pins that a waiting `edi wait` is answered once a worker wakes the primary.
+`EdiCoreApplicationTest` pins that a request and a scheduled job run on a virtual thread, and `WaitControllerTest` pins that an `edi wait` held open is answered once a worker wakes the primary.
 
 ## Why
 

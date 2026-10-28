@@ -18,8 +18,6 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -53,7 +51,6 @@ import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Intakes;
-import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
 import tools.jackson.databind.json.JsonMapper;
@@ -359,27 +356,6 @@ class ApiTest {
     }
 
     @Test
-    void holdsAWaitOpenUntilAWorkerWakesThePrimary() throws Exception {
-        String worker = workerTokenFor("api-held-wake");
-        UUID primary = UUID.randomUUID();
-        primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
-        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Keep watch on the buoy.\"}");
-        String expected = "api-held-wake#1 needs a decision: (buoy) Bell or whistle?";
-
-        try (HttpClient http = HttpClient.newHttpClient()) {
-            CompletableFuture<HttpResponse<String>> held = http.sendAsync(waitIn(primary).build(), BodyHandlers.ofString());
-            send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
-                    .POST(BodyPublishers.ofString("{\"state\":\"needs-decision\",\"key\":\"buoy\",\"text\":\"Bell or whistle?\"}")));
-
-            HttpResponse<String> woken = awaitTheWake(primary, held.get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS), expected);
-            primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
-
-            assertThat(woken.statusCode()).isEqualTo(200);
-            assertThat(woken.body()).contains(expected);
-        }
-    }
-
-    @Test
     void changesThePresenceAndRefusesAnAwayMandateTheCaptainDidNotType() throws Exception {
         UUID primary = UUID.randomUUID();
         primaryHook(primary, "session-start", "{}");
@@ -504,14 +480,6 @@ class ApiTest {
 
     private static HttpRequest.Builder waitIn(UUID session) throws IOException {
         return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}"));
-    }
-
-    private static HttpResponse<String> awaitTheWake(UUID primary, HttpResponse<String> first, String expected) throws Exception {
-        HttpResponse<String> woken = first;
-        for (int earlierWakes = 0; earlierWakes < 5 && woken.statusCode() == 200 && !woken.body().contains(expected); earlierWakes++) {
-            woken = send(waitIn(primary));
-        }
-        return woken;
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {
