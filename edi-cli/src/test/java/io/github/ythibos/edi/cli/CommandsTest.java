@@ -265,24 +265,24 @@ class CommandsTest {
 
     @Test
     void opensTheConsoleThroughTheCore() {
-        core.answering(200, "EDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+        core.answering(200, "EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
 
         int exitCode = edi("", "console");
 
         assertThat(exitCode).isZero();
-        assertThat(out).hasToString("EDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+        assertThat(out).hasToString("EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
         assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/console/open", "Bearer stub-token", "text/plain", null, null, "{}"));
     }
 
     @Test
     void printsTheSitrepAndThenOpensItsBoardInTheConsole() {
         core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n").thenAnswering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n")
-                .thenAnswering(200, "EDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+                .thenAnswering(200, "EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
 
         int exitCode = edi("", "sitrep", "--board");
 
         assertThat(exitCode).isZero();
-        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\nEDI console: http://127.0.0.1:47318/ is open in your browser.\n");
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\nEDI console: http://127.0.0.1:5490/ is open in your browser.\n");
         assertThat(core.requests()).extracting(StubCore.Request::method, StubCore.Request::target)
                 .containsExactly(tuple("GET", "/api/report"), tuple("POST", "/api/console/open"));
     }

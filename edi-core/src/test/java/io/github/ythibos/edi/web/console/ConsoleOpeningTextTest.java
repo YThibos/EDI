@@ -10,7 +10,7 @@ import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
 
 class ConsoleOpeningTextTest {
 
-    private static final URI CONSOLE = URI.create("http://127.0.0.1:47318/");
+    private static final URI CONSOLE = URI.create("http://127.0.0.1:5490/");
 
     @Test
     void namesThePageTheSessionsStartOpenedInsteadOfOpeningAnother() {
