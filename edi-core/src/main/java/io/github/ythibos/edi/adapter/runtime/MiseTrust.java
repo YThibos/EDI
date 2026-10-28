@@ -31,6 +31,7 @@ final class MiseTrust {
     }
 
     private static boolean grantsTrust(ProgramRun shown) {
-        return shown.succeeded() && shown.output().lines().anyMatch(line -> line.strip().endsWith(TRUSTED));
+        List<String> configurations = shown.output().lines().map(String::strip).filter(line -> !line.isEmpty()).toList();
+        return shown.succeeded() && !configurations.isEmpty() && configurations.stream().allMatch(line -> line.endsWith(TRUSTED));
     }
 }

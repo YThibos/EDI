@@ -1,6 +1,6 @@
 #!/bin/sh
 if [ "$1" = trust ]; then
-    printf '%s: untrusted\n' "$(pwd -P)"
+    printf '%s: trusted\n' "$(pwd -P)"
     exit 0
 fi
 shift 2

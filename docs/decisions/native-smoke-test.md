@@ -10,7 +10,7 @@ Workers run the native build too, inside an EDI worker whose environment carries
 
 ## Decision
 
-`NativeSmokeIT` starts the native core on a fresh home and checks its store, `/api/health` and the console (AT-44), drives the S1 commands against it, and runs a worker end to end: with a private worker socket, the stand-in `edi-test-claude` as `edi.workers.claude-code`, the pass-through `edi-test-mise` as `edi.workers.mise` ([worker-sessions](worker-sessions.md)) and the native `edi` first on `PATH`, it dispatches a ship, sees its status, commit, guard refusal and brief, and steers it at its idle prompt; it skips when tmux is missing.
+`NativeSmokeIT` starts the native core on a fresh home and checks its store, `/api/health` and the console (AT-44), drives the S1 commands against it, and runs a worker end to end: with a private worker socket, the stand-in `edi-test-claude` as `edi.workers.claude-code`, the pass-through `edi-test-mise`, which trusts every clone, as `edi.workers.mise` ([worker-sessions](worker-sessions.md)) and the native `edi` first on `PATH`, it dispatches a ship, sees its status, commit, guard refusal and brief, and steers it at its idle prompt; it skips when tmux is missing.
 `edi-test-claude` is a POSIX shell script that takes Claude Code's flags, sends the hooks a session would through `edi hook`, runs each `stub-run:` line of its brief's spec unless the guard denies it, and reads its inbox when told.
 `NativeRecoveryIT` and `NativeLifecycleIT` cover relaunch after a simulated restart and the core's start and stop, and every native test removes every `EDI_`, `TMUX` and `GIT_CONFIG_` variable from the environment of the command and the core it starts.
 `NativeRecoveryIT`, which restarts the native core within its tests, waits up to `Patience.FOR_REAL_WORK`, one minute, for each start and asserts that a test's own work, its time less the start-ups it waited for, stayed under 30 seconds.
@@ -48,4 +48,4 @@ When the median ratio on GitHub's runners is above 1.6, the live profile runs a 
 - 22/10/2026: AT-39 failed on shared runners and a loaded laptop, so it judges the command against the machine's own pace (EDI-37).
 - 23/10/2026: `NativeRecoveryIT` overran its timeout while a loaded machine restarted the core, so the core's start-ups no longer count against a test's own thirty seconds (EDI-35).
 - 27/10/2026: the native tests waited 20 seconds for real work that `edi update` runs beside other builds, so they wait `Patience.FOR_REAL_WORK` for real work and run under the default timeout (EDI-106).
-- 27/10/2026: workers start through `mise exec`, so the native tests pass a stand-in that runs the worker's command unchanged (EDI-100).
+- 27/10/2026: workers start through `mise exec` when mise trusts the project's clone, so the native tests pass a stand-in that trusts every clone and runs the worker's command unchanged (EDI-100).

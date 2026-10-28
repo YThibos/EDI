@@ -131,21 +131,8 @@ class TmuxClaudeRuntimeTest {
     }
 
     @Test
-    void trustsTheCopysPinnedToolchainWhenMiseTrustsTheProjectsCloneAndInstallsNoMissingTool() throws IOException {
+    void startsClaudeCodeOnTheToolchainTheCopyPinsWhenMiseTrustsTheProjectsCloneAndInstallsNoMissingTool() throws IOException {
         Files.writeString(directory.resolve("mise-trust"), "trusted");
-        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
-
-            runtime.launch(launch(UUID.randomUUID(), List.of()));
-
-            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
-                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=" + worktree);
-            assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
-        }
-    }
-
-    @Test
-    void startsClaudeCodeThroughMiseWithoutTrustingTheCopyWhenMiseDoesNotTrustTheProjectsClone() throws IOException {
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
             TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
 
@@ -154,6 +141,19 @@ class TmuxClaudeRuntimeTest {
             assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
                     .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=");
             assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
+        }
+    }
+
+    @Test
+    void startsClaudeCodeWithoutMiseWhenMiseDoesNotTrustTheProjectsClone() throws IOException {
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+
+            List<String> arguments = List.of(Files.readString(awaitFile(home.root().resolve("claude-was-started.arguments"))).split("\0"));
+            assertThat(arguments).startsWith("--add-dir", home.taskDirectory(new TaskId("fit-lamp")).toString());
+            assertThat(home.root().resolve("mise-was-entered")).doesNotExist();
         }
     }
 
