@@ -57,6 +57,17 @@ Verified on no-mistakes 1.84.0, 23/10/2026, from the documented global and repos
 | Can the template skip a key the summary already carries? | No. Verified 27/10/2026 against the same package: `{{.Branch}} {{.Summary}}` rendered `EDI-49 EDI-49 State five effort levels with high as ceiling` for a summary starting with the key, `EDI-49 State ...` for one without it, and `EDI-49 EDI-21 ...` for one starting with another key, and a template with `{{if ...}}` is refused with `commit.fix_message supports only literal text and {{.Step}}, {{.Summary}}, or {{.Branch}} placeholders`. The pipeline commits with `core.hooksPath` at an empty directory and `--no-verify`, so no `commit-msg` hook reaches the subject, and the source at tag `v1.102.1` has neither changed. |
 | Consequence for EDI | EDI sets the commit and title keys in the repository's entry at every draft-review launch ([pipeline-commit-keys](../decisions/pipeline-commit-keys.md)). |
 
+## Skipped steps
+
+Verified on no-mistakes 1.84.0, 27/10/2026, from `axi run --help`, a run started with `--skip`, and the no-mistakes skill text installed with it.
+
+| Question | Result on 1.84.0 |
+|---|---|
+| Can a run leave steps out? | Yes. `axi run --help` lists `--skip string comma-separated pipeline steps to skip`. |
+| Does a skipped step stay out of the run? | Yes. Run `01M5Z6VVRA9TSN4N77YGWP42GH`, started with `--skip rebase,ci`, showed the `rebase` step as skipped. |
+| Does the `ci` step rebase? | The installed skill says that when its CI monitor sees an actual conflict with the base, it rebases onto the base, resolves the conflict, revalidates from the review and pushes the branch again. |
+| Consequence for EDI | Every run a worker starts skips `rebase`, and `ci` as well on a project whose CI does not run ([pipeline-steps](../decisions/pipeline-steps.md)). |
+
 ## Account binding
 
 | Question | Result on 1.84.0 |

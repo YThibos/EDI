@@ -114,7 +114,7 @@ class MemoryAndCraftTest {
                     + "\n\n" + keyedCommits("HRN-3") + "\n\n" + WorkerFixtures.CRAFT_RULES.strip());
             assertThat(Files.readString(flagged)).contains("Acceptance: AT-99 passes", "Offline verification is accepted", WorkerFixtures.CRAFT_RULES.strip());
             assertThat(Files.readString(home.home().taskDirectory(new TaskId("fit-lamp")).resolve("brief.md")))
-                    .contains("no-mistakes axi run --base-branch main --intent \"$(cat '" + flagged + "')\"");
+                    .contains("no-mistakes axi run --base-branch main --skip rebase --intent \"$(cat '" + flagged + "')\"");
             assertThat(Files.readString(home.home().taskDirectory(new TaskId("map-caves")).resolve("intent.md")))
                     .isEqualTo("## Captain's intent\n\nDo the work on map-caves.\n\n" + intent + "\n\n## Spec\n\n" + spec + "\n\n" + keyedCommits("EDI-9"));
         }

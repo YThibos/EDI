@@ -38,6 +38,8 @@ public interface WorkerRuntime {
 
     void close(WorkerWindow window);
 
+    boolean hasATranscriptOf(UUID session);
+
     Optional<LimitStop> usageLimitStopIn(String transcript, Instant since);
 
     Optional<Instant> contextLimitStopIn(String transcript, Instant since);

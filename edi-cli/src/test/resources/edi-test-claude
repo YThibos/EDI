@@ -25,8 +25,13 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 [ -z "$task_directory" ] || { printf '%s' "$launched_with" | tr '\n' ' '; echo; } >> "$task_directory/stub-launches.txt"
-transcript="${task_directory:-$PWD}/stub-transcript-$session.jsonl"
+sessions="${CLAUDE_CONFIG_DIR:?the stand-in Claude Code keeps its transcripts in CLAUDE_CONFIG_DIR}/projects"
+transcript="$sessions/$(pwd | sed 's/[^A-Za-z0-9]/-/g')/$session.jsonl"
 context_full=""
+if [ "$source" = "resume" ] && [ ! -f "$transcript" ]; then
+    echo "No conversation found with session ID: $session"
+    exit 1
+fi
 
 json_string() {
     printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk 'BEGIN { ORS = "" } NR > 1 { print "\\n" } { print }'
@@ -72,7 +77,14 @@ stop() {
     esac
 }
 
+record_the_prompt() {
+    mkdir -p "$(dirname "$transcript")"
+    printf '{"type":"user","message":{"role":"user","content":"%s"},"timestamp":"%s"}\n' \
+        "$(json_string "$1")" "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$transcript"
+}
+
 turn() {
+    record_the_prompt "$1"
     hook UserPromptSubmit ",\"prompt\":\"$(json_string "$1")\"" user-prompt-submit > /dev/null
     case "$1" in
         *"brief waiting: read "*) run_the_brief "$1" ;;

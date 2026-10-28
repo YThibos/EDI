@@ -6,7 +6,7 @@ EDI never merges: every change reaches the captain as a draft the captain merges
 
 A project's registry entry sets its `delivery` (see [Configuration](configuration.md#the-project-registry)):
 
-- `draft-review`, the default: the validation pipeline pushes the branch and opens a draft merge or pull request, which the worker marks ready for review once its checks are green.
+- `draft-review`, the default: the validation pipeline pushes the branch and opens a draft merge or pull request, which the worker marks ready for review once its checks are green, or once the pipeline passes on a project whose CI does not run ([pipeline-steps](decisions/pipeline-steps.md)).
 - `local-branch`: the work arrives in the project's `captainCheckout` by a ref-only fetch ([delivery](decisions/delivery.md)).
 - `local-apply`, which one task may ask for with `--delivery local-apply`: the work arrives in the captain's checkout as an uncommitted patch.
 - `report`, which one task may ask for with `--delivery report`, for an operation on the machine with nothing to commit: the worker's report in the task directory is the delivery, its done counts once the report exists and the copy holds no change, and EDI then retires the task.
@@ -15,7 +15,8 @@ Accepted work reaches the captain by its delivery mode ([delivery](decisions/del
 
 ## A ship's validation
 
-A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included ([worker-brief](decisions/worker-brief.md)), and EDI observes the pipeline ([supervision](decisions/supervision.md)) and sets nothing in it but its agent's model and effort ([pipeline-agent](decisions/pipeline-agent.md)) and the work key in front of its own commit subjects and pull request titles ([pipeline-commit-keys](decisions/pipeline-commit-keys.md)).
+A ship's brief names the exact validation pipeline call with the intent EDI wrote, craft rules included ([worker-brief](decisions/worker-brief.md)), and the steps the run skips: always the rebase, since the worker merges the base in with a merge commit instead, and the CI wait on a project whose CI does not run ([pipeline-steps](decisions/pipeline-steps.md)).
+EDI observes the pipeline ([supervision](decisions/supervision.md)) and, beyond those skipped steps, sets nothing in it but its agent's model and effort ([pipeline-agent](decisions/pipeline-agent.md)) and the work key in front of its own commit subjects and pull request titles ([pipeline-commit-keys](decisions/pipeline-commit-keys.md)).
 The intent carries the task's notes and the brief's spec, so the pipeline's review judges the change against what the worker was asked for, and EDI rewrites it, with the brief, whenever the task is noted ([worker-brief](decisions/worker-brief.md)).
 Its done counts only once its merge request is open, as a draft or ready for review, or merged, at the copy's head, and its branch adds no SNAPSHOT version ([delivery](decisions/delivery.md)).
 `gh` and `glab` must be logged in, and the validation pipeline must be installed for draft reviews (see [Tools EDI drives](tooling.md)).
