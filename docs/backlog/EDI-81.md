@@ -8,7 +8,7 @@
 | Source | EDI-74 plan, step 7 |
 | Size | S |
 | Blocked by | nothing |
-| Status | open |
+| Status | delivered |
 | Cloud session | ok |
 
 ## Goal
