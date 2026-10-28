@@ -11,6 +11,10 @@ The why behind every rule is in [docs/decisions](docs/decisions/README.md); read
 - `./mvnw -Pnative,quick-build verify` builds both native executables in GraalVM's quick-build mode and runs the native smoke test; run it only when the change can reach the native image, as `NativeImageInput` lists, and otherwise say in the pull request why it was not needed ([local-native-builds](docs/decisions/local-native-builds.md)).
 - `./mvnw -Pnative verify` builds the full optimised executables, as CI and the install do.
 
+## Queued work
+
+- The queued and held EDI work is in [docs/backlog](docs/backlog/README.md): an ordered index, the pickup protocol and one self-contained spec per item; a session that has only this repository starts there ([backlog-in-the-repository](docs/decisions/backlog-in-the-repository.md)).
+
 ## Commits and branches
 
 - Branches are `feature|chore|research/EDI-<n>`, never `fm/` or `edi/`.
