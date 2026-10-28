@@ -112,6 +112,7 @@ import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
 import io.github.ythibos.edi.application.lifecycle.StopTheCore;
 import io.github.ythibos.edi.application.memory.DailyMemoryCheck;
 import io.github.ythibos.edi.application.memory.MemoryQuery;
+import io.github.ythibos.edi.application.memory.WorkaroundTickets;
 import io.github.ythibos.edi.application.migration.AdoptForkTask;
 import io.github.ythibos.edi.application.migration.BacklogImport;
 import io.github.ythibos.edi.application.migration.ExampleConfiguration;
@@ -586,7 +587,7 @@ public final class TestHome {
     }
 
     public MemoryQuery memory() {
-        return new MemoryQuery(new MemoryFiles(home), machineProfile(), clock);
+        return new MemoryQuery(new MemoryFiles(home), machineProfile(), new WorkaroundTickets(tasks, registry, trackers(), transaction), clock);
     }
 
     public DispatchRulesFile dispatchRulesFile() {

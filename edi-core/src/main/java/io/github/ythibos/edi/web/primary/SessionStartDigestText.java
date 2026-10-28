@@ -16,6 +16,7 @@ import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
+import io.github.ythibos.edi.domain.memory.WorkaroundCount;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.web.personality.PersonalityText;
@@ -55,7 +56,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.addAll(personalityText.lines(digest.personality()));
         lines.add("Presence: " + presenceWords.of(digest.presence()) + ".");
         lines.addAll(sitrepOf(digest.sitrep()));
-        lines.addAll(memoryOf(digest.memory()));
+        lines.addAll(memoryOf(digest.memory(), digest.workarounds()));
         lines.addAll(setupOf(digest.missingFromTheHome()));
         lines.addAll(limitStop(digest.previousLimitStop()));
         lines.addAll(waitingOnTheCaptain(digest.fleet()));
@@ -87,18 +88,26 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
                         + ", and edi console opens it signed in.");
     }
 
-    private static List<String> memoryOf(MemoryCheck memory) {
+    private static List<String> memoryOf(MemoryCheck memory, WorkaroundCount workarounds) {
         String measured = memory.estimatedTokens() + " of " + memory.budgetTokens() + " tokens";
         if (memory.passes()) {
             return List.of("Startup memory: " + measured + "; it is part of this session's system prompt, and if it is not, read "
-                    + memoryFilesOf(memory) + " now.");
+                    + memoryFilesOf(memory) + " now." + workaroundsOf(workarounds));
         }
         return List.of("Startup memory needs curating (" + measured + (memory.duplicatedHeadings().isEmpty() ? "" : ", repeated rule headings")
-                + "): run /stow; edi memory stow-list lists what to curate.");
+                + "): run /stow; edi memory stow-list lists what to curate." + workaroundsOf(workarounds));
     }
 
     private static String memoryFilesOf(MemoryCheck memory) {
         return memory.files().stream().map(file -> file.path().toString()).collect(Collectors.joining(", "));
+    }
+
+    private static String workaroundsOf(WorkaroundCount workarounds) {
+        if (!workarounds.anyToCurate()) {
+            return "";
+        }
+        return " Workarounds in learnings.md: " + workarounds.expired() + " expired and " + workarounds.unticketed()
+                + " unticketed; /stow deletes an expired one and gives an unticketed one a ticket or a date.";
     }
 
     private static List<String> setupOf(List<String> missing) {

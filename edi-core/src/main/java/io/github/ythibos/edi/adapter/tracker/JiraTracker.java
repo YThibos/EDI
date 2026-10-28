@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -91,6 +92,15 @@ public class JiraTracker implements Tracker {
     @Override
     public Ticket verified(WorkKey key) {
         return ticketOf(calls.read(settings(), API + "/issue/" + key, Map.of("fields", TICKET_FIELDS), "the ticket " + key));
+    }
+
+    @Override
+    public Optional<Ticket> found(WorkKey key) {
+        try {
+            return Optional.of(verified(key));
+        } catch (NothingFound unknown) {
+            return Optional.empty();
+        }
     }
 
     @Override

@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.github.ythibos.edi.domain.project.WorkKey;
+
 public record StartupMemory(List<MemoryFile> files, int budgetTokens) {
 
     public StartupMemory {
@@ -27,6 +29,14 @@ public record StartupMemory(List<MemoryFile> files, int budgetTokens) {
                 .flatMap(file -> file.headings().stream())
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
         return counted.entrySet().stream().filter(heading -> heading.getValue() > 1).map(Map.Entry::getKey).sorted().toList();
+    }
+
+    public List<MemoryEntry> workarounds() {
+        return files.stream().flatMap(file -> file.workarounds().stream()).toList();
+    }
+
+    public List<WorkKey> workaroundKeys() {
+        return workarounds().stream().map(entry -> entry.until().orElseThrow()).distinct().toList();
     }
 
     public boolean passes() {
