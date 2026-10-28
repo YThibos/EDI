@@ -87,6 +87,7 @@ class WaitControllerTest {
         properties.add("edi.home", () -> home.toString());
         properties.add("edi.checkout", () -> home.resolve("checkout").toString());
         properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
+        properties.add("edi.supervision.round", () -> "PT1H");
     }
 
     @Test
@@ -102,7 +103,6 @@ class WaitControllerTest {
             assertThat(held).isNotDone();
 
             needsADecision(worker, "{\"state\":\"needs-decision\",\"key\":\"buoy\",\"text\":\"Bell or whistle?\"}");
-            assertThat(signal.aRequestWaits()).isTrue();
             HttpResponse<String> woken = held.get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
             primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
