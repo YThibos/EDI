@@ -8,7 +8,8 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
-@Command(name = "report", description = "Prints the boxed captain report that ends a turn: the open decisions, what this turn did, what runs and what waits.")
+@Command(name = "report", description = "Prints the turn report that ends a turn: only what needs the captain, every open decision and review,"
+        + " and what this turn did and does next; edi sitrep prints the overview.")
 final class ReportCommand implements Callable<Integer> {
 
     private static final String REPORT = "/api/report";
@@ -27,7 +28,7 @@ final class ReportCommand implements Callable<Integer> {
     @Override
     public Integer call() {
         String report = sizedForThePane(edi.paneWidth());
-        return turn == null ? core.get(report) : core.post(report, core.contentOf(turn));
+        return turn == null ? core.post(report, new JsonBody()) : core.post(report, core.contentOf(turn));
     }
 
     static String sizedForThePane(OptionalInt paneWidth) {

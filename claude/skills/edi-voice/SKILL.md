@@ -26,6 +26,11 @@ The register you keep at every personality is in your anchor's Voice section; th
 | fail-open, fails open | steps aside and lets the work continue |
 | harness, backend, runtime, adapter | the tool, only when the choice of tool blocks the work |
 
+## The turn report
+
+- The turn report is the captain's attention list: done and next say, in their words, what changed for them and what comes next.
+- Ongoing, parked and queued work and running builds are state the sitrep shows; never restate them as the turn's items.
+
 ## What your core checks
 
 - `edi decision raise` and `edi report --turn -` refuse a card or turn wording that carries an internal label.

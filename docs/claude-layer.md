@@ -14,7 +14,7 @@ The anchor holds EDI's character, the hard rules, the turn end and one line per 
 
 The primary and the workers answer every Claude Code hook through `edi hook <event>` ([worker-sessions](decisions/worker-sessions.md), [primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 The session the captain typed in last is the primary and any other stands by; a call made inside a Claude Code session names it, so a standby session's changes are refused.
-The primary's turn ends with the captain report when it changed state, and with an `edi wait` running while work is in flight ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
+The primary's turn ends with the turn report when it changed state ([turn-report](decisions/turn-report.md)), and with an `edi wait` running while work is in flight ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
 `edi wait` serves only the primary, and runs in the background until it exits printing what needs the primary, as soon as it happens ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
 
 ```sh

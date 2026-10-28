@@ -251,7 +251,7 @@ class CommandsTest {
     }
 
     @Test
-    void readsTheReportWithoutATurnAndTheSitrepAlike() {
+    void sendsAnEmptyTurnForTheReportWithoutOneAndReadsTheSitrep() {
         core.answering(200, "report\n");
 
         edi("", "report");
@@ -259,7 +259,7 @@ class CommandsTest {
         edi("", "sitrep", "--json");
         StubCore.Request sitrep = core.received();
 
-        assertThat(report).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "text/plain", null, null, ""));
+        assertThat(report).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, "{}"));
         assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, ""));
     }
 
