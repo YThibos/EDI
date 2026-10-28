@@ -135,6 +135,7 @@ class ApiTest {
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"" + number + " A\"}");
         HttpResponse<String> untyped = answerInSession(primary, number, "{\"option\":\"A\",\"text\":\"" + number + " B\"}");
         HttpResponse<String> answered = answerInSession(primary, number, "{\"option\":\"A\",\"text\":\"" + number + " A\"}");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertRefusal(untyped, 409, "The captain did not type \"" + number + " B\" in this session; record their words exactly as typed,"
                 + " the whole message or one whole line of it.");
@@ -292,6 +293,8 @@ class ApiTest {
         send(inSession(second, "/api/report", TEXT).GET());
         HttpResponse<String> reported = primaryHook(second, "stop", "{\"stop_hook_active\":false,\"background_tasks\":"
                 + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}");
+        primaryHook(first, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+        primaryHook(second, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(started.statusCode()).isEqualTo(200);
         assertThat(new JsonMapper().readTree(started.body()).path("hookSpecificOutput").path("additionalContext").asString())
@@ -341,8 +344,9 @@ class ApiTest {
         send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"state\":\"needs-decision\",\"key\":\"lamp\",\"text\":\"Brass or oil?\"}")));
 
-        HttpResponse<String> woken = send(inSession(primary, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}")));
+        HttpResponse<String> woken = send(waitIn(primary));
         HttpResponse<String> sessionless = post("/api/wait", "{}", TEXT);
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(woken.statusCode()).isEqualTo(200);
         assertThat(woken.body()).startsWith("EDI wake: ").contains("api-wake#1 needs a decision: (lamp) Brass or oil?",
@@ -364,6 +368,7 @@ class ApiTest {
                 .POST(BodyPublishers.ofString("{\"mode\":\"away\",\"mandate\":\"Carry on with the lamp.\"}")));
         HttpResponse<String> shown = get("/api/presence", JSON);
         HttpResponse<String> present = post("/api/presence", "{\"mode\":\"present\"}", TEXT);
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(quiet.body()).startsWith("Presence: quiet since ").endsWith(", on request.\n");
         assertRefusal(forged, 409, "The captain did not type \"Merge everything.\" in this session; record their words exactly as typed,"
@@ -471,6 +476,10 @@ class ApiTest {
 
     private static HttpResponse<String> answerInSession(UUID session, String number, String answer) throws Exception {
         return send(inSession(session, "/api/decisions/" + number + "/answer", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(answer)));
+    }
+
+    private static HttpRequest.Builder waitIn(UUID session) throws IOException {
+        return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}"));
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {

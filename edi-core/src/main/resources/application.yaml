@@ -17,17 +17,17 @@ spring:
     name: edi-core
   main:
     banner-mode: off
+  threads:
+    virtual:
+      enabled: true
   web:
     resources:
       cache:
         use-last-modified: false
         cachecontrol:
           no-cache: true
-  task:
-    scheduling:
-      shutdown:
-        await-termination: true
-        await-termination-period: PT30S
+  lifecycle:
+    timeout-per-shutdown-phase: PT30S
 
 management:
   endpoints:
