@@ -26,6 +26,7 @@ Every test JVM compiles with C1 only (`-XX:TieredStopAtLevel=1`); `MigratedStore
 Only the core's `StoreConfiguration` and the migration tests `SupervisionMigrationTest` and `DecisionsMigrationTest` keep `StoreFile.openedAt`.
 `MigratedStore` keeps each test home's store behind a HikariCP pool of at most 16 connections, which opens a connection only when one is asked for, closes one idle for 10 seconds and shares one housekeeping thread with every other pool, so a statement reuses a connection instead of opening the file again.
 `edi-core`'s `logback-test.xml` keeps Spring Boot's console format, quiets the lines HikariCP writes for each pool it starts and sets the INFO level, at which every test logs except while `CapturedLogs` captures, which lowers the root logger to DEBUG.
+`edi-core`'s test JVMs set `org.springframework.boot.logging.LoggingSystem` to `none`, so logback configures itself once from `logback-test.xml`, and a Spring test core that starts no longer resets the logger context while concurrent test classes log, which printed "No appenders present" warnings.
 A test that needs overlapping processes starts them before the work they overlap, as each AT-38 case starts its pre-push hook before its delivery, whose guard JVM starts with C1 and the serial collector.
 A test whose cases each start child processes checks each case in a home of its own, as `deliveryAndPushRefuseEachKindOfLeak` is a parameterised test over `TwoMachinesTest.Leak` and `deliveryAndPushPassAClearBranch` checks the clean branch apart.
 A test that builds many homes checks each in a case of its own, as AT-22's `captainFacingStringsCarryNoInternalLabels` is a parameterised test over every kind of string `CaptainFacingStrings` generates, each golden report a kind of its own and the fleet's views sharing one home.
@@ -55,6 +56,7 @@ A test's time on a busy machine follows the work every other build asks for, whi
 
 - Diffing the JVM's descendants before and after each test - concurrent classes would blame each other, and a daemonised server is never a descendant.
 - Isolating git in `ExternalPrograms` - EDI itself must read the captain's configuration for proxies and credentials.
+- Spring Boot's logging system in the test JVMs - each Spring test core resets logback's shared context as it starts, and a concurrent test that logs in that moment finds no appender.
 - A stand-in browser named in each Spring test's properties - a test that forgets it opens the captain's browser, as `WaitControllerTest` did.
 - Fewer test threads, or the slowest classes run alone - slower everywhere, or the suite stopped while they run.
 - A long timeout only for the tests tagged `adapter` - application tests on a test home and the architecture scans overran as often, and they read and write the disk too.
@@ -92,3 +94,4 @@ When JUnit offers process tracking, a test needs the developer's git configurati
 - 23/10/2026: the follower test written for the short batch took 22 seconds in a loaded full build, nearly all of it opening connections, so a test home's store keeps its connections in a pool (EDI-45).
 - 27/10/2026: AT-32's canary test and AT-47's import still outlived 30 seconds with several workers building at once, so the default timeout is 3 minutes, helpers and the native tests wait a minute for real work and `ProcessTableTest` no longer reads a start against a fixed window (EDI-106).
 - 28/10/2026: `WaitControllerTest`'s runs opened the sitrep in the captain's browser, so every Spring test core records its browser instead (EDI-120).
+- 28/10/2026: a full build warned that loggers had no appenders while a Spring test core reset logback, so the test JVMs leave logback to configure itself (EDI-120).
