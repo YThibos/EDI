@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.guard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,6 +16,9 @@ class ShellGuardTest {
     private static final ShellGuard SECRETS_KEPT = new ShellGuard("edi", Set.of("main"), Set.of(),
             new Secrets(List.of("/state/core.token", "/tracker-keys.yml"), true));
     private static final ShellGuard UNLANDED_KEPT = new ShellGuard("edi", Set.of("main"), Set.of("feature/HRN-3"), Secrets.NONE);
+    private static final Map<String, String> LINKED_SOCKETS = Map.of("/srv/harbour/lamp", "/tmp/tmux-1000/edi", "lamp", "/tmp/tmux-1000/edi");
+    private static final ShellGuard FOR_A_WORKER = new ShellGuard("edi", Set.of("main"), Set.of(), Secrets.NONE, true,
+            path -> LINKED_SOCKETS.getOrDefault(path, path));
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -100,6 +104,67 @@ class ShellGuardTest {
         "tmux -L edi respawn-pane -k -t @3"})
     void refusesControlOfEdisServer(String command) {
         assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.EDI_SERVER_CONTROL);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "tmux -L default send-keys -t edi-261028-0930 'yes' Enter",
+        "tmux -L default send -t edi-261028-0930 Enter",
+        "tmux -L default send-k -t edi-261028-0930 Enter",
+        "tmux -L default send-prefix -t edi-261028-0930",
+        "tmux -L default set-buffer 'yes' \\; paste-buffer -t edi-261028-0930",
+        "tmux -L default pasteb -t edi-261028-0930",
+        "tmux -L default source-file ./keys.conf",
+        "tmux -L default source ./keys.conf",
+        "tmux -L default run-shell 'tmux send-keys yes Enter'",
+        "tmux -L default run 'echo'",
+        "tmux -L default if-shell true 'send-keys yes Enter'",
+        "tmux -L default if true 'send-keys yes Enter'",
+        "tmux -L default pipe-pane -I -t edi-261028-0930 'echo yes'",
+        "tmux -L default display-popup -E 'tmux send-keys yes Enter'",
+        "tmux -L default display-menu -T x yes y 'send-keys yes Enter'",
+        "tmux -L default respawn-pane -k -t edi-261028-0930 'sh'",
+        "tmux -L default respawnw -k",
+        "tmux -L default set-hook -g client-attached 'send-keys yes Enter'",
+        "tmux -L default bind-key -n F12 send-keys yes Enter",
+        "tmux -L default command-prompt -I yes 'send-keys %1 Enter'",
+        "tmux -L default confirm-before 'send-keys yes Enter'",
+        "tmux -L default display-message -p '#(tmux send-keys yes Enter)'",
+        "tmux -L default -C attach",
+        "tmux -CC -L default attach",
+        "tmux -S /tmp/tmux-1000/default send-keys -t edi-261028-0930 Enter",
+        "tmux -L edi-test-42 send-keys -t probe Enter",
+        "tmux -L default list-sessions \\; send-keys -t edi-261028-0930 Enter",
+        "bash -c \"tmux -L default send-keys -t edi-261028-0930 'yes' Enter\""})
+    void refusesAWorkerAnyInputToAPaneOnAnySocket(String command) {
+        assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.TMUX_INPUT);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "tmux -L default list-sessions",
+        "tmux -L default display-message -p '#{pane_width}'",
+        "tmux -L default display -p '#S'",
+        "tmux -L default capture-pane -p -t edi-261028-0930",
+        "tmux -L edi-test-42 kill-server",
+        "tmux -L edi-test-42 new-session -d -s probe 'sleep 5'"})
+    void letsAWorkerReadAnyServerAndRunItsOwnPrivateOne(String command) {
+        assertThat(FOR_A_WORKER.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"tmux -S /srv/harbour/lamp kill-server", "tmux -S lamp kill-window -t @3", "tmux -S/srv/harbour/lamp respawn-window -k"})
+    void refusesControlOfEdisServerThroughALinkToItsSocket(String command) {
+        ShellGuard forThePrimary = new ShellGuard("edi", Set.of("main"), Set.of(), Secrets.NONE, false, path -> LINKED_SOCKETS.getOrDefault(path, path));
+
+        assertThat(forThePrimary.check(command)).map(GuardRefusal::rule).contains(GuardRule.EDI_SERVER_CONTROL);
+        assertThat(GUARD.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"tmux -L default send-keys -t edi-261028-0930 Enter", "tmux -L default run-shell 'date'"})
+    void leavesTheCaptainsServerToThePrimary(String command) {
+        assertThat(GUARD.check(command)).isEmpty();
     }
 
     @ParameterizedTest

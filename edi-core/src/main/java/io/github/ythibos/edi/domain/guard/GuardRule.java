@@ -6,6 +6,7 @@ public enum GuardRule {
     SIGNAL_BY_PATTERN,
     TMUX_WITHOUT_SOCKET,
     EDI_SERVER_CONTROL,
+    TMUX_INPUT,
     FORCED_PUSH,
     BASE_BRANCH_PUSH,
     MERGE,
