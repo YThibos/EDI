@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets) {
+public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets, boolean keepsAWorkersIdentity) {
 
     public ShellGuard {
         Objects.requireNonNull(ediSocket, "The guard knows the name of the core's tmux socket.");
@@ -16,6 +16,10 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
 
     public ShellGuard(String ediSocket, Set<String> baseBranches) {
         this(ediSocket, baseBranches, Set.of(), Secrets.NONE);
+    }
+
+    public ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets) {
+        this(ediSocket, baseBranches, unlandedBranches, secrets, false);
     }
 
     public Optional<GuardRefusal> check(String script) {
@@ -39,6 +43,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
                 .or(() -> SkippedHooks.refusalFor(command))
                 .or(() -> BranchDeletions.refusalFor(command, unlandedBranches))
                 .or(() -> MergingCommands.refusalFor(command))
-                .or(() -> SecretReads.refusalFor(command, secrets));
+                .or(() -> SecretReads.refusalFor(command, secrets))
+                .or(() -> keepsAWorkersIdentity ? WorkerIdentity.refusalFor(command) : Optional.empty());
     }
 }
