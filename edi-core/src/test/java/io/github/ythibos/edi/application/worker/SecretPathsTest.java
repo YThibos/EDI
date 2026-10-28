@@ -58,6 +58,16 @@ class SecretPathsTest {
     }
 
     @Test
+    void letsThroughWhatADenylistCannotContain() {
+        String builtAtRunTime = "python3 -c \"print(open('" + state + "/core.' + 'tok' + 'en').read())\"";
+        String linkedInTheSameCommand = "ln -s " + state + " cove && cat cove/core.token";
+
+        for (String command : List.of(builtAtRunTime, linkedInTheSameCommand)) {
+            assertThat(shell(command)).as(command).isEqualTo(HookAnswer.PROCEED);
+        }
+    }
+
+    @Test
     void letsAWorkerReadItsOwnSourcesAndListItsCopy() throws IOException {
         Files.writeString(worktree.resolve("Lamp.java"), "class Lamp {}\n");
         for (String command : List.of("cat Lamp.java", "ls *.java", "grep -rn token src", "cat " + state + "/core.port", "ls " + state)) {
