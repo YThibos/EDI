@@ -70,8 +70,7 @@ public class GuardToolCall {
     }
 
     public HookAnswer checkForWorker(WorkerId worker, ToolCall call) {
-        Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
-        Optional<GuardRefusal> refusal = refusalForWorker(call, workplace);
+        Optional<GuardRefusal> refusal = refusalForWorker(worker, call);
         refusal.ifPresent(refused -> transaction.executeWithoutResult(_ ->
                 events.record(new ToolCallRefused(worker.task(), worker, refused.rule()), Actor.worker(worker), clock.now())));
         return refusal.map(GuardToolCall::denial).orElse(HookAnswer.PROCEED);
@@ -84,14 +83,14 @@ public class GuardToolCall {
                 .orElse(HookAnswer.PROCEED);
     }
 
-    private Optional<GuardRefusal> refusalForWorker(ToolCall call, Workplace workplace) {
-        if (call.writesAFile()) {
-            return outsideTheWorkplace(call.file(), workplace);
-        }
+    private Optional<GuardRefusal> refusalForWorker(WorkerId worker, ToolCall call) {
         if (call.readsAFile()) {
             return secretRead(call.file(), secretsKeptFromAWorkersRead());
         }
-        return shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell());
+        Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
+        return call.writesAFile()
+                ? outsideTheWorkplace(call.file(), workplace)
+                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell());
     }
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {

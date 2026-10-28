@@ -7,7 +7,8 @@
 The `PreToolUse` hook must refuse pattern kills (I-30), tmux without a named socket and control of EDI's own server (I-31), forced pushes, pushes to a base and merges (I-03), and for workers any write outside their copy and task directory (I-07).
 Secrets are read only by EDI's adapters and never printed (I-32), and EDI's home token lets its holder act as the primary.
 The `commit-msg` and `pre-push` hooks an isolated copy runs through `core.hooksPath` hold the work key (I-10), the bar on trailers (I-09), the secret check (I-38), the SNAPSHOT check (I-11) and the registered forge (I-39), and git skips them on `--no-verify` or another hooks path.
-Claude Code's `Read` tool shows a file to the model without a shell, and passes a Bash call as one string, which a shell may nest in pipes, substitutions, `bash -c`, `eval`, `xargs`, `find -exec` and wrappers such as `sudo` or `timeout`.
+Claude Code's `Read` tool shows a file to the model without a shell.
+Claude Code passes a Bash call as one string, which a shell may nest in pipes, substitutions, `bash -c`, `eval`, `xargs`, `find -exec` and wrappers such as `sudo` or `timeout`.
 A primary whose core is down must still be able to bring it back.
 
 ## Decision
@@ -27,6 +28,8 @@ The worker's settings send `Bash`, `Read` and the file-writing tools to the guar
 The rules are plain Java tested in milliseconds over a hundred command shapes, and a refusal tells the caller what to do instead.
 Matching a secret by its path's ending catches the forms a shell writes it in while leaving a search of EDI's own source alone.
 Failing closed keeps the invariants when the core is down, while a plain `edi up` lets the primary bring it back.
+Failing closed on a `Read` is consistent with the guard refusing the primary's shell while the core is down.
+Matching a `Read` on its real path closes a link a worker can make in its own copy to a secret file, as the write containment realises paths.
 
 ## Alternatives rejected
 
@@ -47,7 +50,7 @@ Failing closed keeps the invariants when the core is down, while a plain `edi up
 
 ## When to revisit
 
-When workers run as another user, or the captain wants workers kept from the keys file.
+When workers run as another user, or the captain wants workers kept from the keys file in their shell.
 
 ## How we got here
 
