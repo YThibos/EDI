@@ -7,6 +7,7 @@ import java.util.Set;
 public record ToolCall(String tool, String command, String filePath, Path workingDirectory) {
 
     private static final String SHELL = "Bash";
+    private static final String FILE_READER = "Read";
     private static final Set<String> FILE_WRITERS = Set.of("Write", "Edit", "MultiEdit", "NotebookEdit");
 
     public ToolCall {
@@ -21,7 +22,11 @@ public record ToolCall(String tool, String command, String filePath, Path workin
         return FILE_WRITERS.contains(tool) && filePath != null;
     }
 
-    public Path writtenFile() {
+    public boolean readsAFile() {
+        return FILE_READER.equals(tool) && filePath != null;
+    }
+
+    public Path file() {
         Path file = Path.of(filePath);
         return file.isAbsolute() || workingDirectory == null ? file : workingDirectory.resolve(file);
     }
