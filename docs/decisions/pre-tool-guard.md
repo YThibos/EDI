@@ -15,6 +15,8 @@ A primary whose core is down must still be able to bring it back.
 
 `ShellScript` reads a command string into every command it would run, without running anything: quoting, escapes, substitutions, process substitution, here-documents, comments, keywords, assignments, wrappers, and shells read by their shared option grammar (`ShellInvocation`); it refuses more than twelve levels of nesting and anything it cannot read.
 `ShellGuard` refuses with one reason naming the invariant: `pkill`, `killall` and kin, kills fed from process lookups or aimed at groups, tmux without `-L` or `-S`, `kill-*`, `send-*` and `respawn-*` on the `edi` socket, any forced push, a push of every branch or to a base, and merges through `gh`, `glab`, a forge API or push options.
+`TmuxSockets` compares a `-S` socket path on its real path, which `GuardToolCall` resolves from the call's working directory (`SocketPaths`), so a link to the `edi` socket is the `edi` socket.
+For a worker, `TmuxSockets` also refuses, on any socket, every tmux command that types, pastes or runs commands into a pane: `send-keys`, `send-prefix`, `paste-buffer`, `source-file`, `run-shell`, `if-shell`, `pipe-pane`, `display-popup`, `display-menu`, `respawn-pane`, `respawn-window`, `set-hook`, `bind-key`, `command-prompt` and `confirm-before`, their aliases and any abbreviation of four letters or more, a `#(` shell format, and control mode (`-C`), because the primary runs on the captain's default server and text typed into its pane counts as the captain's word ([captains-word](captains-word.md)).
 `SkippedHooks` refuses `git commit` with `--no-verify` or `-n`, `git push` and `git merge` with `--no-verify`, and `-c` or `--config-env` setting `core.hooksPath` on any git command, naming the checks the skipped hook holds.
 `BranchDeletions` refuses deleting the recorded branch of a task still queued or in flight, locally or on the remote; the primary may on the captain's word ([captains-word](captains-word.md)).
 `SecretReads` refuses a command whose words end in a secret file's path, or that prints a forge token, and a `Read` of a file whose path or real path ends in one.
@@ -41,12 +43,14 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 ## Consequences
 
 - Good: AT-30, AT-31 and the secret half of AT-06 pass for workers and the primary.
+- Good: a worker's shell cannot type into the primary's pane through any tmux socket, so it cannot forge the captain's word with a tmux command the guard reads.
 - Good: a `Read` of the keys file or the home token is refused to a worker and to the primary without the captain's word, also through a link, so AT-32 holds for the file tools.
 - Good: a commit with `--no-verify` or `-n`, a push or merge with `--no-verify`, and a `-c` or `--config-env` override of `core.hooksPath` are refused, so AT-09 and AT-10 hold for a commit that asks to skip the hooks.
 - Bad: a command the guard cannot read is refused, while a process id, a branch, a secret or a hooks path reached through a variable or after a `cd` passes; the brief and the anchor state those rules.
 - Bad: while the core is down the guard refuses every `Read` as it refuses a shell, so the primary brings the core back before it reads a file.
 - Bad: a `Grep` of a secret file, or of a folder that holds one, still shows its lines; it is a known gap.
 - Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
+- Bad: workers run as the captain's own user, so a script file the guard does not open, or a program that speaks tmux's protocol to the socket itself, can still type into the primary's pane, and a worker may still kill a pane or the whole server on the captain's default socket; the guard is a denylist for a misled worker, not a boundary.
 
 ## When to revisit
 
@@ -59,3 +63,4 @@ When workers run as another user, or the captain wants workers kept from the key
 - 26/10/2026: EDI-74 refused the flags and settings that skip the commit-msg and pre-push hooks.
 - 27/10/2026: the pre-push hook's publish check refuses a SNAPSHOT version, so a refusal for a skipped hook names that check too (EDI-78).
 - 27/10/2026: the guard refuses a `Read` of a secret file as it refuses a shell's read of it, and keeps the keys file from a worker's `Read` (EDI-80).
+- 28/10/2026: the guard refuses a worker every tmux command that sends input to a pane, on any socket, and compares a socket path on its real path (EDI-123).
