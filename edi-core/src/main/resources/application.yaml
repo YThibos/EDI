@@ -17,6 +17,9 @@ spring:
     name: edi-core
   main:
     banner-mode: off
+  threads:
+    virtual:
+      enabled: true
   web:
     resources:
       cache:

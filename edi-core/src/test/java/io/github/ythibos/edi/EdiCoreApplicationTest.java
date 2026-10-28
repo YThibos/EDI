@@ -10,6 +10,8 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -17,11 +19,18 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import io.github.ythibos.edi.testing.Patience;
 
 @Tag("adapter")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -33,6 +42,9 @@ class EdiCoreApplicationTest {
 
     @Autowired
     private JdbcClient store;
+
+    @Autowired
+    private ScheduledJobWitness scheduledJob;
 
     @DynamicPropertySource
     static void useTheTemporaryHome(DynamicPropertyRegistry properties) {
@@ -76,10 +88,64 @@ class EdiCoreApplicationTest {
         assertThat(console.body()).contains("<app-root></app-root>");
     }
 
+    @Test
+    void handlesARequestOnAVirtualThread() throws Exception {
+        assertThat(get("/witness/request-thread").body()).isEqualTo(ThreadWitnesses.VIRTUAL);
+    }
+
+    @Test
+    void runsAScheduledJobOnAVirtualThread() throws Exception {
+        assertThat(scheduledJob.firstRun().get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)).isEqualTo(ThreadWitnesses.VIRTUAL);
+    }
+
     private static HttpResponse<String> get(String path) throws Exception {
         String port = Files.readString(home.resolve("state/core.port")).strip();
         try (HttpClient http = HttpClient.newHttpClient()) {
             return http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).build(), BodyHandlers.ofString());
+        }
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ThreadWitnesses {
+
+        static final String VIRTUAL = "virtual";
+        static final String PLATFORM = "platform";
+
+        @Bean
+        RequestThreadWitness requestThreadWitness() {
+            return new RequestThreadWitness();
+        }
+
+        @Bean
+        ScheduledJobWitness scheduledJobWitness() {
+            return new ScheduledJobWitness();
+        }
+
+        static String kindOfTheCurrentThread() {
+            return Thread.currentThread().isVirtual() ? VIRTUAL : PLATFORM;
+        }
+    }
+
+    @RestController
+    static class RequestThreadWitness {
+
+        @GetMapping("/witness/request-thread")
+        String requestThread() {
+            return ThreadWitnesses.kindOfTheCurrentThread();
+        }
+    }
+
+    static class ScheduledJobWitness {
+
+        private final CompletableFuture<String> firstRun = new CompletableFuture<>();
+
+        @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.HOURS)
+        void run() {
+            firstRun.complete(ThreadWitnesses.kindOfTheCurrentThread());
+        }
+
+        CompletableFuture<String> firstRun() {
+            return firstRun;
         }
     }
 }
