@@ -42,15 +42,11 @@ The EDI-74 plan fixes the format and the flagging in step 7; the research behind
 - The primary writes the keys on today's workarounds (EDI-74 step 1, done by the primary on the captain's machine); this item does not edit memory.
 - The digest and every new message template follow the persona rule: a text the primary reads says "you", a text that reaches the captain says "I", and EDI in the third person names only the project.
   The persona test in the invariant package scans every message template and fails the build on a breach.
-
-## Open questions to settle before code
-
-- The session-start digest is built from the store, the home and tmux only ([primary-startup-context](../decisions/primary-startup-context.md)), and AT-23 compares the digest before a crash with the one after a restart.
-  Resolving a JIRA-style key through the `Tracker` port at session start would make the digest wait on JIRA, up to 10 seconds to connect and 30 to answer per call, and vary with its answers.
-  How does the digest's memory line count expired and unticketed workarounds?
-  - A. From the store only: the digest resolves every key through the task store, so a JIRA-keyed workaround counts as expired when a task carrying its key has landed and is otherwise counted as neither, while `edi memory stow-list` alone also asks JIRA; recommended, because the digest keeps its recorded sources and never waits on a remote tracker, and `/stow` runs the full list anyway.
-  - B. Through the `Tracker` port as well: the digest asks JIRA for each JIRA-keyed workaround, counts one JIRA cannot answer for as neither, and primary-startup-context records the tracker as a new source of the digest.
-  - C. From a recorded resolution: `DailyMemoryCheck` resolves every workaround once a day and records both counts in the store, and the digest reads the latest record, at the cost of a new table and counts up to a day old.
+- The captain chose A on the pull request: the session-start digest stays built from the store, the home and tmux ([primary-startup-context](../decisions/primary-startup-context.md)).
+  The digest resolves every key through the task store, so a JIRA-keyed workaround counts as expired when a task carrying its key has landed and as neither otherwise; only `edi memory stow-list` also asks the `Tracker` port.
+- A key is EDI-native or JIRA-style by the registered project whose work keys carry its prefix and that project's tracker; a prefix no registered project carries is resolved through the task store.
+- A JIRA ticket has landed when its status is at or past the machine profile's `tracker.mergedStatus` in `tracker.workflow`; a ticket JIRA finds nothing for is unticketed, and one JIRA cannot be asked about is listed as unchecked, never as expired or unticketed, and never fails the list.
+- A workaround needs no date, so it is not listed as undated; workarounds are read from `learnings.md` only.
 
 ## Research and measurements
 
