@@ -15,6 +15,7 @@ class ShellGuardTest {
     private static final ShellGuard SECRETS_KEPT = new ShellGuard("edi", Set.of("main"), Set.of(),
             new Secrets(List.of("/state/core.token", "/tracker-keys.yml"), true));
     private static final ShellGuard UNLANDED_KEPT = new ShellGuard("edi", Set.of("main"), Set.of("feature/HRN-3"), Secrets.NONE);
+    private static final ShellGuard FOR_A_WORKER = new ShellGuard("edi", Set.of("main"), Set.of(), Secrets.NONE, true);
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -317,5 +318,56 @@ class ShellGuardTest {
         "git log --decorate feature/HRN-3"})
     void letsThroughWhatLeavesAnUnlandedTaskBranchStanding(String command) {
         assertThat(UNLANDED_KEPT.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "unset EDI_TOKEN_FILE",
+        "unset -v EDI_ROLE",
+        "unset MAVEN_OPTS EDI_WORKER",
+        "env -u EDI_TOKEN_FILE edi dispatch fit-horn",
+        "env --unset EDI_TOKEN_FILE edi dispatch fit-horn",
+        "env --unset=EDI_TASK_ID edi status working",
+        "env -uEDI_TOKEN_FILE edi dispatch fit-horn",
+        "env -i edi dispatch fit-horn",
+        "env - edi dispatch fit-horn",
+        "env -iv edi dispatch fit-horn",
+        "env --ignore-environment PATH=/usr/bin edi dispatch fit-horn",
+        "env EDI_TOKEN_FILE=/dev/null edi dispatch fit-horn",
+        "env -S '-u EDI_TOKEN_FILE edi dispatch fit-horn'",
+        "export EDI_TOKEN_FILE=/dev/null",
+        "export -n EDI_TOKEN_FILE",
+        "declare -x EDI_WORKER=fit-horn#1",
+        "readonly EDI_ROLE",
+        "EDI_TOKEN_FILE= edi dispatch fit-horn",
+        "EDI_TOKEN_FILE=/dev/null",
+        "LANG=C EDI_TOKEN_FILE+=x edi backlog",
+        "bash -c 'unset EDI_TOKEN_FILE; edi dispatch fit-horn'",
+        "sudo env -u EDI_TOKEN_FILE edi backlog",
+        "nohup env -i edi backlog &"})
+    void keepsWhatTellsTheCoreWhichWorkerIsCalling(String command) {
+        assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.WORKER_IDENTITY);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "echo \"$EDI_TOKEN_FILE\"",
+        "env | grep EDI_",
+        "env",
+        "printenv EDI_WORKER",
+        "env -u MAVEN_OPTS mvn -q test",
+        "env LANG=C mvn -q test",
+        "export PATH=\"$PATH:$PWD/bin\"",
+        "unset MAVEN_OPTS",
+        "LANG=C mvn -q test",
+        "edi status working -- reading the brief"})
+    void letsAWorkerReadThoseVariablesAndSetItsOwn(String command) {
+        assertThat(FOR_A_WORKER.check(command)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"unset EDI_TOKEN_FILE", "env -i bash -lc 'edi health'"})
+    void leavesTheEnvironmentToAnyoneButAWorker(String command) {
+        assertThat(GUARD.check(command)).isEmpty();
     }
 }
