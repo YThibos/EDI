@@ -92,6 +92,7 @@
                         <edi.repository.root>${session.rootDirectory}</edi.repository.root>
                         <edi.test.machine>laptop</edi.test.machine>
                         <org.springframework.boot.logging.LoggingSystem>none</org.springframework.boot.logging.LoggingSystem>
+                        <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>
