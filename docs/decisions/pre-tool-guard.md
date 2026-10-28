@@ -19,6 +19,7 @@ A primary whose core is down must still be able to bring it back.
 `BranchDeletions` refuses deleting the recorded branch of a task still queued or in flight, locally or on the remote; the primary may on the captain's word ([captains-word](captains-word.md)).
 `SecretReads` refuses a command whose words end in a secret file's path, or that prints a forge token, and a `Read` of a file whose path or real path ends in one.
 `GuardToolCall` keeps the home token from a worker's shell, the home token and the tracker's keys file from a worker's `Read`, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
+`WorkerIdentity` refuses a worker's shell command that unsets or reassigns `EDI_TOKEN_FILE`, `EDI_ROLE`, `EDI_WORKER` or `EDI_TASK_ID`, which tell `edi` and the core which worker is calling ([api-access](api-access.md)): through `unset`, `env -u`, `env -i` or an assignment given to `env`, through `export`, `declare`, `typeset`, `local` or `readonly`, or through an assignment before a command or on its own; `ShellScript` reads those assignments, and the primary's environment stays its own.
 `GuardToolCall` keeps a worker's `Write`, `Edit`, `MultiEdit` and `NotebookEdit` calls inside its copy and task directory on real paths, and records every refusal of a worker as `ToolCallRefused` with its rule, never the command.
 The worker's settings send `Bash`, `Read` and the file-writing tools to the guard, the primary's `Bash` and `Read`.
 `edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`).
@@ -47,6 +48,7 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 - Bad: while the core is down the guard refuses every `Read` as it refuses a shell, so the primary brings the core back before it reads a file.
 - Bad: a `Grep` of a secret file, or of a folder that holds one, still shows its lines; it is a known gap.
 - Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
+- Bad: `read`, `printf -v`, `mapfile`, a `for` loop or a script file the guard does not open can still change a worker's identity variables; the `edi` command's own refusal in a worker's window is the second line ([api-access](api-access.md)).
 
 ## When to revisit
 
@@ -59,3 +61,4 @@ When workers run as another user, or the captain wants workers kept from the key
 - 26/10/2026: EDI-74 refused the flags and settings that skip the commit-msg and pre-push hooks.
 - 27/10/2026: the pre-push hook's publish check refuses a SNAPSHOT version, so a refusal for a skipped hook names that check too (EDI-78).
 - 27/10/2026: the guard refuses a `Read` of a secret file as it refuses a shell's read of it, and keeps the keys file from a worker's `Read` (EDI-80).
+- 28/10/2026: the guard keeps a worker's shell from unsetting or reassigning the variables that say which worker is calling (EDI-122).
