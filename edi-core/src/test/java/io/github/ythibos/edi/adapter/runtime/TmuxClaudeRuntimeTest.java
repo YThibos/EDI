@@ -49,6 +49,16 @@ class TmuxClaudeRuntimeTest {
             for word in "$@"; do printf '%s\\0' "$word"; done > "$record.arguments"
             exec sleep 30
             """;
+    private static final String RECORDING_MISE = """
+            #!/bin/sh
+            if [ "$1" = trust ]; then
+                printf '%s: %s\\n' "$(pwd -P)" "$(cat "$(dirname "$0")/mise-trust")"
+                exit 0
+            fi
+            printf '%s %s %s auto-install=%s trusted=%s\\n' "$1" "$2" "$3" "$MISE_EXEC_AUTO_INSTALL" "$MISE_TRUSTED_CONFIG_PATHS" > "$EDI_HOME/mise-was-entered"
+            shift 2
+            exec "$@"
+            """;
     private static final String COMMITTING_CLAUDE = """
             #!/bin/sh
             export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
@@ -76,12 +86,15 @@ class TmuxClaudeRuntimeTest {
         claudeConfiguration = Files.createDirectories(directory.resolve("claude-config"));
         Files.writeString(claudeConfiguration.resolve(".claude.json"), "{\"numStartups\": 3, \"projects\": {\"/elsewhere\": {\"allowedTools\": []}}}");
         executable(directory.resolve("claude"), RECORDING_CLAUDE);
+        executable(directory.resolve("mise"), RECORDING_MISE);
+        Files.createDirectories(projectClone());
+        Files.writeString(directory.resolve("mise-trust"), "untrusted");
     }
 
     @Test
     void launchesClaudeCodeInTheWorktreeWithItsSessionRouteSettingsAndEnvironment() throws IOException {
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
             UUID session = UUID.randomUUID();
 
             WorkerWindow window = runtime.launch(launch(session, List.of("WebSearch", "Bash(git push:*)")));
@@ -118,12 +131,39 @@ class TmuxClaudeRuntimeTest {
     }
 
     @Test
+    void startsClaudeCodeOnTheToolchainTheCopyPinsWhenMiseTrustsTheProjectsCloneAndInstallsNoMissingTool() throws IOException {
+        Files.writeString(directory.resolve("mise-trust"), "trusted");
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+
+            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
+                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=");
+            assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
+        }
+    }
+
+    @Test
+    void startsClaudeCodeWithoutMiseWhenMiseDoesNotTrustTheProjectsClone() throws IOException {
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+
+            List<String> arguments = List.of(Files.readString(awaitFile(home.root().resolve("claude-was-started.arguments"))).split("\0"));
+            assertThat(arguments).startsWith("--add-dir", home.taskDirectory(new TaskId("fit-lamp")).toString());
+            assertThat(home.root().resolve("mise-was-entered")).doesNotExist();
+        }
+    }
+
+    @Test
     void resumesTheRecordedSessionAndTellsAClosedWindowFromAChangedOrLostServer() throws IOException {
         WorkerWindow window;
         TmuxClaudeRuntime runtime;
         UUID session = UUID.randomUUID();
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
+            runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
             window = runtime.launch(launch(session, List.of(), LaunchKind.RESUME));
             List<String> arguments = List.of(Files.readString(awaitFile(home.root().resolve("claude-was-started.arguments"))).split("\0"));
             WorkerWindow onAnotherServer = new WorkerWindow(window.socket(), window.serverPid() + 1, window.serverStartedAt(), window.windowId(), window.panePid());
@@ -142,7 +182,7 @@ class TmuxClaudeRuntimeTest {
         Files.createDirectories(worktree.resolve(".claude"));
         Files.writeString(worktree.resolve(".claude/settings.local.json"), "{\"hooks\": {\"Stop\": [{\"hooks\": []}]}}");
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString());
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
 
             assertThatThrownBy(() -> runtime.launch(launch(UUID.randomUUID(), List.of())))
                     .isInstanceOf(Refusal.class).hasMessageContaining("defines hooks, which Claude Code would run beside the hooks a worker gets at launch");
@@ -156,7 +196,7 @@ class TmuxClaudeRuntimeTest {
         Map<String, String> coreEnvironment = Map.of("GIT_CONFIG_COUNT", "1", "GIT_CONFIG_KEY_0", "core.hooksPath",
                 "GIT_CONFIG_VALUE_0", Files.createDirectories(directory.resolve("no-hooks")).toString());
         try (PrivateTmuxServer server = PrivateTmuxServer.startedWith(processes, coreEnvironment)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("committing-claude").toString());
+            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("committing-claude").toString(), mise());
 
             runtime.launch(launch(UUID.randomUUID(), List.of()));
 
@@ -167,6 +207,10 @@ class TmuxClaudeRuntimeTest {
 
     private static void executable(Path file, String script) throws IOException {
         StandInScripts.installed(file, script);
+    }
+
+    private String mise() {
+        return directory.resolve("mise").toString();
     }
 
     private Path hooksWithTheCommitMessageCheck() throws IOException {

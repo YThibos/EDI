@@ -5,11 +5,12 @@
 ## Toolchain
 
 The toolchain is pinned in [mise.toml](../mise.toml): GraalVM Community Edition for Java 25, the Node that builds the console, and gitleaks ([java-toolchain-and-build](decisions/java-toolchain-and-build.md), [core-lifecycle](decisions/core-lifecycle.md)).
-Maven runs through its wrapper, and Node runs only in the console's build, never at run time ([open-source-tools](decisions/open-source-tools.md)).
+Maven 4 runs through its wrapper, since the POMs use model 4.1.0 that Maven 3 cannot read, and Node runs only in the console's build, never at run time ([open-source-tools](decisions/open-source-tools.md)).
 
 ## Build and test
 
 ```sh
+mise trust                  # once per clone, see java-toolchain-and-build
 mise install
 ./mvnw verify               # the JVM build and every test
 ./mvnw test -Pfast          # domain, application and architecture tests only

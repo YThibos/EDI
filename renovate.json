@@ -56,21 +56,14 @@
     },
     {
       "customType": "regex",
-      "description": "The Tomcat version overriding the one Spring Boot manages, which only Spring Boot's BOM reads",
-      "managerFilePatterns": ["/(^|/)pom\\.xml$/"],
-      "matchStrings": ["<tomcat\\.version>(?<currentValue>[^<]+)</tomcat\\.version>"],
-      "depNameTemplate": "org.apache.tomcat.embed:tomcat-embed-core",
-      "datasourceTemplate": "maven"
-    },
-    {
-      "customType": "regex",
-      "description": "GraalVM Community Edition in mise, which the mise manager does not read",
+      "description": "GraalVM Community Edition in mise's http backend, whose archive names and checksums are moved by hand",
       "managerFilePatterns": ["/(^|/)mise\\.toml$/"],
-      "matchStrings": ["java = \"graalvm-community-(?<currentValue>[^\"]+)\""],
+      "matchStrings": ["\\[tools\\.\"http:graalvm-community\"\\]\\nversion = \"(?<currentValue>[^\"]+)\""],
       "depNameTemplate": "graalvm-community",
       "packageNameTemplate": "graalvm/graalvm-ce-builds",
       "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^jdk-(?<version>.+)$"
+      "versioningTemplate": "loose",
+      "extractVersionTemplate": "^graal-(?<version>.+)$"
     }
   ]
 }

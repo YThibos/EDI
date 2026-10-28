@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ "$1" = trust ]; then
+    printf '%s: trusted\n' "$(pwd -P)"
+    exit 0
+fi
+shift 2
+exec "$@"

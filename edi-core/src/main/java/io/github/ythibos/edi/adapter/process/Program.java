@@ -5,6 +5,7 @@ public enum Program {
     GITLEAKS("gitleaks"),
     TMUX("tmux"),
     CLAUDE_CODE("claude"),
+    MISE("mise"),
     GH("gh"),
     GLAB("glab"),
     NO_MISTAKES("no-mistakes"),

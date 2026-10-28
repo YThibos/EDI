@@ -8,6 +8,7 @@ Each program is started only from the adapter that owns it ([ports-and-architect
 | `git` | clones, isolated copies, branches, hooks and the publish check's view of outgoing commits | - |
 | `tmux` | the primary session, on the captain's default tmux server, and the workers, on EDI's own server `tmux -L edi` ([worker-sessions](decisions/worker-sessions.md)) | - |
 | `claude` | Claude Code, for the primary session and every worker | [claude-code.md](verification/claude-code.md) |
+| `mise` | whether it trusts a project's clone, and then starting the project's workers through `mise exec` on the toolchain their copy pins ([worker-sessions](decisions/worker-sessions.md)) | - |
 | `gh` | drafts, merges and checks on GitHub, under the project's bound account | [gh.md](verification/gh.md) |
 | `glab` | the same on GitLab | [glab.md](verification/glab.md) |
 | `no-mistakes` | the validation pipeline a ship's worker runs before its draft opens; EDI reads its state and sets its agent's model and effort, the work key of its commits and titles, and the steps its runs skip | [no-mistakes.md](verification/no-mistakes.md) |

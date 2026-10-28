@@ -44,6 +44,7 @@ class ArchitectureRulesTest {
             Map.entry("GITLEAKS", "io.github.ythibos.edi.adapter.gitleaks.."),
             Map.entry("TMUX", "io.github.ythibos.edi.adapter.runtime.."),
             Map.entry("CLAUDE_CODE", "io.github.ythibos.edi.adapter.runtime.."),
+            Map.entry("MISE", "io.github.ythibos.edi.adapter.runtime.."),
             Map.entry("GLAB", "io.github.ythibos.edi.adapter.forge.."),
             Map.entry("GH", "io.github.ythibos.edi.adapter.forge.."),
             Map.entry("NO_MISTAKES", "io.github.ythibos.edi.adapter.pipeline.."),
