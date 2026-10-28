@@ -12,6 +12,7 @@ Discarding unlanded work is the one irreversible act on a task's work (I-12).
 ## Decision
 
 A prompt the captain typed is kept as SHA-256 digests of its passages in `typed_passage`: `Passage.allTypedIn` takes the whole prompt and each non-blank line, compared without case, runs of spacing or curly quotes.
+A typed prompt stays the only evidence of the captain's word in the chat; what keeps a worker from making text arrive as typed is the guard, which refuses a worker's shell every tmux command that sends input to a pane, on any socket ([pre-tool-guard](pre-tool-guard.md)).
 The exchange a call belongs to is its own session, or for a call that names none the session holding the primary role (`CaptainsWordEvidence.currentExchange`); without a primary session there is no exchange and the act is refused.
 `edi captain said --text <words> [--task <task> [--for <act>]]` records an `Authorisation` in `captain_word` only when the words were typed in that exchange, with the one act it is for, or none for a general word.
 An act on a task (promoting a scout, dropping a task, discarding work) needs a general word on that task from the exchange, or any of its decisions the captain answered, through any channel, since the session opened (`CaptainsWordEvidence` weighs every decision of the task), by choosing an option that names exactly that act with `authorises` (`promote`, `drop` or `discard-work`, `CaptainsAuthority.onTask`).
@@ -35,16 +36,18 @@ A word on one task or one act authorises nothing else.
 - One authorisation for the whole session, or any answered decision authorising every act on its task - an approval to promote would also discard another task's work.
 - Changing a scout into a ship in place - its research branch, brief and worker would carry into delivery.
 - A `--force` on cleanup - would make the irreversible act look routine.
+- A second channel for each act, such as a confirmation in the console or a one-time code typed back - a step on every promote, drop and discard, while a process running as the captain's own user could reach that channel as well; it is worth its cost once workers run as another user.
 
 ## Consequences
 
 - Good: AT-05 and AT-06 hold mechanically, and the primary learns from one refusal sentence what to record.
 - Bad: the primary must record the captain's whole message or one whole line of it, and a decision meant to authorise an act must say so on the option.
 - Bad: from their own shell outside a primary session the captain gives their word in the console or the primary session.
+- Bad: a process of the captain's own user that the guard does not see, such as a script a worker writes and then runs, can still type into the primary's pane on the captain's tmux server, and that text would count as typed.
 
 ## When to revisit
 
-When the console gains its own promote, drop or discard actions, or the captain wants their shell to carry their word.
+When the console gains its own promote, drop or discard actions, the captain wants their shell to carry their word, or workers run as another user.
 
 ## How we got here
 
@@ -52,3 +55,4 @@ When the console gains its own promote, drop or discard actions, or the captain 
 - 22/10/2026: a task keeps every decision, so an earlier answer that authorised an act still counts after a later decision is raised, and a scout's board card answered on the board is the captain's go (EDI-40).
 - 26/10/2026: the captain's word recorded on one task lifts that task alone above the effort ceiling, the way their standing rule allows (EDI-49).
 - 26/10/2026: the lift now needs a word recorded on the task for that act, `--for effort-above-high`, so a word recorded to discard or drop a task never lifts its effort (EDI-49).
+- 28/10/2026: a typed prompt stays the only evidence, and the guard keeps a worker's shell from typing into any tmux pane, after the security review found a worker could type into the primary through the captain's default server (EDI-123).

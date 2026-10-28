@@ -15,12 +15,15 @@ A primary whose core is down must still be able to bring it back.
 
 `ShellScript` reads a command string into every command it would run, without running anything: quoting, escapes, substitutions, process substitution, here-documents, comments, keywords, assignments, wrappers, and shells read by their shared option grammar (`ShellInvocation`); it refuses more than twelve levels of nesting and anything it cannot read.
 `ShellGuard` refuses with one reason naming the invariant: `pkill`, `killall` and kin, kills fed from process lookups or aimed at groups, tmux without `-L` or `-S`, `kill-*`, `send-*` and `respawn-*` on the `edi` socket, any forced push, a push of every branch or to a base, and merges through `gh`, `glab`, a forge API or push options.
+`TmuxSockets` compares a `-S` socket path on its real path, which `GuardToolCall` resolves from the call's working directory (`SocketPaths`), so a link to the `edi` socket is the `edi` socket.
+For a worker, `TmuxSockets` also refuses, on any socket, every tmux command that types, pastes or runs commands into a pane: `send-keys`, `send-prefix`, `paste-buffer`, `source-file`, `run-shell`, `if-shell`, `pipe-pane`, `display-popup`, `display-menu`, `respawn-pane`, `respawn-window`, `set-hook`, `bind-key`, `command-prompt` and `confirm-before`, their aliases and any abbreviation of four letters or more, a `#(` shell format, and control mode (`-C`), because the primary runs on the captain's default server and text typed into its pane counts as the captain's word ([captains-word](captains-word.md)).
 `SkippedHooks` refuses `git commit` with `--no-verify` or `-n`, `git push` and `git merge` with `--no-verify`, and `-c` or `--config-env` setting `core.hooksPath` on any git command, naming the checks the skipped hook holds.
 `BranchDeletions` refuses deleting the recorded branch of a task still queued or in flight, locally or on the remote; the primary may on the captain's word ([captains-word](captains-word.md)).
 `SecretReads` refuses a command any of whose words leads to a secret file, or that prints a forge token, and a `Read` of a file whose path or real path ends in one.
 A word leads to a secret file when it ends in the file's path as written, or when one of the paths `ShellWordPaths` finds for it does: from the call's working directory, with `~`, `$HOME` and `$EDI_HOME` expanded, glob-expanded over `*`, `?`, `[...]` and `{...}` up to 256 matches, normalised and resolved to its real path; an option's value after `=` counts as a word.
 A worker's `Glob` is refused when its pattern, rooted at its path or the working directory, reaches a secret file on the written or the real paths (`SecretSearches`).
 `GuardToolCall` keeps the home token from a worker's shell, the home token and the tracker's keys file from a worker's `Read`, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
+`WorkerIdentity` refuses a worker's shell command that unsets or reassigns `EDI_TOKEN_FILE`, `EDI_ROLE`, `EDI_WORKER` or `EDI_TASK_ID`, which tell `edi` and the core which worker is calling ([api-access](api-access.md)): through `unset`, `env -u`, `env -i` or an assignment given to `env`, through `export`, `declare`, `typeset`, `local` or `readonly`, or through an assignment before a command or on its own; `ShellScript` reads those assignments, and the primary's environment stays its own.
 `GuardToolCall` keeps a worker's `Write`, `Edit`, `MultiEdit` and `NotebookEdit` calls inside its copy and task directory on real paths, and records every refusal of a worker as `ToolCallRefused` with its rule, never the command.
 The worker's settings send `Bash`, `Read`, `Glob` and the file-writing tools to the guard, the primary's `Bash` and `Read`.
 `edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`).
@@ -43,6 +46,7 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 ## Consequences
 
 - Good: AT-30, AT-31 and the secret half of AT-06 pass for workers and the primary.
+- Good: a worker's shell cannot type into the primary's pane through any tmux socket, so it cannot forge the captain's word with a tmux command the guard reads.
 - Good: a `Read` of the keys file or the home token is refused to a worker and to the primary without the captain's word, also through a link, so AT-32 holds for the file tools.
 - Good: a commit with `--no-verify` or `-n`, a push or merge with `--no-verify`, and a `-c` or `--config-env` override of `core.hooksPath` are refused, so AT-09 and AT-10 hold for a commit that asks to skip the hooks.
 - Bad: a command the guard cannot read is refused, while a process id, a branch or a hooks path reached through a variable or after a `cd` passes, and so does a secret reached through a variable other than `HOME` or `EDI_HOME`, after a `cd`, through the folder that holds it, such as `grep -r` over the state directory, or through a path a program builds at run time, such as `python3 -c` joining strings; the brief and the anchor state those rules.
@@ -52,6 +56,8 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 - Bad: while the core is down the guard refuses every `Read` as it refuses a shell, so the primary brings the core back before it reads a file.
 - Bad: a `Grep` of a secret file, or of a folder that holds one, still shows its lines; it is a known gap.
 - Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
+- Bad: workers run as the captain's own user, so a script file the guard does not open, or a program that speaks tmux's protocol to the socket itself, can still type into the primary's pane, and a worker may still kill a pane or the whole server on the captain's default socket; the guard is a denylist for a misled worker, not a boundary.
+- Bad: `read`, `printf -v`, `mapfile`, a `for` loop or a script file the guard does not open can still change a worker's identity variables; the `edi` command's own refusal in a worker's window is the second line ([api-access](api-access.md)).
 
 ## When to revisit
 
@@ -64,4 +70,6 @@ When the captain chooses one of the stronger options above, workers run as anoth
 - 26/10/2026: EDI-74 refused the flags and settings that skip the commit-msg and pre-push hooks.
 - 27/10/2026: the pre-push hook's publish check refuses a SNAPSHOT version, so a refusal for a skipped hook names that check too (EDI-78).
 - 27/10/2026: the guard refuses a `Read` of a secret file as it refuses a shell's read of it, and keeps the keys file from a worker's `Read` (EDI-80).
+- 28/10/2026: the guard keeps a worker's shell from unsetting or reassigning the variables that say which worker is calling (EDI-122).
+- 28/10/2026: the guard refuses a worker every tmux command that sends input to a pane, on any socket, and compares a socket path on its real path (EDI-123).
 - 28/10/2026: the guard matches a secret on the normalised, glob-expanded real paths a shell word leads to, guards a worker's `Glob`, and states what a denylist cannot contain (EDI-124).

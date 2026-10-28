@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.worker;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
@@ -93,13 +94,13 @@ public class GuardToolCall {
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
         return call.writesAFile()
                 ? outsideTheWorkplace(call.file(), workplace)
-                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell(call));
+                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell(call), true);
     }
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
         return call.readsAFile()
                 ? secretRead(call.file(), secretsKeptFromThePrimary(call))
-                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(call));
+                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(call), false);
     }
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
@@ -107,12 +108,13 @@ public class GuardToolCall {
                 .or(() -> SecretReads.refusalForReading(realised(file).toString(), secrets));
     }
 
-    private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets) {
+    private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets, boolean forAWorker) {
         if (!call.runsAShellCommand()) {
             return Optional.empty();
         }
         Set<String> unlandedBranches = transaction.execute(_ -> dispatches.branchesOfOpenTasks());
-        return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets).check(call.command());
+        return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets, forAWorker, socketPath -> realisedFrom(call.workingDirectory(), socketPath))
+                .check(call.command());
     }
 
     private Optional<GuardRefusal> searchReachingASecret(ToolCall call) {
@@ -200,6 +202,15 @@ public class GuardToolCall {
             return existing.toRealPath().resolve(existing.relativize(absolute));
         } catch (IOException unreadable) {
             return absolute;
+        }
+    }
+
+    private static String realisedFrom(Path workingDirectory, String written) {
+        try {
+            Path path = Path.of(written);
+            return realised(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
+        } catch (InvalidPathException unreadable) {
+            return written;
         }
     }
 
