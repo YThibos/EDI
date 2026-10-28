@@ -330,7 +330,7 @@ class SupervisionAndRecoveryTest {
         void theTmuxAdapterRefusesOtherKeys() throws IOException {
             assumeTrue(PrivateTmuxServer.isInstalled(), "tmux is not installed");
             try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-                TmuxClaudeRuntime runtime = server.runtime(directory, "");
+                TmuxClaudeRuntime runtime = server.runtime(directory, "", "");
                 Path typedIntoTheIdlePrompt = directory.resolve("typed-into-idle.txt");
                 WorkerWindow idle = server.windowShowing("idle-fresh-session.txt", directory, typedIntoTheIdlePrompt);
                 WorkerWindow dialog = server.windowShowing("trust-dialog.txt", directory, directory.resolve("typed-into-dialog.txt"));

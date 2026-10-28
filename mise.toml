@@ -1,4 +1,13 @@
 [tools]
-java = "graalvm-community-25.0.2"
-node = "24.22.0"
+node = "26.12.1"
 "aqua:gitleaks/gitleaks" = "8.30.1"
+
+[tools."http:graalvm-community"]
+version = "25.4.4.1.1"
+
+[tools."http:graalvm-community".platforms]
+linux-x64 = { url = "https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-{{ version }}/graalvm-community-jdk-25i4-25.0.4.1.1_linux-x64_bin.tar.gz", checksum = "sha256:05ccbbe783210b6886ff7b08fcd0b061c5dce4852b05db87284fc0e24abb08e2" }
+linux-arm64 = { url = "https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-{{ version }}/graalvm-community-jdk-25i4-25.0.4.1.1_linux-aarch64_bin.tar.gz", checksum = "sha256:e5f5e2f59643cf96765c741dc00b206f86c69c8c1bf843fe26050c871e0e2dbc" }
+
+[env]
+JAVA_HOME = { value = "{{ tools['graalvm-community'].path }}", tools = true }

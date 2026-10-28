@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns="http://maven.apache.org/POM/4.1.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
+    <modelVersion>4.1.0</modelVersion>
 
-    <parent>
-        <groupId>io.github.ythibos</groupId>
-        <artifactId>edi</artifactId>
-        <version>0.1.0</version>
-    </parent>
+    <parent/>
 
     <artifactId>edi-core</artifactId>
     <name>EDI core</name>
@@ -49,6 +45,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.mockito</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
@@ -87,7 +89,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <systemPropertyVariables>
-                        <edi.repository.root>${maven.multiModuleProjectDirectory}</edi.repository.root>
+                        <edi.repository.root>${session.rootDirectory}</edi.repository.root>
                         <edi.test.machine>laptop</edi.test.machine>
                     </systemPropertyVariables>
                 </configuration>
@@ -154,7 +156,7 @@
                                         <argument>-classpath</argument>
                                         <classpath/>
                                         <argument>io.github.ythibos.edi.application.publish.PublishGuard</argument>
-                                        <argument>${maven.multiModuleProjectDirectory}</argument>
+                                        <argument>${session.rootDirectory}</argument>
                                         <argument>${publish.range}</argument>
                                         <argument>${publish.home}</argument>
                                     </arguments>

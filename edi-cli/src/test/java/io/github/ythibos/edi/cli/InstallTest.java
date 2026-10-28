@@ -27,6 +27,7 @@ import io.github.ythibos.edi.testing.TestProcesses;
 class InstallTest {
 
     private static final Path REPOSITORY = Path.of(System.getProperty("edi.repository.root", "..")).toAbsolutePath().normalize();
+    private static final String MISE_TRUSTED_CONFIG_PATHS = "MISE_TRUSTED_CONFIG_PATHS";
     private static final String MAVEN_NOTING_ITS_JAVA = """
             #!/bin/sh
             echo "$JAVA_HOME" > java-home-of-the-build
@@ -103,10 +104,12 @@ class InstallTest {
 
     private static boolean everyPinnedToolIsInstalled(Path checkout) throws InterruptedException {
         try {
-            Process listing = new ProcessBuilder("mise", "ls", "--local", "--missing", "--no-header").directory(checkout.toFile())
-                    .redirectError(ProcessBuilder.Redirect.DISCARD).start();
-            String missing = new String(listing.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            return listing.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS) && listing.exitValue() == 0 && missing.isBlank();
+            ProcessBuilder listing = new ProcessBuilder("mise", "ls", "--local", "--missing", "--no-header").directory(checkout.toFile())
+                    .redirectError(ProcessBuilder.Redirect.DISCARD);
+            listing.environment().put(MISE_TRUSTED_CONFIG_PATHS, checkout.toString());
+            Process listed = listing.start();
+            String missing = new String(listed.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return listed.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS) && listed.exitValue() == 0 && missing.isBlank();
         } catch (IOException miseIsMissing) {
             return false;
         }
@@ -122,6 +125,7 @@ class InstallTest {
         launch.environment().put("EDI_BIN", directory.resolve("bin").toString());
         launch.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
         launch.environment().put("GIT_CONFIG_NOSYSTEM", "1");
+        launch.environment().put(MISE_TRUSTED_CONFIG_PATHS, checkout.toString());
         Process install = processes.register(launch.start());
         install.getOutputStream().close();
         String output = new String(install.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
