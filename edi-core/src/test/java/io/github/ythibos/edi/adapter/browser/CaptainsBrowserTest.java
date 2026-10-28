@@ -24,7 +24,7 @@ import io.github.ythibos.edi.testing.TestProcesses;
 @Tag("adapter")
 class CaptainsBrowserTest {
 
-    private static final URI SIGN_IN = URI.create("http://127.0.0.1:47318/login#token");
+    private static final URI SIGN_IN = URI.create("http://127.0.0.1:5490/login#token");
     private static final String NO_DESKTOP = "";
     private static final Duration SHORT_PATIENCE = Duration.ofMillis(500);
 

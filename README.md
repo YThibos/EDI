@@ -90,7 +90,7 @@ In the primary session the captain also types these commands, each a skill of th
 
 #### The EDI console
 
-The permanent EDI dashboard is the EDI console, which the core serves on its own machine at `http://127.0.0.1:<port>/`, where `<port>` is the one `edi health` reports, 47318 by default.
+The permanent EDI dashboard is the EDI console, which the core serves on its own machine at `http://127.0.0.1:<port>/`, where `<port>` is the one `edi health` reports, 5490 by default.
 It shows the sitrep page: what needs a decision, what is ongoing and what is charted next, then what landed this week, kept current as the fleet changes.
 It signs the captain in through a link that works once, so open it with `edi console` rather than from a bookmark.
 It is reachable only on the machine whose core serves it, and only while that core runs.

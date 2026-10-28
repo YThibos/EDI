@@ -88,6 +88,6 @@ The publish check refuses outgoing commits that carry any of them (see [Delivery
 | `EDI_CHECKOUT` | `~/EDI` | the EDI repository `helloedi`, `edi up` and `edi update` use |
 | `EDI_CORE` | `edi-core` next to `edi` | the core executable |
 | `EDI_BIN` | `~/.local/bin` | where `ops/install.sh` installs the executables |
-| `SERVER_PORT` | `47318` | the core's port |
+| `SERVER_PORT` | `5490` | the core's port |
 
 The core's own setting `edi.pipeline.home` names the validation pipeline's home when it is not `~/.no-mistakes`.

@@ -28,7 +28,8 @@ The command reads the core's port and token from the EDI home, and a worker's co
 ## The core at run time
 
 The core keeps its store, configuration and state in `EDI_HOME`, default `~/.edi`.
-It listens on port 47318 unless `SERVER_PORT` says otherwise, records the port it bound in `$EDI_HOME/state/core.port`, and writes a fresh API token to `$EDI_HOME/state/core.token` at every start ([api-access](decisions/api-access.md)); the command reads both.
+It listens on port 5490 unless `SERVER_PORT` says otherwise, records the port it bound in `$EDI_HOME/state/core.port`, and writes a fresh API token to `$EDI_HOME/state/core.token` at every start ([api-access](decisions/api-access.md)); the command reads both.
+When another program holds the port, the core stops at start with a message in its log that names the port and `SERVER_PORT`.
 Only one core runs per home: it locks `$EDI_HOME/state/core.pid`, and `edi up` starts it detached, logging to `$EDI_HOME/state/logs/core.log` ([core-lifecycle](decisions/core-lifecycle.md)).
 `edi down` stops the core only when no worker runs; `--force-stop-workers` stops them too, on the captain's word.
 A core counts as stopped once it has let go of `state/core.pid`, so `edi down` and `edi update` return or start the new core only then ([core-lifecycle](decisions/core-lifecycle.md)).
