@@ -2,6 +2,7 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,11 +39,17 @@ final class CommandWrappers {
         int start = firstCommandWord(words);
         List<ShellCommand> leadingSubstitutions = words.subList(0, Math.min(start + 1, words.size())).stream()
                 .flatMap(word -> word.substitutions().stream()).toList();
+        List<String> assigned = assignedIn(words.subList(0, start));
         if (start == words.size()) {
-            return leadingSubstitutions;
+            return assigned.isEmpty() ? leadingSubstitutions : Stream.concat(leadingSubstitutions.stream(), Stream.of(ShellCommand.assigningOnly(assigned)))
+                    .toList();
         }
-        ShellCommand command = new ShellCommand(programName(words.get(start).text()), words.subList(start + 1, words.size()), argumentsFromInput);
+        ShellCommand command = new ShellCommand(programName(words.get(start).text()), words.subList(start + 1, words.size()), argumentsFromInput, assigned);
         return Stream.concat(leadingSubstitutions.stream(), withWhatItRuns(command, nesting).stream()).toList();
+    }
+
+    private static List<String> assignedIn(List<ShellWord> leadingWords) {
+        return leadingWords.stream().map(word -> assignedVariable(word.text())).flatMap(Optional::stream).toList();
     }
 
     private static List<ShellCommand> withWhatItRuns(ShellCommand command, int nesting) {
@@ -142,14 +149,19 @@ final class CommandWrappers {
         return word.text().length() > 1 && word.text().startsWith("-");
     }
 
-    private static boolean isAssignment(String word) {
+    static Optional<String> assignedVariable(String word) {
         int equals = word.indexOf('=');
         if (equals < 1) {
-            return false;
+            return Optional.empty();
         }
         String name = variableName(word.substring(0, equals));
-        return !name.isEmpty() && (Character.isLetter(name.charAt(0)) || name.charAt(0) == '_')
+        boolean named = !name.isEmpty() && (Character.isLetter(name.charAt(0)) || name.charAt(0) == '_')
                 && name.chars().allMatch(character -> Character.isLetterOrDigit(character) || character == '_');
+        return named ? Optional.of(name) : Optional.empty();
+    }
+
+    private static boolean isAssignment(String word) {
+        return assignedVariable(word).isPresent();
     }
 
     private static String variableName(String assigned) {

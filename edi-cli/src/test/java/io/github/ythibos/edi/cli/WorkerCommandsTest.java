@@ -94,6 +94,29 @@ class WorkerCommandsTest {
     }
 
     @Test
+    void refusesAWorkerWhoseTokenFileIsUnsetTheHomeTokenOfThePrimary() {
+        inAWorkersWindowWithoutItsTokenFile();
+        core.answering(200, "Dispatched fit-horn to fit-horn#1.\n");
+
+        int exitCode = edi("", "dispatch", "fit-horn", "--category", "implementation");
+
+        assertThat(exitCode).isOne();
+        assertThat(core.requests()).isEmpty();
+        assertThat(err.toString()).startsWith("This shell is worker fit-lamp#1's, yet EDI_TOKEN_FILE names no token file");
+    }
+
+    @Test
+    void refusesAToolCallOfAWorkerWhoseTokenFileIsUnsetWhileTheCoreIsDown() throws IOException {
+        inAWorkersWindowWithoutItsTokenFile();
+        core.stopAnswering();
+
+        int guarded = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi status working\"}}", "hook", "pre-tool-use");
+
+        assertThat(guarded).isEqualTo(2);
+        assertThat(err.toString()).startsWith("The guard could not check this tool call, so it is refused: This shell is worker fit-lamp#1's");
+    }
+
+    @Test
     void readsALongStatusFromStandardInput() {
         core.answering(200, "Recorded done for fit-lamp#1.\n");
 
@@ -235,5 +258,11 @@ class WorkerCommandsTest {
                 .setOut(new PrintWriter(out, true))
                 .setErr(new PrintWriter(err, true))
                 .execute(arguments);
+    }
+
+    private void inAWorkersWindowWithoutItsTokenFile() {
+        environment.put("EDI_ROLE", "worker");
+        environment.put("EDI_TASK_ID", "fit-lamp");
+        environment.put("EDI_WORKER", "fit-lamp#1");
     }
 }
