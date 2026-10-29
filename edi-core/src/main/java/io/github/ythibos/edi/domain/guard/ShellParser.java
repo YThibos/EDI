@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.regex.Pattern;
 
 final class ShellParser {
 
@@ -15,6 +16,9 @@ final class ShellParser {
     private static final String HEREDOC_ESCAPES = "\\$`\n";
     private static final String EXTENDED_GLOB_OPENERS = "?*+@!";
     private static final String QUOTES_AND_ESCAPES = "'\"\\`$\n";
+    private static final String EMPTY_GROUP = "()";
+    private static final String EXPLICIT_QUALIFIERS = "#q";
+    private static final Pattern CODE_RUNNING_QUALIFIER = Pattern.compile("\\+[A-Za-z_]");
 
     private final String text;
     private final int nesting;
@@ -184,26 +188,14 @@ final class ShellParser {
             return false;
         }
         int end = groupEnd(position);
-        if (end < 0 && !blankBeforeAnythingUnreadable(position)) {
+        if (end < 0) {
             throw new UnreadableCommand("The command attaches a group to a word that holds a quote, an escape or an expansion, so the guard cannot tell which files it globs.");
         }
-        return end > 0 && text.substring(position, end).chars().noneMatch(Character::isWhitespace);
+        return end > position + EMPTY_GROUP.length();
     }
 
     private static boolean continuesAWord(String before) {
         return !before.isEmpty() && !before.endsWith("=");
-    }
-
-    private boolean blankBeforeAnythingUnreadable(int open) {
-        for (int at = open; at < text.length(); at++) {
-            char character = text.charAt(at);
-            if (character == ' ' || character == '\t') {
-                return true;
-            } else if (QUOTES_AND_ESCAPES.indexOf(character) >= 0) {
-                return false;
-            }
-        }
-        return false;
     }
 
     private boolean namesAFileDescriptor(String written) {
@@ -256,9 +248,21 @@ final class ShellParser {
 
     private void readGlobGroup(WrittenWord written, List<ShellCommand> substitutions, int open) {
         int end = groupEnd(open);
+        if (runsCodeAsAQualifier(text.substring(open + 1, end - 1), endsTheWord(end))) {
+            throw new UnreadableCommand("The command ends a glob with a zsh qualifier list that can run code (e or +), so the guard cannot tell what it runs.");
+        }
         text.substring(position, end).chars().forEach(character -> written.open((char) character));
         substitutions.addAll(ShellScript.commandsIn(text.substring(open + 1, end - 1), nesting + 1));
         position = end;
+    }
+
+    private boolean endsTheWord(int end) {
+        return end >= text.length() || WORD_BREAKS.indexOf(text.charAt(end)) >= 0 && text.charAt(end) != '(';
+    }
+
+    private static boolean runsCodeAsAQualifier(String inside, boolean trailing) {
+        boolean qualifiers = inside.startsWith(EXPLICIT_QUALIFIERS) || trailing && inside.indexOf('|') < 0 && inside.indexOf('(') < 0;
+        return qualifiers && (inside.indexOf('e') >= 0 || CODE_RUNNING_QUALIFIER.matcher(inside).find());
     }
 
     private void readEscaped(WrittenWord written) {
