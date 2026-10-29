@@ -21,7 +21,6 @@ import io.github.ythibos.edi.adapter.fork.ForkBacklogReader;
 import io.github.ythibos.edi.adapter.fork.ForkEnvironment;
 import io.github.ythibos.edi.adapter.fork.ForkRoutingRulesReader;
 import io.github.ythibos.edi.adapter.git.Git;
-import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.HomeSetup;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
@@ -665,7 +664,8 @@ public final class TestHome {
     }
 
     public PublishCheck publishCheck() {
-        return new PublishCheck(home, git, new Gitleaks(programs, json), new PublicationTargets(home, git, registry, machineProfile(), forges()));
+        return new PublishCheck(home, git, new GitleaksWhereInstalled(programs, json),
+                new PublicationTargets(home, git, registry, machineProfile(), forges()));
     }
 
     public DeliverDraft deliverDraft() {
