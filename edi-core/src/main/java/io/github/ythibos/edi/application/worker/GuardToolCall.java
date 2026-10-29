@@ -1,7 +1,5 @@
 package io.github.ythibos.edi.application.worker;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -91,11 +89,14 @@ public class GuardToolCall {
         if (call.readsAFile()) {
             return secretRead(call.file(), secretsKeptFromAWorkersRead());
         }
+        if (call.searchesForFiles()) {
+            return searchReachingASecret(call);
+        }
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
         return call.writesAFile()
                 ? outsideTheWorkplace(call.file(), workplace)
                         .or(() -> SettingsWrites.refusalForWriting(call.file().toString(), underTheSettingsOf(workplace, call)))
-                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell(), true)
+                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell(call), true)
                         .or(() -> settingsWrittenByTheShell(call, workplace));
     }
 
@@ -107,7 +108,7 @@ public class GuardToolCall {
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
         return SecretReads.refusalForReading(file.toString(), secrets)
-                .or(() -> SecretReads.refusalForReading(realised(file).toString(), secrets));
+                .or(() -> SecretReads.refusalForReading(RealPaths.of(file).toString(), secrets));
     }
 
     private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets, boolean forAWorker) {
@@ -119,16 +120,30 @@ public class GuardToolCall {
                 .check(call.command());
     }
 
+    private Optional<GuardRefusal> searchReachingASecret(ToolCall call) {
+        Path directory = call.searchedDirectory();
+        return SecretReads.refusalForSearching(
+                () -> directory != null && secretFiles().stream().anyMatch(secret -> SecretSearches.reach(directory, call.pattern(), secret)));
+    }
+
     private Secrets secretsKeptFromAWorkersRead() {
         return new Secrets(secretFileEndings(), false);
     }
 
-    private Secrets secretsKeptFromAWorkersShell() {
-        return new Secrets(List.of(homeTokenEnding()), false);
+    private Secrets secretsKeptFromAWorkersShell(ToolCall call) {
+        return new Secrets(List.of(homeTokenEnding()), false, pathsFrom(call));
     }
 
     private Secrets secretsKeptFromThePrimary() {
         return new Secrets(secretFileEndings(), true);
+    }
+
+    private ShellWordPaths pathsFrom(ToolCall call) {
+        return new ShellWordPaths(call.workingDirectory(), Path.of(System.getProperty("user.home")), System.getProperty("user.name"), home.root());
+    }
+
+    private List<Path> secretFiles() {
+        return Stream.concat(Stream.of(home.coreTokenFile()), keysFile().stream()).toList();
     }
 
     private List<String> secretFileEndings() {
@@ -136,8 +151,12 @@ public class GuardToolCall {
     }
 
     private Optional<String> keysFileEnding() {
+        return keysFile().map(file -> "/" + file.getFileName());
+    }
+
+    private Optional<Path> keysFile() {
         try {
-            return Optional.ofNullable(machine.tracker().credentials()).map(Credentials::keysFile).map(file -> "/" + file.getFileName());
+            return Optional.ofNullable(machine.tracker().credentials()).map(Credentials::keysFile);
         } catch (InvalidConfiguration unreadable) {
             return Optional.empty();
         }
@@ -166,19 +185,19 @@ public class GuardToolCall {
     }
 
     private static Optional<GuardRefusal> outsideTheWorkplace(Path file, Workplace workplace) {
-        Path written = realised(file);
-        boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(GuardToolCall::realised).anyMatch(written::startsWith);
+        Path written = RealPaths.of(file);
+        boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(RealPaths::of).anyMatch(written::startsWith);
         return inside ? Optional.empty() : Optional.of(new GuardRefusal(GuardRule.OUTSIDE_ISOLATED_COPY,
                 "a worker writes only inside its isolated copy " + workplace.worktree() + " and its task directory "
                         + workplace.taskDirectory() + ", and " + file + " is outside both (I-07)."));
     }
 
     private static Predicate<String> underTheSettingsOf(Workplace workplace, ToolCall call) {
-        Path settings = realised(workplace.worktree()).resolve(CLAUDE_DIRECTORY);
+        Path settings = RealPaths.of(workplace.worktree()).resolve(CLAUDE_DIRECTORY);
         Path written = workplace.worktree().toAbsolutePath().normalize().resolve(CLAUDE_DIRECTORY);
         return word -> {
             Path path = pathOf(word, call.workingDirectory());
-            return path != null && (path.toAbsolutePath().normalize().startsWith(written) || realised(path).startsWith(settings));
+            return path != null && (path.toAbsolutePath().normalize().startsWith(written) || RealPaths.of(path).startsWith(settings));
         };
     }
 
@@ -195,26 +214,10 @@ public class GuardToolCall {
         }
     }
 
-    private static Path realised(Path path) {
-        Path absolute = path.toAbsolutePath().normalize();
-        Path existing = absolute;
-        while (existing != null && !Files.exists(existing)) {
-            existing = existing.getParent();
-        }
-        if (existing == null) {
-            return absolute;
-        }
-        try {
-            return existing.toRealPath().resolve(existing.relativize(absolute));
-        } catch (IOException unreadable) {
-            return absolute;
-        }
-    }
-
     private static String realisedFrom(Path workingDirectory, String written) {
         try {
             Path path = Path.of(written);
-            return realised(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
+            return RealPaths.of(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
         } catch (InvalidPathException unreadable) {
             return written;
         }

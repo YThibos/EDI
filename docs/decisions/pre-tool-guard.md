@@ -19,18 +19,29 @@ A primary whose core is down must still be able to bring it back.
 For a worker, `TmuxSockets` also refuses, on any socket, every tmux command that types, pastes or runs commands into a pane: `send-keys`, `send-prefix`, `paste-buffer`, `source-file`, `run-shell`, `if-shell`, `pipe-pane`, `display-popup`, `display-menu`, `respawn-pane`, `respawn-window`, `set-hook`, `bind-key`, `command-prompt` and `confirm-before`, their aliases and any abbreviation of four letters or more, a `#(` shell format, and control mode (`-C`), because the primary runs on the captain's default server and text typed into its pane counts as the captain's word ([captains-word](captains-word.md)).
 `SkippedHooks` refuses `git commit` with `--no-verify` or `-n`, `git push` and `git merge` with `--no-verify`, and `-c` or `--config-env` setting `core.hooksPath` on any git command, naming the checks the skipped hook holds.
 `BranchDeletions` refuses deleting the recorded branch of a task still queued or in flight, locally or on the remote; the primary may on the captain's word ([captains-word](captains-word.md)).
-`SecretReads` refuses a command whose words end in a secret file's path, or that prints a forge token, and a `Read` of a file whose path or real path ends in one.
+`SecretReads` refuses a command any of whose words leads to a secret file, or that prints a forge token, and a `Read` of a file whose path or real path ends in one.
+For a worker, a word leads to a secret file when it ends in the file's path as written, or when one of the paths `ShellWordPaths` finds for it does, from the call's working directory and as bash expands it: braces first, including sequences and a slash inside them (`BraceExpansion`); then `~`, `~` with the user's own name, `~+`, `$HOME` and `$EDI_HOME`; then globs, segment by segment, over `*`, `?`, bracket expressions with `!` or `^`, character classes, extended globs and `**` (`ShellGlob`); each path normalised and resolved to its real path; the value after a word's first `=`, such as `dd if=`, the value after each letter of a short option or a bundle of them, such as `curl -T/path` or `curl -sT/path`, and a path after `@`, as `curl -d @file` and `curl -d@file` read it, count as words.
+`ShellScript` keeps apart what the shell expands from what it takes as written, so a quoted or escaped glob, brace or tilde is matched as the literal text the program receives.
+It reads an extended glob such as `@(e|a)`, and a group attached to a word such as zsh's `core.(tok|x)en`, as part of its word, and also reads what is inside it as commands, since bash without `extglob` runs `!(cmd)` as a negated subshell.
+Where the guard cannot evaluate a form exactly, an equivalence class, an extended glob or a zsh group, it reads it as matching more, never less.
+A group attached to a word is part of that word even when it holds a blank, as zsh reads it, while an empty `()`, which defines a function, and a group after `=`, which assigns an array, are not; bash refuses an attached group that holds a blank as a syntax error, so reading it this way costs nothing under bash.
+A group attached to a word that holds a quote, an escape or an expansion, such as `core.(tok|'')en`, or that is never closed, is refused as unreadable, and so is a group zsh reads as glob qualifiers that can run code: a group that ends the word and holds no `|` or `(`, or one that starts with `#q`, and that holds an `e` or a `+` before a name, such as `*(e:cmd:)` or `*(+fn)`.
+A worker's word whose braces or globs reach more than 1024 paths is refused, since the guard cannot tell which files it reaches.
+A worker's `Glob` is refused when its pattern, expanded and rooted at its path or the working directory, reaches a secret file on the written or the real paths, with its leading folders normalised and resolved to their real path (`SecretSearches`).
 `GuardToolCall` keeps the home token from a worker's shell, the home token and the tracker's keys file from a worker's `Read`, and the home token, the tracker's keys file and forge tokens from the primary unless the captain's word on the home was recorded in that session.
 `WorkerIdentity` refuses a worker's shell command that unsets or reassigns `EDI_TOKEN_FILE`, `EDI_ROLE`, `EDI_WORKER` or `EDI_TASK_ID`, which tell `edi` and the core which worker is calling ([api-access](api-access.md)): through `unset`, `env -u`, `env -i` or an assignment given to `env`, through `export`, `declare`, `typeset`, `local` or `readonly`, or through an assignment before a command or on its own; `ShellScript` reads those assignments, and the primary's environment stays its own.
 `GuardToolCall` keeps a worker's `Write`, `Edit`, `MultiEdit` and `NotebookEdit` calls inside its copy and task directory on real paths, and records every refusal of a worker as `ToolCallRefused` with its rule, never the command.
 It also refuses a worker any write under its copy's `.claude` directory, as written or on real paths, through those tools and through a shell (`SettingsWrites`): a redirection, `tee`, `touch` or `truncate`, the destination of `cp`, `mv`, `install`, `ln` or `rsync`, `sed -i`, and `dd of=`, because a settings file there can switch off the hooks that guard it ([worker-sessions](worker-sessions.md)).
-The worker's settings send `Bash`, `Read` and the file-writing tools to the guard, the primary's `Bash` and `Read`.
+The worker's settings send `Bash`, `Read`, `Glob` and the file-writing tools to the guard, the primary's `Bash` and `Read`.
 `edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`).
 
 ## Why
 
 The rules are plain Java tested in milliseconds over a hundred command shapes, and a refusal tells the caller what to do instead.
-Matching a secret by its path's ending catches the forms a shell writes it in while leaving a search of EDI's own source alone.
+Matching the paths a word leads to, rather than its text, catches a glob, a doubled or dotted segment and a link the way the shell resolves them, while leaving a search of EDI's own source alone.
+Reading globs with its own reader rather than Java's `PathMatcher` keeps bash's meaning of `[^x]`, `{m..o}` and a slash inside braces, and leaves no pattern the guard fails to read and so lets through.
+Refusing at the match limit, rather than checking the first matches, keeps a wide glob from hiding the secret past the limit.
+The primary keeps the match on a word's literal ending and the real-path check on its `Read`, without the path matching and its limit, because a wide glob over its own repository, such as `wc -l src/**/*.java`, must never be refused to it.
 Failing closed keeps the invariants when the core is down, while a plain `edi up` lets the primary bring it back.
 Failing closed on a `Read` is consistent with the guard refusing the primary's shell while the core is down.
 Matching a `Read` on its real path closes a link a worker can make in its own copy to a secret file, as the write containment realises paths.
@@ -48,7 +59,16 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 - Good: a worker's shell cannot type into the primary's pane through any tmux socket, so it cannot forge the captain's word with a tmux command the guard reads.
 - Good: a `Read` of the keys file or the home token is refused to a worker and to the primary without the captain's word, also through a link, so AT-32 holds for the file tools.
 - Good: a commit with `--no-verify` or `-n`, a push or merge with `--no-verify`, and a `-c` or `--config-env` override of `core.hooksPath` are refused, so AT-09 and AT-10 hold for a commit that asks to skip the hooks.
-- Bad: a command the guard cannot read is refused, while a process id, a branch, a secret or a hooks path reached through a variable or after a `cd` passes; the brief and the anchor state those rules.
+- Bad: a command the guard cannot read is refused, while a process id, a branch or a hooks path reached through a variable or after a `cd` passes, and so does a secret reached through a variable other than `HOME` or `EDI_HOME`, after a `cd` or through `~-`, through the folder that holds it, such as `grep -r` over the state directory, or through a path a program builds at run time, such as `python3 -c` joining strings; the brief and the anchor state those rules.
+- Bad: the guard resolves links as they stand before the command runs, so a link the same command makes and then reads through, such as `ln -s` to the state directory followed by a `cat` through it, passes.
+- Bad: a quoted pattern a program expands itself passes as the literal text it is, and a `Glob` whose wildcard, rather than its leading folders, passes through a link to the state directory is matched on the written path only.
+- Bad: `~name` for another user is left as written, since it names that user's home and not the captain's.
+- Bad: a worker's glob or brace that reaches more than 1024 paths is refused wherever it points, and an unquoted `**` is walked as bash's `globstar` would, so a wide pattern over a large tree is refused until it is narrowed or quoted.
+- Bad: the primary's shell is matched on a word's literal ending only, so a glob, a doubled segment or a link that reaches a secret passes for the primary.
+- Bad: zsh's `EXTENDED_GLOB` forms, `^`, `~` and `#`, are left out; they are off by default, and a worker that switches them on reaches a secret through them.
+- Bad: a worker's connector tools are not sent to the guard, and neither is `Grep` until EDI-113.
+- Bad: a denylist cannot fully contain an agent that runs as the captain's own user, whatever it matches: it keeps a misled worker from the secrets through the tools and commands it reads, and nothing more.
+  Two stronger options stand for the captain to weigh: workers running as another operating-system user, so the home token, the keys file, EDI's home and the captain's tmux server are out of their reach; or tokens that grant no primary rights, so a home token a worker reads still cannot act as the primary.
 - Bad: while the core is down the guard refuses every `Read` as it refuses a shell, so the primary brings the core back before it reads a file.
 - Bad: a `Grep` of a secret file, or of a folder that holds one, still shows its lines; it is a known gap.
 - Bad: a hooks path set through the `GIT_CONFIG_*` variables or `git config`, and `git pull --no-verify`, still skip the hooks; they are known gaps.
@@ -58,7 +78,7 @@ Matching a `Read` on its real path closes a link a worker can make in its own co
 
 ## When to revisit
 
-When workers run as another user, or the captain wants workers kept from the keys file in their shell.
+When the captain chooses one of the stronger options above, workers run as another user, or the captain wants workers kept from the keys file in their shell.
 
 ## How we got here
 
@@ -69,4 +89,6 @@ When workers run as another user, or the captain wants workers kept from the key
 - 27/10/2026: the guard refuses a `Read` of a secret file as it refuses a shell's read of it, and keeps the keys file from a worker's `Read` (EDI-80).
 - 28/10/2026: the guard keeps a worker's shell from unsetting or reassigning the variables that say which worker is calling (EDI-122).
 - 28/10/2026: the guard refuses a worker every tmux command that sends input to a pane, on any socket, and compares a socket path on its real path (EDI-123).
+- 28/10/2026: the guard matches a secret on the normalised, glob-expanded real paths a shell word leads to, guards a worker's `Glob`, and states what a denylist cannot contain (EDI-124).
 - 28/10/2026: the guard refuses a worker any write under its copy's `.claude` directory, after a verification showed a settings file there could switch its hooks off (EDI-125).
+- 29/10/2026: the captain chose A for zsh's blank groups: an attached group is part of its word even with a blank, an empty `()` and a group after `=` are not, and a qualifier group that can run code is refused; the value after every letter of bundled short options is looked up as a path (EDI-124).
