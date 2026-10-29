@@ -107,7 +107,8 @@ class BacklogItemSkillTest {
             echo "edi $*" >> "$STATE/calls"
             case "$1 $2" in
               "task list") if [ -f "$STATE/task" ]; then echo '{"tasks":[{"id":"harbour-lamps","intake":{"title":"Harbour lamps light themselves at dusk","projects":["EDI"]}}]}'; else echo '{"tasks":[]}'; fi ;;
-              "task add") cat > "$STATE/task"; echo '{"added":{"id":"harbour-lamps"}}' ;;
+              "task add") case "$*" in *--json*) echo "Record components not available" >&2; exit 1 ;; esac
+                cat > "$STATE/task"; if [ -f "$STATE/added" ]; then cat "$STATE/added"; else echo 'Queued harbour-lamps on EDI-143.'; fi ;;
               "task show") hold=null; if [ -f "$STATE/hold" ]; then hold=$(printf '{"kind":"deferral","reason":"%s","until":null}' "$(cat "$STATE/hold")"); fi
                 printf '{"task":{"id":"harbour-lamps","intake":{"kind":"ship","title":"Harbour lamps light themselves at dusk","projects":["EDI"],"workKey":"EDI-143"},"notes":"","hold":%s}}' "$hold" ;;
             esac
@@ -174,7 +175,7 @@ class BacklogItemSkillTest {
 
         assertThat(run.exitCode()).as(run.output()).isZero();
         assertThat(calls()).contains(
-                "edi task add --json --kind ship --project EDI --title Harbour lamps light themselves at dusk --body -",
+                "edi task add --kind ship --project EDI --title Harbour lamps light themselves at dusk --body -",
                 "gh label create wave-1 --description Backlog wave 1 --repo github.com/example/edi",
                 "gh issue create --title EDI-143 Harbour lamps light themselves at dusk --label wave-1,cloud-ok --body-file - --repo github.com/example/edi",
                 "gh pr create --base main --head chore/EDI-143 --title EDI-143 Backlog: Harbour lamps light themselves at dusk --body-file - --repo github.com/example/edi",
@@ -237,6 +238,30 @@ class BacklogItemSkillTest {
         assertThat(upstream.run("rev-parse", BRANCH)).isEqualTo(pushed);
         assertThat(calls()).anyMatch(call -> call.startsWith("gh pr create")).noneMatch(call -> call.startsWith("gh issue create"));
         assertThat(rerun.output()).contains("pull:  https://github.com/example/edi/pull/7", "issue: https://github.com/example/edi/issues/9");
+    }
+
+    @Test
+    void theNewTaskIsReadFromTheAnswerOfTaskAddWithItsTicketSummary() throws IOException, InterruptedException {
+        Files.writeString(state.resolve("added"), "Queued harbour-lamps on EDI-143: Harbour lamps light themselves at dusk.\n");
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.output()).isZero();
+        assertThat(calls()).contains("edi task show harbour-lamps --json");
+        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).startsWith("# EDI-143 Harbour lamps light themselves at dusk");
+    }
+
+    @Test
+    void anAnswerOfTaskAddThatNamesNoQueuedTaskIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        Files.writeString(state.resolve("added"), "Queued harbour-lamps; the ticket decision asks which ticket it books on, and it waits for that answer.\n");
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.output()).contains("edi task add answered \"Queued harbour-lamps; the ticket decision asks which ticket it books on,"
+                + " and it waits for that answer.\", which names no task queued on an EDI-<n> key.");
+        assertThat(upstream.run("branch", "--list").strip()).isEqualTo("* main");
+        assertThat(calls()).noneMatch(call -> call.startsWith("edi task show") || call.startsWith("gh issue create") || call.startsWith("edi hold"));
     }
 
     @Test

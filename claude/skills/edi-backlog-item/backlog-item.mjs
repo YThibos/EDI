@@ -228,12 +228,20 @@ function keyed(run, item, position) {
         return { ...item, task: item.task.id, key: keyOf(item.task), hold: item.task.hold };
     }
     const added = act(run, `queue the ${item.kind} "${item.title}" with edi task add, which allocates its key`, () =>
-        JSON.parse(command('edi', ['task', 'add', '--json', '--kind', item.kind, '--project', PROJECT, '--title', item.title, '--body', '-'], item.spec)).added.id);
+        queuedTaskIn(command('edi', ['task', 'add', '--kind', item.kind, '--project', PROJECT, '--title', item.title, '--body', '-'], item.spec)));
     if (!added) {
         return { ...item, task: null, key: `${PROJECT}-<new ${position + 1}>`, hold: null };
     }
     const task = taskNamed(added);
     return { ...item, task: task.id, key: keyOf(task), hold: task.hold };
+}
+
+function queuedTaskIn(answer) {
+    const queued = new RegExp(`^Queued (\\S+) on ${PROJECT}-\\d+(: .*)?\\.$`).exec(answer.trim());
+    if (!queued) {
+        throw new Refusal(`edi task add answered "${answer.trim()}", which names no task queued on an ${PROJECT}-<n> key.`);
+    }
+    return queued[1];
 }
 
 function keyOf(task) {
