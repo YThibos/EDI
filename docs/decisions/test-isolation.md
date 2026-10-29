@@ -1,4 +1,4 @@
-# Tests stop every process they start, run git without the developer's configuration, and stay within their timeout under load
+# Tests stop every process they start, never open the captain's browser, run git without the developer's configuration, and stay within their timeout under load
 
 **Kind:** Design
 
@@ -13,6 +13,7 @@ With several workers building at once, a recording of a test that overran showed
 At a load average of about 20, one write and one read through the store took 27 to 59 ms, and 1 to 3 ms with `synchronous` off.
 After all of that, `edi update` still failed while several workers built at once, when AT-32's canary test and AT-47's import outlived a 30-second timeout; alone each takes about 2 seconds.
 With 80 busy loops and six disk writers beside two builds of edi-core on 16 processors, at a load average of 114 to 127, 28 tests of the suite as it was timed out at 30 seconds over two runs, these two among them, while beside them every test passed once the timeout was generous, the slowest in 37 seconds.
+A Spring test core opened the sitrep in the captain's real browser at every primary session start unless its test named a stand-in browser, and `WaitControllerTest` named none.
 
 ## Decision
 
@@ -25,12 +26,14 @@ Every test JVM compiles with C1 only (`-XX:TieredStopAtLevel=1`); `MigratedStore
 Only the core's `StoreConfiguration` and the migration tests `SupervisionMigrationTest` and `DecisionsMigrationTest` keep `StoreFile.openedAt`.
 `MigratedStore` keeps each test home's store behind a HikariCP pool of at most 16 connections, which opens a connection only when one is asked for, closes one idle for 10 seconds and shares one housekeeping thread with every other pool, so a statement reuses a connection instead of opening the file again.
 `edi-core`'s `logback-test.xml` keeps Spring Boot's console format, quiets the lines HikariCP writes for each pool it starts and sets the INFO level, at which every test logs except while `CapturedLogs` captures, which lowers the root logger to DEBUG.
+`edi-core`'s test JVMs set `org.springframework.boot.logging.LoggingSystem` to `none`, so logback configures itself once from `logback-test.xml`, and a Spring test core that starts no longer resets the logger context while concurrent test classes log, which printed "No appenders present" warnings; the test `logging.properties`, named by `java.util.logging.config.file`, hands `java.util.logging` records such as Tomcat's to SLF4J, as Spring Boot's logging system did.
 A test that needs overlapping processes starts them before the work they overlap, as each AT-38 case starts its pre-push hook before its delivery, whose guard JVM starts with C1 and the serial collector.
 A test whose cases each start child processes checks each case in a home of its own, as `deliveryAndPushRefuseEachKindOfLeak` is a parameterised test over `TwoMachinesTest.Leak` and `deliveryAndPushPassAClearBranch` checks the clean branch apart.
 A test that builds many homes checks each in a case of its own, as AT-22's `captainFacingStringsCarryNoInternalLabels` is a parameterised test over every kind of string `CaptainFacingStrings` generates, each golden report a kind of its own and the fleet's views sharing one home.
 A `TestHome` helper that reads and writes several rows does so in one transaction, as `markDone` and `putInFlight` do, and a test that stores several rows for one step of its story stores them through `TestHome.inOneTransaction`, as the research-first pilot's test stores each finished ship, so one step of the test's story is one transaction, as one command is in the core.
 A test that follows the log several times holds one `EventFollowers` for its home, as the core holds one, instead of building the followers and their trackers again for every round.
 A test that needs an external tool skips with a reason when the tool is missing, time comes only from the `Clock` port, and nothing sleeps except a helper waiting for a real child with a hard timeout.
+Every Spring test context holds a `RecordingBrowser` in place of `CaptainsBrowser`: `EveryTestCoreRecordsItsBrowser`, a context customiser registered in `edi-core`'s test `META-INF/spring.factories`, replaces the bean before the core starts, so no test core opens the captain's browser and a test reads the pages it would have opened from the recorder; `EveryTestCoreRecordsItsBrowserTest` pins it.
 The root `pom.xml` sets JUnit's default timeout to 3 minutes, which catches a test that hangs, while a test's speed is judged by its time on an idle machine, a few seconds of work at most.
 Every helper that waits for real work, a child process, a tmux pane, a listener thread or an event stream, waits up to `Patience.FOR_REAL_WORK`, one minute, so a stuck child fails with its own message before the test's timeout ends it; among them are `TestProcesses`, `StandInScripts`, `FixtureRepository`, `PrePushHook`, `PrivateTmuxServer`, `FakeBoardHost` and `InstalledPrograms`.
 A test asserts what an event shows, not how soon it came, as `ProcessTableTest` reads a process's start between the starts of two processes started around it.
@@ -53,6 +56,8 @@ A test's time on a busy machine follows the work every other build asks for, whi
 
 - Diffing the JVM's descendants before and after each test - concurrent classes would blame each other, and a daemonised server is never a descendant.
 - Isolating git in `ExternalPrograms` - EDI itself must read the captain's configuration for proxies and credentials.
+- Spring Boot's logging system in the test JVMs - each Spring test core resets logback's shared context as it starts, and a concurrent test that logs in that moment finds no appender.
+- A stand-in browser named in each Spring test's properties - a test that forgets it opens the captain's browser, as `WaitControllerTest` did.
 - Fewer test threads, or the slowest classes run alone - slower everywhere, or the suite stopped while they run.
 - A long timeout only for the tests tagged `adapter` - application tests on a test home and the architecture scans overran as often, and they read and write the disk too.
 - A timeout scaled by the machine's load average - the limit would still depend on what other builds do, measured a minute late.
@@ -88,3 +93,5 @@ When JUnit offers process tracking, a test needs the developer's git configurati
 - 23/10/2026: the research-first pilot's test took 24 seconds at a load average of 30 to 46, so `TestHome` helpers and each finished ship use one transaction, the test holds one `EventFollowers`, a follower's run ends at a short batch and the machine profile is parsed again only when it changed (EDI-45).
 - 23/10/2026: the follower test written for the short batch took 22 seconds in a loaded full build, nearly all of it opening connections, so a test home's store keeps its connections in a pool (EDI-45).
 - 27/10/2026: AT-32's canary test and AT-47's import still outlived 30 seconds with several workers building at once, so the default timeout is 3 minutes, helpers and the native tests wait a minute for real work and `ProcessTableTest` no longer reads a start against a fixed window (EDI-106).
+- 28/10/2026: `WaitControllerTest`'s runs opened the sitrep in the captain's browser, so every Spring test core records its browser instead (EDI-120).
+- 28/10/2026: a full build warned that loggers had no appenders while a Spring test core reset logback, so the test JVMs leave logback to configure itself (EDI-120).
