@@ -14,6 +14,7 @@ Claude Code opens every turn with `UserPromptSubmit`, lists the session's backgr
 `EventLog.record` asks `WakeRule.wakeFor` about every event, in one exhaustive switch per event type, and inserts a `wake` row in the same transaction for the events of the specification's wake list and the health rules; nothing the primary itself caused wakes it.
 `WakeSignal` hears `WakeQueued` after commit and wakes every parked `edi wait`.
 `POST /api/wait` answers only the session holding the primary role: it acknowledges every wake it delivered to that session before, then delivers every unacknowledged wake, or parks for up to 25 seconds and answers 204; `edi wait` asks again after a 204 and exits printing the digest.
+A wait registers with `WakeSignal` before it looks for wakes, so a wake committed in between is delivered by that first look or by the fresh look the wake starts; the looks of one wait run one at a time and stop once it is answered, so a wait answers once.
 A delivery whose long poll expired is withdrawn, and a wake delivered to a session that crashed stays unacknowledged for the next primary.
 While the captain keeps the chat quiet, `WaitForWakes` delivers nothing until the oldest pending wake has waited `presence.quietBatch`, then delivers them all in one batch, and `WakeDigestText` tells the primary to end the turn without text.
 Each prompt starts a turn and records the event log's latest sequence as its mark, and a report, the turn report or the sitrep, rendered with the session's header records its time on the turn; the next turn keeps the latest such time as its previous report, which decides which decision cards the turn report draws in full ([turn-report](turn-report.md)).
@@ -34,6 +35,7 @@ The turn-end rules read only the store, the presence and what Claude Code report
 
 - Choosing wakes when `edi wait` reads the event log - payloads would be read back into typed events on every poll.
 - Acknowledging a wake as it is printed - a primary that crashed before handling it would lose it.
+- Looking for wakes before registering the wait - a wake committed in between would sit until the next wake or the 25-second expiry.
 - Requiring the report in quiet too - every routine wake would print into a chat nobody reads.
 - Asking the core whether a wait is polling - racy at the end of the very turn that starts it.
 - Checking for a live wait with `pgrep -f` - the pattern matches the checking shell itself.
@@ -55,3 +57,4 @@ When Claude Code stops listing background jobs on `Stop`, or a wake proves too u
 - 17/10/2026: slice S8 batched wakes in quiet and let a quiet turn end without a report.
 - 27/10/2026: EDI-95 let `edi health` and the status line say whether the wait is live, from what the turn's last stop saw.
 - 28/10/2026: the turn began carrying the previous turn's report, and the Stop hook began naming the turn report (EDI-133).
+- 28/10/2026: EDI-120 recorded that a wait registers before it looks for wakes, after a test assumed the wake always reached a parked wait.

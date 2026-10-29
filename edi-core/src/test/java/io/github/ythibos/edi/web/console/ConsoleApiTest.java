@@ -53,6 +53,7 @@ import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.Patience;
+import io.github.ythibos.edi.testing.RecordingBrowser;
 import io.github.ythibos.edi.testing.StandInScripts;
 
 @Tag("adapter")
@@ -77,12 +78,13 @@ class ConsoleApiTest {
     @Autowired
     private WorkerTokens workerTokens;
 
+    @Autowired
+    private RecordingBrowser browser;
+
     @BeforeAll
     static void prepareTheHome() throws IOException {
         Files.createDirectories(home.resolve("config"));
-        Files.createDirectories(home.resolve("windows"));
         Files.writeString(home.resolve("config/projects.yaml"), Intakes.REGISTRY);
-        StandInScripts.installed(home.resolve("bin/browser"), "#!/bin/sh\nprintf '%s\\n' \"$*\" > '" + home.resolve("opened-in-the-browser") + "'\n");
         StandInScripts.installed(home.resolve("bin/lavish-axi"), "#!/bin/sh\nprintf 'session:\\n  file: board.html\\n  status: browser_disconnected\\n'\n");
     }
 
@@ -90,8 +92,6 @@ class ConsoleApiTest {
     static void useTheTemporaryHome(DynamicPropertyRegistry properties) {
         properties.add("edi.home", () -> home.toString());
         properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
-        properties.add("edi.console.browser", () -> home.resolve("bin/browser").toString());
-        properties.add("edi.console.windows-directory", () -> home.resolve("windows").toString());
         properties.add("edi.boards.lavish", () -> home.resolve("bin/lavish-axi").toString());
         properties.add("edi.boards.round", () -> "PT1H");
     }
@@ -99,7 +99,7 @@ class ConsoleApiTest {
     @Test
     void opensTheConsoleInTheBrowserThroughALinkThatSignsInOnce() throws Exception {
         HttpResponse<String> opened = post(withTheHomeToken("/api/console/open", TEXT), "{}");
-        String link = Files.readString(home.resolve("opened-in-the-browser")).strip().split(" ")[2];
+        String link = browser.lastOpened().toString();
 
         HttpResponse<String> signedIn = signIn(tokenOf(link));
         HttpResponse<String> usedAgain = signIn(tokenOf(link));
@@ -340,7 +340,7 @@ class ConsoleApiTest {
 
     private String signedInCookie() throws Exception {
         post(withTheHomeToken("/api/console/open", TEXT), "{}");
-        String link = Files.readString(home.resolve("opened-in-the-browser")).strip().split(" ")[2];
+        String link = browser.lastOpened().toString();
         String setCookie = signIn(tokenOf(link)).headers().firstValue("Set-Cookie").orElseThrow();
         return setCookie.substring(0, setCookie.indexOf(';'));
     }
