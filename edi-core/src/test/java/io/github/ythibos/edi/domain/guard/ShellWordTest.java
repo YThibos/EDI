@@ -18,7 +18,8 @@ class ShellWordTest {
                 "cat '$HOME/lamp'", "\\$HOME/lamp",
                 "cat lamp\\*", "lamp\\*",
                 "cat 'lamp.{java,md}'", "lamp.\\{java\\,md\\}",
-                "cat core.tok@(e|a)n", "core.tok@(e|a)n");
+                "cat core.tok@(e|a)n", "core.tok@(e|a)n",
+                "cat core.(tok|x)en", "core.(tok|x)en");
 
         patterns.forEach((command, pattern) -> assertThat(ShellScript.commandsIn(command).getFirst().arguments().getLast().pattern())
                 .as(command).isEqualTo(pattern));

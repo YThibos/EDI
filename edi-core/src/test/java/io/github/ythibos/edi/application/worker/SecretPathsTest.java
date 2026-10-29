@@ -72,6 +72,8 @@ class SecretPathsTest {
                 "cat " + state + "/core.toke{m..o}",
                 "cat " + state.getParent() + "/st{ate/core.tok,x}en",
                 "cat " + state + "/core.tok@(e|a)n",
+                "cat " + state + "/core.(tok|x)en",
+                "cat " + state.getParent() + "/(state|x)/core.token",
                 "cat " + state + "/.*/state/core.token",
                 "cat " + home.home().root() + "/**/core.token");
 
@@ -118,13 +120,15 @@ class SecretPathsTest {
     }
 
     @Test
-    void refusesThePrimaryAGlobOverTheHomeTokenAndLetsItReadTheRestOfTheState() throws IOException {
-        Files.createDirectories(state.resolve("logs"));
-        Files.writeString(state.resolve("core.port"), "5490\n");
-        Files.writeString(state.resolve("logs/core.log"), "started\n");
+    void refusesThePrimaryTheHomeTokenByNameAndLeavesItsGlobsAlone() throws IOException {
+        Path crowd = Files.createDirectories(worktree.resolve("crowd"));
+        for (int file = 0; file <= 1024; file++) {
+            Files.createFile(crowd.resolve("file-" + file + ".java"));
+        }
 
-        assertThat(primaryShell("cat " + state + "/*").reason()).contains("names a file that holds a secret");
-        for (String command : List.of("cat " + state + "/core.port", "tail -n 50 " + state + "/logs/*.log", "ls " + state, "ls -la " + state + "/")) {
+        assertThat(primaryShell("cat " + state + "/core.token").reason()).contains("names a file that holds a secret");
+        for (String command : List.of("cat " + state + "/core.port", "ls " + state + "/*", "wc -l " + worktree + "/crowd/*.java",
+                "wc -l " + worktree + "/**/*.java")) {
             assertThat(primaryShell(command)).as(command).isEqualTo(HookAnswer.PROCEED);
         }
     }
@@ -133,8 +137,9 @@ class SecretPathsTest {
     void letsThroughWhatADenylistCannotContain() {
         String builtAtRunTime = "python3 -c \"print(open('" + state + "/core.' + 'tok' + 'en').read())\"";
         String linkedInTheSameCommand = "ln -s " + state + " cove && cat cove/core.token";
+        String zshExtendedGlob = "cat " + state + "/^core.port";
 
-        for (String command : List.of(builtAtRunTime, linkedInTheSameCommand)) {
+        for (String command : List.of(builtAtRunTime, linkedInTheSameCommand, zshExtendedGlob)) {
             assertThat(shell(command)).as(command).isEqualTo(HookAnswer.PROCEED);
         }
     }

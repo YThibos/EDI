@@ -25,7 +25,7 @@ public final class ShellGlob {
             char character = segment.charAt(at);
             if (character == ESCAPE) {
                 at++;
-            } else if (WILDCARDS.indexOf(character) >= 0 || extendedEnd(segment, at) > 0) {
+            } else if (WILDCARDS.indexOf(character) >= 0 || groupEnd(segment, at) > 0) {
                 return true;
             }
         }
@@ -54,12 +54,13 @@ public final class ShellGlob {
         return literal.toString();
     }
 
-    private static int extendedEnd(String segment, int at) {
-        if (EXTENDED_OPENERS.indexOf(segment.charAt(at)) < 0 || at + 1 >= segment.length() || segment.charAt(at + 1) != '(') {
+    private static int groupEnd(String segment, int at) {
+        boolean extended = EXTENDED_OPENERS.indexOf(segment.charAt(at)) >= 0 && at + 1 < segment.length() && segment.charAt(at + 1) == '(';
+        if (!extended && segment.charAt(at) != '(') {
             return -1;
         }
         int depth = 0;
-        for (int next = at + 1; next < segment.length(); next++) {
+        for (int next = extended ? at + 1 : at; next < segment.length(); next++) {
             char character = segment.charAt(next);
             if (character == ESCAPE) {
                 next++;
@@ -74,10 +75,10 @@ public final class ShellGlob {
 
     private static int appendNext(String segment, int at, StringBuilder regex) {
         char character = segment.charAt(at);
-        int extended = extendedEnd(segment, at);
-        if (extended > 0) {
+        int group = groupEnd(segment, at);
+        if (group > 0) {
             regex.append(ANY_RUN);
-            return extended;
+            return group;
         }
         if (character == ESCAPE && at + 1 < segment.length()) {
             regex.append(literalOf(segment.codePointAt(at + 1)));

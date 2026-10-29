@@ -173,10 +173,16 @@ final class ShellParser {
     private void readWord(boolean redirectionTarget) {
         WrittenWord written = new WrittenWord();
         List<ShellCommand> substitutions = new ArrayList<>();
-        while (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
+        while (!atEnd() && (WORD_BREAKS.indexOf(current()) < 0 || startsAGlobGroup(written))) {
             readWordPart(written, substitutions);
         }
         words.add(written.word(substitutions, redirectionTarget || namesAFileDescriptor(written.text())));
+    }
+
+    private boolean startsAGlobGroup(WrittenWord written) {
+        String before = written.text();
+        int end = current() == '(' ? groupEnd(position) : -1;
+        return !before.isEmpty() && !before.endsWith("=") && end > 0 && text.substring(position, end).chars().noneMatch(Character::isWhitespace);
     }
 
     private boolean namesAFileDescriptor(String written) {
@@ -202,17 +208,19 @@ final class ShellParser {
             readParenthesisedSubstitution(written, substitutions);
         } else if (character == '`') {
             readBacktickSubstitution(written, substitutions);
-        } else if (EXTENDED_GLOB_OPENERS.indexOf(character) >= 0 && peek(1) == '(' && extendedGlobEnd() > 0) {
-            readExtendedGlob(written, substitutions);
+        } else if (EXTENDED_GLOB_OPENERS.indexOf(character) >= 0 && peek(1) == '(' && groupEnd(position + 1) > 0) {
+            readGlobGroup(written, substitutions, position + 1);
+        } else if (character == '(') {
+            readGlobGroup(written, substitutions, position);
         } else {
             written.open(character);
             position++;
         }
     }
 
-    private int extendedGlobEnd() {
+    private int groupEnd(int open) {
         int depth = 0;
-        for (int at = position + 1; at < text.length(); at++) {
+        for (int at = open; at < text.length(); at++) {
             char character = text.charAt(at);
             if (character == '(') {
                 depth++;
@@ -225,10 +233,10 @@ final class ShellParser {
         return -1;
     }
 
-    private void readExtendedGlob(WrittenWord written, List<ShellCommand> substitutions) {
-        int end = extendedGlobEnd();
+    private void readGlobGroup(WrittenWord written, List<ShellCommand> substitutions, int open) {
+        int end = groupEnd(open);
         text.substring(position, end).chars().forEach(character -> written.open((char) character));
-        substitutions.addAll(ShellScript.commandsIn(text.substring(position + 2, end - 1), nesting + 1));
+        substitutions.addAll(ShellScript.commandsIn(text.substring(open + 1, end - 1), nesting + 1));
         position = end;
     }
 

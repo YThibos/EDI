@@ -17,6 +17,7 @@ class ShellGlobTest {
         "core.t[[=o=]]ken => core.token",
         "core.tok@(e|a)n => core.token",
         "core.tok!(x) => core.token",
+        "core.(tok|x)en => core.token",
         "core.t?ken => core.token",
         "*.token => core.token",
         "[]x] => ]",
@@ -40,7 +41,7 @@ class ShellGlobTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"core.tok*", "core.t?ken", "core.to[kx]en", "core.tok@(e)n", "+(lamp)"})
+    @ValueSource(strings = {"core.tok*", "core.t?ken", "core.to[kx]en", "core.tok@(e)n", "+(lamp)", "core.(tok|x)en"})
     void knowsAGlob(String segment) {
         assertThat(ShellGlob.isAGlob(segment)).isTrue();
     }

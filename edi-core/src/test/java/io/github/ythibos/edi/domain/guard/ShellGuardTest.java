@@ -60,7 +60,8 @@ class ShellGuardTest {
         "diff <(cat <<'EOF'\nthe worker's lamp\nEOF\n) lamp.txt && pkill java",
         "!(pkill -f java)",
         "ls @(pkill -f java)",
-        "echo lamp !(killall java)"})
+        "echo lamp !(killall java)",
+        "ls core.(pkill|lamp)"})
     void refusesSignalsByPattern(String command) {
         assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.SIGNAL_BY_PATTERN);
     }

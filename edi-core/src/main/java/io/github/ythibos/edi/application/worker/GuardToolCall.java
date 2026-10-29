@@ -102,8 +102,8 @@ public class GuardToolCall {
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
         return call.readsAFile()
-                ? secretRead(call.file(), secretsKeptFromThePrimary(call))
-                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(call), false);
+                ? secretRead(call.file(), secretsKeptFromThePrimary())
+                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(), false);
     }
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
@@ -134,8 +134,8 @@ public class GuardToolCall {
         return new Secrets(List.of(homeTokenEnding()), false, pathsFrom(call));
     }
 
-    private Secrets secretsKeptFromThePrimary(ToolCall call) {
-        return new Secrets(secretFileEndings(), true, pathsFrom(call));
+    private Secrets secretsKeptFromThePrimary() {
+        return new Secrets(secretFileEndings(), true);
     }
 
     private ShellWordPaths pathsFrom(ToolCall call) {
