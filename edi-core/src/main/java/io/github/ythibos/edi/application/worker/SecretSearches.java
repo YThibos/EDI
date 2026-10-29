@@ -21,7 +21,7 @@ final class SecretSearches {
     }
 
     static boolean reach(Path directory, String pattern, Path secret) {
-        List<Path> secretPaths = List.of(secret.toAbsolutePath().normalize(), ShellWordPaths.realPathOf(secret));
+        List<Path> secretPaths = List.of(secret.toAbsolutePath().normalize(), RealPaths.of(secret));
         return BraceExpansion.of(pattern, ShellWordPaths.MOST_PATHS).stream()
                 .flatMap(alternative -> searchesFor(directory, alternative).stream())
                 .anyMatch(search -> secretPaths.stream().anyMatch(search::reaches));
@@ -30,7 +30,7 @@ final class SecretSearches {
     private static List<Search> searchesFor(Path directory, String pattern) {
         Path rooted = rooted(directory, pattern);
         Search asWritten = Search.of(rooted);
-        return List.of(Search.of(rooted.normalize()), new Search(ShellWordPaths.realPathOf(asWritten.base()), asWritten.rest()));
+        return List.of(Search.of(rooted.normalize()), new Search(RealPaths.of(asWritten.base()), asWritten.rest()));
     }
 
     private static Path rooted(Path directory, String pattern) {

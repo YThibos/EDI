@@ -51,7 +51,7 @@ final class ShellWordPaths implements PathLookup {
                 .map(this::expanded)
                 .flatMap(word -> absolute(word).stream())
                 .flatMap(word -> matchesOf(word).stream())
-                .flatMap(path -> Stream.of(path.normalize(), realPathOf(path)))
+                .flatMap(path -> Stream.of(path.normalize(), RealPaths.of(path)))
                 .map(Path::toString)
                 .distinct()
                 .toList();
@@ -133,29 +133,6 @@ final class ShellWordPaths implements PathLookup {
 
     private static List<String> directoryEntriesMatching(String segment, Pattern glob) {
         return segment.startsWith(HIDDEN) ? DIRECTORY_ENTRIES.stream().filter(entry -> glob.matcher(entry).matches()).toList() : List.of();
-    }
-
-    static Path realPathOf(Path path) {
-        try {
-            return path.toRealPath();
-        } catch (IOException absent) {
-            return realisedParentOf(path.toAbsolutePath().normalize());
-        }
-    }
-
-    private static Path realisedParentOf(Path absolute) {
-        Path existing = absolute;
-        while (existing != null && !Files.exists(existing)) {
-            existing = existing.getParent();
-        }
-        if (existing == null) {
-            return absolute;
-        }
-        try {
-            return existing.toRealPath().resolve(existing.relativize(absolute));
-        } catch (IOException unreadable) {
-            return absolute;
-        }
     }
 
     private static final class Matches {

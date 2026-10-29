@@ -1,7 +1,5 @@
 package io.github.ythibos.edi.application.worker;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -110,7 +108,7 @@ public class GuardToolCall {
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
         return SecretReads.refusalForReading(file.toString(), secrets)
-                .or(() -> SecretReads.refusalForReading(realised(file).toString(), secrets));
+                .or(() -> SecretReads.refusalForReading(RealPaths.of(file).toString(), secrets));
     }
 
     private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets, boolean forAWorker) {
@@ -187,19 +185,19 @@ public class GuardToolCall {
     }
 
     private static Optional<GuardRefusal> outsideTheWorkplace(Path file, Workplace workplace) {
-        Path written = realised(file);
-        boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(GuardToolCall::realised).anyMatch(written::startsWith);
+        Path written = RealPaths.of(file);
+        boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(RealPaths::of).anyMatch(written::startsWith);
         return inside ? Optional.empty() : Optional.of(new GuardRefusal(GuardRule.OUTSIDE_ISOLATED_COPY,
                 "a worker writes only inside its isolated copy " + workplace.worktree() + " and its task directory "
                         + workplace.taskDirectory() + ", and " + file + " is outside both (I-07)."));
     }
 
     private static Predicate<String> underTheSettingsOf(Workplace workplace, ToolCall call) {
-        Path settings = realised(workplace.worktree()).resolve(CLAUDE_DIRECTORY);
+        Path settings = RealPaths.of(workplace.worktree()).resolve(CLAUDE_DIRECTORY);
         Path written = workplace.worktree().toAbsolutePath().normalize().resolve(CLAUDE_DIRECTORY);
         return word -> {
             Path path = pathOf(word, call.workingDirectory());
-            return path != null && (path.toAbsolutePath().normalize().startsWith(written) || realised(path).startsWith(settings));
+            return path != null && (path.toAbsolutePath().normalize().startsWith(written) || RealPaths.of(path).startsWith(settings));
         };
     }
 
@@ -216,26 +214,10 @@ public class GuardToolCall {
         }
     }
 
-    private static Path realised(Path path) {
-        Path absolute = path.toAbsolutePath().normalize();
-        Path existing = absolute;
-        while (existing != null && !Files.exists(existing)) {
-            existing = existing.getParent();
-        }
-        if (existing == null) {
-            return absolute;
-        }
-        try {
-            return existing.toRealPath().resolve(existing.relativize(absolute));
-        } catch (IOException unreadable) {
-            return absolute;
-        }
-    }
-
     private static String realisedFrom(Path workingDirectory, String written) {
         try {
             Path path = Path.of(written);
-            return realised(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
+            return RealPaths.of(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
         } catch (InvalidPathException unreadable) {
             return written;
         }
