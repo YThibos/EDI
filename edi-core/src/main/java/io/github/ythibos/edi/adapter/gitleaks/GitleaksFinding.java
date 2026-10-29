@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.github.ythibos.edi.domain.publish.PublishFinding;
 import io.github.ythibos.edi.domain.publish.PublishRule;
+import io.github.ythibos.edi.domain.publish.RequestText;
+import io.github.ythibos.edi.domain.publish.TextFinding;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 record GitleaksFinding(
@@ -15,5 +17,13 @@ record GitleaksFinding(
 
     PublishFinding asPublishFinding() {
         return PublishFinding.onLine(PublishRule.SECRET, file, line, commit, "gitleaks rule " + rule);
+    }
+
+    TextFinding asTextFinding() {
+        return new TextFinding(PublishRule.SECRET, RequestText.placeOf(partOf(file), line), "gitleaks rule " + rule);
+    }
+
+    private static String partOf(String file) {
+        return file.endsWith("/" + RequestText.TITLE) || file.equals(RequestText.TITLE) ? RequestText.TITLE : RequestText.DESCRIPTION;
     }
 }

@@ -4,5 +4,6 @@ public enum PublishRule {
     SECRET,
     DENIED_TERM,
     PERSONAL_PATH,
-    SNAPSHOT_VERSION
+    SNAPSHOT_VERSION,
+    NETWORK_ADDRESS
 }

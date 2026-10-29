@@ -12,15 +12,18 @@ import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.publish.AddedLine;
+import io.github.ythibos.edi.domain.publish.TextVerdict;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 @Component
@@ -31,17 +34,21 @@ public class DoneClaims {
     private final InboxStore inbox;
     private final DeliveryRecords records;
     private final LandedWorkCheck landedWork;
+    private final Forges forges;
+    private final PublishCheck publishCheck;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DoneClaims(WorkerContext context, Git git, InboxStore inbox, DeliveryRecords records, LandedWorkCheck landedWork, EventLog events,
-            Clock clock, TransactionTemplate transaction) {
+    public DoneClaims(WorkerContext context, Git git, InboxStore inbox, DeliveryRecords records, LandedWorkCheck landedWork, Forges forges,
+            PublishCheck publishCheck, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.context = context;
         this.git = git;
         this.inbox = inbox;
         this.records = records;
         this.landedWork = landedWork;
+        this.forges = forges;
+        this.publishCheck = publishCheck;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -126,9 +133,21 @@ public class DoneClaims {
         if (workplace.project().forge() == null) {
             return List.of(workplace.project().project().name() + " registers no forge, so no merge request can carry this work");
         }
-        return request.map(found -> found.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), git.head(workplace.worktree())))
+        return request.map(found -> gapsOfTheRequest(workplace, found))
                 .orElseGet(() -> List.of(records.noRequestFrom(workplace)
                         + "; the pipeline opens it as a draft, and edi deliver opens it when the pipeline cannot"));
+    }
+
+    private List<String> gapsOfTheRequest(Workplace workplace, MergeRequestView request) {
+        List<String> gaps = new ArrayList<>(request.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), git.head(workplace.worktree())));
+        textGapOf(workplace, request).ifPresent(gaps::add);
+        return gaps;
+    }
+
+    private Optional<String> textGapOf(Workplace workplace, MergeRequestView request) {
+        RegisteredForge forge = workplace.project().requireForge();
+        TextVerdict verdict = publishCheck.checkText(workplace.worktree(), forges.serving(forge).textOf(forge, request.address()));
+        return verdict.allowsPosting() ? Optional.empty() : Optional.of(verdict.asAGapOf(request.address().toString()));
     }
 
     private List<String> reportGapsOf(Workplace workplace) {

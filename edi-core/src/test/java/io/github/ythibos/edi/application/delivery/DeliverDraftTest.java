@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,10 +24,14 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.publish.RequestText;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.SyntheticSecrets;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -73,6 +78,28 @@ class DeliverDraftTest {
     }
 
     @Test
+    void refusesToPostADescriptionThatCarriesWhatThePublishCheckRefusesAndNamesOnlyWhereItIs() throws IOException {
+        home.writing("config/publish-denylist", "# synthetic deny-list\nacme-corp.example\n");
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = pushed(dispatched);
+        home.forge().pushed(dispatched.launched().branch(), copy.head());
+        Path report = home.home().taskDirectory(new TaskId("fit-lamp")).resolve("report.md");
+        String token = SyntheticSecrets.githubToken();
+
+        for (String carried : List.of("Built on build.acme-corp.example.", "The forge token is " + token + ".", "Ran it from /home/jdoe/projects/harness.",
+                "The proxy at 10.20.30.40 answered.", "The proxy at proxy.internal:3128 answered.")) {
+            Files.writeString(report, "Fits the brass lamp in the hall.\n" + carried + "\n");
+
+            assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).as(carried).isInstanceOf(Refusal.class)
+                    .hasMessageStartingWith("The publish check refuses the request's text: line 2 of the description")
+                    .hasMessageContaining("rewrite it")
+                    .satisfies(refusal -> assertThat(refusal.getMessage()).doesNotContain("acme-corp", token, "jdoe", "10.20.30.40", "proxy.internal"));
+        }
+        assertThat(home.forge().openedDrafts()).isEmpty();
+        assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();
+    }
+
+    @Test
     void recordsTheDraftThePipelineAlreadyOpened() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         FixtureRepository copy = pushed(dispatched);
@@ -83,6 +110,37 @@ class DeliverDraftTest {
         assertThat(delivered.opened()).isFalse();
         assertThat(home.forge().openedDrafts()).isEmpty();
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DraftRecorded");
+    }
+
+    @Test
+    void refusesToRecordADraftThePipelineDescribedWithWhatThePublishCheckRefuses() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = pushed(dispatched);
+        MergeRequestView opened = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), copy.head());
+        home.forge().describes(opened.address(), new RequestText("HRN-3 Fit the lamp", "Fits the lamp.\nThe proxy at proxy.internal:3128 answered.\n"));
+
+        assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("The publish check refuses the request's text: line 2 of the description: a host and its port; rewrite it without what"
+                        + " those places name, since a request's text is published as a commit is.");
+        assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();
+    }
+
+    @Test
+    void refusesAShipsDoneWhileThePipelinesDescriptionCarriesWhatThePublishCheckRefuses() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        Worker worker = dispatched.launched().worker();
+        MergeRequestView opened = WorkerFixtures.opensTheDraftOf(home, worker);
+        home.forge().describes(opened.address(), new RequestText("HRN-3 Fit the lamp", "Fits the lamp.\nRan it from /home/jdoe/projects/harness.\n"));
+
+        assertThatThrownBy(() -> home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "Delivered.")).isInstanceOf(Refusal.class)
+                .hasMessage("This done is accepted once its claims hold: the publish check refuses the text of " + opened.address()
+                        + " (line 2 of the description: a home path), so rewrite it on the forge without what those places name.");
+        assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DeliveryRefused");
+
+        home.forge().describes(opened.address(), new RequestText("HRN-3 Fit the lamp", "Fits the lamp.\n"));
+        home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "Delivered.");
+        assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isPresent();
     }
 
     @Test
