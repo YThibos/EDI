@@ -208,7 +208,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the switch of the default branch, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
 | - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | held: for the captain's Pro cloud session (28 October 2026), or the captain's machine on his word; skip it until the captain changes its status to `open` on its issue. | [#95](https://github.com/YThibos/EDI/issues/95) |
 | - | [EDI-137](EDI-137.md) | Workers reach none of the captain's secrets by permission, not by denylist: a separate OS user, or Docker Sandbox's token substitution | L | - | held: backlogged on the captain's word (28 October 2026, D64 A) as an investigation, not started; until his word. | [#96](https://github.com/YThibos/EDI/issues/96) |
-| - | [EDI-141](EDI-141.md) | Workarounds on a backlog item with no task read as ticketed, and stow-list survives a broken registry | S | - | held: backlogged by EDI (28 October 2026) from its review of pull request 76; until the captain's word. | - |
+| - | [EDI-141](EDI-141.md) | Workarounds on a backlog item with no task read as ticketed, and stow-list survives a broken registry | S | - | held: backlogged by EDI (28 October 2026) from its review of pull request 76; until the captain's word. | [#100](https://github.com/YThibos/EDI/issues/100) |
 
 ## Not in the backlog
 
