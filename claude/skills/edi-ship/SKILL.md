@@ -10,6 +10,7 @@ description: >-
 ## Intake
 
 1. Resolve the project from the captain's words, the registry (`edi project list`) and work in progress; ask one question when it is ambiguous.
+   Work on the EDI project goes to the upstream backlog with `edi-backlog-item` instead of a dispatch here, unless the captain asks for it to run on this machine.
 2. A ship needs implementation the captain authorised; when uncertainty could change whether or what to build, it is a scout first.
 3. Add it with `edi task add --kind ship --project <project> --title "<title>" --body -`, the captain's words verbatim in the body: the ask, its boundaries, the full acceptance criteria and whether offline verification is accepted.
 4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without the captain's answer.

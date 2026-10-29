@@ -11,6 +11,7 @@ This folder is a plan, not a decision: the decision log holds why the backlog li
 
 Each item file is the only source of truth for its item.
 A GitHub issue per item tracks the claim, the questions and the link between issue, branch and pull request; it copies no criteria.
+The captain's primary session adds an item with its [edi-backlog-item](../../claude/skills/edi-backlog-item/SKILL.md) skill, in one step: the item's file, its row in the index, the pull request that adds both, the item's issue and the hold on the local task, so the captain's machine never dispatches it.
 
 ## How to read an item
 
@@ -29,6 +30,7 @@ A session takes one item at a time, in this order.
 2. Pick the first item, in index order, whose status is `open`, whose blockers are all merged into `main`, and that has no open pull request and no claim on its issue.
    Skip every item that is held, parked, in flight or needs the captain's machine; the status column says which.
    Until the issues exist, an open pull request or a pushed branch for the item is the claim.
+   An item whose status says "continue the draft pull request" was handed over by the captain's machine: that draft is not a claim; continue it on its own branch, read its description and the item's Handover section first, and ask its open questions before any code.
 3. Claim it before doing any work:
    1. comment on the item's issue that you are taking it, once the issues exist;
    2. create the branch `feature/EDI-<n>`, `chore/EDI-<n>` or `research/EDI-<n>`, as the item's header names, from a fresh `origin/main`; never use the platform's default branch name, never `fm/` or `edi/`, and never stack on another unmerged branch;
@@ -82,21 +84,23 @@ A session never guesses an ambiguous or scope-changing call.
 
 ## Issues
 
-One GitHub issue per open or held item, opened after the pull request that adds this folder is merged, so the issues link to files on `main`.
+One GitHub issue per open or held item.
+The [edi-backlog-item](../../claude/skills/edi-backlog-item/SKILL.md) skill opens it together with the pull request that adds the item, and names it in the item's row in the same pull request; its link to the item's file on `main` works once that pull request merges.
 
 - Title: `EDI-<n> <the item's title>`.
 - Body: a short line linking the item's file on `main`, the blockers as issue references, and nothing else; the criteria stay in the file.
-- Labels: `wave-1` to `wave-6` (the security findings carry `security` instead), `cloud-ok` or `needs-captain-machine`, and `parked` where an item is held or parked.
-- The index below names each item's issue number once the issues exist.
+- Labels: `wave-1` to `wave-6` (the security findings carry `security` instead), `cloud-ok` or `needs-captain-machine`, and `parked` where an item is held or parked; the skill creates a missing label.
+- The index below names each item's issue number once its issue exists.
 - A session claims an item by commenting on its issue; the pull request's `Closes #<issue>` links issue, branch and pull request, and GitHub closes the issue when the pull request merges.
 
 ## The index
 
 Order follows the waves the captain set.
+An item added later goes at the end of its section's table and takes the highest order plus one in the whole index, on `main` and on every branch awaiting merge, whatever its section, so every order stays unique and no other row changes; an item in the held section carries `-`, as its rows do.
 The waves set the order, and an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
 Wave 5 is the captain's console plan and report chain, which starts once EDI-89 (the plan dispatches its slices) has merged, so every wave 5 item lists EDI-89 or an item that itself waits for it.
 Sizes: XS under two hours, S about half a day, M about a day, L several days of research.
-The Issue column shows `-` until the issues are opened.
+The Issue column shows `-` until the item's issue is opened.
 
 ### Wave 1: no wait
 
@@ -106,6 +110,7 @@ The Issue column shows `-` until the issues are opened.
 | 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
+| 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | open | [#87](https://github.com/YThibos/EDI/issues/87) |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
@@ -175,7 +180,7 @@ The section sits after the six waves; the captain may move it up.
 |---|---|---|---|---|---|---|---|
 | 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | delivered | - |
 | 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | delivered | - |
-| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-132, handover on PR 80 | - |
+| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-132: continue the draft pull request #80, handed over on 29 October 2026 | - |
 | 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | delivered | - |
 | 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | delivered | - |
 | 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-132 | - |
@@ -183,6 +188,10 @@ The section sits after the six waves; the captain may move it up.
 | 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-132 | - |
 | 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-132 | - |
 | 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-132 | - |
+| 48 | [EDI-138](EDI-138.md) | The worker-identity and tmux guards close the bypasses found after EDI-122 and EDI-123 landed | M | medium | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#97](https://github.com/YThibos/EDI/issues/97) |
+| 49 | [EDI-139](EDI-139.md) | Tests never reach the captain's real Outlook calendar | S | low | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#98](https://github.com/YThibos/EDI/issues/98) |
+| 50 | [EDI-140](EDI-140.md) | PinnedActionsTest reads the parsed workflow, and the CI service image and mise version are pinned too | XS | info | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#99](https://github.com/YThibos/EDI/issues/99) |
+| 51 | [EDI-150](EDI-150.md) | Pull request and merge request texts pass the publish guard before EDI posts them | M | medium | - | open | [#104](https://github.com/YThibos/EDI/issues/104) |
 
 ### Held, parked and needs the captain's machine, no wave
 
@@ -197,9 +206,18 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. | - |
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | delivered | - |
-| - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | in-flight: on the captain's machine, a worker is delivering it; not for the cloud session, skip it if its pull request exists or has merged | - |
+| - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | open: continue the draft pull request #85, handed over on 29 October 2026 | - |
 | - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the captain's Pro cloud session; skip it until the captain changes its status to `open` on its issue. | - |
-| - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the switch of the default branch, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
+| - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the pull request edits, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
+| - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | held: for the captain's Pro cloud session (28 October 2026), or the captain's machine on his word; skip it until the captain changes its status to `open` on its issue. | [#95](https://github.com/YThibos/EDI/issues/95) |
+| - | [EDI-137](EDI-137.md) | Workers reach none of the captain's secrets by permission, not by denylist: a separate OS user, or Docker Sandbox's token substitution | L | - | held: backlogged on the captain's word (28 October 2026, D64 A) as an investigation, not started; until his word. | [#96](https://github.com/YThibos/EDI/issues/96) |
+| - | [EDI-141](EDI-141.md) | Workarounds on a backlog item with no task read as ticketed, and stow-list survives a broken registry | S | - | held: backlogged by EDI (28 October 2026) from its review of pull request 76; until the captain's word. | [#100](https://github.com/YThibos/EDI/issues/100) |
+| - | [EDI-144](EDI-144.md) | Validations are recorded and run the project's verify commands, in shadow | L | EDI-105, EDI-85 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#88](https://github.com/YThibos/EDI/issues/88) |
+| - | [EDI-145](EDI-145.md) | A supervised reviewer judges each validation against the intent | L | EDI-105 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#89](https://github.com/YThibos/EDI/issues/89) |
+| - | [EDI-146](EDI-146.md) | The worker fixes findings on top, and a branch behind its base merges it | M | EDI-105, EDI-67 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#90](https://github.com/YThibos/EDI/issues/90) |
+| - | [EDI-147](EDI-147.md) | EDI publishes a validated head on the bound account and opens the draft | M | EDI-105, EDI-70 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#91](https://github.com/YThibos/EDI/issues/91) |
+| - | [EDI-148](EDI-148.md) | EDI watches a request's checks and marks it ready for review | M | EDI-105, EDI-86, EDI-69 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#92](https://github.com/YThibos/EDI/issues/92) |
+| - | [EDI-149](EDI-149.md) | Projects cut over to EDI's validation, and no-mistakes is removed | L | EDI-105 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#93](https://github.com/YThibos/EDI/issues/93) |
 
 ## Not in the backlog
 
