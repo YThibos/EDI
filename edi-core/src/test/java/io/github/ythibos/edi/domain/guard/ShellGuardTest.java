@@ -57,7 +57,10 @@ class ShellGuardTest {
         "git commit -F - <<EOF\nEDI-5 Fix the worker's guard\nEOF\necho done && pkill java",
         "git commit -m \"$(cat <<'EOF'\nEDI-5 Fix the worker's guard\nEOF\n)\" && pkill java",
         "git commit -m \"$(cat <<'EOF'\nEDI-5 Fix two things:\n1) the guard\nEOF\n)\" && pkill java",
-        "diff <(cat <<'EOF'\nthe worker's lamp\nEOF\n) lamp.txt && pkill java"})
+        "diff <(cat <<'EOF'\nthe worker's lamp\nEOF\n) lamp.txt && pkill java",
+        "!(pkill -f java)",
+        "ls @(pkill -f java)",
+        "echo lamp !(killall java)"})
     void refusesSignalsByPattern(String command) {
         assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.SIGNAL_BY_PATTERN);
     }
@@ -135,7 +138,8 @@ class ShellGuardTest {
         "tmux -S /tmp/tmux-1000/default send-keys -t edi-261028-0930 Enter",
         "tmux -L edi-test-42 send-keys -t probe Enter",
         "tmux -L default list-sessions \\; send-keys -t edi-261028-0930 Enter",
-        "bash -c \"tmux -L default send-keys -t edi-261028-0930 'yes' Enter\""})
+        "bash -c \"tmux -L default send-keys -t edi-261028-0930 'yes' Enter\"",
+        "!(tmux -L default send-keys -t edi-261028-0930 yes Enter)"})
     void refusesAWorkerAnyInputToAPaneOnAnySocket(String command) {
         assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.TMUX_INPUT);
     }

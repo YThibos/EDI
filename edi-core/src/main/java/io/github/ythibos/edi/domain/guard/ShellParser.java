@@ -14,6 +14,7 @@ final class ShellParser {
     private static final String DOUBLE_QUOTE_ESCAPES = "\"\\$`\n";
     private static final String HEREDOC_ESCAPES = "\\$`\n";
     private static final String EXTENDED_GLOB_OPENERS = "?*+@!";
+    private static final String QUOTES_AND_ESCAPES = "'\"\\`$\n";
 
     private final String text;
     private final int nesting;
@@ -202,7 +203,7 @@ final class ShellParser {
         } else if (character == '`') {
             readBacktickSubstitution(written, substitutions);
         } else if (EXTENDED_GLOB_OPENERS.indexOf(character) >= 0 && peek(1) == '(' && extendedGlobEnd() > 0) {
-            readExtendedGlob(written);
+            readExtendedGlob(written, substitutions);
         } else {
             written.open(character);
             position++;
@@ -217,16 +218,17 @@ final class ShellParser {
                 depth++;
             } else if (character == ')' && --depth == 0) {
                 return at + 1;
-            } else if (character == '\n') {
+            } else if (QUOTES_AND_ESCAPES.indexOf(character) >= 0) {
                 return -1;
             }
         }
         return -1;
     }
 
-    private void readExtendedGlob(WrittenWord written) {
+    private void readExtendedGlob(WrittenWord written, List<ShellCommand> substitutions) {
         int end = extendedGlobEnd();
         text.substring(position, end).chars().forEach(character -> written.open((char) character));
+        substitutions.addAll(ShellScript.commandsIn(text.substring(position + 2, end - 1), nesting + 1));
         position = end;
     }
 
