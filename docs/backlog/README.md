@@ -95,7 +95,7 @@ The [edi-backlog-item](../../claude/skills/edi-backlog-item/SKILL.md) skill open
 ## The index
 
 Order follows the waves the captain set.
-An item added later goes at the end of its section's table and takes the highest order in the whole index plus one, whatever its section, so every order stays unique and no other row changes; an item in the held section carries `-`, as its rows do.
+An item added later goes at the end of its section's table and takes the highest order plus one in the whole index, on `main` and on every branch awaiting merge, whatever its section, so every order stays unique and no other row changes; an item in the held section carries `-`, as its rows do.
 The waves set the order, and an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
 Wave 5 is the captain's console plan and report chain, which starts once EDI-89 (the plan dispatches its slices) has merged, so every wave 5 item lists EDI-89 or an item that itself waits for it.
 Sizes: XS under two hours, S about half a day, M about a day, L several days of research.

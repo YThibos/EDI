@@ -250,10 +250,12 @@ function act(run, action, deed) {
 
 function deliverInACopy(run, upstream, branch, items) {
     const base = awaitsMerging(upstream, branch) ? `origin/${branch}` : `origin/${BASE}`;
+    const known = issuesByKey(upstream);
+    requireKeysOfTheirOwn(indexOn(upstream, base), known, items);
     const copy = new ThrowawayCopy(run, upstream, base);
     try {
         const index = addTheItems(copy, upstream, base, items);
-        const issues = issuesOf(run, upstream, items);
+        const issues = issuesOf(run, upstream, items, known);
         nameTheIssues(copy, items, issues, index);
         const unmerged = copy.commits > 0 || base !== `origin/${BASE}`;
         return { issues, unmerged, pull: unmerged ? pullRequestFor(run, upstream, copy, branch, items, issues) : null };
@@ -267,10 +269,24 @@ function awaitsMerging(upstream, branch) {
     return pushed && git(upstream.clone, 'rev-list', '--count', `origin/${BASE}..origin/${branch}`).trim() !== '0';
 }
 
+function requireKeysOfTheirOwn(index, issues, items) {
+    for (const item of items) {
+        const other = [index.titleOf(item.key), titleOfTheIssue(item.key, issues)].find(title => title !== undefined && title !== item.title);
+        if (other !== undefined) {
+            throw new Refusal(`${item.key} already names "${other}" upstream, not "${item.title}"; ${item.task} needs a key upstream has not used before it is backlogged.`);
+        }
+    }
+}
+
+function titleOfTheIssue(key, issues) {
+    return issues[key]?.title.slice(key.length + 1);
+}
+
 function addTheItems(copy, upstream, base, items) {
+    const takenElsewhere = ordersAwaitingMerge(upstream);
     let index = indexOn(upstream, base);
     for (const item of items) {
-        const withRow = index.names(item.key) ? index : index.withRow(item);
+        const withRow = index.names(item.key) ? index : index.withRow(item, takenElsewhere);
         const writesTheFile = !existsOn(upstream, base, itemPath(item.key));
         if (withRow !== index) {
             copy.write(INDEX, withRow.text, `add ${item.key}'s row to ${INDEX}: ${withRow.rowOf(item.key)}`);
@@ -285,6 +301,11 @@ function addTheItems(copy, upstream, base, items) {
         index = withRow;
     }
     return index;
+}
+
+function ordersAwaitingMerge(upstream) {
+    const branches = git(upstream.clone, 'for-each-ref', '--format=%(refname)', '--no-merged', `origin/${BASE}`, 'refs/remotes/origin').split('\n');
+    return branches.filter(ref => ref !== '' && existsOn(upstream, ref, INDEX)).flatMap(ref => indexOn(upstream, ref).orders());
 }
 
 function existsOn(upstream, ref, path) {
@@ -332,8 +353,7 @@ function indented(text) {
     return text.trimEnd().split('\n').map(line => `    ${line}`).join('\n');
 }
 
-function issuesOf(run, upstream, items) {
-    const issues = issuesByKey(upstream);
+function issuesOf(run, upstream, items, issues) {
     for (const item of items) {
         issues[item.key] = issues[item.key] || openedIssue(run, upstream, item, issues);
     }
@@ -342,7 +362,7 @@ function issuesOf(run, upstream, items) {
 
 function issuesByKey(upstream) {
     const listed = JSON.parse(gh(upstream, ['issue', 'list', '--state', 'all', '--limit', '1000', '--json', 'number,title,url']));
-    const entries = listed.map(issue => [workKeyOf(issue.title), { number: issue.number, url: issue.url }]).filter(([key]) => key);
+    const entries = listed.map(issue => [workKeyOf(issue.title), { number: issue.number, title: issue.title, url: issue.url }]).filter(([key]) => key);
     return Object.fromEntries(entries.reverse());
 }
 
@@ -590,19 +610,31 @@ class BacklogIndex {
         return this.lines.find(line => line.includes(`| [${key}](${key}.md) |`));
     }
 
-    withRow(item) {
+    withRow(item, takenElsewhere) {
         const section = this.section(item.section);
         const lines = [...this.lines];
-        lines.splice(section.lastRow + 1, 0, rowFor(item, section, this.orderOfANewRowIn(section)));
+        lines.splice(section.lastRow + 1, 0, rowFor(item, section, this.orderOfANewRowIn(section, takenElsewhere)));
         return new BacklogIndex(lines.join('\n'));
     }
 
-    orderOfANewRowIn(section) {
+    orderOfANewRowIn(section, takenElsewhere) {
         if (!section.rows.some(isNumbered)) {
             return '-';
         }
-        const orders = this.sections().flatMap(listed => listed.rows).filter(isNumbered).map(orderOf);
-        return String(Math.max(...orders) + 1);
+        return String(Math.max(...this.orders(), ...takenElsewhere) + 1);
+    }
+
+    orders() {
+        return this.sections().flatMap(listed => listed.rows).filter(isNumbered).map(orderOf);
+    }
+
+    titleOf(key) {
+        const row = this.rowOf(key);
+        return row === undefined ? undefined : cellsOf(row)[this.sectionHolding(row).columns.indexOf('Title')];
+    }
+
+    sectionHolding(row) {
+        return this.sections().find(section => section.rows.includes(row));
     }
 
     placeOf(key) {
@@ -611,7 +643,7 @@ class BacklogIndex {
         if (order === '-') {
             return 'no wave';
         }
-        const heading = this.sections().find(section => section.rows.includes(row)).heading;
+        const heading = this.sectionHolding(row).heading;
         const wave = /^wave\s+(\d+)/i.exec(heading);
         return wave ? `wave ${wave[1]}, order ${order}` : `${heading.split(/\W/)[0].toLowerCase()} section, order ${order}`;
     }

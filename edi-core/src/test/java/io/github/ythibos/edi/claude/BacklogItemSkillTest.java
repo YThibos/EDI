@@ -263,7 +263,36 @@ class BacklogItemSkillTest {
     }
 
     @Test
-    void aTopLevelHeadingBecomesASectionButACodeBlockKeepsItsComments() throws IOException, InterruptedException {
+    void aNewRowTakesNoOrderThatABranchAwaitingMergeHasTaken() throws IOException, InterruptedException {
+        FixtureRepository.at(directory.resolve("seed"))
+                .branch("chore/EDI-144")
+                .write(INDEX, THE_INDEX.replace("open | - |\n","open | - |\n| 2 | [EDI-144](EDI-144.md) | The tide table is posted | S | - | open | - |\n"))
+                .commit("EDI-144 Add the backlog item: The tide table is posted")
+                .run("push", "--quiet", directory.resolve("upstream.git").toString(), "chore/EDI-144");
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.output()).isZero();
+        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("| Wave and order | wave 1, order 3 |");
+    }
+
+    @Test
+    void aNewKeyThatAlreadyNamesOtherWorkUpstreamIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        FixtureRepository.at(directory.resolve("seed"))
+                .write(INDEX, THE_INDEX.replace("open | - |\n", "open | - |\n| 2 | [EDI-143](EDI-143.md) | The beacon rotates every ten seconds | S | - | open | - |\n"))
+                .commit("EDI-143 Add the backlog item: The beacon rotates every ten seconds")
+                .run("push", "--quiet", directory.resolve("upstream.git").toString(), "main");
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.output()).contains("EDI-143 already names \"The beacon rotates every ten seconds\" upstream");
+        assertThat(upstream.run("branch", "--list").strip()).isEqualTo("* main");
+        assertThat(calls()).noneMatch(call -> call.startsWith("gh issue create") || call.startsWith("gh pr create") || call.startsWith("edi hold"));
+    }
+
+    @Test
+    void aTopLevelHeadingBecomesASectionButACodeBlockKeepsItsComments()throws IOException, InterruptedException {
         Files.writeString(draft, DRAFT.replace("## Goal", "# Goal").replace("- `./mvnw verify`.", """
                 ```sh
                 # build both executables
