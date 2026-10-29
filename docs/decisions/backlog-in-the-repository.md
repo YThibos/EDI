@@ -15,7 +15,9 @@ A spec that is a short note pointing at a report on the machine is not a spec a 
 `docs/backlog/README.md` is the ordered index, in the waves the captain set, and the pickup protocol a session follows; `docs/backlog/research/` carries the research reports in full where an item needs them.
 One GitHub issue per open or held item, titled with the item's key and title, links the spec on `main` and copies no criteria; the session claims an item by commenting on its issue and opening a draft pull request that closes it, so GitHub links issue, branch and pull request.
 Questions before code go on the issue and questions about code on the pull request, each with lettered options and a recommendation, and the session stops until the captain answers; an answer that changes an item updates its file in the same pull request.
-The issues are opened only after the pull request that adds the folder has merged, so they link to files that exist on `main`.
+An item's issue links its file on `main`: the issues of the items the folder brought are opened once its pull request has merged, and a later item's issue is opened together with the pull request that adds the item; either link works once that pull request merges, and until then no session sees the item in the index on `main`.
+EDI's own work is not dispatched on the captain's machine: the primary puts it on this backlog with the `edi-backlog-item` skill, whose script `claude/skills/edi-backlog-item/backlog-item.mjs` writes the item's file and its row, opens a ready-for-review pull request on a `chore/` branch and the item's issue, names the issue in the row, and holds the local task for a deferral, idempotently and with a dry run.
+The script takes the key from `edi task add`, the existing EDI-native allocation, and the hold from `edi hold`, and goes to GitHub as the account the clone is pinned to.
 An item that needs the captain's machine, such as one reading his secrets file, is listed with its reason and is not for a cloud session.
 `.claude/settings.json` turns off the attribution lines a cloud session would otherwise add to commits and pull requests, so the no-trailer rule holds there too.
 
@@ -31,6 +33,8 @@ Opening the draft pull request first, naming the item, keeps two sessions from t
 - Specs in the EDI store only - unreachable from a cloud session, which is the reason for the change.
 - A pointer file that names reports on the captain's machine - the session could not read what the pointer names.
 - Opening the issues before the folder merges - they would link to files that are not on `main`.
+- Backlogging an item by hand - the hand route was forgotten for six items on 28 October 2026, which got local tasks only and neither a file nor an issue.
+- An `edi backlog add` subcommand in the core - the core's forge port opens draft merge requests and reads them, but has no issues or labels, and the step is the primary's own orchestration of git, gh and two existing `edi` commands; a script beside the skill does it without widening a port.
 
 ## Consequences
 
@@ -42,7 +46,9 @@ Opening the draft pull request first, naming the item, keeps two sessions from t
 ## When to revisit
 
 When the repository's own task tracking can hold the full spec, or when more than one cloud session works the backlog at once and claims need more than a comment and a draft pull request.
+When the core's forge port gains issues, the script's steps may become an `edi` command.
 
 ## How we got here
 
 - 28/10/2026: the captain asked for every defined EDI upgrade and patch to be available on the upstream repository with its full spec, findings and research, so a second account's cloud session could do the work; he chose a mixture, with the canonical specs and strict rules in `docs/backlog` and issues tracking which issue is linked to which branch (EDI-117).
+- 29/10/2026: the captain restated that EDI's work goes to the upstream backlog as an item and an issue, routinely and as automated as possible, so the `edi-backlog-item` skill and its script now add an item in one step, with its issue opened alongside its pull request (EDI-142).
