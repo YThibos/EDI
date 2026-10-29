@@ -208,6 +208,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-145](EDI-145.md) | A supervised reviewer judges each validation against the intent | L | EDI-105 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
 | - | [EDI-146](EDI-146.md) | The worker fixes findings on top, and a branch behind its base merges it | M | EDI-105, EDI-67 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
 | - | [EDI-147](EDI-147.md) | EDI publishes a validated head on the bound account and opens the draft | M | EDI-105, EDI-70 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
+| - | [EDI-148](EDI-148.md) | EDI watches a request's checks and marks it ready for review | M | EDI-105, EDI-86, EDI-69 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
 
 ## Not in the backlog
 
