@@ -109,6 +109,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
+| 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | open | - |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
