@@ -30,6 +30,7 @@ A session takes one item at a time, in this order.
 2. Pick the first item, in index order, whose status is `open`, whose blockers are all merged into `main`, and that has no open pull request and no claim on its issue.
    Skip every item that is held, parked, in flight or needs the captain's machine; the status column says which.
    Until the issues exist, an open pull request or a pushed branch for the item is the claim.
+   An item whose status says "continue the draft pull request" was handed over by the captain's machine: that draft is not a claim; continue it on its own branch, read its description and the item's Handover section first, and ask its open questions before any code.
 3. Claim it before doing any work:
    1. comment on the item's issue that you are taking it, once the issues exist;
    2. create the branch `feature/EDI-<n>`, `chore/EDI-<n>` or `research/EDI-<n>`, as the item's header names, from a fresh `origin/main`; never use the platform's default branch name, never `fm/` or `edi/`, and never stack on another unmerged branch;
@@ -179,7 +180,7 @@ The section sits after the six waves; the captain may move it up.
 |---|---|---|---|---|---|---|---|
 | 37 | [EDI-122](EDI-122.md) | A worker can never act as the primary by dropping its token file | S | medium | - | delivered | - |
 | 38 | [EDI-123](EDI-123.md) | A worker can never type into the captain's primary session or reach the edi tmux socket another way | M | medium | - | delivered | - |
-| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-132 | - |
+| 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | open, before EDI-132: continue the draft pull request #80, handed over on 29 October 2026 | - |
 | 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | delivered | - |
 | 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | delivered | - |
 | 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-132 | - |
@@ -204,7 +205,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. | - |
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | delivered | - |
-| - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | in-flight: on the captain's machine, a worker is delivering it; not for the cloud session, skip it if its pull request exists or has merged | - |
+| - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | open: continue the draft pull request #85, handed over on 29 October 2026 | - |
 | - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the captain's Pro cloud session; skip it until the captain changes its status to `open` on its issue. | - |
 | - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the switch of the default branch, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
 | - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | held: for the captain's Pro cloud session (28 October 2026), or the captain's machine on his word; skip it until the captain changes its status to `open` on its issue. | [#95](https://github.com/YThibos/EDI/issues/95) |
