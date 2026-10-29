@@ -206,6 +206,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the switch of the default branch, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
 | - | [EDI-144](EDI-144.md) | Validations are recorded and run the project's verify commands, in shadow | L | EDI-105, EDI-85 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
 | - | [EDI-145](EDI-145.md) | A supervised reviewer judges each validation against the intent | L | EDI-105 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
+| - | [EDI-146](EDI-146.md) | The worker fixes findings on top, and a branch behind its base merges it | M | EDI-105, EDI-67 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | - |
 
 ## Not in the backlog
 
