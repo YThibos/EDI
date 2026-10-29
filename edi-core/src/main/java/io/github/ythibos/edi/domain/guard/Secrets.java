@@ -2,6 +2,7 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup paths) {
@@ -10,6 +11,7 @@ public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup 
 
     private static final String FILE_READ_MARK = "@";
     private static final String QUOTED_FILE_READ_MARK = "\\@";
+    private static final Pattern SHORT_OPTION_WITH_A_VALUE = Pattern.compile("-[A-Za-z].");
 
     public Secrets {
         fileEndings = fileEndings.stream().filter(ending -> ending.startsWith("/") && ending.length() > 1).toList();
@@ -37,7 +39,7 @@ public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup 
     }
 
     private static Stream<String> pathsNamedIn(String pattern) {
-        return Stream.of(pattern.startsWith("-") ? "" : pattern, valueAfterTheFirstEquals(pattern))
+        return Stream.of(pattern.startsWith("-") ? "" : pattern, valueAfterTheFirstEquals(pattern), valueAfterAShortOption(pattern))
                 .flatMap(path -> Stream.of(path, withoutAFileReadMark(path)))
                 .filter(path -> !path.isBlank())
                 .distinct();
@@ -46,6 +48,10 @@ public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup 
     private static String valueAfterTheFirstEquals(String pattern) {
         int equals = pattern.indexOf('=');
         return equals > 0 ? pattern.substring(equals + 1) : "";
+    }
+
+    private static String valueAfterAShortOption(String pattern) {
+        return SHORT_OPTION_WITH_A_VALUE.matcher(pattern).lookingAt() ? pattern.substring(2) : "";
     }
 
     private static String withoutAFileReadMark(String path) {

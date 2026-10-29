@@ -180,9 +180,30 @@ final class ShellParser {
     }
 
     private boolean startsAGlobGroup(WrittenWord written) {
-        String before = written.text();
-        int end = current() == '(' ? groupEnd(position) : -1;
-        return !before.isEmpty() && !before.endsWith("=") && end > 0 && text.substring(position, end).chars().noneMatch(Character::isWhitespace);
+        if (current() != '(' || !continuesAWord(written.text())) {
+            return false;
+        }
+        int end = groupEnd(position);
+        if (end < 0 && !blankBeforeAnythingUnreadable(position)) {
+            throw new UnreadableCommand("The command attaches a group to a word that holds a quote, an escape or an expansion, so the guard cannot tell which files it globs.");
+        }
+        return end > 0 && text.substring(position, end).chars().noneMatch(Character::isWhitespace);
+    }
+
+    private static boolean continuesAWord(String before) {
+        return !before.isEmpty() && !before.endsWith("=");
+    }
+
+    private boolean blankBeforeAnythingUnreadable(int open) {
+        for (int at = open; at < text.length(); at++) {
+            char character = text.charAt(at);
+            if (character == ' ' || character == '\t') {
+                return true;
+            } else if (QUOTES_AND_ESCAPES.indexOf(character) >= 0) {
+                return false;
+            }
+        }
+        return false;
     }
 
     private boolean namesAFileDescriptor(String written) {
