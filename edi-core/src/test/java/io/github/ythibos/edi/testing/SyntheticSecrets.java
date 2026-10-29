@@ -1,6 +1,9 @@
 package io.github.ythibos.edi.testing;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public final class SyntheticSecrets {
@@ -13,7 +16,7 @@ public final class SyntheticSecrets {
     }
 
     public static String awsAccessKeyId() {
-        return "AK" + "IA" + randomFrom(BASE32, 16);
+        return "AK" + "IA" + distinctFrom(BASE32, 16);
     }
 
     public static String githubToken() {
@@ -22,6 +25,12 @@ public final class SyntheticSecrets {
 
     public static String canary() {
         return "canary-" + randomFrom(ALPHANUMERIC, 32);
+    }
+
+    private static String distinctFrom(String alphabet, int length) {
+        List<String> symbols = new ArrayList<>(alphabet.chars().mapToObj(Character::toString).toList());
+        Collections.shuffle(symbols, RANDOM);
+        return String.join("", symbols.subList(0, length));
     }
 
     private static String randomFrom(String alphabet, int length) {
