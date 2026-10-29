@@ -5,21 +5,14 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
-import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
-import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
-import io.github.ythibos.edi.application.fleet.ReadyForReview;
-import io.github.ythibos.edi.application.fleet.WaitingBoard;
-import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
-import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
@@ -30,8 +23,8 @@ import io.github.ythibos.edi.web.text.TextPresenter;
 public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static final int BACKLOG_SHOWN = 5;
-    private static final String SECTION_RULE = "─";
     private static final Comparator<Task> NEWEST_FILED_FIRST = Comparator.comparing(CaptainReportPresenter::filedOn).reversed();
+    private static final Predicate<Decision> EVERY_CARD = _ -> true;
 
     private final PresenceWords presenceWords;
 
@@ -50,25 +43,25 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         FleetSnapshot fleet = report.fleet();
         int width = report.width().columns();
         List<String> lines = new ArrayList<>(presenceOf(report, width));
-        lines.addAll(DecisionZone.lines(waitingOnTheCaptain(fleet.waiting(), wording), width));
-        lines.addAll(countedSection("DONE THIS TURN", turnItems(report.turn().done()), "Nothing finished this turn", width));
+        lines.addAll(DecisionZone.lines(WaitingEntries.of(fleet.waiting(), wording, EVERY_CARD), width));
+        lines.addAll(countedSection("DONE THIS TURN", ReportLines.turnItems(report.turn().done()), "Nothing finished this turn", width));
         lines.addAll(countedSection("ONGOING", ongoingItems(fleet, wording), "Nothing running", width));
-        lines.addAll(section("NEXT", ProjectColumn.lines(turnItems(report.turn().next()), "Nothing planned", width)));
+        lines.addAll(section("NEXT", ProjectColumn.lines(ReportLines.turnItems(report.turn().next()), "Nothing planned", width)));
         lines.addAll(parkedSection(fleet, wording, width));
         lines.addAll(backlogSection(fleet, wording, width));
-        return lines.stream().map(CaptainReportPresenter::withoutTrailingSpaces).collect(Collectors.joining("\n", "", "\n"));
+        return lines.stream().map(ReportLines::withoutTrailingSpaces).collect(Collectors.joining("\n", "", "\n"));
     }
 
     private List<String> presenceOf(CaptainReport report, int width) {
         List<String> lines = new ArrayList<>();
         if (report.showsThePresence()) {
-            lines.addAll(standing("Presence: " + presenceWords.of(report.presence()), width));
+            lines.addAll(ReportLines.standing("Presence: " + presenceWords.of(report.presence()), width));
         }
         if (report.showsTheUnreadableCalendar()) {
-            lines.addAll(standing("Calendar: " + presenceWords.ofTheUnreadableCalendar(report.unreadableCalendar()), width));
+            lines.addAll(ReportLines.standing("Calendar: " + presenceWords.ofTheUnreadableCalendar(report.unreadableCalendar()), width));
         }
         if (report.showsTheHeavyRunsAtOnce()) {
-            lines.addAll(standing("Builds: " + heavyRunsOf(report.heavyRunsAtOnce()), width));
+            lines.addAll(ReportLines.standing("Builds: " + heavyRunsOf(report.heavyRunsAtOnce()), width));
         }
         if (!lines.isEmpty()) {
             lines.add("");
@@ -82,53 +75,12 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
                 + " run at once; I cap none of them, so each is slower until they finish.";
     }
 
-    private static List<String> standing(String line, int width) {
-        return WordWrap.hanging(Glyphs.safe(line), width, "", "  ");
-    }
-
     private static LocalDate filedOn(Task task) {
         return LocalDate.ofInstant(task.created(), ZoneOffset.UTC);
     }
 
-    private static List<DecisionZone.Entry> waitingOnTheCaptain(WaitingOnTheCaptain waiting, TurnWording wording) {
-        return Stream.of(
-                        waiting.decisions().stream().map(open -> call(open, wording)),
-                        waiting.boards().stream().map(board -> boardQuestions(board, wording)),
-                        waiting.reviews().stream().map(ready -> review(ready, wording)),
-                        waiting.changing().stream().map(changing -> changing(changing, wording)))
-                .flatMap(Function.identity())
-                .toList();
-    }
-
-    private static DecisionZone.Entry call(OpenDecision open, TurnWording wording) {
-        return new DecisionZone.Call(open.decision().number(), wording.projectsOf(open.task()), open.decision().card());
-    }
-
-    private static DecisionZone.Entry boardQuestions(WaitingBoard waiting, TurnWording wording) {
-        Board board = waiting.board();
-        return new DecisionZone.BoardQuestions(wording.projectsOf(waiting.task()), wording.textOf(waiting.task()), board.openQuestions(), board.link(),
-                waiting.decisions().stream().map(CaptainReportPresenter::boardDecision).toList());
-    }
-
-    private static DecisionZone.BoardDecision boardDecision(OpenDecision open) {
-        return new DecisionZone.BoardDecision(open.decision().number(), open.decision().card().title());
-    }
-
-    private static DecisionZone.Entry review(ReadyForReview ready, TurnWording wording) {
-        return new DecisionZone.Review(wording.projectsOf(ready.task()), wording.textOf(ready.task()), ready.delivery().address().url());
-    }
-
-    private static DecisionZone.Entry changing(ChangingRequest changing, TurnWording wording) {
-        return new DecisionZone.Changing(wording.projectsOf(changing.task()), wording.textOf(changing.task()), changing.delivery().address().url(),
-                changing.whyChanging());
-    }
-
     private static List<String> countedSection(String title, List<ReportItem> items, String placeholder, int width) {
-        return section(counted(title, items.size()), ProjectColumn.lines(items, placeholder, width));
-    }
-
-    private static List<ReportItem> turnItems(List<TurnItem> items) {
-        return items.stream().map(item -> new ReportItem(new ProjectSet(item.projects()), item.text())).toList();
+        return afterABlankLine(ReportLines.countedSection(title, items, placeholder, width));
     }
 
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
@@ -139,9 +91,7 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
     }
 
     private static List<String> section(String heading, List<String> body) {
-        List<String> lines = new ArrayList<>(List.of("", heading, SECTION_RULE.repeat(WordWrap.columns(heading))));
-        lines.addAll(body);
-        return lines;
+        return afterABlankLine(ReportLines.headed(heading, body));
     }
 
     private static List<String> parkedSection(FleetSnapshot fleet, TurnWording wording, int width) {
@@ -161,19 +111,13 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         if (newestFirst.size() > shown.size()) {
             body.add(ProjectColumn.unlabelled("(+" + (newestFirst.size() - shown.size()) + " more queued)"));
         }
-        return section(counted("BACKLOG", newestFirst.size()), body);
+        return section(ReportLines.counted("BACKLOG", newestFirst.size()), body);
     }
 
-    private static String withoutTrailingSpaces(String line) {
-        int end = line.length();
-        while (end > 0 && line.charAt(end - 1) == ' ') {
-            end--;
-        }
-        return line.substring(0, end);
-    }
-
-    private static String counted(String title, int count) {
-        return title + "  (" + count + ")";
+    private static List<String> afterABlankLine(List<String> section) {
+        List<String> lines = new ArrayList<>(List.of(""));
+        lines.addAll(section);
+        return lines;
     }
 
     private static ReportItem parkedItem(ParkedTask parked, TurnWording wording) {
@@ -188,5 +132,4 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         Decision decision = parked.decision();
         return decision == null ? wording.textOf(parked.task()) : decision.number() + " " + decision.card().title();
     }
-
 }

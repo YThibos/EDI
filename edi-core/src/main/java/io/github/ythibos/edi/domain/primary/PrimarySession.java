@@ -45,7 +45,7 @@ public record PrimarySession(
     }
 
     public PrimarySession promptSubmitted(Prompt prompt, long eventMark, Instant at) {
-        return new PrimarySession(id, startedAt, process, claimedAt, PrimaryTurn.startedAt(at, eventMark),
+        return new PrimarySession(id, startedAt, process, claimedAt, turnAfter(at, eventMark),
                 prompt.isTypedByTheCaptain() ? at : typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt, null);
     }
 
@@ -97,6 +97,10 @@ public record PrimarySession(
 
     private PrimaryTurn turnAfterTheStart(SessionSource source, Instant at) {
         return turn == null || source.keepsTheProcess() ? turn : turn.ended(at, false);
+    }
+
+    private PrimaryTurn turnAfter(Instant at, long eventMark) {
+        return turn == null ? PrimaryTurn.startedAt(at, eventMark) : turn.followedAt(at, eventMark);
     }
 
     private PrimarySession withTurn(PrimaryTurn newTurn) {

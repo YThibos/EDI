@@ -9,16 +9,18 @@ user-invocable: true
 # sitrep
 
 The situation report is read-only: it never dispatches, steers, answers, cleans up or edits the backlog.
+It is the overview: every open decision in full, what runs, what is parked and, when nothing runs, the backlog.
+The turn report, `edi report --turn -`, is the chat's attention list instead: what needs the captain now, and this turn's done and next.
 
 ## Plain `/sitrep`
 
-1. If this turn changed state, the turn's single report is `edi report --turn -` with the turn's items on standard input; use that instead of a second report.
-2. Otherwise run `edi sitrep`.
-3. Answer with one plain line to the captain, then the output verbatim in one fenced block.
+1. If this turn changed state, run `edi sitrep --turn -` with the turn's items on standard input; otherwise run `edi sitrep`.
+   The overview the captain asked for is the turn's single report, in place of the turn report.
+2. Answer with one plain line to the captain, then the output verbatim in one fenced block.
 
 ## `/sitrep board`
 
-1. Run `edi sitrep --board`: it prints the same report, opens the console's sitrep page in the captain's browser and prints its address.
+1. Run `edi sitrep --board`, or `edi sitrep --board --turn -` with the turn's items on standard input when this turn changed state: it prints the same report, opens the console's sitrep page in the captain's browser and prints its address.
 2. Answer with one plain line, the report verbatim in one fenced block, then the page's address on its own line.
 3. If the page could not be opened, say so and give the sign-in address it printed.
 
