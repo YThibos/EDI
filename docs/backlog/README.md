@@ -186,6 +186,7 @@ The section sits after the six waves; the captain may move it up.
 | 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-132 | - |
 | 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-132 | - |
 | 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-132 | - |
+| 48 | [EDI-138](EDI-138.md) | The worker-identity and tmux guards close the bypasses found after EDI-122 and EDI-123 landed | M | medium | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | - |
 
 ### Held, parked and needs the captain's machine, no wave
 
