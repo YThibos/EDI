@@ -593,11 +593,11 @@ class BacklogIndex {
     withRow(item) {
         const section = this.section(item.section);
         const lines = [...this.lines];
-        lines.splice(section.lastRow + 1, 0, rowFor(item, section, this.nextOrderIn(section)));
+        lines.splice(section.lastRow + 1, 0, rowFor(item, section, this.orderOfANewRowIn(section)));
         return new BacklogIndex(lines.join('\n'));
     }
 
-    nextOrderIn(section) {
+    orderOfANewRowIn(section) {
         if (!section.rows.some(isNumbered)) {
             return '-';
         }
