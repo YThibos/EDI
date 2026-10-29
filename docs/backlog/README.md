@@ -109,6 +109,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
+| 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | open | [#87](https://github.com/YThibos/EDI/issues/87) |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
@@ -209,6 +210,12 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | held: for the captain's Pro cloud session (28 October 2026), or the captain's machine on his word; skip it until the captain changes its status to `open` on its issue. | [#95](https://github.com/YThibos/EDI/issues/95) |
 | - | [EDI-137](EDI-137.md) | Workers reach none of the captain's secrets by permission, not by denylist: a separate OS user, or Docker Sandbox's token substitution | L | - | held: backlogged on the captain's word (28 October 2026, D64 A) as an investigation, not started; until his word. | [#96](https://github.com/YThibos/EDI/issues/96) |
 | - | [EDI-141](EDI-141.md) | Workarounds on a backlog item with no task read as ticketed, and stow-list survives a broken registry | S | - | held: backlogged by EDI (28 October 2026) from its review of pull request 76; until the captain's word. | [#100](https://github.com/YThibos/EDI/issues/100) |
+| - | [EDI-144](EDI-144.md) | Validations are recorded and run the project's verify commands, in shadow | L | EDI-105, EDI-85 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#88](https://github.com/YThibos/EDI/issues/88) |
+| - | [EDI-145](EDI-145.md) | A supervised reviewer judges each validation against the intent | L | EDI-105 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#89](https://github.com/YThibos/EDI/issues/89) |
+| - | [EDI-146](EDI-146.md) | The worker fixes findings on top, and a branch behind its base merges it | M | EDI-105, EDI-67 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#90](https://github.com/YThibos/EDI/issues/90) |
+| - | [EDI-147](EDI-147.md) | EDI publishes a validated head on the bound account and opens the draft | M | EDI-105, EDI-70 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#91](https://github.com/YThibos/EDI/issues/91) |
+| - | [EDI-148](EDI-148.md) | EDI watches a request's checks and marks it ready for review | M | EDI-105, EDI-86, EDI-69 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#92](https://github.com/YThibos/EDI/issues/92) |
+| - | [EDI-149](EDI-149.md) | Projects cut over to EDI's validation, and no-mistakes is removed | L | EDI-105 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#93](https://github.com/YThibos/EDI/issues/93) |
 
 ## Not in the backlog
 
