@@ -2,11 +2,14 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.stream.Stream;
 
 public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup paths) {
 
     public static final Secrets NONE = new Secrets(List.of(), false);
+
+    private static final String FILE_READ_MARK = "@";
+    private static final String QUOTED_FILE_READ_MARK = "\\@";
 
     public Secrets {
         fileEndings = fileEndings.stream().filter(ending -> ending.startsWith("/") && ending.length() > 1).toList();
@@ -30,14 +33,25 @@ public record Secrets(List<String> fileEndings, boolean forgeTokens, PathLookup 
     }
 
     private boolean leadsToASecret(String pattern) {
-        return pathIn(pattern).stream().flatMap(path -> paths.pathsOf(path).stream()).anyMatch(this::endsInASecret);
+        return pathsNamedIn(pattern).flatMap(path -> paths.pathsOf(path).stream()).anyMatch(this::endsInASecret);
     }
 
-    private static Optional<String> pathIn(String pattern) {
-        if (!pattern.startsWith("-")) {
-            return pattern.isBlank() ? Optional.empty() : Optional.of(pattern);
-        }
+    private static Stream<String> pathsNamedIn(String pattern) {
+        return Stream.of(pattern.startsWith("-") ? "" : pattern, valueAfterTheFirstEquals(pattern))
+                .flatMap(path -> Stream.of(path, withoutAFileReadMark(path)))
+                .filter(path -> !path.isBlank())
+                .distinct();
+    }
+
+    private static String valueAfterTheFirstEquals(String pattern) {
         int equals = pattern.indexOf('=');
-        return equals > 0 ? Optional.of(pattern.substring(equals + 1)) : Optional.empty();
+        return equals > 0 ? pattern.substring(equals + 1) : "";
+    }
+
+    private static String withoutAFileReadMark(String path) {
+        if (path.startsWith(QUOTED_FILE_READ_MARK)) {
+            return path.substring(QUOTED_FILE_READ_MARK.length());
+        }
+        return path.startsWith(FILE_READ_MARK) ? path.substring(FILE_READ_MARK.length()) : path;
     }
 }
