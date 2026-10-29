@@ -43,6 +43,7 @@ Every command the captain types in the primary, such as `/sitrep` or `/quiet`, i
 |---|---|
 | [sitrep](../claude/skills/sitrep/SKILL.md) | the situation report, as boxed text or as the console's sitrep page |
 | [edi-ship](../claude/skills/edi-ship/SKILL.md) | ships from intake to cleanup: the key, the branch, the dispatch category, the brief, the validation pipeline, delivery and landing |
+| [edi-backlog-item](../claude/skills/edi-backlog-item/SKILL.md) | putting work on the EDI project on its upstream backlog: the item's file, its index row, its pull request, its issue and the hold on the local task, in one scripted step |
 | [edi-scout](../claude/skills/edi-scout/SKILL.md) | scouts: research and design tasks, their board, their completion and their promotion to a ship |
 | [edi-board](../claude/skills/edi-board/SKILL.md) | arming a Lavish research board through EDI and routing its answers |
 | [quiet](../claude/skills/quiet/SKILL.md) | `/quiet` and `/quiet off` |
