@@ -27,7 +27,7 @@ The research is in [the EDI-74 plan](research/EDI-74-plan.md), section 8.1 and s
 - `TurnCircumstances.needsTheReport` asks whether a captain-visible change happened since the last report shown, not whether any event was recorded since the prompt.
 - A render counts across prompts until such a change.
 - A report identical to the last shown is never demanded.
-- I-21 is reworded to "A turn that brings the captain news ends with the captain report".
+- I-21 is reworded to "A turn that brings the captain news ends with the turn report".
 - A turn in which only a worker's status was recorded ends without a demand.
 - A message queued mid-turn after a report does not cause a second demand when nothing new for the captain happened.
 - AT-21 still holds for a new decision.
