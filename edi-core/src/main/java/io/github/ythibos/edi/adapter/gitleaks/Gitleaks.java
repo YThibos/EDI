@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.Program;
 import io.github.ythibos.edi.domain.publish.PublishFinding;
+import io.github.ythibos.edi.domain.publish.RequestText;
+import io.github.ythibos.edi.domain.publish.TextFinding;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -46,6 +48,16 @@ public class Gitleaks {
         }
     }
 
+    public List<TextFinding> secretsIn(RequestText text) {
+        try (ScanWorkspace workspace = ScanWorkspace.create(STANDARD_RULES_ONLY)) {
+            Path parts = workspace.holding(text);
+            programs.run(Program.GITLEAKS, parts, textScanArguments(parts, workspace)).outputOfSuccess();
+            return Stream.of(json.readValue(workspace.report().toFile(), GitleaksFinding[].class))
+                    .map(GitleaksFinding::asTextFinding)
+                    .toList();
+        }
+    }
+
     private static List<String> scanArguments(RevisionRange outgoing, ScanWorkspace workspace) {
         return List.of(
                 "git",
@@ -63,8 +75,23 @@ public class Gitleaks {
                 ".");
     }
 
+    private static List<String> textScanArguments(Path parts, ScanWorkspace workspace) {
+        return List.of(
+                "dir",
+                "--config=" + workspace.rules(),
+                "--redact",
+                "--report-format=json",
+                "--report-path=" + workspace.report(),
+                "--exit-code=0",
+                "--no-banner",
+                "--no-color",
+                "--log-level=error",
+                parts.toString());
+    }
+
     private record ScanWorkspace(Path directory) implements AutoCloseable {
 
+        private static final String TEXT_PARTS = "text";
         private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
                 PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
 
@@ -86,9 +113,24 @@ public class Gitleaks {
             return directory.resolve("report.json");
         }
 
+        Path holding(RequestText text) {
+            try {
+                Path parts = Files.createDirectory(directory.resolve(TEXT_PARTS));
+                Files.writeString(parts.resolve(RequestText.TITLE), text.title());
+                Files.writeString(parts.resolve(RequestText.DESCRIPTION), text.description());
+                return parts;
+            } catch (IOException unwritable) {
+                throw new UncheckedIOException(unwritable);
+            }
+        }
+
         @Override
         public void close() {
             try {
+                Path parts = directory.resolve(TEXT_PARTS);
+                Files.deleteIfExists(parts.resolve(RequestText.TITLE));
+                Files.deleteIfExists(parts.resolve(RequestText.DESCRIPTION));
+                Files.deleteIfExists(parts);
                 Files.deleteIfExists(rules());
                 Files.deleteIfExists(report());
                 Files.deleteIfExists(directory);

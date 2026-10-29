@@ -16,7 +16,9 @@ import io.github.ythibos.edi.domain.publish.DenyList;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.PersonalPaths;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
+import io.github.ythibos.edi.domain.publish.TextVerdict;
 
 @Service
 public class PublishCheck {
@@ -37,6 +39,10 @@ public class PublishCheck {
         OutgoingChanges changes = git.outgoingChanges(repository, outgoing);
         targets.requireRegistered(repository, remoteUrl, changes);
         return verdictOn(repository, outgoing, changes);
+    }
+
+    public TextVerdict checkText(Path repository, RequestText text) {
+        return TextVerdict.of(text, denyList().sparing(targets.ownNamesOf(repository)), gitleaks.secretsIn(text));
     }
 
     public PublishVerdict check(Path repository, RevisionRange outgoing) {

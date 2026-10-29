@@ -9,6 +9,7 @@ import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.publish.RequestText;
 
 public interface Forge {
 
@@ -19,6 +20,8 @@ public interface Forge {
     MergeRequestView view(RegisteredForge forge, MergeRequestAddress address);
 
     MergeRequestView openDraft(RegisteredForge forge, DraftProposal proposal);
+
+    RequestText textOf(RegisteredForge forge, MergeRequestAddress address);
 
     boolean mayChangeWorkflows(RegisteredForge forge);
 

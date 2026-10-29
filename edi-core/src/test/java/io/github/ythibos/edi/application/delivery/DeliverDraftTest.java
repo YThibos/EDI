@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
+import io.github.ythibos.edi.testing.SyntheticSecrets;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -70,6 +72,28 @@ class DeliverDraftTest {
         });
         assertThat(home.deliveries().of(new TaskId("fit-lamp"))).contains(delivered.delivery());
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DraftOpened");
+    }
+
+    @Test
+    void refusesToPostADescriptionThatCarriesWhatThePublishCheckRefusesAndNamesOnlyWhereItIs() throws IOException {
+        home.writing("config/publish-denylist", "# synthetic deny-list\nacme-corp.example\n");
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = pushed(dispatched);
+        home.forge().pushed(dispatched.launched().branch(), copy.head());
+        Path report = home.home().taskDirectory(new TaskId("fit-lamp")).resolve("report.md");
+        String token = SyntheticSecrets.githubToken();
+
+        for (String carried : List.of("Built on build.acme-corp.example.", "The forge token is " + token + ".", "Ran it from /home/jdoe/projects/harness.",
+                "The proxy at 10.20.30.40 answered.", "The proxy at proxy.internal:3128 answered.")) {
+            Files.writeString(report, "Fits the brass lamp in the hall.\n" + carried + "\n");
+
+            assertThatThrownBy(() -> home.deliverDraft().deliver(LAMP, Actor.PRIMARY)).as(carried).isInstanceOf(Refusal.class)
+                    .hasMessageStartingWith("The publish check refuses the request's text: line 2 of the description")
+                    .hasMessageContaining("rewrite it")
+                    .satisfies(refusal -> assertThat(refusal.getMessage()).doesNotContain("acme-corp", token, "jdoe", "10.20.30.40", "proxy.internal"));
+        }
+        assertThat(home.forge().openedDrafts()).isEmpty();
+        assertThat(home.deliveries().of(new TaskId("fit-lamp"))).isEmpty();
     }
 
     @Test

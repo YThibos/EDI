@@ -657,7 +657,7 @@ public final class TestHome {
     }
 
     public DoneClaims doneClaims() {
-        return new DoneClaims(workerContext(), git, inbox, deliveryRecords(), landedWork(), events, clock, transaction);
+        return new DoneClaims(workerContext(), git, inbox, deliveryRecords(), landedWork(), forges(), publishCheck(), events, clock, transaction);
     }
 
     public DeliverAcceptedWork deliverAcceptedWork() {
