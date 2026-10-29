@@ -75,7 +75,7 @@ class ReportController {
 
     private static Turn checked(JsonNode turn) {
         Turn read = TurnDocument.read(turn);
-        CaptainVoice.requireOutcomes("The turn's wording in the captain report", read.wording());
+        CaptainVoice.requireOutcomes("The turn's wording in the report", read.wording());
         return read;
     }
 
