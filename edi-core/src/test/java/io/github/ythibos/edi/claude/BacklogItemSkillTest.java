@@ -92,8 +92,12 @@ class BacklogItemSkillTest {
             echo "gh $*" >> "$STATE/calls"
             case "$1 $2" in
               "pr list") if [ -f "$STATE/pull" ]; then printf '[{"url":"%s"}]' "$(cat "$STATE/pull")"; else echo '[]'; fi ;;
-              "pr create") cat > "$STATE/pull-body"; echo https://github.com/example/edi/pull/7 | tee "$STATE/pull" ;;
-              "issue list") if [ -f "$STATE/issue" ]; then printf '[{"number":9,"title":"%s","url":"https://github.com/example/edi/issues/9"}]' "$(cat "$STATE/issue")"; else echo '[]'; fi ;;
+              "pr create") if [ -f "$STATE/pull-fails" ]; then rm "$STATE/pull-fails"; echo "connection reset" >&2; exit 1; fi
+                cat > "$STATE/pull-body"; echo https://github.com/example/edi/pull/7 | tee "$STATE/pull" ;;
+              "issue list") case "$*" in *--search*) echo '[]'; exit ;; esac
+                printf '[{"number":3,"title":"EDI-85 The stage is stored","url":"https://github.com/example/edi/issues/3"}'
+                if [ -f "$STATE/issue" ]; then printf ',{"number":9,"title":"%s","url":"https://github.com/example/edi/issues/9"}' "$(cat "$STATE/issue")"; fi
+                echo ']' ;;
               "issue create") cat > "$STATE/issue-body"; printf '%s' "$4" > "$STATE/issue"; echo https://github.com/example/edi/issues/9 ;;
               "label list") echo '[{"name":"cloud-ok"}]' ;;
             esac
@@ -177,7 +181,7 @@ class BacklogItemSkillTest {
                 "edi hold harbour-lamps --kind deferral --reason Backlogged upstream as https://github.com/example/edi/issues/9,"
                         + " added by https://github.com/example/edi/pull/7; it is taken from there, never from the local queue");
         assertThat(Files.readString(state.resolve("issue-body")))
-                .isEqualTo("The spec is [docs/backlog/EDI-143.md](https://github.com/example/edi/blob/main/docs/backlog/EDI-143.md).\nBlocked by EDI-85.\n");
+                .isEqualTo("The spec is [docs/backlog/EDI-143.md](https://github.com/example/edi/blob/main/docs/backlog/EDI-143.md).\nBlocked by #3.\n");
         assertThat(run.output()).contains("""
                 EDI-143
                   doc:   docs/backlog/EDI-143.md
@@ -217,6 +221,59 @@ class BacklogItemSkillTest {
         assertThat(calls()).noneMatch(call -> call.contains(" create ") || call.startsWith("edi task add") || call.startsWith("edi hold")
                 || call.startsWith("edi release"));
         assertThat(rerun.output()).contains("pull:  https://github.com/example/edi/pull/7", "issue: https://github.com/example/edi/issues/9");
+    }
+
+    @Test
+    void aRerunAfterThePullRequestFailedOpensItOnThePushedBranch() throws IOException, InterruptedException {
+        Files.writeString(state.resolve("pull-fails"), "");
+        Run failed = backlogItem(draft.toString());
+        String pushed = upstream.run("rev-parse", BRANCH);
+        Files.delete(state.resolve("calls"));
+
+        Run rerun = backlogItem(draft.toString());
+
+        assertThat(failed.exitCode()).isEqualTo(1);
+        assertThat(rerun.exitCode()).as(rerun.output()).isZero();
+        assertThat(upstream.run("rev-parse", BRANCH)).isEqualTo(pushed);
+        assertThat(calls()).anyMatch(call -> call.startsWith("gh pr create")).noneMatch(call -> call.startsWith("gh issue create"));
+        assertThat(rerun.output()).contains("pull:  https://github.com/example/edi/pull/7", "issue: https://github.com/example/edi/issues/9");
+    }
+
+    @Test
+    void aNewRowTakesTheHighestOrderInTheWholeIndexPlusOne() throws IOException, InterruptedException {
+        FixtureRepository.at(directory.resolve("seed"))
+                .write(INDEX, THE_INDEX.replace("### Held", """
+                        ### Wave 2: after the stage
+
+                        | Order | Item | Title | Size | Blocked by | Status | Issue |
+                        |---|---|---|---|---|---|---|
+                        | 5 | [EDI-86](EDI-86.md) | The stage is shown | S | EDI-85 | open | - |
+
+                        ### Held"""))
+                .commit("EDI-117 Add the second wave")
+                .run("push", "--quiet", directory.resolve("upstream.git").toString(), "main");
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.output()).isZero();
+        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("| Wave and order | wave 1, order 6 |");
+        assertThat(upstream.run("diff", "main", BRANCH, "--", INDEX)).contains("""
+                 | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - | open | - |
+                +| 6 | [EDI-143](EDI-143.md) |""");
+    }
+
+    @Test
+    void aTopLevelHeadingBecomesASectionButACodeBlockKeepsItsComments() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("## Goal", "# Goal").replace("- `./mvnw verify`.", """
+                ```sh
+                # build both executables
+                ./mvnw verify
+                ```"""));
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.output()).isZero();
+        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("\n## Goal\n").contains("```sh\n# build both executables\n./mvnw verify\n```");
     }
 
     @Test

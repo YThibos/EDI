@@ -23,7 +23,7 @@ Write one draft per item in a scratch file outside the repository: the fields be
 | `branch` | `feature`, `chore` or `research`; `feature` for a ship and `research` for a scout when left out |
 | `source` | where the work comes from, such as `The captain's word of 29 October 2026` |
 | `size` | `XS`, `S`, `M` or `L`, as the index defines them |
-| `section` | the start of an index section's heading: `Wave 1` to `Wave 6`, `Security` or `Held` |
+| `section` | the start of an index section's heading: `Wave 1` to `Wave 6`, `Security` or `Held`; the item's row goes into that section's table |
 | `severity` | the finding's severity; required in the security section |
 | `blocked-by` | work keys such as `EDI-85`, separated by commas, or `-` |
 | `status` | `open`, or `held: <reason>`, `parked: <reason>` or `needs-captain-machine: <reason>` |
@@ -39,7 +39,8 @@ Restate the captain's answers as requirements, name no particular person, accoun
 2. Run it again without `--dry-run`.
 
 It refuses a draft with a missing field or section before it changes anything.
-It fetches the EDI project's clone in the EDI home, works in a throwaway copy of it from a fresh `origin/main`, and removes the copy afterwards.
+It fetches the EDI project's clone in the EDI home, works in a throwaway copy of it from a fresh `origin/main`, or from the item's branch when an earlier run pushed it and it has not merged, and removes the copy afterwards.
+It puts the item's row at the end of its section's table with the highest order in the whole index plus one, so every order stays unique and no other row changes; in the held section, whose rows carry `-` for their order, the row carries `-` too.
 It opens the pull request ready for review on `chore/<the first item's key>`, opens one issue per item, names each issue in its index row in a second commit, and holds each local task for a deferral whose reason names the issue and the pull request.
 It goes to GitHub as the account the clone is pinned to with the gh-account-pin skill, or as the active gh account when the clone has no pin.
 

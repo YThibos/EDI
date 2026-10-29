@@ -118,7 +118,7 @@ function pinnedAccount(clone, host) {
 }
 
 function fetchTheBase(upstream) {
-    git(upstream.clone, 'fetch', '--quiet', 'origin');
+    git(upstream.clone, 'fetch', '--quiet', '--prune', 'origin');
 }
 
 function indexOn(upstream, ref) {
@@ -207,12 +207,20 @@ function listOf(field) {
 }
 
 function specOf(path, text) {
-    const spec = text.trim().replace(/^# /gm, '## ');
+    const spec = withSecondLevelHeadings(text.trim());
     const missing = SPEC_SECTIONS.filter(section => !new RegExp(`^## ${section}$`, 'm').test(spec));
     if (missing.length > 0) {
         throw new Refusal(`${path}: the spec lacks the sections ${missing.map(section => `"## ${section}"`).join(', ')}.`);
     }
     return spec;
+}
+
+function withSecondLevelHeadings(markdown) {
+    let fenced = false;
+    return markdown.split('\n').map(line => {
+        fenced = /^\s*(```|~~~)/.test(line) ? !fenced : fenced;
+        return !fenced && line.startsWith('# ') ? `#${line}` : line;
+    }).join('\n');
 }
 
 function keyed(run, item, position) {
@@ -241,22 +249,22 @@ function act(run, action, deed) {
 }
 
 function deliverInACopy(run, upstream, branch, items) {
-    const openPull = openPullFrom(upstream, branch);
-    const base = openPull ? `origin/${branch}` : `origin/${BASE}`;
+    const base = awaitsMerging(upstream, branch) ? `origin/${branch}` : `origin/${BASE}`;
     const copy = new ThrowawayCopy(run, upstream, base);
     try {
         const index = addTheItems(copy, upstream, base, items);
         const issues = issuesOf(run, upstream, items);
         nameTheIssues(copy, items, issues, index);
-        return { issues, changed: copy.commits > 0, pull: copy.commits === 0 ? openPull : pullRequestFor(run, upstream, copy, branch, openPull, items, issues) };
+        const unmerged = copy.commits > 0 || base !== `origin/${BASE}`;
+        return { issues, unmerged, pull: unmerged ? pullRequestFor(run, upstream, copy, branch, items, issues) : null };
     } finally {
         copy.remove();
     }
 }
 
-function openPullFrom(upstream, branch) {
-    const pulls = JSON.parse(gh(upstream, ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'url']));
-    return pulls[0]?.url ?? null;
+function awaitsMerging(upstream, branch) {
+    const pushed = git(upstream.clone, 'for-each-ref', '--format=%(refname)', `refs/remotes/origin/${branch}`).trim() !== '';
+    return pushed && git(upstream.clone, 'rev-list', '--count', `origin/${BASE}..origin/${branch}`).trim() !== '0';
 }
 
 function addTheItems(copy, upstream, base, items) {
@@ -325,25 +333,29 @@ function indented(text) {
 }
 
 function issuesOf(run, upstream, items) {
-    const issues = {};
+    const issues = issuesByKey(upstream);
     for (const item of items) {
-        issues[item.key] = (item.task && issueTitled(upstream, item.key)) || openedIssue(run, upstream, item, issues);
+        issues[item.key] = issues[item.key] || openedIssue(run, upstream, item, issues);
     }
     return issues;
 }
 
-function issueTitled(upstream, key) {
-    const found = JSON.parse(gh(upstream, ['issue', 'list', '--state', 'all', '--search', `${key} in:title`, '--json', 'number,title,url']));
-    const issue = found.find(candidate => candidate.title.startsWith(`${key} `));
-    return issue ? { number: issue.number, url: issue.url } : null;
+function issuesByKey(upstream) {
+    const listed = JSON.parse(gh(upstream, ['issue', 'list', '--state', 'all', '--limit', '1000', '--json', 'number,title,url']));
+    const entries = listed.map(issue => [workKeyOf(issue.title), { number: issue.number, url: issue.url }]).filter(([key]) => key);
+    return Object.fromEntries(entries.reverse());
 }
 
-function openedIssue(run, upstream, item, openedBefore) {
+function workKeyOf(title) {
+    return new RegExp(`^(${PROJECT}-\\d+) `).exec(title)?.[1];
+}
+
+function openedIssue(run, upstream, item, known) {
     const labels = labelsOf(item);
     ensureLabels(run, upstream, labels);
     const title = `${item.key} ${item.title}`;
     const url = act(run, `open the issue "${title}" labelled ${labels.join(', ')}`, () =>
-        lastLineOf(gh(upstream, ['issue', 'create', '--title', title, '--label', labels.join(','), '--body-file', '-'], issueBody(upstream, item, openedBefore))));
+        lastLineOf(gh(upstream, ['issue', 'create', '--title', title, '--label', labels.join(','), '--body-file', '-'], issueBody(upstream, item, known))));
     return url ? { number: Number(url.split('/').at(-1)), url } : null;
 }
 
@@ -377,15 +389,12 @@ function lastLineOf(output) {
     return output.trim().split('\n').at(-1);
 }
 
-function issueBody(upstream, item, openedBefore) {
+function issueBody(upstream, item, known) {
     const spec = `The spec is [${itemPath(item.key)}](${upstream.web}/blob/${BASE}/${itemPath(item.key)}).`;
     if (item.blockers.length === 0) {
         return `${spec}\n`;
     }
-    const blockers = item.blockers.map(key => {
-        const issue = openedBefore[key] ?? issueTitled(upstream, key);
-        return issue ? `#${issue.number}` : key;
-    });
+    const blockers = item.blockers.map(key => known[key] ? `#${known[key].number}` : key);
     return `${spec}\nBlocked by ${blockers.join(', ')}.\n`;
 }
 
@@ -399,14 +408,22 @@ function nameTheIssues(copy, items, issues, index) {
     }
 }
 
-function pullRequestFor(run, upstream, copy, branch, openPull, items, issues) {
-    copy.push(branch);
+function pullRequestFor(run, upstream, copy, branch, items, issues) {
+    if (copy.commits > 0) {
+        copy.push(branch);
+    }
+    const openPull = openPullFrom(upstream, branch);
     if (openPull) {
         return openPull;
     }
     const title = items.length === 1 ? `${items[0].key} Backlog: ${items[0].title}` : `${items[0].key} Backlog: ${keysOf(items)}`;
     return act(run, `open the pull request "${title}" from ${branch} into ${BASE}, ready for review`, () =>
         lastLineOf(gh(upstream, ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'], pullBody(upstream, branch, items, issues))));
+}
+
+function openPullFrom(upstream, branch) {
+    const pulls = JSON.parse(gh(upstream, ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'url']));
+    return pulls[0]?.url ?? null;
 }
 
 function keysOf(items) {
@@ -459,7 +476,7 @@ function printSummary(item, delivered, held) {
         '',
         item.key,
         `  doc:   ${itemPath(item.key)}`,
-        `  pull:  ${delivered.pull ?? (delivered.changed ? 'a new pull request' : 'none needed, the item is on main')}`,
+        `  pull:  ${delivered.pull ?? (delivered.unmerged ? 'a new pull request' : 'none needed, the item is on main')}`,
         `  issue: ${delivered.issues[item.key]?.url ?? 'a new issue'}`,
         `  hold:  ${item.task ?? 'the new task'}: ${held}`,
     ].join('\n'));
@@ -576,8 +593,16 @@ class BacklogIndex {
     withRow(item) {
         const section = this.section(item.section);
         const lines = [...this.lines];
-        lines.splice(section.lastRow + 1, 0, rowFor(item, section));
+        lines.splice(section.lastRow + 1, 0, rowFor(item, section, this.nextOrderIn(section)));
         return new BacklogIndex(lines.join('\n'));
+    }
+
+    nextOrderIn(section) {
+        if (!section.rows.some(isNumbered)) {
+            return '-';
+        }
+        const orders = this.sections().flatMap(listed => listed.rows).filter(isNumbered).map(orderOf);
+        return String(Math.max(...orders) + 1);
     }
 
     placeOf(key) {
@@ -605,9 +630,9 @@ function startsWithTheWords(heading, words) {
     return heading.toLowerCase().startsWith(words.toLowerCase()) && !/\w/.test(heading.charAt(words.length));
 }
 
-function rowFor(item, section) {
+function rowFor(item, section, order) {
     const cells = {
-        Order: nextOrderIn(section),
+        Order: order,
         Item: `[${item.key}](${item.key}.md)`,
         Title: item.title,
         Size: item.size,
@@ -619,9 +644,12 @@ function rowFor(item, section) {
     return `| ${section.columns.map(column => cells[column]).join(' | ')} |`;
 }
 
-function nextOrderIn(section) {
-    const numbered = section.rows.map(row => Number(cellsOf(row)[0])).filter(Number.isInteger);
-    return numbered.length === 0 ? '-' : String(Math.max(...numbered) + 1);
+function isNumbered(row) {
+    return /^\d+$/.test(cellsOf(row)[0]);
+}
+
+function orderOf(row) {
+    return Number(cellsOf(row)[0]);
 }
 
 function cellsOf(row) {
