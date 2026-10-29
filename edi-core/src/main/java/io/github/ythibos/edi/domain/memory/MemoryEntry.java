@@ -8,10 +8,13 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public record MemoryEntry(String firstLine, Optional<LocalDate> dated) {
+import io.github.ythibos.edi.domain.project.WorkKey;
+
+public record MemoryEntry(String firstLine, Optional<LocalDate> dated, Optional<WorkKey> until) {
 
     private static final Pattern ITEM = Pattern.compile("[-*]\\s.*");
     private static final Pattern ISO_DATE = Pattern.compile("\\b(\\d{4}-\\d{2}-\\d{2})\\b");
+    private static final Pattern UNTIL_KEY = Pattern.compile("\\b[Uu]ntil\\s+([A-Z][A-Z0-9]*-\\d+)[.;)]*\\z");
     private static final int SHOWN = 80;
 
     static List<MemoryEntry> allIn(String text) {
@@ -31,6 +34,10 @@ public record MemoryEntry(String firstLine, Optional<LocalDate> dated) {
         return List.copyOf(entries);
     }
 
+    public boolean isAWorkaround() {
+        return until.isPresent();
+    }
+
     public String shown() {
         return firstLine.length() <= SHOWN ? firstLine : firstLine.substring(0, SHOWN - 3) + "...";
     }
@@ -44,7 +51,7 @@ public record MemoryEntry(String firstLine, Optional<LocalDate> dated) {
             return;
         }
         String entry = String.join("\n", lines.subList(start, end));
-        entries.add(new MemoryEntry(lines.get(start).replaceFirst("^[-*]\\s+", "").strip(), latestDateIn(entry)));
+        entries.add(new MemoryEntry(lines.get(start).replaceFirst("^[-*]\\s+", "").strip(), latestDateIn(entry), keyAtTheEndOf(entry)));
     }
 
     private static Optional<LocalDate> latestDateIn(String entry) {
@@ -63,6 +70,18 @@ public record MemoryEntry(String firstLine, Optional<LocalDate> dated) {
         try {
             return Optional.of(LocalDate.parse(written));
         } catch (DateTimeParseException notADate) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<WorkKey> keyAtTheEndOf(String entry) {
+        Matcher until = UNTIL_KEY.matcher(entry.strip());
+        if (!until.find()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(WorkKey.parse(until.group(1)));
+        } catch (IllegalArgumentException notAKey) {
             return Optional.empty();
         }
     }

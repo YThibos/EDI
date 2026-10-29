@@ -5,17 +5,23 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets) {
+public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets, boolean forAWorker,
+        SocketPaths socketPaths) {
 
     public ShellGuard {
         Objects.requireNonNull(ediSocket, "The guard knows the name of the core's tmux socket.");
         baseBranches = Set.copyOf(baseBranches);
         unlandedBranches = Set.copyOf(unlandedBranches);
         Objects.requireNonNull(secrets, "The guard knows which secrets it keeps from a shell.");
+        Objects.requireNonNull(socketPaths, "The guard knows how to find where a tmux socket path really leads.");
     }
 
     public ShellGuard(String ediSocket, Set<String> baseBranches) {
         this(ediSocket, baseBranches, Set.of(), Secrets.NONE);
+    }
+
+    public ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets) {
+        this(ediSocket, baseBranches, unlandedBranches, secrets, false, SocketPaths.AS_WRITTEN);
     }
 
     public Optional<GuardRefusal> check(String script) {
@@ -34,11 +40,12 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
     }
 
     private Optional<GuardRefusal> refusalFor(ShellCommand command) {
-        return TmuxSockets.refusalFor(command, ediSocket)
+        return TmuxSockets.refusalFor(command, ediSocket, forAWorker, socketPaths)
                 .or(() -> GitPushes.refusalFor(command, baseBranches))
                 .or(() -> SkippedHooks.refusalFor(command))
                 .or(() -> BranchDeletions.refusalFor(command, unlandedBranches))
                 .or(() -> MergingCommands.refusalFor(command))
-                .or(() -> SecretReads.refusalFor(command, secrets));
+                .or(() -> SecretReads.refusalFor(command, secrets))
+                .or(() -> forAWorker ? WorkerIdentity.refusalFor(command) : Optional.empty());
     }
 }

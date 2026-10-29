@@ -2,12 +2,14 @@ package io.github.ythibos.edi.application.worker;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ import io.github.ythibos.edi.domain.guard.GuardRefusal;
 import io.github.ythibos.edi.domain.guard.GuardRule;
 import io.github.ythibos.edi.domain.guard.SecretReads;
 import io.github.ythibos.edi.domain.guard.Secrets;
+import io.github.ythibos.edi.domain.guard.SettingsWrites;
 import io.github.ythibos.edi.domain.guard.ShellGuard;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -40,6 +43,7 @@ import io.github.ythibos.edi.domain.worker.WorkerId;
 public class GuardToolCall {
 
     private static final Set<String> USUAL_BASES = Set.of("main", "master");
+    private static final String CLAUDE_DIRECTORY = ".claude";
     private static final Set<GuardRule> ALLOWED_ON_THE_CAPTAINS_WORD = Set.of(GuardRule.SECRET, GuardRule.UNLANDED_BRANCH_DELETION);
     private static final String AFTER_THE_CAPTAINS_WORD = " The captain's word in this session lets the primary run it: record it with"
             + " edi captain said --text \"<their words>\".";
@@ -90,13 +94,15 @@ public class GuardToolCall {
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
         return call.writesAFile()
                 ? outsideTheWorkplace(call.file(), workplace)
-                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell());
+                        .or(() -> SettingsWrites.refusalForWriting(call.file().toString(), underTheSettingsOf(workplace, call)))
+                : shellRefusal(call, basesOf(workplace), secretsKeptFromAWorkersShell(), true)
+                        .or(() -> settingsWrittenByTheShell(call, workplace));
     }
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
         return call.readsAFile()
                 ? secretRead(call.file(), secretsKeptFromThePrimary())
-                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary());
+                : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(), false);
     }
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
@@ -104,12 +110,13 @@ public class GuardToolCall {
                 .or(() -> SecretReads.refusalForReading(realised(file).toString(), secrets));
     }
 
-    private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets) {
+    private Optional<GuardRefusal> shellRefusal(ToolCall call, Set<String> bases, Secrets secrets, boolean forAWorker) {
         if (!call.runsAShellCommand()) {
             return Optional.empty();
         }
         Set<String> unlandedBranches = transaction.execute(_ -> dispatches.branchesOfOpenTasks());
-        return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets).check(call.command());
+        return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets, forAWorker, socketPath -> realisedFrom(call.workingDirectory(), socketPath))
+                .check(call.command());
     }
 
     private Secrets secretsKeptFromAWorkersRead() {
@@ -166,6 +173,28 @@ public class GuardToolCall {
                         + workplace.taskDirectory() + ", and " + file + " is outside both (I-07)."));
     }
 
+    private static Predicate<String> underTheSettingsOf(Workplace workplace, ToolCall call) {
+        Path settings = realised(workplace.worktree()).resolve(CLAUDE_DIRECTORY);
+        Path written = workplace.worktree().toAbsolutePath().normalize().resolve(CLAUDE_DIRECTORY);
+        return word -> {
+            Path path = pathOf(word, call.workingDirectory());
+            return path != null && (path.toAbsolutePath().normalize().startsWith(written) || realised(path).startsWith(settings));
+        };
+    }
+
+    private static Optional<GuardRefusal> settingsWrittenByTheShell(ToolCall call, Workplace workplace) {
+        return call.runsAShellCommand() ? SettingsWrites.refusalFor(call.command(), underTheSettingsOf(workplace, call)) : Optional.empty();
+    }
+
+    private static Path pathOf(String word, Path workingDirectory) {
+        try {
+            Path path = Path.of(word);
+            return path.isAbsolute() || workingDirectory == null ? path : workingDirectory.resolve(path);
+        } catch (InvalidPathException unreadable) {
+            return null;
+        }
+    }
+
     private static Path realised(Path path) {
         Path absolute = path.toAbsolutePath().normalize();
         Path existing = absolute;
@@ -179,6 +208,15 @@ public class GuardToolCall {
             return existing.toRealPath().resolve(existing.relativize(absolute));
         } catch (IOException unreadable) {
             return absolute;
+        }
+    }
+
+    private static String realisedFrom(Path workingDirectory, String written) {
+        try {
+            Path path = Path.of(written);
+            return realised(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
+        } catch (InvalidPathException unreadable) {
+            return written;
         }
     }
 

@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 public record MemoryFile(String name, String text) {
 
+    public static final String LEARNINGS = "learnings.md";
     private static final int CHARACTERS_PER_TOKEN = 4;
     private static final Pattern HEADING = Pattern.compile("#{1,6}\\s+(\\S.*)");
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
@@ -27,6 +28,14 @@ public record MemoryFile(String name, String text) {
 
     public List<MemoryEntry> entries() {
         return MemoryEntry.allIn(text);
+    }
+
+    public boolean holdsLearnings() {
+        return name.equals(LEARNINGS);
+    }
+
+    public List<MemoryEntry> workarounds() {
+        return holdsLearnings() ? entries().stream().filter(MemoryEntry::isAWorkaround).toList() : List.of();
     }
 
     private static String withoutClosingHashes(String heading) {

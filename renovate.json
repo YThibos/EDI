@@ -30,6 +30,11 @@
       "branchConcurrentLimit": 3
     },
     {
+      "description": "GitHub Actions are pinned to full commit digests, with the tag beside each, and Renovate keeps both current",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    },
+    {
       "description": "The Spring Boot parent, its plugin and its managed dependencies move together",
       "matchPackageNames": ["org.springframework.boot:**"],
       "groupName": "Spring Boot"

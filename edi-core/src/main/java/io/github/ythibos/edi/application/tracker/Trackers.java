@@ -8,6 +8,7 @@ import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TrackedProject;
 
 @Component
@@ -43,6 +44,10 @@ public class Trackers {
 
     public String mergedStatus() {
         return machine.tracker().mergedStatus();
+    }
+
+    public boolean hasLanded(Ticket ticket) {
+        return machine.tracker().isJira() && machine.tracker().workflow().hasReached(ticket.status(), mergedStatus());
     }
 
     private void requireReachable(ProjectEntry project) {

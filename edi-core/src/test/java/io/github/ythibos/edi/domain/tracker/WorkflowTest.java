@@ -36,6 +36,14 @@ class WorkflowTest {
     }
 
     @Test
+    void hasReachedATargetAtItOrBeyondItButNotFromAStatusOutsideTheWorkflow() {
+        assertThat(WORKFLOW.hasReached("testing", "Testing")).isTrue();
+        assertThat(WORKFLOW.hasReached("Done", "Testing")).isTrue();
+        assertThat(WORKFLOW.hasReached("In Review", "Testing")).isFalse();
+        assertThat(WORKFLOW.hasReached("Blocked", "Testing")).isFalse();
+    }
+
+    @Test
     void refusesAWorkflowWithoutStatusesOrWithARepeatedOne() {
         assertThatIllegalArgumentException().isThrownBy(() -> new Workflow(List.of())).withMessageContaining("in their forward order");
         assertThatIllegalArgumentException().isThrownBy(() -> new Workflow(List.of("To Do", "to do"))).withMessageContaining("each status once");

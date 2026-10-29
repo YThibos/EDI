@@ -71,6 +71,12 @@ public final class FakeJira implements Tracker {
     }
 
     @Override
+    public synchronized Optional<Ticket> found(WorkKey key) {
+        failIfAsked();
+        return Optional.ofNullable(tickets.get(key)).map(FakeTicket::asTicket);
+    }
+
+    @Override
     public synchronized TicketMove transition(WorkKey key, String target) {
         failIfAsked();
         FakeTicket ticket = ticket(key);
