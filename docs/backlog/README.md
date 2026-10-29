@@ -11,6 +11,7 @@ This folder is a plan, not a decision: the decision log holds why the backlog li
 
 Each item file is the only source of truth for its item.
 A GitHub issue per item tracks the claim, the questions and the link between issue, branch and pull request; it copies no criteria.
+The captain's primary session adds an item with its [edi-backlog-item](../../claude/skills/edi-backlog-item/SKILL.md) skill, in one step: the item's file, its row in the index, the pull request that adds both, the item's issue and the hold on the local task, so the captain's machine never dispatches it.
 
 ## How to read an item
 
@@ -82,21 +83,23 @@ A session never guesses an ambiguous or scope-changing call.
 
 ## Issues
 
-One GitHub issue per open or held item, opened after the pull request that adds this folder is merged, so the issues link to files on `main`.
+One GitHub issue per open or held item.
+The [edi-backlog-item](../../claude/skills/edi-backlog-item/SKILL.md) skill opens it together with the pull request that adds the item, and names it in the item's row in the same pull request; its link to the item's file on `main` works once that pull request merges.
 
 - Title: `EDI-<n> <the item's title>`.
 - Body: a short line linking the item's file on `main`, the blockers as issue references, and nothing else; the criteria stay in the file.
-- Labels: `wave-1` to `wave-6` (the security findings carry `security` instead), `cloud-ok` or `needs-captain-machine`, and `parked` where an item is held or parked.
-- The index below names each item's issue number once the issues exist.
+- Labels: `wave-1` to `wave-6` (the security findings carry `security` instead), `cloud-ok` or `needs-captain-machine`, and `parked` where an item is held or parked; the skill creates a missing label.
+- The index below names each item's issue number once its issue exists.
 - A session claims an item by commenting on its issue; the pull request's `Closes #<issue>` links issue, branch and pull request, and GitHub closes the issue when the pull request merges.
 
 ## The index
 
 Order follows the waves the captain set.
+An item added later goes at the end of its section's table and takes the highest order plus one in the whole index, on `main` and on every branch awaiting merge, whatever its section, so every order stays unique and no other row changes; an item in the held section carries `-`, as its rows do.
 The waves set the order, and an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
 Wave 5 is the captain's console plan and report chain, which starts once EDI-89 (the plan dispatches its slices) has merged, so every wave 5 item lists EDI-89 or an item that itself waits for it.
 Sizes: XS under two hours, S about half a day, M about a day, L several days of research.
-The Issue column shows `-` until the issues are opened.
+The Issue column shows `-` until the item's issue is opened.
 
 ### Wave 1: no wait
 
