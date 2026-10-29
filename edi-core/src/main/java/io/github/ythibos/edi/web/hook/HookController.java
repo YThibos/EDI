@@ -138,7 +138,9 @@ class HookController {
         JsonNode input = payload.path("tool_input");
         String file = input.path("file_path").asString(input.path("notebook_path").asString(null));
         String cwd = payload.path("cwd").asString(null);
-        return new ToolCall(payload.path("tool_name").asString(""), input.path("command").asString(null), file, cwd == null ? null : Path.of(cwd));
+        String searched = input.path("path").asString(null);
+        return new ToolCall(payload.path("tool_name").asString(""), input.path("command").asString(null), file == null ? searched : file,
+                cwd == null ? null : Path.of(cwd), input.path("pattern").asString(null));
     }
 
     private ResponseEntity<String> rendered(HookAnswer answer) {

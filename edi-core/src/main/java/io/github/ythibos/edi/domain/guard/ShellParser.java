@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.regex.Pattern;
 
 final class ShellParser {
 
@@ -13,6 +14,11 @@ final class ShellParser {
     private static final String WORD_BREAKS = " \t\n;&|()<>";
     private static final String DOUBLE_QUOTE_ESCAPES = "\"\\$`\n";
     private static final String HEREDOC_ESCAPES = "\\$`\n";
+    private static final String EXTENDED_GLOB_OPENERS = "?*+@!";
+    private static final String QUOTES_AND_ESCAPES = "'\"\\`$\n";
+    private static final String EMPTY_GROUP = "()";
+    private static final String EXPLICIT_QUALIFIERS = "#q";
+    private static final Pattern CODE_RUNNING_QUALIFIER = Pattern.compile("\\+[A-Za-z_]");
 
     private final String text;
     private final int nesting;
@@ -105,10 +111,10 @@ final class ShellParser {
     }
 
     private ShellWord processSubstitution() {
-        StringBuilder written = new StringBuilder();
+        WrittenWord written = new WrittenWord();
         List<ShellCommand> substitutions = new ArrayList<>();
         readParenthesisedSubstitution(written, substitutions);
-        return new ShellWord(written.toString(), substitutions, false);
+        return written.word(substitutions, false);
     }
 
     private void readRedirectionTarget() {
@@ -153,14 +159,14 @@ final class ShellParser {
     }
 
     private void readExpandedBodyLine() {
-        StringBuilder written = new StringBuilder();
+        WrittenWord written = new WrittenWord();
         List<ShellCommand> substitutions = new ArrayList<>();
         while (!atEnd() && current() != '\n') {
             readExpandedPart(written, substitutions, HEREDOC_ESCAPES);
         }
         position = Math.min(position + 1, text.length());
         if (!substitutions.isEmpty()) {
-            commands.add(List.of(new ShellWord("", substitutions, false)));
+            commands.add(List.of(new WrittenWord().word(substitutions, false)));
         }
     }
 
@@ -169,20 +175,35 @@ final class ShellParser {
     }
 
     private void readWord(boolean redirectionTarget) {
-        StringBuilder written = new StringBuilder();
+        WrittenWord written = new WrittenWord();
         List<ShellCommand> substitutions = new ArrayList<>();
-        while (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
+        while (!atEnd() && (WORD_BREAKS.indexOf(current()) < 0 || startsAGlobGroup(written))) {
             readWordPart(written, substitutions);
         }
-        words.add(new ShellWord(written.toString(), substitutions, redirectionTarget || namesAFileDescriptor(written)));
+        words.add(written.word(substitutions, redirectionTarget || namesAFileDescriptor(written.text())));
     }
 
-    private boolean namesAFileDescriptor(StringBuilder written) {
+    private boolean startsAGlobGroup(WrittenWord written) {
+        if (current() != '(' || !continuesAWord(written.text())) {
+            return false;
+        }
+        int end = groupEnd(position);
+        if (end < 0) {
+            throw new UnreadableCommand("The command attaches a group to a word that holds a quote, an escape or an expansion, so the guard cannot tell which files it globs.");
+        }
+        return end > position + EMPTY_GROUP.length();
+    }
+
+    private static boolean continuesAWord(String before) {
+        return !before.isEmpty() && !before.endsWith("=");
+    }
+
+    private boolean namesAFileDescriptor(String written) {
         boolean redirectedNext = !atEnd() && (current() == '<' || current() == '>');
         return redirectedNext && !written.isEmpty() && written.chars().allMatch(Character::isDigit);
     }
 
-    private void readWordPart(StringBuilder written, List<ShellCommand> substitutions) {
+    private void readWordPart(WrittenWord written, List<ShellCommand> substitutions) {
         char character = current();
         if (character == '\\') {
             readEscaped(written);
@@ -200,42 +221,80 @@ final class ShellParser {
             readParenthesisedSubstitution(written, substitutions);
         } else if (character == '`') {
             readBacktickSubstitution(written, substitutions);
+        } else if (EXTENDED_GLOB_OPENERS.indexOf(character) >= 0 && peek(1) == '(' && groupEnd(position + 1) > 0) {
+            readGlobGroup(written, substitutions, position + 1);
+        } else if (character == '(') {
+            readGlobGroup(written, substitutions, position);
         } else {
-            written.append(character);
+            written.open(character);
             position++;
         }
     }
 
-    private void readEscaped(StringBuilder written) {
+    private int groupEnd(int open) {
+        int depth = 0;
+        for (int at = open; at < text.length(); at++) {
+            char character = text.charAt(at);
+            if (character == '(') {
+                depth++;
+            } else if (character == ')' && --depth == 0) {
+                return at + 1;
+            } else if (QUOTES_AND_ESCAPES.indexOf(character) >= 0) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    private void readGlobGroup(WrittenWord written, List<ShellCommand> substitutions, int open) {
+        int end = groupEnd(open);
+        if (runsCodeAsAQualifier(text.substring(open + 1, end - 1), endsTheWord(end))) {
+            throw new UnreadableCommand("The command ends a glob with a zsh qualifier list that can run code (e or +), so the guard cannot tell what it runs.");
+        }
+        text.substring(position, end).chars().forEach(character -> written.open((char) character));
+        substitutions.addAll(ShellScript.commandsIn(text.substring(open + 1, end - 1), nesting + 1));
+        position = end;
+    }
+
+    private boolean endsTheWord(int end) {
+        return end >= text.length() || WORD_BREAKS.indexOf(text.charAt(end)) >= 0 && text.charAt(end) != '(';
+    }
+
+    private static boolean runsCodeAsAQualifier(String inside, boolean trailing) {
+        boolean qualifiers = inside.startsWith(EXPLICIT_QUALIFIERS) || trailing && inside.indexOf('|') < 0 && inside.indexOf('(') < 0;
+        return qualifiers && (inside.indexOf('e') >= 0 || CODE_RUNNING_QUALIFIER.matcher(inside).find());
+    }
+
+    private void readEscaped(WrittenWord written) {
         position++;
         if (!atEnd()) {
             if (current() != '\n') {
-                written.append(current());
+                written.quoted(current());
             }
             position++;
         }
     }
 
-    private void readSingleQuoted(StringBuilder written) {
+    private void readSingleQuoted(WrittenWord written) {
         int closing = text.indexOf('\'', position + 1);
         int end = closing < 0 ? text.length() : closing;
-        written.append(text, position + 1, end);
+        written.quoted(text.substring(position + 1, end));
         position = Math.min(end + 1, text.length());
     }
 
-    private void readAnsiQuoted(StringBuilder written) {
+    private void readAnsiQuoted(WrittenWord written) {
         position++;
         while (!atEnd() && current() != '\'') {
             if (current() == '\\' && position + 1 < text.length()) {
                 position++;
             }
-            written.append(current());
+            written.quoted(current());
             position++;
         }
         position = Math.min(position + 1, text.length());
     }
 
-    private void readDoubleQuoted(StringBuilder written, List<ShellCommand> substitutions) {
+    private void readDoubleQuoted(WrittenWord written, List<ShellCommand> substitutions) {
         position++;
         while (!atEnd() && current() != '"') {
             readExpandedPart(written, substitutions, DOUBLE_QUOTE_ESCAPES);
@@ -243,14 +302,16 @@ final class ShellParser {
         position = Math.min(position + 1, text.length());
     }
 
-    private void readExpandedPart(StringBuilder written, List<ShellCommand> substitutions, String escapable) {
+    private void readExpandedPart(WrittenWord written, List<ShellCommand> substitutions, String escapable) {
         char character = current();
         if (character == '\\' && position + 1 < text.length() && escapable.indexOf(peek(1)) >= 0) {
             position++;
             if (current() != '\n') {
-                written.append(current());
+                written.quoted(current());
             }
             position++;
+        } else if (character == '$' && peek(1) == '{') {
+            readParameter(written);
         } else if (character == '$' && peek(1) == '(' && peek(2) == '(') {
             readArithmetic(written);
         } else if (character == '$' && peek(1) == '(') {
@@ -258,28 +319,38 @@ final class ShellParser {
             readParenthesisedSubstitution(written, substitutions);
         } else if (character == '`') {
             readBacktickSubstitution(written, substitutions);
+        } else if (character == '$') {
+            written.open(character);
+            position++;
         } else {
-            written.append(character);
+            written.quoted(character);
             position++;
         }
     }
 
-    private void readArithmetic(StringBuilder written) {
-        int end = text.indexOf("))", position + 3);
-        int stop = end < 0 ? text.length() : end + 2;
-        written.append(text, position, stop);
+    private void readParameter(WrittenWord written) {
+        int closing = text.indexOf('}', position);
+        int stop = closing < 0 ? text.length() : closing + 1;
+        text.substring(position, stop).chars().forEach(character -> written.open((char) character));
         position = stop;
     }
 
-    private void readParenthesisedSubstitution(StringBuilder written, List<ShellCommand> substitutions) {
+    private void readArithmetic(WrittenWord written) {
+        int end = text.indexOf("))", position + 3);
+        int stop = end < 0 ? text.length() : end + 2;
+        written.quoted(text.substring(position, stop));
+        position = stop;
+    }
+
+    private void readParenthesisedSubstitution(WrittenWord written, List<ShellCommand> substitutions) {
         ShellParser inner = new ShellParser(text, position + 1, nesting + 1, true);
         inner.parse();
-        written.append("$(").append(text, position + 1, inner.position).append(')');
+        written.quoted("$(" + text.substring(position + 1, inner.position) + ")");
         substitutions.addAll(ShellScript.commandsOf(inner.commands, nesting + 1));
         position = Math.min(inner.position + 1, text.length());
     }
 
-    private void readBacktickSubstitution(StringBuilder written, List<ShellCommand> substitutions) {
+    private void readBacktickSubstitution(WrittenWord written, List<ShellCommand> substitutions) {
         StringBuilder inner = new StringBuilder();
         position++;
         while (!atEnd() && current() != '`') {
@@ -290,7 +361,7 @@ final class ShellParser {
             position++;
         }
         position = Math.min(position + 1, text.length());
-        written.append('`').append(inner).append('`');
+        written.quoted("`" + inner + "`");
         substitutions.addAll(ShellScript.commandsIn(inner.toString(), nesting + 1));
     }
 
@@ -326,5 +397,38 @@ final class ShellParser {
     }
 
     private record Heredoc(String delimiter, boolean expanded) {
+    }
+
+    private static final class WrittenWord {
+
+        private static final String EXPANSION_CHARACTERS = "\\*?[]{},~$@!+()|";
+
+        private final StringBuilder text = new StringBuilder();
+        private final StringBuilder pattern = new StringBuilder();
+
+        void open(char character) {
+            text.append(character);
+            pattern.append(character);
+        }
+
+        void quoted(String characters) {
+            characters.chars().forEach(character -> quoted((char) character));
+        }
+
+        void quoted(char character) {
+            text.append(character);
+            if (EXPANSION_CHARACTERS.indexOf(character) >= 0) {
+                pattern.append('\\');
+            }
+            pattern.append(character);
+        }
+
+        String text() {
+            return text.toString();
+        }
+
+        ShellWord word(List<ShellCommand> substitutions, boolean redirectionTarget) {
+            return new ShellWord(text(), pattern.toString(), substitutions, redirectionTarget);
+        }
     }
 }
