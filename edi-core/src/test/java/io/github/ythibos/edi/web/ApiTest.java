@@ -60,6 +60,9 @@ import tools.jackson.databind.json.JsonMapper;
 class ApiTest {
 
     private static final String TEXT = "text/plain";
+    private static final long ABOVE_THE_HIGHEST_LINUX_PID = 4_194_304L;
+    private static final WorkerWindow WINDOW_OF_NO_PROCESS = new WorkerWindow("edi-test", ABOVE_THE_HIGHEST_LINUX_PID + 1,
+            Instant.parse("2026-10-15T09:00:00Z"), "@1", ABOVE_THE_HIGHEST_LINUX_PID + 2);
     private static final String JSON = "application/json";
 
     @TempDir
@@ -184,6 +187,12 @@ class ApiTest {
                 "\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Painted the buoy\n")
                 .doesNotContain("ONGOING", "PARKED", "BACKLOG", "NEXT", "Nothing finished this turn");
         assertThat(asJson.body()).contains("\"fleet\":{", "\"turn\":{\"done\":[]", "\"width\":{\"columns\":120}");
+    }
+
+    @Test
+    void givesItsWorkersAWindowThatNoProcessOfTheMachineCanBe() {
+        assertThat(ProcessHandle.of(WINDOW_OF_NO_PROCESS.serverPid())).isEmpty();
+        assertThat(ProcessHandle.of(WINDOW_OF_NO_PROCESS.panePid())).isEmpty();
     }
 
     @Test
@@ -535,7 +544,7 @@ class ApiTest {
         WorkerTokens.IssuedToken token = workerTokens.issueInto(home.resolve("state/workers/" + task));
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
-                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2),
+                WINDOW_OF_NO_PROCESS,
                 new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
         return Files.readString(token.file());
     }
