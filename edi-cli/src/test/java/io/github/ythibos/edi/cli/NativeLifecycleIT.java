@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,8 @@ class NativeLifecycleIT {
     void theCommandStartsTheCoreOnceAndStopsIt() throws Exception {
         CommandRun up = edi("up", "--core-only");
         CommandRun health = edi("health");
+        String store = PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("data/edi.db")));
+        String port = PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("state/core.port")));
         CommandRun again = edi("up", "--core-only");
         CommandRun second = run(new ProcessBuilder(binary("edi.core.binary").toString()).redirectErrorStream(true));
         CommandRun down = edi("down");
@@ -49,6 +52,8 @@ class NativeLifecycleIT {
 
         assertThat(up.output()).isEqualTo("EDI core is up.\n");
         assertThat(health.output()).startsWith("EDI core is up on 127.0.0.1:");
+        assertThat(store).isEqualTo("rw-------");
+        assertThat(port).isEqualTo("rw-------");
         assertThat(again.output()).isEqualTo("EDI core is already up.\n");
         assertThat(second.exitCode()).isNotZero();
         assertThat(second.output()).contains("Another EDI core runs on this home");
