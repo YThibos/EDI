@@ -51,4 +51,4 @@ When native images can evaluate conditions at runtime, or a third machine profil
 - 15/10/2026: the specification made the harness person- and employer-agnostic and chose machine differences at runtime, because native images fix Spring's conditions at build time.
 - 17/10/2026: slice S6 ran the suite under both fixture profiles.
 - 23/10/2026: a test that followed the log for every finished ship spent part of its time parsing the unchanged machine profile, so `MachineProfile` parses again only when the content changed (EDI-45).
-- 29/10/2026: the store and the state files were created readable by every user, so the home is kept for its owner alone, repaired at each start (EDI-129).
+- 30/10/2026: the store and the state files were created readable by every user, so the home is kept for its owner alone, repaired at each start (EDI-129).
