@@ -163,3 +163,11 @@ EDI stands on the ideas and the work of others.
 - [Angular](https://angular.dev), [RxJS](https://rxjs.dev), [Node.js](https://nodejs.org) through the [frontend-maven-plugin](https://github.com/eirslett/frontend-maven-plugin), [resvg-js](https://github.com/thx/resvg-js), which renders the console's icons, and the [Fontsource](https://fontsource.org) packages of Exo 2, Inter and JetBrains Mono.
 - [JUnit](https://junit.org), [AssertJ](https://assertj.github.io/doc/), [ArchUnit](https://www.archunit.org), [Vitest](https://vitest.dev) and [JaCoCo](https://www.jacoco.org/jacoco/).
 - [Renovate](https://github.com/renovatebot/renovate), [OWASP Dependency-Check](https://owasp.org/www-project-dependency-check/) and [SonarQube Community Build](https://www.sonarsource.com/open-source-editions/sonarqube-community-edition/).
+
+## Security
+
+Report a vulnerability privately, as [SECURITY.md](SECURITY.md) says, never in a public issue.
+
+## Licence
+
+EDI is licensed under the [Apache License, Version 2.0](LICENSE).
