@@ -10,13 +10,12 @@ public record ForgeRepository(ForgeKind kind, String host, String path) {
     private static final String GITHUB_HOST = "github.com";
     private static final String SCHEME = "https://";
     private static final String SEGMENT_SEPARATOR = "/";
-    private static final String HOST_SEPARATORS = ".-:";
     private static final String SEGMENT_SEPARATORS = "._-";
 
     public ForgeRepository {
         Objects.requireNonNull(kind, "A forge repository names its forge.");
-        if (!isHostName(host)) {
-            throw new IllegalArgumentException("A forge host is a name such as forge.example.org, not " + host + ".");
+        if (!HostNames.isDnsNameWithAnyPort(host)) {
+            throw new IllegalArgumentException("A forge host is a DNS name, with a port if it needs one, such as forge.example.org, not " + host + ".");
         }
         if (!isRepositoryPath(path)) {
             throw new IllegalArgumentException("A forge path names a group or owner and a repository, such as team/service, not " + path + ".");
@@ -56,13 +55,6 @@ public record ForgeRepository(ForgeKind kind, String host, String path) {
     @Override
     public String toString() {
         return url();
-    }
-
-    private static boolean isHostName(String host) {
-        return host != null
-                && !host.isEmpty()
-                && AsciiCharacters.isLetterOrDigit(host.charAt(0))
-                && host.chars().allMatch(character -> AsciiCharacters.isLetterOrDigit(character) || HOST_SEPARATORS.indexOf(character) >= 0);
     }
 
     private static boolean isRepositoryPath(String path) {

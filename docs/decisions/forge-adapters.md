@@ -17,7 +17,8 @@ A remote URL may carry a token, and no refusal may repeat a secret (I-32).
 Creating always passes `--draft`, and a view whose URL does not match the address rebuilt from the registered repository is refused; only an exact `merged` or `MERGED` counts as merged.
 A project's `forge` entry is `{ kind, host, path, account }`.
 `GitHubForge` reads the bound account's token with `gh auth token --hostname <host> --user <account>` before each call and passes it to that call alone as `GH_TOKEN`, while `ForgeCalls` withholds any inherited `GH_TOKEN` or `GITHUB_TOKEN`; `GitLabForge`, whose tool holds one login per host, checks with `glab api user` that the login is the bound account before it opens a draft.
-`IsolatedCopies` binds the clone's git transport to a repository-local credential helper that asks `gh` for the bound account's token at call time.
+`IsolatedCopies` binds the clone's git transport to a repository-local credential helper that asks `gh` for the bound account's token at call time; the helper is a shell snippet, and it carries the host and the account in single quotes.
+A forge host is a DNS name, with a port when the forge needs one, and the account a name of letters, digits, dots, dashes and underscores, so neither can hold a quote or any other character the shell reads (`ForgeRepository`, `RegisteredForge`); a remote whose host is no DNS name is read as no forge at all (`RemoteAddress`), so a push to it, or an import of it, is refused.
 `PublicationTargets` refuses a push from an isolated copy unless git's push URL, read as host and path whatever its scheme, names the registered host and path, and refuses one that touches `.github/workflows/` while the bound account lacks the `workflow` scope, naming the `gh auth refresh` to run.
 
 ## Why
@@ -25,6 +26,7 @@ A project's `forge` entry is `{ kind, host, path, account }`.
 The allow-list makes I-03 a property of the code that a test reads, and one runner means no forge call can bypass it.
 The active `gh` account never decides who acts, so an account switch in another terminal cannot break or misdirect a delivery.
 A worker, a tool or a stray command that points a copy elsewhere cannot publish EDI's work there, and the check needs nothing but the registry.
+Validating the host and the account where they are read, and quoting them where the snippet is built, means a crafted origin URL or registry entry reaches the shell as one word or not at all.
 
 ## Alternatives rejected
 
@@ -36,6 +38,7 @@ A worker, a tool or a stray command that points a copy elsewhere cannot publish 
 
 - Good: AT-03b runs every adapter operation against recording stand-ins and finds no merge or push argument, and AT-43 refuses a copy whose origin points elsewhere.
 - Bad: every GitHub call costs one extra local `gh auth token`, a new forge feature means a reviewed allow-list entry, and a project behind a mirror registers the mirror as its forge.
+- Bad: a host written as an IPv6 literal, or with characters outside a DNS name, is refused, and the snippet's safety rests on that validation, which a test pins; anyone who can write the registry runs as the captain's own user and can reach the shell in other ways, which this does not contain.
 - Bad: the validation pipeline's own pushes do not use this binding ([docs/verification/no-mistakes.md](../verification/no-mistakes.md)).
 
 ## When to revisit
@@ -46,3 +49,4 @@ When a third forge is registered, `glab` supports several accounts per host, or 
 
 - 16/10/2026: slice S5 built both adapters on the allow-list, bound every call to the registry's account after the failed deliveries of 14/10/2026, and refused pushes to any other repository.
 - 21/10/2026: the adapters learnt to list every request from a branch, merged ones included ([merge-following](merge-following.md)).
+- 29/10/2026: the credential helper quotes the host and the account, and a forge host or a remote's host must be a DNS name, since a crafted remote could otherwise reach the helper's shell snippet (EDI-128).
