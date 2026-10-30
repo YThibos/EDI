@@ -170,11 +170,11 @@ The Issue column shows `-` until the item's issue is opened.
 | 35 | [EDI-97](EDI-97.md) | Effort and review yield recorded per task, shown in the Week view | M | EDI-62 | open | - |
 | 36 | [EDI-76](EDI-76.md) | Introspect again after a week of the EDI-52 and EDI-74 changes | M | EDI-93 | needs-captain-machine: the measurement reads the primary's transcripts and EDI's store, which exist only on the captain's machine. | - |
 
-### Security findings, to land before the repository is made public
+### Security findings
 
 The findings of the read-only security review of 28 October 2026, held on the captain's machine for the cloud session.
 The four worker-escape items come first, then the pinned actions the captain named alongside them, then the low findings.
-Each must land before the repository is made public ([EDI-132](EDI-132.md)), which waits on the four worker-escape items and the pinned actions.
+The four worker-escape items and the pinned actions had to land before the repository is made public ([EDI-132](EDI-132.md)); the captain decided on 30 October 2026 that the other findings do not block it, since EDI runs locally for the captain alone.
 The section sits after the six waves; the captain may move it up.
 
 | Order | Item | Title | Size | Severity | Blocked by | Status | Issue |
