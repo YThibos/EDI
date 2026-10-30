@@ -140,7 +140,24 @@ class ShellGuardTest {
         "tmux -L edi-test-42 send-keys -t probe Enter",
         "tmux -L default list-sessions \\; send-keys -t edi-261028-0930 Enter",
         "bash -c \"tmux -L default send-keys -t edi-261028-0930 'yes' Enter\"",
-        "!(tmux -L default send-keys -t edi-261028-0930 yes Enter | cat)"})
+        "!(tmux -L default send-keys -t edi-261028-0930 yes Enter | cat)",
+        "tmux -L default new-window 'edi dispatch fit-horn'",
+        "tmux -L default neww edi dispatch fit-horn",
+        "tmux -L default split-window -h 'edi backlog'",
+        "tmux -L default splitw -d -c /tmp edi backlog",
+        "tmux -L default split-window -I -t edi-261028-0930",
+        "tmux -L default new-session -d 'edi backlog'",
+        "tmux -L default new -d -s lamp edi backlog",
+        "tmux -L edi-test-42 new-session -d -s probe 'sleep 5'",
+        "tmux -L default set -g default-command 'edi backlog'",
+        "tmux -L default set-option -g default-shell /tmp/lamp.sh",
+        "tmux -L default set -s command-alias[100] lamp=send-keys",
+        "tmux -L default pas -t edi-261028-0930",
+        "tmux -L default ru 'echo'",
+        "tmux -L default sou ./keys.conf",
+        "tmux -L default pi -t edi-261028-0930 'cat'",
+        "tmux -L default list-sessions\\; send-keys -t edi-261028-0930 Enter",
+        "tmux -L default display -p x\\; neww edi backlog"})
     void refusesAWorkerAnyInputToAPaneOnAnySocket(String command) {
         assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.TMUX_INPUT);
     }
@@ -152,7 +169,11 @@ class ShellGuardTest {
         "tmux -L default display -p '#S'",
         "tmux -L default capture-pane -p -t edi-261028-0930",
         "tmux -L edi-test-42 kill-server",
-        "tmux -L edi-test-42 new-session -d -s probe 'sleep 5'"})
+        "tmux -L edi-test-42 new-session -d -s probe",
+        "tmux -L default new-window -d -n lamp",
+        "tmux -L default show-options -g default-command",
+        "tmux -L default s",
+        "tmux -L default display -p 'lamp\\;'"})
     void letsAWorkerReadAnyServerAndRunItsOwnPrivateOne(String command) {
         assertThat(FOR_A_WORKER.check(command)).isEmpty();
     }
@@ -428,7 +449,22 @@ class ShellGuardTest {
         "LANG=C EDI_TOKEN_FILE+=x edi backlog",
         "bash -c 'unset EDI_TOKEN_FILE; edi dispatch fit-horn'",
         "sudo env -u EDI_TOKEN_FILE edi backlog",
-        "nohup env -i edi backlog &"})
+        "nohup env -i edi backlog &",
+        "exec -c edi dispatch fit-horn",
+        "exec -cl -a lamp edi backlog",
+        "env --uns EDI_TOKEN_FILE edi dispatch fit-horn",
+        "env --uns=EDI_TOKEN_FILE edi backlog",
+        "env --ignore-env edi backlog",
+        "env -vu EDI_TOKEN_FILE edi backlog",
+        "env -vuEDI_TOKEN_FILE edi backlog",
+        "env -S'-u EDI_TOKEN_FILE edi backlog'",
+        "env --split-string='-i edi backlog'",
+        "env --sp='-i edi backlog'",
+        "env -vS '-i edi backlog'",
+        "systemd-run --user edi dispatch fit-horn",
+        "systemd-run --user --pty --wait edi backlog",
+        "echo EDI_TOKEN_FILE | xargs -I{} env -u {} edi dispatch fit-horn",
+        "echo '-i edi backlog' | xargs env"})
     void keepsWhatTellsTheCoreWhichWorkerIsCalling(String command) {
         assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.WORKER_IDENTITY);
     }
@@ -444,7 +480,13 @@ class ShellGuardTest {
         "export PATH=\"$PATH:$PWD/bin\"",
         "unset MAVEN_OPTS",
         "LANG=C mvn -q test",
-        "edi status working -- reading the brief"})
+        "edi status working -- reading the brief",
+        "env -v mvn -q test",
+        "env --chdir=/tmp ls",
+        "env --deb mvn -q test",
+        "exec mvn -q test",
+        "exec -a lamp mvn -q test",
+        "find . -name '*.java' | xargs env LANG=C wc -l"})
     void letsAWorkerReadThoseVariablesAndSetItsOwn(String command) {
         assertThat(FOR_A_WORKER.check(command)).isEmpty();
     }

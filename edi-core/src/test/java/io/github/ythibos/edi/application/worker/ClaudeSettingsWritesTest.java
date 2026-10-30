@@ -56,7 +56,26 @@ class ClaudeSettingsWritesTest {
                 shell("cp off.json harbour/settings.local.json"),
                 shell("cp -t .claude off.json"),
                 shell("dd if=off.json of=.claude/settings.local.json"),
-                shell("bash -c \"echo '{}' > .claude/settings.local.json\""));
+                shell("bash -c \"echo '{}' > .claude/settings.local.json\""),
+                shell("echo '" + SWITCHED_OFF + "' > \"$PWD/.claude/settings.local.json\""),
+                shell("echo '" + SWITCHED_OFF + "' > \"${PWD}/.claude/settings.json\""),
+                shell("D=.claude; echo '" + SWITCHED_OFF + "' > \"$D/settings.local.json\""),
+                shell("cp off.json \"$SETTINGS\""),
+                shell("cp -r /tmp/lamp/.claude ."),
+                shell("cp -r /tmp/lamp/. ."),
+                shell("rsync -a /tmp/lamp/ ./"),
+                shell("rsync -a /tmp/lamp/.claude ."),
+                shell("mv /tmp/lamp/.claude ."),
+                shell("git checkout -- .claude"),
+                shell("git checkout lamp -- .claude/settings.json"),
+                shell("git restore --source lamp .claude"),
+                shell("tar -xf /tmp/lamp.tar"),
+                shell("tar xzf /tmp/lamp.tgz -C ."),
+                shell("tar --extract --file=/tmp/lamp.tar --directory=" + worktree),
+                shell("perl -pi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -i.bak -pe 's/false/true/' .claude/settings.local.json"),
+                shell("mv .claude /tmp/lamp-settings"),
+                shell("mv " + worktree.resolve(".claude") + " old-settings"));
 
         assertThat(calls).filteredOn(call -> !refusesTheSettings(guarded(call))).isEmpty();
     }
@@ -65,6 +84,9 @@ class ClaudeSettingsWritesTest {
     void letsAWorkerReadItsClaudeDirectoryAndWriteItsSources() {
         for (ToolCall call : List.of(new ToolCall("Read", null, ".claude/settings.json", worktree), shell("cat .claude/settings.json"),
                 shell("cp .claude/settings.json /tmp/settings-copy.json"), shell("mv .claude/notes.md docs/notes.md"), write("Write", "src/Lamp.java"),
+                shell("cp -t /tmp .claude/settings.json"), shell("cp -r /tmp/lamp/src ."), shell("rsync -a /tmp/lamp/ build/"),
+                shell("tar -xf /tmp/lamp.tar -C build"), shell("tar -tf /tmp/lamp.tar"), shell("git checkout -- src/Lamp.java"),
+                shell("perl -pi -e 's/a/b/' src/Lamp.java"), shell("\"$JAVA_HOME/bin/java\" -version"),
                 shell("echo lamp > notes.txt"),
                 shell("sed -i 's/a/b/' src/Lamp.java"))) {
             assertThat(guarded(call)).as(call.toString()).isEqualTo(HookAnswer.PROCEED);

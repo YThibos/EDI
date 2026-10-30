@@ -216,7 +216,7 @@ public class GuardToolCall {
 
     private static String realisedFrom(Path workingDirectory, String written) {
         try {
-            Path path = Path.of(written);
+            Path path = Path.of(SocketPathWords.expanded(written, workingDirectory));
             return RealPaths.of(workingDirectory == null ? path : workingDirectory.resolve(path)).toString();
         } catch (InvalidPathException unreadable) {
             return written;
