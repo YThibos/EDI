@@ -49,4 +49,4 @@ When a third forge is registered, `glab` supports several accounts per host, or 
 
 - 16/10/2026: slice S5 built both adapters on the allow-list, bound every call to the registry's account after the failed deliveries of 14/10/2026, and refused pushes to any other repository.
 - 21/10/2026: the adapters learnt to list every request from a branch, merged ones included ([merge-following](merge-following.md)).
-- 29/10/2026: the credential helper quotes the host and the account, and a forge host or a remote's host must be a DNS name, since a crafted remote could otherwise reach the helper's shell snippet (EDI-128).
+- 30/10/2026: the credential helper quotes the host and the account, and a forge host or a remote's host must be a DNS name, since a crafted remote could otherwise reach the helper's shell snippet (EDI-128).

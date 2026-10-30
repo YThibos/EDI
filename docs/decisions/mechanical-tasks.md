@@ -42,4 +42,4 @@ When the protected patterns refuse a change a reviewer would accept.
 - 15/10/2026: the specification made `mechanical` foolproof three ways: an exact expected change, a full verify with a diff limited to the named files, and no protected file.
 - 16/10/2026: slice S3 built the check and the re-dispatch as `implementation`.
 - 26/10/2026: the record stated that an accepted check went on to the done's claims, so it now says that the claims are checked when the done is reported and the mechanical check gates the delivery (EDI-52).
-- 29/10/2026: the security review asked whether the verify command needs the care the forge's credential helper got; it runs as the captain wrote it, since it is the captain's own configuration (EDI-128).
+- 30/10/2026: the security review asked whether the verify command needs the care the forge's credential helper got; it runs as the captain wrote it, since it is the captain's own configuration (EDI-128).
