@@ -28,7 +28,9 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
+import io.github.ythibos.edi.domain.publish.TextVerdict;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
@@ -62,7 +64,8 @@ public class DeliverDraft {
         requireACleanPublication(workplace);
         Optional<MergeRequestView> found = records.requestFrom(workplace);
         requireNoMergeYet(workplace, found);
-        MergeRequestView request = found.orElseGet(() -> forges.serving(forge).openDraft(forge, proposalFor(workplace)));
+        MergeRequestView request = found.orElseGet(() -> forges.serving(forge).openDraft(forge, aCleanProposalFor(workplace)));
+        found.ifPresent(posted -> requireACleanText(workplace, forges.serving(forge).textOf(forge, posted.address())));
         requireTheDeliveryOf(workplace, request, head);
         return recorded(workplace, request, found.isEmpty(), actor);
     }
@@ -97,8 +100,18 @@ public class DeliverDraft {
         });
     }
 
-    private DraftProposal proposalFor(Workplace workplace) {
-        return DraftProposal.forWork(workplace.dispatch().branch(), workplace.base(), workplace.task().intake().title(), deliveryNoteOf(workplace));
+    private DraftProposal aCleanProposalFor(Workplace workplace) {
+        DraftProposal proposal = DraftProposal.forWork(workplace.dispatch().branch(), workplace.base(), workplace.task().intake().title(),
+                deliveryNoteOf(workplace));
+        requireACleanText(workplace, new RequestText(proposal.title(), proposal.description()));
+        return proposal;
+    }
+
+    private void requireACleanText(Workplace workplace, RequestText text) {
+        TextVerdict verdict = publishCheck.checkText(workplace.worktree(), text);
+        if (!verdict.allowsPosting()) {
+            throw new Refusal(verdict.refusal());
+        }
     }
 
     private static String deliveryNoteOf(Workplace workplace) {

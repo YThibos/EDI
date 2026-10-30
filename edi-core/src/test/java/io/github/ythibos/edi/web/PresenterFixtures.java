@@ -27,6 +27,7 @@ import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
 import io.github.ythibos.edi.web.report.CaptainReportPresenter;
+import io.github.ythibos.edi.web.report.TurnReportPresenter;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.worker.HealthWords;
 import io.github.ythibos.edi.web.worker.WorkerListText;
@@ -64,6 +65,10 @@ public final class PresenterFixtures {
 
     public static CaptainReportPresenter captainReportPresenter() {
         return new CaptainReportPresenter(presenceWords());
+    }
+
+    public static TurnReportPresenter turnReportPresenter() {
+        return new TurnReportPresenter(presenceWords());
     }
 
     public static ReturnBriefText returnBriefText() {

@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -61,6 +62,13 @@ public class GitLabForge implements Forge {
                 "--title", proposal.title(), "--description", proposal.description(), "--yes"), Map.of(), null);
         return MergeRequestView.openAmong(mergeRequestsFrom(forge, proposal.branch()))
                 .orElseThrow(() -> new ProgramFailure("glab opened no merge request from " + proposal.branch() + " on " + forge.repository() + "."));
+    }
+
+    @Override
+    public RequestText textOf(RegisteredForge forge, MergeRequestAddress address) {
+        JsonNode request = json.readTree(calls.run(ForgeCommand.GLAB_MR_VIEW,
+                List.of(String.valueOf(address.number()), "-R", forge.repository().url(), "-F", "json"), Map.of(), null));
+        return new RequestText(request.path("title").asString(""), request.path("description").asString(""));
     }
 
     @Override

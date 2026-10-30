@@ -111,6 +111,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
 | 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | open | [#87](https://github.com/YThibos/EDI/issues/87) |
+| 52 | [EDI-151](EDI-151.md) | Stopping a worker also ends the processes it left behind in its copy | S | - | open | [#107](https://github.com/YThibos/EDI/issues/107) |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
@@ -191,7 +192,7 @@ The section sits after the six waves; the captain may move it up.
 | 48 | [EDI-138](EDI-138.md) | The worker-identity and tmux guards close the bypasses found after EDI-122 and EDI-123 landed | M | medium | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#97](https://github.com/YThibos/EDI/issues/97) |
 | 49 | [EDI-139](EDI-139.md) | Tests never reach the captain's real Outlook calendar | S | low | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#98](https://github.com/YThibos/EDI/issues/98) |
 | 50 | [EDI-140](EDI-140.md) | PinnedActionsTest reads the parsed workflow, and the CI service image and mise version are pinned too | XS | info | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#99](https://github.com/YThibos/EDI/issues/99) |
-| 51 | [EDI-150](EDI-150.md) | Pull request and merge request texts pass the publish guard before EDI posts them | M | medium | - | open | [#104](https://github.com/YThibos/EDI/issues/104) |
+| 51 | [EDI-150](EDI-150.md) | Pull request and merge request texts pass the publish guard before EDI posts them | M | medium | - | delivered | [#104](https://github.com/YThibos/EDI/issues/104) |
 
 ### Held, parked and needs the captain's machine, no wave
 
@@ -206,7 +207,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. | - |
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | delivered | - |
-| - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | open: continue the draft pull request #85, handed over on 29 October 2026 | - |
+| - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | delivered | - |
 | - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the captain's Pro cloud session; skip it until the captain changes its status to `open` on its issue. | - |
 | - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the pull request edits, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
 | - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | held: for the captain's Pro cloud session (28 October 2026), or the captain's machine on his word; skip it until the captain changes its status to `open` on its issue. | [#95](https://github.com/YThibos/EDI/issues/95) |

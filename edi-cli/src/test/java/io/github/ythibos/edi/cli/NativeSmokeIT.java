@@ -265,9 +265,10 @@ class NativeSmokeIT {
 
         assertThat(report.exitCode()).isZero();
         assertThat(report.output()).startsWith("╔══ NEEDS YOUR DECISION ══ ")
-                .contains("║  %-6sWhich lantern?\n".formatted(number), "║        » Recommended: A - it shines\n", "  harness           • Rendered natively\n");
+                .contains("║  %-6sWhich lantern?\n".formatted(number), "║        » Recommended: A - it shines\n", "  harness           • Rendered natively\n")
+                .doesNotContain("ONGOING");
         assertThat(sitrep.output()).contains("║  %-6sWhich lantern?\n".formatted(number)).doesNotContain("Rendered natively");
-        assertThat(asJson.output()).contains("\"fleet\":{", "\"width\":{\"columns\":120}");
+        assertThat(asJson.output()).contains("\"waiting\":{", "\"width\":{\"columns\":120}");
     }
 
     @Test

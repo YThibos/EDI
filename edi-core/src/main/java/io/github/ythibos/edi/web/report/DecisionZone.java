@@ -67,6 +67,7 @@ final class DecisionZone {
     private static List<String> entryLines(Entry entry, int boxWidth) {
         return switch (entry) {
             case Call call -> decisionLines(call, boxWidth);
+            case Reminder reminder -> reminderLines(reminder, boxWidth);
             case BoardQuestions board -> boardLines(board, boxWidth);
             case Review review -> singleLine(WaitingWords.review(review.title(), review.url()), boxWidth);
             case Changing changing -> singleLine(WaitingWords.changing(changing.title(), changing.url(), changing.why()), boxWidth);
@@ -83,6 +84,16 @@ final class DecisionZone {
         }
         card.options().forEach(option -> lines.addAll(optionLines(option, boxWidth)));
         lines.addAll(recommendationLines(card.recommendation(), boxWidth));
+        return lines;
+    }
+
+    private static List<String> reminderLines(Reminder reminder, int boxWidth) {
+        DecisionCard card = reminder.card();
+        DecisionOption recommended = card.recommendedOption();
+        String line = Glyphs.safe(card.title()) + " » Recommended: " + recommended.key() + " - " + Glyphs.safe(recommended.text());
+        List<String> lines = new ArrayList<>();
+        lines.add(RAIL);
+        lines.addAll(onTheRail(WordWrap.hanging(line, boxWidth, numbered(reminder.number()), CARD_INDENT)));
         return lines;
     }
 
@@ -137,6 +148,9 @@ final class DecisionZone {
     }
 
     record Call(DecisionNumber number, ProjectSet projects, DecisionCard card) implements Entry {
+    }
+
+    record Reminder(DecisionNumber number, ProjectSet projects, DecisionCard card) implements Entry {
     }
 
     record BoardQuestions(ProjectSet projects, String title, int questions, String link, List<BoardDecision> decisions) implements Entry {
