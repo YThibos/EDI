@@ -237,7 +237,7 @@ class ApiTest {
     @Test
     void checksTheOutgoingCommitsOfARepositoryBeforeAPush() throws Exception {
         assumeTrue(InstalledPrograms.answers("gitleaks", "version"), "gitleaks is not installed");
-        FixtureRepository repository = FixtureRepository.initialise(Files.createTempDirectory(home, "repository-"))
+        FixtureRepository repository = FixtureRepository.initialise(Files.createDirectories(home.resolve("worktrees/harness/api-secrets")))
                 .write("README.md", "A project.\n")
                 .commit("Start the project")
                 .branch("secrets")
@@ -252,6 +252,37 @@ class ApiTest {
         assertThat(refused.statusCode()).isEqualTo(409);
         assertThat(refused.body()).isEqualTo("config/app.properties:1 in commit " + repository.head().substring(0, 7) + ": gitleaks rule aws-access-token\n"
                 + "Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.\n");
+    }
+
+    @Test
+    void checksOnlyARegisteredClonesOrAnIsolatedCopysCommits() throws Exception {
+        Path elsewhere = FixtureRepository.initialise(Files.createTempDirectory(home, "elsewhere-")).write("README.md", "A stranger.\n")
+                .commit("Start elsewhere").root();
+        Path linkedCopy = Files.createSymbolicLink(Files.createDirectories(home.resolve("worktrees/harness")).resolve("api-linked"), elsewhere);
+
+        for (Path repository : List.of(elsewhere, linkedCopy, home.resolve("worktrees/harness/api-linked/../../../" + elsewhere.getFileName()))) {
+            assertRefusal(post("/api/publish-checks", "{\"repository\":\"" + repository + "\",\"range\":\"main..main\"}", TEXT), 409,
+                    "The publish check runs only in a registered project's clone or a task's isolated copy under " + home.resolve("worktrees")
+                            + ", and " + repository.normalize() + " is neither.");
+        }
+    }
+
+    @Test
+    void letsAWorkerCheckOnlyItsOwnIsolatedCopy() throws Exception {
+        String worker = workerTokenFor("api-pusher");
+        Path ownCopy = FixtureRepository.initialise(Files.createDirectories(home.resolve("worktrees/harness/api-pusher"))).write("README.md", "Lamp.\n")
+                .commit("Fit the lamp").root();
+        Path otherCopy = FixtureRepository.initialise(Files.createDirectories(home.resolve("worktrees/harness/api-other"))).write("README.md", "Horn.\n")
+                .commit("Tune the horn").root();
+
+        HttpResponse<String> own = send(as(worker, "/api/publish-checks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"repository\":\"" + ownCopy + "\",\"range\":\"main..main\"}")));
+        HttpResponse<String> other = send(as(worker, "/api/publish-checks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"repository\":\"" + otherCopy + "\",\"range\":\"main..main\"}")));
+
+        assertThat(own.body()).doesNotContain("runs only in");
+        assertRefusal(other, 409, "A worker runs the publish check only in its own isolated copy, " + home.resolve("worktrees/harness/api-pusher")
+                + ", and " + otherCopy + " is not it.");
     }
 
     @Test
