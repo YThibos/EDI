@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.primary;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.domain.primary.PrimaryRole;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
+import io.github.ythibos.edi.domain.primary.PrimaryTurn;
 import io.github.ythibos.edi.domain.primary.Standing;
 
 @Component
@@ -31,6 +33,10 @@ public class PrimarySessions {
 
     public Optional<PrimarySession> holder() {
         return transaction.execute(_ -> role().holder());
+    }
+
+    public Optional<Instant> previousReportOf(UUID session) {
+        return transaction.execute(_ -> sessions.get(session).map(PrimarySession::turn).map(PrimaryTurn::previousReportAt));
     }
 
     PrimaryRole role() {

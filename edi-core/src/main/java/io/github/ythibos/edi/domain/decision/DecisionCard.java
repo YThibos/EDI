@@ -29,6 +29,10 @@ public record DecisionCard(String title, String context, List<DecisionOption> op
         return offers(options, key);
     }
 
+    public DecisionOption recommendedOption() {
+        return options.stream().filter(option -> option.key().equals(recommendation.key())).findFirst().orElseThrow();
+    }
+
     public boolean asksTheSameAs(DecisionCard other) {
         return title.equals(other.title);
     }

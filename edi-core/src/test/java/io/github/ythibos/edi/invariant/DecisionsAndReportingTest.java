@@ -70,6 +70,7 @@ import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.TaskWording;
 import io.github.ythibos.edi.web.report.Turn;
 import io.github.ythibos.edi.web.report.TurnItem;
+import io.github.ythibos.edi.web.report.TurnReport;
 
 @DisplayName("4.4 Decisions and reporting")
 class DecisionsAndReportingTest {
@@ -131,6 +132,33 @@ class DecisionsAndReportingTest {
 
             String report = captainReport(home, aTurnAboutOtherWork());
             assertThat(report).contains("║  " + open + "   Which lamp?", "║        (A)  The simple way", "║        » Recommended: A - it is enough");
+        }
+
+        @Test
+        @DisplayName("AT-19 an open decision shows its card in the turn report of the turn it is raised and one line in every later turn report")
+        void anOpenDecisionStaysInEveryTurnReportOnOneLineOnceShown() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
+            UUID primary = UUID.randomUUID();
+            home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+            home.primaryHooks().promptSubmitted(primary, "Ask me about the lamp.");
+            home.addTask().add(captainItem("lamp-choice", "Choose the lamp"), Actor.PRIMARY);
+            DecisionNumber open = raise(home, "lamp-choice", "Which lamp?");
+
+            String raisedTurn = turnReport(home, primary);
+            String raisedTurnAgain = turnReport(home, primary);
+            home.clock().advance(Duration.ofHours(1));
+            home.primaryHooks().promptSubmitted(primary, "Fit the bracket.");
+            String laterTurn = turnReport(home, primary);
+            home.clock().advance(Duration.ofDays(3));
+            home.primaryHooks().promptSubmitted(primary, "<task-notification>\n<status>completed</status>\n</task-notification>");
+            home.clock().advance(Duration.ofHours(1));
+            home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+            String muchLaterTurn = turnReport(home, primary);
+
+            assertThat(raisedTurn).isEqualTo(raisedTurnAgain)
+                    .contains("║  " + open + "   Which lamp?\n", "║        (A)  The simple way\n", "║        » Recommended: A - it is enough\n");
+            assertThat(laterTurn).isEqualTo(muchLaterTurn)
+                    .contains("║  " + open + "   Which lamp? » Recommended: A - The simple way\n").doesNotContain("(A)", "it is enough");
         }
 
         private static Turn aTurnAboutOtherWork() {
@@ -430,7 +458,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-21 Every state-changing turn ends with the boxed captain report")
+    @DisplayName("I-21 Every state-changing turn ends with the turn report")
     class StateChangingTurnsEndWithTheReport {
 
         @Test
@@ -450,7 +478,7 @@ class DecisionsAndReportingTest {
 
             assertThat(quietTurn).isEqualTo(HookAnswer.PROCEED);
             assertThat(unreported.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
-            assertThat(unreported.reason()).isEqualTo("This turn changed state: render the captain report with edi report and paste it verbatim, then stop.");
+            assertThat(unreported.reason()).isEqualTo("This turn changed state: render the turn report with edi report --turn - and paste it verbatim, then stop.");
             assertThat(reported).isEqualTo(HookAnswer.PROCEED);
         }
     }
@@ -515,6 +543,13 @@ class DecisionsAndReportingTest {
     private static String captainReport(TestHome home, Turn turn) {
         return PresenterFixtures.captainReportPresenter().text(new CaptainReport(home.fleetSnapshot().snapshot(), turn, ReportWidth.standard(), Presence.presentSince(TestHome.START),
                 null, null));
+    }
+
+    private static String turnReport(TestHome home, UUID session) {
+        TurnReport report = new TurnReport(home.fleetSnapshot().snapshot().waiting(), Turn.NONE, ReportWidth.standard(), null,
+                home.primarySessions().previousReportOf(session).orElse(null));
+        home.primaryHooks().reportRendered(session);
+        return PresenterFixtures.turnReportPresenter().text(report);
     }
 
     private static ConsoleSitrep consoleSitrep(TestHome home) {

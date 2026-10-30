@@ -251,7 +251,7 @@ class CommandsTest {
     }
 
     @Test
-    void readsTheReportWithoutATurnAndTheSitrepAlike() {
+    void sendsAnEmptyTurnForTheReportWithoutOneAndReadsTheSitrep() {
         core.answering(200, "report\n");
 
         edi("", "report");
@@ -259,7 +259,7 @@ class CommandsTest {
         edi("", "sitrep", "--json");
         StubCore.Request sitrep = core.received();
 
-        assertThat(report).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "text/plain", null, null, ""));
+        assertThat(report).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, "{}"));
         assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, ""));
     }
 
@@ -285,6 +285,32 @@ class CommandsTest {
         assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\nEDI console: http://127.0.0.1:5490/ is open in your browser.\n");
         assertThat(core.requests()).extracting(StubCore.Request::method, StubCore.Request::target)
                 .containsExactly(tuple("GET", "/api/report"), tuple("POST", "/api/console/open"));
+    }
+
+    @Test
+    void sendsTheTurnFromStandardInputForTheSitrep() {
+        core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n");
+        String turn = "{\"done\":[{\"projects\":[],\"text\":\"Fitted the lamp\"}],\"next\":[],\"tasks\":{}}";
+
+        int exitCode = edi(turn, "sitrep", "--turn", "-");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\n");
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report/sitrep", "Bearer stub-token", "text/plain", null, null, turn));
+    }
+
+    @Test
+    void printsTheSitrepWithTheTurnAndThenOpensItsBoardInTheConsole() {
+        core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n").thenAnswering(200, "╔══ NEEDS YOUR DECISION ══ nothing open ═══\n")
+                .thenAnswering(200, "EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
+        String turn = "{\"next\":[{\"text\":\"Fit the lamp\"}]}";
+
+        int exitCode = edi(turn, "sitrep", "--board", "--turn", "-");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\nEDI console: http://127.0.0.1:5490/ is open in your browser.\n");
+        assertThat(core.requests()).extracting(StubCore.Request::method, StubCore.Request::target, StubCore.Request::body)
+                .containsExactly(tuple("POST", "/api/report/sitrep", turn), tuple("POST", "/api/console/open", "{}"));
     }
 
     @Test

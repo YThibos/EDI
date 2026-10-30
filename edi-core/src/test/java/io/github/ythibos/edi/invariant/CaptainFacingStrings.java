@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Named;
 
 import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
+import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.presence.CaptainNotices;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -51,6 +52,7 @@ import io.github.ythibos.edi.web.migration.MigrationReportText;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
+import io.github.ythibos.edi.web.report.TurnReport;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -91,6 +93,11 @@ final class CaptainFacingStrings {
                 fleet.waiting(), fleet.landed(), List.of(), fleet.ongoing())));
         views.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE, ReportWidth.standard(),
                 Presence.presentSince(TestHome.START), null, null)));
+        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(),
+                new UnreadableCalendar(NOW, "Outlook did not answer."), null)));
+        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(), null, NOW)));
+        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), Turn.NONE,
+                ReportWidth.standard(), null, NOW)));
         views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
         return views;

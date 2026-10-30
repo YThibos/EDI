@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 
 public final class FakeForge implements Forge {
@@ -29,6 +30,7 @@ public final class FakeForge implements Forge {
     private final Map<Integer, MergeRequestView> mergeRequests = new HashMap<>();
     private final Map<String, String> pushedHeads = new HashMap<>();
     private final List<DraftProposal> openedDrafts = new ArrayList<>();
+    private final Map<Integer, RequestText> texts = new HashMap<>();
     private final Set<MergeRequestAddress> unreachable = new HashSet<>();
     private boolean workflowScope = true;
     private int lastNumber;
@@ -67,7 +69,19 @@ public final class FakeForge implements Forge {
     @Override
     public synchronized MergeRequestView openDraft(RegisteredForge forge, DraftProposal proposal) {
         openedDrafts.add(proposal);
-        return opened(forge, proposal.branch(), proposal.base(), pushedHeads.get(proposal.branch().toString()), true);
+        MergeRequestView opened = opened(forge, proposal.branch(), proposal.base(), pushedHeads.get(proposal.branch().toString()), true);
+        texts.put(opened.address().number(), new RequestText(proposal.title(), proposal.description()));
+        return opened;
+    }
+
+    @Override
+    public synchronized RequestText textOf(RegisteredForge forge, MergeRequestAddress address) {
+        view(forge, address);
+        return texts.getOrDefault(address.number(), new RequestText("", ""));
+    }
+
+    public synchronized void describes(MergeRequestAddress address, RequestText text) {
+        texts.put(address.number(), text);
     }
 
     @Override
