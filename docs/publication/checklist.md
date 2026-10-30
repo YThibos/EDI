@@ -4,15 +4,12 @@ This checklist follows the findings of [EDI-132](../backlog/EDI-132.md) and reco
 A box is ticked when the step is done; a step marked *captain's machine* needs the account that owns the repository and the captain's word in the session that does it.
 The patterns that find personal material live in the EDI home, never here.
 
-## Before anything else: the security items
+## What blocks the switch
 
-The four worker escapes and the pinned actions block this item; the five low findings are marked to land before it.
+The captain decided on 30 October 2026 that only what could publish credentials or sensitive data blocks the switch: EDI runs on the captain's own machine for the captain alone, and the repository goes public to show EDI to colleagues.
 
 - [x] EDI-122, EDI-123, EDI-124 and EDI-125, the worker escapes, and EDI-131, the pinned actions, merged.
-- [x] EDI-126, the console's Host check and framing headers, merged.
-- [ ] EDI-127, EDI-128, EDI-129 and EDI-130, the remaining low findings, in review.
-- [ ] EDI-138, the bypasses found after EDI-122 and EDI-123, in review; whether it must land first is the captain's call, asked on its issue.
-- [ ] EDI-139 and EDI-140, the low and informational follow-ups, in review.
+- [x] The hardening findings, EDI-126 to EDI-130 and EDI-138 to EDI-140, do not block the switch; they publish nothing, and they land or are dropped on their own.
 
 ## 1. History
 
