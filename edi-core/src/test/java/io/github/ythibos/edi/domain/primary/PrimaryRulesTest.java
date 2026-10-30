@@ -73,6 +73,24 @@ class PrimaryRulesTest {
     }
 
     @Test
+    void remembersTheLastReportOfAnEarlierTurnAcrossTurnsWithoutOne() {
+        PrimarySession firstTurn = PrimarySession.started(UUID.randomUUID(), null, START).promptSubmitted(new Prompt("Fit the lamp."), 1, START);
+        PrimarySession reportedTwice = firstTurn.reported(START.plusSeconds(5)).reported(START.plusSeconds(8));
+        PrimarySession secondTurn = reportedTwice.promptSubmitted(new Prompt("And the bell?"), 2, START.plusSeconds(60));
+        PrimarySession thirdTurn = secondTurn.promptSubmitted(new Prompt("<task-notification>"), 3, START.plusSeconds(120));
+        PrimarySession reportedInTheThird = thirdTurn.reported(START.plusSeconds(125));
+
+        assertThat(firstTurn.turn().previousReportAt()).isNull();
+        assertThat(reportedTwice.turn().previousReportAt()).isNull();
+        assertThat(secondTurn.turn().previousReportAt()).isEqualTo(START.plusSeconds(8));
+        assertThat(thirdTurn.turn().previousReportAt()).isEqualTo(START.plusSeconds(8));
+        assertThat(reportedInTheThird.turn().previousReportAt()).isEqualTo(START.plusSeconds(8));
+        assertThat(reportedInTheThird.promptSubmitted(new Prompt("Next."), 4, START.plusSeconds(180)).turn().previousReportAt())
+                .isEqualTo(START.plusSeconds(125));
+        assertThat(secondTurn.turn().renderedTheReport()).isFalse();
+    }
+
+    @Test
     void recognisesALiveEdiWaitAmongTheSessionsBackgroundJobs() {
         assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "running", "edi wait")))).isTrue();
         assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "pending", "cd ~/.edi && /usr/local/bin/edi wait 2>&1")))).isTrue();

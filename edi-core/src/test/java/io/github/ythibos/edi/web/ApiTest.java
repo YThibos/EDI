@@ -60,6 +60,9 @@ import tools.jackson.databind.json.JsonMapper;
 class ApiTest {
 
     private static final String TEXT = "text/plain";
+    private static final long ABOVE_THE_HIGHEST_LINUX_PID = 4_194_304L;
+    private static final WorkerWindow WINDOW_OF_NO_PROCESS = new WorkerWindow("edi-test", ABOVE_THE_HIGHEST_LINUX_PID + 1,
+            Instant.parse("2026-10-15T09:00:00Z"), "@1", ABOVE_THE_HIGHEST_LINUX_PID + 2);
     private static final String JSON = "application/json";
 
     @TempDir
@@ -165,7 +168,11 @@ class ApiTest {
     }
 
     @Test
-    void rendersTheCaptainReportForTheCallersPaneWithOrWithoutATurn() throws Exception {
+    void rendersTheSitrepForTheCallersPaneAndTheTurnReportWithOnlyWhatNeedsTheCaptain() throws Exception {
+        post("/api/tasks", "{\"id\":\"api-buoy\",\"kind\":\"captain\",\"title\":\"Choose the buoy\"}", TEXT);
+        String number = post("/api/tasks/api-buoy/decision", """
+                {"title":"Which buoy colour?","context":"","options":[{"key":"A","text":"Red"}],"recommend":{"key":"A","why":"it shows"}}""", TEXT)
+                .body().strip();
         HttpResponse<String> sitrep = get("/api/report?paneWidth=90", TEXT);
         HttpResponse<String> report = post("/api/report", """
                 {"done":[{"projects":["harness"],"text":"Painted the buoy"}],"next":[],"tasks":{}}""", TEXT);
@@ -173,11 +180,50 @@ class ApiTest {
 
         assertThat(sitrep.statusCode()).isEqualTo(200);
         assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(88);
-        assertThat(sitrep.body()).contains("\nDONE THIS TURN  (0)\n", "  Nothing finished this turn\n");
+        assertThat(sitrep.body()).contains("\nDONE THIS TURN  (0)\n", "  Nothing finished this turn\n", "\nONGOING  (");
         assertThat(report.statusCode()).isEqualTo(200);
-        assertThat(report.body().lines().findFirst().orElseThrow()).hasSize(120);
-        assertThat(report.body()).contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Painted the buoy\n");
+        assertThat(report.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(120);
+        assertThat(report.body()).contains("║  %-6sWhich buoy colour?\n".formatted(number), "║        » Recommended: A - it shows\n",
+                "\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Painted the buoy\n")
+                .doesNotContain("ONGOING", "PARKED", "BACKLOG", "NEXT", "Nothing finished this turn");
         assertThat(asJson.body()).contains("\"fleet\":{", "\"turn\":{\"done\":[]", "\"width\":{\"columns\":120}");
+    }
+
+    @Test
+    void givesItsWorkersAWindowThatNoProcessOfTheMachineCanBe() {
+        assertThat(ProcessHandle.of(WINDOW_OF_NO_PROCESS.serverPid())).isEmpty();
+        assertThat(ProcessHandle.of(WINDOW_OF_NO_PROCESS.panePid())).isEmpty();
+    }
+
+    @Test
+    void carriesTheTurnsItemsIntoTheSitrepWhenTheTurnIsPosted() throws Exception {
+        HttpResponse<String> sitrep = post("/api/report/sitrep", """
+                {"done":[{"projects":["harness"],"text":"Moored the buoy"}],"next":[],"tasks":{}}""", TEXT);
+
+        assertThat(sitrep.statusCode()).isEqualTo(200);
+        assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(120);
+        assertThat(sitrep.body()).contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Moored the buoy\n", "\nONGOING  (")
+                .doesNotContain("Nothing finished this turn");
+    }
+
+    @Test
+    void drawsADecisionCardInFullInTheTurnItIsRaisedAndOnOneLineInTheTurnsAfter() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Ask me about the bell.\"}");
+        post("/api/tasks", "{\"id\":\"api-bell\",\"kind\":\"captain\",\"title\":\"Choose the bell\"}", TEXT);
+        String number = post("/api/tasks/api-bell/decision", """
+                {"title":"Which bell?","context":"","options":[{"key":"A","text":"Brass"},{"key":"B","text":"Iron"}],"recommend":{"key":"A","why":"it rings"}}""",
+                TEXT).body().strip();
+        String raisedTurn = turnReportInSession(primary).body();
+        String raisedTurnAgain = turnReportInSession(primary).body();
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Carry on.\"}");
+        String laterTurn = turnReportInSession(primary).body();
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(raisedTurn).contains("║  %-6sWhich bell?\n".formatted(number), "║        (A)  Brass\n", "║        » Recommended: A - it rings\n");
+        assertThat(raisedTurnAgain).isEqualTo(raisedTurn);
+        assertThat(laterTurn).contains("║  %-6sWhich bell? » Recommended: A - Brass\n".formatted(number)).doesNotContain("(A)  Brass", "it rings");
     }
 
     @Test
@@ -302,8 +348,8 @@ class ApiTest {
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
         assertThat(queued.statusCode()).isEqualTo(201);
-        assertThat(unreported.body()).isEqualTo("{\"decision\":\"block\",\"reason\":\"This turn changed state: render the captain report with "
-                + "edi report and paste it verbatim, then stop.\"}");
+        assertThat(unreported.body()).isEqualTo("{\"decision\":\"block\",\"reason\":\"This turn changed state: render the turn report with "
+                + "edi report --turn - and paste it verbatim, then stop.\"}");
         assertThat(reported.statusCode()).isEqualTo(204);
     }
 
@@ -476,6 +522,10 @@ class ApiTest {
         return send(inSession(session, "/api/decisions/" + number + "/answer", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(answer)));
     }
 
+    private static HttpResponse<String> turnReportInSession(UUID session) throws Exception {
+        return send(inSession(session, "/api/report", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}")));
+    }
+
     private static HttpRequest.Builder waitIn(UUID session) throws IOException {
         return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}"));
     }
@@ -497,7 +547,7 @@ class ApiTest {
         WorkerTokens.IssuedToken token = workerTokens.issueInto(home.resolve("state/workers/" + task));
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
-                new WorkerWindow("edi-test", 1, Instant.parse("2026-10-15T09:00:00Z"), "@1", 2),
+                WINDOW_OF_NO_PROCESS,
                 new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
         return Files.readString(token.file());
     }

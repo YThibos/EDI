@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.testing.ForgeStandIns;
 import tools.jackson.databind.json.JsonMapper;
@@ -86,6 +87,16 @@ class GitHubForgeTest {
             assertThat(request.landedCommit()).isEqualTo("3333");
             assertThat(request.mergedAt()).isEqualTo(Instant.parse("2026-10-21T12:37:04Z"));
         });
+    }
+
+    @Test
+    void readsTheTitleAndDescriptionOfAPullRequestUnderTheBoundAccount() throws IOException {
+        standIns.answering("pr-view", "{\"title\":\"HRN-3 Fit the lamp\",\"body\":\"Fits the lamp.\\nIn the hall.\"}");
+
+        RequestText text = forge.textOf(FORGE, new MergeRequestAddress(FORGE.repository(), 7));
+
+        assertThat(text).isEqualTo(new RequestText("HRN-3 Fit the lamp", "Fits the lamp.\nIn the hall."));
+        assertThat(standIns.calls()).endsWith("pr view 7 --repo github.com/example-owner/harness --json title,body");
     }
 
     @Test

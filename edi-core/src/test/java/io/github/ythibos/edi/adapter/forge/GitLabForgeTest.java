@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.testing.ForgeStandIns;
 import tools.jackson.databind.json.JsonMapper;
@@ -48,6 +49,16 @@ class GitLabForgeTest {
     void installTheStandIns() throws IOException {
         standIns = ForgeStandIns.in(directory.resolve("tools"));
         forge = new GitLabForge(new ForgeCalls(new ExternalPrograms(), standIns.gh(), standIns.glab()), new JsonMapper());
+    }
+
+    @Test
+    void readsTheTitleAndDescriptionOfAMergeRequest() throws IOException {
+        standIns.answering("mr-view", "{\"iid\":5,\"title\":\"HRN-3 Fit the lamp\",\"description\":\"Fits the lamp.\"}");
+
+        RequestText text = forge.textOf(FORGE, new MergeRequestAddress(FORGE.repository(), 5));
+
+        assertThat(text).isEqualTo(new RequestText("HRN-3 Fit the lamp", "Fits the lamp."));
+        assertThat(standIns.calls()).last().asString().startsWith("mr view 5 -R ").endsWith(" -F json");
     }
 
     @Test

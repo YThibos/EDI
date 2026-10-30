@@ -66,7 +66,7 @@ public record DenyList(List<DeniedTerm> terms) {
                 PublishFinding.onLine(PublishRule.DENIED_TERM, line.path(), line.number(), commit.id(), reasonFor(term)));
     }
 
-    private Stream<DeniedTerm> termsIn(String text) {
+    Stream<DeniedTerm> termsIn(String text) {
         return terms.stream().filter(term -> term.appearsIn(text));
     }
 

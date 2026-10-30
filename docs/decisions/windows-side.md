@@ -15,7 +15,7 @@ Each read starts a PowerShell that talks to Outlook for about four seconds.
 `WindowsToasts` shows a notification with the bundled `windows/toast.ps1` when the machine profile says `notify.windowsToast: true`; the title and text travel base64-encoded and are XML-escaped inside PowerShell, so no text can change the script, and a failed notification changes nothing.
 `OutlookCalendar` reads one day's entries with the bundled `windows/outlook-calendar.ps1` when the profile says `presence.calendar: outlook`, starting it with `WSL_INTEROP=/run/WSL/1_interop`, WSL's own server, so the read runs with the captain's ordinary rights whichever terminal started the core; the script prints the time-booking tool's JSON shape, or its failure's own message and exit code 1.
 `MeetingCalendar` keeps the latest `CalendarReading` and reads again two minutes after it (`CalendarReading.READ_AGAIN_AFTER`) or on a new day; between readings every round finds a meeting in the entries it holds, and a failed read keeps them and the moment the calendar became unreadable (`UnreadableCalendar`).
-`NoticeTheUnreadableCalendar` shows one notification for each spell of unreadability, in the first round the chat is quiet, and the captain report carries `Calendar: unreadable since ...` with the failure's words until it clears.
+`NoticeTheUnreadableCalendar` shows one notification for each spell of unreadability, in the first round the chat is quiet, and the sitrep and the turn report carry `Calendar: unreadable since ...` with the failure's words until it clears.
 
 ## Why
 
@@ -44,3 +44,4 @@ When WSL renames its interop servers, the calendar export becomes a file EDI can
 
 - 17/10/2026: slice S8 ran notifications and the calendar through `powershell.exe`, reading the calendar at most every fifteen minutes.
 - 22/10/2026: every read had failed for three days from an elevated terminal with only a log warning, so the read moved to WSL's own interop server, every two minutes, and an unreadable calendar is told to the captain once (EDI-34).
+- 28/10/2026: the unreadable calendar's line is carried by both the sitrep and the turn report (EDI-133).

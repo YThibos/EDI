@@ -24,6 +24,16 @@ In the first week the report was 30.2% of the primary's output tokens, run five 
 This item builds its layout on that report.
 The research is in [the EDI-74 plan](research/EDI-74-plan.md), section 8, and [the EDI-75 measurements](research/EDI-75-measurements.md), section 7.
 
+## What EDI-133 already changed
+
+EDI-133 split the report in two, and this item builds on that split rather than on the boxed report alone ([turn-report](../decisions/turn-report.md)).
+
+- `edi report` prints the turn report (`TurnReport`, `TurnReportPresenter`): the calendar notice, the decision zone when something waits, and DONE THIS TURN and NEXT when the turn has items; nothing else.
+- `edi sitrep` keeps the boxed `CaptainReport` and its golden files unchanged, so AT-42 still pins the sitrep, not the turn report.
+- A decision card is drawn in full until a report of an earlier turn of the session showed it, then as one line with its number, title and recommended option (`DecisionZone.Reminder`); `PrimaryTurn.previousReportAt` carries the moment of that report, which is the "last look" this item's header and SINCE section can read.
+- Ongoing, parked and queued work, the presence and the `Builds:` line left the turn report; the WORKING line and the presence in the header are therefore additions to the turn report, not trims of it.
+- A turn report with nothing in it is one line, which this item's 12-line limit for a report with nothing waiting already allows.
+
 ## Acceptance criteria
 
 - The report shows, in order:
@@ -56,7 +66,8 @@ The research is in [the EDI-74 plan](research/EDI-74-plan.md), section 8, and [t
 ## Read first
 
 - [captain-report](../decisions/captain-report.md), [captain-facing-voice](../decisions/captain-facing-voice.md), [console](../decisions/console.md).
-- `edi-core/src/main/java/io/github/ythibos/edi/web/report/` (`CaptainReportPresenter`, `CaptainReport`, `DecisionZone`), `invariant/ReportGoldenCases.java` in the tests, `claude/primary/CLAUDE.md`.
+- [turn-report](../decisions/turn-report.md).
+- `edi-core/src/main/java/io/github/ythibos/edi/web/report/` (`TurnReportPresenter`, `TurnReport`, `CaptainReportPresenter`, `CaptainReport`, `DecisionZone`), `invariant/ReportGoldenCases.java` in the tests, `claude/primary/CLAUDE.md`.
 
 ## How to verify
 

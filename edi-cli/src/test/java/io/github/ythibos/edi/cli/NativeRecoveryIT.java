@@ -187,7 +187,7 @@ class NativeRecoveryIT {
         assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThis session is the primary",
                 "The console's sitrep page is open in the captain's browser at http://127.0.0.1:");
         assertThat(home.resolve("opened-in-the-browser")).content().startsWith("/c start http://127.0.0.1:");
-        assertThat(unreported.output()).contains("\"decision\":\"block\"", "render the captain report with edi report");
+        assertThat(unreported.output()).contains("\"decision\":\"block\"", "render the turn report with edi report --turn -");
         assertThat(reported.exitCode()).isZero();
         assertThat(reported.output()).isEmpty();
         assertThat(woken.exitCode()).isZero();
