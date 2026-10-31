@@ -45,6 +45,8 @@ class NativeSmokeIT {
     private static final RoundTripBudget ROUND_TRIP_BUDGET = new RoundTripBudget(200);
     private static final RoundTripBudget PROOF_BUDGET = new RoundTripBudget(50);
     private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
+    private static final String WSL_DISTRIBUTION = "Smoke-Linux";
+    private static final String HAND_OFF_LINK = "url=";
     private static final Pattern ADDED_TASK_ID = Pattern.compile("\"added\":\\{\"id\":\"([^\"]+)\"");
     private static final String REGISTRY = """
             projects:
@@ -82,7 +84,9 @@ class NativeSmokeIT {
     @BeforeAll
     static void startTheNativeCore() throws Exception {
         Files.createDirectories(home.resolve("config"));
-        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY.formatted(home.resolve("checkouts/harness")));
+        Files.writeString(home.resolve("config/projects.yaml"), 
+                          
+                          .formatted(home.resolve("checkouts/harness")));
         Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
         Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
                 home.resolve("config/dispatch-rules.json"));
@@ -94,7 +98,8 @@ class NativeSmokeIT {
                 "--edi.workers.mise=" + stubMise(),
                 "--edi.pipeline.home=" + pipelineHome(),
                 "--edi.console.browser=" + stubBrowser(),
-                "--edi.console.windows-directory=" + home)
+                "--edi.console.windows-directory=" + home,
+                "--edi.console.wsl-distribution=" + WSL_DISTRIBUTION)
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
@@ -143,7 +148,7 @@ class NativeSmokeIT {
     @Test
     void theCommandOpensTheConsoleThroughALinkThatSignsInOnce() throws Exception {
         CommandRun opened = edi("", "console");
-        String link = Files.readString(home.resolve("opened-in-the-browser")).strip().split(" ")[2];
+        String link = signInLinkHandedToTheBrowser();
         HttpResponse<String> signedIn = send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/console/session"))
                 .header("X-EDI-Console", "1").header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("{\"token\":\"" + link.substring(link.indexOf('#') + 1) + "\"}")));
@@ -402,6 +407,13 @@ class NativeSmokeIT {
         Path pipelineHome = Files.createDirectories(home.resolve("no-mistakes"));
         Files.writeString(pipelineHome.resolve("config.yaml"), "agent: auto\n");
         return pipelineHome;
+    }
+
+    private static String signInLinkHandedToTheBrowser() throws IOException {
+        URI handOff = URI.create(Files.readString(home.resolve("opened-in-the-browser")).strip().split(" ")[2]);
+        String page = Files.readString(Path.of(handOff.getPath().substring(WSL_DISTRIBUTION.length() + 1)));
+        int link = page.indexOf(HAND_OFF_LINK) + HAND_OFF_LINK.length();
+        return page.substring(link, page.indexOf('"', link));
     }
 
     private static String stubBrowser() throws IOException {

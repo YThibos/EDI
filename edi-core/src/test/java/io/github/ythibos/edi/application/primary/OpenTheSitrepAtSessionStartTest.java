@@ -28,6 +28,7 @@ class OpenTheSitrepAtSessionStartTest {
     private static final SessionSource LAUNCHED = SessionSource.LAUNCH;
     private static final SessionSource RESUMED = SessionSource.RESTART;
     private static final String NO_DESKTOP = "";
+    private static final String DISTRIBUTION = "Harbour-Linux";
     private static final String CAPTAINS_FIRST_PROMPT = "/sitrep board";
 
     @TempDir
@@ -55,7 +56,7 @@ class OpenTheSitrepAtSessionStartTest {
         assertThat(sitrep.openFor(primary, started(primary, RESUMED), CONSOLE)).isEmpty();
         assertThat(sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE)).isEmpty();
         assertThat(sitrep.openFor(standby, started(standby, LAUNCHED), CONSOLE)).isEmpty();
-        assertThat(Files.readAllLines(opened)).singleElement().asString().startsWith("/c start " + CONSOLE + "login#");
+        assertThat(Files.readAllLines(opened)).singleElement().asString().startsWith("/c start file://wsl.localhost/" + DISTRIBUTION + "/");
     }
 
     @Test
@@ -143,7 +144,7 @@ class OpenTheSitrepAtSessionStartTest {
     private CaptainsBrowser browserThatOpens() throws IOException {
         Path browser = StandInScripts.installed(directory.resolve("bin/browser"), "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '" + opened + "'\n");
         return new CaptainsBrowser(new ExternalPrograms(), home.home(), browser.toString(), Files.createDirectories(directory.resolve("windows")),
-                NO_DESKTOP);
+                NO_DESKTOP, DISTRIBUTION);
     }
 
     private SessionStart started(UUID session, SessionSource source) {
@@ -151,7 +152,7 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     private CaptainsBrowser browserBesideNothing() {
-        return new CaptainsBrowser(new ExternalPrograms(), home.home(), "", directory.resolve("no-windows"), NO_DESKTOP);
+        return new CaptainsBrowser(new ExternalPrograms(), home.home(), "", directory.resolve("no-windows"), NO_DESKTOP, DISTRIBUTION);
     }
 
     private String digestTelling(UUID session, ConsoleOpening sitrep) {
