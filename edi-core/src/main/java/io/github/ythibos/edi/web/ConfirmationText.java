@@ -3,6 +3,7 @@ package io.github.ythibos.edi.web;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.migration.AdoptedTask;
@@ -42,6 +43,7 @@ import io.github.ythibos.edi.web.text.TextPresenter;
 import io.github.ythibos.edi.web.text.Words;
 
 @Component
+@ImportRuntimeHints(ConfirmationBinding.class)
 class ConfirmationText implements TextPresenter<Confirmation> {
 
     @Override

@@ -22,6 +22,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -45,6 +47,7 @@ class NativeSmokeIT {
     private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
     private static final String WSL_DISTRIBUTION = "Smoke-Linux";
     private static final String HAND_OFF_LINK = "url=";
+    private static final Pattern ADDED_TASK_ID = Pattern.compile("\"added\":\\{\"id\":\"([^\"]+)\"");
     private static final String REGISTRY = """
             projects:
               - name: harness
@@ -81,7 +84,9 @@ class NativeSmokeIT {
     @BeforeAll
     static void startTheNativeCore() throws Exception {
         Files.createDirectories(home.resolve("config"));
-        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY.formatted(home.resolve("checkouts/harness")));
+        Files.writeString(home.resolve("config/projects.yaml"), 
+                          
+                          .formatted(home.resolve("checkouts/harness")));
         Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
         Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
                 home.resolve("config/dispatch-rules.json"));
@@ -189,6 +194,16 @@ class NativeSmokeIT {
         assertThat(added.output()).isEqualTo("Queued native-lantern on HRN-3.\n");
         assertThat(backlog.output()).contains("native-lantern", "Native lantern");
         assertThat(shown.output()).contains("\"workKey\":\"HRN-3\"", "\"state\":\"queued\"");
+    }
+
+    @Test
+    void theCommandAnswersAChangeInJson() throws Exception {
+        CommandRun added = edi("", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Native beacon", "--key", "HRN-4", "--json");
+        Matcher addedTask = ADDED_TASK_ID.matcher(added.output());
+
+        assertThat(added.exitCode()).isZero();
+        assertThat(addedTask.find()).as(added.output()).isTrue();
+        assertThat(edi("", "task", "show", addedTask.group(1), "--json").output()).contains("\"workKey\":\"HRN-4\"", "\"title\":\"Native beacon\"");
     }
 
     @Test
