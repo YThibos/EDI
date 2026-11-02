@@ -113,6 +113,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | delivered | [#87](https://github.com/YThibos/EDI/issues/87) |
 | 52 | [EDI-151](EDI-151.md) | Stopping a worker also ends the processes it left behind in its copy | S | - | open | [#107](https://github.com/YThibos/EDI/issues/107) |
 | 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | open | - |
+| 54 | [EDI-153](EDI-153.md) | An unanswered worker question comes back to the primary until it is answered | S | - | open | - |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
