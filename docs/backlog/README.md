@@ -116,6 +116,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 54 | [EDI-153](EDI-153.md) | An unanswered worker question comes back to the primary until it is answered | S | - | open | [#170](https://github.com/YThibos/EDI/issues/170) |
 | 55 | [EDI-154](EDI-154.md) | The turn report shows every worker waiting on the primary | XS | - | open | [#171](https://github.com/YThibos/EDI/issues/171) |
 | 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | [#173](https://github.com/YThibos/EDI/issues/173) |
+| 60 | [EDI-162](EDI-162.md) | edi worker show prints a worker's full last status and its open question | XS | - | open | [#179](https://github.com/YThibos/EDI/issues/179) |
 | 62 | [EDI-164](EDI-164.md) | Every rule, guard and hook records when it fires, and the core records its own health | M | EDI-132 | open | [#182](https://github.com/YThibos/EDI/issues/182) |
 | 63 | [EDI-165](EDI-165.md) | A weekly gardening round measures slips and rules and drafts hard rules on a board | M | EDI-155, EDI-164 | open | [#183](https://github.com/YThibos/EDI/issues/183) |
 | 64 | [EDI-166](EDI-166.md) | Sparks are captured in a second and sorted at gardening | S | EDI-132 | open | [#184](https://github.com/YThibos/EDI/issues/184) |
@@ -137,6 +138,8 @@ The Issue column shows `-` until the item's issue is opened.
 | 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 | open | - |
 | 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 | open | [#175](https://github.com/YThibos/EDI/issues/175) |
 | 58 | [EDI-157](EDI-157.md) | A merge request's validation watch never reads as changing | XS | EDI-86 | open | [#176](https://github.com/YThibos/EDI/issues/176) |
+| 59 | [EDI-161](EDI-161.md) | A worker's done is checked and booked by the core in one pass | M | EDI-86 | open | [#178](https://github.com/YThibos/EDI/issues/178) |
+| 61 | [EDI-163](EDI-163.md) | The tracker walks a ticket to a named state and checks tickets against what landed | S | - | open | [#180](https://github.com/YThibos/EDI/issues/180) |
 
 ### Wave 4: plans dispatch themselves
 
