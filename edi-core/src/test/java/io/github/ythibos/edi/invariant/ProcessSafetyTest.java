@@ -89,6 +89,26 @@ class ProcessSafetyTest {
             assertThat(forThePrimary("pgrep -f surefire").verdict()).isEqualTo(HookAnswer.Verdict.PROCEED);
             assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).filteredOn("ToolCallRefused"::equals).hasSize(7);
         }
+
+        @Test
+        @DisplayName("AT-30 the guard reads a Monitor command as it reads a Bash command, and the primary's edi wait runs alone")
+        void theGuardReadsAMonitorCommandAsAShellCommand() throws IOException {
+            prepareAWorker();
+            Path worktree = home.home().worktreeOf(new ProjectName("harness"), new TaskId("fit-lamp"));
+
+            assertDenied(home.guardToolCall().checkForWorker(worker.id(), new ToolCall("Monitor", "pkill -f surefire", null, worktree)),
+                    "kill only a process id you started and captured (I-30)");
+            assertDenied(byThePrimarysMonitor("edi wait --follow > /dev/null"), "edi wait runs alone");
+            assertDenied(forThePrimary("edi wait >/dev/null 2>&1 & disown"), "edi wait runs alone");
+            assertThat(byThePrimarysMonitor("edi wait --follow")).isEqualTo(HookAnswer.PROCEED);
+            assertThat(forThePrimary("edi wait")).isEqualTo(HookAnswer.PROCEED);
+            assertThat(SecretsAreNeverPrinted.guardedToolsIn("claude/worker/settings.json")).contains("Monitor");
+            assertThat(SecretsAreNeverPrinted.guardedToolsIn("claude/primary/settings.json")).contains("Monitor");
+        }
+
+        private HookAnswer byThePrimarysMonitor(String command) {
+            return home.guardToolCall().checkForPrimary(new ToolCall("Monitor", command, null, home.home().root()), CallingSession.UNNAMED);
+        }
     }
 
     @Nested

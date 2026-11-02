@@ -6,24 +6,33 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
+import io.github.ythibos.edi.domain.wake.WakeStream;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
+import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
 class WaitForWakesTest {
+
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
 
     @TempDir
     private Path directory;
@@ -39,49 +48,151 @@ class WaitForWakesTest {
 
     @Test
     void deliversWhatNeedsThePrimaryAndNothingRoutine() {
-        UUID primary = primarySession();
+        WakeStream stream = followedBy(primarySession());
         home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Fitting the lamp.");
 
-        assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
+        assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
 
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
-        WakeDelivery delivery = home.waitForWakes().deliverTo(primary).orElseThrow();
+        WakeDelivery delivery = home.waitForWakes().deliverTo(stream).orElseThrow();
 
         assertThat(delivery.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
         assertThat(delivery.ongoing()).isOne();
+        assertThat(delivery.streamContinues()).isTrue();
         assertThat(delivery.wakes().getFirst().wake().detail()).isEqualTo("(lamp) Brass or oil?");
     }
 
     @Test
-    void acknowledgesADeliveryWhenTheSameSessionWaitsAgain() {
+    void countsAWakeDeliveredOnceItsStreamPrintedItAndNeverAcknowledgesItForAnotherWait() {
         UUID primary = primarySession();
+        WakeStream first = waitingOnceIn(primary);
         home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
-        home.waitForWakes().deliverTo(primary);
+        WakeDelivery delivery = home.waitForWakes().deliverTo(first).orElseThrow();
+        home.waitForWakes().heard(primary, poll(first, delivery.numbers(), true));
 
-        assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
+        WakeStream second = waitingOnceIn(primary);
+
+        assertThat(home.waitForWakes().deliverTo(second)).isEmpty();
+        assertThat(home.wakes().unacknowledged()).extracting(QueuedWake::deliveredTo).containsExactly(primary);
+    }
+
+    @Test
+    void acknowledgesAPrintedWakeOnceThePrimaryActsOnItsTask() {
+        UUID primary = primarySession();
+        WakeStream stream = followedBy(primary);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        printed(primary, stream, home.waitForWakes().deliverTo(stream).orElseThrow());
+
+        primaryActsOn("fit-lamp");
+
         assertThat(home.wakes().unacknowledged()).isEmpty();
     }
 
     @Test
-    void deliversAgainWhatAnExpiredWaitWithdrew() {
+    void leavesAWakeNotYetPrintedUnacknowledgedWhenThePrimaryActsOnItsTask() {
         UUID primary = primarySession();
+        WakeStream stream = followedBy(primary);
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
-        home.waitForWakes().withdraw(home.waitForWakes().deliverTo(primary).orElseThrow());
+        home.waitForWakes().deliverTo(stream).orElseThrow();
 
-        WakeDelivery redelivered = home.waitForWakes().deliverTo(primary).orElseThrow();
+        primaryActsOn("fit-lamp");
+
+        assertThat(home.wakes().unacknowledged()).hasSize(1);
+    }
+
+    @Test
+    void acknowledgesAPrintedWakeOnceTheNextWakeForItsTaskIsPrinted() {
+        UUID primary = primarySession();
+        WakeStream stream = followedBy(primary);
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
+        printed(primary, stream, home.waitForWakes().deliverTo(stream).orElseThrow());
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+
+        printed(primary, stream, home.waitForWakes().deliverTo(stream).orElseThrow());
+
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.FAILED);
+    }
+
+    @Test
+    void deliversAgainWhatAnExpiredWaitWithdrew() {
+        WakeStream stream = followedBy(primarySession());
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        home.waitForWakes().withdraw(home.waitForWakes().deliverTo(stream).orElseThrow());
+
+        WakeDelivery redelivered = home.waitForWakes().deliverTo(stream).orElseThrow();
 
         assertThat(redelivered.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
     }
 
     @Test
+    void refusesASecondStreamWhileOneIsLiveNamingTheLiveOne() {
+        UUID primary = primarySession();
+        WakeStream live = followedBy(primary);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+
+        assertThatThrownBy(() -> followedBy(primary)).isInstanceOf(Refusal.class)
+                .hasMessageContaining("already live as edi wait --follow in process " + home.processes().ownId())
+                .hasMessageContaining("the Monitor tool running edi wait --follow alone");
+        assertThatThrownBy(() -> waitingOnceIn(primary)).isInstanceOf(Refusal.class).hasMessageContaining("already live as edi wait --follow");
+        assertThat(home.waitForWakes().deliverTo(live)).isPresent();
+    }
+
+    @Test
+    void replacesAStreamWhoseProcessIsGoneAndOffersItsUnprintedWakesToTheNewOne() throws IOException {
+        UUID primary = primarySession();
+        Process dying = processes.register(new ProcessBuilder("sleep", "30").start());
+        WakeStream dead = home.waitForWakes().heard(primary, new StreamPoll(UUID.randomUUID(), dying.pid(), true, List.of(), false));
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        home.waitForWakes().deliverTo(dead).orElseThrow();
+        dying.destroy();
+        TestProcesses.awaitExit(dying.toHandle());
+
+        WakeStream replacement = followedBy(primary);
+
+        assertThat(home.waitForWakes().deliverTo(replacement).orElseThrow().wakes()).extracting(queued -> queued.wake().kind())
+                .containsExactly(WakeKind.NEEDS_DECISION);
+        assertThat(home.wakeStreams().liveOf(primary)).contains(replacement);
+    }
+
+    @Test
+    void refusesAStreamThatHasEnded() {
+        UUID primary = primarySession();
+        WakeStream ended = waitingOnceIn(primary);
+        home.waitForWakes().heard(primary, poll(ended, List.of(), true));
+
+        assertThatThrownBy(() -> home.waitForWakes().heard(primary, poll(ended, List.of(), false))).isInstanceOf(Refusal.class)
+                .hasMessageContaining("has ended");
+        assertThat(home.wakeStreams().liveOf(primary)).isEmpty();
+    }
+
+    @Test
+    void keepsTheLiveStreamAcrossARestartOfTheCore() throws IOException {
+        UUID primary = primarySession();
+        WakeStream stream = followedBy(primary);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        WakeDelivery delivery = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        TestHome restarted = home.restarted();
+        WakeStream resumed = restarted.waitForWakes().heard(primary, poll(stream, delivery.numbers(), false));
+
+        assertThat(resumed).isEqualTo(stream);
+        assertThat(restarted.wakeStreams().liveOf(primary)).contains(stream);
+        assertThat(restarted.waitForWakes().deliverTo(resumed)).isEmpty();
+        assertThat(restarted.wakes().unacknowledged()).extracting(QueuedWake::deliveredTo).containsExactly(primary);
+    }
+
+    @Test
     void deliversAgainToANewPrimaryWhatTheLastOneNeverAcknowledged() {
         UUID crashed = primarySession();
+        WakeStream stream = followedBy(crashed);
         home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
-        home.waitForWakes().deliverTo(crashed);
+        printed(crashed, stream, home.waitForWakes().deliverTo(stream).orElseThrow());
 
         home.primaryHooks().sessionEnded(crashed);
         UUID next = primarySession();
-        WakeDelivery redelivered = home.waitForWakes().deliverTo(next).orElseThrow();
+        WakeStream nextStream = followedBy(next);
+        WakeDelivery redelivered = home.waitForWakes().deliverTo(nextStream).orElseThrow();
+        printed(next, nextStream, redelivered);
 
         assertThat(redelivered.wakes()).extracting(QueuedWake::deliveredTo).containsExactly(crashed);
         assertThat(home.wakes().unacknowledged()).extracting(QueuedWake::deliveredTo).containsExactly(next);
@@ -100,16 +211,16 @@ class WaitForWakesTest {
 
     @Test
     void gathersWakesIntoOneBatchWhileTheCaptainKeepsTheChatQuiet() {
-        UUID primary = primarySession();
+        WakeStream stream = followedBy(primarySession());
         home.changePresence().quiet();
         home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
 
-        assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
+        assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
         home.clock().advance(Duration.ofMinutes(29));
         home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
-        assertThat(home.waitForWakes().deliverTo(primary)).isEmpty();
+        assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
         home.clock().advance(Duration.ofMinutes(1));
-        WakeDelivery batch = home.waitForWakes().deliverTo(primary).orElseThrow();
+        WakeDelivery batch = home.waitForWakes().deliverTo(stream).orElseThrow();
 
         assertThat(batch.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.BLOCKED, WakeKind.FAILED);
         assertThat(batch.presence().keepsTheChatQuiet()).isTrue();
@@ -120,5 +231,25 @@ class WaitForWakesTest {
         home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(session, "Carry on.");
         return session;
+    }
+
+    private WakeStream followedBy(UUID session) {
+        return home.waitForWakes().heard(session, new StreamPoll(UUID.randomUUID(), home.processes().ownId(), true, List.of(), false));
+    }
+
+    private WakeStream waitingOnceIn(UUID session) {
+        return home.waitForWakes().heard(session, new StreamPoll(UUID.randomUUID(), home.processes().ownId(), false, List.of(), false));
+    }
+
+    private static StreamPoll poll(WakeStream stream, List<Long> printed, boolean ending) {
+        return new StreamPoll(stream.id(), stream.process().pid(), stream.follows(), printed, ending);
+    }
+
+    private void printed(UUID session, WakeStream stream, WakeDelivery delivery) {
+        home.waitForWakes().heard(session, poll(stream, delivery.numbers(), false));
+    }
+
+    private void primaryActsOn(String task) {
+        home.noteTask().note(TaskReference.parse(task), "Asked the captain.", Actor.PRIMARY);
     }
 }

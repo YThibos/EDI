@@ -34,7 +34,7 @@ class WakeDigestTextTest {
                 queued(1, new Wake(WakeKind.NEEDS_DECISION, LAMP, WorkerId.first(LAMP), "(lamp) Brass or oil?", null)),
                 queued(2, new Wake(WakeKind.WORKER_DIED, LAMP, WorkerId.first(LAMP), "its tmux server changed", null)),
                 queued(3, new Wake(WakeKind.USAGE_LIMIT, LAMP, WorkerId.first(LAMP), "session limit", Instant.parse("2026-10-16T14:10:00Z"))),
-                queued(4, new Wake(WakeKind.LOST_IN_OUTAGE, new TaskId("tune-horn"), null, "2: the machine restarted", null))), 1, 3, 1, PRESENT);
+                queued(4, new Wake(WakeKind.LOST_IN_OUTAGE, new TaskId("tune-horn"), null, "2: the machine restarted", null))), 1, 3, 1, PRESENT, true);
 
         assertThat(digest.text(delivery)).isEqualTo("""
                 EDI wake: 4 waiting.
@@ -43,14 +43,14 @@ class WakeDigestTextTest {
                 3. fit-lamp#1 stopped on the session limit; you type one resume line after 2026-10-16 14:10 UTC.
                 4. tune-horn is on the outage hold list as number 2: the machine restarted; edi recover shows the list.
                 Fleet: 1 open decisions, 3 tasks in flight, 1 on the outage hold list.
-                Handle these, then start edi wait in the background again.
+                Handle these; the wake stream keeps running and prints the next.
                 """);
     }
 
     @Test
     void tellsThePrimaryThatAFullContextNeedsAFreshSession() {
         WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.CONTEXT_FULL, LAMP, WorkerId.first(LAMP), "", RAISED))), 0, 1, 0,
-                PRESENT);
+                PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("1. fit-lamp#1's context has been full since 2026-10-16 09:00 UTC, so it can take no further prompt and"
                 + " a resume would stop on it again; edi worker stop fit-lamp, then edi worker relaunch fit-lamp starts a fresh session in its copy with a"
@@ -60,7 +60,7 @@ class WakeDigestTextTest {
     @Test
     void tellsThePrimaryToWarnTheCaptainOfHeavyRunsAtOnce() {
         WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.HEAVY_RUNS_AT_ONCE, LAMP, WorkerId.first(LAMP),
-                "a native build while tune-horn#1 runs a test run", null))), 0, 2, 0, PRESENT);
+                "a native build while tune-horn#1 runs a test run", null))), 0, 2, 0, PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("1. fit-lamp#1 started a native build while tune-horn#1 runs a test run; nothing caps them, so each runs"
                 + " slower until they finish: tell the captain, whose report warns while they overlap.\n");
@@ -70,7 +70,7 @@ class WakeDigestTextTest {
     void tellsThePrimaryThatEdiWokeAWorkerWhoseStopItMissed() {
         Wake missed = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, true), Actor.CORE).orElseThrow();
         Wake untyped = WakeRule.wakeFor(new WorkerStopMissed(LAMP, WorkerId.first(LAMP), RAISED, 2, false), Actor.CORE).orElseThrow();
-        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, missed), queued(2, untyped)), 0, 1, 0, PRESENT);
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, missed), queued(2, untyped)), 0, 1, 0, PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("1. fit-lamp#1 ended its turn at 2026-10-16 09:00 UTC while you could not take its stop hook, so you"
                 + " sent it a message to carry on: message 2 was typed into its idle prompt.\n")
@@ -84,7 +84,7 @@ class WakeDigestTextTest {
                 queued(1, new Wake(WakeKind.DRAFT_MERGED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(2, new Wake(WakeKind.DRAFT_CLOSED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(3, new Wake(WakeKind.DELIVERY_FAILED, LAMP, null, "the captain's checkout has uncommitted work in lamp.txt", null)),
-                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0, PRESENT);
+                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0, PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("""
                 1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; you refresh the clone and clean up.
@@ -97,15 +97,15 @@ class WakeDigestTextTest {
     @Test
     void namesEveryKindOfWake() {
         for (WakeKind kind : WakeKind.values()) {
-            String text = digest.text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0, PRESENT));
+            String text = digest.text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0, PRESENT, true));
             assertThat(text).as(kind.word()).contains("1. fit-lamp");
         }
     }
 
     @Test
-    void asksForSilenceWhileTheCaptainKeepsTheChatQuiet() {
+    void asksForSilenceWhileTheCaptainKeepsTheChatQuietAndForTheNextWaitAfterAWaitForOneWake() {
         Presence quiet = PRESENT.quiet(RAISED.plusSeconds(60));
-        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.DONE, LAMP, WorkerId.first(LAMP), "fitted", null))), 0, 1, 0, quiet);
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.DONE, LAMP, WorkerId.first(LAMP), "fitted", null))), 0, 1, 0, quiet, false);
 
         assertThat(digest.text(delivery)).contains("The captain is quiet since 2026-10-16 09:01 UTC, on request: handle these and end"
                 + " the turn with no text for the captain; decisions, failures, blockers and ready drafts reach the captain as notifications and in their"

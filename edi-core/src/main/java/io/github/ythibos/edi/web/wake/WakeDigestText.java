@@ -37,7 +37,7 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             lines.add("The captain is " + presenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for the captain;"
                     + " decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.");
         }
-        lines.add("Handle these, then start edi wait in the background again.");
+        lines.add(closingAdvice(delivery));
         return String.join("\n", lines) + "\n";
     }
 
@@ -90,5 +90,11 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     private String stopMissedBy(String who, Wake wake) {
         return who + " ended its turn at " + moments.minute(wake.moment()) + " while you could not take its stop hook, so you sent it a message to carry on:"
                 + " message " + wake.detail();
+    }
+
+    private static String closingAdvice(WakeDelivery delivery) {
+        return delivery.streamContinues()
+                ? "Handle these; the wake stream keeps running and prints the next."
+                : "Handle these, then start edi wait in the background again.";
     }
 }

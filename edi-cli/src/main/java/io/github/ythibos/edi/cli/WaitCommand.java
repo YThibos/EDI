@@ -2,22 +2,33 @@ package io.github.ythibos.edi.cli;
 
 import java.io.PrintWriter;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
-@Command(name = "wait", description = "Waits until something needs the primary, prints what it is and exits; the primary keeps one running in the background.")
+@Command(name = "wait", description = "Waits until something needs the primary, prints what it is and exits; with --follow it stays running as the"
+        + " primary's one wake stream and prints each wake the moment it is raised.")
 final class WaitCommand implements Callable<Integer> {
 
     private static final int WOKEN = 0;
     private static final int NOT_WAITING = 1;
+    private static final int KEEP_FOLLOWING = -1;
     private static final int NOTHING_YET = 204;
+    private static final String PRINTED_WAKES = "EDI-Wakes";
     private static final Duration RETRY = Duration.ofSeconds(2);
     private static final Duration PATIENCE_WITH_AN_ABSENT_CORE = Duration.ofSeconds(60);
+
+    @Option(names = "--follow", description = "Stay running as the primary's one wake stream and print each wake as it is raised;"
+            + " start it alone with the Monitor tool.")
+    private boolean follow;
 
     @ParentCommand
     private Edi edi;
@@ -25,52 +36,104 @@ final class WaitCommand implements Callable<Integer> {
     @Spec
     private CommandSpec spec;
 
+    private final UUID stream = UUID.randomUUID();
+    private List<Long> printed = List.of();
+
     @Override
     public Integer call() {
         if (edi.claudeSession().idIfAny().isEmpty()) {
-            return notWaiting("edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID.");
+            return ended("edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID.");
         }
-        return untilAWake();
+        Optional<String> unread = edi.output().whyNobodyReadsIt();
+        if (unread.isPresent()) {
+            return refusedBecause(unread.get());
+        }
+        return follow ? followTheWakes() : waitForOneWake();
     }
 
-    private int untilAWake() {
+    private int ended(String reason) {
+        PrintWriter channel = follow ? spec.commandLine().getOut() : spec.commandLine().getErr();
+        channel.println(follow ? "The wake stream ended: " + reason : reason);
+        channel.flush();
+        return NOT_WAITING;
+    }
+
+    private int refusedBecause(String unread) {
+        PrintWriter err = spec.commandLine().getErr();
+        err.println("edi wait refuses to start: " + unread + ", so every wake it took would be lost. Start the one wake stream with the Monitor"
+                + " tool running edi wait --follow alone; where Monitor is unavailable, run edi wait alone as a background command.");
+        err.flush();
+        return NOT_WAITING;
+    }
+
+    private int followTheWakes() {
+        int outcome = printTheNextWakes();
+        while (outcome == KEEP_FOLLOWING) {
+            outcome = printTheNextWakes();
+        }
+        return outcome;
+    }
+
+    private int waitForOneWake() {
+        int outcome = printTheNextWakes();
+        if (outcome != KEEP_FOLLOWING) {
+            return outcome;
+        }
+        askTheCore(true);
+        return WOKEN;
+    }
+
+    private int printTheNextWakes() {
         Duration unanswered = Duration.ZERO;
         while (unanswered.compareTo(PATIENCE_WITH_AN_ABSENT_CORE) < 0) {
-            Optional<CoreReply> reply = askTheCore();
+            Optional<CoreReply> reply = askTheCore(false);
             if (reply.isPresent() && reply.get().status() != NOTHING_YET) {
-                return outcomeOf(reply.get());
+                return printed(reply.get());
             }
             unanswered = reply.isPresent() ? Duration.ZERO : unanswered.plus(RETRY);
             if (reply.isEmpty() && !pausedForTheCore()) {
-                return notWaiting("edi wait was interrupted.");
+                return ended("edi wait was interrupted.");
             }
         }
-        return notWaiting("EDI core did not answer for a minute, so edi wait gave up; start the core, then edi wait again.");
+        return ended("EDI core did not answer for a minute, so edi wait gave up; once the core runs, start it again.");
     }
 
-    private Optional<CoreReply> askTheCore() {
+    private Optional<CoreReply> askTheCore(boolean ending) {
         try {
-            return Optional.of(new CoreClient().post(edi.core(), "/api/wait", "{}", "text/plain"));
+            CoreReply reply = new CoreClient().post(edi.core(), "/api/wait", poll(ending), "text/plain");
+            printed = List.of();
+            return Optional.of(reply);
         } catch (CoreUnavailable unavailable) {
             return Optional.empty();
         }
     }
 
-    private int outcomeOf(CoreReply reply) {
+    private String poll(boolean ending) {
+        return new JsonBody().with("stream", stream.toString())
+                .with("pid", ProcessHandle.current().pid())
+                .with("follows", follow)
+                .withNumbers("printed", printed)
+                .with("ending", ending)
+                .text();
+    }
+
+    private int printed(CoreReply reply) {
         if (!reply.succeeded()) {
-            return notWaiting(reply.body().strip());
+            return ended(reply.body().strip());
         }
         PrintWriter out = spec.commandLine().getOut();
         out.print(reply.body().endsWith("\n") ? reply.body() : reply.body() + "\n");
-        out.flush();
-        return WOKEN;
+        if (out.checkError()) {
+            return NOT_WAITING;
+        }
+        printed = wakesNumberedIn(reply);
+        return KEEP_FOLLOWING;
     }
 
-    private int notWaiting(String reason) {
-        PrintWriter err = spec.commandLine().getErr();
-        err.println(reason);
-        err.flush();
-        return NOT_WAITING;
+    private static List<Long> wakesNumberedIn(CoreReply reply) {
+        return reply.header(PRINTED_WAKES)
+                .map(numbers -> Arrays.stream(numbers.split(",")).map(String::strip).filter(number -> !number.isEmpty()).map(Long::valueOf).toList())
+                .orElseGet(List::of);
     }
 
     private static boolean pausedForTheCore() {

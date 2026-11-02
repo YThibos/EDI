@@ -468,13 +468,13 @@ class DecisionsAndReportingTest {
             UUID primary = UUID.randomUUID();
             home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(primary, "What is waiting on me?");
-            HookAnswer quietTurn = home.primaryHooks().stopping(primary, List.of());
+            HookAnswer quietTurn = home.primaryHooks().stopping(primary);
 
             home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
             home.addTask().add(ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
-            HookAnswer unreported = home.primaryHooks().stopping(primary, List.of());
+            HookAnswer unreported = home.primaryHooks().stopping(primary);
             home.primaryHooks().reportRendered(primary);
-            HookAnswer reported = home.primaryHooks().stopping(primary, List.of());
+            HookAnswer reported = home.primaryHooks().stopping(primary);
 
             assertThat(quietTurn).isEqualTo(HookAnswer.PROCEED);
             assertThat(unreported.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);

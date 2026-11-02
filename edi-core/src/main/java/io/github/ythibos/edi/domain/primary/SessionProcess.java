@@ -4,7 +4,7 @@ public record SessionProcess(long pid, Long startTick) {
 
     public SessionProcess {
         if (pid < 1) {
-            throw new IllegalArgumentException("A Claude Code session runs as a process with a positive id, not " + pid + ".");
+            throw new IllegalArgumentException("A process has a positive id, not " + pid + ".");
         }
     }
 

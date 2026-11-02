@@ -13,7 +13,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Read",
+        "matcher": "Bash|Monitor|Read",
         "hooks": [{ "type": "command", "command": "edi hook pre-tool-use" }]
       }
     ],

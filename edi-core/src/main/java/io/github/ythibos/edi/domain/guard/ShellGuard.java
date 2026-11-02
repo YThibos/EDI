@@ -32,7 +32,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
             return Optional.of(new GuardRefusal(GuardRule.UNREADABLE_COMMAND,
                     unreadable.getMessage() + " The guard refuses what it cannot read; run it as plainer commands."));
         }
-        return ProcessSignals.refusalFor(commands).or(() -> firstRefusalAmong(commands));
+        return ProcessSignals.refusalFor(commands).or(() -> LoneWaits.refusalFor(script, commands)).or(() -> firstRefusalAmong(commands));
     }
 
     private Optional<GuardRefusal> firstRefusalAmong(List<ShellCommand> commands) {

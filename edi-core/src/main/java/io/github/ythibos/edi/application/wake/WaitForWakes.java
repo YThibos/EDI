@@ -21,11 +21,13 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.wake.WakeStream;
 
 @Service
 public class WaitForWakes {
 
     private final WakeStore wakes;
+    private final WakeStreams streams;
     private final PrimarySessions sessions;
     private final DecisionStore decisions;
     private final TaskStore tasks;
@@ -35,9 +37,10 @@ public class WaitForWakes {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public WaitForWakes(WakeStore wakes, PrimarySessions sessions, DecisionStore decisions, TaskStore tasks, OutageStore outages,
+    public WaitForWakes(WakeStore wakes, WakeStreams streams, PrimarySessions sessions, DecisionStore decisions, TaskStore tasks, OutageStore outages,
             PresenceStore presence, PersonalConfiguration personal, Clock clock, TransactionTemplate transaction) {
         this.wakes = wakes;
+        this.streams = streams;
         this.sessions = sessions;
         this.decisions = decisions;
         this.tasks = tasks;
@@ -54,18 +57,31 @@ public class WaitForWakes {
         }
     }
 
-    public Optional<WakeDelivery> deliverTo(UUID session) {
+    public WakeStream heard(UUID session, StreamPoll poll) {
         return transaction.execute(_ -> {
+            WakeStream stream = streams.admit(poll, session);
+            wakes.printed(poll.printed(), stream.id(), session, clock.now());
+            if (poll.ending()) {
+                streams.retire(stream);
+            }
+            return stream;
+        });
+    }
+
+    public Optional<WakeDelivery> deliverTo(WakeStream stream) {
+        return transaction.execute(_ -> {
+            if (!streams.isOpen(stream)) {
+                return Optional.<WakeDelivery>empty();
+            }
             Instant now = clock.now();
-            wakes.acknowledgeDeliveredTo(session, now);
-            List<QueuedWake> pending = wakes.unacknowledged();
+            List<QueuedWake> pending = wakes.awaitingDeliveryTo(stream.session());
             Presence captain = presence.current().orElseGet(() -> Presence.presentSince(now));
             if (pending.isEmpty() || !theBatchIsDue(pending, captain, now)) {
                 return Optional.<WakeDelivery>empty();
             }
-            wakes.deliver(pending, session, now);
+            wakes.offer(pending, stream.id());
             return Optional.of(new WakeDelivery(pending, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(), outages.open().size(),
-                    captain));
+                    captain, stream.follows()));
         });
     }
 

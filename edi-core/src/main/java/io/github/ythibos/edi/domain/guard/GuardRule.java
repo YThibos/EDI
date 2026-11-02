@@ -16,6 +16,7 @@ public enum GuardRule {
     SECRET,
     WORKER_IDENTITY,
     UNLANDED_BRANCH_DELETION,
+    EDI_WAIT_NOT_ALONE,
     UNREADABLE_COMMAND;
 
     public String word() {
