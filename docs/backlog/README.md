@@ -208,7 +208,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-113](EDI-113.md) | Guard Grep against the secret files, as Read is | S | - | held: backlogged on the captain's word, to start when he says so. | - |
 | - | [EDI-114](EDI-114.md) | Native builds use a fixed share of the cores, so two can run side by side | M | - | held: until the captain's word, and the before and after measurements need the captain's laptop. | - |
 | - | [EDI-109](EDI-109.md) | Worker builds get NVD_API_KEY from the captain's secrets file at call time | M | - | needs-captain-machine: the feature reads a secrets file that exists only on the captain's machine; it is held until his word. | - |
-| - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. | - |
+| - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | delivered | - |
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | delivered | - |
 | - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | delivered | - |
