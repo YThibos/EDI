@@ -117,6 +117,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 55 | [EDI-154](EDI-154.md) | The turn report shows every worker waiting on the primary | XS | - | open | [#171](https://github.com/YThibos/EDI/issues/171) |
 | 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | [#173](https://github.com/YThibos/EDI/issues/173) |
 | 62 | [EDI-164](EDI-164.md) | Every rule, guard and hook records when it fires, and the core records its own health | M | EDI-132 | open | - |
+| 63 | [EDI-165](EDI-165.md) | A weekly gardening round measures slips and rules and drafts hard rules on a board | M | EDI-155, EDI-164 | open | - |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
