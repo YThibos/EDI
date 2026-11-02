@@ -136,6 +136,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 | open | [#175](https://github.com/YThibos/EDI/issues/175) |
 | 58 | [EDI-157](EDI-157.md) | A merge request's validation watch never reads as changing | XS | EDI-86 | open | [#176](https://github.com/YThibos/EDI/issues/176) |
 | 59 | [EDI-161](EDI-161.md) | A worker's done is checked and booked by the core in one pass | M | EDI-86 | open | - |
+| 61 | [EDI-163](EDI-163.md) | The tracker walks a ticket to a named state and checks tickets against what landed | S | - | open | - |
 
 ### Wave 4: plans dispatch themselves
 
