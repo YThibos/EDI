@@ -26,7 +26,7 @@ CI runs on every push and pull request:
 - gitleaks and the publish guard ([publish-guard](publish-guard.md)).
 
 A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, kept current by a Renovate regex manager, until Spring Boot 4.1.2 managed the fixed Tomcat.
-Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, which Renovate's npm manager keeps current.
+Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, until `@angular/build` 22.2.5 brought the fixed Vite.
 The `edi-upkeep` skill lists Renovate's pull requests with their checks, raises one decision per green batch, and turns a red major into a migration task.
 
 ## Why
@@ -46,11 +46,11 @@ A tag can be moved by whoever maintains an action, and once the repository is pu
 ## Consequences
 
 - Good: dependencies, plugins, actions, the wrapper and the toolchain stay current.
-- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and an override such as the Vite one must be removed by hand once its upstream catches up.
+- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and an override must be removed by hand once its upstream catches up.
 
 ## When to revisit
 
-When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, Angular's build depends on a fixed Vite, EDI ships a container image, or coverage becomes a gate.
+When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, EDI ships a container image, or coverage becomes a gate.
 
 ## How we got here
 
@@ -58,3 +58,4 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 27/10/2026: GraalVM Community moved to mise's `http` backend and its `graal-` release tags, so its regex manager followed, and `npm audit` found a high-severity Vite the Angular build pinned, which the console overrides (EDI-100).
 - 28/10/2026: Spring Boot 4.1.2 manages Tomcat 11.0.27, so the `tomcat.version` override and its regex manager were removed (EDI-100).
 - 28/10/2026: every GitHub Action is pinned to a full commit SHA, verified against the action's repository, with its tag beside it, and Renovate pins and keeps the digests, before the repository is made public (EDI-131).
+- 02/11/2026: `@angular/build` 22.2.5 depends on Vite 8.3.5, which carries the fix, so the console's `vite` override was removed (EDI-1).
