@@ -36,7 +36,7 @@ It also refuses a worker any write under its copy's `.claude` directory, as writ
 `GuardToolCall` passes the tool's name to `ShellGuard`, and `LoneWaits` refuses `edi wait --follow` alone in any tool but `Monitor`, because a stream that never ends prints into an output file nobody reads anywhere else; `edi wait` alone passes in `Bash` too, for where Monitor is unavailable.
 Claude Code's `Monitor` tool runs its command in the same shell as `Bash`, so `GuardToolCall` reads a `Monitor` command as a shell command.
 The worker's settings send `Bash`, `Monitor`, `Read`, `Glob` and the file-writing tools to the guard, the primary's `Bash`, `Monitor` and `Read`.
-`edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`).
+`edi hook pre-tool-use` prints Claude Code's deny decision with the reason, and when the core cannot be asked exits with code 2, which refuses the call, except that the primary may run a plain `edi` command with no shell syntax (`PlainEdiCall`); `edi wait --follow` is not such a command, so a wake stream outside the Monitor tool stays refused while the core is down too.
 
 ## Why
 
@@ -97,4 +97,4 @@ When the captain chooses one of the stronger options above, workers run as anoth
 - 28/10/2026: the guard refuses a worker any write under its copy's `.claude` directory, after a verification showed a settings file there could switch its hooks off (EDI-125).
 - 29/10/2026: the captain chose A for zsh's blank groups: an attached group is part of its word even with a blank, an empty `()` and a group after `=` are not, and a qualifier group that can run code is refused; the value after every letter of bundled short options is looked up as a path (EDI-124).
 - 02/11/2026: the guard refuses `edi wait` with anything else, and reads a `Monitor` command as a shell command, after a second `edi wait` sent to `/dev/null` took a worker's question (EDI-158).
-- 02/11/2026: the captain chose that `edi wait --follow` runs only under the Monitor tool, after a review showed a `Bash` stream in the background would print every wake into a file nobody reads (EDI-158).
+- 02/11/2026: the captain chose that `edi wait --follow` runs only under the Monitor tool, after a review showed a `Bash` stream in the background would print every wake into a file nobody reads, and `PlainEdiCall` stopped letting it through from `Bash` while the core is down (EDI-158).
