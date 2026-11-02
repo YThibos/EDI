@@ -84,9 +84,7 @@ class NativeSmokeIT {
     @BeforeAll
     static void startTheNativeCore() throws Exception {
         Files.createDirectories(home.resolve("config"));
-        Files.writeString(home.resolve("config/projects.yaml"), 
-                          
-                          .formatted(home.resolve("checkouts/harness")));
+        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY.formatted(home.resolve("checkouts/harness")));
         Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
         Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
                 home.resolve("config/dispatch-rules.json"));
