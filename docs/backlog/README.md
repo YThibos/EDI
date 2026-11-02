@@ -115,7 +115,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | open | [#169](https://github.com/YThibos/EDI/issues/169) |
 | 54 | [EDI-153](EDI-153.md) | An unanswered worker question comes back to the primary until it is answered | S | - | open | [#170](https://github.com/YThibos/EDI/issues/170) |
 | 55 | [EDI-154](EDI-154.md) | The turn report shows every worker waiting on the primary | XS | - | open | [#171](https://github.com/YThibos/EDI/issues/171) |
-| 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | - |
+| 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | [#173](https://github.com/YThibos/EDI/issues/173) |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
