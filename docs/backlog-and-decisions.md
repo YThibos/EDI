@@ -53,7 +53,7 @@ Every time a report, a decision list or a presence line shows is in the machine'
 
 Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own words from the current session ([captains-word](decisions/captains-word.md)).
 The primary's hooks store every message the captain types and every dialog answer, numbered, so a word is cited by its number and never retyped.
-A dialog option the captain chooses is their word by itself for the one act it opens with and the task it names, such as `drop fit-the-lamp`.
+A dialog option the captain chooses is their word by itself for the one act it opens with and the one task it names, such as `drop fit-the-lamp`.
 
 ```sh
 edi captain messages                                                           # this session's stored messages, numbered

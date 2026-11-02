@@ -92,7 +92,7 @@ public class CaptainsWordEvidence {
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
                         + " --message <n>, have the captain choose a dialog option that opens with " + act.word() + " and names " + task
-                        + ", or have the captain choose, here, in the console or on a research board, the option of a decision on it"
+                        + " and no other task, or have the captain choose, here, in the console or on a research board, the option of a decision on it"
                         + " that authorises " + act.word() + "."));
     }
 
@@ -101,7 +101,7 @@ public class CaptainsWordEvidence {
         return transaction.execute(_ -> CaptainsAuthority.saidForActOnTask(task, act, exchange, heardIn(exchange)))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session recorded for it: record it with edi captain said --task " + task + " --for " + act.word()
-                        + " --message <n>, or have the captain choose a dialog option that opens with " + act.word() + " and names " + task + "."));
+                        + " --message <n>, or have the captain choose a dialog option that opens with " + act.word() + " and names " + task + " and no other task."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {

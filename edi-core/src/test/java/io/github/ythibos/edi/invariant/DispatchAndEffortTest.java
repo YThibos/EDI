@@ -62,7 +62,7 @@ class DispatchAndEffortTest {
     private static final Route SONNET_HIGH = new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH);
     private static final String THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD = "To run one task above high, the effort ceiling, you need the captain's"
             + " word on fit-lamp in this session recorded for it: record it with edi captain said --task fit-lamp --for effort-above-high"
-            + " --message <n>, or have the captain choose a dialog option that opens with effort-above-high and names fit-lamp.";
+            + " --message <n>, or have the captain choose a dialog option that opens with effort-above-high and names fit-lamp and no other task.";
 
     @TempDir
     private Path directory;
@@ -103,7 +103,7 @@ class DispatchAndEffortTest {
 
         @Test
         @DisplayName("the captain's word recorded on a task for effort above high in this session, or the captain's choice of a dialog option"
-                + " that opens with effort-above-high and names the task, lifts that task to xhigh or max, with a reason")
+                + " that opens with effort-above-high and names the task and no other, lifts that task to xhigh or max, with a reason")
         @Tag("adapter")
         void theCaptainsWordOnATaskLiftsItAboveHigh() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);

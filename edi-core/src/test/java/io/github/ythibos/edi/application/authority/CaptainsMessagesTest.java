@@ -151,6 +151,22 @@ class CaptainsMessagesTest {
     }
 
     @Test
+    void neverTakesADialogAnswerThatNamesTwoTasksTheStoreKnowsAsTheWordOnEither() {
+        CallingSession session = typedIn("What now?");
+        TaskId door = new TaskId("choose-door");
+        home.primaryHooks().dialogAnswered(session.id(), List.of(
+                new AnsweredQuestion("What do we drop?", "drop choose-door, then promote choose-lamp", ""),
+                new AnsweredQuestion("Which effort?", "effort-above-high choose-lamp, keep choose-door at high", "")));
+
+        for (TaskId task : List.of(LAMP, door)) {
+            assertThatThrownBy(() -> home.captainsWord().requireOnTask(session, task, CaptainWordAct.DROP))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("names " + task + " and no other task");
+            assertThatThrownBy(() -> home.captainsWord().requireSaidForActOnTask(session, task, CaptainWordAct.EFFORT_ABOVE_HIGH))
+                    .isInstanceOf(Refusal.class).hasMessageContaining("names " + task + " and no other task");
+        }
+    }
+
+    @Test
     void refusesTextNoStoredMessageHoldsAndAMessageOfAnotherSession() {
         CallingSession session = typedIn("Drop the lamp.");
         CallingSession other = typedIn("Drop the door.");

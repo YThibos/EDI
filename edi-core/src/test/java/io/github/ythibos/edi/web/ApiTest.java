@@ -543,7 +543,7 @@ class ApiTest {
         assertThat(aGeneralWord.statusCode()).isEqualTo(200);
         assertRefusal(withoutTheWordForIt, 409, "To run one task above high, the effort ceiling, you need the captain's word on api-beacon in this session"
                 + " recorded for it: record it with edi captain said --task api-beacon --for effort-above-high --message <n>,"
-                + " or have the captain choose a dialog option that opens with effort-above-high and names api-beacon.");
+                + " or have the captain choose a dialog option that opens with effort-above-high and names api-beacon and no other task.");
         assertRefusal(forAnotherAct, 400, "The captain's word is recorded for effort-above-high alone, not drop.");
         assertRefusal(forTheHome, 400, "The captain's word for effort-above-high is on one task.");
         assertRefusal(withoutAReason, 400, "An override of the dispatch rules records the captain's reason for it.");
