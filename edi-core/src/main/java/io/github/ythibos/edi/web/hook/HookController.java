@@ -43,6 +43,7 @@ class HookController {
 
     private static final String LAUNCH = "startup";
     private static final String COMPACTION = "compact";
+    private static final String ASKS_THE_CAPTAIN = "AskUserQuestion";
 
     private final WorkerHooks workerHooks;
     private final PrimaryHooks primaryHooks;
@@ -81,6 +82,7 @@ class HookController {
             case SESSION_START -> workerHooks.sessionStarted(worker, optionalSessionIn(payload), textIn(payload, "transcript_path"));
             case USER_PROMPT_SUBMIT -> workerHooks.promptSubmitted(worker, payload.path("prompt").asString(""), textIn(payload, "transcript_path"));
             case PRE_TOOL_USE -> guard.checkForWorker(worker, toolCallIn(payload));
+            case POST_TOOL_USE -> HookAnswer.PROCEED;
             case STOP -> workerHooks.stopping(worker);
             case STOP_FAILURE -> workerHooks.stopFailed(worker, textIn(payload, "error"), textIn(payload, "transcript_path"));
             case NOTIFICATION -> workerHooks.notified(worker, textIn(payload, "notification_type"));
@@ -93,6 +95,7 @@ class HookController {
             case SESSION_START -> sessionStarted(sessionIn(payload), claudePid, sourceOf(payload), console);
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
+            case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
             case STOP -> rendered(primaryHooks.stopping(sessionIn(payload), backgroundJobsIn(payload)));
             case STOP_FAILURE -> rendered(primaryHooks.stopFailed(sessionIn(payload), textIn(payload, "transcript_path")));
             case NOTIFICATION -> rendered(primaryHooks.notified(sessionIn(payload), textIn(payload, "notification_type")));
@@ -111,6 +114,12 @@ class HookController {
         return primaryHooks.promptSubmitted(session, prompt)
                 .map(brief -> asJson(additionalContext(HookEvent.USER_PROMPT_SUBMIT, returnBriefText.text(brief))))
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    private HookAnswer toolUsed(UUID session, JsonNode payload) {
+        return ASKS_THE_CAPTAIN.equals(payload.path("tool_name").asString(""))
+                ? primaryHooks.dialogAnswered(session, DialogAnswers.in(payload))
+                : HookAnswer.PROCEED;
     }
 
     private static SessionSource sourceOf(JsonNode payload) {
@@ -140,7 +149,7 @@ class HookController {
         String cwd = payload.path("cwd").asString(null);
         String searched = input.path("path").asString(null);
         return new ToolCall(payload.path("tool_name").asString(""), input.path("command").asString(null), file == null ? searched : file,
-                cwd == null ? null : Path.of(cwd), input.path("pattern").asString(null));
+                cwd == null ? null : Path.of(cwd), input.path("pattern").asString(null), DialogAnswers.areFilledIn(input));
     }
 
     private ResponseEntity<String> rendered(HookAnswer answer) {

@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +50,39 @@ class ClaudeLayerCommandsTest {
         assertThat(onATask.target()).isEqualTo("/api/captain/said");
         assertThat(onATask.body()).isEqualTo("{\"text\":\"Discard the lamp's copy.\",\"task\":\"D58\"}");
         assertThat(onTheHome.body()).isEqualTo("{\"text\":\"Read the token.\\nThen tell me.\"}");
+    }
+
+    @Test
+    void recordsTheCaptainsWordFromAStoredMessageOrOneLineOfIt() {
+        edi("", "captain", "said", "--task", "fit-lamp", "--message", "3");
+        StubCore.Request wholeMessage = core.received();
+        edi("", "captain", "said", "--message", "4", "--line", "2");
+        StubCore.Request oneLine = core.received();
+
+        assertThat(wholeMessage.body()).isEqualTo("{\"message\":3,\"task\":\"fit-lamp\"}");
+        assertThat(oneLine.body()).isEqualTo("{\"message\":4,\"line\":2}");
+    }
+
+    @Test
+    void refusesToCiteTheCaptainsWordsTwiceOrNotAtAllOrALineWithoutItsMessage() {
+        int twice = edi("", "captain", "said", "--message", "3", "--text", "Drop the lamp.");
+        int never = edi("", "captain", "said", "--task", "fit-lamp");
+        int lineAlone = edi("", "captain", "said", "--line", "2", "--text", "Drop the lamp.");
+
+        assertThat(List.of(twice, never, lineAlone)).containsOnly(2);
+        assertThat(err.toString()).contains("Cite the captain's words with --message, or with --text, one of the two.",
+                "--line cites one line of a message, so it takes --message.");
+        assertThat(core.requests()).isEmpty();
+    }
+
+    @Test
+    void listsTheCaptainsMessagesOfThisSession() {
+        core.answering(200, "The captain's messages in this session (0)\n");
+
+        edi("", "captain", "messages");
+
+        assertThat(core.received().target()).isEqualTo("/api/captain/messages");
+        assertThat(out.toString()).isEqualTo("The captain's messages in this session (0)\n");
     }
 
     @Test

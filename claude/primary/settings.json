@@ -13,8 +13,14 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Read",
+        "matcher": "Bash|Read|AskUserQuestion",
         "hooks": [{ "type": "command", "command": "edi hook pre-tool-use" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [{ "type": "command", "command": "edi hook post-tool-use" }]
       }
     ],
     "Stop": [

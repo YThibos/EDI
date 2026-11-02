@@ -28,6 +28,13 @@ final class JsonBody {
         return this;
     }
 
+    JsonBody with(String name, Integer number) {
+        if (number != null) {
+            field(name).append(number);
+        }
+        return this;
+    }
+
     JsonBody with(String name, List<String> values) {
         if (values != null && !values.isEmpty()) {
             field(name).append(values.stream().map(JsonBody::quoted).collect(Collectors.joining(",", "[", "]")));

@@ -190,3 +190,18 @@ Headless runs (`claude -p`, `claude-haiku-5-5`, `--allowedTools Bash`) in throwa
 - A settings file in the session's working directory can switch off every hook given with `--settings`, and a value the `--settings` file states for the same key wins over it.
 - With `--allowedTools Write`, Claude Code held the model's `Write` of `.claude/settings.local.json` for a permission prompt; whether a file written in the middle of a session under `--dangerously-skip-permissions` takes effect in that session was not verified, because the sandbox's own permission check refused that run.
 - User settings in `~/.claude/` were not tried, so as not to change the sandbox's own Claude Code; Claude Code documents them below the command line in precedence, as local and project settings are.
+
+## Dialog answers and pasted text, on 2.1.316
+
+Read on Claude Code 2.1.316 on WSL2 Ubuntu 24.04, 02/11/2026, for the captain's stored messages ([captains-word](../decisions/captains-word.md)).
+The evidence is the structure of records in existing session transcripts, read with every word of their text masked; no new session was run, because a worker's guard refuses typing into a pane and a dialog needs an interactive session.
+
+- The transcript's `toolUseResult` of an `AskUserQuestion` call holds `questions`, the questions as asked, `answers`, an object from each question's text to the label of the option the captain chose, and `annotations`, an object from a question's text to the captain's `notes` and the `preview` they chose, empty when there are none.
+- `AskUserQuestion`'s own input schema lists `answers` and `annotations` as filled in by the permission component that shows the dialog, so the model's call carries neither.
+- A prompt holding pasted text records it between `<pasted_content id="<id>">` and `</pasted_content id="<id>">`, each tag on a line of its own, with the same short id on both, and the text the captain typed around it outside the tags.
+
+Not verified, and assumed by the hooks until a live run checks them:
+
+- that the `PostToolUse` payload's `tool_response` for `AskUserQuestion` equals the transcript's `toolUseResult`, which is why the hook also reads `answers` and `annotations` from `tool_input`;
+- that `PreToolUse` fires before the dialog fills in the answers, so a call that arrives already answered was not shown to the captain;
+- that the `UserPromptSubmit` payload's `prompt` carries the paste tags as the transcript records them.

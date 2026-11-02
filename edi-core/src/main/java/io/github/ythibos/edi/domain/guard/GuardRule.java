@@ -16,6 +16,7 @@ public enum GuardRule {
     SECRET,
     WORKER_IDENTITY,
     UNLANDED_BRANCH_DELETION,
+    DIALOG_ANSWERED_AHEAD,
     UNREADABLE_COMMAND;
 
     public String word() {

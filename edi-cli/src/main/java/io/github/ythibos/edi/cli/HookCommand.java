@@ -25,7 +25,7 @@ final class HookCommand implements Callable<Integer> {
     @Spec
     private CommandSpec spec;
 
-    @Parameters(paramLabel = "EVENT", description = "session-start, user-prompt-submit, pre-tool-use, stop, stop-failure, notification or session-end.")
+    @Parameters(paramLabel = "EVENT", description = "session-start, user-prompt-submit, pre-tool-use, post-tool-use, stop, stop-failure, notification or session-end.")
     private String event;
 
     @Override

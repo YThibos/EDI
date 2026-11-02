@@ -27,7 +27,9 @@ import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.AnsweredQuestion;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
@@ -60,7 +62,7 @@ class DispatchAndEffortTest {
     private static final Route SONNET_HIGH = new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH);
     private static final String THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD = "To run one task above high, the effort ceiling, you need the captain's"
             + " word on fit-lamp in this session recorded for it: record it with edi captain said --task fit-lamp --for effort-above-high"
-            + " --text \"<their words>\".";
+            + " --message <n>, or have the captain choose a dialog option that opens with effort-above-high and names fit-lamp.";
 
     @TempDir
     private Path directory;
@@ -100,14 +102,16 @@ class DispatchAndEffortTest {
         }
 
         @Test
-        @DisplayName("the captain's word recorded on a task for effort above high in this session lifts that task to xhigh or max, with a reason")
+        @DisplayName("the captain's word recorded on a task for effort above high in this session, or the captain's choice of a dialog option"
+                + " that opens with effort-above-high and names the task, lifts that task to xhigh or max, with a reason")
         @Tag("adapter")
         void theCaptainsWordOnATaskLiftsItAboveHigh() throws IOException {
             TestHome home = WorkerFixtures.homeWithProjects(directory);
             home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4")));
             CallingSession session = primarySession(home);
             captainSaysForEffortAboveHigh(home, session, "fit-lamp", "Fit the lamp on Opus at xhigh, it matters.");
-            captainSaysForEffortAboveHigh(home, session, "fit-horn", "The horn runs at max.");
+            home.primaryHooks().dialogAnswered(session.id(), List.of(new AnsweredQuestion("How hard does the horn work?", "effort-above-high fit-horn at max",
+                    "")));
 
             dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session);
             assertThat(home.runtime().lastLaunch().route()).isEqualTo(OPUS_XHIGH);
@@ -154,7 +158,7 @@ class DispatchAndEffortTest {
             CallingSession session = primarySession(home);
             captainSaysForEffortAboveHigh(home, session, "fit-horn", "The horn runs at xhigh.");
             home.primaryHooks().promptSubmitted(session.id(), "Everything at xhigh today.");
-            home.captainsWord().record(session, "Everything at xhigh today.", null, null, Actor.PRIMARY);
+            home.captainsWord().record(session, new Citation.Verbatim("Everything at xhigh today."), null, null, Actor.PRIMARY);
 
             assertThatThrownBy(() -> dispatchAboveHigh(home, "fit-lamp", EffortLevel.XHIGH, session))
                     .isInstanceOf(Refusal.class).hasMessage(THE_REFUSAL_WITHOUT_THE_LAMPS_EFFORT_WORD);
@@ -270,7 +274,8 @@ class DispatchAndEffortTest {
 
     private static void recordTheCaptainsWord(TestHome home, CallingSession session, String task, String words, CaptainWordAct act) {
         home.primaryHooks().promptSubmitted(session.id(), words);
-        home.captainsWord().record(session, words, TaskReference.parse(task), act, Actor.PRIMARY);
+        int typed = home.captainMessages().sentIn(session.id()).messages().getLast().number();
+        home.captainsWord().record(session, new Citation.WholeMessage(typed), TaskReference.parse(task), act, Actor.PRIMARY);
     }
 
     private static void dispatchAboveHigh(TestHome home, String task, EffortLevel effort, CallingSession session) {

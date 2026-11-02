@@ -28,7 +28,7 @@ Its report, diagnosis or recommendation authorises nothing (I-05).
 ## Promotion to a ship
 
 1. Only the captain's go starts implementation.
-2. When the captain's message says go, record their words first: `edi captain said --task <scout> --text "<their words>"`.
+2. When the captain's message says go, record it first by its number: `edi captain said --task <scout> --message <n>`, as `edi captain messages` lists it; a dialog option they chose that opens with `promote` and names the scout needs no recording.
 3. A decision on the scout counts as their go when the captain chooses, since this session opened, an option that names `"authorises": "promote"`, in the chat, in the console or on the scout's board.
    The scout's board card carries it (load `edi-board`); otherwise raise such a card with `edi decision raise <scout> --card -`, putting `"authorises": "promote"` on the option that ships the plan and on no other.
    Never ask the captain to retype a choice made on the console or the board.

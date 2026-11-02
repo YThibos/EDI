@@ -27,6 +27,7 @@ import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
@@ -400,7 +401,7 @@ class DecisionsAndReportingTest {
             home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(session, words);
             CallingSession calling = new CallingSession(session);
-            home.captainsWord().record(calling, words, TaskReference.parse(task), null, Actor.PRIMARY);
+            home.captainsWord().record(calling, new Citation.Verbatim(words), TaskReference.parse(task), null, Actor.PRIMARY);
             return calling;
         }
 
