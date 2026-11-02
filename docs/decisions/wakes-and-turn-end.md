@@ -21,10 +21,11 @@ Every call of either names its stream, a fresh id, and its process; `WakeStreams
 `POST /api/wait` answers only the session holding the primary role, and `WakeStreams.admit` refuses a stream of that session while another of its streams is live, naming the live one's command and process; a stream whose process is gone, or that belongs to a session no longer primary, is retired instead, so a crash never locks the primary out.
 A stream that has ended, cleanly or by retirement, is refused if it calls again.
 `edi wait` refuses to start when its standard output is `/dev/null` or closed, which `StandardOutput` reads from `/proc/self/fd/1`, before it calls the core.
-The guard refuses `edi wait` chained, piped, redirected or sent to the background in the same Bash or Monitor call ([pre-tool-guard](pre-tool-guard.md)).
+The guard refuses `edi wait` chained, piped, redirected or sent to the background in the same Bash or Monitor call, and `edi wait --follow` in any tool but Monitor ([pre-tool-guard](pre-tool-guard.md)).
 A call offers the stream every wake not yet acknowledged and not yet delivered to this session, or parks for up to 25 seconds and answers 204; it answers the wakes' numbers in the `EDI-Wakes` header, and the stream's next call names the numbers it printed.
-A wake counts delivered once its stream says it printed it; an offer a stream never confirms goes back when the stream is retired, and an offer whose long poll expired is withdrawn.
-A wake is acknowledged when the primary records an event on its task after its delivery, or when a later wake for its task is printed; starting another wait never acknowledges anything.
+A wake counts delivered once its stream says it printed it.
+A stream makes one call at a time, so an offer its next call does not name as printed was never printed and goes back then; every offer to a retired stream goes back too, and an offer whose long poll expired is withdrawn.
+A wake is acknowledged when the primary records an event on its task after its delivery, when a later wake for its task is printed, or when the session it was delivered to ends cleanly through its `SessionEnd` hook; starting another wait never acknowledges anything.
 A wake delivered to a session that crashed stays unacknowledged, so the next primary session is offered it again; the same session is never offered a wake it printed.
 A wait registers with `WakeSignal` before it looks for wakes, so a wake committed in between is delivered by that first look or by the fresh look the wake starts; the looks of one call run one at a time and stop once it is answered, and a stream that has ended is offered nothing.
 `edi wait` keeps its stream across a restart of the core: it asks again every two seconds for up to a minute, naming what it printed, and the restarted core finds the stream in the store.
@@ -39,7 +40,8 @@ A turn's stop is blocked at most three times, and a standby session's stop is ne
 ## Why
 
 A wake can never exist without its event, and a wake printed into a stream nobody reads cannot happen: the stream that would print it is refused before it starts.
-Counting a wake delivered only once its stream printed it, and acknowledged only once the primary acted on its task or a newer wake for that task reached it, keeps a crash between printing and acting from losing it.
+Counting a wake delivered only once its stream printed it, and acknowledged only once the primary acted on its task, a newer wake for that task reached it or its session ended cleanly, keeps a crash between printing and acting from losing it.
+A session that ends cleanly had every wake it printed in front of it, so its end settles them, and a wake that only informs is not replayed to every later session.
 One stream per session turns the wake loop's three tool calls per wake into one notification per wake and a restart when the monitor's timeout ends it.
 Liveness read from the stream's own process, rather than from what a turn's last stop saw, holds between turns and is the same answer for the stop hook, `edi health` and the status line.
 The turn-end rules read only the store, the presence and the process table, so they hold whatever the primary remembers, and an unanswerable block cannot burn the captain's usage.
@@ -49,6 +51,7 @@ The turn-end rules read only the store, the presence and the process table, so t
 - Choosing wakes when `edi wait` reads the event log - payloads would be read back into typed events on every poll.
 - Acknowledging a wake as it is printed - a primary that crashed before handling it would lose it.
 - Acknowledging every wake a session was given when it next waits - a stray second wait acknowledged a question nobody saw.
+- Acknowledging a wake once its task reaches a final state - a health wake or a wake of a task that stays open would still pile up.
 - Looking for wakes before registering the wait - a wake committed in between would sit until the next wake or the 25-second expiry.
 - A server-sent stream held open by the core - a write into the socket says nothing about the stream having printed it, and a core restart would end it.
 - Reading the session's background jobs from the Stop hook's `background_tasks` - they say a command runs, not that it prints anywhere, and say nothing between turns.
@@ -59,11 +62,11 @@ The turn-end rules read only the store, the presence and the process table, so t
 ## Consequences
 
 - Good: a new event type must decide whether it wakes the primary, and a burst of events in quiet becomes one turn.
-- Good: a second stream, a wait sent to `/dev/null` and a wait chained onto another command are refused, each naming the one correct way to start the stream.
+- Good: a second stream, a wait sent to `/dev/null`, a wait chained onto another command and a stream started outside the Monitor tool are refused, each naming the one correct way to start the stream.
 - Good: a dead stream reads as missing at once, in the stop hook, `edi health` and the status line, and the next stream replaces it and is offered what it never printed.
 - Bad: in quiet a worker's question waits up to `presence.quietBatch` for the primary, while a decision reaches the captain at once as a notification.
 - Bad: the Monitor tool ends a stream at its timeout, so the primary starts it again then; the notification of its end is what tells it.
-- Bad: a wake whose task the primary never acts on stays unacknowledged until a newer wake for that task arrives, and the next session is offered it again.
+- Bad: a wake a session printed and let pass is settled when that session ends cleanly, so the next session is not told of it again; only a crashed session's wakes reach the next one.
 - Bad: a closed standard output is read from `/proc`, so off Linux `edi wait` cannot tell and starts.
 
 ## When to revisit
@@ -78,3 +81,4 @@ When Claude Code's Monitor tool changes how it delivers lines or drops its timeo
 - 28/10/2026: the turn began carrying the previous turn's report, and the Stop hook began naming the turn report (EDI-133).
 - 28/10/2026: EDI-120 recorded that a wait registers before it looks for wakes, after a test assumed the wake always reached a parked wait.
 - 02/11/2026: EDI-158 gave the primary one wake stream, `edi wait --follow` under the Monitor tool, counted a wake delivered once printed and acknowledged once acted on, refused a second stream and a wait that prints nowhere, and read the wait's liveness from the stream's process; it carries EDI-152's hard rules.
+- 02/11/2026: the captain chose that a session ending cleanly acknowledges the wakes delivered to it, after a review showed wakes nobody acts on piling up for every later session; an offer a stream's next call does not confirm now goes back at once (EDI-158).

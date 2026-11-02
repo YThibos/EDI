@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
@@ -47,13 +48,14 @@ public class PrimaryHooks {
     private final EventLog events;
     private final ProcessTable processes;
     private final WakeStreams streams;
+    private final WakeStore wakes;
     private final WorkerRuntime runtime;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainWordStore captainWords, ChangePresence presence,
             PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, EventLog events, ProcessTable processes, WakeStreams streams,
-            WorkerRuntime runtime, Clock clock, TransactionTemplate transaction) {
+            WakeStore wakes, WorkerRuntime runtime, Clock clock, TransactionTemplate transaction) {
         this.sessions = sessions;
         this.roles = roles;
         this.captainWords = captainWords;
@@ -64,6 +66,7 @@ public class PrimaryHooks {
         this.events = events;
         this.processes = processes;
         this.streams = streams;
+        this.wakes = wakes;
         this.runtime = runtime;
         this.clock = clock;
         this.transaction = transaction;
@@ -118,7 +121,7 @@ public class PrimaryHooks {
     }
 
     public HookAnswer sessionEnded(UUID id) {
-        transaction.executeWithoutResult(_ -> sessions.get(id).ifPresent(session -> sessions.save(session.ended(clock.now()))));
+        transaction.executeWithoutResult(_ -> sessions.get(id).ifPresent(this::ended));
         return HookAnswer.PROCEED;
     }
 
@@ -155,5 +158,11 @@ public class PrimaryHooks {
         }
         return TurnEnd.blockingReason(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), presenceNow.current().keepsTheChatQuiet(),
                 !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), waitIsLive));
+    }
+
+    private void ended(PrimarySession session) {
+        Instant now = clock.now();
+        sessions.save(session.ended(now));
+        wakes.acknowledgeDeliveredTo(session.id(), now);
     }
 }

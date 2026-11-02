@@ -21,7 +21,7 @@ import io.github.ythibos.edi.web.access.Caller;
 @RestController
 class WaitController {
 
-    private static final String PRINTED_WAKES = "EDI-Wakes";
+    private static final String OFFERED_WAKES = "EDI-Wakes";
     private static final Duration PATIENCE = Duration.ofSeconds(25);
 
     private final WaitForWakes waits;
@@ -88,7 +88,7 @@ class WaitController {
 
         private void delivered(WakeDelivery delivery) {
             signal.forget(this);
-            if (!result.setResult(ResponseEntity.ok().header(PRINTED_WAKES, delivery.numbers().stream().map(String::valueOf).collect(Collectors.joining(","))).body(delivery))) {
+            if (!result.setResult(ResponseEntity.ok().header(OFFERED_WAKES, delivery.numbers().stream().map(String::valueOf).collect(Collectors.joining(","))).body(delivery))) {
                 waits.withdraw(delivery);
             }
         }

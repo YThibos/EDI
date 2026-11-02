@@ -835,7 +835,7 @@ public final class TestHome {
 
     public PrimaryHooks primaryHooks() {
         return new PrimaryHooks(primarySessions, primarySessions(), captainWords, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
-                processes, wakeStreams(), runtime, clock, transaction);
+                processes, wakeStreams(), wakes, runtime, clock, transaction);
     }
 
     public WorkerListQuery workerList() {

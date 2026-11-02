@@ -114,6 +114,20 @@ class WaitForWakesTest {
     }
 
     @Test
+    void offersAgainWhatAStreamsNextCallDidNotNameAsPrinted() {
+        UUID primary = primarySession();
+        WakeStream stream = followedBy(primary);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        home.waitForWakes().heard(primary, poll(stream, List.of(), false));
+        WakeDelivery reoffered = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        assertThat(reoffered.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
+        assertThat(home.wakes().unacknowledged()).extracting(QueuedWake::deliveredTo).containsOnlyNulls();
+    }
+
+    @Test
     void deliversAgainWhatAnExpiredWaitWithdrew() {
         WakeStream stream = followedBy(primarySession());
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
@@ -188,7 +202,6 @@ class WaitForWakesTest {
         home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
         printed(crashed, stream, home.waitForWakes().deliverTo(stream).orElseThrow());
 
-        home.primaryHooks().sessionEnded(crashed);
         UUID next = primarySession();
         WakeStream nextStream = followedBy(next);
         WakeDelivery redelivered = home.waitForWakes().deliverTo(nextStream).orElseThrow();
@@ -196,6 +209,20 @@ class WaitForWakesTest {
 
         assertThat(redelivered.wakes()).extracting(QueuedWake::deliveredTo).containsExactly(crashed);
         assertThat(home.wakes().unacknowledged()).extracting(QueuedWake::deliveredTo).containsExactly(next);
+    }
+
+    @Test
+    void acknowledgesWhatASessionPrintedOnceItEndsSoTheNextSessionIsOfferedNoneOfIt() {
+        UUID ended = primarySession();
+        WakeStream stream = followedBy(ended);
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+        printed(ended, stream, home.waitForWakes().deliverTo(stream).orElseThrow());
+
+        home.primaryHooks().sessionEnded(ended);
+        WakeStream nextStream = followedBy(primarySession());
+
+        assertThat(home.wakes().unacknowledged()).isEmpty();
+        assertThat(home.waitForWakes().deliverTo(nextStream)).isEmpty();
     }
 
     @Test

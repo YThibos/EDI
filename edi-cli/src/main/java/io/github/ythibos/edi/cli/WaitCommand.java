@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -20,9 +21,8 @@ final class WaitCommand implements Callable<Integer> {
 
     private static final int WOKEN = 0;
     private static final int NOT_WAITING = 1;
-    private static final int KEEP_FOLLOWING = -1;
     private static final int NOTHING_YET = 204;
-    private static final String PRINTED_WAKES = "EDI-Wakes";
+    private static final String OFFERED_WAKES = "EDI-Wakes";
     private static final Duration RETRY = Duration.ofSeconds(2);
     private static final Duration PATIENCE_WITH_AN_ABSENT_CORE = Duration.ofSeconds(60);
 
@@ -67,40 +67,48 @@ final class WaitCommand implements Callable<Integer> {
     }
 
     private int followTheWakes() {
-        int outcome = printTheNextWakes();
-        while (outcome == KEEP_FOLLOWING) {
-            outcome = printTheNextWakes();
+        OptionalInt stopped = printTheNextWakes();
+        while (stopped.isEmpty()) {
+            stopped = printTheNextWakes();
         }
-        return outcome;
+        return stopped.getAsInt();
     }
 
     private int waitForOneWake() {
-        int outcome = printTheNextWakes();
-        if (outcome != KEEP_FOLLOWING) {
-            return outcome;
+        OptionalInt stopped = printTheNextWakes();
+        if (stopped.isPresent()) {
+            return stopped.getAsInt();
         }
-        askTheCore(true);
+        tellTheCoreTheStreamEnded();
         return WOKEN;
     }
 
-    private int printTheNextWakes() {
+    private OptionalInt printTheNextWakes() {
         Duration unanswered = Duration.ZERO;
         while (unanswered.compareTo(PATIENCE_WITH_AN_ABSENT_CORE) < 0) {
-            Optional<CoreReply> reply = askTheCore(false);
+            Optional<CoreReply> reply = askTheCore();
             if (reply.isPresent() && reply.get().status() != NOTHING_YET) {
-                return printed(reply.get());
+                return printReply(reply.get());
             }
             unanswered = reply.isPresent() ? Duration.ZERO : unanswered.plus(RETRY);
             if (reply.isEmpty() && !pausedForTheCore()) {
-                return ended("edi wait was interrupted.");
+                return stoppedWith(ended("edi wait was interrupted."));
             }
         }
-        return ended("EDI core did not answer for a minute, so edi wait gave up; once the core runs, start it again.");
+        return stoppedWith(ended("EDI core did not answer for a minute, so edi wait gave up; once the core runs, start it again."));
     }
 
-    private Optional<CoreReply> askTheCore(boolean ending) {
+    private void tellTheCoreTheStreamEnded() {
+        sent(poll(true));
+    }
+
+    private Optional<CoreReply> askTheCore() {
+        return sent(poll(false));
+    }
+
+    private Optional<CoreReply> sent(String poll) {
         try {
-            CoreReply reply = new CoreClient().post(edi.core(), "/api/wait", poll(ending), "text/plain");
+            CoreReply reply = new CoreClient().post(edi.core(), "/api/wait", poll, "text/plain");
             printed = List.of();
             return Optional.of(reply);
         } catch (CoreUnavailable unavailable) {
@@ -117,21 +125,25 @@ final class WaitCommand implements Callable<Integer> {
                 .text();
     }
 
-    private int printed(CoreReply reply) {
+    private OptionalInt printReply(CoreReply reply) {
         if (!reply.succeeded()) {
-            return ended(reply.body().strip());
+            return stoppedWith(ended(reply.body().strip()));
         }
         PrintWriter out = spec.commandLine().getOut();
         out.print(reply.body().endsWith("\n") ? reply.body() : reply.body() + "\n");
         if (out.checkError()) {
-            return NOT_WAITING;
+            return stoppedWith(NOT_WAITING);
         }
         printed = wakesNumberedIn(reply);
-        return KEEP_FOLLOWING;
+        return OptionalInt.empty();
+    }
+
+    private static OptionalInt stoppedWith(int exitCode) {
+        return OptionalInt.of(exitCode);
     }
 
     private static List<Long> wakesNumberedIn(CoreReply reply) {
-        return reply.header(PRINTED_WAKES)
+        return reply.header(OFFERED_WAKES)
                 .map(numbers -> Arrays.stream(numbers.split(",")).map(String::strip).filter(number -> !number.isEmpty()).map(Long::valueOf).toList())
                 .orElseGet(List::of);
     }

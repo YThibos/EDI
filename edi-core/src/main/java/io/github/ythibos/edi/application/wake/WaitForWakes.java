@@ -61,6 +61,7 @@ public class WaitForWakes {
         return transaction.execute(_ -> {
             WakeStream stream = streams.admit(poll, session);
             wakes.printed(poll.printed(), stream.id(), session, clock.now());
+            wakes.withdrawOffersTo(stream.id());
             if (poll.ending()) {
                 streams.retire(stream);
             }

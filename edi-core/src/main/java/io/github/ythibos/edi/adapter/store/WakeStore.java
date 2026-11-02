@@ -90,6 +90,13 @@ public class WakeStore {
                 .update();
     }
 
+    public void acknowledgeDeliveredTo(UUID session, Instant at) {
+        store.sql("update wake set acknowledged_at = :at where acknowledged_at is null and delivered_to = :session")
+                .param("at", Columns.text(at))
+                .param("session", session.toString())
+                .update();
+    }
+
     private void acknowledgeWhatSupersedes(long number, Instant at) {
         store.sql("""
                         update wake set acknowledged_at = :at

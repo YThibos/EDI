@@ -100,6 +100,7 @@ class ProcessSafetyTest {
                     "kill only a process id you started and captured (I-30)");
             assertDenied(byThePrimarysMonitor("edi wait --follow > /dev/null"), "edi wait runs alone");
             assertDenied(forThePrimary("edi wait >/dev/null 2>&1 & disown"), "edi wait runs alone");
+            assertDenied(forThePrimary("edi wait --follow"), "only the Monitor tool");
             assertThat(byThePrimarysMonitor("edi wait --follow")).isEqualTo(HookAnswer.PROCEED);
             assertThat(forThePrimary("edi wait")).isEqualTo(HookAnswer.PROCEED);
             assertThat(SecretsAreNeverPrinted.guardedToolsIn("claude/worker/settings.json")).contains("Monitor");
