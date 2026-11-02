@@ -339,6 +339,8 @@ class ApiTest {
         HttpResponse<String> asked = primaryHook(primary, "pre-tool-use", "{" + dialog + "}");
         HttpResponse<String> answeredAhead = primaryHook(primary, "pre-tool-use",
                 "{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{\"answers\":{\"Which lamp?\":\"drop api-dialog\"}}}");
+        HttpResponse<String> annotatedAhead = primaryHook(primary, "pre-tool-use",
+                "{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{\"annotations\":{\"Which lamp?\":{\"notes\":\"drop api-dialog\"}}}}");
         HttpResponse<String> chosen = primaryHook(primary, "post-tool-use", "{" + dialog + "," + answers + "}");
         HttpResponse<String> chosenByTheWorker = hook(worker, "post-tool-use", "{\"session_id\":\"" + primary + "\"," + dialog + "," + answers + "}");
         HttpResponse<String> listed = send(inSession(primary, "/api/captain/messages", TEXT).GET());
@@ -347,6 +349,8 @@ class ApiTest {
 
         assertThat(asked.statusCode()).isEqualTo(204);
         assertThat(answeredAhead.body()).contains("\"permissionDecision\":\"deny\"",
+                "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
+        assertThat(annotatedAhead.body()).contains("\"permissionDecision\":\"deny\"",
                 "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
         assertThat(chosen.statusCode()).isEqualTo(204);
         assertThat(chosenByTheWorker.statusCode()).isEqualTo(204);

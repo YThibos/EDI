@@ -61,7 +61,7 @@ public record CaptainMessages(List<CaptainMessage> messages) {
         Passage cited = Passage.of(words);
         return messages.stream()
                 .filter(message -> passagesOf(message).anyMatch(cited::equals))
-                .max(Comparator.comparingInt(CaptainMessage::number))
+                .max(typedBeforeDialogAnswersThenLatest())
                 .map(message -> new CitedWords(words.strip(), message))
                 .orElseThrow(() -> new Refusal("The captain did not type \"" + words.strip() + "\" in this session; cite their message with"
                         + " --message <n>, or one line of it with --line, as edi captain messages lists them."));
@@ -72,5 +72,9 @@ public record CaptainMessages(List<CaptainMessage> messages) {
                 .map(candidate -> Passage.of(candidate.wholeText())).stream();
         Stream<Passage> lines = message.lines().stream().filter(MessageLine::isCitable).map(line -> Passage.of(line.text()));
         return Stream.concat(whole, lines);
+    }
+
+    private static Comparator<CaptainMessage> typedBeforeDialogAnswersThenLatest() {
+        return Comparator.comparing((CaptainMessage message) -> message instanceof TypedMessage).thenComparingInt(CaptainMessage::number);
     }
 }

@@ -210,6 +210,22 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
+    void letsThePrimaryAskTheCaptainWhileTheCoreIsDownUnlessTheAnswersAreGiven() throws IOException {
+        core.stopAnswering();
+        String questions = "\"questions\":[{\"question\":\"Shall I bring the core back?\",\"options\":[{\"label\":\"Yes\"}]}]";
+
+        int asked = edi("{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{" + questions + "}}", "hook", "pre-tool-use");
+        int answered = edi("{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{" + questions
+                + ",\"answers\":{\"Shall I bring the core back?\":\"Yes\"}}}", "hook", "pre-tool-use");
+        int annotated = edi("{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{" + questions
+                + ",\"annotations\":{\"Shall I bring the core back?\":{\"notes\":\"drop fix-login\"}}}}", "hook", "pre-tool-use");
+
+        assertThat(asked).isZero();
+        assertThat(answered).isEqualTo(2);
+        assertThat(annotated).isEqualTo(2);
+    }
+
+    @Test
     void passesTheStatusLinePayloadThroughAndPrintsTheCoresLine() {
         core.answering(200, "\u001b[38;2;200;200;200mOpus 5.5\u001b[0m\n");
 

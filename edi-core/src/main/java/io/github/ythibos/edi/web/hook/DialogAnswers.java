@@ -25,11 +25,15 @@ final class DialogAnswers {
     }
 
     static boolean areFilledIn(JsonNode toolInput) {
-        return answered(toolInput);
+        return answered(toolInput) || holdsEntries(toolInput, ANNOTATIONS);
     }
 
     private static boolean answered(JsonNode node) {
-        return node.path(ANSWERS).isObject() && !node.path(ANSWERS).isEmpty();
+        return holdsEntries(node, ANSWERS);
+    }
+
+    private static boolean holdsEntries(JsonNode node, String field) {
+        return node.path(field).isObject() && !node.path(field).isEmpty();
     }
 
     private static boolean isAChoice(Map.Entry<String, JsonNode> answer) {

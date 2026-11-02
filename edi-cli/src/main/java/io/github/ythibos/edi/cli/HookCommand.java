@@ -40,7 +40,7 @@ final class HookCommand implements Callable<Integer> {
             CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload, "application/json");
             return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip());
         } catch (CoreUnavailable unavailable) {
-            return thePrimaryMayStillRunEdi(payload) ? ANSWERED : unanswered(unavailable.getMessage());
+            return thePrimaryMayGoOnWithoutTheCore(payload) ? ANSWERED : unanswered(unavailable.getMessage());
         }
     }
 
@@ -48,8 +48,8 @@ final class HookCommand implements Callable<Integer> {
         return new String(edi.input().readAllBytes(), StandardCharsets.UTF_8);
     }
 
-    private boolean thePrimaryMayStillRunEdi(String payload) {
-        return event.equals(GUARD) && !edi.runsForAWorker() && PlainEdiCall.isIn(payload);
+    private boolean thePrimaryMayGoOnWithoutTheCore(String payload) {
+        return event.equals(GUARD) && !edi.runsForAWorker() && (PlainEdiCall.isIn(payload) || UnansweredDialog.isIn(payload));
     }
 
     private int answered(String answer) {
