@@ -132,6 +132,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 8 | [EDI-86](EDI-86.md) | Delivered, changing, ready | M | EDI-85 | open | - |
 | 9 | [EDI-70](EDI-70.md) | Landing by the merged head: squash-merge cleanup | M | EDI-85 | open | - |
 | 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 | open | - |
+| 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 | open | - |
 
 ### Wave 4: plans dispatch themselves
 
