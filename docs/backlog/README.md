@@ -133,6 +133,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 9 | [EDI-70](EDI-70.md) | Landing by the merged head: squash-merge cleanup | M | EDI-85 | open | - |
 | 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 | open | - |
 | 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 | open | - |
+| 58 | [EDI-157](EDI-157.md) | A merge request's validation watch never reads as changing | XS | EDI-86 | open | - |
 
 ### Wave 4: plans dispatch themselves
 
