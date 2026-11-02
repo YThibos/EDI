@@ -159,7 +159,18 @@ class CaptainsMessagesTest {
                 .isInstanceOf(Refusal.class).hasMessageContaining("The captain did not type \"Drop the door.\" in this session");
         assertThatThrownBy(() -> record(other, new Citation.WholeMessage(2), null))
                 .isInstanceOf(Refusal.class).hasMessage("The captain sent no message 2 in this session; edi captain messages lists them.");
-        assertThat(home.captainsWord().requireCited(session, new Citation.Verbatim("drop the lamp."))).isEqualTo("drop the lamp.");
+        assertThat(home.captainsWord().requireCited(session, new Citation.Verbatim("drop the LAMP."))).isEqualTo("Drop the lamp.");
+    }
+
+    @Test
+    void recordsTheStoredTextAsTheVerbatimWhateverSpellingTheTextIsCitedIn() {
+        CallingSession session = typedIn("Drop the lamp.\nIt is “broken”.");
+
+        record(session, new Citation.Verbatim("drop  the LAMP."), CaptainWordAct.DROP);
+        String cited = home.captainsWord().requireCited(session, new Citation.Verbatim("it is \"broken\"."));
+
+        assertThat(authorised(session, CaptainWordAct.DROP)).isEqualTo(new CaptainsWord("Drop the lamp."));
+        assertThat(cited).isEqualTo("It is “broken”.");
     }
 
     @Test

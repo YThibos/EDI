@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.authority;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -138,7 +139,7 @@ public class CaptainsWordEvidence {
     }
 
     private Heard heardIn(Exchange exchange) {
-        return new Heard(words.heardIn(exchange.session()), messages.sentIn(exchange.session()).dialogAnswers());
+        return new Heard(words.heardIn(exchange.session()), messages.sentIn(exchange.session()).dialogAnswers(), Set.copyOf(tasks.ids()));
     }
 
     private Optional<CaptainsWord> onTheHome(Exchange exchange, CaptainWordAct act) {

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -20,14 +21,14 @@ public final class CaptainsAuthority {
     public static Optional<CaptainsWord> onTask(TaskId task, CaptainWordAct act, Exchange exchange, Heard heard, List<Decision> decisions) {
         return latest(Stream.concat(
                         heardOnTask(task, exchange, heard.words()).filter(Authorisation::isGeneral).map(CaptainsAuthority::said),
-                        chosenInADialog(exchange, heard.answers(), answer -> answer.authorises(act, task))))
+                        chosenInADialog(exchange, heard.answers(), answer -> answer.authorises(act, task, heard.knownTasks()))))
                 .or(() -> answeredDecision(act, exchange, decisions));
     }
 
     public static Optional<CaptainsWord> saidForActOnTask(TaskId task, CaptainWordAct act, Exchange exchange, Heard heard) {
         return latest(Stream.concat(
                 heardOnTask(task, exchange, heard.words()).filter(word -> word.isFor(act)).map(CaptainsAuthority::said),
-                chosenInADialog(exchange, heard.answers(), answer -> answer.authorises(act, task))));
+                chosenInADialog(exchange, heard.answers(), answer -> answer.authorises(act, task, heard.knownTasks()))));
     }
 
     public static Optional<CaptainsWord> onTheHome(CaptainWordAct act, Exchange exchange, Heard heard) {
@@ -62,7 +63,7 @@ public final class CaptainsAuthority {
                 .map(CaptainsWord::new);
     }
 
-    public record Heard(List<Authorisation> words, List<DialogAnswer> answers) {
+    public record Heard(List<Authorisation> words, List<DialogAnswer> answers, Set<TaskId> knownTasks) {
     }
 
     private record Given(Instant at, String verbatim) {

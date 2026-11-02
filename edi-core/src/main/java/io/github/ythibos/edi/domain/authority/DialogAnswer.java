@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.authority;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -32,8 +33,8 @@ public record DialogAnswer(UUID session, int number, AnsweredQuestion answer, In
         return IntStream.range(0, said.size()).mapToObj(index -> new MessageLine(index + 1, said.get(index), false)).toList();
     }
 
-    public boolean authorises(CaptainWordAct act, TaskId task) {
-        return choiceOpensWith(act) && choiceNames(task.value());
+    public boolean authorises(CaptainWordAct act, TaskId task, Set<TaskId> knownTasks) {
+        return choiceOpensWith(act) && choiceNames(task.value()) && namesNoOtherTask(task, knownTasks);
     }
 
     public boolean authorisesOnTheHome(CaptainWordAct act) {
@@ -46,6 +47,10 @@ public record DialogAnswer(UUID session, int number, AnsweredQuestion answer, In
 
     private boolean choiceNames(String word) {
         return wordPattern("", word).matcher(answer.chosen()).find();
+    }
+
+    private boolean namesNoOtherTask(TaskId task, Set<TaskId> knownTasks) {
+        return knownTasks.stream().filter(other -> !other.equals(task)).noneMatch(other -> choiceNames(other.value()));
     }
 
     private static Pattern wordPattern(String anchor, String word) {

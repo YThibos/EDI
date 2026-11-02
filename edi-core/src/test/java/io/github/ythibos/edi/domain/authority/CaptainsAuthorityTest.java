@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ class CaptainsAuthorityTest {
     private static final UUID SESSION = UUID.randomUUID();
     private static final Exchange EXCHANGE = new Exchange(SESSION, OPENED);
     private static final TaskId LAMP = new TaskId("fit-lamp");
+    private static final TaskId DOOR = new TaskId("fit-door");
 
     @Test
     void takesTheLatestWordOnTheTaskFromThisSession() {
@@ -117,12 +119,26 @@ class CaptainsAuthorityTest {
         assertThat(CaptainsAuthority.onTheHome(CaptainWordAct.STOP_RUNNING_WORKERS, EXCHANGE, chose(lift, secret))).isEmpty();
     }
 
+    @Test
+    void neverCountsADialogAnswerThatNamesAnotherTaskToo() {
+        DialogAnswer dropBoth = chosen("drop fit-door, then promote fit-lamp", OPENED.plusSeconds(60));
+        DialogAnswer liftOne = chosen("effort-above-high fit-lamp, keep fit-door at high", OPENED.plusSeconds(60));
+        DialogAnswer dropTheDoor = chosen("drop fit-door, the lamp stays", OPENED.plusSeconds(60));
+
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, chose(dropBoth), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(DOOR, CaptainWordAct.DROP, EXCHANGE, chose(dropBoth), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, chose(liftOne))).isEmpty();
+        assertThat(CaptainsAuthority.saidForActOnTask(DOOR, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, chose(liftOne))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(DOOR, CaptainWordAct.DROP, EXCHANGE, chose(dropTheDoor), List.of()))
+                .contains(new CaptainsWord("drop fit-door, the lamp stays"));
+    }
+
     private static Heard said(List<Authorisation> words) {
-        return new Heard(words, List.of());
+        return new Heard(words, List.of(), Set.of(LAMP, DOOR));
     }
 
     private static Heard chose(DialogAnswer... answers) {
-        return new Heard(List.of(), List.of(answers));
+        return new Heard(List.of(), List.of(answers), Set.of(LAMP, DOOR, new TaskId("fit"), new TaskId("fit-lamp-twice")));
     }
 
     private static DialogAnswer chosen(String option, Instant at) {

@@ -36,7 +36,8 @@ class CaptainMessagesTest {
     void citesTextOnlyWhenAStoredMessageHoldsItWholeOrAsOneLine() {
         CaptainMessages sent = sent(typed(1, "Drop the lamp.\nAnd discard its copy."));
 
-        assertThat(sent.cite(new Citation.Verbatim("  and discard its   copy. ")).verbatim()).isEqualTo("and discard its   copy.");
+        assertThat(sent.cite(new Citation.Verbatim("  and discard its   copy. ")).verbatim()).isEqualTo("And discard its copy.");
+        assertThat(sent.cite(new Citation.Verbatim("DROP THE LAMP.\nand discard its copy.")).verbatim()).isEqualTo("Drop the lamp.\nAnd discard its copy.");
         assertThat(sent.cite(new Citation.Verbatim("Drop the lamp.\nAnd discard its copy.")).source().number()).isEqualTo(1);
         assertThatThrownBy(() -> sent.cite(new Citation.Verbatim("Drop the lamp and its copy.")))
                 .isInstanceOf(Refusal.class)
@@ -119,7 +120,7 @@ class CaptainMessagesTest {
 
         assertThat(sent.cite(new Citation.WholeMessage(3)).verbatim()).isEqualTo("The brass one\nPolish it first.\nThen fit it.");
         assertThat(sent.cite(new Citation.OneLine(3, 2)).verbatim()).isEqualTo("Polish it first.");
-        assertThat(sent.cite(new Citation.Verbatim("the brass one")).comeFromADialog()).isTrue();
+        assertThat(sent.cite(new Citation.Verbatim("the brass one"))).isEqualTo(new CitedWords("The brass one", answer));
         assertThat(sent.dialogAnswers()).containsExactly(answer);
         assertThat(new AnsweredQuestion("Which lamp?", "Oil", null).carriesNotes()).isFalse();
     }

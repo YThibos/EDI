@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.authority;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.Refusal;
@@ -22,8 +23,7 @@ public record CaptainMessages(List<CaptainMessage> messages) {
     }
 
     public boolean hold(String words) {
-        Passage cited = Passage.of(words);
-        return messages.stream().anyMatch(message -> passagesOf(message).anyMatch(cited::equals));
+        return messages.stream().flatMap(CaptainMessages::citableWordsOf).anyMatch(saying(words));
     }
 
     public List<DialogAnswer> dialogAnswers() {
@@ -58,23 +58,27 @@ public record CaptainMessages(List<CaptainMessage> messages) {
     }
 
     private CitedWords matching(String words) {
-        Passage cited = Passage.of(words);
         return messages.stream()
-                .filter(message -> passagesOf(message).anyMatch(cited::equals))
+                .flatMap(CaptainMessages::citableWordsOf)
+                .filter(saying(words))
                 .max(typedBeforeDialogAnswersThenLatest())
-                .map(message -> new CitedWords(words.strip(), message))
                 .orElseThrow(() -> new Refusal("The captain did not type \"" + words.strip() + "\" in this session; cite their message with"
                         + " --message <n>, or one line of it with --line, as edi captain messages lists them."));
     }
 
-    private static Stream<Passage> passagesOf(CaptainMessage message) {
-        Stream<Passage> whole = Optional.of(message).filter(candidate -> !candidate.holdsPastedContent())
-                .map(candidate -> Passage.of(candidate.wholeText())).stream();
-        Stream<Passage> lines = message.lines().stream().filter(MessageLine::isCitable).map(line -> Passage.of(line.text()));
+    private static Stream<CitedWords> citableWordsOf(CaptainMessage message) {
+        Stream<CitedWords> whole = Optional.of(message).filter(candidate -> !candidate.holdsPastedContent())
+                .map(candidate -> new CitedWords(candidate.wholeText(), candidate)).stream();
+        Stream<CitedWords> lines = message.lines().stream().filter(MessageLine::isCitable).map(line -> new CitedWords(line.text().strip(), message));
         return Stream.concat(whole, lines);
     }
 
-    private static Comparator<CaptainMessage> typedBeforeDialogAnswersThenLatest() {
-        return Comparator.comparing((CaptainMessage message) -> message instanceof TypedMessage).thenComparingInt(CaptainMessage::number);
+    private static Predicate<CitedWords> saying(String words) {
+        Passage cited = Passage.of(words);
+        return stored -> Passage.of(stored.verbatim()).equals(cited);
+    }
+
+    private static Comparator<CitedWords> typedBeforeDialogAnswersThenLatest() {
+        return Comparator.comparing((CitedWords cited) -> cited.source() instanceof TypedMessage).thenComparingInt(cited -> cited.source().number());
     }
 }
