@@ -112,7 +112,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
 | 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | delivered | [#87](https://github.com/YThibos/EDI/issues/87) |
 | 52 | [EDI-151](EDI-151.md) | Stopping a worker also ends the processes it left behind in its copy | S | - | open | [#107](https://github.com/YThibos/EDI/issues/107) |
-| 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | open | [#169](https://github.com/YThibos/EDI/issues/169) |
+| 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | delivered | [#169](https://github.com/YThibos/EDI/issues/169) |
 | 54 | [EDI-153](EDI-153.md) | An unanswered worker question comes back to the primary until it is answered | S | - | open | [#170](https://github.com/YThibos/EDI/issues/170) |
 | 55 | [EDI-154](EDI-154.md) | The turn report shows every worker waiting on the primary | XS | - | open | [#171](https://github.com/YThibos/EDI/issues/171) |
 | 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | [#173](https://github.com/YThibos/EDI/issues/173) |
@@ -199,7 +199,7 @@ The section sits after the six waves; the captain may move it up.
 | 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | delivered | - |
 | 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-132 | - |
 | 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | delivered | - |
-| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-132 | - |
+| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | delivered | - |
 | 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-132 | - |
 | 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-132 | - |
 | 48 | [EDI-138](EDI-138.md) | The worker-identity and tmux guards close the bypasses found after EDI-122 and EDI-123 landed | M | medium | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#97](https://github.com/YThibos/EDI/issues/97) |

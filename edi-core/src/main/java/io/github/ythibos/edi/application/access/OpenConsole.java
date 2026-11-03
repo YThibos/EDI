@@ -12,16 +12,22 @@ public class OpenConsole {
     private static final String SIGN_IN_PAGE = "login";
 
     private final ConsoleAccess access;
+    private final ConsoleHandOffs handOffs;
     private final CaptainsBrowser browser;
 
-    public OpenConsole(ConsoleAccess access, CaptainsBrowser browser) {
+    public OpenConsole(ConsoleAccess access, ConsoleHandOffs handOffs, CaptainsBrowser browser) {
         this.access = access;
+        this.handOffs = handOffs;
         this.browser = browser;
     }
 
     public ConsoleOpening open(URI console) {
-        URI signIn = URI.create(console.resolve(SIGN_IN_PAGE) + "#" + access.issueSignInLink());
-        return browser.open(signIn) ? ConsoleOpening.inTheBrowser(console) : ConsoleOpening.byLink(console, signIn);
+        URI signIn = signInLinkTo(console);
+        return browser.open(handOffs.handOff(console, signIn)) ? ConsoleOpening.inTheBrowser(console) : ConsoleOpening.byLink(console, signIn);
+    }
+
+    private URI signInLinkTo(URI console) {
+        return URI.create(console.resolve(SIGN_IN_PAGE) + "#" + access.issueSignInLink());
     }
 
     public record ConsoleOpening(URI console, URI signInLink, boolean opened, boolean openedAtSessionStart) {

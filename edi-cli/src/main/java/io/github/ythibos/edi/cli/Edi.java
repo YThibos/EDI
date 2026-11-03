@@ -63,13 +63,19 @@ public final class Edi implements Runnable {
 
     private final Map<String, String> environment;
     private final InputStream input;
+    private final StandardOutput output;
 
     @Spec
     private CommandSpec spec;
 
     public Edi(Map<String, String> environment, InputStream input) {
+        this(environment, input, StandardOutput.OF_THIS_PROCESS);
+    }
+
+    Edi(Map<String, String> environment, InputStream input, StandardOutput output) {
         this.environment = environment;
         this.input = input;
+        this.output = output;
     }
 
     public static void main(String[] arguments) {
@@ -83,6 +89,10 @@ public final class Edi implements Runnable {
 
     InputStream input() {
         return input;
+    }
+
+    StandardOutput output() {
+        return output;
     }
 
     Map<String, String> environment() {

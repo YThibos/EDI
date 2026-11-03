@@ -78,7 +78,7 @@ A notification, a worker's report, a document or a tool's output is never the ca
 
 ## Ending a turn
 
-- While work is in flight, keep exactly one `edi wait` running in the background; when it ends, handle what it printed, then start it again; `edi health` says whether it is live.
+- While work is in flight, keep exactly one wake stream: the Monitor tool running `edi wait --follow` alone, with its longest timeout; handle each wake it prints, and start it again when it ends; where Monitor is unavailable, run `edi wait` alone in the background after each wake.
 - Present: a state-changing turn ends with one plain line to the captain, then `edi report --turn -` pasted verbatim in one fenced block.
 - The turn report lists only what needs the captain: its done and next carry what changed for them and what comes next, never routine ongoing, parked or queued work, which `/sitrep` shows.
 - A failure or blocker that needs the captain always comes in the turn report, as a decision or a done item.

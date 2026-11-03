@@ -9,6 +9,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.wake.WakeStream;
+
 class PrimaryRulesTest {
 
     private static final Instant START = Instant.parse("2026-10-16T09:00:00Z");
@@ -91,48 +93,27 @@ class PrimaryRulesTest {
     }
 
     @Test
-    void recognisesALiveEdiWaitAmongTheSessionsBackgroundJobs() {
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "running", "edi wait")))).isTrue();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "pending", "cd ~/.edi && /usr/local/bin/edi wait 2>&1")))).isTrue();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "completed", "edi wait")))).isFalse();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "running", "edi worker list")))).isFalse();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "running", "echo edi wait")))).isFalse();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("subagent", "running", "edi wait")))).isFalse();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of(new BackgroundJob("shell", "running", "edi wait | tee wake.txt")))).isTrue();
-        assertThat(BackgroundJob.anyWaitsForEdi(List.of())).isFalse();
-    }
-
-    @Test
-    void tellsWhetherTheWaitIsLiveFromWhatThePrimarysLastStopSaw() {
+    void tellsWhetherTheWaitIsLiveFromThePrimarysLiveWakeStream() {
         PrimarySession claimed = PrimarySession.started(UUID.randomUUID(), null, START).claimed(START);
-        PrimarySession inATurn = claimed.promptSubmitted(new Prompt("How is the lamp?"), 7, START.plusSeconds(10));
-        PrimarySession endedWaiting = inATurn.turnEnded(START.plusSeconds(20), true);
-        PrimarySession endedBlind = inATurn.turnEnded(START.plusSeconds(20), false);
+        WakeStream following = new WakeStream(UUID.randomUUID(), claimed.id(), new SessionProcess(4242, 9L), true, START.plusSeconds(20));
+        WakeStream once = new WakeStream(UUID.randomUUID(), claimed.id(), new SessionProcess(4242, 9L), false, START.plusSeconds(30));
 
-        assertThat(PrimaryWait.of(Optional.of(endedWaiting), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, START.plusSeconds(20), 2));
-        assertThat(PrimaryWait.of(Optional.of(endedBlind), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(20), 2));
-        assertThat(PrimaryWait.of(Optional.of(inATurn), 2).sighting()).isEqualTo(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN);
-        assertThat(PrimaryWait.of(Optional.of(inATurn), 2).seenAt()).isEqualTo(START.plusSeconds(10));
-        assertThat(PrimaryWait.of(Optional.of(claimed), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING_SINCE_SESSION_START, START, 2));
-        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, SessionSource.RESTART, START.plusSeconds(40))), 2))
-                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(40), 2));
-        assertThat(PrimaryWait.of(Optional.of(endedWaiting.restarted(null, SessionSource.COMPACTION, START.plusSeconds(40))), 2))
-                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, START.plusSeconds(20), 2));
-        assertThat(PrimaryWait.of(Optional.of(inATurn.turnFailed(START.plusSeconds(40))), 2))
-                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, START.plusSeconds(40), 2));
-        assertThat(PrimaryWait.of(Optional.empty(), 2).sighting()).isEqualTo(PrimaryWait.Sighting.NO_PRIMARY);
-        assertThat(endedBlind.promptSubmitted(new Prompt("And now?"), 8, START.plusSeconds(30)).turn().hasEnded()).isFalse();
+        assertThat(PrimaryWait.of(Optional.of(claimed), Optional.of(following), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.FOLLOWING, START.plusSeconds(20), 2));
+        assertThat(PrimaryWait.of(Optional.of(claimed), Optional.of(once), 2))
+                .isEqualTo(new PrimaryWait(PrimaryWait.Sighting.WAITING_ONCE, START.plusSeconds(30), 2));
+        assertThat(PrimaryWait.of(Optional.of(claimed), Optional.empty(), 2)).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, null, 2));
+        assertThat(PrimaryWait.of(Optional.empty(), Optional.empty(), 2).sighting()).isEqualTo(PrimaryWait.Sighting.NO_PRIMARY);
     }
 
     @Test
-    void needsAWaitOnlyWhileWorkIsInFlightAndTheLastStopSawNone() {
-        PrimarySession inATurn = PrimarySession.started(UUID.randomUUID(), null, START).claimed(START)
-                .promptSubmitted(new Prompt("How is the lamp?"), 7, START.plusSeconds(10));
+    void needsAWaitOnlyWhileWorkIsInFlightAndNoWakeStreamIsLive() {
+        PrimarySession claimed = PrimarySession.started(UUID.randomUUID(), null, START).claimed(START);
+        WakeStream live = new WakeStream(UUID.randomUUID(), claimed.id(), new SessionProcess(4242, 9L), true, START);
 
-        assertThat(PrimaryWait.of(Optional.of(inATurn.turnEnded(START.plusSeconds(20), false)), 1).needsAWait()).isTrue();
-        assertThat(PrimaryWait.of(Optional.empty(), 1).needsAWait()).isTrue();
-        assertThat(PrimaryWait.of(Optional.of(inATurn.turnEnded(START.plusSeconds(20), false)), 0).needsAWait()).isFalse();
-        assertThat(PrimaryWait.of(Optional.of(inATurn.turnEnded(START.plusSeconds(20), true)), 1).needsAWait()).isFalse();
-        assertThat(PrimaryWait.of(Optional.of(inATurn), 1).needsAWait()).isFalse();
+        assertThat(PrimaryWait.of(Optional.of(claimed), Optional.empty(), 1).needsAWait()).isTrue();
+        assertThat(PrimaryWait.of(Optional.empty(), Optional.empty(), 1).needsAWait()).isTrue();
+        assertThat(PrimaryWait.of(Optional.of(claimed), Optional.empty(), 0).needsAWait()).isFalse();
+        assertThat(PrimaryWait.of(Optional.of(claimed), Optional.of(live), 1).needsAWait()).isFalse();
     }
 }

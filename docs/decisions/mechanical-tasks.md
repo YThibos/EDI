@@ -20,11 +20,13 @@ A refused check records `MechanicalChangeRefused` with the reason, closes the wo
 
 The cheap model gets only work a reviewer can verify at a glance, and nothing it touches beyond that is ever accepted silently.
 Treating every test file as protected keeps a test from being bent to pass; a rename that reaches tests is implementation work.
+The verify command runs through `sh -c` exactly as the registry holds it, without validation or quoting: it is the captain's own shell command, written in the registry in the EDI home, quoting would break its pipes and its `&&`, and whoever can change it can already run any command as the captain.
 
 ## Alternatives rejected
 
 - Running the verify command inside `edi status done` - the worker's call would wait for a whole build.
 - Asking the worker for proof that verify passed - the check would trust the cheap model's own claim.
+- Validating or quoting the verify command - breaks the command it is meant to run, and protects nothing from a writer of the registry, who runs as the captain already.
 
 ## Consequences
 
@@ -40,3 +42,4 @@ When the protected patterns refuse a change a reviewer would accept.
 - 15/10/2026: the specification made `mechanical` foolproof three ways: an exact expected change, a full verify with a diff limited to the named files, and no protected file.
 - 16/10/2026: slice S3 built the check and the re-dispatch as `implementation`.
 - 26/10/2026: the record stated that an accepted check went on to the done's claims, so it now says that the claims are checked when the done is reported and the mechanical check gates the delivery (EDI-52).
+- 30/10/2026: the security review asked whether the verify command needs the care the forge's credential helper got; it runs as the captain wrote it, since it is the captain's own configuration (EDI-128).

@@ -44,6 +44,52 @@ public class WakeStore {
         return wakes(store.sql(SELECT_WAKES + "where acknowledged_at is null order by number"));
     }
 
+    public List<QueuedWake> awaitingDeliveryTo(UUID session) {
+        return wakes(store.sql(SELECT_WAKES + """
+                where acknowledged_at is null and offered_to is null and (delivered_to is null or delivered_to <> :session)
+                order by number""").param("session", session.toString()));
+    }
+
+    public void offer(List<QueuedWake> wakes, UUID stream) {
+        wakes.forEach(wake -> store.sql("update wake set offered_to = :stream where number = :number")
+                .param("stream", stream.toString())
+                .param("number", wake.number())
+                .update());
+    }
+
+    public void withdraw(List<QueuedWake> wakes) {
+        wakes.forEach(wake -> store.sql("update wake set offered_to = null where number = :number")
+                .param("number", wake.number())
+                .update());
+    }
+
+    public void withdrawOffersTo(UUID stream) {
+        store.sql("update wake set offered_to = null where offered_to = :stream").param("stream", stream.toString()).update();
+    }
+
+    public void printed(List<Long> numbers, UUID stream, UUID session, Instant at) {
+        numbers.forEach(number -> {
+            int delivered = store.sql("""
+                            update wake set delivered_to = :session, delivered_at = :at, offered_to = null
+                            where number = :number and offered_to = :stream""")
+                    .param("session", session.toString())
+                    .param("at", Columns.text(at))
+                    .param("number", number)
+                    .param("stream", stream.toString())
+                    .update();
+            if (delivered > 0) {
+                acknowledgeWhatSupersedes(number, at);
+            }
+        });
+    }
+
+    public void acknowledgeActedOn(TaskId task, Instant at) {
+        store.sql("update wake set acknowledged_at = :at where acknowledged_at is null and delivered_to is not null and task_id = :task")
+                .param("at", Columns.text(at))
+                .param("task", task.value())
+                .update();
+    }
+
     public void acknowledgeDeliveredTo(UUID session, Instant at) {
         store.sql("update wake set acknowledged_at = :at where acknowledged_at is null and delivered_to = :session")
                 .param("at", Columns.text(at))
@@ -51,18 +97,14 @@ public class WakeStore {
                 .update();
     }
 
-    public void deliver(List<QueuedWake> wakes, UUID session, Instant at) {
-        wakes.forEach(wake -> store.sql("update wake set delivered_to = :session, delivered_at = :at where number = :number")
-                .param("session", session.toString())
+    private void acknowledgeWhatSupersedes(long number, Instant at) {
+        store.sql("""
+                        update wake set acknowledged_at = :at
+                        where acknowledged_at is null and delivered_to is not null and number < :number
+                          and task_id = (select task_id from wake where number = :number)""")
                 .param("at", Columns.text(at))
-                .param("number", wake.number())
-                .update());
-    }
-
-    public void withdraw(List<QueuedWake> wakes) {
-        wakes.forEach(wake -> store.sql("update wake set delivered_to = null, delivered_at = null where number = :number and acknowledged_at is null")
-                .param("number", wake.number())
-                .update());
+                .param("number", number)
+                .update();
     }
 
     private List<QueuedWake> wakes(StatementSpec query) {

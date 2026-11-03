@@ -64,7 +64,7 @@ class EveryTestCoreRecordsItsBrowserTest {
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(core.getBeansOfType(CaptainsBrowser.class).values()).singleElement().isSameAs(browser);
-        assertThat(browser.opened()).singleElement().asString().startsWith(uri("/login#").toString());
+        assertThat(browser.opened()).singleElement().asString().startsWith(uri("/hand-off/").toString());
         assertThat(started.body()).contains("The console's sitrep page is open in the captain's browser at " + uri("/") + ".");
     }
 

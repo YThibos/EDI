@@ -99,7 +99,7 @@ class ConsoleApiTest {
     @Test
     void opensTheConsoleInTheBrowserThroughALinkThatSignsInOnce() throws Exception {
         HttpResponse<String> opened = post(withTheHomeToken("/api/console/open", TEXT), "{}");
-        String link = browser.lastOpened().toString();
+        String link = signInLinkHandedOff();
 
         HttpResponse<String> signedIn = signIn(tokenOf(link));
         HttpResponse<String> usedAgain = signIn(tokenOf(link));
@@ -112,6 +112,24 @@ class ConsoleApiTest {
                 .startsWith("EDI-Console=").contains("Path=/", "Max-Age=43200", "HttpOnly", "SameSite=Strict"));
         assertThat(usedAgain.statusCode()).isEqualTo(401);
         assertThat(usedAgain.body()).isEqualTo("This sign-in link was used already or has expired; run edi console for a new one.\n");
+    }
+
+    @Test
+    void handsTheBrowserAnHttpAddressOfTheConsoleThatLeadsOnToTheSignInLinkOnce() throws Exception {
+        post(withTheHomeToken("/api/console/open", TEXT), "{}");
+        URI handOff = browser.lastOpened();
+
+        HttpResponse<String> followed = send(HttpRequest.newBuilder(handOff).GET());
+        HttpResponse<String> followedAgain = send(HttpRequest.newBuilder(handOff).GET());
+        String link = followed.headers().firstValue("Location").orElseThrow();
+
+        assertThat(handOff.toString()).startsWith(console() + "hand-off/").doesNotContain(tokenOf(link));
+        assertThat(followed.statusCode()).isEqualTo(303);
+        assertThat(followed.headers().firstValue("Cache-Control")).hasValue("no-store");
+        assertThat(link).startsWith(console() + "login#");
+        assertThat(signIn(tokenOf(link)).statusCode()).isEqualTo(204);
+        assertThat(followedAgain.statusCode()).isEqualTo(404);
+        assertThat(followedAgain.body()).isEqualTo("This page was opened already or has expired; run edi console to open the console again.\n");
     }
 
     @Test
@@ -340,9 +358,13 @@ class ConsoleApiTest {
 
     private String signedInCookie() throws Exception {
         post(withTheHomeToken("/api/console/open", TEXT), "{}");
-        String link = browser.lastOpened().toString();
+        String link = signInLinkHandedOff();
         String setCookie = signIn(tokenOf(link)).headers().firstValue("Set-Cookie").orElseThrow();
         return setCookie.substring(0, setCookie.indexOf(';'));
+    }
+
+    private String signInLinkHandedOff() throws Exception {
+        return send(HttpRequest.newBuilder(browser.lastOpened()).GET()).headers().firstValue("Location").orElseThrow();
     }
 
     private static HttpResponse<String> signIn(String token) throws Exception {
