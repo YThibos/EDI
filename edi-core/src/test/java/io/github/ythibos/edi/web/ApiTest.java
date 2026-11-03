@@ -88,6 +88,7 @@ class ApiTest {
         properties.add("edi.home", () -> home.toString());
         properties.add("edi.checkout", () -> home.resolve("checkout").toString());
         properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
+        properties.add("edi.supervision.round", () -> "PT1H");
     }
 
     @Test
