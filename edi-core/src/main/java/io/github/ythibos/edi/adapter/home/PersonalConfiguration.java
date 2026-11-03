@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.domain.personality.CaptainsPersonality;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
+import io.github.ythibos.edi.domain.wallpaper.Blink;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -25,7 +26,7 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 
 @Component
 @RegisterReflectionForBinding({PersonalConfiguration.PersonalDocument.class, PersonalConfiguration.IdentitySection.class,
-    PersonalConfiguration.PresenceSection.class})
+    PersonalConfiguration.PresenceSection.class, PersonalConfiguration.WallpaperSection.class})
 public class PersonalConfiguration {
 
     private final Path file;
@@ -50,6 +51,16 @@ public class PersonalConfiguration {
                     durationOf(presence.quietBatch(), PresenceSettings.QUIET_BATCH), Objects.requireNonNullElse(presence.calendarIgnore(), List.of()));
         } catch (DateTimeParseException invalid) {
             throw new InvalidConfiguration(file, "presence holds \"" + invalid.getParsedString() + "\", which is not a duration such as PT15M.");
+        } catch (IllegalArgumentException invalid) {
+            throw new InvalidConfiguration(file, invalid.getMessage());
+        }
+    }
+
+    public Blink blink() {
+        try {
+            return new Blink(durationOf(document().wallpaper().blinkEvery(), Blink.EVERY));
+        } catch (DateTimeParseException invalid) {
+            throw new InvalidConfiguration(file, "wallpaper.blinkEvery holds \"" + invalid.getParsedString() + "\", which is not a duration such as PT15S.");
         } catch (IllegalArgumentException invalid) {
             throw new InvalidConfiguration(file, invalid.getMessage());
         }
@@ -160,13 +171,15 @@ public class PersonalConfiguration {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record PersonalDocument(IdentitySection identity, PresenceSection presence, @JsonProperty(PersonalitySection.NAME) JsonNode personality) {
+    record PersonalDocument(IdentitySection identity, PresenceSection presence, @JsonProperty(PersonalitySection.NAME) JsonNode personality,
+            WallpaperSection wallpaper) {
 
-        static final PersonalDocument EMPTY = new PersonalDocument(null, null, null);
+        static final PersonalDocument EMPTY = new PersonalDocument(null, null, null, null);
 
         PersonalDocument {
             identity = Objects.requireNonNullElse(identity, new IdentitySection(null));
             presence = Objects.requireNonNullElse(presence, new PresenceSection(null, null, null));
+            wallpaper = Objects.requireNonNullElse(wallpaper, new WallpaperSection(null));
         }
     }
 
@@ -176,5 +189,9 @@ public class PersonalConfiguration {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record IdentitySection(String address) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record WallpaperSection(String blinkEvery) {
     }
 }

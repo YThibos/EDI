@@ -21,3 +21,5 @@ edi-personality:
     formality: 7
     verbosity: 5
     flavour: 7
+wallpaper:
+  blinkEvery: PT15S

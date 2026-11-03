@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.personality.PersonalityOverride;
 import io.github.ythibos.edi.domain.personality.Preset;
 import io.github.ythibos.edi.domain.personality.Scale;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
+import io.github.ythibos.edi.domain.wallpaper.Blink;
 import io.github.ythibos.edi.testing.ExampleHome;
 
 @Tag("adapter")
@@ -57,6 +58,7 @@ class PersonalConfigurationTest {
         assertThat(example.personality()).isEqualTo(new CaptainsPersonality(Optional.of(Preset.BALANCED.personality()), PersonalityOverride.SHIPPED_DEMO));
         assertThat(example.presence()).isEqualTo(new PresenceSettings(Duration.ofMinutes(15), Duration.ofMinutes(30),
                 List.of("Example at the office", "Example working from home")));
+        assertThat(example.blink()).isEqualTo(Blink.SETTLED);
     }
 
     @Test
@@ -67,6 +69,21 @@ class PersonalConfigurationTest {
         assertThat(absent.personality()).isEqualTo(CaptainsPersonality.UNCHOSEN);
         assertThat(absent.presence()).isEqualTo(new PresenceSettings(PresenceSettings.AUTO_QUIET_AFTER, PresenceSettings.QUIET_BATCH,
                 List.of()));
+        assertThat(absent.blink()).isEqualTo(Blink.SETTLED);
+    }
+
+    @Test
+    void readsHowOftenEdiBlinks() throws IOException {
+        assertThat(configurationOf("wallpaper:\n  blinkEvery: PT40S\n").blink()).isEqualTo(new Blink(Duration.ofSeconds(40)));
+        assertThat(configurationOf("identity:\n  address: Captain\n").blink()).isEqualTo(Blink.SETTLED);
+    }
+
+    @Test
+    void refusesABlinkItCannotRead() {
+        assertThatThrownBy(() -> configurationOf("wallpaper:\n  blinkEvery: often\n").blink())
+                .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("which is not a duration such as PT15S");
+        assertThatThrownBy(() -> configurationOf("wallpaper:\n  blinkEvery: PT0.5S\n").blink())
+                .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("wallpaper.blinkEvery is between PT1S and PT10M");
     }
 
     @Test

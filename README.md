@@ -128,6 +128,7 @@ The primary's first session lists any file the home still lacks.
 - [The console and research boards](docs/console-and-boards.md): the sitrep page in the browser and Lavish boards.
 - [The Claude layer](docs/claude-layer.md): the primary session, hooks, the status line and the skills.
 - [Memory and presence](docs/memory-and-presence.md): the captain's memory and its budget, and present, quiet and away.
+- [The wallpaper](docs/wallpaper.md): EDI's animated face behind the terminal, and how often she blinks.
 - [Moving from the old harness](docs/migration.md): importing the old home and adopting its open tasks.
 - [Tools EDI drives](docs/tooling.md): the external programs and where each was verified.
 - [Development](docs/development.md): building, testing, CI and dependency upkeep.

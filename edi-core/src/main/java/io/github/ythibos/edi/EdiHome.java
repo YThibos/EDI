@@ -42,6 +42,10 @@ public final class EdiHome {
         return root.resolve("state").resolve("primary");
     }
 
+    public Path wallpaper() {
+        return root.resolve("state").resolve("wallpaper.png");
+    }
+
     public Path fleetLedger() {
         return root.resolve("state").resolve("fleet-ledger.jsonl");
     }

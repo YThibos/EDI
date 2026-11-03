@@ -16,7 +16,7 @@ Everything that differs between machines or people lives in the EDI home, never 
 | `projects/<name>` | a project's clone, unless its registry entry names another |
 | `worktrees/<project>/<task-id>` | a task's isolated copy |
 | `data/tasks/<task-id>/` | a task's brief and report |
-| `state/` | the core's port, token, lock, logs and activity ledger, and the commit the installed build was built from |
+| `state/` | the core's port, token, lock, logs and activity ledger, the commit the installed build was built from, and EDI's wallpaper |
 | `.claude/skills/` | the skills `ops/install.sh` links in |
 
 The session-start digest lists any of the machine profile, the personal configuration, the registry, the dispatch rules, the craftsmanship rules and the three startup memory files that the home still lacks.
@@ -68,6 +68,8 @@ edi personality                           # the personality, the address word an
 edi personality humour 2 formality 10     # changes two scales and keeps the change
 edi personality plain                     # chooses a preset: balanced, plain or demo
 ```
+
+Its `wallpaper.blinkEvery` says how often EDI blinks on her wallpaper, a duration from `PT1S` to `PT10M`, every `PT15S` when it is left out (see [The wallpaper](wallpaper.md)).
 
 ## The memory files
 

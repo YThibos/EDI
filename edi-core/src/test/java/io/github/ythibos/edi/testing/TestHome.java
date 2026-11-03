@@ -63,6 +63,7 @@ import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
 import io.github.ythibos.edi.adapter.tracker.NoTracker;
+import io.github.ythibos.edi.adapter.wallpaper.EdiWallpaper;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
 import io.github.ythibos.edi.adapter.windows.WindowsToasts;
 import io.github.ythibos.edi.application.access.ConsoleAccess;
@@ -165,6 +166,7 @@ import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.tracker.Trackers;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.wake.WakeStreams;
+import io.github.ythibos.edi.application.wallpaper.DrawTheWallpaper;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -552,6 +554,10 @@ public final class TestHome {
 
     public NotifyTheCaptain notifyTheCaptain() {
         return new NotifyTheCaptain(presence, tasks, windowsToasts(), transaction);
+    }
+
+    public DrawTheWallpaper drawTheWallpaper() {
+        return new DrawTheWallpaper(new PersonalConfiguration(home), new EdiWallpaper(home));
     }
 
     public DailyMemoryCheck dailyMemoryCheck() {
