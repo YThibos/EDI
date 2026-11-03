@@ -46,7 +46,7 @@ A tag can be moved by whoever maintains an action, and once the repository is pu
 ## Consequences
 
 - Good: dependencies, plugins, actions, the wrapper and the toolchain stay current.
-- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over an hour, coverage is reported but not gated, and an override must be removed by hand once its upstream catches up.
+- Bad: nightly native builds cost CI minutes, a cold Dependency-Check run downloads its whole database for over three hours, about 10,000 of the NVD's 418,000 records every five minutes, so the job allows five hours, coverage is reported but not gated, and an override must be removed by hand once its upstream catches up.
 
 ## When to revisit
 
@@ -59,4 +59,4 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 28/10/2026: Spring Boot 4.1.2 manages Tomcat 11.0.27, so the `tomcat.version` override and its regex manager were removed (EDI-100).
 - 28/10/2026: every GitHub Action is pinned to a full commit SHA, verified against the action's repository, with its tag beside it, and Renovate pins and keeps the digests, before the repository is made public (EDI-131).
 - 02/11/2026: `@angular/build` 22.2.5 depends on Vite 8.3.5, which carries the fix, so the console's `vite` override was removed (EDI-1).
-- 03/11/2026: CI came back red on main: a cancelled run had cached Dependency-Check's update lock, so every later run waited forty minutes for it and failed, and the `npm audit` job, installing only Node, could not render `JAVA_HOME`; the cache now keeps no cancelled run and drops a stale lock, and the job installs every pinned tool (EDI-168).
+- 03/11/2026: CI came back red on main: a cancelled run had cached Dependency-Check's update lock, so every later run waited forty minutes for it and failed, and the `npm audit` job, installing only Node, could not render `JAVA_HOME`; the cache now keeps no cancelled run and drops a stale lock, the job installs every pinned tool, and the Dependency-Check job allows five hours instead of 150 minutes, since a run that reached 79% of a cold download at the limit was cancelled and kept nothing (EDI-168).
