@@ -203,7 +203,7 @@ The section sits after the six waves; the captain may move it up.
 | 39 | [EDI-124](EDI-124.md) | The shell secret guard matches paths, not the literal text of a word | M | medium | - | delivered | - |
 | 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | delivered | - |
 | 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | delivered | - |
-| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-132 | - |
+| 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | delivered | - |
 | 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | delivered | - |
 | 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | delivered | - |
 | 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | delivered | - |
