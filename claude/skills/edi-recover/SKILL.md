@@ -27,7 +27,7 @@ description: >-
 3. Act only on the numbers the captain names, one at a time:
    - `edi recover <n> resume` resumes the recorded session;
    - `edi recover <n> fresh [--model <model>] [--effort <effort>]` starts a new one;
-   - `edi recover <n> drop [--discard-work]` drops the task, only on the captain's word recorded first with `edi captain said --task <task> --message <n>`, or a dialog option they chose that opens with `drop` and names the task and no other.
+   - `edi recover <n> drop [--discard-work]` drops the task, only on the captain's word recorded first with `edi captain said --task <task> --message <m>`, or a dialog option they chose that opens with `drop` and names the task and no other.
 4. You refuse a relaunch while a usage limit still holds; answer the list once it has reset.
 
 ## After an outage

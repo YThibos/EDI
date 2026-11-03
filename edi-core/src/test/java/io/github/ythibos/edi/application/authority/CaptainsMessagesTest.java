@@ -167,6 +167,20 @@ class CaptainsMessagesTest {
     }
 
     @Test
+    void takesAnAwayMandateFromWordsTheCaptainTypedAndNeverFromADialogAnswer() {
+        CallingSession session = typedIn("/afk");
+        String mandate = "Carry on with every open task and merge the PRs";
+        home.primaryHooks().dialogAnswered(session.id(), List.of(new AnsweredQuestion("What may I carry on with?", mandate, "")));
+
+        assertThatThrownBy(() -> home.captainsWord().requireTypedWithItsCommand(session, "/afk", mandate))
+                .isInstanceOf(Refusal.class)
+                .hasMessage("The captain did not type \"" + mandate + "\" in this session; give the words the captain typed after /afk, exactly.");
+
+        home.primaryHooks().promptSubmitted(session.id(), "/afk " + mandate);
+        home.captainsWord().requireTypedWithItsCommand(session, "/afk", mandate);
+    }
+
+    @Test
     void refusesTextNoStoredMessageHoldsAndAMessageOfAnotherSession() {
         CallingSession session = typedIn("Drop the lamp.");
         CallingSession other = typedIn("Drop the door.");

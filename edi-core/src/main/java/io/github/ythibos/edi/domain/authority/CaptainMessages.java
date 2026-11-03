@@ -22,8 +22,8 @@ public record CaptainMessages(List<CaptainMessage> messages) {
         };
     }
 
-    public boolean hold(String words) {
-        return messages.stream().flatMap(CaptainMessages::citableWordsOf).anyMatch(saying(words));
+    public boolean typed(String words) {
+        return messages.stream().filter(TypedMessage.class::isInstance).flatMap(CaptainMessages::citableWordsOf).anyMatch(saying(words));
     }
 
     public List<DialogAnswer> dialogAnswers() {

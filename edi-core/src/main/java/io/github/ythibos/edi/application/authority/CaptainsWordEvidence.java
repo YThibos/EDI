@@ -76,7 +76,7 @@ public class CaptainsWordEvidence {
 
     public void requireTypedWithItsCommand(CallingSession calling, String command, String verbatim) {
         CaptainMessages sent = messagesOf(exchangeOf(calling));
-        if (!sent.hold(command + " " + verbatim.strip()) && !sent.hold(verbatim)) {
+        if (!sent.typed(command + " " + verbatim.strip()) && !sent.typed(verbatim)) {
             throw new Refusal("The captain did not type \"" + verbatim.strip() + "\" in this session; give the words the captain typed after "
                     + command + ", exactly.");
         }
