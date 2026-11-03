@@ -402,14 +402,14 @@ class NativeSmokeIT {
     }
 
     @Test
-    void theRoundTripBudgetFailsACommandThatDoesItsWorkTwice() throws Exception {
+    void theRoundTripBudgetsPaceFailsACommandThatDoesItsWorkTwice() throws Exception {
         Path command = binary("edi.cli.binary");
         Path doubled = StandInScripts.installed(home.resolve("doubled-edi"),
                 "#!/bin/sh\n'%s' \"$@\" > /dev/null && exec '%s' \"$@\"\n".formatted(command, command));
 
         RoundTripBudget.Measurement backlog = PROOF_BUDGET.measure(backlogThrough(doubled), bareStartUpOf(command));
 
-        assertThat(backlog.metTheBudget()).as(backlog.summary()).isFalse();
+        assertThat(backlog.keptPaceWithTheMachine()).as(backlog.summary()).isFalse();
     }
 
     @Test

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
 @Tag("adapter")
@@ -44,9 +45,9 @@ class ProcessTableTest {
 
     @Test
     void readsTheStartTickOfAProcessWhoseNameLooksLikeMoreFields() throws IOException {
-        Path oddlyNamed = Files.createSymbolicLink(directory.resolve("sl) S 1 2 3"), Path.of(executableOf("sleep")));
+        Path oddlyNamed = StandInScripts.installed(directory.resolve("sl) S 1 2 3"), "#!/bin/sh\nread -r _\n");
         Process before = processes.register(new ProcessBuilder("sleep", "30").start());
-        Process odd = processes.register(new ProcessBuilder(oddlyNamed.toString(), "30").start());
+        Process odd = processes.register(new ProcessBuilder(oddlyNamed.toString()).start());
         Process after = processes.register(new ProcessBuilder("sleep", "30").start());
 
         assertThat(startTickOf(odd)).isBetween(startTickOf(before), startTickOf(after));
@@ -90,11 +91,6 @@ class ProcessTableTest {
         assertThat(TestProcesses.awaitExit(polite.toHandle())).isTrue();
         assertThat(TestProcesses.awaitExit(stubborn.toHandle())).isTrue();
         table.close();
-    }
-
-    private static String executableOf(String program) throws IOException {
-        Process which = new ProcessBuilder("sh", "-c", "command -v " + program).start();
-        return new String(which.getInputStream().readAllBytes()).strip();
     }
 
     private long startTickOf(Process process) {
