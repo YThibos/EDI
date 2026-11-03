@@ -63,7 +63,7 @@ public class CaptainMessageStore {
     private int nextNumberIn(UUID session) {
         return store.sql("select coalesce(max(number), 0) + 1 from captain_message where session_id = :session")
                 .param("session", session.toString())
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single();
     }
 
