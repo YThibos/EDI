@@ -21,6 +21,7 @@ Every call of either names its stream, a fresh id, and its process; `WakeStreams
 `POST /api/wait` answers only the session holding the primary role, and `WakeStreams.admit` refuses a stream of that session while another of its streams is live, naming the live one's command and process; a stream whose process is gone, or that belongs to a session no longer primary, is retired instead, so a crash never locks the primary out.
 A stream that has ended, cleanly or by retirement, is refused if it calls again.
 `edi wait` refuses to start when its standard output is `/dev/null` or closed, which `StandardOutput` reads from `/proc/self/fd/1`, before it calls the core.
+A standard output open only for reading, as `/proc/self/fdinfo/1` gives its access mode, counts as closed, because the JVM reuses a closed descriptor 1 for its own read-only `lib/modules`.
 The guard refuses `edi wait` chained, piped, redirected or sent to the background in the same Bash or Monitor call, and `edi wait --follow` in any tool but Monitor ([pre-tool-guard](pre-tool-guard.md)).
 A call offers the stream every wake not yet acknowledged and not yet delivered to this session, or parks for up to 25 seconds and answers 204; it answers the wakes' numbers in the `EDI-Wakes` header, and the stream's next call names the numbers it printed.
 A wake counts delivered once its stream says it printed it.
@@ -67,7 +68,7 @@ The turn-end rules read only the store, the presence and the process table, so t
 - Bad: in quiet a worker's question waits up to `presence.quietBatch` for the primary, while a decision reaches the captain at once as a notification.
 - Bad: the Monitor tool ends a stream at its timeout, so the primary starts it again then; the notification of its end is what tells it.
 - Bad: a wake a session printed and let pass is settled when that session ends cleanly, so the next session is not told of it again; only a crashed session's wakes reach the next one.
-- Bad: a closed standard output is read from `/proc`, so off Linux `edi wait` cannot tell and starts.
+- Bad: a closed standard output is read from `/proc/self/fd/1` and `/proc/self/fdinfo/1`, so off Linux `edi wait` cannot tell and starts.
 
 ## When to revisit
 
@@ -82,3 +83,4 @@ When Claude Code's Monitor tool changes how it delivers lines or drops its timeo
 - 28/10/2026: EDI-120 recorded that a wait registers before it looks for wakes, after a test assumed the wake always reached a parked wait.
 - 02/11/2026: EDI-158 gave the primary one wake stream, `edi wait --follow` under the Monitor tool, counted a wake delivered once printed and acknowledged once acted on, refused a second stream and a wait that prints nowhere, and read the wait's liveness from the stream's process; it carries EDI-152's hard rules.
 - 02/11/2026: the captain chose that a session ending cleanly acknowledges the wakes delivered to it, after a review showed wakes nobody acts on piling up for every later session; an offer a stream's next call does not confirm now goes back at once (EDI-158).
+- 03/11/2026: the captain chose that a standard output open only for reading counts as closed, after a test showed the JVM reusing a closed descriptor 1 and `edi wait --follow >&-` starting (EDI-158).

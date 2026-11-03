@@ -31,6 +31,8 @@ class WaitCommandTest {
     private static final String LAMP_DONE = "EDI wake: 1 waiting.\n7. fit-lamp#1 reports done: fitted\n";
     private static final String HORN_BLOCKED = "EDI wake: 1 waiting.\n8. tune-horn#1 is blocked: no reed\n";
     private static final String REFUSED = "edi wait is refused: the primary's wake stream is already live as edi wait --follow in process 4242.\n";
+    private static final String WRITE_ONLY = "0100001";
+    private static final String READ_ONLY = "0100000";
 
     @TempDir
     private Path home;
@@ -46,7 +48,7 @@ class WaitCommandTest {
         core = StubCore.recordedIn(home);
         environment.put("EDI_HOME", home.toString());
         environment.put("CLAUDE_CODE_SESSION_ID", SESSION);
-        readOutput = new StandardOutput(Files.createSymbolicLink(home.resolve("fd-1"), Files.createFile(home.resolve("monitor.output"))));
+        readOutput = descriptorOpenedOn(Files.createFile(home.resolve("monitor.output")), WRITE_ONLY);
     }
 
     @AfterEach
@@ -123,6 +125,18 @@ class WaitCommandTest {
     }
 
     @Test
+    void refusesToStartWhenItsStandardOutputIsOpenOnlyForReadingAsAClosedDescriptorReusedByTheRuntime() throws IOException {
+        StandardOutput reused = descriptorOpenedOn(Files.createFile(home.resolve("modules")), READ_ONLY);
+
+        int exitCode = edi(reused, "wait", "--follow");
+
+        assertThat(exitCode).isOne();
+        assertThat(err.toString()).startsWith("edi wait refuses to start: its standard output is closed");
+        assertThat(out.toString()).isEmpty();
+        assertThat(core.requests()).isEmpty();
+    }
+
+    @Test
     void waitsOnlyInsideAClaudeCodeSessionAndStopsWhenTheCoreRefuses() {
         environment.remove("CLAUDE_CODE_SESSION_ID");
         int outside = edi(readOutput, "wait");
@@ -135,6 +149,12 @@ class WaitCommandTest {
         assertThat(outsideError).startsWith("edi wait runs inside the primary's Claude Code session");
         assertThat(refused).isOne();
         assertThat(err.toString()).endsWith("this session is not it.\n");
+    }
+
+    private StandardOutput descriptorOpenedOn(Path target, String flags) throws IOException {
+        Path process = Files.createTempDirectory(home, "proc-");
+        Files.writeString(Files.createDirectories(process.resolve("fdinfo")).resolve("1"), "pos:\t0\nflags:\t" + flags + "\nmnt_id:\t88\n");
+        return new StandardOutput(Files.createSymbolicLink(Files.createDirectories(process.resolve("fd")).resolve("1"), target));
     }
 
     private int edi(StandardOutput output, String... arguments) {

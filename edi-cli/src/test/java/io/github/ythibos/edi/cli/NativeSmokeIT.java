@@ -182,6 +182,17 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandRefusesAWakeStreamWhoseStandardOutputIsClosed() throws Exception {
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+
+        CommandRun closed = commandIn(Path.of("/bin/sh"), Path.of(""), primary, "", "-c", "exec \"$0\" wait --follow >&-",
+                binary("edi.cli.binary").toString());
+
+        assertThat(closed.exitCode()).isOne();
+        assertThat(closed.output()).startsWith("edi wait refuses to start: its standard output is closed");
+    }
+
+    @Test
     void theCommandNamesItsVersion() throws Exception {
         CommandRun version = edi("", "--version");
 
