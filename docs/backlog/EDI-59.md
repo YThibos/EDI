@@ -23,6 +23,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), slice 8 and secti
 ## Acceptance criteria
 
 - `/task/<id>` opens a panel over the current view with the task's facts and chips and tabs for timeline, decisions, brief, report and board rounds; Esc and a close control return to the view.
+- The board rounds tab reads the read-only endpoint behind `edi board show` ([EDI-66](EDI-66.md)), so opening it consumes nothing.
 - A new `GET /api/tasks/<id>` returns the detail that `edi task show --json` already assembles.
 - Clicking a row's title opens its panel; the address is shareable within the console session and survives a reload.
 - The decisions column stays visible beside the panel from 1200 pixels wide; below that the panel takes the page.

@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 18 |
 | Source | EDI-52 plan, slice 4 |
 | Size | S |
-| Blocked by | [EDI-89](EDI-89.md) |
+| Blocked by | nothing |
 | Status | open |
 | Cloud session | ok |
 
@@ -33,6 +33,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), finding F2 and sl
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on EDI-89: it needs neither plans nor stages, so it may start on its own.
 - D42 A (captain, 26 October 2026): ship the whole console plan in order.
 - Wakes the primary settles without the captain: pipeline gates, a worker's question for the primary, a done to accept.
 - Quiet and away keep their rule: no text to the captain.

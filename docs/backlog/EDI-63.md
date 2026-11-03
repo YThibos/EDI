@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 26 |
 | Source | EDI-52 plan, slice 12 |
 | Size | S |
-| Blocked by | [EDI-89](EDI-89.md) |
+| Blocked by | nothing |
 | Status | open |
 | Cloud session | ok |
 
@@ -28,6 +28,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), slice 12, Q7 a.
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on EDI-89: it needs neither plans nor stages, so it may start on its own.
 - Q7 a (captain, 26 October 2026): tab title and notification.
 - Notification text speaks as EDI in the first person.
 - The title also states a page health state when the core does not answer, if EDI-110 has landed; otherwise leave that to EDI-110.

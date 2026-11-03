@@ -8,7 +8,7 @@
 | Source | EDI-52 plan, slice 18a |
 | Size | S |
 | Blocked by | [EDI-89](EDI-89.md) |
-| Status | open |
+| Status | dropped: the captain dropped it on 3 November 2026, since GitHub Actions runs on the repository again and [EDI-148](EDI-148.md) covers a project without CI |
 | Cloud session | ok |
 
 ## Goal

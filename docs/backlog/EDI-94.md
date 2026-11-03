@@ -8,7 +8,7 @@
 | Source | EDI-74 plan, step 24 |
 | Size | M |
 | Blocked by | nothing |
-| Status | open |
+| Status | folded: into [EDI-161](EDI-161.md), on the captain's word of 3 November 2026, which books the core's measured minutes and drives the ticket from the stage |
 | Cloud session | ok |
 
 ## Goal
