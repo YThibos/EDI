@@ -146,6 +146,17 @@ class MachineProfileTest {
         assertThatThrownBy(profile::time).as("a malformed profile asked again").isInstanceOf(InvalidConfiguration.class);
     }
 
+    @Test
+    void readsHowOftenAnUnansweredWorkerQuestionIsRaisedAgainAndRefusesNone() throws IOException {
+        Duration absent = profileOf("machine: laptop\n").supervision().questionReminder();
+        Duration set = profileOf("supervision:\n  questionReminder: PT5M\n").supervision().questionReminder();
+        MachineProfile never = profileOf("supervision:\n  questionReminder: PT0S\n");
+
+        assertThat(absent).isEqualTo(Duration.ofMinutes(10));
+        assertThat(set).isEqualTo(Duration.ofMinutes(5));
+        assertThatThrownBy(never::supervision).isInstanceOf(InvalidConfiguration.class).hasMessageContaining("supervision.questionReminder");
+    }
+
     private MachineProfile profileOf(String yaml) throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/machine.yaml"), yaml);

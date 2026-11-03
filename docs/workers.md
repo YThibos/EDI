@@ -44,7 +44,8 @@ A supervision round judges each worker from its hooks, its tmux server and the m
 It parks a worker that stopped on a usage limit and resumes it after the reset ([recovery](decisions/recovery.md)).
 It reads each working worker's transcript for a full context, which Claude Code reports through no hook, and wakes the primary at once; a steer to such a worker waits in its inbox for the fresh session ([supervision](decisions/supervision.md)).
 It reads each busy worker's transcript for a turn that ended while EDI could not take its stop hook, such as during a core outage, marks the worker idle, sends it a message to carry on so the steers that waited reach it, and wakes the primary ([supervision](decisions/supervision.md)).
-The machine profile's `supervision` section sets when an idle worker has waited too long and when a paused one resurfaces.
+The machine profile's `supervision` section sets when an idle worker has waited too long, when a paused one resurfaces, and how often an unanswered question is raised again.
+A worker's `needs-decision` or `blocked` comes back to the primary as a `question-unanswered` wake every `supervision.questionReminder` (ten minutes) until a steer that resolves its key is sent, except while the captain is away; `edi health` lists each open question with its age.
 
 ## Recovery
 

@@ -83,6 +83,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -113,6 +114,8 @@ public final class WakeRule {
             case HeavyRunsAtOnce atOnce -> wake(WakeKind.HEAVY_RUNS_AT_ONCE, atOnce, atOnce.worker(), runsOf(atOnce));
             case DeclaredWaitEnded ended -> Optional.of(new Wake(WakeKind.WAIT_ENDED, ended.task(), ended.worker(),
                     ended.pause().text(), ended.pause().until()));
+            case WorkerQuestionUnanswered unanswered -> Optional.of(new Wake(WakeKind.QUESTION_UNANSWERED, unanswered.task(), unanswered.worker(),
+                    "(" + unanswered.question().key() + ") " + unanswered.question().text(), unanswered.askedAt()));
             case HoldDateArrived due -> wake(WakeKind.HOLD_DUE, due, null, due.until().toString());
             case DraftMerged merged -> wake(WakeKind.DRAFT_MERGED, merged, null, merged.address().url());
             case DraftClosed closed -> wake(WakeKind.DRAFT_CLOSED, closed, null, closed.address().url());

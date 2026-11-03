@@ -41,7 +41,9 @@ final class HealthCommand implements Callable<Integer> {
 
     private Integer healthy(String message) {
         spec.commandLine().getOut().println(message);
-        reportThePrimarysWait();
+        if (reported("/api/primary/wait", "whether the primary's edi wait is live")) {
+            reported("/api/workers/questions", "which worker questions wait on an answer");
+        }
         return HEALTHY;
     }
 
@@ -50,20 +52,21 @@ final class HealthCommand implements Callable<Integer> {
         return UNHEALTHY;
     }
 
-    private void reportThePrimarysWait() {
+    private boolean reported(String path, String what) {
         try {
-            CoreReply reply = new CoreClient().get(edi.core(), "/api/primary/wait", "text/plain");
+            CoreReply reply = new CoreClient().get(edi.core(), path, "text/plain");
             if (reply.succeeded()) {
                 spec.commandLine().getOut().println(reply.body().stripTrailing());
-            } else {
-                cannotAskAboutTheWait(reply.body().stripTrailing());
+                return true;
             }
+            return cannotAsk(what, reply.body().stripTrailing());
         } catch (CoreUnavailable unavailable) {
-            cannotAskAboutTheWait(unavailable.getMessage());
+            return cannotAsk(what, unavailable.getMessage());
         }
     }
 
-    private void cannotAskAboutTheWait(String reason) {
-        spec.commandLine().getErr().println("Cannot ask whether the primary's edi wait is live: " + reason);
+    private boolean cannotAsk(String what, String reason) {
+        spec.commandLine().getErr().println("Cannot ask " + what + ": " + reason);
+        return false;
     }
 }
