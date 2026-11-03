@@ -88,7 +88,8 @@ class WaitController {
 
         private void delivered(WakeDelivery delivery) {
             signal.forget(this);
-            if (!result.setResult(ResponseEntity.ok().header(OFFERED_WAKES, delivery.numbers().stream().map(String::valueOf).collect(Collectors.joining(","))).body(delivery))) {
+            String offered = delivery.numbers().stream().map(String::valueOf).collect(Collectors.joining(","));
+            if (!result.setResult(ResponseEntity.ok().header(OFFERED_WAKES, offered).body(delivery))) {
                 waits.withdraw(delivery);
             }
         }
