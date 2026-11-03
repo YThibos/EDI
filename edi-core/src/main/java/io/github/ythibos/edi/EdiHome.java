@@ -34,10 +34,6 @@ public final class EdiHome {
         return root.resolve("state").resolve("core.token");
     }
 
-    public Path consoleHandOff() {
-        return root.resolve("state").resolve("console");
-    }
-
     public Path corePidFile() {
         return root.resolve("state").resolve("core.pid");
     }

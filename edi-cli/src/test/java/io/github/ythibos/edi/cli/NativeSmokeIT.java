@@ -45,8 +45,6 @@ class NativeSmokeIT {
     private static final RoundTripBudget ROUND_TRIP_BUDGET = new RoundTripBudget(200);
     private static final RoundTripBudget PROOF_BUDGET = new RoundTripBudget(50);
     private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
-    private static final String WSL_DISTRIBUTION = "Smoke-Linux";
-    private static final String HAND_OFF_LINK = "url=";
     private static final Pattern ADDED_TASK_ID = Pattern.compile("\"added\":\\{\"id\":\"([^\"]+)\"");
     private static final String REGISTRY = """
             projects:
@@ -96,8 +94,7 @@ class NativeSmokeIT {
                 "--edi.workers.mise=" + stubMise(),
                 "--edi.pipeline.home=" + pipelineHome(),
                 "--edi.console.browser=" + stubBrowser(),
-                "--edi.console.windows-directory=" + home,
-                "--edi.console.wsl-distribution=" + WSL_DISTRIBUTION)
+                "--edi.console.windows-directory=" + home)
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
@@ -153,6 +150,7 @@ class NativeSmokeIT {
         String cookie = signedIn.headers().firstValue("Set-Cookie").orElseThrow().split(";")[0];
 
         assertThat(opened.output()).isEqualTo("EDI console: http://127.0.0.1:" + port + "/ is open in your browser.\n");
+        assertThat(Files.readString(home.resolve("opened-in-the-browser"))).startsWith("/c start http://127.0.0.1:" + port + "/hand-off/");
         assertThat(signedIn.statusCode()).isEqualTo(204);
         assertThat(send(withTheCookie("/api/sitrep", cookie).header("Accept", "application/json").GET()).body()).contains("\"schema\":\"edi-sitrep.v1\"");
         assertThat(get("/login").body()).contains("<app-root></app-root>");
@@ -424,11 +422,9 @@ class NativeSmokeIT {
         return pipelineHome;
     }
 
-    private static String signInLinkHandedToTheBrowser() throws IOException {
+    private static String signInLinkHandedToTheBrowser() throws Exception {
         URI handOff = URI.create(Files.readString(home.resolve("opened-in-the-browser")).strip().split(" ")[2]);
-        String page = Files.readString(Path.of(handOff.getPath().substring(WSL_DISTRIBUTION.length() + 1)));
-        int link = page.indexOf(HAND_OFF_LINK) + HAND_OFF_LINK.length();
-        return page.substring(link, page.indexOf('"', link));
+        return send(HttpRequest.newBuilder(handOff)).headers().firstValue("Location").orElseThrow();
     }
 
     private static String stubBrowser() throws IOException {
