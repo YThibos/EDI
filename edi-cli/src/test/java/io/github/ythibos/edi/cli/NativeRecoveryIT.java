@@ -176,17 +176,16 @@ class NativeRecoveryIT {
         CommandRun started = edi(primary, payload(session, "\"source\":\"startup\""), "hook", "session-start");
         edi(primary, payload(session, "\"prompt\":\"Queue the bell.\""), "hook", "user-prompt-submit");
         edi(primary, "", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Ring the bell", "--key", "HRN-13");
-        CommandRun unreported = edi(primary, payload(session, "\"stop_hook_active\":false,\"background_tasks\":[]"), "hook", "stop");
+        CommandRun unreported = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
         edi(primary, "", "report");
-        CommandRun reported = edi(primary, payload(session, "\"stop_hook_active\":false,\"background_tasks\":"
-                + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]"), "hook", "stop");
+        CommandRun reported = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
         dispatch("wake-bell", "HRN-14", "stub-run: edi status needs-decision --key bell -- Brass or bronze?");
         workerServer().ifPresent(server -> processes.register(server.pid()));
         CommandRun woken = awaitTheWake(primary, "wake-bell#1 needs a decision: (bell) Brass or bronze?");
 
         assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThis session is the primary",
                 "The console's sitrep page is open in the captain's browser at http://127.0.0.1:");
-        assertThat(home.resolve("opened-in-the-browser")).content().startsWith("/c start file://wsl.localhost/Recovery-Linux/");
+        assertThat(home.resolve("opened-in-the-browser")).content().startsWith("/c start http://127.0.0.1:").contains("/hand-off/");
         assertThat(unreported.output()).contains("\"decision\":\"block\"", "render the turn report with edi report --turn -");
         assertThat(reported.exitCode()).isZero();
         assertThat(reported.output()).isEmpty();
@@ -203,8 +202,7 @@ class NativeRecoveryIT {
                 "--edi.pipeline.home=" + home.resolve("no-mistakes"),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
-                "--edi.console.windows-directory=" + home,
-                "--edi.console.wsl-distribution=Recovery-Linux"));
+                "--edi.console.windows-directory=" + home));
         commandLine.addAll(List.of(options));
         ProcessBuilder launch = new ProcessBuilder(commandLine)
                 .redirectErrorStream(true)

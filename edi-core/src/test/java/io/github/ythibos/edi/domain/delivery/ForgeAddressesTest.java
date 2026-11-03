@@ -62,6 +62,34 @@ class ForgeAddressesTest {
         assertThat(RemoteAddress.of(remote)).isEmpty();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "https://forge.example$(touch${IFS}harbour)/team/harness", "https://forge.example;id/team/harness", "git@forge.example`id`:team/harness",
+        "ssh://git@forge.example|id:22/team/harness", "https://forge..example/team/harness", "https://-forge.example/team/harness",
+        "https://forge-.example/team/harness", "https://[::1]/team/harness", "https://forge example/team/harness"})
+    void refusesARemoteWhoseHostIsNoDnsName(String remote) {
+        assertThat(RemoteAddress.of(remote)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "https://forge.example.org:8443/team/harness", "ssh://git@forge.example.org:2222/team/harness.git", "git@forge.example.org:team/harness.git",
+        "https://Forge.Example.org/team/harness"})
+    void readsTheHostOfARemoteWithOrWithoutAPort(String remote) {
+        assertThat(RemoteAddress.of(remote)).hasValueSatisfying(address -> assertThat(address.host()).isEqualToIgnoringCase("forge.example.org"));
+    }
+
+    @Test
+    void registersOnlyAHostThatIsADnsNameWithAnOptionalPort() {
+        for (String host : List.of("forge.example$(id)", "forge.example;id", "forge..example", "forge-.example", "forge.example:", "forge.example:84a3",
+                "forge.example:8443:1", "forge.example:70000", "forge.example:0", "x".repeat(64) + ".example")) {
+            assertThatIllegalArgumentException().as(host).isThrownBy(() -> ForgeRepository.registered(ForgeKind.GITLAB, host, "team/harness"));
+        }
+        assertThat(ForgeRepository.registered(ForgeKind.GITLAB, "forge.example.org:8443", "team/harness").url())
+                .isEqualTo("https://forge.example.org:8443/team/harness");
+        assertThat(ForgeRepository.registered(ForgeKind.GITLAB, "10.0.0.5", "team/harness").host()).isEqualTo("10.0.0.5");
+    }
+
     @Test
     void refusesAPushElsewhereWithoutRepeatingItsCredentials() {
         RegisteredForge forge = new RegisteredForge(GITHUB, "example-owner");

@@ -41,7 +41,8 @@ final class DispatchCommand implements Callable<Integer> {
 
         @Option(names = "--override-effort", paramLabel = "EFFORT", description = "The effort the captain asked for: low, medium or high,"
                 + " high being EDI's ceiling; xhigh or max only for this one task, with --reason, once the captain's word for it is recorded"
-                + " in this session with edi captain said --task TASK --for effort-above-high. The task keeps it on relaunch; no other task and"
+                + " in this session with edi captain said --task TASK --for effort-above-high --message N, or they chose a dialog option that"
+                + " opens with effort-above-high and names the task and no other. The task keeps it on relaunch; no other task and"
                 + " no dispatch rule gets it.")
         private String overrideEffort;
 

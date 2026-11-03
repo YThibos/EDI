@@ -14,11 +14,13 @@ The anchor holds EDI's character, the hard rules, the turn end and one line per 
 
 The primary and the workers answer every Claude Code hook through `edi hook <event>` ([worker-sessions](decisions/worker-sessions.md), [primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 The session the captain typed in last is the primary and any other stands by; a call made inside a Claude Code session names it, so a standby session's changes are refused.
-The primary's turn ends with the turn report when it changed state ([turn-report](decisions/turn-report.md)), and with an `edi wait` running while work is in flight ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
-`edi wait` serves only the primary, and runs in the background until it exits printing what needs the primary, as soon as it happens ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
+The primary's turn ends with the turn report when it changed state ([turn-report](decisions/turn-report.md)), and with its wake stream live while work is in flight ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
+The wake stream is `edi wait --follow`, which the primary starts alone with Claude Code's Monitor tool, once per session; it prints each wake the moment it is raised and keeps running ([wakes-and-turn-end](decisions/wakes-and-turn-end.md)).
+`edi wait` serves only the primary: the core refuses a second stream while one is live, and `edi wait` refuses to start when its standard output leads nowhere.
 
 ```sh
-edi wait                                            # the primary, in the background: exits printing what needs it
+edi wait --follow                                   # the primary, with the Monitor tool: prints each wake as it is raised
+edi wait                                            # where Monitor is unavailable, in the background: exits printing the next wakes
 ```
 
 Each session starts from a digest the core rebuilds from the store ([primary-startup-context](decisions/primary-startup-context.md)).
@@ -27,7 +29,7 @@ Each session starts from a digest the core rebuilds from the store ([primary-sta
 
 [claude/primary/settings.json](../claude/primary/settings.json) also runs `edi statusline` as the session's status line, after every update and once a minute ([primary-anchor-and-skills](decisions/primary-anchor-and-skills.md)).
 It shows the model and effort, the context used, the session tokens with the cached and uncached split, the 5-hour and weekly limits with their resets, the branch of the working directory and the cache hit ratio.
-While work is in flight and no `edi wait` is live, it ends with "Wait: none" in dark red; `edi health` says the same in words.
+While work is in flight and no wake stream is live, it ends with "Wait: none" in dark red; `edi health` says the same in words.
 
 ## Workers
 

@@ -3,37 +3,34 @@ package io.github.ythibos.edi.domain.primary;
 import java.time.Instant;
 import java.util.Optional;
 
-public record PrimaryWait(Sighting sighting, Instant seenAt, int tasksInFlight) {
+import io.github.ythibos.edi.domain.wake.WakeStream;
+
+public record PrimaryWait(Sighting sighting, Instant since, int tasksInFlight) {
 
     public enum Sighting {
-        LIVE,
+        FOLLOWING,
+        WAITING_ONCE,
         MISSING,
-        MISSING_SINCE_SESSION_START,
-        UNCHECKED_IN_A_TURN,
         NO_PRIMARY
     }
 
-    public static PrimaryWait of(Optional<PrimarySession> primary, int tasksInFlight) {
-        return primary.map(session -> seenAtTheTurnEndOf(session, tasksInFlight))
-                .orElseGet(() -> new PrimaryWait(Sighting.NO_PRIMARY, null, tasksInFlight));
+    public static PrimaryWait of(Optional<PrimarySession> primary, Optional<WakeStream> liveStream, int tasksInFlight) {
+        if (primary.isEmpty()) {
+            return new PrimaryWait(Sighting.NO_PRIMARY, null, tasksInFlight);
+        }
+        return liveStream.map(stream -> new PrimaryWait(sightingOf(stream), stream.startedAt(), tasksInFlight))
+                .orElseGet(() -> new PrimaryWait(Sighting.MISSING, null, tasksInFlight));
     }
 
     public boolean needsAWait() {
         return tasksInFlight > 0 && isNotLive();
     }
 
-    private static PrimaryWait seenAtTheTurnEndOf(PrimarySession session, int tasksInFlight) {
-        PrimaryTurn turn = session.turn();
-        if (turn == null) {
-            return new PrimaryWait(Sighting.MISSING_SINCE_SESSION_START, session.startedAt(), tasksInFlight);
-        }
-        if (!turn.hasEnded()) {
-            return new PrimaryWait(Sighting.UNCHECKED_IN_A_TURN, turn.startedAt(), tasksInFlight);
-        }
-        return new PrimaryWait(turn.endedWithAWait() ? Sighting.LIVE : Sighting.MISSING, turn.endedAt(), tasksInFlight);
+    private static Sighting sightingOf(WakeStream stream) {
+        return stream.follows() ? Sighting.FOLLOWING : Sighting.WAITING_ONCE;
     }
 
     private boolean isNotLive() {
-        return sighting == Sighting.MISSING || sighting == Sighting.MISSING_SINCE_SESSION_START || sighting == Sighting.NO_PRIMARY;
+        return sighting == Sighting.MISSING || sighting == Sighting.NO_PRIMARY;
     }
 }

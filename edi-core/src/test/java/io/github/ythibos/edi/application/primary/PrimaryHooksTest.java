@@ -14,9 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.wake.StreamPoll;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
-import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
@@ -29,8 +29,6 @@ import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
 class PrimaryHooksTest {
-
-    private static final List<BackgroundJob> A_LIVE_WAIT = List.of(new BackgroundJob("shell", "running", "edi wait"));
 
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
@@ -97,96 +95,54 @@ class PrimaryHooksTest {
     }
 
     @Test
-    void endsATurnWithWorkInFlightOnlyWhileAnEdiWaitIsLive() throws IOException {
+    void endsATurnWithWorkInFlightOnlyWhileAWakeStreamIsLive() {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
-        HookAnswer blind = home.primaryHooks().stopping(primary, List.of());
-        HookAnswer waiting = home.primaryHooks().stopping(primary, A_LIVE_WAIT);
+        HookAnswer blind = home.primaryHooks().stopping(primary);
+        streamIn(primary, home.processes().ownId(), true);
+        HookAnswer streaming = home.primaryHooks().stopping(primary);
 
         assertThat(blind.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
-        assertThat(blind.reason()).isEqualTo("Work is in flight and no edi wait is live: start edi wait in the background, then stop.");
-        assertThat(waiting).isEqualTo(HookAnswer.PROCEED);
+        assertThat(blind.reason()).isEqualTo("Work is in flight and no wake stream is live: start edi wait --follow alone with the Monitor tool, then stop.");
+        assertThat(streaming).isEqualTo(HookAnswer.PROCEED);
     }
 
     @Test
-    void remembersWhetherAnEdiWaitRanWhenThePrimarysTurnEnded() {
+    void seesTheWakeStreamLiveUntilItsProcessIsGone() throws IOException {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
-        Instant prompted = home.clock().now();
-
-        PrimaryWait inTheTurn = home.primaryWaits().current();
-        home.primaryHooks().stopping(primary, A_LIVE_WAIT);
-        PrimaryWait afterAWaitingStop = home.primaryWaits().current();
-        home.clock().advance(Duration.ofMinutes(5));
-        home.primaryHooks().promptSubmitted(primary, "<task-notification>done</task-notification>");
-        for (int block = 0; block < 4; block++) {
-            home.primaryHooks().stopping(primary, List.of());
-        }
-        PrimaryWait afterABlindStop = home.primaryWaits().current();
-
-        assertThat(inTheTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN, prompted, 1));
-        assertThat(afterAWaitingStop).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, prompted, 1));
-        assertThat(afterABlindStop).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, home.clock().now(), 1));
-        assertThat(afterABlindStop.needsAWait()).isTrue();
-    }
-
-    @Test
-    void forgetsTheWaitOfTheLastTurnWhenTheSameSessionStartsAgain() {
-        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
-        UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        PrimaryWait beforeAnyStream = home.primaryWaits().current();
+        Process stream = processes.register(new ProcessBuilder("sleep", "30").start());
+        streamIn(primary, stream.pid(), true);
         Instant started = home.clock().now();
-        PrimaryWait beforeAnyTurn = home.primaryWaits().current();
-        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
-        home.primaryHooks().stopping(primary, A_LIVE_WAIT);
         home.clock().advance(Duration.ofMinutes(5));
-        home.primaryHooks().sessionStarted(primary, null, SessionSource.RESTART);
 
-        PrimaryWait afterTheResume = home.primaryWaits().current();
+        PrimaryWait following = home.primaryWaits().current();
+        stream.destroy();
+        TestProcesses.awaitExit(stream.toHandle());
+        PrimaryWait afterItDied = home.primaryWaits().current();
 
-        assertThat(beforeAnyTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING_SINCE_SESSION_START, started, 1));
-        assertThat(afterTheResume).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, home.clock().now(), 1));
-        assertThat(afterTheResume.needsAWait()).isTrue();
+        assertThat(beforeAnyStream).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, null, 1));
+        assertThat(following).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.FOLLOWING, started, 1));
+        assertThat(afterItDied).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, null, 1));
+        assertThat(afterItDied.needsAWait()).isTrue();
+        assertThat(home.primaryHooks().stopping(primary).verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
     }
 
     @Test
-    void keepsTheTurnAndItsWaitWhenTheSessionIsCompacted() {
-        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+    void tellsAWaitForOneWakeFromTheWakeStream() {
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
-        Instant prompted = home.clock().now();
-        home.clock().advance(Duration.ofMinutes(1));
-        home.primaryHooks().sessionStarted(primary, null, SessionSource.COMPACTION);
-        PrimaryWait compactedInTheTurn = home.primaryWaits().current();
-        home.primaryHooks().stopping(primary, A_LIVE_WAIT);
-        Instant stopped = home.clock().now();
-        home.clock().advance(Duration.ofMinutes(5));
-        home.primaryHooks().sessionStarted(primary, null, SessionSource.COMPACTION);
+        streamIn(primary, home.processes().ownId(), false);
 
-        PrimaryWait compactedAfterTheTurn = home.primaryWaits().current();
-
-        assertThat(compactedInTheTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.UNCHECKED_IN_A_TURN, prompted, 1));
-        assertThat(compactedAfterTheTurn).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.LIVE, stopped, 1));
-    }
-
-    @Test
-    void endsATurnWhoseStopFailedWithoutAWait() {
-        WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
-        UUID primary = UUID.randomUUID();
-        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
-        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
-        home.clock().advance(Duration.ofMinutes(1));
-        home.primaryHooks().stopFailed(primary, "/transcripts/failed.jsonl");
-
-        PrimaryWait afterTheFailure = home.primaryWaits().current();
-
-        assertThat(afterTheFailure).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, home.clock().now(), 1));
+        assertThat(home.primaryWaits().current().sighting()).isEqualTo(PrimaryWait.Sighting.WAITING_ONCE);
+        assertThat(home.primaryWaits().current().needsAWait()).isFalse();
     }
 
     @Test
@@ -199,11 +155,11 @@ class PrimaryHooksTest {
         home.primaryHooks().promptSubmitted(standby, "<task-notification>done</task-notification>");
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
-        assertThat(home.primaryHooks().stopping(standby, List.of())).isEqualTo(HookAnswer.PROCEED);
+        assertThat(home.primaryHooks().stopping(standby)).isEqualTo(HookAnswer.PROCEED);
         for (int block = 0; block < 3; block++) {
-            assertThat(home.primaryHooks().stopping(primary, List.of()).verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
+            assertThat(home.primaryHooks().stopping(primary).verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
         }
-        assertThat(home.primaryHooks().stopping(primary, List.of())).isEqualTo(HookAnswer.PROCEED);
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(HookAnswer.PROCEED);
     }
 
     @Test
@@ -226,9 +182,13 @@ class PrimaryHooksTest {
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
     }
 
+    private void streamIn(UUID session, long pid, boolean follows) {
+        home.waitForWakes().heard(session, new StreamPoll(UUID.randomUUID(), pid, follows, List.of(), false));
+    }
+
     private static void recordTheStartOneTickLater(TestHome home, UUID session) {
         PrimarySession recorded = home.primarySessionStore().get(session).orElseThrow();
         SessionProcess reused = new SessionProcess(recorded.process().pid(), recorded.process().startTick() + 1);
-        home.primarySessionStore().save(recorded.restarted(reused, SessionSource.RESTART, home.clock().now()));
+        home.primarySessionStore().save(recorded.restarted(reused));
     }
 }

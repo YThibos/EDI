@@ -22,7 +22,7 @@ public class PrimarySessionStore {
     private static final String SELECT_SESSIONS = """
             select session_id, started_at, claude_pid, claude_start_tick, claimed_at, turn_started_at, turn_event_mark, reported_at,
                    stops_blocked, typed_at, notification, notified_at, limit_name, limit_resets_at, limit_reached_at, ended_at,
-                   sitrep_opened_at, turn_ended_at, turn_ended_waiting, previous_report_at
+                   sitrep_opened_at, previous_report_at
             from primary_session
             """;
 
@@ -40,10 +40,10 @@ public class PrimarySessionStore {
                         insert into primary_session (session_id, started_at, claude_pid, claude_start_tick, claimed_at, turn_started_at,
                                                      turn_event_mark, reported_at, stops_blocked, typed_at, notification, notified_at,
                                                      limit_name, limit_resets_at, limit_reached_at, ended_at, sitrep_opened_at,
-                                                     turn_ended_at, turn_ended_waiting, previous_report_at)
+                                                     previous_report_at)
                         values (:session, :started, :pid, :startTick, :claimed, :turnStarted, :eventMark, :reported, :stopsBlocked,
                                 :typed, :notification, :notified, :limitName, :limitResets, :limitReached, :ended, :sitrepOpened,
-                                :turnEnded, :turnEndedWaiting, :previousReport)
+                                :previousReport)
                         on conflict (session_id) do update set
                             claude_pid = excluded.claude_pid, claude_start_tick = excluded.claude_start_tick,
                             claimed_at = excluded.claimed_at, turn_started_at = excluded.turn_started_at,
@@ -51,8 +51,7 @@ public class PrimarySessionStore {
                             stops_blocked = excluded.stops_blocked, typed_at = excluded.typed_at, notification = excluded.notification,
                             notified_at = excluded.notified_at, limit_name = excluded.limit_name, limit_resets_at = excluded.limit_resets_at,
                             limit_reached_at = excluded.limit_reached_at, ended_at = excluded.ended_at,
-                            sitrep_opened_at = excluded.sitrep_opened_at, turn_ended_at = excluded.turn_ended_at,
-                            turn_ended_waiting = excluded.turn_ended_waiting, previous_report_at = excluded.previous_report_at""")
+                            sitrep_opened_at = excluded.sitrep_opened_at, previous_report_at = excluded.previous_report_at""")
                 .param("session", session.id().toString())
                 .param("started", Columns.text(session.startedAt()))
                 .param("pid", process == null ? null : process.pid())
@@ -70,8 +69,6 @@ public class PrimarySessionStore {
                 .param("limitReached", Columns.text(session.limitReachedAt()))
                 .param("ended", Columns.text(session.endedAt()))
                 .param("sitrepOpened", Columns.text(session.sitrepOpenedAt()))
-                .param("turnEnded", turn == null ? null : Columns.text(turn.endedAt()))
-                .param("turnEndedWaiting", turn != null && turn.endedWithAWait() ? 1 : 0)
                 .param("previousReport", turn == null ? null : Columns.text(turn.previousReportAt()))
                 .update();
     }
@@ -124,8 +121,7 @@ public class PrimarySessionStore {
             return null;
         }
         return new PrimaryTurn(Columns.instant(started), row.getLong("turn_event_mark"), Columns.instant(row.getString("reported_at")),
-                row.getInt("stops_blocked"), Columns.instant(row.getString("turn_ended_at")), row.getBoolean("turn_ended_waiting"),
-                Columns.instant(row.getString("previous_report_at")));
+                row.getInt("stops_blocked"), Columns.instant(row.getString("previous_report_at")));
     }
 
     private static UsageLimit limit(ResultSet row) throws SQLException {
