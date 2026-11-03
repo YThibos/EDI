@@ -199,7 +199,7 @@ The section sits after the six waves; the captain may move it up.
 | 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | delivered | - |
 | 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-132 | - |
 | 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | delivered | - |
-| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-132 | - |
+| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | delivered | - |
 | 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-132 | - |
 | 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-132 | - |
 | 48 | [EDI-138](EDI-138.md) | The worker-identity and tmux guards close the bypasses found after EDI-122 and EDI-123 landed | M | medium | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#97](https://github.com/YThibos/EDI/issues/97) |
