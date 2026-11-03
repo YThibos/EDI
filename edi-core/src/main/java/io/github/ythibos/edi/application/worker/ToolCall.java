@@ -6,7 +6,7 @@ import java.util.Set;
 
 public record ToolCall(String tool, String command, String filePath, Path workingDirectory, String pattern) {
 
-    private static final String SHELL = "Bash";
+    private static final Set<String> SHELLS = Set.of("Bash", "Monitor");
     private static final String FILE_READER = "Read";
     private static final Set<String> FILE_WRITERS = Set.of("Write", "Edit", "MultiEdit", "NotebookEdit");
     private static final String FILE_SEARCH = "Glob";
@@ -20,7 +20,7 @@ public record ToolCall(String tool, String command, String filePath, Path workin
     }
 
     public boolean runsAShellCommand() {
-        return SHELL.equals(tool) && command != null;
+        return SHELLS.contains(tool) && command != null;
     }
 
     public boolean writesAFile() {

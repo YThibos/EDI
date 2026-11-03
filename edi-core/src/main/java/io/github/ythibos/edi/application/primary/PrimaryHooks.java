@@ -1,7 +1,6 @@
 package io.github.ythibos.edi.application.primary;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,16 +12,17 @@ import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
+import io.github.ythibos.edi.application.wake.WakeStreams;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.authority.Passage;
 import io.github.ythibos.edi.domain.presence.Presence;
-import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
 import io.github.ythibos.edi.domain.primary.Prompt;
@@ -47,13 +47,15 @@ public class PrimaryHooks {
     private final TaskStore tasks;
     private final EventLog events;
     private final ProcessTable processes;
+    private final WakeStreams streams;
+    private final WakeStore wakes;
     private final WorkerRuntime runtime;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainWordStore captainWords, ChangePresence presence,
-            PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, EventLog events, ProcessTable processes, WorkerRuntime runtime,
-            Clock clock, TransactionTemplate transaction) {
+            PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, EventLog events, ProcessTable processes, WakeStreams streams,
+            WakeStore wakes, WorkerRuntime runtime, Clock clock, TransactionTemplate transaction) {
         this.sessions = sessions;
         this.roles = roles;
         this.captainWords = captainWords;
@@ -63,6 +65,8 @@ public class PrimaryHooks {
         this.tasks = tasks;
         this.events = events;
         this.processes = processes;
+        this.streams = streams;
+        this.wakes = wakes;
         this.runtime = runtime;
         this.clock = clock;
         this.transaction = transaction;
@@ -73,7 +77,7 @@ public class PrimaryHooks {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Optional<PrimarySession> known = sessions.get(id);
-            PrimarySession session = known.map(earlier -> earlier.restarted(process, source, now)).orElseGet(() -> PrimarySession.started(id, process, now));
+            PrimarySession session = known.map(earlier -> earlier.restarted(process)).orElseGet(() -> PrimarySession.started(id, process, now));
             sessions.save(session);
             if (roles.role().isVacant()) {
                 claim(session, now);
@@ -98,12 +102,12 @@ public class PrimaryHooks {
         return left.map(returnBriefs::since);
     }
 
-    public HookAnswer stopping(UUID id, List<BackgroundJob> backgroundJobs) {
-        return transaction.execute(_ -> sessions.get(id).map(session -> answeredStop(session, backgroundJobs)).orElse(HookAnswer.PROCEED));
+    public HookAnswer stopping(UUID id) {
+        return transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(HookAnswer.PROCEED));
     }
 
     public HookAnswer stopFailed(UUID id, String transcript) {
-        Optional<PrimarySession> stopped = transaction.execute(_ -> endTheFailedTurn(id));
+        Optional<PrimarySession> stopped = transaction.execute(_ -> sessions.get(id));
         stopped.flatMap(session -> runtime.usageLimitStopIn(transcript, session.startedAt()))
                 .map(LimitStop::limit)
                 .ifPresent(limit -> transaction.executeWithoutResult(_ -> sessions.get(id)
@@ -117,7 +121,7 @@ public class PrimaryHooks {
     }
 
     public HookAnswer sessionEnded(UUID id) {
-        transaction.executeWithoutResult(_ -> sessions.get(id).ifPresent(session -> sessions.save(session.ended(clock.now()))));
+        transaction.executeWithoutResult(_ -> sessions.get(id).ifPresent(this::ended));
         return HookAnswer.PROCEED;
     }
 
@@ -136,15 +140,15 @@ public class PrimaryHooks {
         return sessions.get(id).orElseGet(() -> PrimarySession.started(id, null, now));
     }
 
-    private HookAnswer answeredStop(PrimarySession session, List<BackgroundJob> backgroundJobs) {
+    private HookAnswer answeredStop(PrimarySession session) {
         boolean supervises = roles.role().standingOf(session.id()) == Standing.PRIMARY;
-        boolean waitIsLive = BackgroundJob.anyWaitsForEdi(backgroundJobs);
+        boolean waitIsLive = streams.liveOf(session.id()).isPresent();
         Optional<String> blocked = supervises ? blockingReason(session.turn(), waitIsLive) : Optional.empty();
         if (blocked.isPresent()) {
             sessions.save(session.stopBlocked());
             return HookAnswer.blockTheStop(blocked.get());
         }
-        sessions.save(session.turnEnded(clock.now(), waitIsLive));
+        sessions.save(session.turnEnded());
         return HookAnswer.PROCEED;
     }
 
@@ -156,9 +160,9 @@ public class PrimaryHooks {
                 !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), waitIsLive));
     }
 
-    private Optional<PrimarySession> endTheFailedTurn(UUID id) {
-        Optional<PrimarySession> failed = sessions.get(id).map(session -> session.turnFailed(clock.now()));
-        failed.ifPresent(sessions::save);
-        return failed;
+    private void ended(PrimarySession session) {
+        Instant now = clock.now();
+        sessions.save(session.ended(now));
+        wakes.acknowledgeDeliveredTo(session.id(), now);
     }
 }

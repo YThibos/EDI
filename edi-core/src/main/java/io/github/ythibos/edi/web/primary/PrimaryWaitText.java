@@ -24,13 +24,11 @@ class PrimaryWaitText implements TextPresenter<PrimaryWait> {
     @Override
     public String text(PrimaryWait wait) {
         return switch (wait.sighting()) {
-            case LIVE -> "edi wait is live: it was running when the primary's last turn ended, at " + moments.minute(wait.seenAt()) + ".\n";
-            case MISSING -> "No edi wait is live" + whileInFlight(wait) + ": the primary's last turn ended at " + moments.minute(wait.seenAt())
-                    + " without one.\n";
-            case MISSING_SINCE_SESSION_START -> "No edi wait is live" + whileInFlight(wait) + ": the primary's session started at "
-                    + moments.minute(wait.seenAt()) + " and has not started one.\n";
-            case UNCHECKED_IN_A_TURN -> "The primary is in a turn since " + moments.minute(wait.seenAt())
-                    + "; its stop checks that edi wait is live.\n";
+            case FOLLOWING -> "The wake stream is live: edi wait --follow has run since " + moments.minute(wait.since()) + ".\n";
+            case WAITING_ONCE -> "edi wait is live since " + moments.minute(wait.since()) + " and ends at the next wake.\n";
+            case MISSING -> wait.needsAWait()
+                    ? "No edi wait is live" + whileInFlight(wait) + ": start edi wait --follow alone with the Monitor tool.\n"
+                    : "No edi wait is live, and no task is in flight.\n";
             case NO_PRIMARY -> "No edi wait is live" + whileInFlight(wait) + ": no session holds the primary role.\n";
         };
     }

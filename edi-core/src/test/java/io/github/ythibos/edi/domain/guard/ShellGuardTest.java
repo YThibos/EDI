@@ -63,7 +63,7 @@ class ShellGuardTest {
         "echo lamp !(killall java)",
         "ls core.(pkill|lamp)"})
     void refusesSignalsByPattern(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.SIGNAL_BY_PATTERN);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.SIGNAL_BY_PATTERN);
     }
 
     @ParameterizedTest
@@ -83,7 +83,7 @@ class ShellGuardTest {
         "cat <<EOF\nthe worker's \\$(pkill java) stays text\nEOF",
         "grep -rn killall docs/"})
     void allowsSignalsToCapturedProcessIds(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -95,7 +95,7 @@ class ShellGuardTest {
         "TMUX= tmux new-session -d",
         "command tmux list-windows"})
     void refusesTmuxWithoutASocket(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.TMUX_WITHOUT_SOCKET);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.TMUX_WITHOUT_SOCKET);
     }
 
     @ParameterizedTest
@@ -107,7 +107,7 @@ class ShellGuardTest {
         "tmux -L edi list-windows \\; send -t @3 Escape",
         "tmux -L edi respawn-pane -k -t @3"})
     void refusesControlOfEdisServer(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.EDI_SERVER_CONTROL);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.EDI_SERVER_CONTROL);
     }
 
     @ParameterizedTest
@@ -142,7 +142,7 @@ class ShellGuardTest {
         "bash -c \"tmux -L default send-keys -t edi-261028-0930 'yes' Enter\"",
         "!(tmux -L default send-keys -t edi-261028-0930 yes Enter | cat)"})
     void refusesAWorkerAnyInputToAPaneOnAnySocket(String command) {
-        assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.TMUX_INPUT);
+        assertThat(FOR_A_WORKER.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.TMUX_INPUT);
     }
 
     @ParameterizedTest
@@ -154,7 +154,7 @@ class ShellGuardTest {
         "tmux -L edi-test-42 kill-server",
         "tmux -L edi-test-42 new-session -d -s probe 'sleep 5'"})
     void letsAWorkerReadAnyServerAndRunItsOwnPrivateOne(String command) {
-        assertThat(FOR_A_WORKER.check(command)).isEmpty();
+        assertThat(FOR_A_WORKER.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -162,14 +162,14 @@ class ShellGuardTest {
     void refusesControlOfEdisServerThroughALinkToItsSocket(String command) {
         ShellGuard forThePrimary = new ShellGuard("edi", Set.of("main"), Set.of(), Secrets.NONE, false, path -> LINKED_SOCKETS.getOrDefault(path, path));
 
-        assertThat(forThePrimary.check(command)).map(GuardRefusal::rule).contains(GuardRule.EDI_SERVER_CONTROL);
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(forThePrimary.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.EDI_SERVER_CONTROL);
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"tmux -L default send-keys -t edi-261028-0930 Enter", "tmux -L default run-shell 'date'"})
     void leavesTheCaptainsServerToThePrimary(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -180,7 +180,7 @@ class ShellGuardTest {
         "tmux -L edi-test-1234 kill-server",
         "tmux -S \"$TMUX_SOCKET\" display-message -p '#{pane_width}'"})
     void allowsTmuxThatNamesItsSocket(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -194,7 +194,7 @@ class ShellGuardTest {
         "git -C ../copy push --mirror",
         "git commit -m \"$(cat <<'EOF'\nEDI-5 Fix the worker's guard\nEOF\n)\" && git push --force origin feature/EDI-5"})
     void refusesForcedPushes(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.FORCED_PUSH);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.FORCED_PUSH);
     }
 
     @ParameterizedTest
@@ -207,7 +207,7 @@ class ShellGuardTest {
         "git push --all origin",
         "git -c push.default=current push origin HEAD:feature/EDI-4"})
     void refusesPushesToABaseBranch(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.BASE_BRANCH_PUSH);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.BASE_BRANCH_PUSH);
     }
 
     @ParameterizedTest
@@ -219,7 +219,7 @@ class ShellGuardTest {
         "git commit -m \"$(cat <<'EOF'\nEDI-5 Fix the worker's guard (twice)\nEOF\n)\" && git push -u origin feature/EDI-5",
         "git status && git log --oneline -3"})
     void allowsPushingTheTaskBranch(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -234,7 +234,7 @@ class ShellGuardTest {
         "git push -o merge_request.merge_when_pipeline_succeeds origin feature/EDI-5",
         "git push --push-option=merge_request.auto_merge origin feature/EDI-5"})
     void refusesMerges(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.MERGE);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.MERGE);
     }
 
     @ParameterizedTest
@@ -245,7 +245,7 @@ class ShellGuardTest {
         "git merge origin/main",
         "gh api repos/owner/repo/pulls/12"})
     void allowsWhatOnlyObservesOrPreparesADraft(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -269,7 +269,7 @@ class ShellGuardTest {
         "function push() { git push --no-verify origin feature/EDI-5; }",
         "echo lamp(x|git push --no-verify origin)"})
     void refusesWhatSkipsTheGitHooks(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.SKIPPED_HOOKS);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.SKIPPED_HOOKS);
     }
 
     @ParameterizedTest
@@ -286,7 +286,7 @@ class ShellGuardTest {
         "git -c user.name=Fixture commit -m 'EDI-1 x'",
         "grep -rn core.hooksPath docs/"})
     void allowsGitThatRunsItsHooks(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -296,7 +296,7 @@ class ShellGuardTest {
         "git push --no-verify origin x       | the pre-push hook, whose publish check keeps secrets (I-38) and -SNAPSHOT versions (I-11)",
         "git -c core.hooksPath= commit       | leave core.hooksPath as the isolated copy sets it"})
     void namesTheChecksASkippedHookHolds(String command, String named) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::reason).hasValueSatisfying(reason -> assertThat(reason).contains(named));
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::reason).hasValueSatisfying(reason -> assertThat(reason).contains(named));
     }
 
     @ParameterizedTest
@@ -312,7 +312,7 @@ class ShellGuardTest {
         "lamp() { echo \"lit\"; }; lamp",
         "lamps=(\"a b\" c) && echo \"${lamps[0]}\""})
     void allowsAShellWhoseScriptItCanRead(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -343,7 +343,7 @@ class ShellGuardTest {
         "cat ~/.edi/state/core.(tok|x y",
         "echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo $(echo x)))))))))))))"})
     void refusesWhatItCannotRead(String command) {
-        assertThat(GUARD.check(command)).map(GuardRefusal::rule).contains(GuardRule.UNREADABLE_COMMAND);
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.UNREADABLE_COMMAND);
     }
 
     @ParameterizedTest
@@ -358,7 +358,7 @@ class ShellGuardTest {
         "glab auth status -t",
         "glab config get token --host forge.example.org"})
     void keepsSecretsFromAShell(String command) {
-        assertThat(SECRETS_KEPT.check(command)).map(GuardRefusal::rule).contains(GuardRule.SECRET);
+        assertThat(SECRETS_KEPT.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.SECRET);
     }
 
     @ParameterizedTest
@@ -370,13 +370,13 @@ class ShellGuardTest {
         "cat state/core.port",
         "less tracker-keys.yml.example"})
     void letsThroughWhatOnlyMentionsASecret(String command) {
-        assertThat(SECRETS_KEPT.check(command)).isEmpty();
+        assertThat(SECRETS_KEPT.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"cat ~/.edi/state/core.token", "gh auth token"})
     void keepsNoSecretWhenNoneIsNamed(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -389,7 +389,7 @@ class ShellGuardTest {
         "git push origin :feature/HRN-3",
         "git push origin :refs/heads/feature/HRN-3"})
     void keepsAnUnlandedTaskBranch(String command) {
-        assertThat(UNLANDED_KEPT.check(command)).map(GuardRefusal::rule).contains(GuardRule.UNLANDED_BRANCH_DELETION);
+        assertThat(UNLANDED_KEPT.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.UNLANDED_BRANCH_DELETION);
     }
 
     @ParameterizedTest
@@ -401,7 +401,7 @@ class ShellGuardTest {
         "git checkout -b feature/HRN-5 feature/HRN-3",
         "git log --decorate feature/HRN-3"})
     void letsThroughWhatLeavesAnUnlandedTaskBranchStanding(String command) {
-        assertThat(UNLANDED_KEPT.check(command)).isEmpty();
+        assertThat(UNLANDED_KEPT.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -430,7 +430,7 @@ class ShellGuardTest {
         "sudo env -u EDI_TOKEN_FILE edi backlog",
         "nohup env -i edi backlog &"})
     void keepsWhatTellsTheCoreWhichWorkerIsCalling(String command) {
-        assertThat(FOR_A_WORKER.check(command)).map(GuardRefusal::rule).contains(GuardRule.WORKER_IDENTITY);
+        assertThat(FOR_A_WORKER.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.WORKER_IDENTITY);
     }
 
     @ParameterizedTest
@@ -446,13 +446,13 @@ class ShellGuardTest {
         "LANG=C mvn -q test",
         "edi status working -- reading the brief"})
     void letsAWorkerReadThoseVariablesAndSetItsOwn(String command) {
-        assertThat(FOR_A_WORKER.check(command)).isEmpty();
+        assertThat(FOR_A_WORKER.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"unset EDI_TOKEN_FILE", "env -i bash -lc 'edi health'"})
     void leavesTheEnvironmentToAnyoneButAWorker(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 
     @ParameterizedTest
@@ -466,6 +466,6 @@ class ShellGuardTest {
         "ls src/*.(java|kt)",
         "[[ $answer =~ ^(yes|no)$ ]]"})
     void readsAGroupAttachedToAWordAsPartOfItAndLetsTheHarmlessOnesThrough(String command) {
-        assertThat(GUARD.check(command)).isEmpty();
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
     }
 }

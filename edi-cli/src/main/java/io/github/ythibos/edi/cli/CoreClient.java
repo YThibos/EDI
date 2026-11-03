@@ -58,7 +58,7 @@ final class CoreClient {
     private CoreReply exchange(CoreConnection core, HttpRequest.Builder request) {
         try {
             HttpResponse<String> response = http.send(request.build(), BodyHandlers.ofString());
-            return new CoreReply(response.statusCode(), response.body());
+            return new CoreReply(response.statusCode(), response.body(), response.headers());
         } catch (IOException unreachable) {
             throw new CoreUnavailable("EDI core is not answering on " + core.address() + ".");
         } catch (InterruptedException interrupted) {

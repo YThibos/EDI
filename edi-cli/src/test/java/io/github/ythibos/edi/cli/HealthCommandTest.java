@@ -29,9 +29,8 @@ class HealthCommandTest {
     @TempDir
     private Path home;
 
-    private static final String LIVE_WAIT = "edi wait is live: it was running when the primary's last turn ended, at 2026-10-26 20:31 CET.\n";
-    private static final String MISSING_WAIT = "No edi wait is live while 2 tasks are in flight: the primary's last turn ended at 2026-10-26 20:31 CET"
-            + " without one.\n";
+    private static final String LIVE_WAIT = "The wake stream is live: edi wait --follow has run since 2026-10-26 20:31 CET.\n";
+    private static final String MISSING_WAIT = "No edi wait is live while 2 tasks are in flight: start edi wait --follow alone with the Monitor tool.\n";
 
     private HttpServer core;
     private String primaryWait = LIVE_WAIT;
