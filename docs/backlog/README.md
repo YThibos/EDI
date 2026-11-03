@@ -206,7 +206,7 @@ The section sits after the six waves; the captain may move it up.
 | 49 | [EDI-139](EDI-139.md) | Tests never reach the captain's real Outlook calendar | S | low | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#98](https://github.com/YThibos/EDI/issues/98) |
 | 50 | [EDI-140](EDI-140.md) | PinnedActionsTest reads the parsed workflow, and the CI service image and mise version are pinned too | XS | info | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#99](https://github.com/YThibos/EDI/issues/99) |
 | 51 | [EDI-150](EDI-150.md) | Pull request and merge request texts pass the publish guard before EDI posts them | M | medium | - | delivered | [#104](https://github.com/YThibos/EDI/issues/104) |
-| 67 | [EDI-169](EDI-169.md) | The publish guard finds a secret wherever it falls in a large diff | M | low | - | open | - |
+| 67 | [EDI-169](EDI-169.md) | The publish guard finds a secret wherever it falls in a large diff | M | low | - | open | [#193](https://github.com/YThibos/EDI/issues/193) |
 
 ### Held, parked and needs the captain's machine, no wave
 
