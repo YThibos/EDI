@@ -191,6 +191,15 @@ Headless runs (`claude -p`, `claude-haiku-5-5`, `--allowedTools Bash`) in throwa
 - With `--allowedTools Write`, Claude Code held the model's `Write` of `.claude/settings.local.json` for a permission prompt; whether a file written in the middle of a session under `--dangerously-skip-permissions` takes effect in that session was not verified, because the sandbox's own permission check refused that run.
 - User settings in `~/.claude/` were not tried, so as not to change the sandbox's own Claude Code; Claude Code documents them below the command line in precedence, as local and project settings are.
 
+## The Monitor tool, on 2.1.316
+
+A worker session ran the Monitor tool on a command that printed two lines a second apart, and read its own transcript and the installed binary's hook schema.
+
+- The tool call is recorded as `name: "Monitor"` with `input.command`, `input.description` and `input.timeout_ms`, the shape a `PreToolUse` hook receives as `tool_name` and `tool_input`, so a matcher naming `Monitor` sends its command to the guard as a Bash command is sent.
+- Each line the command printed reached the session as its own notification, a `<task-notification>` naming the task, with the line in `<event>`; the last line came with the notice that the stream ended.
+- The schema caps `timeout_ms` at 3,600,000 and the tool's own description says it caps deadlines at 1,800,000; at its deadline the monitor's command is killed and the session gets one notice.
+- The binary keeps a Monitor command as a `local_bash` task of kind `monitor`, which it reports as type `shell` in the Stop hook's `background_tasks`; this was read from the binary, not observed in a hook, and EDI no longer reads that list, since the core sees the wake stream's own process ([wakes-and-turn-end](../decisions/wakes-and-turn-end.md)).
+
 ## Dialog answers and pasted text, on 2.1.316
 
 Read on Claude Code 2.1.316 on WSL2 Ubuntu 24.04, 02/11/2026, for the captain's stored messages ([captains-word](../decisions/captains-word.md)).

@@ -4,7 +4,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.StreamSupport;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +22,6 @@ import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.authority.CallingSession;
-import io.github.ythibos.edi.domain.primary.BackgroundJob;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -96,7 +94,7 @@ class HookController {
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
-            case STOP -> rendered(primaryHooks.stopping(sessionIn(payload), backgroundJobsIn(payload)));
+            case STOP -> rendered(primaryHooks.stopping(sessionIn(payload)));
             case STOP_FAILURE -> rendered(primaryHooks.stopFailed(sessionIn(payload), textIn(payload, "transcript_path")));
             case NOTIFICATION -> rendered(primaryHooks.notified(sessionIn(payload), textIn(payload, "notification_type")));
             case SESSION_END -> rendered(primaryHooks.sessionEnded(sessionIn(payload)));
@@ -173,12 +171,6 @@ class HookController {
         ObjectNode output = json.createObjectNode();
         output.putObject("hookSpecificOutput").put("hookEventName", hook.claudeCodeName()).put("additionalContext", context);
         return output;
-    }
-
-    private static List<BackgroundJob> backgroundJobsIn(JsonNode payload) {
-        return StreamSupport.stream(payload.path("background_tasks").spliterator(), false)
-                .map(job -> new BackgroundJob(job.path("type").asString(""), job.path("status").asString(""), job.path("command").asString("")))
-                .toList();
     }
 
     private ObjectNode toolDenial(String reason) {

@@ -228,6 +228,17 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
+    void refusesTheWakeStreamFromBashWhileTheCoreIsDownAndLetsOneWaitAloneThrough() throws IOException {
+        core.stopAnswering();
+
+        int stream = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi wait --follow\",\"run_in_background\":true}}", "hook", "pre-tool-use");
+        int oneWait = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi wait\",\"run_in_background\":true}}", "hook", "pre-tool-use");
+
+        assertThat(stream).isEqualTo(2);
+        assertThat(oneWait).isZero();
+    }
+
+    @Test
     void passesTheStatusLinePayloadThroughAndPrintsTheCoresLine() {
         core.answering(200, "\u001b[38;2;200;200;200mOpus 5.5\u001b[0m\n");
 

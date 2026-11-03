@@ -176,10 +176,9 @@ class NativeRecoveryIT {
         CommandRun started = edi(primary, payload(session, "\"source\":\"startup\""), "hook", "session-start");
         edi(primary, payload(session, "\"prompt\":\"Queue the bell.\""), "hook", "user-prompt-submit");
         edi(primary, "", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Ring the bell", "--key", "HRN-13");
-        CommandRun unreported = edi(primary, payload(session, "\"stop_hook_active\":false,\"background_tasks\":[]"), "hook", "stop");
+        CommandRun unreported = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
         edi(primary, "", "report");
-        CommandRun reported = edi(primary, payload(session, "\"stop_hook_active\":false,\"background_tasks\":"
-                + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]"), "hook", "stop");
+        CommandRun reported = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
         dispatch("wake-bell", "HRN-14", "stub-run: edi status needs-decision --key bell -- Brass or bronze?");
         workerServer().ifPresent(server -> processes.register(server.pid()));
         CommandRun woken = awaitTheWake(primary, "wake-bell#1 needs a decision: (bell) Brass or bronze?");

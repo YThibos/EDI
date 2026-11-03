@@ -29,9 +29,9 @@ public record PrimarySession(
         return new PrimarySession(id, at, process, null, null, null, null, null, null, null, null, null);
     }
 
-    public PrimarySession restarted(SessionProcess restartedProcess, SessionSource source, Instant at) {
+    public PrimarySession restarted(SessionProcess restartedProcess) {
         return new PrimarySession(id, startedAt, restartedProcess == null ? process : restartedProcess, claimedAt,
-                turnAfterTheStart(source, at), typedAt, notification, notifiedAt, limit, limitReachedAt, null, null);
+                turn, typedAt, notification, notifiedAt, limit, limitReachedAt, null, null);
     }
 
     public PrimarySession claimed(Instant at) {
@@ -57,13 +57,8 @@ public record PrimarySession(
         return withTurn(turn.stopBlocked());
     }
 
-    public PrimarySession turnFailed(Instant at) {
-        return turn == null ? this : withTurn(turn.ended(at, false));
-    }
-
-    public PrimarySession turnEnded(Instant at, boolean withAWait) {
-        return new PrimarySession(id, startedAt, process, claimedAt, turn == null ? null : turn.ended(at, withAWait), typedAt,
-                notification, notifiedAt, null, null, endedAt, null);
+    public PrimarySession turnEnded() {
+        return new PrimarySession(id, startedAt, process, claimedAt, turn, typedAt, notification, notifiedAt, null, null, endedAt, null);
     }
 
     public PrimarySession notified(String kind, Instant at) {
@@ -93,10 +88,6 @@ public record PrimarySession(
 
     public boolean showsTheSitrepItsStartOpened() {
         return sitrepOpenedAt != null;
-    }
-
-    private PrimaryTurn turnAfterTheStart(SessionSource source, Instant at) {
-        return turn == null || source.keepsTheProcess() ? turn : turn.ended(at, false);
     }
 
     private PrimaryTurn turnAfter(Instant at, long eventMark) {

@@ -160,19 +160,36 @@ class NativeSmokeIT {
     }
 
     @Test
-    void theCommandReportsTheCoreHealthyAndThePrimarysLiveWait() throws Exception {
+    void theCommandReportsTheCoreHealthyAndThePrimarysLiveWakeStreamUntilItDies() throws Exception {
         Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
         String session = "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"";
         ediIn(Path.of(""), primary, session + "}", "hook", "session-start");
         ediIn(Path.of(""), primary, session + ",\"prompt\":\"How is the native lamp?\"}", "hook", "user-prompt-submit");
-        ediIn(Path.of(""), primary, session + ",\"background_tasks\":[{\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}",
-                "hook", "stop");
+        Process stream = followedIn(primary);
 
-        CommandRun health = edi("", "health");
+        CommandRun live = awaitOutput(List.of("health"), "The wake stream is live");
+        CommandRun second = ediIn(Path.of(""), primary, "", "wait", "--follow");
+        stream.destroy();
+        TestProcesses.awaitExit(stream.toHandle());
+        CommandRun afterItDied = edi("", "health");
 
-        assertThat(health.exitCode()).isZero();
-        assertThat(health.output()).startsWith("EDI core is up on 127.0.0.1:" + port + ".\n"
-                + "edi wait is live: it was running when the primary's last turn ended, at ");
+        assertThat(live.exitCode()).isZero();
+        assertThat(live.output()).startsWith("EDI core is up on 127.0.0.1:" + port + ".\n" + "The wake stream is live: edi wait --follow has run since ");
+        assertThat(second.exitCode()).isOne();
+        assertThat(second.output()).startsWith("The wake stream ended: edi wait is refused: the primary's wake stream is already live as edi wait --follow"
+                + " in process " + stream.pid());
+        assertThat(afterItDied.output()).contains("\nNo edi wait is live");
+    }
+
+    @Test
+    void theCommandRefusesAWakeStreamWhoseStandardOutputIsClosed() throws Exception {
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+
+        CommandRun closed = commandIn(Path.of("/bin/sh"), Path.of(""), primary, "", "-c", "exec \"$0\" wait --follow >&-",
+                binary("edi.cli.binary").toString());
+
+        assertThat(closed.exitCode()).isOne();
+        assertThat(closed.output()).startsWith("edi wait refuses to start: its standard output is closed");
     }
 
     @Test
@@ -446,6 +463,16 @@ class NativeSmokeIT {
         git(upstream, "commit", "--quiet", "--message", "Start harness");
         Files.createDirectories(clone.getParent());
         git(clone.getParent(), "clone", "--quiet", upstream.toString(), clone.toString());
+    }
+
+    private static Process followedIn(Map<String, String> primary) throws Exception {
+        ProcessBuilder launch = new ProcessBuilder(binary("edi.cli.binary").toString(), "wait", "--follow")
+                .redirectErrorStream(true)
+                .redirectOutput(Files.createTempFile(home, "wake-stream-", ".out").toFile());
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
+        launch.environment().putAll(primary);
+        launch.environment().put("EDI_HOME", home.toString());
+        return processes.register(launch.start());
     }
 
     private static CommandRun awaitOutput(List<String> command, String expected) throws Exception {

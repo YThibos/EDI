@@ -124,7 +124,7 @@ public class GuardToolCall {
         }
         Set<String> unlandedBranches = transaction.execute(_ -> dispatches.branchesOfOpenTasks());
         return new ShellGuard(runtime.socket(), bases, unlandedBranches, secrets, forAWorker, socketPath -> realisedFrom(call.workingDirectory(), socketPath))
-                .check(call.command());
+                .check(call.command(), call.tool());
     }
 
     private Optional<GuardRefusal> searchReachingASecret(ToolCall call) {
