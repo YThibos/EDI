@@ -200,12 +200,14 @@ class ClaudeLayerCommandsTest {
 
         int plain = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi up --core-only\"}}", "hook", "pre-tool-use");
         int other = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi up; rm -rf /tmp/x\"}}", "hook", "pre-tool-use");
+        int feedingAHook = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi hook post-tool-use\"}}", "hook", "pre-tool-use");
         int forAWorker = new CommandLine(new Edi(Map.of("EDI_HOME", home.toString(), "EDI_TOKEN_FILE", home.resolve("state/core.token").toString()),
                 new ByteArrayInputStream("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi status working\"}}".getBytes(StandardCharsets.UTF_8))))
                 .setOut(new PrintWriter(out, true)).setErr(new PrintWriter(err, true)).execute("hook", "pre-tool-use");
 
         assertThat(plain).isZero();
         assertThat(other).isEqualTo(2);
+        assertThat(feedingAHook).isEqualTo(2);
         assertThat(forAWorker).isEqualTo(2);
     }
 

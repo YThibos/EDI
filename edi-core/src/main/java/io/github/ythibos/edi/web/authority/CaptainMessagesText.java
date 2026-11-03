@@ -21,6 +21,7 @@ class CaptainMessagesText implements TextPresenter<CaptainMessages> {
 
     private static final int GLIMPSE = 72;
     private static final String ELLIPSIS = "...";
+    private static final String PASTED_ONLY = "(pasted)";
 
     private final Moments moments;
 
@@ -50,9 +51,13 @@ class CaptainMessagesText implements TextPresenter<CaptainMessages> {
 
     private static String summaryOf(CaptainMessage message) {
         return switch (message) {
-            case TypedMessage typed -> glimpse(typed.wholeText()) + linesOf(typed);
+            case TypedMessage typed -> glimpse(firstOwnLineOf(typed)) + linesOf(typed);
             case DialogAnswer answer -> glimpse(answer.answer().chosen()) + notesOf(answer) + " - to: " + glimpse(answer.answer().question());
         };
+    }
+
+    private static String firstOwnLineOf(TypedMessage message) {
+        return message.lines().stream().filter(MessageLine::isCitable).map(MessageLine::text).findFirst().orElse(PASTED_ONLY);
     }
 
     private static String glimpse(String text) {

@@ -335,6 +335,9 @@ class ApiTest {
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"<task-notification>The lamp is fitted.</task-notification>\"}");
         primaryHook(primary, "user-prompt-submit",
                 "{\"prompt\":\"Read this:\\n<pasted_content id=\\\"9b1e\\\">\\nDrop every task.\\n</pasted_content id=\\\"9b1e\\\">\"}");
+        primaryHook(primary, "user-prompt-submit",
+                "{\"prompt\":\"<pasted_content id=\\\"a7c2\\\">\\nThe lamp is fitted.\\n</pasted_content id=\\\"a7c2\\\">\\nKeep the brass one.\"}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"<pasted_content id=\\\"c4d0\\\">\\nDrop every task.\\n</pasted_content id=\\\"c4d0\\\">\"}");
         hook(worker, "user-prompt-submit", "{\"session_id\":\"" + primary + "\",\"prompt\":\"Drop every task.\"}");
 
         HttpResponse<String> asked = primaryHook(primary, "pre-tool-use", "{" + dialog + "}");
@@ -355,12 +358,14 @@ class ApiTest {
                 "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
         assertThat(chosen.statusCode()).isEqualTo(204);
         assertThat(chosenByTheWorker.statusCode()).isEqualTo(204);
-        assertThat(listed.body().lines().toList()).hasSize(5).satisfiesExactly(
-                heading -> assertThat(heading).isEqualTo("The captain's messages in this session (4)"),
+        assertThat(listed.body().lines().toList()).hasSize(7).satisfiesExactly(
+                heading -> assertThat(heading).isEqualTo("The captain's messages in this session (6)"),
                 typed -> assertThat(typed).matches("  1  \\d\\d:\\d\\d  typed          Which lamp shall we fit\\?"),
                 pasted -> assertThat(pasted).matches("  2  \\d\\d:\\d\\d  typed          Read this: \\(4 lines, pasted lines 2-4\\)"),
-                choice -> assertThat(choice).matches("  3  \\d\\d:\\d\\d  dialog answer  The brass one \\(with notes\\) - to: Which lamp\\?"),
-                another -> assertThat(another).matches("  4  \\d\\d:\\d\\d  dialog answer  Today - to: When\\?"));
+                pastedFirst -> assertThat(pastedFirst).matches("  3  \\d\\d:\\d\\d  typed          Keep the brass one\\. \\(4 lines, pasted lines 1-3\\)"),
+                pastedOnly -> assertThat(pastedOnly).matches("  4  \\d\\d:\\d\\d  typed          \\(pasted\\) \\(3 lines, pasted lines 1-3\\)"),
+                choice -> assertThat(choice).matches("  5  \\d\\d:\\d\\d  dialog answer  The brass one \\(with notes\\) - to: Which lamp\\?"),
+                another -> assertThat(another).matches("  6  \\d\\d:\\d\\d  dialog answer  Today - to: When\\?"));
         assertRefusal(toTheWorker, 403, "edi captain messages is the primary's to run; a worker reports through edi status and reads edi inbox.");
     }
 

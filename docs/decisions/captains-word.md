@@ -58,6 +58,7 @@ An exchange that ends with its session keeps yesterday's approval from authorisi
 
 - Good: AT-05 and AT-06 hold mechanically, the primary cites a number instead of copying words, and a dialog the captain answers can authorise the act it names.
 - Good: the primary learns from one refusal sentence what to cite or what option to offer.
+- Good: the primary's own shell cannot feed a hook, since the guard refuses it any `edi hook` command ([pre-tool-guard](pre-tool-guard.md)), so it cannot store a typed message or a dialog answer of its own making.
 - Bad: the store keeps whatever the captain types in the primary, a pasted secret included, as the session's transcript does; it lives in the EDI home with the rest of the store.
 - Bad: a dialog option meant to authorise an act must open with the act's word and name the task, and a decision option must say so with `authorises`.
 - Bad: from their own shell outside a primary session the captain gives their word in the console or the primary session.
@@ -76,3 +77,4 @@ When the console gains its own promote, drop or discard actions, the captain wan
 - 26/10/2026: the lift now needs a word recorded on the task for that act, `--for effort-above-high`, so a word recorded to discard or drop a task never lifts its effort (EDI-49).
 - 28/10/2026: a typed prompt stays the only evidence, and the guard keeps a worker's shell from typing into any tmux pane, after the security review found a worker could type into the primary through the captain's default server (EDI-123).
 - 02/11/2026: the hooks store the captain's messages and dialog answers verbatim and numbered, in place of digests, so the primary cites them by number, and a dialog answer that opens with an act and names its task is the captain's word for that act (EDI-159).
+- 03/11/2026: the guard refuses the primary's shell any `edi hook` command, so only Claude Code stores the captain's messages and dialog answers (EDI-159).
