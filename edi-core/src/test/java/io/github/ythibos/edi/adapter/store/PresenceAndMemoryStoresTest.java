@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -13,8 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.store.MemoryCheckStore.CheckedMemory;
+import io.github.ythibos.edi.domain.authority.AnsweredQuestion;
 import io.github.ythibos.edi.domain.authority.Authorisation;
-import io.github.ythibos.edi.domain.authority.Passage;
+import io.github.ythibos.edi.domain.authority.DialogAnswer;
+import io.github.ythibos.edi.domain.authority.TypedMessage;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
@@ -49,18 +52,22 @@ class PresenceAndMemoryStoresTest {
     }
 
     @Test
-    void keepsTypedPassagesAsDigestsAndTheCaptainsWordPerSession() {
+    void numbersTheCaptainsMessagesAndKeepsTheCaptainsWordPerSession() {
         UUID session = UUID.randomUUID();
+        UUID other = UUID.randomUUID();
         home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
+        home.primaryHooks().sessionStarted(other, null, SessionSource.LAUNCH);
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
-        home.captainWords().recordTyped(session, Passage.allTypedIn("Drop the lamp.\nAnd the horn."), TestHome.START);
+        TypedMessage typed = home.captainMessages().recordTyped(session, "Drop the lamp.\nAnd the horn.", TestHome.START);
+        DialogAnswer chosen = home.captainMessages().recordDialogAnswer(session, new AnsweredQuestion("Which lamp?", "The brass one", "Polish it."),
+                TestHome.START.plusSeconds(60));
+        TypedMessage elsewhere = home.captainMessages().recordTyped(other, "Fit the door.", TestHome.START);
         Authorisation word = new Authorisation(session, new TaskId("fit-lamp"), null, "Drop the lamp.", TestHome.START);
         home.captainWords().save(word);
 
-        assertThat(home.captainWords().wasTyped(session, Passage.of("and the horn."))).isTrue();
-        assertThat(home.captainWords().wasTyped(session, Passage.of("Drop the horn."))).isFalse();
-        assertThat(home.captainWords().wasTyped(UUID.randomUUID(), Passage.of("Drop the lamp."))).isFalse();
-        assertThat(home.jdbc().sql("select digest from typed_passage").query(String.class).list()).noneMatch(digest -> digest.contains("lamp"));
+        assertThat(home.captainMessages().sentIn(session).messages()).containsExactly(typed, chosen);
+        assertThat(List.of(typed.number(), chosen.number(), elsewhere.number())).containsExactly(1, 2, 1);
+        assertThat(home.captainMessages().sentIn(other).messages()).containsExactly(elsewhere);
         assertThat(home.captainWords().heardIn(session)).containsExactly(word);
     }
 

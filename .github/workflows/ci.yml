@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          version: 2026.10.20
+          version: 2026.10.25
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          version: 2026.10.20
+          version: 2026.10.25
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
@@ -82,12 +82,12 @@ jobs:
   dependency-check:
     name: Dependency-Check
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          version: 2026.10.20
+          version: 2026.10.25
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
@@ -99,6 +99,8 @@ jobs:
           path: ${{ runner.temp }}/dependency-check-data
           key: dependency-check-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: dependency-check-
+      - name: Drop an update lock a stopped run left in the database
+        run: rm -f "${{ runner.temp }}/dependency-check-data/odc.update.lock"
       - name: Scan the Maven dependencies
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
@@ -106,7 +108,7 @@ jobs:
           ./mvnw -DskipTests package org.owasp:dependency-check-maven:aggregate
           -DdataDirectory="${{ runner.temp }}/dependency-check-data"
       - name: Keep the vulnerability database
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/dependency-check-data
@@ -126,8 +128,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          version: 2026.10.20
-          install_args: node
+          version: 2026.10.25
       - name: Audit the console's build dependencies
         working-directory: edi-console
         run: npm audit --audit-level=high
@@ -149,7 +150,7 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          version: 2026.10.20
+          version: 2026.10.25
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
@@ -170,7 +171,7 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          version: 2026.10.20
+          version: 2026.10.25
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository

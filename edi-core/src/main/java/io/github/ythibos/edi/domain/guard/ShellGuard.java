@@ -24,7 +24,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
         this(ediSocket, baseBranches, unlandedBranches, secrets, false, SocketPaths.AS_WRITTEN);
     }
 
-    public Optional<GuardRefusal> check(String script) {
+    public Optional<GuardRefusal> check(String script, String tool) {
         List<ShellCommand> commands;
         try {
             commands = ShellScript.commandsIn(script);
@@ -32,7 +32,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
             return Optional.of(new GuardRefusal(GuardRule.UNREADABLE_COMMAND,
                     unreadable.getMessage() + " The guard refuses what it cannot read; run it as plainer commands."));
         }
-        return ProcessSignals.refusalFor(commands).or(() -> firstRefusalAmong(commands));
+        return ProcessSignals.refusalFor(commands).or(() -> LoneWaits.refusalFor(script, commands, tool)).or(() -> firstRefusalAmong(commands));
     }
 
     private Optional<GuardRefusal> firstRefusalAmong(List<ShellCommand> commands) {
@@ -46,6 +46,6 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
                 .or(() -> BranchDeletions.refusalFor(command, unlandedBranches))
                 .or(() -> MergingCommands.refusalFor(command))
                 .or(() -> SecretReads.refusalFor(command, secrets))
-                .or(() -> forAWorker ? WorkerIdentity.refusalFor(command) : Optional.empty());
+                .or(() -> forAWorker ? WorkerIdentity.refusalFor(command) : HookFeeds.refusalFor(command));
     }
 }

@@ -151,6 +151,13 @@ class CommandsTest {
     }
 
     @Test
+    void recordsTheCaptainsAnswerFromAStoredMessage() {
+        edi("", "decision", "answer", "D58", "--option", "B", "--message", "7", "--line", "1");
+
+        assertThat(core.received().body()).isEqualTo("{\"message\":7,\"line\":1,\"option\":\"B\"}");
+    }
+
+    @Test
     void listsDecisionsAndProjects() {
         core.answering(200, "Open decisions (0)\n");
 
@@ -404,7 +411,7 @@ class CommandsTest {
     void explainsEverySubcommand() {
         assertThat(edi("", "decision", "answer", "--help")).isZero();
 
-        assertThat(out.toString()).contains("Usage: edi decision answer", "--text=WORDS", "The captain's own words, exactly as given.");
+        assertThat(out.toString()).contains("Usage: edi decision answer", "--message=N", "--line=K", "--text=WORDS");
         assertThat(core.received()).isNull();
     }
 

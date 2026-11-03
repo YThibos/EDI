@@ -51,6 +51,14 @@ class TextVerdictTest {
                 .extracting(TextFinding::rule).containsExactly(PublishRule.NETWORK_ADDRESS);
     }
 
+    @Test
+    void readsAHostWithAsManyLabelsAsADescriptionCanHold() {
+        String host = "lamp.".repeat(100_000) + "example:8443";
+
+        assertThat(TextVerdict.of(new RequestText("HRN-3 Fit the lamp", "Reached " + host + " at last."), DenyList.empty(), List.of()).findings())
+                .extracting(TextFinding::rule).containsExactly(PublishRule.NETWORK_ADDRESS);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
         "Ran from /home/jdoe/projects/harness.",

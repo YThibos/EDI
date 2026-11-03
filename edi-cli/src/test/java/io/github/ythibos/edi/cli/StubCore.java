@@ -16,6 +16,8 @@ import java.util.List;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import io.github.ythibos.edi.testing.Patience;
+
 final class StubCore implements AutoCloseable {
 
     static final String TOKEN = "stub-token";
@@ -27,6 +29,7 @@ final class StubCore implements AutoCloseable {
     private final List<Request> requests = new ArrayList<>();
     private int status = 200;
     private String reply = "";
+    private int answeredBeforeDropping = Integer.MAX_VALUE;
 
     private StubCore(HttpServer server, Path portFile) {
         this.server = server;
@@ -50,8 +53,26 @@ final class StubCore implements AutoCloseable {
     }
 
     synchronized StubCore thenAnswering(int replyStatus, String replyBody) {
-        queued.add(new Reply(replyStatus, replyBody));
+        queued.add(new Reply(replyStatus, replyBody, null));
         return this;
+    }
+
+    synchronized StubCore thenWaking(long number, String digest) {
+        queued.add(new Reply(200, digest, Long.toString(number)));
+        return this;
+    }
+
+    synchronized StubCore droppingEveryCallAfter(int answered) {
+        answeredBeforeDropping = answered;
+        return this;
+    }
+
+    synchronized boolean awaitRequests(int count) throws InterruptedException {
+        long giveUp = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
+        while (requests.size() < count && System.nanoTime() < giveUp) {
+            wait(Math.max(1, (giveUp - System.nanoTime()) / 1_000_000));
+        }
+        return requests.size() >= count;
     }
 
     synchronized Request received() {
@@ -88,6 +109,13 @@ final class StubCore implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("EDI-Claude-Pid"),
                 new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         Reply answer = answerTo(request);
+        if (answer == null) {
+            exchange.close();
+            return;
+        }
+        if (answer.wakes() != null) {
+            exchange.getResponseHeaders().add("EDI-Wakes", answer.wakes());
+        }
         byte[] body = answer.body().getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(answer.status(), body.length == 0 ? -1 : body.length);
         exchange.getResponseBody().write(body);
@@ -96,12 +124,16 @@ final class StubCore implements AutoCloseable {
 
     private synchronized Reply answerTo(Request request) {
         requests.add(request);
-        return queued.isEmpty() ? new Reply(status, reply) : queued.poll();
+        notifyAll();
+        if (requests.size() > answeredBeforeDropping) {
+            return null;
+        }
+        return queued.isEmpty() ? new Reply(status, reply, null) : queued.poll();
     }
 
     record Request(String method, String target, String authorization, String accepted, String session, String claudePid, String body) {
     }
 
-    private record Reply(int status, String body) {
+    private record Reply(int status, String body, String wakes) {
     }
 }
