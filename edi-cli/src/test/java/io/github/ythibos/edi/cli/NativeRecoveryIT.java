@@ -203,8 +203,7 @@ class NativeRecoveryIT {
                 "--edi.pipeline.home=" + home.resolve("no-mistakes"),
                 "--edi.machine.boot-id=" + bootIdFile(),
                 "--edi.console.browser=" + stubBrowser(),
-                "--edi.console.windows-directory=" + home,
-                "--edi.console.wsl-distribution=Recovery-Linux"));
+                "--edi.console.windows-directory=" + home));
         commandLine.addAll(List.of(options));
         ProcessBuilder launch = new ProcessBuilder(commandLine)
                 .redirectErrorStream(true)
