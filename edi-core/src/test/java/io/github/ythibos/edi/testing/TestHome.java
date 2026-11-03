@@ -916,7 +916,7 @@ public final class TestHome {
     }
 
     public StopWorker stopWorker() {
-        return new StopWorker(tasks, workers, runtime, processes, events, clock, transaction);
+        return new StopWorker(home, tasks, workers, runtime, processes, events, clock, transaction);
     }
 
     public ResumeAfterUsageLimits resumeAfterUsageLimits() {
