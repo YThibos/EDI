@@ -26,6 +26,7 @@ CI runs on every push and pull request:
 - gitleaks and the publish guard ([publish-guard](publish-guard.md)).
 
 A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, kept current by a Renovate regex manager, until Spring Boot 4.1.2 managed the fixed Tomcat.
+Likewise the parent `pom.xml` overrides `sqlite-jdbc.version` with 3.54.1.0, kept current by a Renovate regex manager, while Spring Boot 4.1.2 manages a 3.53.4.0 that Dependency-Check scores 8.5; the override goes once Spring Boot manages 3.54.1.0 or later.
 Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, until `@angular/build` 22.2.5 brought the fixed Vite.
 The `edi-upkeep` skill lists Renovate's pull requests with their checks, raises one decision per green batch, and turns a red major into a migration task.
 
@@ -60,3 +61,4 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 28/10/2026: every GitHub Action is pinned to a full commit SHA, verified against the action's repository, with its tag beside it, and Renovate pins and keeps the digests, before the repository is made public (EDI-131).
 - 02/11/2026: `@angular/build` 22.2.5 depends on Vite 8.3.5, which carries the fix, so the console's `vite` override was removed (EDI-1).
 - 03/11/2026: CI came back red on main: a cancelled run had cached Dependency-Check's update lock, so every later run waited forty minutes for it and failed, and the `npm audit` job, installing only Node, could not render `JAVA_HOME`; the cache now keeps no cancelled run and drops a stale lock, the job installs every pinned tool, and the Dependency-Check job allows five hours instead of 150 minutes, since a run that reached 79% of a cold download at the limit was cancelled and kept nothing (EDI-168).
+- 03/11/2026: the first complete Dependency-Check run found CVEs scored up to 8.5 in sqlite-jdbc 3.53.4.0, the version Spring Boot 4.1.2 manages, so the parent overrides it with 3.54.1.0, which bundles SQLite 3.54.1, under a regex manager as Tomcat's override was (EDI-168).
