@@ -6,12 +6,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -23,12 +25,25 @@ import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.status.StatusReport;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.worker.BootId;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
 class TurnReportPresenterTest {
@@ -134,6 +149,28 @@ class TurnReportPresenterTest {
     }
 
     @Test
+    void drawsAWorkerQuestionAsALineWaitingOnEdiAndNeverSaysNothingWaits() {
+        Task lamp = Task.queued(new TaskId("fit-lamp"), new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null),
+                "", NOW);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
+                List.of(new WorkerQuestion(lamp, asking(lamp, "Which socket does the lamp take, the bayonet one or the screw one the old lamp used?"),
+                        Duration.ofMinutes(65))));
+
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+
+        assertThat(report).isEqualTo("""
+                ╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════
+                ║
+                ╟── harness ─────────────────────────────────
+                ║
+                ║  Waiting on EDI: Fit the lamp asks "Which socket does the lamp take,
+                ║        the bayonet one or the screw ..." - waiting 1 hour 5 minutes
+                ║
+                ╚═══════════════════════════════════════════════════════════════════════
+                """).doesNotContain("Nothing waiting on you", "Nothing needs you");
+    }
+
+    @Test
     void headsTheReportWithTheCalendarItCannotRead() {
         UnreadableCalendar unreadable = new UnreadableCalendar(Instant.parse("2026-10-15T08:02:00Z"), "Outlook did not answer.");
 
@@ -154,6 +191,13 @@ class TurnReportPresenterTest {
         return Decision.raised(new DecisionNumber(number), task.id(), new DecisionCard(title, "",
                 List.of(new DecisionOption(new OptionKey('A'), "The simple way"), new DecisionOption(new OptionKey('B'), "The thorough way")),
                 new Recommendation(new OptionKey('A'), "it is enough")), at);
+    }
+
+    private static Worker asking(Task task, String question) {
+        Worker launched = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
+                new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, NOW, "@1", 2L),
+                new WorkerLaunch(LaunchKind.DISPATCH, NOW, new BootId("boot")));
+        return launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("socket"), null, question), NOW);
     }
 
     private static ReadyForReview readyForReview(Task task) {
