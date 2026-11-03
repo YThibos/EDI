@@ -1,8 +1,6 @@
 package io.github.ythibos.edi.domain.authority;
 
-import java.util.LinkedHashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 public record Passage(String words) {
@@ -17,15 +15,6 @@ public record Passage(String words) {
 
     public static Passage of(String text) {
         return new Passage(comparable(text));
-    }
-
-    public static Set<Passage> allTypedIn(String prompt) {
-        Set<Passage> passages = new LinkedHashSet<>();
-        if (!prompt.isBlank()) {
-            passages.add(of(prompt));
-        }
-        prompt.lines().filter(line -> !line.isBlank()).map(Passage::of).forEach(passages::add);
-        return passages;
     }
 
     private static String comparable(String text) {

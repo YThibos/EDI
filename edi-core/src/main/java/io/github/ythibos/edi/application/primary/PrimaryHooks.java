@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.primary;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.process.ProcessTable;
-import io.github.ythibos.edi.adapter.store.CaptainWordStore;
+import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
@@ -21,7 +22,7 @@ import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
 import io.github.ythibos.edi.application.wake.WakeStreams;
 import io.github.ythibos.edi.application.worker.HookAnswer;
-import io.github.ythibos.edi.domain.authority.Passage;
+import io.github.ythibos.edi.domain.authority.AnsweredQuestion;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
@@ -40,7 +41,7 @@ public class PrimaryHooks {
 
     private final PrimarySessionStore sessions;
     private final PrimarySessions roles;
-    private final CaptainWordStore captainWords;
+    private final CaptainMessageStore captainMessages;
     private final ChangePresence presence;
     private final PresenceQuery presenceNow;
     private final ReturnBriefQuery returnBriefs;
@@ -53,12 +54,12 @@ public class PrimaryHooks {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainWordStore captainWords, ChangePresence presence,
+    public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainMessageStore captainMessages, ChangePresence presence,
             PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, EventLog events, ProcessTable processes, WakeStreams streams,
             WakeStore wakes, WorkerRuntime runtime, Clock clock, TransactionTemplate transaction) {
         this.sessions = sessions;
         this.roles = roles;
-        this.captainWords = captainWords;
+        this.captainMessages = captainMessages;
         this.presence = presence;
         this.presenceNow = presenceNow;
         this.returnBriefs = returnBriefs;
@@ -95,11 +96,20 @@ public class PrimaryHooks {
             if (!prompt.isTypedByTheCaptain()) {
                 return Optional.<Presence>empty();
             }
-            captainWords.recordTyped(id, Passage.allTypedIn(prompt.text()), now);
+            captainMessages.recordTyped(id, prompt.text(), now);
             claim(session, now);
             return presence.captainTypedAt(now);
         });
         return left.map(returnBriefs::since);
+    }
+
+    public HookAnswer dialogAnswered(UUID id, List<AnsweredQuestion> answers) {
+        transaction.executeWithoutResult(_ -> {
+            Instant now = clock.now();
+            sessions.save(registered(id, now));
+            answers.forEach(answer -> captainMessages.recordDialogAnswer(id, answer, now));
+        });
+        return HookAnswer.PROCEED;
     }
 
     public HookAnswer stopping(UUID id) {

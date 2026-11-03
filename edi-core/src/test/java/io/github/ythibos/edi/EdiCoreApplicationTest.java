@@ -68,13 +68,13 @@ class EdiCoreApplicationTest {
     void keepsItsStoreInTheHomeWithMigrationsApplied() {
         assertThat(home.resolve("data/edi.db")).isRegularFile();
         assertThat(store.sql("select version from flyway_schema_history where success = 1").query(String.class).list()).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17",
-                "18", "19");
+                "18", "19", "20");
         assertThat(store.sql("select name from sqlite_master where type = 'table' and name not like 'flyway%' and name not like 'sqlite%' order by name")
                 .query(String.class).list())
-                .containsExactly("adoption", "board", "board_answer", "board_decision", "captain_hold", "captain_word", "clone_refresh", "console_session",
+                .containsExactly("adoption", "board", "board_answer", "board_decision", "captain_hold", "captain_message", "captain_word", "clone_refresh", "console_session",
                         "console_sign_in", "decision", "decision_option", "delivery", "dispatch", "dispatch_file", "event", "event_cursor", "hold_notice",
                         "inbox_message", "memory_check", "meta", "outage_entry", "pipeline_run", "presence", "primary_session", "recovery_cost", "task",
-                        "task_cost", "task_dependency", "task_project", "task_review", "ticket_candidate", "ticket_proposal", "typed_passage",
+                        "task_cost", "task_dependency", "task_project", "task_review", "ticket_candidate", "ticket_proposal",
                         "unbriefed_absence", "unplanned_ship", "wake", "wake_stream", "work_key_sequence", "worker", "worker_notice");
         assertThat(store.sql("pragma journal_mode").query(String.class).single()).isEqualToIgnoringCase("wal");
         assertThat(store.sql("pragma foreign_keys").query(Integer.class).single()).isOne();

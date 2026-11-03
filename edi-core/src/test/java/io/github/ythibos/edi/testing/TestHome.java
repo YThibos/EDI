@@ -35,6 +35,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
 import io.github.ythibos.edi.adapter.store.ConsoleAccessStore;
@@ -231,6 +232,7 @@ public final class TestHome {
     private final PipelineReviewStore reviews;
     private final BoardStore boards;
     private final CaptainWordStore captainWords;
+    private final CaptainMessageStore captainMessages;
     private final PresenceStore presence;
     private final AdoptionStore adoptions;
     private String oldPauseResurfaceSeconds = "";
@@ -273,6 +275,7 @@ public final class TestHome {
         this.reviews = new PipelineReviewStore(jdbc);
         this.boards = new BoardStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
+        this.captainMessages = new CaptainMessageStore(jdbc);
         this.presence = new PresenceStore(jdbc, _ -> { });
         this.adoptions = new AdoptionStore(jdbc);
     }
@@ -719,8 +722,12 @@ public final class TestHome {
         return captainWords;
     }
 
+    public CaptainMessageStore captainMessages() {
+        return captainMessages;
+    }
+
     public CaptainsWordEvidence captainsWord() {
-        return new CaptainsWordEvidence(captainWords, primarySessions, primarySessions(), tasks, decisions, events, clock, transaction);
+        return new CaptainsWordEvidence(captainWords, captainMessages, primarySessions, primarySessions(), tasks, decisions, events, clock, transaction);
     }
 
     public FollowMerges followMerges() {
@@ -837,7 +844,7 @@ public final class TestHome {
     }
 
     public PrimaryHooks primaryHooks() {
-        return new PrimaryHooks(primarySessions, primarySessions(), captainWords, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
+        return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
                 processes, wakeStreams(), wakes, runtime, clock, transaction);
     }
 

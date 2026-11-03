@@ -17,6 +17,10 @@ public record Exchange(UUID session, Instant openedAt) {
         return word.session().equals(session);
     }
 
+    public boolean holds(CaptainMessage message) {
+        return message.session().equals(session);
+    }
+
     public boolean holds(CaptainAnswer answer) {
         return !answer.answeredAt().isBefore(openedAt);
     }

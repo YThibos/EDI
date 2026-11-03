@@ -10,6 +10,7 @@ public enum CaptainWordAct {
     DISCARD_WORK("discard work that has not landed", true),
     EFFORT_ABOVE_HIGH("run one task above high, the effort ceiling", false),
     TOUCH_A_SECRET("touch a secret", false),
+    DELETE_UNLANDED_BRANCH("delete a branch that has not landed", false),
     STOP_RUNNING_WORKERS("stop the workers that are running", false);
 
     private final String sentence;

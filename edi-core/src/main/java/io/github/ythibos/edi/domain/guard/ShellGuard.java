@@ -46,6 +46,6 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
                 .or(() -> BranchDeletions.refusalFor(command, unlandedBranches))
                 .or(() -> MergingCommands.refusalFor(command))
                 .or(() -> SecretReads.refusalFor(command, secrets))
-                .or(() -> forAWorker ? WorkerIdentity.refusalFor(command) : Optional.empty());
+                .or(() -> forAWorker ? WorkerIdentity.refusalFor(command) : HookFeeds.refusalFor(command));
     }
 }

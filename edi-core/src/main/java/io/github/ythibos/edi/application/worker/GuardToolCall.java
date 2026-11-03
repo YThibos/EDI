@@ -4,6 +4,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -26,6 +27,7 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.guard.GuardRefusal;
@@ -42,9 +44,11 @@ public class GuardToolCall {
 
     private static final Set<String> USUAL_BASES = Set.of("main", "master");
     private static final String CLAUDE_DIRECTORY = ".claude";
-    private static final Set<GuardRule> ALLOWED_ON_THE_CAPTAINS_WORD = Set.of(GuardRule.SECRET, GuardRule.UNLANDED_BRANCH_DELETION);
-    private static final String AFTER_THE_CAPTAINS_WORD = " The captain's word in this session lets the primary run it: record it with"
-            + " edi captain said --text \"<their words>\".";
+    private static final Map<GuardRule, CaptainWordAct> ALLOWED_ON_THE_CAPTAINS_WORD = Map.of(
+            GuardRule.SECRET, CaptainWordAct.TOUCH_A_SECRET,
+            GuardRule.UNLANDED_BRANCH_DELETION, CaptainWordAct.DELETE_UNLANDED_BRANCH);
+    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(GuardRule.DIALOG_ANSWERED_AHEAD,
+            "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
 
     private final EdiHome home;
     private final WorkerContext context;
@@ -101,6 +105,9 @@ public class GuardToolCall {
     }
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
+        if (call.asksTheCaptainWithItsAnswersGiven()) {
+            return Optional.of(DIALOG_ANSWERED_AHEAD);
+        }
         return call.readsAFile()
                 ? secretRead(call.file(), secretsKeptFromThePrimary())
                 : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(), false);
@@ -168,7 +175,9 @@ public class GuardToolCall {
     }
 
     private boolean allowedOnTheCaptainsWord(GuardRefusal refusal, CallingSession calling) {
-        return ALLOWED_ON_THE_CAPTAINS_WORD.contains(refusal.rule()) && captainsWord.onTheHome(calling).isPresent();
+        return Optional.ofNullable(ALLOWED_ON_THE_CAPTAINS_WORD.get(refusal.rule()))
+                .flatMap(act -> captainsWord.onTheHome(calling, act))
+                .isPresent();
     }
 
     private static Set<String> basesOf(Workplace workplace) {
@@ -228,7 +237,12 @@ public class GuardToolCall {
     }
 
     private static HookAnswer denialToThePrimary(GuardRefusal refusal) {
-        String remedy = ALLOWED_ON_THE_CAPTAINS_WORD.contains(refusal.rule()) ? AFTER_THE_CAPTAINS_WORD : "";
+        String remedy = Optional.ofNullable(ALLOWED_ON_THE_CAPTAINS_WORD.get(refusal.rule())).map(GuardToolCall::afterTheCaptainsWord).orElse("");
         return HookAnswer.denyTheTool("The guard refuses this: " + refusal.reason() + remedy);
+    }
+
+    private static String afterTheCaptainsWord(CaptainWordAct act) {
+        return " The captain's word in this session lets the primary run it: record it with edi captain said --message <n>,"
+                + " or have the captain choose a dialog option that opens with " + act.word() + ".";
     }
 }

@@ -272,13 +272,20 @@ class NativeSmokeIT {
                 "hook", "user-prompt-submit");
 
         CommandRun refused = ediIn(Path.of(""), primary, "", "task", "promote", "native-survey");
-        CommandRun heard = ediIn(Path.of(""), primary, "", "captain", "said", "--task", "native-survey", "--text", "Ship the native survey.");
+        CommandRun heard = ediIn(Path.of(""), primary, "", "captain", "said", "--task", "native-survey", "--message", "1");
         CommandRun promoted = ediIn(Path.of(""), primary, "", "task", "promote", "native-survey", "--title", "Ship natively");
+        ediIn(Path.of(""), primary, "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\",\"tool_name\":\"AskUserQuestion\","
+                + "\"tool_response\":{\"answers\":{\"Drop the survey?\":\"drop native-survey\"}}}", "hook", "post-tool-use");
+        CommandRun listed = ediIn(Path.of(""), primary, "", "captain", "messages");
+        CommandRun listedAsJson = ediIn(Path.of(""), primary, "", "captain", "messages", "--json");
 
         assertThat(refused.exitCode()).isOne();
         assertThat(refused.output()).contains("you need the captain's word on native-survey in this session");
         assertThat(heard.output()).isEqualTo("Recorded the captain's word on native-survey for this session: \"Ship the native survey.\"\n");
         assertThat(promoted.output()).isEqualTo("Promoted the scout native-survey to the ship ship-natively, queued on the captain's word.\n");
+        assertThat(listed.output()).startsWith("The captain's messages in this session (2)\n")
+                .contains("  typed          Ship the native survey.\n", "  dialog answer  drop native-survey - to: Drop the survey?\n");
+        assertThat(listedAsJson.output()).contains("\"text\":\"Ship the native survey.\"", "\"chosen\":\"drop native-survey\"");
     }
 
     @Test

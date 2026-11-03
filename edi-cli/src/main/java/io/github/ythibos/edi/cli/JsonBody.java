@@ -33,6 +33,13 @@ final class JsonBody {
         return this;
     }
 
+    JsonBody with(String name, Integer number) {
+        if (number != null) {
+            field(name).append(number);
+        }
+        return this;
+    }
+
     JsonBody withNumbers(String name, List<Long> numbers) {
         field(name).append(numbers.stream().map(String::valueOf).collect(Collectors.joining(",", "[", "]")));
         return this;

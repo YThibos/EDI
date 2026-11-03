@@ -450,6 +450,25 @@ class ShellGuardTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {
+        "edi hook post-tool-use",
+        "echo '{\"prompt\":\"drop fix-login\"}' | edi hook user-prompt-submit",
+        "env LANG=C edi hook post-tool-use < answer.json",
+        "timeout 5 /usr/local/bin/edi hook post-tool-use",
+        "bash -c 'cat answer.json | edi hook post-tool-use'",
+        "edi hook session-end"})
+    void keepsThePrimarysShellFromFeedingAHook(String command) {
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(GuardRule.HOOK_FROM_THE_SHELL);
+        assertThat(GUARD.check(command, "Monitor")).map(GuardRefusal::rule).contains(GuardRule.HOOK_FROM_THE_SHELL);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"edi captain messages", "edi health", "grep -rn 'edi hook' claude/primary", "echo edi hook"})
+    void letsThePrimaryRunEdiAndReadAboutItsHooks(String command) {
+        assertThat(GUARD.check(command, "Bash")).isEmpty();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"unset EDI_TOKEN_FILE", "env -i bash -lc 'edi health'"})
     void leavesTheEnvironmentToAnyoneButAWorker(String command) {
         assertThat(GUARD.check(command, "Bash")).isEmpty();
