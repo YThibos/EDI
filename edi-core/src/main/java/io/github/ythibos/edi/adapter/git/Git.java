@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
 import io.github.ythibos.edi.domain.delivery.ChangedPath;
 import io.github.ythibos.edi.domain.delivery.LocalChange;
+import io.github.ythibos.edi.domain.delivery.Reactor;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
@@ -32,6 +33,7 @@ public class Git {
     private static final String NUL = "\0";
     private static final String IDENTITIES_AND_MESSAGE = "--format=%an <%ae>%x00%cn <%ce>%x00%B";
     private static final String BUILD_FILES = ":(glob)**/pom.xml";
+    private static final String BUILD_FILE = "pom.xml";
     private static final String NESTED_REPOSITORY_MARK = "/";
     private static final String SAME_CHANGE_IN_THE_BASE = "-";
     private static final int CONFLICTS = 1;
@@ -151,6 +153,18 @@ public class Git {
     public List<AddedLine> buildFileLinesAddedSince(Path worktree, String base) {
         return UnifiedDiff.addedLines(git(worktree, "diff", "--unified=0", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames",
                 "--src-prefix=a/", "--dst-prefix=b/", base + "...HEAD", "--", BUILD_FILES));
+    }
+
+    public Reactor reactorAt(Path repository, String revision) {
+        return new Reactor(nulSeparated(git(repository, "ls-tree", "-r", "-z", "--name-only", revision)).stream()
+                .filter(Git::isABuildFile)
+                .sorted()
+                .flatMap(path -> BuildFiles.read(path, git(repository, "show", revision + ":" + path)).stream())
+                .toList());
+    }
+
+    private static boolean isABuildFile(String path) {
+        return path.equals(BUILD_FILE) || path.endsWith("/" + BUILD_FILE);
     }
 
     public List<String> uncommittedPaths(Path worktree) {
