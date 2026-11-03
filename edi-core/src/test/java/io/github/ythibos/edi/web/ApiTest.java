@@ -333,10 +333,9 @@ class ApiTest {
                 .POST(BodyPublishers.ofString("{\"id\":\"api-anchor\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Weigh the anchor\"}")));
         HttpResponse<String> queued = send(inSession(second, "/api/tasks", TEXT).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"id\":\"api-anchor\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Weigh the anchor\"}")));
-        HttpResponse<String> unreported = primaryHook(second, "stop", "{\"stop_hook_active\":false,\"background_tasks\":[]}");
+        HttpResponse<String> unreported = primaryHook(second, "stop", "{\"stop_hook_active\":false}");
         send(inSession(second, "/api/report", TEXT).GET());
-        HttpResponse<String> reported = primaryHook(second, "stop", "{\"stop_hook_active\":false,\"background_tasks\":"
-                + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}");
+        HttpResponse<String> reported = primaryHook(second, "stop", "{\"stop_hook_active\":false}");
         primaryHook(first, "session-end", "{\"reason\":\"prompt_input_exit\"}");
         primaryHook(second, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
@@ -354,29 +353,29 @@ class ApiTest {
     }
 
     @Test
-    void tellsAnyCallerWhetherThePrimarysLastTurnEndedWithAnEdiWait() throws Exception {
+    void tellsAnyCallerWhetherThePrimarysWakeStreamIsLive() throws Exception {
         UUID primary = UUID.randomUUID();
+        UUID stream = UUID.randomUUID();
         primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Watch the lamp.\"}");
-        HttpResponse<String> inTheTurn = get("/api/primary/wait", TEXT);
-        primaryHook(primary, "stop", "{\"stop_hook_active\":false,\"background_tasks\":"
-                + "[{\"id\":\"b1\",\"type\":\"shell\",\"status\":\"running\",\"command\":\"edi wait\"}]}");
+        HttpResponse<String> beforeTheStream = get("/api/primary/wait", TEXT);
+        String worker = workerTokenFor("api-primary-wait");
+        send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"state\":\"blocked\",\"key\":\"lamp\",\"text\":\"The lamp is missing.\"}")));
 
+        HttpResponse<String> woken = send(followIn(primary, stream, "", false));
         HttpResponse<String> live = get("/api/primary/wait", TEXT);
-        HttpResponse<String> forAWorker = send(as(workerTokenFor("api-primary-wait"), "/api/primary/wait", JSON).GET());
-        primaryHook(primary, "session-start", "{\"source\":\"compact\"}");
-        HttpResponse<String> compacted = get("/api/primary/wait", TEXT);
-        primaryHook(primary, "session-start", "{\"source\":\"resume\"}");
-        HttpResponse<String> resumed = get("/api/primary/wait", TEXT);
+        HttpResponse<String> forAWorker = send(as(worker, "/api/primary/wait", JSON).GET());
+        HttpResponse<String> ended = send(followIn(primary, stream, woken.headers().firstValue("EDI-Wakes").orElseThrow(), true));
+        HttpResponse<String> afterTheStream = get("/api/primary/wait", TEXT);
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
-        assertThat(inTheTurn.body()).startsWith("The primary is in a turn since ").endsWith("; its stop checks that edi wait is live.\n");
-        assertThat(live.statusCode()).isEqualTo(200);
-        assertThat(live.body()).startsWith("edi wait is live: it was running when the primary's last turn ended, at ");
-        assertThat(forAWorker.statusCode()).isEqualTo(200);
-        assertThat(new JsonMapper().readTree(forAWorker.body()).path("sighting").asString()).isEqualTo("LIVE");
-        assertThat(compacted.body()).isEqualTo(live.body());
-        assertThat(resumed.body()).startsWith("No edi wait is live").contains(": the primary's last turn ended at ");
+        assertThat(beforeTheStream.body()).isEqualTo("No edi wait is live, and no task is in flight.\n");
+        assertThat(woken.body()).contains("api-primary-wait#1 is blocked: (lamp) The lamp is missing.");
+        assertThat(live.body()).startsWith("The wake stream is live: edi wait --follow has run since ");
+        assertThat(new JsonMapper().readTree(forAWorker.body()).path("sighting").asString()).isEqualTo("FOLLOWING");
+        assertThat(ended.statusCode()).isEqualTo(204);
+        assertThat(afterTheStream.body()).isEqualTo(beforeTheStream.body());
     }
 
     @Test
@@ -527,7 +526,14 @@ class ApiTest {
     }
 
     private static HttpRequest.Builder waitIn(UUID session) throws IOException {
-        return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}"));
+        String poll = "{\"stream\":\"" + UUID.randomUUID() + "\",\"pid\":" + ProcessHandle.current().pid() + ",\"ending\":false}";
+        return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(poll));
+    }
+
+    private static HttpRequest.Builder followIn(UUID session, UUID stream, String printed, boolean ending) throws IOException {
+        String poll = "{\"stream\":\"" + stream + "\",\"pid\":" + ProcessHandle.current().pid() + ",\"follows\":true,\"printed\":[" + printed
+                + "],\"ending\":" + ending + "}";
+        return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(poll));
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {

@@ -57,6 +57,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
 import io.github.ythibos.edi.adapter.store.UnplannedShipStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
+import io.github.ythibos.edi.adapter.store.WakeStreamStore;
 import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
@@ -161,6 +162,7 @@ import io.github.ythibos.edi.application.tracker.TaskKeys;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.tracker.Trackers;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
+import io.github.ythibos.edi.application.wake.WakeStreams;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -828,12 +830,12 @@ public final class TestHome {
     }
 
     public PrimaryWaitQuery primaryWaits() {
-        return new PrimaryWaitQuery(primarySessions(), tasks, transaction);
+        return new PrimaryWaitQuery(primarySessions(), wakeStreams(), tasks, transaction);
     }
 
     public PrimaryHooks primaryHooks() {
         return new PrimaryHooks(primarySessions, primarySessions(), captainWords, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
-                processes, runtime, clock, transaction);
+                processes, wakeStreams(), wakes, runtime, clock, transaction);
     }
 
     public WorkerListQuery workerList() {
@@ -854,7 +856,11 @@ public final class TestHome {
     }
 
     public WaitForWakes waitForWakes() {
-        return new WaitForWakes(wakes, primarySessions(), decisions, tasks, outages, presence, new PersonalConfiguration(home), clock, transaction);
+        return new WaitForWakes(wakes, wakeStreams(), primarySessions(), decisions, tasks, outages, presence, new PersonalConfiguration(home), clock, transaction);
+    }
+
+    public WakeStreams wakeStreams() {
+        return new WakeStreams(new WakeStreamStore(jdbc), wakes, processes, clock);
     }
 
     public CountRecoveryCost countRecoveryCost() {
