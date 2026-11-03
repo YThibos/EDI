@@ -42,9 +42,16 @@ class WakeDigestTextTest {
                 2. fit-lamp#1 died: its tmux server changed; edi worker relaunch fit-lamp resumes its session.
                 3. fit-lamp#1 stopped on the session limit; you type one resume line after 2026-10-16 14:10 UTC.
                 4. tune-horn is on the outage hold list as number 2: the machine restarted; edi recover shows the list.
-                Fleet: 1 open decisions, 3 tasks in flight, 1 on the outage hold list.
+                Fleet: 1 open decision, 3 tasks in flight, 1 on the outage hold list.
                 Handle these; the wake stream keeps running and prints the next.
                 """);
+    }
+
+    @Test
+    void countsTheFleetInTheSingularWhenOneTaskIsInFlight() {
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.HOLD_DUE, LAMP, null, "2026-11-03", null))), 2, 1, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery)).contains("Fleet: 2 open decisions, 1 task in flight, 0 on the outage hold list.\n");
     }
 
     @Test

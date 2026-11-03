@@ -10,6 +10,7 @@ import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.Words;
 
 @Component
 class WakeDigestText implements TextPresenter<WakeDelivery> {
@@ -31,7 +32,7 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     public String text(WakeDelivery delivery) {
         List<String> lines = new ArrayList<>(List.of("EDI wake: " + delivery.wakes().size() + " waiting."));
         delivery.wakes().forEach(queued -> lines.add(queued.number() + ". " + sentenceOf(queued.wake())));
-        lines.add("Fleet: " + delivery.openDecisions() + " open decisions, " + delivery.ongoing() + " tasks in flight, "
+        lines.add("Fleet: " + Words.quantity(delivery.openDecisions(), "open decision") + ", " + Words.quantity(delivery.ongoing(), "task") + " in flight, "
                 + delivery.outageEntries() + " on the outage hold list.");
         if (delivery.presence().keepsTheChatQuiet()) {
             lines.add("The captain is " + presenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for the captain;"
