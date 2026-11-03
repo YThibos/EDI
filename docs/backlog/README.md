@@ -7,7 +7,7 @@ This folder is a plan, not a decision: the decision log holds why the backlog li
 
 - `README.md`: this index and the pickup protocol.
 - `EDI-<n>.md`: one file per item, the full and canonical spec: goal, context, acceptance criteria, the decisions and answers that bind it restated as requirements, the research it rests on, what to read first and how to verify.
-- `research/`: the research reports the specs rest on, carried over in full where a worker needs them: [the lifecycle, plans and report plan](research/EDI-74-plan.md), [the console and week-one plan](research/EDI-52-plan.md), [the measurements](research/EDI-75-measurements.md) and [the validation pipeline research](research/EDI-105-validation-pipeline.md).
+- `research/`: the research reports the specs rest on, carried over in full where a worker needs them: [the lifecycle, plans and report plan](research/EDI-74-plan.md), [the console and week-one plan](research/EDI-52-plan.md), [the measurements](research/EDI-75-measurements.md), [the validation pipeline research](research/EDI-105-validation-pipeline.md) and [the wallpaper moods plan](research/EDI-171-wallpaper-moods.md).
 
 Each item file is the only source of truth for its item.
 A GitHub issue per item tracks the claim, the questions and the link between issue, branch and pull request; it copies no criteria.
