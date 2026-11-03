@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,8 +35,7 @@ public class CaptainsBrowser {
         this(programs, home, executable, windowsDirectory, desktopDisplay, PATIENCE);
     }
 
-    CaptainsBrowser(ExternalPrograms programs, EdiHome home, String executable, Path windowsDirectory, String desktopDisplay,
-            Duration patience) {
+    CaptainsBrowser(ExternalPrograms programs, EdiHome home, String executable, Path windowsDirectory, String desktopDisplay, Duration patience) {
         this.programs = programs;
         this.home = home;
         this.executable = executable;
@@ -47,17 +45,18 @@ public class CaptainsBrowser {
     }
 
     public boolean open(URI page) {
-        return opening(page).map(this::succeeds).orElse(false);
+        return canOpenAPage() && succeeds(opening(page));
     }
 
-    private Optional<ProgramCall> opening(URI page) {
+    private boolean canOpenAPage() {
+        return runsBesideWindows() || hasADesktop();
+    }
+
+    private ProgramCall opening(URI page) {
         if (runsBesideWindows()) {
-            return Optional.of(ProgramCall.of(Program.CMD, executable, windowsDirectory, List.of("/c", "start", page.toString())));
+            return ProgramCall.of(Program.CMD, executable, windowsDirectory, List.of("/c", "start", page.toASCIIString()));
         }
-        if (hasADesktop()) {
-            return Optional.of(ProgramCall.of(Program.XDG_OPEN, executable, home.root(), List.of(page.toString())));
-        }
-        return Optional.empty();
+        return ProgramCall.of(Program.XDG_OPEN, executable, home.root(), List.of(page.toASCIIString()));
     }
 
     private boolean succeeds(ProgramCall opening) {

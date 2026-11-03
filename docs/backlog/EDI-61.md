@@ -36,11 +36,11 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), slice 10, Q7 c an
 
 ## Research and measurements
 
-- Whether the primary's `edi wait` is live is read by the stop hook through `BackgroundJob.anyWaitsForEdi`; the Fleet strip reads the same source as `edi health`, which EDI-95 landed.
+- Whether the primary's wake stream is live is read by `WakeStreams.liveOf` from the stream's own process, which the stop hook and, through `PrimaryWaitQuery`, `edi health` share since EDI-158; the Fleet strip reads the same source.
 
 ## Read first
 
-- `edi-core/src/main/java/io/github/ythibos/edi/application/statusline/`, `domain/statusline/`, `application/worker/WorkerListQuery.java`, `domain/primary/BackgroundJob.java`, `web/console/`, `edi-console/src/app/`.
+- `edi-core/src/main/java/io/github/ythibos/edi/application/statusline/`, `domain/statusline/`, `application/worker/WorkerListQuery.java`, `application/primary/PrimaryWaitQuery.java`, `web/console/`, `edi-console/src/app/`.
 - [console](../decisions/console.md), [console-look](../decisions/console-look.md), [supervision](../decisions/supervision.md).
 
 ## How to verify

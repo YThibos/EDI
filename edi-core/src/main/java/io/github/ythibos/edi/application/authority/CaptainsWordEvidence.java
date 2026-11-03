@@ -1,10 +1,12 @@
 package io.github.ythibos.edi.application.authority;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
@@ -16,9 +18,12 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.Authorisation;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.authority.CaptainMessages;
 import io.github.ythibos.edi.domain.authority.CaptainsAuthority;
+import io.github.ythibos.edi.domain.authority.CaptainsAuthority.Heard;
+import io.github.ythibos.edi.domain.authority.Citation;
+import io.github.ythibos.edi.domain.authority.CitedWords;
 import io.github.ythibos.edi.domain.authority.Exchange;
-import io.github.ythibos.edi.domain.authority.Passage;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
@@ -29,6 +34,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 public class CaptainsWordEvidence {
 
     private final CaptainWordStore words;
+    private final CaptainMessageStore messages;
     private final PrimarySessionStore sessions;
     private final PrimarySessions roles;
     private final TaskStore tasks;
@@ -37,9 +43,10 @@ public class CaptainsWordEvidence {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public CaptainsWordEvidence(CaptainWordStore words, PrimarySessionStore sessions, PrimarySessions roles, TaskStore tasks,
+    public CaptainsWordEvidence(CaptainWordStore words, CaptainMessageStore messages, PrimarySessionStore sessions, PrimarySessions roles, TaskStore tasks,
             DecisionStore decisions, EventLog events, Clock clock, TransactionTemplate transaction) {
         this.words = words;
+        this.messages = messages;
         this.sessions = sessions;
         this.roles = roles;
         this.tasks = tasks;
@@ -49,12 +56,12 @@ public class CaptainsWordEvidence {
         this.transaction = transaction;
     }
 
-    public Authorisation record(CallingSession calling, String verbatim, TaskReference task, CaptainWordAct act, Actor actor) {
+    public Authorisation record(CallingSession calling, Citation citation, TaskReference task, CaptainWordAct act, Actor actor) {
         Exchange exchange = exchangeOf(calling);
-        requireTyped(exchange, verbatim);
+        CitedWords cited = typedIn(exchange, citation);
         return transaction.execute(_ -> {
             TaskId concerned = task == null ? null : tasks.get(task).id();
-            Authorisation word = new Authorisation(exchange.session(), concerned, act, verbatim.strip(), clock.now());
+            Authorisation word = new Authorisation(exchange.session(), concerned, act, cited.verbatim(), clock.now());
             words.save(word);
             if (concerned != null) {
                 events.record(new CaptainSaid(concerned, word.verbatim()), actor, word.saidAt());
@@ -63,42 +70,48 @@ public class CaptainsWordEvidence {
         });
     }
 
-    public void requireTyped(CallingSession calling, String verbatim) {
-        requireTyped(exchangeOf(calling), verbatim);
+    public String requireCited(CallingSession calling, Citation citation) {
+        return messagesOf(exchangeOf(calling)).cite(citation).verbatim();
     }
 
     public void requireTypedWithItsCommand(CallingSession calling, String command, String verbatim) {
-        Exchange exchange = exchangeOf(calling);
-        if (!wasTyped(exchange, command + " " + verbatim.strip())) {
-            requireTyped(exchange, verbatim);
+        CaptainMessages sent = messagesOf(exchangeOf(calling));
+        if (!sent.typed(command + " " + verbatim.strip()) && !sent.typed(verbatim)) {
+            throw new Refusal("The captain did not type \"" + verbatim.strip() + "\" in this session; give the words the captain typed after "
+                    + command + ", exactly.");
         }
+    }
+
+    public CaptainMessages messages(CallingSession calling) {
+        return messagesOf(exchangeOf(calling));
     }
 
     public CaptainsWord requireOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
-        return transaction.execute(_ -> CaptainsAuthority.onTask(task, act, exchange, words.heardIn(exchange.session()),
-                        decisions.everyOneOfTask(task)))
+        return transaction.execute(_ -> CaptainsAuthority.onTask(task, act, exchange, heardIn(exchange), decisions.everyOneOfTask(task)))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
-                        + " --text \"<their words>\", or have the captain choose, here, in the console or on a research board, the option of a decision on it"
+                        + " --message <n>, have the captain choose a dialog option that opens with " + act.word() + " and names " + task
+                        + " and no other task, or have the captain choose, here, in the console or on a research board, the option of a decision on it"
                         + " that authorises " + act.word() + "."));
     }
 
     public CaptainsWord requireSaidForActOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
-        return transaction.execute(_ -> CaptainsAuthority.saidForActOnTask(task, act, exchange, words.heardIn(exchange.session())))
+        return transaction.execute(_ -> CaptainsAuthority.saidForActOnTask(task, act, exchange, heardIn(exchange)))
                 .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session recorded for it: record it with edi captain said --task " + task + " --for " + act.word()
-                        + " --text \"<their words>\"."));
+                        + " --message <n>, or have the captain choose a dialog option that opens with " + act.word() + " and names " + task + " and no other task."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {
-        return onTheHome(exchangeOf(calling)).orElseThrow(() -> new Refusal("To " + act.sentence()
-                + ", you need the captain's word in this session: record it with edi captain said --text \"<their words>\"."));
+        return onTheHome(exchangeOf(calling), act).orElseThrow(() -> new Refusal("To " + act.sentence()
+                + ", you need the captain's word in this session: record it with edi captain said --message <n>,"
+                + " or have the captain choose a dialog option that opens with " + act.word() + "."));
     }
 
-    public Optional<CaptainsWord> onTheHome(CallingSession calling) {
-        return currentExchange(calling).flatMap(this::onTheHome);
+    public Optional<CaptainsWord> onTheHome(CallingSession calling, CaptainWordAct act) {
+        return currentExchange(calling).flatMap(exchange -> onTheHome(exchange, act));
     }
 
     private Exchange exchangeOf(CallingSession calling) {
@@ -112,18 +125,24 @@ public class CaptainsWordEvidence {
                 .map(session -> new Exchange(session.id(), session.startedAt()));
     }
 
-    private void requireTyped(Exchange exchange, String verbatim) {
-        if (!wasTyped(exchange, verbatim)) {
-            throw new Refusal("The captain did not type \"" + verbatim.strip() + "\" in this session; record their words exactly as typed,"
-                    + " the whole message or one whole line of it.");
+    private CitedWords typedIn(Exchange exchange, Citation citation) {
+        CitedWords cited = messagesOf(exchange).cite(citation);
+        if (cited.comeFromADialog()) {
+            throw new Refusal("A dialog answer is the captain's word by itself, for the act its chosen option opens with and the task it names,"
+                    + " so it is not recorded again; cite a message the captain typed.");
         }
+        return cited;
     }
 
-    private boolean wasTyped(Exchange exchange, String verbatim) {
-        return !verbatim.isBlank() && transaction.execute(_ -> words.wasTyped(exchange.session(), Passage.of(verbatim)));
+    private CaptainMessages messagesOf(Exchange exchange) {
+        return transaction.execute(_ -> messages.sentIn(exchange.session()));
     }
 
-    private Optional<CaptainsWord> onTheHome(Exchange exchange) {
-        return transaction.execute(_ -> CaptainsAuthority.onTheHome(exchange, words.heardIn(exchange.session())));
+    private Heard heardIn(Exchange exchange) {
+        return new Heard(words.heardIn(exchange.session()), messages.sentIn(exchange.session()).dialogAnswers(), Set.copyOf(tasks.ids()));
+    }
+
+    private Optional<CaptainsWord> onTheHome(Exchange exchange, CaptainWordAct act) {
+        return transaction.execute(_ -> CaptainsAuthority.onTheHome(act, exchange, heardIn(exchange)));
     }
 }

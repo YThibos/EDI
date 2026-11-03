@@ -35,6 +35,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
 import io.github.ythibos.edi.adapter.store.ConsoleAccessStore;
@@ -57,6 +58,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
 import io.github.ythibos.edi.adapter.store.UnplannedShipStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
+import io.github.ythibos.edi.adapter.store.WakeStreamStore;
 import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
@@ -64,6 +66,7 @@ import io.github.ythibos.edi.adapter.tracker.NoTracker;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
 import io.github.ythibos.edi.adapter.windows.WindowsToasts;
 import io.github.ythibos.edi.application.access.ConsoleAccess;
+import io.github.ythibos.edi.application.access.ConsoleHandOffs;
 import io.github.ythibos.edi.application.access.OpenConsole;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
@@ -161,6 +164,7 @@ import io.github.ythibos.edi.application.tracker.TaskKeys;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.tracker.Trackers;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
+import io.github.ythibos.edi.application.wake.WakeStreams;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -203,6 +207,7 @@ public final class TestHome {
     private final InboxStore inbox;
     private final FakeWorkerRuntime runtime;
     private final ManualClock clock;
+    private final ConsoleHandOffs consoleHandOffs;
     private final ExternalPrograms programs = new ExternalPrograms();
     private final Git git = new Git(programs);
     private final ProcessTable processes = new ProcessTable();
@@ -227,6 +232,7 @@ public final class TestHome {
     private final PipelineReviewStore reviews;
     private final BoardStore boards;
     private final CaptainWordStore captainWords;
+    private final CaptainMessageStore captainMessages;
     private final PresenceStore presence;
     private final AdoptionStore adoptions;
     private String oldPauseResurfaceSeconds = "";
@@ -240,6 +246,7 @@ public final class TestHome {
         this.home = home;
         this.runtime = runtime;
         this.clock = clock;
+        this.consoleHandOffs = new ConsoleHandOffs(clock);
         this.forge = new FakeForge(ForgeKind.GITHUB, clock);
         this.gitLabForge = new FakeForge(ForgeKind.GITLAB, clock);
         this.jdbc = JdbcClient.create(store);
@@ -268,6 +275,7 @@ public final class TestHome {
         this.reviews = new PipelineReviewStore(jdbc);
         this.boards = new BoardStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
+        this.captainMessages = new CaptainMessageStore(jdbc);
         this.presence = new PresenceStore(jdbc, _ -> { });
         this.adoptions = new AdoptionStore(jdbc);
     }
@@ -714,8 +722,12 @@ public final class TestHome {
         return captainWords;
     }
 
+    public CaptainMessageStore captainMessages() {
+        return captainMessages;
+    }
+
     public CaptainsWordEvidence captainsWord() {
-        return new CaptainsWordEvidence(captainWords, primarySessions, primarySessions(), tasks, decisions, events, clock, transaction);
+        return new CaptainsWordEvidence(captainWords, captainMessages, primarySessions, primarySessions(), tasks, decisions, events, clock, transaction);
     }
 
     public FollowMerges followMerges() {
@@ -828,12 +840,12 @@ public final class TestHome {
     }
 
     public PrimaryWaitQuery primaryWaits() {
-        return new PrimaryWaitQuery(primarySessions(), tasks, transaction);
+        return new PrimaryWaitQuery(primarySessions(), wakeStreams(), tasks, transaction);
     }
 
     public PrimaryHooks primaryHooks() {
-        return new PrimaryHooks(primarySessions, primarySessions(), captainWords, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
-                processes, runtime, clock, transaction);
+        return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
+                processes, wakeStreams(), wakes, runtime, clock, transaction);
     }
 
     public WorkerListQuery workerList() {
@@ -854,7 +866,11 @@ public final class TestHome {
     }
 
     public WaitForWakes waitForWakes() {
-        return new WaitForWakes(wakes, primarySessions(), decisions, tasks, outages, presence, new PersonalConfiguration(home), clock, transaction);
+        return new WaitForWakes(wakes, wakeStreams(), primarySessions(), decisions, tasks, outages, presence, new PersonalConfiguration(home), clock, transaction);
+    }
+
+    public WakeStreams wakeStreams() {
+        return new WakeStreams(new WakeStreamStore(jdbc), wakes, processes, clock);
     }
 
     public CountRecoveryCost countRecoveryCost() {
@@ -951,12 +967,16 @@ public final class TestHome {
         return new ConsoleAccess(new ConsoleAccessStore(jdbc), clock, transaction);
     }
 
+    public ConsoleHandOffs consoleHandOffs() {
+        return consoleHandOffs;
+    }
+
     public OpenTheSitrepAtSessionStart openTheSitrepAtSessionStart(CaptainsBrowser browser) {
-        return new OpenTheSitrepAtSessionStart(machineProfile(), new OpenConsole(consoleAccess(), browser), primarySessions, clock, transaction);
+        return new OpenTheSitrepAtSessionStart(machineProfile(), new OpenConsole(consoleAccess(), consoleHandOffs(), browser), primarySessions, clock, transaction);
     }
 
     public OpenTheConsoleOnRequest openTheConsoleOnRequest(CaptainsBrowser browser) {
-        return new OpenTheConsoleOnRequest(new OpenConsole(consoleAccess(), browser), primarySessions, transaction);
+        return new OpenTheConsoleOnRequest(new OpenConsole(consoleAccess(), consoleHandOffs(), browser), primarySessions, transaction);
     }
 
     public AskForARecheck askForARecheck() {

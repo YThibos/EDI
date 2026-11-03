@@ -53,6 +53,7 @@
         <exec-maven-plugin.version>3.6.4</exec-maven-plugin.version>
         <node.version>v26.12.1</node.version>
         <native.optimisation>-O2</native.optimisation>
+        <sqlite-jdbc.version>3.54.1.0</sqlite-jdbc.version>
     </properties>
 
     <dependencyManagement>

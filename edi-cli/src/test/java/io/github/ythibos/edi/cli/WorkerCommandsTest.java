@@ -173,36 +173,6 @@ class WorkerCommandsTest {
     }
 
     @Test
-    void waitsUntilTheCoreHasAWakeAndPrintsIt() {
-        environment.put("CLAUDE_CODE_SESSION_ID", "6d1f0c2e-0000-4000-8000-000000000001");
-        core.thenAnswering(204, "").thenAnswering(204, "").thenAnswering(200, "EDI wake: 1 waiting.\n1. fit-lamp#1 reports done: fitted\n");
-
-        int exitCode = edi("", "wait");
-
-        assertThat(exitCode).isZero();
-        assertThat(out).hasToString("EDI wake: 1 waiting.\n1. fit-lamp#1 reports done: fitted\n");
-        assertThat(core.requests()).hasSize(3).allSatisfy(request -> {
-            assertThat(request.method()).isEqualTo("POST");
-            assertThat(request.target()).isEqualTo("/api/wait");
-            assertThat(request.session()).isEqualTo("6d1f0c2e-0000-4000-8000-000000000001");
-        });
-    }
-
-    @Test
-    void waitsOnlyInsideAClaudeCodeSessionAndStopsWhenTheCoreRefuses() {
-        int outside = edi("", "wait");
-        String outsideError = err.toString();
-        environment.put("CLAUDE_CODE_SESSION_ID", "6d1f0c2e-0000-4000-8000-000000000001");
-        core.answering(409, "edi wait serves the primary session, the one the captain typed in last; this session is not it.\n");
-        int refused = edi("", "wait");
-
-        assertThat(outside).isOne();
-        assertThat(outsideError).startsWith("edi wait runs inside the primary's Claude Code session");
-        assertThat(refused).isOne();
-        assertThat(err.toString()).endsWith("this session is not it.\n");
-    }
-
-    @Test
     void namesTheClaudeCodeSessionAndProcessOnEveryCall() {
         environment.put("CLAUDE_CODE_SESSION_ID", "6d1f0c2e-0000-4000-8000-000000000002");
         environment.put("CLAUDE_PID", "4242");
