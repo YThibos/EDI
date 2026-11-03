@@ -20,8 +20,8 @@ Renovate runs in this repository's GitHub Actions (`renovatebot/github-action`),
 
 CI runs on every push and pull request:
 
-- OWASP Dependency-Check, failing at CVSS 7 or above, with its vulnerability database cached between runs and NVD requests spaced to avoid the NVD's 403s;
-- `npm audit --audit-level=high` over the console's build dependencies;
+- OWASP Dependency-Check, failing at CVSS 7 or above, with its vulnerability database cached between runs, kept only from a run that was not cancelled and freed of any update lock a stopped run left in it, and NVD requests spaced to avoid the NVD's 403s;
+- `npm audit --audit-level=high` over the console's build dependencies, in a job that installs every tool `mise.toml` pins, since mise cannot render `JAVA_HOME` without GraalVM installed;
 - SonarQube Community Build as a service container, with a quality gate on overall code: reliability, security and maintainability rated A and at most 3% duplication;
 - gitleaks and the publish guard ([publish-guard](publish-guard.md)).
 
@@ -59,3 +59,4 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 28/10/2026: Spring Boot 4.1.2 manages Tomcat 11.0.27, so the `tomcat.version` override and its regex manager were removed (EDI-100).
 - 28/10/2026: every GitHub Action is pinned to a full commit SHA, verified against the action's repository, with its tag beside it, and Renovate pins and keeps the digests, before the repository is made public (EDI-131).
 - 02/11/2026: `@angular/build` 22.2.5 depends on Vite 8.3.5, which carries the fix, so the console's `vite` override was removed (EDI-1).
+- 03/11/2026: CI came back red on main: a cancelled run had cached Dependency-Check's update lock, so every later run waited forty minutes for it and failed, and the `npm audit` job, installing only Node, could not render `JAVA_HOME`; the cache now keeps no cancelled run and drops a stale lock, and the job installs every pinned tool (EDI-168).
