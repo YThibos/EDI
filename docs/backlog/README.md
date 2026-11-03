@@ -110,8 +110,18 @@ The Issue column shows `-` until the item's issue is opened.
 | 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
-| 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | open | [#87](https://github.com/YThibos/EDI/issues/87) |
+| 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | delivered | [#87](https://github.com/YThibos/EDI/issues/87) |
 | 52 | [EDI-151](EDI-151.md) | Stopping a worker also ends the processes it left behind in its copy | S | - | open | [#107](https://github.com/YThibos/EDI/issues/107) |
+| 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | delivered | [#169](https://github.com/YThibos/EDI/issues/169) |
+| 54 | [EDI-153](EDI-153.md) | An unanswered worker question comes back to the primary until it is answered | S | - | open | [#170](https://github.com/YThibos/EDI/issues/170) |
+| 55 | [EDI-154](EDI-154.md) | The turn report shows every worker waiting on the primary | XS | - | open | [#171](https://github.com/YThibos/EDI/issues/171) |
+| 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | [#173](https://github.com/YThibos/EDI/issues/173) |
+| 60 | [EDI-162](EDI-162.md) | edi worker show prints a worker's full last status and its open question | XS | - | open | [#179](https://github.com/YThibos/EDI/issues/179) |
+| 62 | [EDI-164](EDI-164.md) | Every rule, guard and hook records when it fires, and the core records its own health | M | EDI-132 | open | [#182](https://github.com/YThibos/EDI/issues/182) |
+| 63 | [EDI-165](EDI-165.md) | A weekly gardening round measures slips and rules and drafts hard rules on a board | M | EDI-155, EDI-164 | open | [#183](https://github.com/YThibos/EDI/issues/183) |
+| 64 | [EDI-166](EDI-166.md) | Sparks are captured in a second and sorted at gardening | S | EDI-132 | open | [#184](https://github.com/YThibos/EDI/issues/184) |
+| 65 | [EDI-167](EDI-167.md) | The SNAPSHOT check accepts a new module's parent reference to its own reactor's version | XS | - | open | [#187](https://github.com/YThibos/EDI/issues/187) |
+| 66 | [EDI-168](EDI-168.md) | CI is green again on main | XS | - | delivered | [#190](https://github.com/YThibos/EDI/issues/190) |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
@@ -128,6 +138,10 @@ The Issue column shows `-` until the item's issue is opened.
 | 8 | [EDI-86](EDI-86.md) | Delivered, changing, ready | M | EDI-85 | open | - |
 | 9 | [EDI-70](EDI-70.md) | Landing by the merged head: squash-merge cleanup | M | EDI-85 | open | - |
 | 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 | open | - |
+| 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 | open | [#175](https://github.com/YThibos/EDI/issues/175) |
+| 58 | [EDI-157](EDI-157.md) | A merge request's validation watch never reads as changing | XS | EDI-86 | open | [#176](https://github.com/YThibos/EDI/issues/176) |
+| 59 | [EDI-161](EDI-161.md) | A worker's done is checked and booked by the core in one pass | M | EDI-86 | open | [#178](https://github.com/YThibos/EDI/issues/178) |
+| 61 | [EDI-163](EDI-163.md) | The tracker walks a ticket to a named state and checks tickets against what landed | S | - | open | [#180](https://github.com/YThibos/EDI/issues/180) |
 
 ### Wave 4: plans dispatch themselves
 
@@ -185,14 +199,15 @@ The section sits after the six waves; the captain may move it up.
 | 40 | [EDI-125](EDI-125.md) | A worker cannot switch its own hooks off through local Claude Code settings | S | medium, unverified | - | delivered | - |
 | 41 | [EDI-131](EDI-131.md) | CI actions are pinned to commit SHAs | XS | info | - | delivered | - |
 | 42 | [EDI-126](EDI-126.md) | The console checks the Host header and refuses to be framed | S | low | - | open, before EDI-132 | - |
-| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | open, before EDI-132 | - |
-| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | open, before EDI-132 | - |
-| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | open, before EDI-132 | - |
+| 43 | [EDI-127](EDI-127.md) | The console's sign-in link never appears on a process command line | S | low | - | delivered | - |
+| 44 | [EDI-128](EDI-128.md) | Shell snippets built from configuration validate what they interpolate | S | low | - | delivered | - |
+| 45 | [EDI-129](EDI-129.md) | The EDI home and its store are readable by the captain only | S | low | - | delivered | - |
 | 46 | [EDI-130](EDI-130.md) | The publish-check endpoint only checks paths EDI owns | S | low | - | open, before EDI-132 | - |
 | 48 | [EDI-138](EDI-138.md) | The worker-identity and tmux guards close the bypasses found after EDI-122 and EDI-123 landed | M | medium | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#97](https://github.com/YThibos/EDI/issues/97) |
 | 49 | [EDI-139](EDI-139.md) | Tests never reach the captain's real Outlook calendar | S | low | - | delivered | [#98](https://github.com/YThibos/EDI/issues/98) |
 | 50 | [EDI-140](EDI-140.md) | PinnedActionsTest reads the parsed workflow, and the CI service image and mise version are pinned too | XS | info | - | held: backlogged by EDI (28 October 2026) from its review of the cloud session's security pull requests; until the captain's word. | [#99](https://github.com/YThibos/EDI/issues/99) |
 | 51 | [EDI-150](EDI-150.md) | Pull request and merge request texts pass the publish guard before EDI posts them | M | medium | - | delivered | [#104](https://github.com/YThibos/EDI/issues/104) |
+| 67 | [EDI-170](EDI-170.md) | The publish guard finds a secret wherever it falls in a large diff | M | low | - | open | [#193](https://github.com/YThibos/EDI/issues/193) |
 
 ### Held, parked and needs the captain's machine, no wave
 
@@ -204,7 +219,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-113](EDI-113.md) | Guard Grep against the secret files, as Read is | S | - | held: backlogged on the captain's word, to start when he says so. | - |
 | - | [EDI-114](EDI-114.md) | Native builds use a fixed share of the cores, so two can run side by side | M | - | held: until the captain's word, and the before and after measurements need the captain's laptop. | - |
 | - | [EDI-109](EDI-109.md) | Worker builds get NVD_API_KEY from the captain's secrets file at call time | M | - | needs-captain-machine: the feature reads a secrets file that exists only on the captain's machine; it is held until his word. | - |
-| - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. | - |
+| - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | delivered | - |
 | - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | delivered | - |
 | - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | delivered | - |

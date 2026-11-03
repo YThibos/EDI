@@ -64,7 +64,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.addAll(parked(digest.fleet()));
         lines.add("Queued: " + digest.fleet().queued().size() + ".");
         lines.addAll(outage(digest));
-        lines.add("Wakes waiting: " + digest.wakesWaiting() + "; edi wait prints them.");
+        lines.add("Wakes not yet handled: " + digest.wakesWaiting() + "; the wake stream prints those this session has not seen.");
         lines.addAll(upkeepOf(digest));
         lines.addAll(waitAdvice(digest));
         return String.join("\n", lines) + "\n";
@@ -184,6 +184,6 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     private static List<String> waitAdvice(SessionStartDigest digest) {
         boolean workInFlight = !digest.fleet().ongoing().isEmpty() || !digest.workers().entries().isEmpty();
-        return digest.standing() == Standing.STANDBY || !workInFlight ? List.of() : List.of("Work is in flight: keep one edi wait running in the background.");
+        return digest.standing() == Standing.STANDBY || !workInFlight ? List.of() : List.of("Work is in flight: keep one wake stream, edi wait --follow alone with the Monitor tool.");
     }
 }

@@ -134,6 +134,9 @@ public class EventLog {
                 .query((row, _) -> row.getLong(1))
                 .single();
         WakeRule.wakeFor(event, actor).ifPresent(wake -> queue(sequence, wake, at));
+        if (actor.equals(Actor.PRIMARY)) {
+            wakes.acknowledgeActedOn(event.task(), at);
+        }
         publisher.publishEvent(new EventRecorded(sequence));
     }
 

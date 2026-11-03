@@ -35,6 +35,11 @@ install_the_executables() {
   install -m 755 "${checkout}/ops/helloedi" "${bin}/helloedi"
 }
 
+keep_the_home_for_its_owner_alone() {
+  mkdir -p "${home}"
+  chmod 700 "${home}"
+}
+
 link_the_skills() {
   mkdir -p "${skills}"
   find "${skills}" -maxdepth 1 -type l -lname "${checkout}/*" -delete
@@ -52,6 +57,7 @@ record_the_installed_build() {
 require_the_pinned_toolchain
 build
 install_the_executables
+keep_the_home_for_its_owner_alone
 link_the_skills
 record_the_installed_build
 echo "EDI is installed: ${bin}/edi, ${bin}/edi-core and ${bin}/helloedi, built from $(<"${installed_build_record}"), with the skills linked into ${skills}."

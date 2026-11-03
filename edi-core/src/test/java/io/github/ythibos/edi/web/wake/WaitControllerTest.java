@@ -97,17 +97,24 @@ class WaitControllerTest {
         primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Keep watch on the buoy.\"}");
 
+        UUID stream = UUID.randomUUID();
+
         try (HttpClient http = HttpClient.newHttpClient()) {
-            CompletableFuture<HttpResponse<String>> held = http.sendAsync(waitIn(primary).build(), BodyHandlers.ofString());
+            CompletableFuture<HttpResponse<String>> held = http.sendAsync(waitIn(primary, stream).build(), BodyHandlers.ofString());
             assertThat(signal.aRequestWaits()).isTrue();
             assertThat(held).isNotDone();
+            HttpResponse<String> second = send(waitIn(primary, UUID.randomUUID()));
 
             needsADecision(worker, "{\"state\":\"needs-decision\",\"key\":\"buoy\",\"text\":\"Bell or whistle?\"}");
             HttpResponse<String> woken = held.get(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS);
             primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
+            assertThat(second.statusCode()).isEqualTo(409);
+            assertThat(second.body()).contains("already live as edi wait --follow in process " + ProcessHandle.current().pid());
             assertThat(woken.statusCode()).isEqualTo(200);
-            assertThat(woken.body()).startsWith("EDI wake: ").contains("held-wake#1 needs a decision: (buoy) Bell or whistle?");
+            assertThat(woken.headers().firstValue("EDI-Wakes")).hasValueSatisfying(numbers -> assertThat(numbers).matches("\\d+"));
+            assertThat(woken.body()).startsWith("EDI wake: ").contains("held-wake#1 needs a decision: (buoy) Bell or whistle?")
+                    .endsWith("Handle these; the wake stream keeps running and prints the next.\n");
         }
     }
 
@@ -129,8 +136,9 @@ class WaitControllerTest {
         return send(inSession(session, "/api/hooks/" + event, JSON).header("Content-Type", JSON).POST(BodyPublishers.ofString(payload)));
     }
 
-    private static HttpRequest.Builder waitIn(UUID session) throws IOException {
-        return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}"));
+    private static HttpRequest.Builder waitIn(UUID session, UUID stream) throws IOException {
+        String poll = "{\"stream\":\"" + stream + "\",\"pid\":" + ProcessHandle.current().pid() + ",\"follows\":true}";
+        return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(poll));
     }
 
     private static void needsADecision(String worker, String status) throws Exception {

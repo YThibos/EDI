@@ -13,6 +13,7 @@ final class LocalCore {
 
     static final Duration STARTING_PATIENCE = Duration.ofSeconds(60);
     static final Duration STOPPING_PATIENCE = Duration.ofSeconds(90);
+    private static final String FOR_ITS_OWNER_ALONE = "umask 077 && exec \"$0\"";
     private static final Duration BETWEEN_LOOKS = Duration.ofMillis(250);
 
     private final Path home;
@@ -43,7 +44,7 @@ final class LocalCore {
         } catch (IOException unwritable) {
             throw new UncheckedIOException(unwritable);
         }
-        LocalPrograms.startDetached(List.of("setsid", "-f", executable), log, Map.of("EDI_HOME", home.toString()));
+        LocalPrograms.startDetached(List.of("setsid", "-f", "sh", "-c", FOR_ITS_OWNER_ALONE, executable), log, Map.of("EDI_HOME", home.toString()));
         if (!comesTrue(this::answers, STARTING_PATIENCE)) {
             throw new CommandFailure("EDI core did not answer within " + STARTING_PATIENCE.toSeconds() + " seconds; " + log + " says why.");
         }

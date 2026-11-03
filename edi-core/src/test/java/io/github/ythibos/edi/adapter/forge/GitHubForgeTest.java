@@ -158,7 +158,7 @@ class GitHubForgeTest {
     @Test
     void bindsGitTransportToTheAccountThroughGh() {
         assertThat(forge.credentialHelperFor(FORGE)).hasValueSatisfying(helper -> assertThat(helper)
-                .startsWith("!f() { test \"$1\" = get || exit 0; GH_TOKEN=\"$('" + standIns.gh() + "' auth token --hostname github.com --user example-owner)\"")
+                .startsWith("!f() { test \"$1\" = get || exit 0; GH_TOKEN=\"$('" + standIns.gh() + "' auth token --hostname 'github.com' --user 'example-owner')\"")
                 .endsWith("exec '" + standIns.gh() + "' auth git-credential get; }; f"));
     }
 }

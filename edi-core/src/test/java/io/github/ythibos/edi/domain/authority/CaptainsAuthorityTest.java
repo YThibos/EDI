@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.authority.CaptainsAuthority.Heard;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -26,6 +28,7 @@ class CaptainsAuthorityTest {
     private static final UUID SESSION = UUID.randomUUID();
     private static final Exchange EXCHANGE = new Exchange(SESSION, OPENED);
     private static final TaskId LAMP = new TaskId("fit-lamp");
+    private static final TaskId DOOR = new TaskId("fit-door");
 
     @Test
     void takesTheLatestWordOnTheTaskFromThisSession() {
@@ -35,8 +38,8 @@ class CaptainsAuthorityTest {
                 new Authorisation(UUID.randomUUID(), LAMP, null, "Discard everything.", OPENED.plusSeconds(180)),
                 new Authorisation(SESSION, new TaskId("fit-door"), null, "Drop the door.", OPENED.plusSeconds(240)));
 
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, words, List.of())).contains(new CaptainsWord("Discard its work too."));
-        assertThat(CaptainsAuthority.onTask(new TaskId("fit-hinge"), CaptainWordAct.DROP, EXCHANGE, words, List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, said(words), List.of())).contains(new CaptainsWord("Discard its work too."));
+        assertThat(CaptainsAuthority.onTask(new TaskId("fit-hinge"), CaptainWordAct.DROP, EXCHANGE, said(words), List.of())).isEmpty();
     }
 
     @Test
@@ -44,11 +47,11 @@ class CaptainsAuthorityTest {
         Authorisation general = new Authorisation(SESSION, LAMP, null, "Drop the lamp.", OPENED.plusSeconds(60));
         Authorisation forEffort = new Authorisation(SESSION, LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, "Fit the lamp at xhigh.", OPENED.plusSeconds(120));
 
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, List.of(forEffort), List.of())).isEmpty();
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, List.of(general, forEffort), List.of()))
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, said(List.of(forEffort)), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, said(List.of(general, forEffort)), List.of()))
                 .contains(new CaptainsWord("Drop the lamp."));
-        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, List.of(general))).isEmpty();
-        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, List.of(general, forEffort)))
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, said(List.of(general)))).isEmpty();
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, said(List.of(general, forEffort))))
                 .contains(new CaptainsWord("Fit the lamp at xhigh."));
         assertThatThrownBy(() -> new Authorisation(SESSION, null, CaptainWordAct.EFFORT_ABOVE_HIGH, "Everything at xhigh.", OPENED))
                 .hasMessage("The captain's word for effort-above-high is on one task.");
@@ -59,8 +62,8 @@ class CaptainsAuthorityTest {
         Decision before = discardAnsweredAt(OPENED.minusSeconds(1), 'A');
         Decision during = discardAnsweredAt(OPENED.plusSeconds(1), 'A');
 
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, List.of(), List.of(before))).isEmpty();
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, List.of(), List.of(during)))
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, said(List.of()), List.of(before))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, said(List.of()), List.of(during)))
                 .contains(new CaptainsWord("D58 A"));
     }
 
@@ -69,18 +72,77 @@ class CaptainsAuthorityTest {
         Decision discardChosen = discardAnsweredAt(OPENED.plusSeconds(1), 'A');
         Decision discardDeclined = discardAnsweredAt(OPENED.plusSeconds(1), 'B');
 
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, List.of(), List.of(discardChosen))).isEmpty();
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.PROMOTE, EXCHANGE, List.of(), List.of(discardChosen))).isEmpty();
-        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, List.of(), List.of(discardDeclined))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, said(List.of()), List.of(discardChosen))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.PROMOTE, EXCHANGE, said(List.of()), List.of(discardChosen))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, said(List.of()), List.of(discardDeclined))).isEmpty();
     }
 
     @Test
     void keepsAWordOnTheHomeApartFromAWordOnATask() {
         List<Authorisation> words = List.of(new Authorisation(SESSION, LAMP, null, "Read the token for the lamp.", OPENED.plusSeconds(60)));
 
-        assertThat(CaptainsAuthority.onTheHome(EXCHANGE, words)).isEmpty();
-        assertThat(CaptainsAuthority.onTheHome(EXCHANGE, List.of(new Authorisation(SESSION, null, null, "Read the token.", OPENED.plusSeconds(60)))))
+        assertThat(CaptainsAuthority.onTheHome(CaptainWordAct.TOUCH_A_SECRET, EXCHANGE, said(words))).isEmpty();
+        assertThat(CaptainsAuthority.onTheHome(CaptainWordAct.TOUCH_A_SECRET, EXCHANGE,
+                said(List.of(new Authorisation(SESSION, null, null, "Read the token.", OPENED.plusSeconds(60))))))
                 .contains(new CaptainsWord("Read the token."));
+    }
+
+    @Test
+    void countsADialogAnswerWhoseChosenOptionOpensWithTheActAndNamesTheTask() {
+        DialogAnswer dropTheLamp = chosen("drop fit-lamp, it is obsolete", OPENED.plusSeconds(60));
+
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, chose(dropTheLamp), List.of()))
+                .contains(new CaptainsWord("drop fit-lamp, it is obsolete"));
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DISCARD_WORK, EXCHANGE, chose(dropTheLamp), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(new TaskId("fit"), CaptainWordAct.DROP, EXCHANGE, chose(dropTheLamp), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(new TaskId("fit-lamp-twice"), CaptainWordAct.DROP, EXCHANGE, chose(dropTheLamp), List.of())).isEmpty();
+    }
+
+    @Test
+    void neverCountsADialogAnswerThatOnlyMentionsTheAct() {
+        DialogAnswer keep = chosen("Do not drop fit-lamp", OPENED.plusSeconds(60));
+        DialogAnswer dropped = chosen("dropped fit-lamp", OPENED.plusSeconds(60));
+        DialogAnswer elsewhere = new DialogAnswer(UUID.randomUUID(), 1, new AnsweredQuestion("What now?", "drop fit-lamp", ""), OPENED.plusSeconds(60));
+
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, chose(keep, dropped, elsewhere), List.of())).isEmpty();
+    }
+
+    @Test
+    void liftsEffortAndActsOnTheHomeOnADialogAnswerThatNamesThem() {
+        DialogAnswer lift = chosen("Effort-above-high for fit-lamp at xhigh", OPENED.plusSeconds(60));
+        DialogAnswer secret = chosen("touch-a-secret: read the forge token", OPENED.plusSeconds(120));
+
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, chose(lift, secret)))
+                .contains(new CaptainsWord("Effort-above-high for fit-lamp at xhigh"));
+        assertThat(CaptainsAuthority.onTheHome(CaptainWordAct.TOUCH_A_SECRET, EXCHANGE, chose(lift, secret)))
+                .contains(new CaptainsWord("touch-a-secret: read the forge token"));
+        assertThat(CaptainsAuthority.onTheHome(CaptainWordAct.STOP_RUNNING_WORKERS, EXCHANGE, chose(lift, secret))).isEmpty();
+    }
+
+    @Test
+    void neverCountsADialogAnswerThatNamesAnotherTaskToo() {
+        DialogAnswer dropBoth = chosen("drop fit-door, then promote fit-lamp", OPENED.plusSeconds(60));
+        DialogAnswer liftOne = chosen("effort-above-high fit-lamp, keep fit-door at high", OPENED.plusSeconds(60));
+        DialogAnswer dropTheDoor = chosen("drop fit-door, the lamp stays", OPENED.plusSeconds(60));
+
+        assertThat(CaptainsAuthority.onTask(LAMP, CaptainWordAct.DROP, EXCHANGE, chose(dropBoth), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.onTask(DOOR, CaptainWordAct.DROP, EXCHANGE, chose(dropBoth), List.of())).isEmpty();
+        assertThat(CaptainsAuthority.saidForActOnTask(LAMP, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, chose(liftOne))).isEmpty();
+        assertThat(CaptainsAuthority.saidForActOnTask(DOOR, CaptainWordAct.EFFORT_ABOVE_HIGH, EXCHANGE, chose(liftOne))).isEmpty();
+        assertThat(CaptainsAuthority.onTask(DOOR, CaptainWordAct.DROP, EXCHANGE, chose(dropTheDoor), List.of()))
+                .contains(new CaptainsWord("drop fit-door, the lamp stays"));
+    }
+
+    private static Heard said(List<Authorisation> words) {
+        return new Heard(words, List.of(), Set.of(LAMP, DOOR));
+    }
+
+    private static Heard chose(DialogAnswer... answers) {
+        return new Heard(List.of(), List.of(answers), Set.of(LAMP, DOOR, new TaskId("fit"), new TaskId("fit-lamp-twice")));
+    }
+
+    private static DialogAnswer chosen(String option, Instant at) {
+        return new DialogAnswer(SESSION, 1, new AnsweredQuestion("What do we do with the lamp?", option, ""), at);
     }
 
     private static Decision discardAnsweredAt(Instant at, char chosen) {

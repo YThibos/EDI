@@ -24,9 +24,10 @@ import io.github.ythibos.edi.testing.TestProcesses;
 @Tag("adapter")
 class CaptainsBrowserTest {
 
-    private static final URI SIGN_IN = URI.create("http://127.0.0.1:5490/login#token");
+    private static final URI HAND_OFF = URI.create("http://127.0.0.1:5490/hand-off/harbour-pilot-code");
     private static final String NO_DESKTOP = "";
     private static final Duration SHORT_PATIENCE = Duration.ofMillis(500);
+    private static final Duration PATIENCE = Duration.ofSeconds(15);
 
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
@@ -44,22 +45,22 @@ class CaptainsBrowserTest {
     }
 
     @Test
-    void opensThePageInTheWindowsBrowserBesideWindows() throws IOException {
+    void opensTheConsolesHttpAddressBesideWindowsSoWindowsDefaultWebBrowserOpensIt() throws IOException {
         Path windows = Files.createDirectories(directory.resolve("windows"));
 
-        assertThat(browserWith(browser, windows, ":0").open(SIGN_IN)).isTrue();
-        assertThat(Files.readString(opened)).isEqualTo("/c start " + SIGN_IN + "\n");
+        assertThat(browserWith(browser, windows, ":0").open(HAND_OFF)).isTrue();
+        assertThat(Files.readString(opened)).isEqualTo("/c start http://127.0.0.1:5490/hand-off/harbour-pilot-code\n");
     }
 
     @Test
-    void opensThePageOnALinuxDesktopWithoutWindows() throws IOException {
-        assertThat(browserWith(browser, directory.resolve("no-windows"), ":0").open(SIGN_IN)).isTrue();
-        assertThat(Files.readString(opened)).isEqualTo(SIGN_IN + "\n");
+    void opensTheConsolesHttpAddressOnALinuxDesktopWithoutWindows() throws IOException {
+        assertThat(browserWith(browser, directory.resolve("no-windows"), ":0").open(HAND_OFF)).isTrue();
+        assertThat(Files.readString(opened)).isEqualTo("http://127.0.0.1:5490/hand-off/harbour-pilot-code\n");
     }
 
     @Test
     void opensNothingWithoutWindowsOrADesktop() {
-        assertThat(browserWith(browser, directory.resolve("no-windows"), NO_DESKTOP).open(SIGN_IN)).isFalse();
+        assertThat(browserWith(browser, directory.resolve("no-windows"), NO_DESKTOP).open(HAND_OFF)).isFalse();
         assertThat(opened).doesNotExist();
     }
 
@@ -67,15 +68,15 @@ class CaptainsBrowserTest {
     void reportsABrowserThatFailedOrCouldNotRun() throws IOException {
         Path failing = StandInScripts.installed(directory.resolve("bin/failing-browser"), "#!/bin/sh\nexit 1\n");
 
-        assertThat(browserWith(failing, directory.resolve("no-windows"), ":0").open(SIGN_IN)).isFalse();
-        assertThat(browserWith(directory.resolve("bin/missing"), directory.resolve("no-windows"), ":0").open(SIGN_IN)).isFalse();
+        assertThat(browserWith(failing, directory.resolve("no-windows"), ":0").open(HAND_OFF)).isFalse();
+        assertThat(browserWith(directory.resolve("bin/missing"), directory.resolve("no-windows"), ":0").open(HAND_OFF)).isFalse();
     }
 
     @Test
     void countsABrowserStillRunningAfterItsPatienceAsOpenedAndLeavesItRunning() throws IOException {
         Path foreground = StandInScripts.installed(directory.resolve("bin/foreground-browser"), "#!/bin/sh\nsleep 30\n");
 
-        boolean opened = browserWith(foreground, directory.resolve("no-windows"), ":0", SHORT_PATIENCE).open(SIGN_IN);
+        boolean opened = browserWith(foreground, directory.resolve("no-windows"), ":0", SHORT_PATIENCE).open(HAND_OFF);
         ProcessHandle browserProcess = childRunning(foreground);
         processes.register(browserProcess.pid());
 
@@ -87,12 +88,11 @@ class CaptainsBrowserTest {
     }
 
     private CaptainsBrowser browserWith(Path executable, Path windowsDirectory, String desktopDisplay) {
-        return new CaptainsBrowser(new ExternalPrograms(), new EdiHome(directory), executable.toString(), windowsDirectory, desktopDisplay);
+        return browserWith(executable, windowsDirectory, desktopDisplay, PATIENCE);
     }
 
     private CaptainsBrowser browserWith(Path executable, Path windowsDirectory, String desktopDisplay, Duration patience) {
-        return new CaptainsBrowser(new ExternalPrograms(), new EdiHome(directory), executable.toString(), windowsDirectory, desktopDisplay,
-                patience);
+        return new CaptainsBrowser(new ExternalPrograms(), new EdiHome(directory), executable.toString(), windowsDirectory, desktopDisplay, patience);
     }
 
     private static ProcessHandle childRunning(Path standIn) {

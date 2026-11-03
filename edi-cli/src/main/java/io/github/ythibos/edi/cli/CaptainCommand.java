@@ -4,8 +4,8 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "captain",
-        description = "Records the captain's word for the commands that need it.",
+        description = "Lists the captain's messages and records the captain's word for the commands that need it.",
         synopsisSubcommandLabel = "COMMAND",
-        subcommands = {CaptainSaidCommand.class})
+        subcommands = {CaptainSaidCommand.class, CaptainMessagesCommand.class})
 final class CaptainCommand extends CommandGroup {
 }

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.SessionSource;
@@ -51,7 +52,7 @@ class StopTheCoreTest {
         assertThatThrownBy(() -> home.stopTheCore().stopFor(CoreStop.WITH_ITS_WORKERS, session, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class).hasMessageContaining("To stop the workers that are running, you need the captain's word");
 
-        home.captainsWord().record(session, "Stop everything, the workers too.", null, null, Actor.PRIMARY);
+        home.captainsWord().record(session, new Citation.Verbatim("Stop everything, the workers too."), null, null, Actor.PRIMARY);
 
         assertThat(home.stopTheCore().stopFor(CoreStop.WITH_ITS_WORKERS, session, Actor.PRIMARY)).extracting(Worker::id).containsExactly(worker.id());
         assertThat(home.eventTypesOf(worker.id().task())).contains("WorkerStopRequested");
