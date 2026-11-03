@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -67,6 +68,7 @@ class InstallTest {
         assertThat(install.exitCode()).as(install.output()).isZero();
         assertThat(directory.resolve("bin/helloedi")).isExecutable();
         assertThat(directory.resolve("home/state/installed-build")).hasContent(FixtureRepository.at(checkout).head());
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(directory.resolve("home")))).isEqualTo("rwx------");
     }
 
     @Test
