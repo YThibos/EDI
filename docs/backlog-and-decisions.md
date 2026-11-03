@@ -33,13 +33,15 @@ An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`
 
 ## Reports
 
-One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi report` and `edi sitrep` print it as the boxed captain report ([captain-report](decisions/captain-report.md)).
+One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi sitrep` prints it as the boxed captain report ([captain-report](decisions/captain-report.md)).
+`edi report` prints the turn report that ends a turn: only what needs the captain, with a decision card in full in the turn it is raised and one line after that ([turn-report](decisions/turn-report.md)).
 What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions or bound decisions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
 A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 
 ```sh
-edi report --turn - < turn.json                     # the boxed captain report that ends a turn
-edi sitrep                                          # the same report, read-only and without a turn
+edi report --turn - < turn.json                     # the turn report: only what needs the captain
+edi sitrep                                          # the boxed overview, read-only and without a turn
+edi sitrep --turn - < turn.json                     # the boxed overview with a state-changing turn's items
 ```
 
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional.

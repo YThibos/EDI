@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.publish.RequestText;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -25,6 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class GitHubForge implements Forge {
 
     private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt";
+    private static final String TEXT_FIELDS = "title,body";
     private static final String WORKFLOW_SCOPE = "workflow";
 
     private final ForgeCalls calls;
@@ -61,6 +63,13 @@ public class GitHubForge implements Forge {
                 proposal.description());
         return MergeRequestView.openAmong(mergeRequestsFrom(forge, proposal.branch()))
                 .orElseThrow(() -> new ProgramFailure("gh opened no pull request from " + proposal.branch() + " on " + forge.repository() + "."));
+    }
+
+    @Override
+    public RequestText textOf(RegisteredForge forge, MergeRequestAddress address) {
+        JsonNode pull = json.readTree(asTheBoundAccount(forge, ForgeCommand.GH_PR_VIEW,
+                List.of(String.valueOf(address.number()), "--repo", repositoryOf(forge), "--json", TEXT_FIELDS), null));
+        return new RequestText(pull.path("title").asString(""), pull.path("body").asString(""));
     }
 
     @Override
