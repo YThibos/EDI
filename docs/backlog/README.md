@@ -126,7 +126,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 64 | [EDI-166](EDI-166.md) | Sparks are captured in a second and sorted at gardening | S | EDI-132 | open | [#184](https://github.com/YThibos/EDI/issues/184) |
 | 65 | [EDI-167](EDI-167.md) | The SNAPSHOT check accepts a new module's parent reference to its own reactor's version | XS | - | open | [#187](https://github.com/YThibos/EDI/issues/187) |
 | 66 | [EDI-168](EDI-168.md) | CI is green again on main | XS | - | delivered | [#190](https://github.com/YThibos/EDI/issues/190) |
-| 68 | [EDI-171](EDI-171.md) | The backlog is reconciled after an analysis of its overlaps | XS | - | delivered | - |
+| 68 | [EDI-171](EDI-171.md) | The backlog is reconciled after an analysis of its overlaps | XS | - | delivered | [#197](https://github.com/YThibos/EDI/issues/197) |
 
 ### Wave 2: after the foundations of wave 1 and the lifecycle domain
 
