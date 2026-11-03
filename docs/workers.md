@@ -15,6 +15,7 @@ edi brief fit-the-lamp --category implementation --spec - < spec.md   # the brie
 edi dispatch fit-the-lamp --category implementation --spec - < spec.md # isolated copy, brief, worker
 edi dispatch rename-lamp --category mechanical --spec - --files src/Lamp.java < change.md
 edi worker list                                     # serving workers, their route and last status
+edi worker show fit-the-lamp                        # the worker from the store: its state, last status in full, open question, steers and pipeline
 edi worker peek fit-the-lamp                        # the worker pane's last lines and what EDI reads in them
 edi steer fit-the-lamp --resolves lamp-choice < answer.md
 edi status working -- tests pass                    # a worker reporting, under the token EDI gave it
