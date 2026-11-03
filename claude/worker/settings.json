@@ -18,7 +18,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Read|Write|Edit|MultiEdit|NotebookEdit|Glob",
+        "matcher": "Bash|Monitor|Read|Write|Edit|MultiEdit|NotebookEdit|Glob",
         "hooks": [{ "type": "command", "command": "edi hook pre-tool-use" }]
       }
     ],

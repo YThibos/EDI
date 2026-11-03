@@ -14,6 +14,7 @@ import io.github.ythibos.edi.domain.task.HoldUntil;
 public class Moments {
 
     private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm zzz", Locale.ENGLISH);
+    private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH);
 
     private final Clock clock;
 
@@ -23,6 +24,10 @@ public class Moments {
 
     public String minute(Instant instant) {
         return MINUTE.format(onTheMachine(instant));
+    }
+
+    public String clockTime(Instant instant) {
+        return CLOCK_TIME.format(onTheMachine(instant));
     }
 
     public String day(Instant instant) {

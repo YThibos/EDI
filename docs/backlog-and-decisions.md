@@ -51,11 +51,15 @@ Every time a report, a decision list or a presence line shows is in the machine'
 
 ## The captain's word
 
-Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own typed words from the current session ([captains-word](decisions/captains-word.md)).
+Acts only the captain may authorise, such as promoting a scout, dropping a task, discarding unlanded work or touching a secret, need the captain's own words from the current session ([captains-word](decisions/captains-word.md)).
+The primary's hooks store every message the captain types and every dialog answer, numbered, so a word is cited by its number and never retyped.
+A dialog option the captain chooses is their word by itself for the one act it opens with and the one task it names, such as `drop fit-the-lamp`.
 
 ```sh
-edi captain said --task fit-the-lamp --text "Drop it, and discard its work."   # the captain's words, as typed this session
-edi captain said --text "Read the token to check it."                          # the captain's word on what concerns no single task
+edi captain messages                                                           # this session's stored messages, numbered
+edi captain said --task fit-the-lamp --message 4                               # the captain's message 4, on a task
+edi captain said --message 6 --line 2                                          # one line of a message, on what concerns no single task
+edi decision answer D58 --option A --message 7                                 # a decision answered with a stored message or dialog answer
 edi task promote survey-the-lamps --title "Fit the lamps"                      # a scout's ship, queued on the captain's word
 edi task drop fit-the-lamp --discard-work                                      # on the captain's word; unlanded work only with --discard-work
 edi worktree discard fit-the-lamp                                              # the copy and branch, on the captain's word; the task stays

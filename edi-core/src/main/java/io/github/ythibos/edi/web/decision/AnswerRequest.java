@@ -4,13 +4,18 @@ import static io.github.ythibos.edi.web.RequestValues.optional;
 import static io.github.ythibos.edi.web.RequestValues.orEmpty;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 
-record AnswerRequest(String option, String text, String interpretation) {
+record AnswerRequest(String option, Integer message, Integer line, String text, String interpretation) {
 
-    GivenAnswer givenThrough(AnswerChannel channel) {
-        return new GivenAnswer(verbatim(), optional(option, OptionKey::parse), orEmpty(interpretation), channel);
+    GivenAnswer givenThrough(AnswerChannel channel, String verbatim) {
+        return new GivenAnswer(verbatim, optional(option, OptionKey::parse), orEmpty(interpretation), channel);
+    }
+
+    Citation citation() {
+        return Citation.of(message, line, text);
     }
 
     String verbatim() {

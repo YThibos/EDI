@@ -8,6 +8,7 @@ enum HookEvent {
     SESSION_START,
     USER_PROMPT_SUBMIT,
     PRE_TOOL_USE,
+    POST_TOOL_USE,
     STOP,
     STOP_FAILURE,
     NOTIFICATION,
@@ -17,8 +18,8 @@ enum HookEvent {
         return Arrays.stream(values())
                 .filter(event -> event.word().equals(word))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("The hooks answered are session-start, user-prompt-submit, pre-tool-use, stop,"
-                        + " stop-failure, notification and session-end, not " + word + "."));
+                .orElseThrow(() -> new IllegalArgumentException("The hooks answered are session-start, user-prompt-submit, pre-tool-use,"
+                        + " post-tool-use, stop, stop-failure, notification and session-end, not " + word + "."));
     }
 
     String word() {
