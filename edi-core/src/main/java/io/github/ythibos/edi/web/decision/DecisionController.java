@@ -58,10 +58,8 @@ class DecisionController {
     @PostMapping("/api/decisions/{reference}/answer")
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
         AnswerChannel channel = caller.answeringChannel("edi decision answer");
-        if (channel == AnswerChannel.CHAT) {
-            captainsWord.requireTyped(caller.callingSession(), request.verbatim());
-        }
-        AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel), caller.actor());
+        String verbatim = channel == AnswerChannel.CHAT ? captainsWord.requireCited(caller.callingSession(), request.citation()) : request.verbatim();
+        AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel, verbatim), caller.actor());
         return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket());
     }
 

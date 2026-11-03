@@ -8,8 +8,4 @@ public enum SessionSource {
     public boolean isALaunch() {
         return this == LAUNCH;
     }
-
-    public boolean keepsTheProcess() {
-        return this == COMPACTION;
-    }
 }

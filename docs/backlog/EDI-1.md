@@ -8,8 +8,8 @@
 | Source | Dependency upkeep |
 | Size | XS |
 | Blocked by | nothing |
-| Status | needs-captain-machine: it waits on an upstream release, and the check needs the captain's machine. |
-| Cloud session | not yet: see the status |
+| Status | delivered |
+| Cloud session | no: the check needs the captain's machine |
 
 ## Goal
 
@@ -24,25 +24,26 @@ EDI-1 is also the evergreen work key for dependency upkeep.
 ## Acceptance criteria
 
 - The console's high-severity audit passes: `npm audit --audit-level=high` in `edi-console` reports nothing at high or above.
+- The console's `package.json` overrides no `vite`: the Angular build brings the fixed Vite.
 - The lockfile changes only as far as the fix needs.
 - The console still builds and its tests pass.
 
 ## Requirements from decisions and answers
 
 - Option A of decision D2 (captain, 21 October 2026): fix straight away; the review of the first attempt was merged.
+- Option B of decision D6 (captain): no version pin, so the `vite` override goes as soon as the Angular build brings the fixed Vite.
 - Never use `--force` on the audit fix without reading what it changes; a major bump of the build tool is a scope change, so ask on the issue first.
 - The console's dependencies are checked against upstream releases, not guessed.
 
 ## Research and measurements
 
 - The advisories concern a transitive dependency of the console build tool's dev server: GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw and GHSA-587h-7wmj-h5pm, against vite 8.3.0 under `@angular/build` 22.2.2 in `edi-console/package-lock.json`.
-- The fix is an upstream release or an override.
+- The upstream fix is `@angular/build` 22.2.5, which depends on vite 8.3.5, past the fix in vite 8.3.3; `@angular/build` 22.2.4 still depends on vite 8.3.0.
+- The console therefore asks for `@angular/build` and `@angular/cli` at 22.2.5 or above, and Renovate's Angular group update to 22.2.5 is the same change.
 
 ## Not for the cloud session
 
-The item waits on an upstream release that fixes the advisory, and it needs the captain's machine to check it against his registry access and his lockfile state.
-It is held.
-When the upstream release exists, the captain releases it and its status changes to open.
+The check needs the captain's machine, for the captain's registry access and lockfile state.
 
 ## Read first
 

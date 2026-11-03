@@ -10,11 +10,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.home.PrivateHome;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 
 @Component(CoreInstanceLock.BEAN)
+@DependsOn(PrivateHome.BEAN)
 public class CoreInstanceLock implements AutoCloseable {
 
     public static final String BEAN = "coreInstanceLock";

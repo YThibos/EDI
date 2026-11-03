@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +50,39 @@ class ClaudeLayerCommandsTest {
         assertThat(onATask.target()).isEqualTo("/api/captain/said");
         assertThat(onATask.body()).isEqualTo("{\"text\":\"Discard the lamp's copy.\",\"task\":\"D58\"}");
         assertThat(onTheHome.body()).isEqualTo("{\"text\":\"Read the token.\\nThen tell me.\"}");
+    }
+
+    @Test
+    void recordsTheCaptainsWordFromAStoredMessageOrOneLineOfIt() {
+        edi("", "captain", "said", "--task", "fit-lamp", "--message", "3");
+        StubCore.Request wholeMessage = core.received();
+        edi("", "captain", "said", "--message", "4", "--line", "2");
+        StubCore.Request oneLine = core.received();
+
+        assertThat(wholeMessage.body()).isEqualTo("{\"message\":3,\"task\":\"fit-lamp\"}");
+        assertThat(oneLine.body()).isEqualTo("{\"message\":4,\"line\":2}");
+    }
+
+    @Test
+    void refusesToCiteTheCaptainsWordsTwiceOrNotAtAllOrALineWithoutItsMessage() {
+        int twice = edi("", "captain", "said", "--message", "3", "--text", "Drop the lamp.");
+        int never = edi("", "captain", "said", "--task", "fit-lamp");
+        int lineAlone = edi("", "captain", "said", "--line", "2", "--text", "Drop the lamp.");
+
+        assertThat(List.of(twice, never, lineAlone)).containsOnly(2);
+        assertThat(err.toString()).contains("Cite the captain's words with --message, or with --text, one of the two.",
+                "--line cites one line of a message, so it takes --message.");
+        assertThat(core.requests()).isEmpty();
+    }
+
+    @Test
+    void listsTheCaptainsMessagesOfThisSession() {
+        core.answering(200, "The captain's messages in this session (0)\n");
+
+        edi("", "captain", "messages");
+
+        assertThat(core.received().target()).isEqualTo("/api/captain/messages");
+        assertThat(out.toString()).isEqualTo("The captain's messages in this session (0)\n");
     }
 
     @Test
@@ -166,13 +200,42 @@ class ClaudeLayerCommandsTest {
 
         int plain = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi up --core-only\"}}", "hook", "pre-tool-use");
         int other = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi up; rm -rf /tmp/x\"}}", "hook", "pre-tool-use");
+        int feedingAHook = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi hook post-tool-use\"}}", "hook", "pre-tool-use");
         int forAWorker = new CommandLine(new Edi(Map.of("EDI_HOME", home.toString(), "EDI_TOKEN_FILE", home.resolve("state/core.token").toString()),
                 new ByteArrayInputStream("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi status working\"}}".getBytes(StandardCharsets.UTF_8))))
                 .setOut(new PrintWriter(out, true)).setErr(new PrintWriter(err, true)).execute("hook", "pre-tool-use");
 
         assertThat(plain).isZero();
         assertThat(other).isEqualTo(2);
+        assertThat(feedingAHook).isEqualTo(2);
         assertThat(forAWorker).isEqualTo(2);
+    }
+
+    @Test
+    void letsThePrimaryAskTheCaptainWhileTheCoreIsDownUnlessTheAnswersAreGiven() throws IOException {
+        core.stopAnswering();
+        String questions = "\"questions\":[{\"question\":\"Shall I bring the core back?\",\"options\":[{\"label\":\"Yes\"}]}]";
+
+        int asked = edi("{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{" + questions + "}}", "hook", "pre-tool-use");
+        int answered = edi("{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{" + questions
+                + ",\"answers\":{\"Shall I bring the core back?\":\"Yes\"}}}", "hook", "pre-tool-use");
+        int annotated = edi("{\"tool_name\":\"AskUserQuestion\",\"tool_input\":{" + questions
+                + ",\"annotations\":{\"Shall I bring the core back?\":{\"notes\":\"drop fix-login\"}}}}", "hook", "pre-tool-use");
+
+        assertThat(asked).isZero();
+        assertThat(answered).isEqualTo(2);
+        assertThat(annotated).isEqualTo(2);
+    }
+
+    @Test
+    void refusesTheWakeStreamFromBashWhileTheCoreIsDownAndLetsOneWaitAloneThrough() throws IOException {
+        core.stopAnswering();
+
+        int stream = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi wait --follow\",\"run_in_background\":true}}", "hook", "pre-tool-use");
+        int oneWait = edi("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"edi wait\",\"run_in_background\":true}}", "hook", "pre-tool-use");
+
+        assertThat(stream).isEqualTo(2);
+        assertThat(oneWait).isZero();
     }
 
     @Test
