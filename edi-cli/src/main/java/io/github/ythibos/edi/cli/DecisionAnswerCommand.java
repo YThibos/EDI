@@ -7,7 +7,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "answer", description = "Records the captain's answer to a decision, verbatim.")
+@Command(name = "answer", description = "Records the captain's answer to a decision, verbatim, from a message they typed or a dialog they answered.")
 final class DecisionAnswerCommand implements Callable<Integer> {
 
     @Mixin
@@ -16,8 +16,8 @@ final class DecisionAnswerCommand implements Callable<Integer> {
     @Parameters(paramLabel = "DECISION", description = "A D number, or the id of the task the decision holds.")
     private String decision;
 
-    @Option(names = "--text", required = true, paramLabel = "WORDS", description = "The captain's own words, exactly as given.")
-    private String text;
+    @Mixin
+    private CaptainsWordsCited words;
 
     @Option(names = "--option", paramLabel = "KEY", description = "The option the captain chose, such as A.")
     private String option;
@@ -28,6 +28,6 @@ final class DecisionAnswerCommand implements Callable<Integer> {
     @Override
     public Integer call() {
         return core.post("/api/decisions/" + CoreExchange.encoded(decision) + "/answer",
-                new JsonBody().with("text", text).with("option", option).with("interpretation", interpretation));
+                words.addedTo(new JsonBody(), core).with("option", option).with("interpretation", interpretation));
     }
 }

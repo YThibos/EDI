@@ -55,7 +55,7 @@ class OpenTheSitrepAtSessionStartTest {
         assertThat(sitrep.openFor(primary, started(primary, RESUMED), CONSOLE)).isEmpty();
         assertThat(sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE)).isEmpty();
         assertThat(sitrep.openFor(standby, started(standby, LAUNCHED), CONSOLE)).isEmpty();
-        assertThat(Files.readAllLines(opened)).singleElement().asString().startsWith("/c start " + CONSOLE + "login#");
+        assertThat(Files.readAllLines(opened)).singleElement().asString().startsWith("/c start " + CONSOLE + "hand-off/");
     }
 
     @Test
@@ -142,8 +142,7 @@ class OpenTheSitrepAtSessionStartTest {
 
     private CaptainsBrowser browserThatOpens() throws IOException {
         Path browser = StandInScripts.installed(directory.resolve("bin/browser"), "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '" + opened + "'\n");
-        return new CaptainsBrowser(new ExternalPrograms(), home.home(), browser.toString(), Files.createDirectories(directory.resolve("windows")),
-                NO_DESKTOP);
+        return new CaptainsBrowser(new ExternalPrograms(), home.home(), browser.toString(), Files.createDirectories(directory.resolve("windows")), NO_DESKTOP);
     }
 
     private SessionStart started(UUID session, SessionSource source) {

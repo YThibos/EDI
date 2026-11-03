@@ -140,7 +140,7 @@ class TmuxClaudeRuntimeTest {
             runtime.launch(launch(UUID.randomUUID(), List.of()));
 
             assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("mise-was-entered"), "\n").strip())
-                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=");
+                    .isEqualTo("exec -- " + directory.resolve("claude") + " auto-install=false trusted=" + trustedPathsTheCoreInherited());
             assertThat(awaitFile(home.root().resolve("claude-was-started.arguments"))).exists();
         }
     }
@@ -212,6 +212,10 @@ class TmuxClaudeRuntimeTest {
 
     private String mise() {
         return directory.resolve("mise").toString();
+    }
+
+    private static String trustedPathsTheCoreInherited() {
+        return System.getenv().getOrDefault("MISE_TRUSTED_CONFIG_PATHS", "");
     }
 
     private Path hooksWithTheCommitMessageCheck() throws IOException {

@@ -15,7 +15,7 @@ Workers run the native build too, inside an EDI worker whose environment carries
 `NativeRecoveryIT` and `NativeLifecycleIT` cover relaunch after a simulated restart and the core's start and stop, and every native test removes every `EDI_`, `TMUX` and `GIT_CONFIG_` variable from the environment of the command and the core it starts.
 `NativeRecoveryIT`, which restarts the native core within its tests, waits up to `Patience.FOR_REAL_WORK`, one minute, for each start and asserts that a test's own work, its time less the start-ups it waited for, stayed under 30 seconds.
 AT-39 lives in `NativeSmokeIT`, not the catalogue: `RoundTripBudget` times a bare `edi --version` before each `edi backlog` round trip, and the command meets the budget when its p95 is under 50 ms or, on a slower machine, when its p50 is under twice the bare start-up's p50.
-The measurement stops at 200 round trips or 20 seconds, and the build summary names the round trips made, both medians, their ratio and the rule met; two proofs show a command doing its work twice fails and a uniformly slowed machine passes.
+The measurement stops at 200 round trips or 20 seconds, and the build summary names the round trips made, both medians, their ratio and the rule met; two proofs show a command doing its work twice fails the pace rule and a uniformly slowed machine passes; a machine fast enough to keep a doubled command under 50 ms meets AT-39 with it, as AT-39 asks.
 
 ## Why
 
@@ -49,3 +49,4 @@ When the median ratio on GitHub's runners is above 1.6, the live profile runs a 
 - 23/10/2026: `NativeRecoveryIT` overran its timeout while a loaded machine restarted the core, so the core's start-ups no longer count against a test's own thirty seconds (EDI-35).
 - 27/10/2026: the native tests waited 20 seconds for real work that `edi update` runs beside other builds, so they wait `Patience.FOR_REAL_WORK` for real work and run under the default timeout (EDI-106).
 - 27/10/2026: workers start through `mise exec` when mise trusts the project's clone, so the native tests pass a stand-in that trusts every clone and runs the worker's command unchanged (EDI-100).
+- 03/11/2026: a GitHub runner kept the doubled command at a p95 of 49 ms, within the limit, while its median ran 2.46 times a bare start-up's, so the proof asserts that the pace rule fails it, which holds on any machine (EDI-168).

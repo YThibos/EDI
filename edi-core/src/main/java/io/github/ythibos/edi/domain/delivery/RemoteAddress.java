@@ -47,7 +47,7 @@ public record RemoteAddress(String host, String path) {
 
     private static Optional<RemoteAddress> addressOf(String host, String path) {
         String repository = withoutGitSuffix(trimmedOfSlashes(path));
-        return host.isEmpty() || repository.isEmpty() ? Optional.empty() : Optional.of(new RemoteAddress(host, repository));
+        return !HostNames.isDnsName(host) || repository.isEmpty() ? Optional.empty() : Optional.of(new RemoteAddress(host, repository));
     }
 
     private static String withoutUser(String authority) {

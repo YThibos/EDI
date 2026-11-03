@@ -27,6 +27,7 @@ import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
@@ -400,7 +401,7 @@ class DecisionsAndReportingTest {
             home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(session, words);
             CallingSession calling = new CallingSession(session);
-            home.captainsWord().record(calling, words, TaskReference.parse(task), null, Actor.PRIMARY);
+            home.captainsWord().record(calling, new Citation.Verbatim(words), TaskReference.parse(task), null, Actor.PRIMARY);
             return calling;
         }
 
@@ -468,13 +469,13 @@ class DecisionsAndReportingTest {
             UUID primary = UUID.randomUUID();
             home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(primary, "What is waiting on me?");
-            HookAnswer quietTurn = home.primaryHooks().stopping(primary, List.of());
+            HookAnswer quietTurn = home.primaryHooks().stopping(primary);
 
             home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
             home.addTask().add(ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
-            HookAnswer unreported = home.primaryHooks().stopping(primary, List.of());
+            HookAnswer unreported = home.primaryHooks().stopping(primary);
             home.primaryHooks().reportRendered(primary);
-            HookAnswer reported = home.primaryHooks().stopping(primary, List.of());
+            HookAnswer reported = home.primaryHooks().stopping(primary);
 
             assertThat(quietTurn).isEqualTo(HookAnswer.PROCEED);
             assertThat(unreported.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);

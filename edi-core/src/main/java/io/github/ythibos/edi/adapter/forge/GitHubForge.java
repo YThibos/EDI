@@ -83,8 +83,8 @@ public class GitHubForge implements Forge {
     @Override
     public Optional<String> credentialHelperFor(RegisteredForge forge) {
         return Optional.of("!f() { test \"$1\" = get || exit 0; GH_TOKEN=\"$(" + calls.commandLineOf(ForgeCommand.GH_AUTH_TOKEN) + " --hostname "
-                + forge.repository().host() + " --user " + forge.account() + ")\" exec " + calls.commandLineOf(ForgeCommand.GH_AUTH_GIT_CREDENTIAL)
-                + " get; }; f");
+                + quoted(forge.repository().host()) + " --user " + quoted(forge.account()) + ")\" exec "
+                + calls.commandLineOf(ForgeCommand.GH_AUTH_GIT_CREDENTIAL) + " get; }; f");
     }
 
     private String asTheBoundAccount(RegisteredForge forge, ForgeCommand command, List<String> arguments, String input) {
@@ -137,5 +137,9 @@ public class GitHubForge implements Forge {
         } catch (DateTimeParseException unreadable) {
             throw new ProgramFailure("gh shows " + address + " merged without a readable mergedAt: '" + moment + "'.");
         }
+    }
+
+    private static String quoted(String word) {
+        return "'" + word + "'";
     }
 }
