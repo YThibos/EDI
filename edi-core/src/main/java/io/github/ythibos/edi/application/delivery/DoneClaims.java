@@ -29,6 +29,8 @@ import io.github.ythibos.edi.domain.worker.WorkerId;
 @Component
 public class DoneClaims {
 
+    private static final String HEAD = "HEAD";
+
     private final WorkerContext context;
     private final Git git;
     private final InboxStore inbox;
@@ -118,7 +120,8 @@ public class DoneClaims {
 
     private List<String> snapshotGapsOf(Workplace workplace) {
         List<AddedLine> snapshots = SnapshotVersions.addedIn(git.buildFileLinesAddedSince(workplace.worktree(), workplace.baseRef()));
-        return snapshots.isEmpty() ? List.of() : List.of(SnapshotVersions.refusalOf(snapshots));
+        List<AddedLine> refused = snapshots.isEmpty() ? snapshots : SnapshotVersions.outsideTheReactor(snapshots, git.reactorAt(workplace.worktree(), HEAD));
+        return refused.isEmpty() ? List.of() : List.of(SnapshotVersions.refusalOf(refused));
     }
 
     private List<String> deliveryGapsOf(Workplace workplace, Optional<MergeRequestView> request) {

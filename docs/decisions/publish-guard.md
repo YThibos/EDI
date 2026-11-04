@@ -18,7 +18,7 @@ Before any push, `PublishCheck` checks the outgoing commits of a revision range 
 - a secret scan with gitleaks and its standard rules only, which a repository cannot weaken with its own configuration, ignore file or allow comments, read from a redacted report (`Gitleaks`);
 - the captain's deny-list `config/publish-denylist`, matched as case-insensitive literals in every added line, every added or changed path, every message and every author and committer identity, and reported by entry number (`DenyList`);
 - a path check refusing the gitignored `personal/` layer and anything under the EDI home (`PersonalPaths`);
-- a build-file check refusing every line an outgoing commit adds to a `pom.xml` with a `-SNAPSHOT` word, the rule a ship's done applies to its branch (`SnapshotVersions.findIn`).
+- a build-file check refusing every line an outgoing commit adds to a `pom.xml` with a `-SNAPSHOT` word, the rule a ship's done applies to its branch (`SnapshotVersions.findIn`), except a line inside a module's `<parent>` element that names a `pom.xml` of the same repository, at the commit, by its groupId and artifactId and that pom's own version (`Reactor`); the poms are read, with a parser that refuses a DOCTYPE, only for a commit that adds a SNAPSHOT line (`Git.reactorAt`).
 
 The list a push is checked against leaves out every term equal, whatever its case, to one of the pushing project's own names: its forge host and account from the registry and, when it books on the machine's JIRA, the tracker's host and keys-file name (`DenyList.sparing`, `OwnNames`).
 `PublicationTargets.ownNamesOf` finds the project only from the repository's top level, its isolated copy or its registered clone, never from a remote URL; any other repository spares nothing.
@@ -43,6 +43,7 @@ The forges read a request's text through `Forge.textOf`; EDI posts no comment an
 
 A leak is stopped before it leaves the machine, whoever pushes, and the guard itself never becomes the leak.
 A SNAPSHOT version is stopped at the push that would publish it, not at a done that comes after it, and every commit is checked because each commit a push publishes carries its own `pom.xml`.
+A module must name its parent's version, and the parent of a module in the same reactor is released together with it, so that reference is no SNAPSHOT dependency (D82 A).
 The registry and the profile already state each project's own names, so sparing them needs no new configuration, while every other term and every secret is refused as before.
 Git reads a repository's own configuration, which can name programs to run, so the core runs it only in the repositories EDI keeps for its registered projects.
 
@@ -66,6 +67,7 @@ Git reads a repository's own configuration, which can name programs to run, so t
 - Bad: the path check keeps the core from running git in a directory a caller chose; a worker runs as the captain's own user and can still run git anywhere itself.
 - Bad: the CI job builds `edi-core` before it scans.
 - Bad: a SNAPSHOT version committed and then removed again before a push must be squashed out of the unpushed commits.
+- Bad: the parent's lines are found as the first `<parent>` to the first `</parent>` after it in the file, so a `pom.xml` that writes either in a comment above the real one may have its parent misplaced, which refuses the reference rather than admitting another line.
 - Bad: a commit already on the remote branch or in the base is not judged again by a push, so a tightened rule reaches it only through a ship's done and CI.
 
 ## When to revisit
@@ -80,3 +82,4 @@ When the deny-list is reworked, which the captain has asked for, or EDI pushes f
 - 27/10/2026: a merged base that gained a SNAPSHOT line stranded the branch's next push, so the captain chose to judge only the commits new to both the remote branch and the base (EDI-78).
 - 29/10/2026: a request's title and description pass the guard before EDI posts or accepts them, and an IP address outside the documentation ranges or a host with its port is refused in them, after the review found internal addresses and hostnames in descriptions whose commits had passed (EDI-150).
 - 30/10/2026: the publish-check endpoint ran git in any absolute path from any caller, so it now checks only registered clones and isolated copies, a worker only its own copy, and never for the console (EDI-130).
+- 03/11/2026: a new module's parent reference to its own reactor's SNAPSHOT version was refused at done and push, though every sibling module carries the same line, so the captain allowed it (D82 A) and the guard and the done admit it (EDI-167).
