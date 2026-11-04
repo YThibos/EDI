@@ -70,9 +70,9 @@ class JiraTrackerTest {
 
     @Test
     void givesEachKeyTheTrackersBrowseAddress() {
-        String base = jira.address().toString();
+        String base = "http://127.0.0.1:" + jira.address().getPort();
 
-        assertThat(tracker.browseAddressOf(WorkKey.parse("SVC-7"))).contains(base + (base.endsWith("/") ? "" : "/") + "browse/SVC-7");
+        assertThat(tracker.browseAddressOf(WorkKey.parse("SVC-7"))).contains(base + "/browse/SVC-7");
     }
 
     @Test

@@ -33,7 +33,6 @@ public class TaskLinksQuery {
 
     public static final String TASK_PAGES = "/api/tasks/";
     static final String REPORT = "report.md";
-    static final String BRIEF = "brief.md";
 
     private final EdiHome home;
     private final ProjectRegistry registry;
@@ -77,7 +76,6 @@ public class TaskLinksQuery {
                 dispatches.of(task.id()).map(dispatch -> branchOf(dispatch, project)).orElse(null),
                 boards.latestOf(task.id()).map(Board::link).orElse(null),
                 pageOf(task, REPORT, "report"),
-                pageOf(task, BRIEF, "brief"),
                 decisions.everyOneOfTask(task.id()).stream().map(decision -> decision.number().toString()).toList());
     }
 

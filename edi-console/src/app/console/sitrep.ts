@@ -26,7 +26,6 @@ export interface TaskLinks {
   branch: { name: string; url: string | null } | null;
   board: string | null;
   report: string | null;
-  brief: string | null;
   decisions: string[];
 }
 

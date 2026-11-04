@@ -285,7 +285,7 @@ describe('SitrepPage', () => {
       sitrepFixture({
         links: {
           'fit-lamp': { key: 'EDI-31', tracker: null, request: null, branch: { name: 'feature/EDI-31', url: 'https://github.com/example-owner/harness/tree/feature/EDI-31' },
-            board: null, report: null, brief: null, decisions: [] },
+            board: null, report: null, decisions: [] },
         },
       }),
     );

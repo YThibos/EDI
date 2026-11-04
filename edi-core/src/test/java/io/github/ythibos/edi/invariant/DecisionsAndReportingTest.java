@@ -558,7 +558,7 @@ class DecisionsAndReportingTest {
 
     private static ConsoleSitrep consoleSitrep(TestHome home) {
         return PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
-                Presence.presentSince(TestHome.START));
+                Presence.presentSince(TestHome.START), _ -> Map.of());
     }
 
     private static String returnBrief(TestHome home) {

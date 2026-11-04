@@ -71,7 +71,7 @@ class ProcessTableTest {
     @Test
     void findsTheProcessesThatWorkInADirectoryOrRunAProgramFromIt() throws IOException {
         Path copy = Files.createDirectories(directory.resolve("worktrees/harness/fit-lamp"));
-        Path sleepInside = Files.copy(Path.of("/bin/sleep").toRealPath(), copy.resolve("sleep"));
+        Path sleepInside = StandInScripts.copied(Path.of("/bin/sleep").toRealPath(), copy.resolve("sleep"));
         Process working = processes.register(new ProcessBuilder("sleep", "30").directory(copy.toFile()).start());
         Process running = processes.register(new ProcessBuilder(sleepInside.toString(), "30").directory(directory.toFile()).start());
         Process elsewhere = processes.register(new ProcessBuilder("sleep", "30").directory(directory.toFile()).start());
