@@ -50,6 +50,19 @@ class MeetingCalendarTest {
     }
 
     @Test
+    void staysPresentThroughEightSilentHoursWhenQuietOnSilenceIsOffButTurnsQuietForAMeeting() throws IOException {
+        home.writing("config/personal.yaml", "presence:\n  autoQuietAfter: PT0S\n");
+        Instant meetingStart = home.clock().now().plus(Duration.ofHours(8));
+        home.windowsSide().showingTheCalendar(calendarWith("Sprint review", meetingStart, meetingStart.plus(Duration.ofMinutes(15))));
+
+        Presence afterEightSilentHours = roundsUntil(meetingStart.minus(ROUND));
+        Presence inTheMeeting = roundsUntil(meetingStart);
+
+        assertThat(afterEightSilentHours.mode()).isEqualTo(PresenceMode.PRESENT);
+        assertThat(inTheMeeting).extracting(Presence::mode, Presence::cause).containsExactly(PresenceMode.QUIET, PresenceCause.MEETING);
+    }
+
+    @Test
     void tellsTheCaptainOnceWhileQuietThatTheCalendarCannotBeRead() throws IOException {
         Instant firstFailure = home.clock().now();
         home.windowsSide().failingToReadTheCalendar("Outlook did not answer.");
