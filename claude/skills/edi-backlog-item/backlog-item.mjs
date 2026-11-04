@@ -15,7 +15,7 @@ const STATUSES = /^(open|(held|parked|needs-captain-machine): \S.*)$/;
 const SPEC_SECTIONS = ['Goal', 'Context', 'Acceptance criteria', 'Requirements from decisions and answers', 'Read first', 'How to verify'];
 const DELIVERY = `## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.
 `;
 const LABEL_DESCRIPTIONS = {
     'cloud-ok': 'A cloud session may take it',
@@ -264,7 +264,7 @@ function deliverInACopy(run, upstream, branch, items) {
     try {
         const index = addTheItems(copy, upstream, base, items);
         const issues = issuesOf(run, upstream, items, known);
-        nameTheIssues(copy, items, issues, index);
+        nameTheIssues(copy, items, issues);
         const unmerged = copy.commits > 0 || base !== `origin/${BASE}`;
         return { issues, unmerged, pull: unmerged ? pullRequestFor(run, upstream, copy, branch, items, issues) : null };
     } finally {
@@ -339,6 +339,7 @@ function itemFile(item, index) {
         ...(item.severity ? [['Severity', item.severity]] : []),
         ['Blocked by', item.blockers.length === 0 ? 'nothing' : item.blockers.map(key => `[${key}](${key}.md)`).join(', ')],
         ['Status', item.status],
+        ['Issue', '-'],
         ['Cloud session', cloudSessionOf(item.status)],
     ];
     const header = ['| Field | Value |', '|---|---|', ...fields.map(([name, value]) => `| ${name} | ${value} |`)].join('\n');
@@ -426,14 +427,24 @@ function issueBody(upstream, item, known) {
     return `${spec}\nBlocked by ${blockers.join(', ')}.\n`;
 }
 
-function nameTheIssues(copy, items, issues, index) {
-    let named = index;
-    for (const item of items.filter(candidate => index.awaitsItsIssue(candidate.key))) {
+function nameTheIssues(copy, items, issues) {
+    for (const item of items) {
         const issue = issues[item.key];
-        named = issue ? named.withIssue(item.key, issue) : named;
-        copy.write(INDEX, named.text, `name ${item.key}'s issue in its row${issue ? `: ${named.rowOf(item.key)}` : ''}`);
-        copy.commit(`${item.key} Name the issue of the backlog item`);
+        const file = copy.read(itemPath(item.key));
+        const named = issue ? withIssue(file, issue) : file;
+        if (named !== file) {
+            copy.write(itemPath(item.key), named, `name ${item.key}'s issue in ${itemPath(item.key)}: [#${issue.number}](${issue.url})`);
+            copy.commit(`${item.key} Name the issue of the backlog item`);
+        }
     }
+}
+
+function withIssue(file, issue) {
+    const field = `| Issue | [#${issue.number}](${issue.url}) |`;
+    if (/^\| Issue \| -? *\|$/m.test(file)) {
+        return file.replace(/^\| Issue \| -? *\|$/m, field);
+    }
+    return /^\| Issue \|/m.test(file) ? file : file.replace(/^(\| Status \| .* \|)$/m, `$1\n${field}`);
 }
 
 function pullRequestFor(run, upstream, copy, branch, items, issues) {
@@ -537,6 +548,10 @@ class ThrowawayCopy {
             git(upstream.clone, 'worktree', 'add', '--quiet', '--detach', copy, base);
             return copy;
         });
+    }
+
+    read(path) {
+        return this.path ? readFileSync(join(this.path, path), 'utf8') : '';
     }
 
     write(path, text, action) {
@@ -655,15 +670,6 @@ class BacklogIndex {
         const wave = /^wave\s+(\d+)/i.exec(heading);
         return wave ? `wave ${wave[1]}, order ${order}` : `${heading.split(/\W/)[0].toLowerCase()} section, order ${order}`;
     }
-
-    awaitsItsIssue(key) {
-        return /\|\s*-\s*\|\s*$/.test(this.rowOf(key) ?? '');
-    }
-
-    withIssue(key, issue) {
-        const row = this.rowOf(key);
-        return new BacklogIndex(this.lines.map(line => line === row ? line.replace(/\|\s*-\s*\|\s*$/, `| [#${issue.number}](${issue.url}) |`) : line).join('\n'));
-    }
 }
 
 function startsWithTheWords(heading, words) {
@@ -678,8 +684,6 @@ function rowFor(item, section, order) {
         Size: item.size,
         Severity: item.severity,
         'Blocked by': item.blockers.length === 0 ? '-' : item.blockers.join(', '),
-        Status: item.status,
-        Issue: '-',
     };
     return `| ${section.columns.map(column => cells[column]).join(' | ')} |`;
 }
