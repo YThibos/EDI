@@ -61,6 +61,16 @@
     },
     {
       "customType": "regex",
+      "description": "The mise version every jdx/mise-action step installs in CI",
+      "managerFilePatterns": ["/(^|/)\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": ["uses: jdx/mise-action@[0-9a-f]{40} # v[\\d.]+\\n\\s+with:\\n\\s+version: (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "mise",
+      "packageNameTemplate": "jdx/mise",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
       "description": "The SQLite driver version overriding the one Spring Boot manages, which only Spring Boot's BOM reads",
       "managerFilePatterns": ["/(^|/)pom\\.xml$/"],
       "matchStrings": ["<sqlite-jdbc\\.version>(?<currentValue>[^<]+)</sqlite-jdbc\\.version>"],
