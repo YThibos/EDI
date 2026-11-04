@@ -25,6 +25,7 @@ The list a push is checked against leaves out every term equal, whatever its cas
 A path that carries a denied term is never named: every finding on it names it by its position, such as `line 1 of path 2 of commit abc1234` (`PublishVerdict.hidingPathsDeniedBy`); deleted paths publish nothing and are not checked.
 A push judges only the commits new to both the remote branch and the base: the copy's hook checks `origin/<base>..<local head>` excluding the remote branch's head, an exclusion `RevisionRange` hands to both `git rev-list` and gitleaks.
 `edi publish-check` exposes the guard, each copy's `pre-push` hook runs it ([isolated-copies](isolated-copies.md)), `edi deliver` runs it, and CI runs the same guard over every pushed range through `PublishGuard` with the deny-list from the Actions secret `PUBLISH_DENYLIST`.
+`POST /api/publish-checks` runs git only in a registered project's clone or a task's isolated copy, `<home>/worktrees/<project>/<task>` of a registered project, compared by real path after the request's path is normalised, and refuses any other path before git runs (`PublicationTargets.requireCheckable`); a worker may check only its own task's copy, and the console's session is refused.
 `PublishCheckTest` proves it with invented patterns and secrets generated at run time, so the tracked test carries nothing personal.
 
 A request's title and description pass the same guard before EDI posts or accepts them (`PublishCheck.checkText`, `TextVerdict`):
@@ -43,6 +44,7 @@ The forges read a request's text through `Forge.textOf`; EDI posts no comment an
 A leak is stopped before it leaves the machine, whoever pushes, and the guard itself never becomes the leak.
 A SNAPSHOT version is stopped at the push that would publish it, not at a done that comes after it, and every commit is checked because each commit a push publishes carries its own `pom.xml`.
 The registry and the profile already state each project's own names, so sparing them needs no new configuration, while every other term and every secret is refused as before.
+Git reads a repository's own configuration, which can name programs to run, so the core runs it only in the repositories EDI keeps for its registered projects.
 
 ## Alternatives rejected
 
@@ -60,7 +62,8 @@ The registry and the profile already state each project's own names, so sparing 
 - Good: a request's text can no longer carry what a commit could not, so the cleaning of the descriptions stays done.
 - Bad: a description that names the core's loopback address and port, or any host with a port, is refused and must say it in words or with a documentation address.
 - Bad: the pipeline posts its description before EDI sees it, so a refused text stays on the forge until the worker rewrites it; EDI only keeps the request from counting as ready.
-- Bad: `edi publish-check` in a checkout outside EDI's home applies the whole list, and a listed term equal to a project's own name no longer guards that project.
+- Bad: `edi publish-check` runs only in a registered clone or an isolated copy, from its top level, so a checkout outside EDI's home, the captain's own checkout included, is checked through its push's hook only once it is registered; and a listed term equal to a project's own name no longer guards that project.
+- Bad: the path check keeps the core from running git in a directory a caller chose; a worker runs as the captain's own user and can still run git anywhere itself.
 - Bad: the CI job builds `edi-core` before it scans.
 - Bad: a SNAPSHOT version committed and then removed again before a push must be squashed out of the unpushed commits.
 - Bad: a commit already on the remote branch or in the base is not judged again by a push, so a tightened rule reaches it only through a ship's done and CI.
@@ -76,3 +79,4 @@ When the deny-list is reworked, which the captain has asked for, or EDI pushes f
 - 27/10/2026: a SNAPSHOT version was refused only at a ship's done, after the push that published it, so the guard refuses one in any outgoing commit (EDI-78).
 - 27/10/2026: a merged base that gained a SNAPSHOT line stranded the branch's next push, so the captain chose to judge only the commits new to both the remote branch and the base (EDI-78).
 - 29/10/2026: a request's title and description pass the guard before EDI posts or accepts them, and an IP address outside the documentation ranges or a host with its port is refused in them, after the review found internal addresses and hostnames in descriptions whose commits had passed (EDI-150).
+- 30/10/2026: the publish-check endpoint ran git in any absolute path from any caller, so it now checks only registered clones and isolated copies, a worker only its own copy, and never for the console (EDI-130).

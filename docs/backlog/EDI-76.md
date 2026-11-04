@@ -9,6 +9,7 @@
 | Size | M |
 | Blocked by | [EDI-93](EDI-93.md) |
 | Status | needs-captain-machine: the measurement reads the primary's transcripts and EDI's store, which exist only on the captain's machine. |
+| Issue | [#167](https://github.com/YThibos/EDI/issues/167) |
 | Cloud session | not yet: see the status |
 
 ## Goal
@@ -55,4 +56,4 @@ The item is listed as needs-captain-machine.
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.

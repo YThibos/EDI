@@ -20,6 +20,14 @@
     <description>Enhanced Development Intelligence: a development harness for one developer across machines</description>
     <url>https://github.com/YThibos/EDI</url>
 
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <subprojects>
         <subproject>edi-console</subproject>
         <subproject>edi-core</subproject>
