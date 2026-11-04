@@ -107,9 +107,9 @@ The Issue column shows `-` until the item's issue is opened.
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
 | 1 | [EDI-81](EDI-81.md) | Learnings name their ticket | S | - | delivered | - |
-| 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
-| 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
-| 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
+| 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | [#119](https://github.com/YThibos/EDI/issues/119) |
+| 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | [#120](https://github.com/YThibos/EDI/issues/120) |
+| 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | [#121](https://github.com/YThibos/EDI/issues/121) |
 | 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | delivered | [#87](https://github.com/YThibos/EDI/issues/87) |
 | 52 | [EDI-151](EDI-151.md) | Stopping a worker also ends the processes it left behind in its copy | S | - | open | [#107](https://github.com/YThibos/EDI/issues/107) |
 | 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | delivered | [#169](https://github.com/YThibos/EDI/issues/169) |
@@ -127,17 +127,17 @@ The Issue column shows `-` until the item's issue is opened.
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| 5 | [EDI-85](EDI-85.md) | The stage is stored | M | - | open | - |
-| 6 | [EDI-83](EDI-83.md) | The anchor as an index | S | EDI-81 | open | - |
+| 5 | [EDI-85](EDI-85.md) | The stage is stored | M | - | open | [#122](https://github.com/YThibos/EDI/issues/122) |
+| 6 | [EDI-83](EDI-83.md) | The anchor as an index | S | EDI-81 | open | [#123](https://github.com/YThibos/EDI/issues/123) |
 
 ### Wave 3: after the stage is stored
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| 7 | [EDI-88](EDI-88.md) | Plans and their waits | M | EDI-85 | open | - |
-| 8 | [EDI-86](EDI-86.md) | Delivered, changing, ready | M | EDI-85 | open | - |
-| 9 | [EDI-70](EDI-70.md) | Landing by the merged head: squash-merge cleanup | M | EDI-85 | open | - |
-| 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 | open | - |
+| 7 | [EDI-88](EDI-88.md) | Plans and their waits | M | EDI-85 | open | [#137](https://github.com/YThibos/EDI/issues/137) |
+| 8 | [EDI-86](EDI-86.md) | Delivered, changing, ready | M | EDI-85 | open | [#138](https://github.com/YThibos/EDI/issues/138) |
+| 9 | [EDI-70](EDI-70.md) | Landing by the merged head: squash-merge cleanup | M | EDI-85 | open | [#139](https://github.com/YThibos/EDI/issues/139) |
+| 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 | open | [#140](https://github.com/YThibos/EDI/issues/140) |
 | 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 | open | [#175](https://github.com/YThibos/EDI/issues/175) |
 | 58 | [EDI-157](EDI-157.md) | A merge request's validation watch never reads as changing | XS | EDI-86 | open | [#176](https://github.com/YThibos/EDI/issues/176) |
 | 59 | [EDI-161](EDI-161.md) | A worker's done is checked and booked by the core in one pass | M | EDI-86 | open | [#178](https://github.com/YThibos/EDI/issues/178) |
@@ -147,42 +147,42 @@ The Issue column shows `-` until the item's issue is opened.
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| 11 | [EDI-89](EDI-89.md) | The plan dispatches its slices | M | EDI-88 | open | - |
-| 12 | [EDI-71](EDI-71.md) | One effort word per plan | S | EDI-88 | open | - |
-| 13 | [EDI-65](EDI-65.md) | The page, the report and the digest on stages: report ready, not ongoing | M | EDI-86, EDI-70 | open | - |
-| 14 | [EDI-67](EDI-67.md) | The base moved: open requests stay mergeable | S | EDI-86 | open | - |
+| 11 | [EDI-89](EDI-89.md) | The plan dispatches its slices | M | EDI-88 | open | [#141](https://github.com/YThibos/EDI/issues/141) |
+| 12 | [EDI-71](EDI-71.md) | One effort word per plan | S | EDI-88 | open | [#142](https://github.com/YThibos/EDI/issues/142) |
+| 13 | [EDI-65](EDI-65.md) | The page, the report and the digest on stages: report ready, not ongoing | M | EDI-86, EDI-70 | open | [#143](https://github.com/YThibos/EDI/issues/143) |
+| 14 | [EDI-67](EDI-67.md) | The base moved: open requests stay mergeable | S | EDI-86 | open | [#144](https://github.com/YThibos/EDI/issues/144) |
 
 ### Wave 5: the console plan and the report, once plans dispatch themselves
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| 15 | [EDI-90](EDI-90.md) | The captain's last look and the delta | S | EDI-65 | open | - |
-| 16 | [EDI-91](EDI-91.md) | The report's new layout | M | EDI-90, EDI-133 | open | - |
-| 17 | [EDI-92](EDI-92.md) | The stop hook's new rule | S | EDI-90 | open | - |
-| 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | EDI-89 | open | - |
-| 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | EDI-89 | open | - |
-| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | EDI-89 | open | - |
-| 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | EDI-89 | open | - |
-| 22 | [EDI-59](EDI-59.md) | The task panel | M | EDI-57, EDI-58 | open | - |
-| 23 | [EDI-60](EDI-60.md) | Live check-in on a worker | M | EDI-59 | open | - |
-| 24 | [EDI-61](EDI-61.md) | The Fleet view | M | EDI-58, EDI-60 | open | - |
-| 25 | [EDI-62](EDI-62.md) | The Week view | S | EDI-58 | open | - |
-| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | EDI-89 | open | - |
-| 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | EDI-89 | open | - |
-| 28 | [EDI-66](EDI-66.md) | edi board show | S | EDI-59 | open | - |
-| 29 | [EDI-68](EDI-68.md) | edi park and edi resume | M | EDI-87, EDI-89 | open | - |
-| 30 | [EDI-69](EDI-69.md) | A standing CI note per project | S | EDI-89 | open | - |
-| 31 | [EDI-72](EDI-72.md) | Spike: a steer at the next tool call | S | EDI-89 | needs-captain-machine: the spike needs a real Claude Code worker session in a private tmux socket and a real long turn, which only the captain's machine gives. | - |
-| 32 | [EDI-73](EDI-73.md) | EDI's concept art in the repository | S | EDI-89 | needs-captain-machine: the two source images exist only on the captain's machine and are not in the repository. | - |
-| 33 | [EDI-93](EDI-93.md) | Plans on the page and in the report | S | EDI-89, EDI-91, EDI-59 | open | - |
-| 34 | [EDI-96](EDI-96.md) | Ship-raised decisions batched into console rounds | M | EDI-59 | open | - |
+| 15 | [EDI-90](EDI-90.md) | The captain's last look and the delta | S | EDI-65 | open | [#145](https://github.com/YThibos/EDI/issues/145) |
+| 16 | [EDI-91](EDI-91.md) | The report's new layout | M | EDI-90, EDI-133 | open | [#156](https://github.com/YThibos/EDI/issues/156) |
+| 17 | [EDI-92](EDI-92.md) | The stop hook's new rule | S | EDI-90 | open | [#157](https://github.com/YThibos/EDI/issues/157) |
+| 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | EDI-89 | open | [#146](https://github.com/YThibos/EDI/issues/146) |
+| 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | EDI-89 | open | [#147](https://github.com/YThibos/EDI/issues/147) |
+| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | EDI-89 | open | [#148](https://github.com/YThibos/EDI/issues/148) |
+| 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | EDI-89 | open | [#149](https://github.com/YThibos/EDI/issues/149) |
+| 22 | [EDI-59](EDI-59.md) | The task panel | M | EDI-57, EDI-58 | open | [#158](https://github.com/YThibos/EDI/issues/158) |
+| 23 | [EDI-60](EDI-60.md) | Live check-in on a worker | M | EDI-59 | open | [#161](https://github.com/YThibos/EDI/issues/161) |
+| 24 | [EDI-61](EDI-61.md) | The Fleet view | M | EDI-58, EDI-60 | open | [#166](https://github.com/YThibos/EDI/issues/166) |
+| 25 | [EDI-62](EDI-62.md) | The Week view | S | EDI-58 | open | [#159](https://github.com/YThibos/EDI/issues/159) |
+| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | EDI-89 | open | [#150](https://github.com/YThibos/EDI/issues/150) |
+| 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | EDI-89 | open | [#151](https://github.com/YThibos/EDI/issues/151) |
+| 28 | [EDI-66](EDI-66.md) | edi board show | S | EDI-59 | open | [#162](https://github.com/YThibos/EDI/issues/162) |
+| 29 | [EDI-68](EDI-68.md) | edi park and edi resume | M | EDI-87, EDI-89 | open | [#160](https://github.com/YThibos/EDI/issues/160) |
+| 30 | [EDI-69](EDI-69.md) | A standing CI note per project | S | EDI-89 | open | [#152](https://github.com/YThibos/EDI/issues/152) |
+| 31 | [EDI-72](EDI-72.md) | Spike: a steer at the next tool call | S | EDI-89 | needs-captain-machine: the spike needs a real Claude Code worker session in a private tmux socket and a real long turn, which only the captain's machine gives. | [#153](https://github.com/YThibos/EDI/issues/153) |
+| 32 | [EDI-73](EDI-73.md) | EDI's concept art in the repository | S | EDI-89 | needs-captain-machine: the two source images exist only on the captain's machine and are not in the repository. | [#154](https://github.com/YThibos/EDI/issues/154) |
+| 33 | [EDI-93](EDI-93.md) | Plans on the page and in the report | S | EDI-89, EDI-91, EDI-59 | open | [#163](https://github.com/YThibos/EDI/issues/163) |
+| 34 | [EDI-96](EDI-96.md) | Ship-raised decisions batched into console rounds | M | EDI-59 | open | [#164](https://github.com/YThibos/EDI/issues/164) |
 
 ### Wave 6: after the Week view and a week of use
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| 35 | [EDI-97](EDI-97.md) | Effort and review yield recorded per task, shown in the Week view | M | EDI-62 | open | - |
-| 36 | [EDI-76](EDI-76.md) | Introspect again after a week of the EDI-52 and EDI-74 changes | M | EDI-93 | needs-captain-machine: the measurement reads the primary's transcripts and EDI's store, which exist only on the captain's machine. | - |
+| 35 | [EDI-97](EDI-97.md) | Effort and review yield recorded per task, shown in the Week view | M | EDI-62 | open | [#165](https://github.com/YThibos/EDI/issues/165) |
+| 36 | [EDI-76](EDI-76.md) | Introspect again after a week of the EDI-52 and EDI-74 changes | M | EDI-93 | needs-captain-machine: the measurement reads the primary's transcripts and EDI's store, which exist only on the captain's machine. | [#167](https://github.com/YThibos/EDI/issues/167) |
 
 ### Security findings, to land before the repository is made public
 
@@ -213,19 +213,19 @@ The section sits after the six waves; the captain may move it up.
 
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
-| - | [EDI-110](EDI-110.md) | The console header hides its stardate and machine slots while the core does not answer | XS | - | held: backlogged on the captain's word, to start when he says so. | - |
-| - | [EDI-111](EDI-111.md) | An adopted task's title drops the old harness's kind prefix | XS | - | held: backlogged on the captain's word, to start when he says so. | - |
-| - | [EDI-112](EDI-112.md) | Show the full session name in the status bar, and give EDI release versions | M | - | held: backlogged on the captain's word, to start when he says so. | - |
-| - | [EDI-113](EDI-113.md) | Guard Grep against the secret files, as Read is | S | - | held: backlogged on the captain's word, to start when he says so. | - |
-| - | [EDI-114](EDI-114.md) | Native builds use a fixed share of the cores, so two can run side by side | M | - | held: until the captain's word, and the before and after measurements need the captain's laptop. | - |
-| - | [EDI-109](EDI-109.md) | Worker builds get NVD_API_KEY from the captain's secrets file at call time | M | - | needs-captain-machine: the feature reads a secrets file that exists only on the captain's machine; it is held until his word. | - |
-| - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | delivered | - |
-| - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | - |
+| - | [EDI-110](EDI-110.md) | The console header hides its stardate and machine slots while the core does not answer | XS | - | held: backlogged on the captain's word, to start when he says so. | [#128](https://github.com/YThibos/EDI/issues/128) |
+| - | [EDI-111](EDI-111.md) | An adopted task's title drops the old harness's kind prefix | XS | - | held: backlogged on the captain's word, to start when he says so. | [#129](https://github.com/YThibos/EDI/issues/129) |
+| - | [EDI-112](EDI-112.md) | Show the full session name in the status bar, and give EDI release versions | M | - | held: backlogged on the captain's word, to start when he says so. | [#130](https://github.com/YThibos/EDI/issues/130) |
+| - | [EDI-113](EDI-113.md) | Guard Grep against the secret files, as Read is | S | - | held: backlogged on the captain's word, to start when he says so. | [#131](https://github.com/YThibos/EDI/issues/131) |
+| - | [EDI-114](EDI-114.md) | Native builds use a fixed share of the cores, so two can run side by side | M | - | held: until the captain's word, and the before and after measurements need the captain's laptop. | [#132](https://github.com/YThibos/EDI/issues/132) |
+| - | [EDI-109](EDI-109.md) | Worker builds get NVD_API_KEY from the captain's secrets file at call time | M | - | needs-captain-machine: the feature reads a secrets file that exists only on the captain's machine; it is held until his word. | [#133](https://github.com/YThibos/EDI/issues/133) |
+| - | [EDI-1](EDI-1.md) | Clear the high-severity vite advisory in the console's lockfile | XS | - | delivered | [#134](https://github.com/YThibos/EDI/issues/134) |
+| - | [EDI-105](EDI-105.md) | Bring the validation pipeline into EDI's own code flow, replacing no-mistakes | L | EDI-89 | parked: until EDI-89 (EDI-74 step 18) lands, as the captain set on 28 October 2026. | [#155](https://github.com/YThibos/EDI/issues/155) |
 | - | [EDI-120](EDI-120.md) | WaitControllerTest no longer races its own wake, and no test opens a real browser | S | - | delivered | - |
 | - | [EDI-133](EDI-133.md) | The turn report shows only what needs the captain; the sitrep keeps the overview | M | - | delivered | - |
-| - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the captain's Pro cloud session; skip it until the captain changes its status to `open` on its issue. | - |
-| - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the pull request edits, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | - |
-| - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | held: for the captain's Pro cloud session (28 October 2026), or the captain's machine on his word; skip it until the captain changes its status to `open` on its issue. | [#95](https://github.com/YThibos/EDI/issues/95) |
+| - | [EDI-134](EDI-134.md) | edi merged reports the cleanup once the copy is gone, never a half-removed copy as unlanded work | S | - | held: for the captain's Pro cloud session; skip it until the captain changes its status to `open` on its issue. | [#135](https://github.com/YThibos/EDI/issues/135) |
+| - | [EDI-132](EDI-132.md) | The EDI repository cleaned of every personal and employer trace and made public | L | EDI-122, EDI-123, EDI-124, EDI-125, EDI-131 | needs-captain-machine: the pull request edits, the deletions and the settings are on the captain's account; held on the captain's word, after the four worker-escape fixes and the pinned actions. | [#136](https://github.com/YThibos/EDI/issues/136) |
+| - | [EDI-136](EDI-136.md) | Every open backlog item gets its GitHub issue | S | - | delivered | [#95](https://github.com/YThibos/EDI/issues/95) |
 | - | [EDI-137](EDI-137.md) | Workers reach none of the captain's secrets by permission, not by denylist: a separate OS user, or Docker Sandbox's token substitution | L | - | held: backlogged on the captain's word (28 October 2026, D64 A) as an investigation, not started; until his word. | [#96](https://github.com/YThibos/EDI/issues/96) |
 | - | [EDI-141](EDI-141.md) | Workarounds on a backlog item with no task read as ticketed, and stow-list survives a broken registry | S | - | held: backlogged by EDI (28 October 2026) from its review of pull request 76; until the captain's word. | [#100](https://github.com/YThibos/EDI/issues/100) |
 | - | [EDI-144](EDI-144.md) | Validations are recorded and run the project's verify commands, in shadow | L | EDI-105, EDI-85 | parked: until EDI-105 revises the validation design on the stored task stage and releases the slices | [#88](https://github.com/YThibos/EDI/issues/88) |
