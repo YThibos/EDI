@@ -51,5 +51,5 @@ When the thresholds prove wrong in daily use, the notifications prove too many, 
 - 28/10/2026: the turn report stopped showing the presence, which stays in the sitrep (EDI-133).
 - 03/11/2026: the captain wanted quiet and away on the page too, so the console gained Quiet and Away, Away with a form for its mandate; the return brief still comes at the next typed prompt (EDI-64).
 - 03/11/2026: the captain could not switch quiet on silence off, so `presence.autoQuietAfter: PT0S` keeps presence present however long the captain is silent, while a meeting still turns it quiet (EDI-56).
-- 04/11/2026: the console's own list of modes went, as it had come to list every mode the core knows; a mode the core does not know is now a bad request from the console too, not a refusal (EDI-64).
 - 03/11/2026: the quiet batch held the pipeline gates and worker questions the primary settles alone for up to 30 minutes, so those wakes reach it at once in quiet and away, and only what speaks to the captain keeps the batch (EDI-55).
+- 04/11/2026: the console's own list of modes went, as it had come to list every mode the core knows; a mode the core does not know is now a bad request from the console too, not a refusal (EDI-64).
