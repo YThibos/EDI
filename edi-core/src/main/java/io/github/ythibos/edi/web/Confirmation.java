@@ -11,6 +11,7 @@ import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.task.PromotedScout;
 import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.authority.Authorisation;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -62,7 +63,7 @@ public sealed interface Confirmation {
     record Relaunched(DispatchOutcome.Launched launched) implements Confirmation {
     }
 
-    record StopRequested(Worker worker) implements Confirmation {
+    record StopRequested(StopWorker.StoppedWorker stopped) implements Confirmation {
     }
 
     record DraftDelivered(DeliveredDraft delivered) implements Confirmation {

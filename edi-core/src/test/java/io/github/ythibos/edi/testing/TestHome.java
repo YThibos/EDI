@@ -72,6 +72,7 @@ import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
 import io.github.ythibos.edi.application.board.PostBoardRound;
 import io.github.ythibos.edi.application.board.BoardListeners;
+import io.github.ythibos.edi.application.board.BoardRoundsQuery;
 import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
 import io.github.ythibos.edi.application.board.SettleBoardAnswers;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
@@ -926,7 +927,7 @@ public final class TestHome {
     }
 
     public StopWorker stopWorker() {
-        return new StopWorker(tasks, workers, runtime, processes, events, clock, transaction);
+        return new StopWorker(home, tasks, workers, runtime, processes, events, clock, transaction);
     }
 
     public ResumeAfterUsageLimits resumeAfterUsageLimits() {
@@ -963,6 +964,10 @@ public final class TestHome {
 
     public PostBoardRound postBoardRound() {
         return new PostBoardRound(boards, events, clock, transaction);
+    }
+
+    public BoardRoundsQuery boardRounds() {
+        return new BoardRoundsQuery(tasks, events, inbox, boards, transaction);
     }
 
     public ReceiveBoardFeedback receiveBoardFeedback() {

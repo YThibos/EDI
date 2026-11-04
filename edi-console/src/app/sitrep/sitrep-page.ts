@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { fromEvent } from 'rxjs';
 
+import { Attention } from '../console/attention';
 import { ChartedList } from '../console/charted-list';
 import { ConsoleApi } from '../console/console-api';
 import { ConsoleHeader } from '../console/console-header';
@@ -28,6 +29,7 @@ const SIGNED_OUT = 401;
 })
 export class SitrepPage {
   private readonly api = inject(ConsoleApi);
+  private readonly attention = inject(Attention);
 
   protected readonly sitrep = signal<Sitrep | null>(null);
   protected readonly access = signal<Access>('loading');
@@ -60,9 +62,11 @@ export class SitrepPage {
     const destroyed = inject(DestroyRef);
     const stream = inject(FleetStream).events().subscribe((event) => this.follow(event));
     const focus = fromEvent(window, 'focus').subscribe(() => this.refresh());
+    const firstAction = fromEvent(document, 'click').subscribe(() => this.attention.askOnce());
     destroyed.onDestroy(() => {
       stream.unsubscribe();
       focus.unsubscribe();
+      firstAction.unsubscribe();
     });
   }
 
@@ -87,6 +91,7 @@ export class SitrepPage {
   private shown(sitrep: Sitrep): void {
     this.sitrep.set(sitrep);
     this.access.set('signed-in');
+    this.attention.follow(sitrep, this.waitingCount());
   }
 }
 

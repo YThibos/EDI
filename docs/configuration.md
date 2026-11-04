@@ -56,7 +56,7 @@ An effort in the file is `low`, `medium` or `high`; only the captain's word reco
 
 ## The personal configuration
 
-`config/personal.yaml` holds the address word EDI uses for the captain and the presence settings: `presence.autoQuietAfter` (PT15M), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
+`config/personal.yaml` holds the address word EDI uses for the captain and the presence settings: `presence.autoQuietAfter` (PT15M; PT0S never turns quiet on silence, while a meeting still does), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
 
 Its `edi-personality:` section holds the personality EDI speaks with: humour, formality, verbosity, warmth, directness, initiative, depth, enthusiasm and flavour, each from 0 to 10, and under `demo:` the levels a demo overrides ([personality](decisions/personality.md)).
 A scale the section leaves out takes its Balanced level, and a demo override left out is formality 7, humour 3, verbosity 5 and flavour 7.

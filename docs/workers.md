@@ -55,7 +55,7 @@ A worker whose context is full, or whose session left no transcript, cannot be r
 
 ```sh
 edi worker relaunch fit-lamp                        # resume a dead or stopped worker's session in its own copy, or start a full context afresh
-edi worker stop fit-lamp                            # signal the processes EDI recorded for the worker
+edi worker stop fit-lamp                            # signal the worker's processes and what it left running in its copy
 edi recover                                         # put dead workers on the numbered outage hold list and show it
 edi recover 2 resume                                # answer one number, as the captain named it
 edi recover 4 fresh --effort medium
