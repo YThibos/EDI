@@ -1,2 +1,3 @@
 org.springframework.test.context.ContextCustomizerFactory = \
-	io.github.ythibos.edi.testing.EveryTestCoreRecordsItsBrowser
+	io.github.ythibos.edi.testing.EveryTestCoreRecordsItsBrowser, \
+	io.github.ythibos.edi.testing.EveryTestCoreReadsARecordingCalendar
