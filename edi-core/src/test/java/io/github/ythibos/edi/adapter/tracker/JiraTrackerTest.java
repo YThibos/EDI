@@ -70,7 +70,9 @@ class JiraTrackerTest {
 
     @Test
     void givesEachKeyTheTrackersBrowseAddress() {
-        assertThat(tracker.browseAddressOf(WorkKey.parse("SVC-7"))).contains(jira.address().toString().replaceAll("/+$", "") + "/browse/SVC-7");
+        String base = jira.address().toString();
+
+        assertThat(tracker.browseAddressOf(WorkKey.parse("SVC-7"))).contains(base + (base.endsWith("/") ? "" : "/") + "browse/SVC-7");
     }
 
     @Test

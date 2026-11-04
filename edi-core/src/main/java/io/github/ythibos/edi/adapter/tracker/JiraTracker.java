@@ -97,7 +97,11 @@ public class JiraTracker implements Tracker {
     @Override
     public Optional<String> browseAddressOf(WorkKey key) {
         TrackerSettings settings = machine.tracker();
-        return settings.isJira() ? Optional.of(settings.baseUrl().toString().replaceAll("/+$", "") + "/browse/" + key) : Optional.empty();
+        if (!settings.isJira()) {
+            return Optional.empty();
+        }
+        String base = settings.baseUrl().toString();
+        return Optional.of(base + (base.endsWith("/") ? "" : "/") + "browse/" + key);
     }
 
     @Override

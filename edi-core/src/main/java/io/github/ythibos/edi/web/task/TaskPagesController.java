@@ -32,7 +32,7 @@ class TaskPagesController {
     private final EdiHome home;
     private final TaskStore tasks;
     private final Parser markdown = Parser.builder().build();
-    private final HtmlRenderer html = HtmlRenderer.builder().escapeHtml(true).sanitizeUrls(true).build();
+    private final HtmlRenderer renderer = HtmlRenderer.builder().escapeHtml(true).sanitizeUrls(true).build();
 
     TaskPagesController(EdiHome home, TaskStore tasks) {
         this.home = home;
@@ -59,7 +59,7 @@ class TaskPagesController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).contentType(TEXT).body(task + " has no " + what + " yet.\n");
         }
         return ResponseEntity.ok().contentType(HTML).cacheControl(CacheControl.noStore()).header("Content-Security-Policy", READ_ONLY_PAGE)
-                .body(document(task + " " + what, html.render(markdown.parse(contentOf(page)))));
+                .body(document(task + " " + what, renderer.render(markdown.parse(contentOf(page)))));
     }
 
     private static String contentOf(Path page) {
