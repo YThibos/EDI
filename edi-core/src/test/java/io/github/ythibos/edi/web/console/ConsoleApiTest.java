@@ -332,8 +332,8 @@ class ConsoleApiTest {
         assertThat(away.statusCode()).isEqualTo(200);
         assertThat(away.body()).startsWith("Presence: away since ");
         assertThat(awaySitrep).contains("\"mode\":\"away\"");
-        assertThat(asleep.statusCode()).isEqualTo(403);
-        assertThat(asleep.body()).isEqualTo("The console sets presence to present, quiet, away or a demo, not asleep.\n");
+        assertThat(asleep.statusCode()).isEqualTo(400);
+        assertThat(asleep.body()).isEqualTo("Presence is present, quiet, away, demo or demo-off, not asleep.\n");
     }
 
     private HttpResponse<String> presence(String cookie, String body) throws Exception {

@@ -31,11 +31,7 @@ export class ConsoleHeader {
   protected readonly mandate = signal('');
 
   protected goAway(): void {
-    const words = this.mandate().trim();
-    if (!words) {
-      return;
-    }
-    this.awayChosen.emit(words);
+    this.awayChosen.emit(this.mandate().trim());
     this.closeAway();
   }
 
