@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 19 |
 | Source | EDI-52 plan, slice 5 |
 | Size | XS |
-| Blocked by | [EDI-89](EDI-89.md) |
+| Blocked by | nothing |
 | Status | open |
 | Issue | [#147](https://github.com/YThibos/EDI/issues/147) |
 | Cloud session | ok |
@@ -30,6 +30,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), finding F9 and sl
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on EDI-89: it needs neither plans nor stages, so it may start on its own.
 - D42 A: ship the whole console plan in order.
 - A negative value is still refused.
 - Time comes from the `Clock` port.

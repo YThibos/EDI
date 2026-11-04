@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 21 |
 | Source | EDI-52 plan, slice 7 |
 | Size | S |
-| Blocked by | [EDI-89](EDI-89.md) |
+| Blocked by | nothing |
 | Status | delivered |
 | Issue | [#149](https://github.com/YThibos/EDI/issues/149) |
 | Cloud session | ok |
@@ -30,6 +30,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), slice 7, with the
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on EDI-89: it needs neither plans nor stages, so it may start on its own.
 - Q7 note and Q8 A (captain, 26 October 2026): three views on top, Sitrep, Fleet (workers, the primary's health, usage) and Week (active time per task); "try not to pollute the main dashboard too much".
 - The page fits 1920 by 1080 at 100% and 125%.
 - No control on the page changes the fleet except those the console already allows.

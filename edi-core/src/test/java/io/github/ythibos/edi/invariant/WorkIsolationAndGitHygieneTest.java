@@ -274,6 +274,31 @@ class WorkIsolationAndGitHygieneTest {
         }
 
         @Test
+        @DisplayName("AT-11 a branch adding a module whose parent is its own reactor's SNAPSHOT version reports done, and its SNAPSHOT dependency does not")
+        @Tag("adapter")
+        void doneAdmitsANewModulesParentReferenceToItsOwnReactor() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository.at(directory.resolve("upstream/harness")).write("pom.xml", REACTOR).commit("Add the reactor");
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            DispatchOutcome dispatched = dispatch(home, "fit-lamp");
+            Worker worker = dispatched.launched().worker();
+            FixtureRepository worktree = FixtureRepository.at(dispatched.launched().worktree())
+                    .write("lamp/pom.xml", MODULE.formatted(LAMP_DEPENDENCY.formatted("1.2.0-SNAPSHOT")))
+                    .commit("HRN-3 Add the lamp module");
+            WorkerFixtures.opensTheDraftOf(home, worker);
+
+            assertThatThrownBy(() -> home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "The lamp is fitted."))
+                    .isInstanceOf(Refusal.class)
+                    .hasMessageEndingWith("push-bound work carries no -SNAPSHOT version, and the branch adds one at lamp/pom.xml:11.");
+
+            worktree.write("lamp/pom.xml", MODULE.formatted(LAMP_DEPENDENCY.formatted("1.2.0"))).commit("HRN-3 Use the released lamp");
+            WorkerFixtures.opensTheDraftOf(home, worker);
+            home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "The lamp is fitted.");
+
+            assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
+        }
+
+        @Test
         @DisplayName("AT-11 a worker's push of a commit adding a SNAPSHOT version is refused with the file and line")
         @Tag("adapter")
         void pushRefusesASnapshotVersion() throws IOException, InterruptedException {
@@ -405,6 +430,25 @@ class WorkIsolationAndGitHygieneTest {
     private static final String BUILD_FILE = """
             <project>
               <version>3.1.0-SNAPSHOT</version>
+              <dependencies>
+            %s  </dependencies>
+            </project>
+            """;
+    private static final String REACTOR = """
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+              <groupId>example.harness</groupId>
+              <artifactId>harness</artifactId>
+              <version>3.1.0-SNAPSHOT</version>
+            </project>
+            """;
+    private static final String MODULE = """
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+              <parent>
+                <groupId>example.harness</groupId>
+                <artifactId>harness</artifactId>
+                <version>3.1.0-SNAPSHOT</version>
+              </parent>
+              <artifactId>lamp-module</artifactId>
               <dependencies>
             %s  </dependencies>
             </project>
