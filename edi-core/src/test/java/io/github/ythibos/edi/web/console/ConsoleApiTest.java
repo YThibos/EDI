@@ -367,6 +367,23 @@ class ConsoleApiTest {
     }
 
     @Test
+    void servesATasksDetailToTheConsoleAndThePrimaryAndRefusesAWorker() throws Exception {
+        String cookie = signedInCookie();
+        String worker = workerTokenFor("lamp-panel");
+        post(withTheHomeToken("/api/tasks", TEXT), "{\"id\":\"lamp-room\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Paint the lamp room\",\"key\":\"HRN-7\"}");
+
+        HttpResponse<String> shown = send(withTheCookie("/api/tasks/lamp-room", cookie, "application/json").GET());
+        HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/tasks/lamp-room", "application/json").GET());
+        HttpResponse<String> toTheWorker = send(withToken(worker, "/api/tasks/lamp-room", "application/json").GET());
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.body()).contains("\"id\":\"lamp-room\"", "\"title\":\"Paint the lamp room\"", "\"workKey\":\"HRN-7\"", "\"timeline\":[");
+        assertThat(toThePrimary.statusCode()).isEqualTo(200);
+        assertThat(toTheWorker.statusCode()).isEqualTo(403);
+        assertThat(toTheWorker.body()).isEqualTo("A task's whole record is the primary's and the captain's to read; a worker reads its brief and edi inbox.\n");
+    }
+
+    @Test
     void showsAndKeepsThePersonalityFromTheConsoleThroughTheSameCoreAsEdiPersonality() throws Exception {
         String cookie = signedInCookie();
         String change = "{\"change\":[\"humour\",\"2\",\"formality\",\"10\"]}";
