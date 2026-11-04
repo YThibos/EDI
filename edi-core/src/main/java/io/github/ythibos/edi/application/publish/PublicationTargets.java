@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.OwnNames;
+import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
 public class PublicationTargets {
@@ -47,8 +48,31 @@ public class PublicationTargets {
         });
     }
 
+    public void requireCheckable(Path repository, Optional<TaskId> workersOwnTask) {
+        Path real = realPathOf(repository);
+        ProjectName project = projectWithACopyAt(real).or(() -> projectWithItsCloneAt(real))
+                .orElseThrow(() -> new Refusal("The publish check runs only in a registered project's clone or a task's isolated copy under "
+                        + home.worktrees() + ", and " + repository + " is neither."));
+        workersOwnTask.map(task -> home.worktreeOf(project, task)).filter(ownCopy -> !realPathOf(ownCopy).equals(real)).ifPresent(ownCopy -> {
+            throw new Refusal("A worker runs the publish check only in its own isolated copy, " + ownCopy + ", and " + repository + " is not it.");
+        });
+    }
+
     public OwnNames ownNamesOf(Path repository) {
         return projectCopiedTo(repository).or(() -> projectClonedTo(repository)).map(this::ownNamesOf).orElseGet(OwnNames::none);
+    }
+
+    private Optional<ProjectName> projectWithACopyAt(Path real) {
+        Path copies = realPathOf(home.worktrees());
+        if (!real.startsWith(copies) || copies.relativize(real).getNameCount() != PROJECT_AND_TASK) {
+            return Optional.empty();
+        }
+        String project = copies.relativize(real).getName(0).toString();
+        return registry.entries().stream().map(entry -> entry.project().name()).filter(name -> name.value().equals(project)).findFirst();
+    }
+
+    private Optional<ProjectName> projectWithItsCloneAt(Path real) {
+        return registry.entries().stream().filter(project -> realPathOf(project.projectClone()).equals(real)).map(entry -> entry.project().name()).findFirst();
     }
 
     private Optional<ProjectEntry> projectCopiedTo(Path repository) {
