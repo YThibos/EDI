@@ -1,4 +1,4 @@
-# The allowlists of gitleaks' default configuration, config/gitleaks.toml at the version below, that judge a secret's value.
+# The global allowlist of gitleaks' default configuration, config/gitleaks.toml at the version below, that judges a secret's value.
 version = "8.30.1"
 
 [allowlist]
@@ -22,9 +22,3 @@ stopwords = [
     "abcdefghijklmnopqrstuvwxyz",
 ]
 
-[[rules]]
-id = "aws-access-token"
-[[rules.allowlists]]
-regexes = [
-    '''.+EXAMPLE$''',
-]

@@ -40,15 +40,15 @@ public final class SyntheticSecrets {
     }
 
     String nextAwsAccessKeyId() {
-        return firstNotAllowlisted(GitleaksAllowlists.AWS_ACCESS_TOKEN, () -> "AK" + "IA" + distinctFrom(BASE32, 16));
+        return firstNotAllowlisted(() -> "AK" + "IA" + distinctFrom(BASE32, 16));
     }
 
     String nextGithubToken() {
-        return firstNotAllowlisted(GitleaksAllowlists.GITHUB_PAT, () -> "gh" + "p_" + randomFrom(ALPHANUMERIC, 36));
+        return firstNotAllowlisted(() -> "gh" + "p_" + randomFrom(ALPHANUMERIC, 36));
     }
 
-    private static String firstNotAllowlisted(String rule, Supplier<String> draw) {
-        return Stream.generate(draw).filter(secret -> !ALLOWLISTS.allow(rule, secret)).findFirst().orElseThrow();
+    private static String firstNotAllowlisted(Supplier<String> draw) {
+        return Stream.generate(draw).filter(secret -> !ALLOWLISTS.allow(secret)).findFirst().orElseThrow();
     }
 
     private String distinctFrom(String alphabet, int length) {

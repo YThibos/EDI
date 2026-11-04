@@ -71,8 +71,8 @@ class SyntheticSecretsTest {
     void noDrawYieldsAnAwsAccessKeyGitleaksAllowlists() {
         assertThat(firstDrawsOfSeedsAround(SEED_SPELLING_FALSE_IN_AN_AWS_KEY, SyntheticSecrets::nextAwsAccessKeyId))
                 .hasSize(DRAWS)
-                .filteredOn(key -> ALLOWLISTS.allow(GitleaksAllowlists.AWS_ACCESS_TOKEN, key))
-                .as("drawn keys gitleaks' allowlists let through")
+                .filteredOn(ALLOWLISTS::allow)
+                .as("drawn keys gitleaks' global allowlist lets through")
                 .isEmpty();
     }
 
@@ -80,8 +80,8 @@ class SyntheticSecretsTest {
     void noDrawYieldsAGithubTokenGitleaksAllowlists() {
         assertThat(firstDrawsOfSeedsAround(SEED_ENDING_A_GITHUB_TOKEN_IN_NULL, SyntheticSecrets::nextGithubToken))
                 .hasSize(DRAWS)
-                .filteredOn(token -> ALLOWLISTS.allow(GitleaksAllowlists.GITHUB_PAT, token))
-                .as("drawn tokens gitleaks' allowlists let through")
+                .filteredOn(ALLOWLISTS::allow)
+                .as("drawn tokens gitleaks' global allowlist lets through")
                 .isEmpty();
     }
 
