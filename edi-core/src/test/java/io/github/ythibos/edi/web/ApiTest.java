@@ -295,6 +295,21 @@ class ApiTest {
     }
 
     @Test
+    void showsAWorkersWholeOpenQuestionFromTheStore() throws Exception {
+        String worker = workerTokenFor("api-show");
+        send(as(worker, "/api/status", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(
+                "{\"state\":\"needs-decision\",\"key\":\"lamp-colour\",\"text\":\"Brass or copper?\\nThe brass one is heavier.\"}")));
+
+        HttpResponse<String> shown = get("/api/tasks/api-show/worker", TEXT);
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.body()).startsWith("api-show#1, implementation, on claude-sonnet-5-5 at high\nState: starting since ")
+                .contains("needs-decision (lamp-colour)\n  Brass or copper?\n  The brass one is heavier.\n",
+                        "Open question lamp-colour: it waits on the primary since ", "Steers (0)\nPipeline: no run yet.\n");
+        assertRefusal(get("/api/tasks/api-never-dispatched/worker", TEXT), 404, "No task is called api-never-dispatched.");
+    }
+
+    @Test
     void tellsAWorkerFromThePrimaryByItsTokenAndKeepsEachToItsCommands() throws Exception {
         String worker = workerTokenFor("api-worker");
 
@@ -559,6 +574,16 @@ class ApiTest {
                 .startsWith("Opus 5.5 · medium -- Context: 6% -- Session tokens: 58k (C 25k/!C 33k) -- 5-hour: 28% (")
                 .endsWith(") -- Branch: main* -- Cache: 43%\n");
         assertRefusal(forAWorker, 403, "edi statusline runs under the EDI home's own token, in the captain's terminal or the primary session.");
+    }
+
+    @Test
+    void showsTheOpenWorkerQuestionsUnderTheHomesOwnTokenAndToNoWorker() throws Exception {
+        HttpResponse<String> questions = get("/api/workers/questions", TEXT);
+        HttpResponse<String> toAWorker = send(as(workerTokenFor("api-questions"), "/api/workers/questions", TEXT).GET());
+
+        assertThat(questions.statusCode()).isEqualTo(200);
+        assertThat(questions.body()).containsAnyOf("No worker waits on an answer.", "Workers waiting on an answer");
+        assertRefusal(toAWorker, 403, "edi health runs under the EDI home's own token, in the captain's terminal or the primary session.");
     }
 
     @Test

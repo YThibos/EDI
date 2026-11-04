@@ -58,13 +58,52 @@ public class ProcessTable implements AutoCloseable {
         Path inside = realPathOf(directory);
         List<Long> holders = new ArrayList<>();
         try (DirectoryStream<Path> processes = Files.newDirectoryStream(PROCESSES, "[0-9]*")) {
-            processes.forEach(process -> workingDirectoryOf(process)
-                    .filter(cwd -> cwd.startsWith(inside))
-                    .ifPresent(_ -> holders.add(Long.parseLong(process.getFileName().toString()))));
+            processes.forEach(process -> {
+                if (linkIn(process, "cwd", inside)) {
+                    holders.add(Long.parseLong(process.getFileName().toString()));
+                }
+            });
         } catch (IOException unreadable) {
             throw new ProgramFailure("The process table cannot be read: " + unreadable.getMessage(), unreadable);
         }
         return holders;
+    }
+
+    public List<Long> heldIn(Path directory) {
+        Path inside = realPathOf(directory);
+        List<Long> holders = new ArrayList<>();
+        try (DirectoryStream<Path> processes = Files.newDirectoryStream(PROCESSES, "[0-9]*")) {
+            processes.forEach(process -> {
+                if (linkIn(process, "cwd", inside) || linkIn(process, "exe", inside)) {
+                    holders.add(Long.parseLong(process.getFileName().toString()));
+                }
+            });
+        } catch (IOException unreadable) {
+            throw new ProgramFailure("The process table cannot be read: " + unreadable.getMessage(), unreadable);
+        }
+        return holders;
+    }
+
+    public List<Long> treeOf(long pid) {
+        return ProcessHandle.of(pid)
+                .map(root -> Stream.concat(Stream.of(root), root.descendants()).map(ProcessHandle::pid).toList())
+                .orElseGet(List::of);
+    }
+
+    public List<Long> ancestryOf(long pid) {
+        List<Long> ancestry = new ArrayList<>();
+        Optional<ProcessHandle> process = ProcessHandle.of(pid);
+        while (process.isPresent()) {
+            ancestry.add(process.get().pid());
+            process = process.get().parent();
+        }
+        return ancestry;
+    }
+
+    public void stopEach(List<Long> pids, Duration grace) {
+        List<ProcessHandle> stopped = pids.stream().map(ProcessHandle::of).flatMap(Optional::stream).toList();
+        stopped.forEach(ProcessHandle::destroy);
+        escalations.submit(() -> killWhatOutlives(stopped, grace));
     }
 
     public List<List<String>> argumentsInTree(long pid) {
@@ -111,9 +150,13 @@ public class ProcessTable implements AutoCloseable {
         }
     }
 
-    private static Optional<Path> workingDirectoryOf(Path process) {
+    private static boolean linkIn(Path process, String link, Path inside) {
+        return linkOf(process, link).filter(target -> target.startsWith(inside)).isPresent();
+    }
+
+    private static Optional<Path> linkOf(Path process, String link) {
         try {
-            return Optional.of(Files.readSymbolicLink(process.resolve("cwd")));
+            return Optional.of(Files.readSymbolicLink(process.resolve(link)));
         } catch (IOException | SecurityException | UnsupportedOperationException unreadable) {
             return Optional.empty();
         }

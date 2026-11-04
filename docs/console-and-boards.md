@@ -46,8 +46,26 @@ When the scout cannot arm it again, the primary posts the round instead:
 
 ```sh
 edi board post "$EDI_HOME/data/tasks/<task-id>/board.html" --link <url> --questions 2
+edi board show <task-id> [--round 2]                                  # what the captain answered, without delivering it
 ```
 
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops ([research-boards](decisions/research-boards.md)).
 Each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` or by its card's `question` (with `option` or `answer`), or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word ([research-boards](decisions/research-boards.md)).
 A board stops listening when the captain ends its session or its task is cleaned up.
+
+## The terminal background
+
+[EDI-darkness.jpg](images/EDI-darkness.jpg) is EDI's face faded into the dark, 2752 by 1536 pixels, made as a terminal background.
+It travels with the repository, so every machine that has the checkout has the picture.
+
+A WezTerm background points at it from `wezterm.lua`, here with the checkout at `~/EDI`:
+
+```lua
+config.background = {
+  {
+    source = { File = wezterm.home_dir .. '/EDI/docs/images/EDI-darkness.jpg' },
+    width = '100%',
+    height = '100%',
+  },
+}
+```

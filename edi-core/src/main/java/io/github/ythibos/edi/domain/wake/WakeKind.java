@@ -23,6 +23,7 @@ public enum WakeKind {
     BUSY_TOO_LONG,
     HEAVY_RUNS_AT_ONCE,
     WAIT_ENDED,
+    QUESTION_UNANSWERED,
     HOLD_DUE,
     DRAFT_MERGED,
     DRAFT_CLOSED,

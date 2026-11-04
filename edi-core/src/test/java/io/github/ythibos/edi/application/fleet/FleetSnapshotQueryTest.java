@@ -36,6 +36,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.HoldKind;
@@ -53,6 +54,7 @@ class FleetSnapshotQueryTest {
 
     private static final MergeRequestAddress REQUEST =
             new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITLAB, "forge.example.org", "team/harness"), 5);
+    private static final StatusKey SOCKET = new StatusKey("socket");
 
     @TempDir
     private Path directory;
@@ -288,6 +290,31 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void putsAWorkerQuestionBeforeEdiWithHowLongItWaitedUntilASteerThatResolvesItIsAcknowledged() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
+        ask(lamp, "Which socket does the lamp take?");
+        home.clock().advance(Duration.ofMinutes(65));
+
+        WaitingOnTheCaptain asked = home.fleetSnapshot().snapshot().waiting();
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "The bayonet socket.", SOCKET, Actor.PRIMARY);
+        WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
+        home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
+        WaitingOnTheCaptain settled = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(asked.workerQuestions()).singleElement().satisfies(question -> {
+            assertThat(question.task().id()).isEqualTo(lamp.id());
+            assertThat(question.question()).isEqualTo("Which socket does the lamp take?");
+            assertThat(question.waited()).isEqualTo(Duration.ofMinutes(65));
+        });
+        assertThat(asked.isEmpty()).isTrue();
+        assertThat(asked.hasNothingWaiting()).isFalse();
+        assertThat(steered.workerQuestions()).hasSize(1);
+        assertThat(settled.workerQuestions()).isEmpty();
+        assertThat(settled.hasNothingWaiting()).isTrue();
+    }
+
+    @Test
     void keepsAnAnsweredDecisionOutOfALaterHold() {
         add(ship("lamp-fitting", "Fit the lamp"));
         raise("lamp-fitting");
@@ -373,6 +400,13 @@ class FleetSnapshotQueryTest {
         Worker reported = home.workers().latestOf(task.id()).orElseThrow().reported(report, TestHome.START);
         home.workers().update(reported);
         home.events().record(new StatusReported(task.id(), reported.id(), report), Actor.worker(reported.id()), TestHome.START);
+    }
+
+    private void ask(Task task, String question) {
+        StatusReport report = new StatusReport(StatusState.NEEDS_DECISION, SOCKET, null, question);
+        Worker reported = home.workers().latestOf(task.id()).orElseThrow().reported(report, home.clock().now());
+        home.workers().update(reported);
+        home.events().record(new StatusReported(task.id(), reported.id(), report), Actor.worker(reported.id()), home.clock().now());
     }
 
     private void checkTheMechanicalDone(Task task, boolean accepted) {

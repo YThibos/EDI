@@ -20,6 +20,7 @@ import io.github.ythibos.edi.application.worker.NoticeHeavyRunsAtOnce;
 import io.github.ythibos.edi.application.worker.NoticeMissedLaunches;
 import io.github.ythibos.edi.application.worker.NoticeMissedStops;
 import io.github.ythibos.edi.application.worker.NoticeOverdueSteers;
+import io.github.ythibos.edi.application.worker.RemindOfUnansweredQuestions;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 @Component
@@ -40,13 +41,15 @@ public class SupervisionRound implements AutoCloseable {
     private final FollowThePresence presence;
     private final NoticeTheUnreadableCalendar unreadableCalendar;
     private final NoticeHeavyRunsAtOnce heavyRuns;
+    private final RemindOfUnansweredQuestions unansweredQuestions;
     private final ExecutorService checks = Executors.newVirtualThreadPerTaskExecutor();
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
     public SupervisionRound(NoticeOverdueSteers overdueSteers, NoticeMissedLaunches missedLaunches,
             LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, NoticeFullContexts fullContexts,
             NoticeMissedStops missedStops, JudgeWorkers judgeWorkers, ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals,
-            FollowThePresence presence, NoticeTheUnreadableCalendar unreadableCalendar, NoticeHeavyRunsAtOnce heavyRuns) {
+            FollowThePresence presence, NoticeTheUnreadableCalendar unreadableCalendar, NoticeHeavyRunsAtOnce heavyRuns,
+            RemindOfUnansweredQuestions unansweredQuestions) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
@@ -60,6 +63,7 @@ public class SupervisionRound implements AutoCloseable {
         this.presence = presence;
         this.unreadableCalendar = unreadableCalendar;
         this.heavyRuns = heavyRuns;
+        this.unansweredQuestions = unansweredQuestions;
     }
 
     @Scheduled(fixedDelayString = "${edi.supervision.round:PT30S}", initialDelayString = "${edi.supervision.round:PT30S}")
@@ -69,6 +73,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("notice workers whose context is full", fullContexts::notice);
         attempt("wake workers whose stop was missed", missedStops::notice);
         attempt("judge the workers", judgeWorkers::judge);
+        attempt("raise unanswered worker questions again", unansweredQuestions::remind);
         attempt("resume a worker after its usage limit", usageLimits::resumeTheNextOneDue);
         attempt("notice holds whose date arrived", dueHolds::notice);
         attempt("launch deferred dispatches", deferredDispatches::launchWhereThereIsRoom);
