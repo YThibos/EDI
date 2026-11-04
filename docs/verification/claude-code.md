@@ -209,8 +209,14 @@ The evidence is the structure of records in existing session transcripts, read w
 - `AskUserQuestion`'s own input schema lists `answers` and `annotations` as filled in by the permission component that shows the dialog, so the model's call carries neither.
 - A prompt holding pasted text records it between `<pasted_content id="<id>">` and `</pasted_content id="<id>">`, each tag on a line of its own, with the same short id on both, and the text the captain typed around it outside the tags.
 
-Not verified, and assumed by the hooks until a live run checks them:
+## Dialog answers and pasted text in hook payloads, on 2.1.317
 
-- that the `PostToolUse` payload's `tool_response` for `AskUserQuestion` equals the transcript's `toolUseResult`, which is why the hook also reads `answers` and `annotations` from `tool_input`;
-- that `PreToolUse` fires before the dialog fills in the answers, so a call that arrives already answered was not shown to the captain;
-- that the `UserPromptSubmit` payload's `prompt` carries the paste tags as the transcript records them.
+Verified on Claude Code 2.1.317 on WSL2 Ubuntu 24.04, 03/11/2026, for the hooks that store the captain's messages ([captains-word](../decisions/captains-word.md)) and the guard on an answered dialog ([pre-tool-guard](../decisions/pre-tool-guard.md)).
+A throwaway interactive session on a private tmux server ran with a settings file passed with `--settings` whose `UserPromptSubmit`, `PreToolUse` (matcher `AskUserQuestion`) and `PostToolUse` (matcher `AskUserQuestion`) hooks saved the JSON they received.
+Six lines were pasted into the composer with a bracketed paste (`tmux paste-buffer -p`), between typed text, and the model was asked to put one question to the user in a dialog, whose option was then chosen.
+
+- The composer showed the paste as "[Pasted text #1 +6 lines]", and the `UserPromptSubmit` payload's `prompt` carried it as the transcript records it: the typed text, a blank line, `<pasted_content id="3615">` on its own line, the six pasted lines, `</pasted_content id="3615">` on its own line, a blank line, then the text typed after the paste.
+- `PreToolUse` for `AskUserQuestion` fired while the dialog was on screen, before any answer, and its `tool_input` held only `questions`, with neither `answers` nor `annotations`.
+- `PostToolUse` after an option was chosen carried a `tool_response` with `questions`, `answers`, such as `{"Which colour?": "Blue"}`, and `annotations` (`{}`), the shape of the transcript's `toolUseResult`, and its `tool_input` carried the same `answers` and `annotations`.
+
+Not verified: a note on a chosen option, since the 2.1.317 dialog offered no key to add one, so a non-empty `annotations` was not observed in a hook payload.
