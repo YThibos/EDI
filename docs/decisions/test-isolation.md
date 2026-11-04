@@ -34,6 +34,7 @@ A `TestHome` helper that reads and writes several rows does so in one transactio
 A test that follows the log several times holds one `EventFollowers` for its home, as the core holds one, instead of building the followers and their trackers again for every round.
 A test that needs an external tool skips with a reason when the tool is missing, time comes only from the `Clock` port, and nothing sleeps except a helper waiting for a real child with a hard timeout.
 Every Spring test context holds a `RecordingBrowser` in place of `CaptainsBrowser`: `EveryTestCoreRecordsItsBrowser`, a context customiser registered in `edi-core`'s test `META-INF/spring.factories`, replaces the bean before the core starts, so no test core opens the captain's browser and a test reads the pages it would have opened from the recorder; `EveryTestCoreRecordsItsBrowserTest` pins it.
+Every Spring test context holds a `RecordingCalendar` in place of `OutlookCalendar` the same way, through `EveryTestCoreReadsARecordingCalendar`, so no test core reads the captain's Outlook through `powershell.exe` even on a machine whose profile reads it; `EveryTestCoreReadsARecordingCalendarTest` pins it with a profile that reads Outlook, and the tests of the calendar itself run against the `WindowsStandIn`, whose failures say they are a stand-in's.
 The root `pom.xml` sets JUnit's default timeout to 3 minutes, which catches a test that hangs, while a test's speed is judged by its time on an idle machine, a few seconds of work at most.
 Every helper that waits for real work, a child process, a tmux pane, a listener thread or an event stream, waits up to `Patience.FOR_REAL_WORK`, one minute, so a stuck child fails with its own message before the test's timeout ends it; among them are `TestProcesses`, `StandInScripts`, `FixtureRepository`, `PrePushHook`, `PrivateTmuxServer`, `FakeBoardHost` and `InstalledPrograms`.
 A test asserts what an event shows, not how soon it came, as `ProcessTableTest` reads a process's start between the starts of two processes started around it.
@@ -58,6 +59,7 @@ A test's time on a busy machine follows the work every other build asks for, whi
 - Isolating git in `ExternalPrograms` - EDI itself must read the captain's configuration for proxies and credentials.
 - Spring Boot's logging system in the test JVMs - each Spring test core resets logback's shared context as it starts, and a concurrent test that logs in that moment finds no appender.
 - A stand-in browser named in each Spring test's properties - a test that forgets it opens the captain's browser, as `WaitControllerTest` did.
+- Leaving the calendar to each test's machine profile - no test core reads Outlook today only because no test profile asks it to, and the first that does would read the captain's calendar.
 - Fewer test threads, or the slowest classes run alone - slower everywhere, or the suite stopped while they run.
 - A long timeout only for the tests tagged `adapter` - application tests on a test home and the architecture scans overran as often, and they read and write the disk too.
 - A timeout scaled by the machine's load average - the limit would still depend on what other builds do, measured a minute late.
@@ -95,3 +97,4 @@ When JUnit offers process tracking, a test needs the developer's git configurati
 - 27/10/2026: AT-32's canary test and AT-47's import still outlived 30 seconds with several workers building at once, so the default timeout is 3 minutes, helpers and the native tests wait a minute for real work and `ProcessTableTest` no longer reads a start against a fixed window (EDI-106).
 - 28/10/2026: `WaitControllerTest`'s runs opened the sitrep in the captain's browser, so every Spring test core records its browser instead (EDI-120).
 - 28/10/2026: a full build warned that loggers had no appenders while a Spring test core reset logback, so the test JVMs leave logback to configure itself (EDI-120).
+- 30/10/2026: a run on the captain's machine logged an unreadable Outlook, which came from the stand-in's own failures, so every test core now reads a recording calendar and the stand-in's failures say what they are (EDI-139).
