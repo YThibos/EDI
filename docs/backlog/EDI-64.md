@@ -9,6 +9,7 @@
 | Size | S |
 | Blocked by | nothing |
 | Status | open |
+| Issue | [#151](https://github.com/YThibos/EDI/issues/151) |
 | Cloud session | ok |
 
 ## Goal
@@ -50,4 +51,4 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), slice 13, Q7 b.
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.

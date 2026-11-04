@@ -9,6 +9,7 @@
 | Size | M |
 | Blocked by | [EDI-90](EDI-90.md), [EDI-133](EDI-133.md) |
 | Status | open |
+| Issue | [#156](https://github.com/YThibos/EDI/issues/156) |
 | Cloud session | ok |
 
 ## Goal
@@ -77,4 +78,4 @@ EDI-133 split the report in two, and this item builds on that split rather than 
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.

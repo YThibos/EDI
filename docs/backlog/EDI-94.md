@@ -9,6 +9,7 @@
 | Size | M |
 | Blocked by | nothing |
 | Status | folded: into [EDI-161](EDI-161.md), on the captain's word of 3 November 2026, which books the core's measured minutes and drives the ticket from the stage |
+| Issue | [#120](https://github.com/YThibos/EDI/issues/120) |
 | Cloud session | ok |
 
 ## Goal
@@ -69,4 +70,4 @@ The research is in [the EDI-74 plan](research/EDI-74-plan.md), section 5.1 (line
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.

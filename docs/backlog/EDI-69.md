@@ -9,6 +9,7 @@
 | Size | S |
 | Blocked by | [EDI-89](EDI-89.md) |
 | Status | dropped: the captain dropped it on 3 November 2026, since GitHub Actions runs on the repository again and [EDI-148](EDI-148.md) covers a project without CI |
+| Issue | [#152](https://github.com/YThibos/EDI/issues/152) |
 | Cloud session | ok |
 
 ## Goal
@@ -50,4 +51,4 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), finding F10 and s
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.
