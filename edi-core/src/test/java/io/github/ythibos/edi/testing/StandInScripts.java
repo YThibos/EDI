@@ -11,7 +11,16 @@ public final class StandInScripts {
 
     private static final String WRITE_AND_MARK_EXECUTABLE = "cat > \"$1\" && chmod 755 \"$1\"";
 
+    private static final String COPY_KEEPING_MODE = "cp \"$1\" \"$2\"";
+
     private StandInScripts() {
+    }
+
+    public static Path copied(Path program, Path copy) throws IOException {
+        Files.createDirectories(copy.getParent());
+        Process copier = new ProcessBuilder("/bin/sh", "-c", COPY_KEEPING_MODE, "sh", program.toString(), copy.toString()).redirectErrorStream(true).start();
+        awaitWritten(copier, copy);
+        return copy;
     }
 
     public static Path installed(Path script, String content) throws IOException {
