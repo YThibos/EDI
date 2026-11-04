@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.worker.OpenWorkerQuestions;
+import io.github.ythibos.edi.application.worker.OpenWorkerQuestionsQuery;
 import io.github.ythibos.edi.application.worker.PeekWorker;
 import io.github.ythibos.edi.application.worker.RecordStatus;
 import io.github.ythibos.edi.application.worker.RelaunchWorker;
@@ -32,9 +34,11 @@ class WorkerController {
     private final WorkerDetailQuery detail;
     private final RelaunchWorker relaunchWorker;
     private final StopWorker stopWorker;
+    private final OpenWorkerQuestionsQuery questions;
 
     WorkerController(RecordStatus recordStatus, WorkerInbox inbox, SteerWorker steerWorker, WorkerListQuery list, PeekWorker peekWorker,
-            WorkerDetailQuery detail, RelaunchWorker relaunchWorker, StopWorker stopWorker) {
+            WorkerDetailQuery detail, RelaunchWorker relaunchWorker, StopWorker stopWorker,
+            OpenWorkerQuestionsQuery questions) {
         this.recordStatus = recordStatus;
         this.inbox = inbox;
         this.steerWorker = steerWorker;
@@ -43,6 +47,7 @@ class WorkerController {
         this.detail = detail;
         this.relaunchWorker = relaunchWorker;
         this.stopWorker = stopWorker;
+        this.questions = questions;
     }
 
     @PostMapping("/api/status")
@@ -70,6 +75,12 @@ class WorkerController {
     @GetMapping("/api/workers")
     WorkerList workers() {
         return list.serving();
+    }
+
+    @GetMapping("/api/workers/questions")
+    OpenWorkerQuestions openQuestions(Caller caller) {
+        caller.requireTheHomeToken("edi health");
+        return questions.open();
     }
 
     @GetMapping("/api/tasks/{reference}/worker")

@@ -165,6 +165,8 @@ import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.tracker.Trackers;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.wake.WakeStreams;
+import io.github.ythibos.edi.application.worker.OpenWorkerQuestionsQuery;
+import io.github.ythibos.edi.application.worker.RemindOfUnansweredQuestions;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -899,6 +901,14 @@ public final class TestHome {
 
     public NoticeMissedStops noticeMissedStops() {
         return new NoticeMissedStops(workerList(), workers, runtime, steerWorker(), events, clock, transaction);
+    }
+
+    public RemindOfUnansweredQuestions remindOfUnansweredQuestions() {
+        return new RemindOfUnansweredQuestions(workers, inbox, presence, events, machineProfile(), clock, transaction);
+    }
+
+    public OpenWorkerQuestionsQuery openWorkerQuestions() {
+        return new OpenWorkerQuestionsQuery(workers, clock, transaction);
     }
 
     public JudgeWorkers judgeWorkers() {

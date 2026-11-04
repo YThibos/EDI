@@ -30,10 +30,12 @@ class HealthCommandTest {
     private Path home;
 
     private static final String LIVE_WAIT = "The wake stream is live: edi wait --follow has run since 2026-10-26 20:31 CET.\n";
+    private static final String NO_QUESTION = "No worker waits on an answer.\n";
     private static final String MISSING_WAIT = "No edi wait is live while 2 tasks are in flight: start edi wait --follow alone with the Monitor tool.\n";
 
     private HttpServer core;
     private String primaryWait = LIVE_WAIT;
+    private String openQuestions = NO_QUESTION;
     private final StringWriter out = new StringWriter();
     private final StringWriter err = new StringWriter();
 
@@ -51,8 +53,19 @@ class HealthCommandTest {
         int exitCode = edi("health");
 
         assertThat(exitCode).isZero();
-        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT);
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT + NO_QUESTION);
         assertThat(err.toString()).isEmpty();
+    }
+
+    @Test
+    void listsEachWorkerQuestionThatWaitsOnAnAnswerWithItsAge() throws IOException {
+        openQuestions = "Workers waiting on an answer (1):\n  fit-lamp#1 (socket), 25 minutes: Which socket?\n";
+        int port = startStubCoreAnswering(200);
+
+        int exitCode = edi("health");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT + openQuestions);
     }
 
     @Test
@@ -63,7 +76,7 @@ class HealthCommandTest {
         int exitCode = edi("health");
 
         assertThat(exitCode).isZero();
-        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + MISSING_WAIT);
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + MISSING_WAIT + NO_QUESTION);
     }
 
     @Test
@@ -150,6 +163,12 @@ class HealthCommandTest {
         });
         core.createContext("/api/primary/wait", exchange -> {
             byte[] body = primaryWait.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        core.createContext("/api/workers/questions", exchange -> {
+            byte[] body = openQuestions.getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(200, body.length);
             exchange.getResponseBody().write(body);
             exchange.close();

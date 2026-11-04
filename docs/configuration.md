@@ -26,7 +26,7 @@ The session-start digest lists any of the machine profile, the personal configur
 `config/machine.yaml` describes this machine:
 
 - `workers` lists the models workers may run, strongest first, the tools they never get and their permission mode.
-- `supervision.staleAfter` and `supervision.pauseResurface` tune the supervision round, PT20M and PT4H by default (see [Workers](workers.md)).
+- `supervision.staleAfter` and `supervision.pauseResurface` tune the supervision round, PT20M and PT4H by default, and `supervision.questionReminder` sets how often a worker's unanswered question is raised to the primary again, PT10M by default (see [Workers](workers.md)).
 - `tracker` says whether this machine reaches a JIRA instance or none, and `time` switches the activity ledger and the brief's `worked:` line (see [Trackers and time](trackers-and-time.md)).
 - `memory.startupBudgetTokens` caps the startup memory, 18,000 by default.
 - `notify.windowsToast: true` raises Windows notifications while the captain is quiet or away.
