@@ -115,7 +115,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - | delivered | [#169](https://github.com/YThibos/EDI/issues/169) |
 | 54 | [EDI-153](EDI-153.md) | An unanswered worker question comes back to the primary until it is answered | S | - | open | [#170](https://github.com/YThibos/EDI/issues/170) |
 | 55 | [EDI-154](EDI-154.md) | The turn report shows every worker waiting on the primary | XS | - | open | [#171](https://github.com/YThibos/EDI/issues/171) |
-| 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | open | [#173](https://github.com/YThibos/EDI/issues/173) |
+| 56 | [EDI-155](EDI-155.md) | An introspect skill turns a failure of mine into backlogged hard rules, its evidence gathered by a script | M | - | delivered | [#173](https://github.com/YThibos/EDI/issues/173) |
 | 60 | [EDI-162](EDI-162.md) | edi worker show prints a worker's full last status and its open question | XS | - | open | [#179](https://github.com/YThibos/EDI/issues/179) |
 | 62 | [EDI-164](EDI-164.md) | Every rule, guard and hook records when it fires, and the core records its own health | M | EDI-132 | open | [#182](https://github.com/YThibos/EDI/issues/182) |
 | 63 | [EDI-165](EDI-165.md) | A weekly gardening round measures slips and rules and drafts hard rules on a board | M | EDI-155, EDI-164 | open | [#183](https://github.com/YThibos/EDI/issues/183) |
