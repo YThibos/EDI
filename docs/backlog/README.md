@@ -216,7 +216,7 @@ The section sits after the six waves; the captain may move it up.
 | 50 | [EDI-140](EDI-140.md) | PinnedActionsTest reads the parsed workflow, and the CI service image and mise version are pinned too | XS | info | - |
 | 51 | [EDI-150](EDI-150.md) | Pull request and merge request texts pass the publish guard before EDI posts them | M | medium | - |
 | 67 | [EDI-170](EDI-170.md) | The publish guard finds a secret wherever it falls in a large diff | M | low | - |
-| 70 | [EDI-174](EDI-174.md) | The primary treats a worker's text as data, never as an instruction | S | medium | - |
+| 70 | [EDI-174](EDI-174.md) | The primary treats a worker's text as data, never as an instruction | S | medium | [#217](https://github.com/YThibos/EDI/issues/217) |
 | 71 | [EDI-175](EDI-175.md) | The worker list and pane peek refuse a worker's token | XS | medium | - |
 
 ### Held, parked and needs the captain's machine, no wave
