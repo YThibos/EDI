@@ -15,6 +15,7 @@ public final class FakeBoardHost implements ResearchBoardHost {
 
     private final Deque<BoardFeedback> rounds = new ArrayDeque<>();
     private final List<String> listeners = new ArrayList<>();
+    private final List<Path> boards = new ArrayList<>();
     private boolean holding;
     private CountDownLatch polled = new CountDownLatch(1);
     private final CountDownLatch neverOpens = new CountDownLatch(1);
@@ -22,7 +23,7 @@ public final class FakeBoardHost implements ResearchBoardHost {
 
     @Override
     public BoardFeedback awaitFeedback(Path board, String listener) {
-        BoardFeedback next = nextFor(listener);
+        BoardFeedback next = nextFor(board, listener);
         if (next != null) {
             return next;
         }
@@ -53,6 +54,10 @@ public final class FakeBoardHost implements ResearchBoardHost {
         return List.copyOf(listeners);
     }
 
+    public synchronized List<Path> boards() {
+        return List.copyOf(boards);
+    }
+
     public void awaitStopOfTheHeldPoll() throws InterruptedException {
         if (!stopped.await(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             throw new AssertionError("The held poll was not stopped within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds.");
@@ -65,7 +70,8 @@ public final class FakeBoardHost implements ResearchBoardHost {
         }
     }
 
-    private synchronized BoardFeedback nextFor(String listener) {
+    private synchronized BoardFeedback nextFor(Path board, String listener) {
+        boards.add(board);
         listeners.add(listener);
         polled.countDown();
         if (!rounds.isEmpty()) {

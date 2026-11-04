@@ -40,15 +40,15 @@ class BacklogItemSkillTest {
 
             ### Wave 1: no wait
 
-            | Order | Item | Title | Size | Blocked by | Status | Issue |
-            |---|---|---|---|---|---|---|
-            | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - | open | - |
+            | Order | Item | Title | Size | Blocked by |
+            |---|---|---|---|---|
+            | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - |
 
             ### Held, parked and needs the captain's machine, no wave
 
-            | Order | Item | Title | Size | Blocked by | Status | Issue |
-            |---|---|---|---|---|---|---|
-            | - | [EDI-110](EDI-110.md) | The header hides its slots | XS | - | held: until the captain's word. | - |
+            | Order | Item | Title | Size | Blocked by |
+            |---|---|---|---|---|
+            | - | [EDI-110](EDI-110.md) | The header hides its slots | XS | - |
 
             ## Not in the backlog
             """;
@@ -157,12 +157,13 @@ class BacklogItemSkillTest {
                 | Size | S |
                 | Blocked by | [EDI-85](EDI-85.md) |
                 | Status | open |
+                | Issue | [#9](https://github.com/example/edi/issues/9) |
                 | Cloud session | ok |
 
                 ## Goal
                 """).contains("## How to verify").contains("## Delivery");
         assertThat(upstream.run("diff", "main", BRANCH, "--", INDEX)).containsOnlyOnce("\n+|").contains("""
-                +| 2 | [EDI-143](EDI-143.md) | Harbour lamps light themselves at dusk | S | EDI-85 | open | [#9](https://github.com/example/edi/issues/9) |""");
+                +| 2 | [EDI-143](EDI-143.md) | Harbour lamps light themselves at dusk | S | EDI-85 |""");
         assertThat(upstream.run("log", "--format=%B", "main.." + BRANCH).strip()).isEqualTo("""
                 EDI-143 Name the issue of the backlog item
 
@@ -270,9 +271,9 @@ class BacklogItemSkillTest {
                 .write(INDEX, THE_INDEX.replace("### Held", """
                         ### Wave 2: after the stage
 
-                        | Order | Item | Title | Size | Blocked by | Status | Issue |
-                        |---|---|---|---|---|---|---|
-                        | 5 | [EDI-86](EDI-86.md) | The stage is shown | S | EDI-85 | open | - |
+                        | Order | Item | Title | Size | Blocked by |
+                        |---|---|---|---|---|
+                        | 5 | [EDI-86](EDI-86.md) | The stage is shown | S | EDI-85 |
 
                         ### Held"""))
                 .commit("EDI-117 Add the second wave")
@@ -283,7 +284,7 @@ class BacklogItemSkillTest {
         assertThat(run.exitCode()).as(run.output()).isZero();
         assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("| Wave and order | wave 1, order 6 |");
         assertThat(upstream.run("diff", "main", BRANCH, "--", INDEX)).contains("""
-                 | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - | open | - |
+                 | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - |
                 +| 6 | [EDI-143](EDI-143.md) |""");
     }
 
@@ -291,7 +292,7 @@ class BacklogItemSkillTest {
     void aNewRowTakesNoOrderThatABranchAwaitingMergeHasTaken() throws IOException, InterruptedException {
         FixtureRepository.at(directory.resolve("seed"))
                 .branch("chore/EDI-144")
-                .write(INDEX, THE_INDEX.replace("open | - |\n","open | - |\n| 2 | [EDI-144](EDI-144.md) | The tide table is posted | S | - | open | - |\n"))
+                .write(INDEX, THE_INDEX.replace("stored | M | - |\n","stored | M | - |\n| 2 | [EDI-144](EDI-144.md) | The tide table is posted | S | - |\n"))
                 .commit("EDI-144 Add the backlog item: The tide table is posted")
                 .run("push", "--quiet", directory.resolve("upstream.git").toString(), "chore/EDI-144");
 
@@ -304,7 +305,7 @@ class BacklogItemSkillTest {
     @Test
     void aNewKeyThatAlreadyNamesOtherWorkUpstreamIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
         FixtureRepository.at(directory.resolve("seed"))
-                .write(INDEX, THE_INDEX.replace("open | - |\n", "open | - |\n| 2 | [EDI-143](EDI-143.md) | The beacon rotates every ten seconds | S | - | open | - |\n"))
+                .write(INDEX, THE_INDEX.replace("stored | M | - |\n", "stored | M | - |\n| 2 | [EDI-143](EDI-143.md) | The beacon rotates every ten seconds | S | - |\n"))
                 .commit("EDI-143 Add the backlog item: The beacon rotates every ten seconds")
                 .run("push", "--quiet", directory.resolve("upstream.git").toString(), "main");
 
