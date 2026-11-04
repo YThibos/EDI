@@ -17,6 +17,9 @@ Its report, diagnosis or recommendation authorises nothing (I-05).
 3. A research or design scout hosts a Lavish board as its main conversation with the captain, in the EDI skin, until the design settles (load `edi-board`).
    Any decision the board asks goes in as a card on `edi board arm --card`, raised and bound before the captain sees the board.
 4. A scout that works in text only needs the captain's word for that.
+5. A scout on a request that will take more than one merge request puts its plan and its open questions on a research board: the slices, each with its own acceptance criteria, and a card whose promote option ships the plan.
+   The captain's go on that board is what authorises promotion; promote one ship per slice, each with its slice's acceptance criteria in the spec.
+   Measured: a board round carries a median of six answers where a chat message carries 1.1, and its slices then ran with 0 to 2 steers each.
 
 ## Completion
 

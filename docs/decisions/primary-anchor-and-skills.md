@@ -49,3 +49,4 @@ When the anchor nears its budget, Claude Code gives skills command aliases or ch
 - 23/10/2026: the anchor gained a Character section, and the `personality` and `edi-personality` skills joined it (EDI-31).
 - 27/10/2026: EDI-95 marked a missing `edi wait` on the status line while work is in flight.
 - 29/10/2026: the `edi-backlog-item` skill joined the `edi-` skills, the first with a script beside it, to put EDI's own work on the upstream backlog in one step (EDI-142).
+- 03/11/2026: a request that takes more than one merge request goes through a scout's board first, and the `edi-ship` and `edi-scout` skills say so, since board-first features reached a sliced plan in a working day (EDI-75).

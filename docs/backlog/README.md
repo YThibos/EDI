@@ -107,7 +107,7 @@ The Issue column shows `-` until the item's issue is opened.
 | Order | Item | Title | Size | Blocked by | Status | Issue |
 |---|---|---|---|---|---|---|
 | 1 | [EDI-81](EDI-81.md) | Learnings name their ticket | S | - | delivered | - |
-| 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | open | - |
+| 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - | delivered | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - | open | - |
 | 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - | open | - |
 | 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - | delivered | [#87](https://github.com/YThibos/EDI/issues/87) |

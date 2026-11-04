@@ -8,7 +8,7 @@
 | Source | EDI-75 change 1 |
 | Size | S |
 | Blocked by | nothing |
-| Status | open |
+| Status | delivered |
 | Cloud session | ok |
 
 ## Goal
