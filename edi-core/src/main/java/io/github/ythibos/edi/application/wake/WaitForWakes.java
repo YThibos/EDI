@@ -75,13 +75,13 @@ public class WaitForWakes {
                 return Optional.<WakeDelivery>empty();
             }
             Instant now = clock.now();
-            List<QueuedWake> pending = wakes.awaitingDeliveryTo(stream.session());
             Presence captain = presence.current().orElseGet(() -> Presence.presentSince(now));
-            if (pending.isEmpty() || !theBatchIsDue(pending, captain, now)) {
+            List<QueuedWake> due = dueAmong(wakes.awaitingDeliveryTo(stream.session()), captain, now);
+            if (due.isEmpty()) {
                 return Optional.<WakeDelivery>empty();
             }
-            wakes.offer(pending, stream.id());
-            return Optional.of(new WakeDelivery(pending, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(), outages.open().size(),
+            wakes.offer(due, stream.id());
+            return Optional.of(new WakeDelivery(due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(), outages.open().size(),
                     captain, stream.follows()));
         });
     }
@@ -90,11 +90,19 @@ public class WaitForWakes {
         transaction.executeWithoutResult(_ -> wakes.withdraw(undelivered.wakes()));
     }
 
-    private boolean theBatchIsDue(List<QueuedWake> pending, Presence captain, Instant now) {
-        if (!captain.keepsTheChatQuiet()) {
-            return true;
+    private List<QueuedWake> dueAmong(List<QueuedWake> pending, Presence captain, Instant now) {
+        if (!captain.keepsTheChatQuiet() || theBatchIsDue(pending, now)) {
+            return pending;
         }
-        Instant gatheredSince = pending.stream().map(QueuedWake::raisedAt).min(Instant::compareTo).orElse(now);
-        return !now.isBefore(gatheredSince.plus(personal.presence().quietBatch()));
+        return pending.stream().filter(queued -> queued.wake().kind().isSettledByThePrimary()).toList();
+    }
+
+    private boolean theBatchIsDue(List<QueuedWake> pending, Instant now) {
+        return pending.stream()
+                .filter(queued -> !queued.wake().kind().isSettledByThePrimary())
+                .map(QueuedWake::raisedAt)
+                .min(Instant::compareTo)
+                .filter(gatheredSince -> !now.isBefore(gatheredSince.plus(personal.presence().quietBatch())))
+                .isPresent();
     }
 }

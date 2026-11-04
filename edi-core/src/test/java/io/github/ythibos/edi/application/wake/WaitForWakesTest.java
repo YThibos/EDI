@@ -240,17 +240,43 @@ class WaitForWakesTest {
     void gathersWakesIntoOneBatchWhileTheCaptainKeepsTheChatQuiet() {
         WakeStream stream = followedBy(primarySession());
         home.changePresence().quiet();
-        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
 
         assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
         home.clock().advance(Duration.ofMinutes(29));
-        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The spare lamp broke too.");
         assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
         home.clock().advance(Duration.ofMinutes(1));
         WakeDelivery batch = home.waitForWakes().deliverTo(stream).orElseThrow();
 
-        assertThat(batch.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.BLOCKED, WakeKind.FAILED);
+        assertThat(batch.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.FAILED, WakeKind.FAILED);
         assertThat(batch.presence().keepsTheChatQuiet()).isTrue();
+    }
+
+    @Test
+    void deliversAtOnceInQuietTheWakesThePrimarySettlesAloneAndKeepsTheRestForTheBatch() {
+        WakeStream stream = followedBy(primarySession());
+        home.changePresence().quiet();
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("nm-01RUN-review"), null, "Fix the finding or skip it?");
+
+        WakeDelivery atOnce = home.waitForWakes().deliverTo(stream).orElseThrow();
+        home.waitForWakes().heard(stream.session(), new StreamPoll(stream.id(), home.processes().ownId(), true,
+                atOnce.wakes().stream().map(QueuedWake::number).toList(), false));
+        home.clock().advance(Duration.ofMinutes(10));
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("socket"), null, "The socket is missing.");
+        WakeDelivery theBlock = home.waitForWakes().deliverTo(stream).orElseThrow();
+        home.waitForWakes().heard(stream.session(), new StreamPoll(stream.id(), home.processes().ownId(), true,
+                theBlock.wakes().stream().map(QueuedWake::number).toList(), false));
+        boolean failureHeldBack = home.waitForWakes().deliverTo(stream).isEmpty();
+        home.clock().advance(Duration.ofMinutes(20));
+        WakeDelivery batch = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        assertThat(atOnce.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
+        assertThat(atOnce.presence().keepsTheChatQuiet()).isTrue();
+        assertThat(theBlock.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.BLOCKED);
+        assertThat(failureHeldBack).isTrue();
+        assertThat(batch.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.FAILED);
     }
 
     private UUID primarySession() {
