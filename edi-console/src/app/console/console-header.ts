@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import { PresenceChoice, PresenceShown } from './sitrep';
 import { shipDay, shipTime } from './stardate';
@@ -27,8 +27,22 @@ export class ConsoleHeader {
     }
     return presence.demo ? 'demo' : presence.mode;
   });
+  protected readonly awayOffered = computed(() => this.mode() === 'present' || this.mode() === 'quiet');
   protected readonly awayOpen = signal(false);
   protected readonly mandate = signal('');
+
+  constructor() {
+    effect(() => {
+      if (!this.awayOffered()) {
+        this.closeAway();
+      }
+    });
+  }
+
+  protected choose(choice: PresenceChoice): void {
+    this.closeAway();
+    this.presenceChosen.emit(choice);
+  }
 
   protected goAway(): void {
     this.awayChosen.emit(this.mandate().trim());
