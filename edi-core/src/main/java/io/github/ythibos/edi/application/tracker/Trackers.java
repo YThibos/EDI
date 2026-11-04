@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.tracker;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -8,6 +9,7 @@ import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TrackedProject;
 
@@ -28,6 +30,13 @@ public class Trackers {
                 .filter(tracker -> tracker.kind() == project.tracker())
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No adapter serves " + project.tracker().word() + " trackers."));
+    }
+
+    public Optional<String> browseAddressOf(ProjectEntry project, WorkKey key) {
+        if (project.tracker().isExternal() && machine.tracker().kind() != project.tracker()) {
+            return Optional.empty();
+        }
+        return trackers.stream().filter(tracker -> tracker.kind() == project.tracker()).findFirst().flatMap(tracker -> tracker.browseAddressOf(key));
     }
 
     public TrackedProject tracked(ProjectEntry project) {

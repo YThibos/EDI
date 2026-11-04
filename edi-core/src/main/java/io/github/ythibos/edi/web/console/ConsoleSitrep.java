@@ -2,6 +2,9 @@ package io.github.ythibos.edi.web.console;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+
+import io.github.ythibos.edi.application.fleet.TaskLinks;
 
 public record ConsoleSitrep(
         String schema,
@@ -19,7 +22,8 @@ public record ConsoleSitrep(
         List<Landed> landed,
         int landedTotal,
         List<Charted> charted,
-        int chartedTotal) {
+        int chartedTotal,
+        Map<String, TaskLinks> links) {
 
     public static final String EDI_SITREP_V1 = "edi-sitrep.v1";
 
@@ -32,6 +36,7 @@ public record ConsoleSitrep(
         ongoing = List.copyOf(ongoing);
         landed = List.copyOf(landed);
         charted = List.copyOf(charted);
+        links = Map.copyOf(links);
     }
 
     public record PresenceShown(String mode, boolean demo, String words) {

@@ -8,8 +8,9 @@
         <div class="sr-row__main">
           <div class="sr-row__title">{{ landed.title }}</div>
           <div class="sr-row__sub">{{ projectsOf(landed.projects, landed.task) }} · {{ landed.kind }} · {{ stardate(landed.landedAt, zone()) }}</div>
+          <app-link-chips [links]="links()[landed.task]" />
         </div>
-        @if (landed.draft; as draft) {
+        @if (!links()[landed.task]?.request && landed.draft; as draft) {
           <a class="sr-row__pr" [href]="draft" [title]="draft" target="_blank" rel="noopener">#{{ draft.split('/').pop() }}</a>
         }
       </div>

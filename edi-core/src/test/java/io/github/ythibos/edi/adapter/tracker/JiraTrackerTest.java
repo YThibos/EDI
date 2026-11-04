@@ -69,6 +69,11 @@ class JiraTrackerTest {
     }
 
     @Test
+    void givesEachKeyTheTrackersBrowseAddress() {
+        assertThat(tracker.browseAddressOf(WorkKey.parse("SVC-7"))).contains(jira.address().toString().replaceAll("/+$", "") + "/browse/SVC-7");
+    }
+
+    @Test
     void findsOpenTicketsByTheWordsOfTheWorkWithTheTokenOfTheKeysFile() {
         List<Ticket> found = tracker.findExisting(new TicketContext(new ProjectKey("SVC"), "Fix the harbour lamps, at last"));
 

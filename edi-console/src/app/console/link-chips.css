@@ -1,0 +1,43 @@
+.sr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.sr-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  color: var(--text-dim);
+  background: var(--panel-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  padding: 0 6px;
+  text-decoration: none;
+}
+
+a.sr-chip {
+  color: var(--ion);
+  border-color: var(--ion-line);
+}
+
+a.sr-chip:hover,
+a.sr-chip:focus-visible {
+  background: var(--ion-soft);
+  outline: none;
+}
+
+.sr-chip--key {
+  font-weight: 600;
+}
+
+.sr-chip--decision {
+  color: var(--amber);
+  border-color: var(--amber-line);
+}

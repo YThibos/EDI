@@ -161,7 +161,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 17 | [EDI-92](EDI-92.md) | The stop hook's new rule | S | EDI-90 | open | - |
 | 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | EDI-89 | open | - |
 | 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | EDI-89 | open | - |
-| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | EDI-89 | open | - |
+| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | EDI-89 | delivered | - |
 | 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | EDI-89 | open | - |
 | 22 | [EDI-59](EDI-59.md) | The task panel | M | EDI-57, EDI-58 | open | - |
 | 23 | [EDI-60](EDI-60.md) | Live check-in on a worker | M | EDI-59 | open | - |

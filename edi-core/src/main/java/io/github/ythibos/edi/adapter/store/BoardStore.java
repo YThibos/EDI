@@ -79,6 +79,10 @@ public class BoardStore {
         return boards(store.sql(SELECT_BOARDS + "where " + LISTENING + " order by id"));
     }
 
+    public Optional<Board> latestOf(TaskId task) {
+        return boards(store.sql(SELECT_BOARDS + "where task_id = :task order by id desc limit 1").param("task", task.value())).stream().findFirst();
+    }
+
     public List<Board> listeningOf(TaskId task) {
         return boards(store.sql(SELECT_BOARDS + "where task_id = :task and " + LISTENING + " order by id").param("task", task.value()));
     }

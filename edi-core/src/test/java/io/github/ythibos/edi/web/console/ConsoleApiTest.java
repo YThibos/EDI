@@ -326,6 +326,29 @@ class ConsoleApiTest {
     }
 
     @Test
+    void rendersATasksReportAsAReadOnlyPageForTheConsoleAndThePrimaryAndRefusesAWorker() throws Exception {
+        String cookie = signedInCookie();
+        String worker = workerTokenFor("cave-map");
+        Path report = Files.createDirectories(home.resolve("data/tasks/cave-map")).resolve("report.md");
+        Files.writeString(report, "# The caves\n\nThree *dry* chambers.\n\n<script>alert(1)</script>\n");
+
+        HttpResponse<String> shown = send(withTheCookie("/api/tasks/cave-map/pages/report", cookie).header("Accept", "text/html").GET());
+        HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/tasks/cave-map/pages/report", "text/html").GET());
+        HttpResponse<String> noBrief = send(withTheCookie("/api/tasks/cave-map/pages/brief", cookie).header("Accept", "text/html").GET());
+        HttpResponse<String> toTheWorker = send(withToken(worker, "/api/tasks/cave-map/pages/report", "text/html").GET());
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.headers().firstValue("Content-Type")).hasValueSatisfying(type -> assertThat(type).startsWith("text/html"));
+        assertThat(shown.headers().firstValue("Content-Security-Policy")).hasValueSatisfying(policy -> assertThat(policy).startsWith("default-src 'none'"));
+        assertThat(shown.body()).contains("<title>cave-map report · EDI</title>", "<h1>The caves</h1>", "<p>Three <em>dry</em> chambers.</p>",
+                "&lt;script&gt;alert(1)&lt;/script&gt;").doesNotContain("<script>");
+        assertThat(toThePrimary.statusCode()).isEqualTo(200);
+        assertThat(noBrief.statusCode()).isEqualTo(404);
+        assertThat(noBrief.body()).isEqualTo("cave-map has no brief yet.\n");
+        assertThat(toTheWorker.statusCode()).isEqualTo(403);
+    }
+
+    @Test
     void showsAndKeepsThePersonalityFromTheConsoleThroughTheSameCoreAsEdiPersonality() throws Exception {
         String cookie = signedInCookie();
         String change = "{\"change\":[\"humour\",\"2\",\"formality\",\"10\"]}";

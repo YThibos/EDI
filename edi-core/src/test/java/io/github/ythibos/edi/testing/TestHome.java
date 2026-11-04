@@ -109,6 +109,7 @@ import io.github.ythibos.edi.application.dispatch.RewriteBrief;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
+import io.github.ythibos.edi.application.fleet.TaskLinksQuery;
 import io.github.ythibos.edi.application.follow.EventFollowers;
 import io.github.ythibos.edi.application.ledger.EmitFleetLedger;
 import io.github.ythibos.edi.application.lifecycle.StopTheCore;
@@ -376,6 +377,10 @@ public final class TestHome {
 
     public AddTask addTask() {
         return new AddTask(tasks, events, registry, taskKeys(), ticketProposals(), clock, transaction);
+    }
+
+    public TaskLinksQuery taskLinks() {
+        return new TaskLinksQuery(home, registry, trackers(), dispatches, deliveries, pipelineRuns, boards, decisions, transaction);
     }
 
     public Trackers trackers() {

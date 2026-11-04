@@ -5,13 +5,18 @@
         <div class="sr-row__main">
           <div class="sr-row__title">
             @if (ongoing.key; as key) {
-              <span class="sr-row__key">{{ key }}</span>
+              @if (links()[ongoing.task]?.tracker; as tracker) {
+                <a class="sr-row__key" [href]="tracker" target="_blank" rel="noopener">{{ key }}</a>
+              } @else {
+                <span class="sr-row__key">{{ key }}</span>
+              }
             }
             {{ ongoing.title }}
           </div>
           <div class="sr-row__sub">{{ ongoing.doing }} · {{ ongoing.kind }} · {{ projectsOf(ongoing.projects, ongoing.task) }}</div>
+          <app-link-chips [links]="links()[ongoing.task]" [showsKey]="false" />
         </div>
-        @if (ongoing.draft; as draft) {
+        @if (!links()[ongoing.task]?.request && ongoing.draft; as draft) {
           <a class="sr-row__pr" [href]="draft" [title]="draft" target="_blank" rel="noopener">#{{ draft.split('/').pop() }}</a>
         }
         <span class="sr-badge" [class]="'sr-badge--' + toneOf(ongoing.state)"><span class="sr-badge__dot"></span>{{ ongoing.state }}</span>

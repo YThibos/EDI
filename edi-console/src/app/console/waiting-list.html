@@ -6,6 +6,7 @@
           <div class="sr-row__title">Board for {{ board.title }}</div>
           <div class="sr-row__sub">{{ boardSummary(board) }}</div>
           <a class="sr-waiting__link" [href]="board.link" target="_blank" rel="noopener">{{ board.link }}</a>
+          <app-link-chips [links]="links()[board.task]" />
           @if (board.decisions.length) {
             <ul class="sr-waiting__decisions">
               @for (decision of board.decisions; track decision.number) {
@@ -23,6 +24,7 @@
           <div class="sr-row__title">{{ review.title }}</div>
           <div class="sr-row__sub">ready for your review · {{ projectsOf(review.projects, review.task) }}</div>
           <a class="sr-waiting__link" [href]="review.url" target="_blank" rel="noopener">{{ review.url }}</a>
+          <app-link-chips [links]="links()[review.task]" />
         </div>
         <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>review</span>
       </div>
@@ -33,6 +35,7 @@
           <div class="sr-row__title">{{ request.title }}</div>
           <div class="sr-row__sub">changing, hold the merge: {{ request.why }} · {{ projectsOf(request.projects, request.task) }}</div>
           <a class="sr-waiting__link" [href]="request.url" target="_blank" rel="noopener">{{ request.url }}</a>
+          <app-link-chips [links]="links()[request.task]" />
         </div>
         <span class="sr-badge sr-badge--danger"><span class="sr-badge__dot"></span>changing</span>
       </div>
