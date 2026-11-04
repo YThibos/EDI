@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 27 |
 | Source | EDI-52 plan, slice 13 |
 | Size | S |
-| Blocked by | [EDI-89](EDI-89.md) |
+| Blocked by | nothing |
 | Status | open |
 | Issue | [#151](https://github.com/YThibos/EDI/issues/151) |
 | Cloud session | ok |
@@ -30,6 +30,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), slice 13, Q7 b.
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on EDI-89: it needs neither plans nor stages, so it may start on its own.
 - Q7 b: quiet and away buttons.
 - The console may do only what `Caller.Captain` allows; extend that list for these two acts and no others ([api-access](../decisions/api-access.md)).
 - Away needs a mandate; never set it without one.

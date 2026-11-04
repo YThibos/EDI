@@ -55,7 +55,7 @@ public class PublishCheck {
                         gitleaks.secretsIn(repository, outgoing),
                         denyList.sparing(targets.ownNamesOf(repository)).findIn(changes),
                         personalPathsOf(repository).findIn(changes),
-                        SnapshotVersions.findIn(changes))
+                        SnapshotVersions.findIn(changes, commit -> git.reactorAt(repository, commit)))
                 .hidingPathsDeniedBy(denyList, changes);
     }
 
