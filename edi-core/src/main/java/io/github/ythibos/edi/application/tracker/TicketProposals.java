@@ -19,15 +19,20 @@ import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketChoiceRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketCreated;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.ProposedTicket;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -72,9 +77,7 @@ public class TicketProposals {
     }
 
     public void requireAChoiceIn(TaskId task, OptionKey option) {
-        proposals.of(task)
-                .filter(proposed -> !proposed.isSettled())
-                .ifPresent(proposed -> proposed.proposal().choiceFor(option));
+        unsettled(task).ifPresent(proposed -> proposed.proposal().choiceFor(option));
     }
 
     public synchronized TicketSettlement settle(TaskId task, Actor actor) {
@@ -97,24 +100,47 @@ public class TicketProposals {
         transaction.execute(_ -> proposals.answeredAndUnsettled()).forEach(task -> settle(task, Actor.CORE));
     }
 
-    private ProjectEntry projectOf(TaskId task) {
-        return registry.entryOf(tasks.get(task).intake().projects().getFirst());
+    public boolean awaitsItsTicket(TaskId task) {
+        return unsettled(task).isPresent() && openDecisionOf(task).isPresent();
+    }
+
+    public Optional<DecisionNumber> closeForTheDrop(TaskId task, CaptainsWord word, Actor actor, Instant at) {
+        Optional<ProposedTicket> unsettled = unsettled(task);
+        unsettled.ifPresent(proposed -> proposals.update(proposed.settledWithoutATicket(at)));
+        return unsettled.flatMap(_ -> openDecisionOf(task)).map(open -> closed(open, answerOfTheDrop(task, word, at), actor));
+    }
+
+    public Optional<DecisionNumber> closeOnTheKey(TaskId task, WorkKey key, String captainsWords, Actor actor, Instant at) {
+        Optional<ProposedTicket> unsettled = unsettled(task);
+        unsettled.ifPresent(proposed -> proposals.update(proposed.settledOn(key, at)));
+        return unsettled.flatMap(_ -> openDecisionOf(task)).map(open -> closed(open, answerOfTheKey(open, key, captainsWords, at), actor));
+    }
+
+    private Optional<ProposedTicket> unsettled(TaskId task) {
+        return proposals.of(task).filter(proposed -> !proposed.isSettled());
     }
 
     private Optional<Choice> chosenAndUnsettled(TaskId task) {
-        return proposals.of(task)
-                .filter(proposed -> !proposed.isSettled())
+        return unsettled(task)
                 .flatMap(proposed -> decisions.ofTask(task)
                         .filter(decision -> !decision.isOpen())
                         .map(decision -> new Choice(proposed, proposed.proposal().choiceFor(decision.answer()))));
     }
 
     private TicketSettlement carriedOut(Choice chosen, Actor actor) {
-        Tracker tracker = transaction.execute(_ -> trackers.serving(projectOf(chosen.proposed().task())));
         return switch (chosen.choice()) {
-            case TicketChoice.BookOn bookOn -> bookedOn(chosen.proposed(), tracker.verified(bookOn.key()), actor);
-            case TicketChoice.Create create -> created(chosen.proposed(), tracker, create.draft(), actor);
+            case TicketChoice.BookOn bookOn -> bookedOn(chosen.proposed(), trackerOf(chosen.proposed()).verified(bookOn.key()), actor);
+            case TicketChoice.Create create -> created(chosen.proposed(), trackerOf(chosen.proposed()), create.draft(), actor);
+            case TicketChoice.DropTheTask _ -> settledForTheDrop(chosen.proposed());
         };
+    }
+
+    private Tracker trackerOf(ProposedTicket proposed) {
+        return transaction.execute(_ -> trackers.serving(projectOf(proposed.task())));
+    }
+
+    private ProjectEntry projectOf(TaskId task) {
+        return registry.entryOf(tasks.get(task).intake().projects().getFirst());
     }
 
     private TicketSettlement bookedOn(ProposedTicket proposed, Ticket ticket, Actor actor) {
@@ -124,6 +150,11 @@ public class TicketProposals {
             proposals.update(proposed.settledOn(ticket.key(), now));
         });
         return new TicketSettlement.Keyed(ticket.key(), false);
+    }
+
+    private TicketSettlement settledForTheDrop(ProposedTicket proposed) {
+        transaction.executeWithoutResult(_ -> proposals.update(proposed.settledWithoutATicket(clock.now())));
+        return new TicketSettlement.DropChosen();
     }
 
     private TicketSettlement created(ProposedTicket proposed, Tracker tracker, TicketDraft draft, Actor actor) {
@@ -185,6 +216,29 @@ public class TicketProposals {
             events.record(new TicketChoiceRefused(proposed.task(), because), Actor.CORE, clock.now());
             raiseDecision.raise(new TaskReference.ById(proposed.task()), proposed.proposal().cardAfterRefusal(because), Actor.CORE);
         });
+    }
+
+    private Optional<Decision> openDecisionOf(TaskId task) {
+        return decisions.ofTask(task).filter(Decision::isOpen);
+    }
+
+    private DecisionNumber closed(Decision open, CaptainAnswer answer, Actor actor) {
+        Decision answered = open.answered(answer);
+        decisions.save(answered);
+        events.record(new DecisionAnswered(open.task(), answered.number(), answer), actor, answer.answeredAt());
+        return answered.number();
+    }
+
+    private static CaptainAnswer answerOfTheDrop(TaskId task, CaptainsWord word, Instant at) {
+        return new CaptainAnswer(word.verbatim(), null, "Drop " + task + ", with no ticket.", at, AnswerChannel.CHAT);
+    }
+
+    private static CaptainAnswer answerOfTheKey(Decision open, WorkKey key, String captainsWords, Instant at) {
+        if (captainsWords == null) {
+            throw new Refusal(open.number() + " asks which ticket " + open.task() + " books on, so its key answers that decision: cite the captain's words"
+                    + " that give " + key + " with --message <n> or --text.");
+        }
+        return new CaptainAnswer(captainsWords, null, "Book it on " + key + ".", at, AnswerChannel.CHAT);
     }
 
     private record Choice(ProposedTicket proposed, TicketChoice choice) {

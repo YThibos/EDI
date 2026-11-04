@@ -12,11 +12,13 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.task.DependantTasks;
+import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
@@ -37,11 +39,13 @@ public class DropTask {
     private final CopyRetirement retirement;
     private final CaptainsWordEvidence captainsWord;
     private final DependantTasks dependants;
+    private final TicketProposals ticketProposals;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DropTask(TaskStore tasks, DispatchStore dispatches, EventLog events, WorkerContext context, LandedWorkCheck landedWork,
-            CopyRetirement retirement, CaptainsWordEvidence captainsWord, DependantTasks dependants, Clock clock, TransactionTemplate transaction) {
+            CopyRetirement retirement, CaptainsWordEvidence captainsWord, DependantTasks dependants, TicketProposals ticketProposals, Clock clock,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.events = events;
@@ -50,6 +54,7 @@ public class DropTask {
         this.retirement = retirement;
         this.captainsWord = captainsWord;
         this.dependants = dependants;
+        this.ticketProposals = ticketProposals;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -57,17 +62,21 @@ public class DropTask {
     public DroppedTask drop(TaskReference reference, boolean discardingWork, CallingSession calling, Actor actor) {
         Task task = transaction.execute(_ -> tasks.get(reference));
         CaptainsWord word = captainsWord.requireOnTask(calling, task.id(), discardingWork ? CaptainWordAct.DISCARD_WORK : CaptainWordAct.DROP);
-        requireNoDecisionWaiting(task);
+        requireNoDecisionButItsTicketWaiting(task);
         List<String> discarded = wasDispatched(task) ? retiredCopy(transaction.execute(_ -> context.of(task.id())), discardingWork) : List.of();
-        Task dropped = dropped(task, word, discarded, actor);
-        retirement.stopListeningFor(dropped.id());
-        return new DroppedTask(dropped, discarded);
+        DroppedTask dropped = dropped(task, word, discarded, actor);
+        retirement.stopListeningFor(dropped.task().id());
+        return dropped;
     }
 
-    private static void requireNoDecisionWaiting(Task task) {
-        if (task.isHeld() && task.hold().awaitsADecision()) {
+    private void requireNoDecisionButItsTicketWaiting(Task task) {
+        if (task.isHeld() && task.hold().awaitsADecision() && !awaitsItsTicket(task)) {
             throw new Refusal(task.id() + " waits on " + task.hold().reason() + "; it is dropped once that decision is answered.");
         }
+    }
+
+    private boolean awaitsItsTicket(Task task) {
+        return Boolean.TRUE.equals(transaction.execute(_ -> ticketProposals.awaitsItsTicket(task.id())));
     }
 
     private boolean wasDispatched(Task task) {
@@ -89,16 +98,17 @@ public class DropTask {
         return landed.findings();
     }
 
-    private Task dropped(Task task, CaptainsWord word, List<String> discarded, Actor actor) {
+    private DroppedTask dropped(Task task, CaptainsWord word, List<String> discarded, Actor actor) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Task closed = tasks.get(task.id()).dropped(word, now);
+            DecisionNumber closedDecision = ticketProposals.closeForTheDrop(closed.id(), word, actor, now).orElse(null);
             retirement.retireWorkers(closed.id(), "its task was dropped", now, actor);
             retirement.retireBoards(closed.id(), now, actor);
             tasks.update(closed);
             dependants.stopWaitingFor(closed);
             events.record(new TaskDropped(closed.id(), word.verbatim(), discarded), actor, now);
-            return closed;
+            return new DroppedTask(closed, discarded, closedDecision);
         });
     }
 }

@@ -19,8 +19,8 @@ public record ProposedTicket(
     public ProposedTicket {
         Objects.requireNonNull(proposal, "A proposed ticket carries its proposal.");
         Objects.requireNonNull(proposedAt, () -> "The ticket proposal for " + proposal.task() + " records when it was made.");
-        if ((settledKey == null) != (settledAt == null)) {
-            throw new IllegalArgumentException("The ticket proposal for " + proposal.task() + " is settled on a key at a time, or not at all.");
+        if (settledKey != null && settledAt == null) {
+            throw new IllegalArgumentException("The ticket proposal for " + proposal.task() + " is settled on a key at a time.");
         }
         if (filledAt != null && createdKey == null) {
             throw new IllegalArgumentException("The ticket proposal for " + proposal.task() + " fills only a ticket it created.");
@@ -69,5 +69,9 @@ public record ProposedTicket(
 
     public ProposedTicket settledOn(WorkKey key, Instant at) {
         return new ProposedTicket(proposal, proposedAt, createTriedAt, createdKey, filledAt, key, at, null);
+    }
+
+    public ProposedTicket settledWithoutATicket(Instant at) {
+        return new ProposedTicket(proposal, proposedAt, createTriedAt, createdKey, filledAt, null, at, null);
     }
 }

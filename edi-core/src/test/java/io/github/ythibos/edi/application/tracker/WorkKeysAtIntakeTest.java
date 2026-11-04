@@ -57,7 +57,8 @@ class WorkKeysAtIntakeTest {
         assertThat(decision.number()).isEqualTo(added.ticketDecision());
         assertThat(decision.card().options()).extracting(DecisionOption::text).containsExactly(
                 "Book it on SVC-40: Harbour lamps (To Do)",
-                "Create a Story \"Fix the harbour lamps\" in SVC");
+                "Create a Story \"Fix the harbour lamps\" in SVC",
+                "Drop this task, with no ticket");
         assertThat(home.tasks().get(new TaskId("fix-lamps")).isHeld()).isTrue();
         assertThat(home.tasks().get(new TaskId("fix-lamps")).intake().workKey()).isNull();
         assertThat(home.jira().created()).isEmpty();

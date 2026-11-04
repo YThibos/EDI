@@ -6,8 +6,10 @@ import java.util.stream.Collectors;
 import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.delivery.DroppedTask;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
+import io.github.ythibos.edi.application.tracker.KeyedTask;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
@@ -26,6 +28,7 @@ import io.github.ythibos.edi.web.Confirmation.Dispatched;
 import io.github.ythibos.edi.web.Confirmation.DraftDelivered;
 import io.github.ythibos.edi.web.Confirmation.Dropped;
 import io.github.ythibos.edi.web.Confirmation.Held;
+import io.github.ythibos.edi.web.Confirmation.Keyed;
 import io.github.ythibos.edi.web.Confirmation.MergedWorkFollowedUp;
 import io.github.ythibos.edi.web.Confirmation.Noted;
 import io.github.ythibos.edi.web.Confirmation.PlannedFirst;
@@ -84,12 +87,23 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case CaptainHeard heard -> captainHeard(heard);
             case Promoted promoted -> "Promoted the scout " + promoted.promoted().scout() + " to the ship " + promoted.promoted().ship().id()
                     + ", queued on the captain's word.";
-            case Dropped dropped -> "Dropped " + dropped.dropped().task().id() + " on the captain's word" + discardedOf(dropped.dropped().discarded());
+            case Dropped dropped -> dropped(dropped.dropped());
+            case Keyed keyed -> keyed(keyed.keyed());
             case Adopted adopted -> adopted(adopted.adopted());
             case WorkDiscarded discarded -> "Discarded the isolated copy and the branch of " + discarded.discarded().task()
                     + " on the captain's word" + discardedOf(discarded.discarded().discarded());
             case CoreStopping stopping -> coreStopping(stopping);
         };
+    }
+
+    private static String dropped(DroppedTask dropped) {
+        String closed = dropped.closedItsTicketDecision() ? "; the drop answers " + dropped.closedDecision() + ", its ticket decision" : "";
+        return "Dropped " + dropped.task().id() + " on the captain's word" + closed + discardedOf(dropped.discarded());
+    }
+
+    private static String keyed(KeyedTask keyed) {
+        String closed = keyed.closedItsTicketDecision() ? "; the key answers " + keyed.closedDecision() + ", its ticket decision, and releases it" : "";
+        return "Keyed " + keyed.task().id() + " on " + keyed.task().intake().workKey() + closed + ".";
     }
 
     private static String adopted(AdoptedTask adopted) {
@@ -173,17 +187,18 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String answerRecorded(Answered answered) {
         String option = answered.decision().answer().choosesAnOption() ? " (option " + answered.decision().answer().option() + ")" : "";
         String outcome = answered.task().isDone() ? " is done." : " is " + answered.task().state().word() + " again.";
-        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered.ticket());
+        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered);
     }
 
-    private static String ticketOf(TicketSettlement ticket) {
-        return switch (ticket) {
+    private static String ticketOf(Answered answered) {
+        return switch (answered.ticket()) {
             case TicketSettlement.Unasked _ -> "";
             case TicketSettlement.Keyed keyed -> " It books its work on " + keyed.key() + (keyed.created() ? ", the ticket you created." : ".");
             case TicketSettlement.CreatedWithoutItsFields created -> " It books its work on " + created.key()
                     + ", the ticket you created, but the tracker refused its fields: " + created.because();
             case TicketSettlement.Pending pending -> " Its ticket is not settled yet: " + pending.because() + " You try again every 30 seconds.";
             case TicketSettlement.AskedAgain asked -> " You could not carry out the answer, so you raised the decision again: " + asked.because();
+            case TicketSettlement.DropChosen _ -> " It books on no ticket; the answer authorises edi task drop " + answered.task().id() + ".";
         };
     }
 }

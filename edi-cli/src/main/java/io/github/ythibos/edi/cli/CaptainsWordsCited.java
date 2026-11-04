@@ -27,6 +27,10 @@ final class CaptainsWordsCited {
         return body.with("message", message).with("line", line).with("text", wordsFrom(core));
     }
 
+    JsonBody addedWhenCitedTo(JsonBody body, CoreExchange core) {
+        return message == null && text == null && line == null ? body : addedTo(body, core);
+    }
+
     private void requireOneCitation() {
         if ((message == null) == (text == null)) {
             throw new ParameterException(command.commandLine(), "Cite the captain's words with --message, or with --text, one of the two.");

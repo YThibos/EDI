@@ -22,4 +22,7 @@ public sealed interface TicketSettlement {
 
     record AskedAgain(String because) implements TicketSettlement {
     }
+
+    record DropChosen() implements TicketSettlement {
+    }
 }

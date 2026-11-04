@@ -62,6 +62,7 @@ edi captain said --message 6 --line 2                                          #
 edi decision answer D58 --option A --message 7                                 # a decision answered with a stored message or dialog answer
 edi task promote survey-the-lamps --title "Fit the lamps"                      # a scout's ship, queued on the captain's word
 edi task drop fit-the-lamp --discard-work                                      # on the captain's word; unlanded work only with --discard-work
+edi task key fit-the-lamp SVC-40 --message 8                                   # a key after intake, answering an open ticket decision with message 8
 edi worktree discard fit-the-lamp                                              # the copy and branch, on the captain's word; the task stays
 ```
 

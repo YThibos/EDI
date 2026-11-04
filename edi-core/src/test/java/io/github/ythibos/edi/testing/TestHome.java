@@ -162,6 +162,7 @@ import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
 import io.github.ythibos.edi.application.task.WorkedTimes;
 import io.github.ythibos.edi.application.tracker.FollowTickets;
+import io.github.ythibos.edi.application.tracker.KeyTask;
 import io.github.ythibos.edi.application.tracker.TaskKeys;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.tracker.Trackers;
@@ -396,6 +397,10 @@ public final class TestHome {
 
     public TicketProposals ticketProposals() {
         return new TicketProposals(ticketProposals, tasks, decisions, raiseDecision(), events, registry, trackers(), clock, transaction);
+    }
+
+    public KeyTask keyTask() {
+        return new KeyTask(tasks, events, taskKeys(), ticketProposals(), captainsWord(), clock, transaction);
     }
 
     public FakeJira jira() {
@@ -707,7 +712,7 @@ public final class TestHome {
 
     public DropTask dropTask() {
         return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), dependantTasks(),
-                clock, transaction);
+                ticketProposals(), clock, transaction);
     }
 
     public DependantTasks dependantTasks() {

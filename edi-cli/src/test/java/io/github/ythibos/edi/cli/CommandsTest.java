@@ -99,6 +99,14 @@ class CommandsTest {
         assertThat(core.received().target()).isEqualTo("/api/tasks/fit-lamp/notes");
         assertThat(core.received().body()).isEqualTo("{\"note\":\"The ladder is ready.\\n\"}");
 
+        edi("", "task", "key", "fit-lamp", "SVC-40");
+        assertThat(core.received().target()).isEqualTo("/api/tasks/fit-lamp/key");
+        assertThat(core.received().body()).isEqualTo("{\"key\":\"SVC-40\"}");
+
+        edi("", "task", "key", "D87", "SVC-40", "--message", "8");
+        assertThat(core.received().target()).isEqualTo("/api/tasks/D87/key");
+        assertThat(core.received().body()).isEqualTo("{\"key\":\"SVC-40\",\"message\":8}");
+
         edi("", "hold", "fit-lamp", "--kind", "deferral", "--reason", "after the storm", "--until", "2026-11-01");
         assertThat(core.received().target()).isEqualTo("/api/tasks/fit-lamp/hold");
         assertThat(core.received().body()).isEqualTo("{\"kind\":\"deferral\",\"reason\":\"after the storm\",\"until\":\"2026-11-01\"}");

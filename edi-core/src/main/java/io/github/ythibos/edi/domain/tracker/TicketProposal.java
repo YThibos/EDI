@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
@@ -48,6 +49,9 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
         if (position == candidates.size()) {
             return new TicketChoice.Create(draft);
         }
+        if (position == candidates.size() + 1) {
+            return new TicketChoice.DropTheTask();
+        }
         throw new Refusal("The ticket decision for " + task + " offers no option " + option + ".");
     }
 
@@ -68,6 +72,7 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
             options.add(new DecisionOption(optionAt(position), bookingOn(candidates.get(position))));
         }
         options.add(new DecisionOption(optionAt(candidates.size()), "Create " + draft.described() + " in " + draft.project()));
+        options.add(new DecisionOption(optionAt(candidates.size() + 1), "Drop this task, with no ticket", CaptainWordAct.DROP));
         return options;
     }
 

@@ -19,4 +19,7 @@ public sealed interface TicketChoice {
             Objects.requireNonNull(draft, "The captain chose to create the drafted ticket.");
         }
     }
+
+    record DropTheTask() implements TicketChoice {
+    }
 }
