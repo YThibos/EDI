@@ -42,9 +42,11 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final String claudeCode;
     private final String mise;
     private final MiseTrust miseTrust;
+    private final String edi;
 
     public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, JsonMapper json, ExternalPrograms programs,
-            @Value("${edi.workers.claude-code:}") String claudeCode, @Value("${edi.workers.mise:}") String mise) {
+            @Value("${edi.workers.claude-code:}") String claudeCode, @Value("${edi.workers.mise:}") String mise,
+            @Value("${edi.workers.edi:}") String edi) {
         this.tmux = tmux;
         this.probe = probe;
         this.trust = trust;
@@ -54,6 +56,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
         this.mise = mise.isBlank() ? Program.MISE.executable() : mise;
         this.miseTrust = new MiseTrust(programs, this.mise, Path.of(System.getProperty("user.home")));
+        this.edi = edi;
     }
 
     @Override
@@ -65,7 +68,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     public WorkerWindow launch(Launch launch) {
         LocalHooks.refuseHooksIn(launch.worktree(), json);
         trust.trust(launch.projectClone());
-        Path settings = WorkerSettingsFile.writtenInto(launch.stateDirectory());
+        Path settings = WorkerSettingsFile.writtenInto(launch.stateDirectory(), ediCommand(), json);
         List<String> claude = ClaudeCommandLine.of(claudeCode, mise, miseTrust.trusts(launch.projectClone()), launch, settings,
                 ClaudeLayer.read(ClaudeLayer.WORKER_SYSTEM_PROMPT), System.getenv().keySet());
         OpenedWindow opened = tmux.openWindow(launch.worker().task().value(), launch.worktree(), launch.environment(), claude);
@@ -135,6 +138,14 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     @Override
     public TokenUsage tokensSpentIn(String transcript, Instant since) {
         return transcript == null ? TokenUsage.NONE : transcripts.tokensSpent(Path.of(transcript), since);
+    }
+
+    private Path ediCommand() {
+        if (!edi.isBlank()) {
+            return Path.of(edi);
+        }
+        return EdiOnThePath.in(System.getenv("PATH")).orElseThrow(() -> new Refusal("The edi command is on none of the directories of the core's PATH,"
+                + " and a worker's hooks call it by its absolute path; put edi on that PATH or set edi.workers.edi to it."));
     }
 
     private void typeIntoTheIdlePrompt(WorkerWindow window, Keystroke.Line line) {

@@ -132,6 +132,20 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void handsTheBoardHostOnlyABoardInsideItsTasksDirectory() throws IOException, InterruptedException {
+        Path outside = Files.writeString(directory.resolve("outside.html"), "<!doctype html>\n");
+        Path linked = Files.createSymbolicLink(home.home().taskDirectory(SCOUT).resolve("linked.html"), outside);
+        var polled = home.boardHost().expectPolls(1);
+
+        assertThatThrownBy(() -> arm(linked)).isInstanceOf(Refusal.class).hasMessageContaining("lives in its task's directory");
+        arm(boardFile, decision);
+        FakeBoardHost.await(polled);
+
+        assertThat(home.boardHost().boards()).isNotEmpty()
+                .allSatisfy(board -> assertThat(board).startsWith(home.home().taskDirectory(SCOUT).toRealPath()));
+    }
+
+    @Test
     void passesARoundToTheWorkersInboxAndRecordsTheBoundAnswerAsTheCaptainsWord() {
         Board board = armQuietly(boardFile, decision);
         BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",

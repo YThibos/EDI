@@ -23,6 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 public final class PrivateTmuxServer implements AutoCloseable {
 
+    static final String STAND_IN_EDI = "/opt/edi/bin/edi";
     private static final Duration POLL = Duration.ofMillis(50);
     private static final String STANDBY = "standby";
 
@@ -56,7 +57,7 @@ public final class PrivateTmuxServer implements AutoCloseable {
     public TmuxClaudeRuntime runtime(Path claudeConfiguration, String claudeCode, String mise) {
         JsonMapper json = new JsonMapper();
         return new TmuxClaudeRuntime(tmux, new TmuxPaneProbe(), new ClaudeWorkspaceTrust(claudeConfiguration, json),
-                new ClaudeSessions(claudeConfiguration.resolve("projects")), json, new ExternalPrograms(), claudeCode, mise);
+                new ClaudeSessions(claudeConfiguration.resolve("projects")), json, new ExternalPrograms(), claudeCode, mise, STAND_IN_EDI);
     }
 
     public WorkerWindow windowShowing(String fixture, Path directory, Path received) throws IOException {

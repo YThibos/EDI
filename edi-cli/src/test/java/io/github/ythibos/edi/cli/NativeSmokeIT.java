@@ -555,7 +555,7 @@ class NativeSmokeIT {
     }
 
     private static Path repositoryWithAPersonalFileOn(String branch) throws Exception {
-        Path repository = Files.createDirectories(home.resolve("repository"));
+        Path repository = Files.createDirectories(home.resolve("worktrees/harness/native-share"));
         git(repository, "init", "--quiet", "--initial-branch=main");
         git(repository, "commit", "--quiet", "--allow-empty", "--message", "Start");
         git(repository, "switch", "--quiet", "--create", branch);
