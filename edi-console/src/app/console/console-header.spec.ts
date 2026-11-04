@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { ConsoleHeader } from './console-header';
+import { PresenceChoice, PresenceShown } from './sitrep';
 
 describe('ConsoleHeader', () => {
   let fixture: ComponentFixture<ConsoleHeader>;
@@ -78,6 +79,35 @@ describe('ConsoleHeader', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.sr-view__count')).toBeNull();
   });
 
+  it('closes the Away form when the captain chooses another presence instead', async () => {
+    const chosen: PresenceChoice[] = [];
+    fixture.componentInstance.presenceChosen.subscribe((choice) => chosen.push(choice));
+    await shownWith({ mode: 'present', demo: false, words: 'present' });
+    await openAway('Carry on with the lamp.');
+
+    button('Quiet').click();
+    await fixture.whenStable();
+
+    expect(chosen).toEqual(['quiet']);
+    expect(header().querySelector('.sr-away')).toBeNull();
+  });
+
+  it.each([
+    { turned: 'away', elsewhere: { mode: 'away', demo: false, words: 'away since 2026-10-15 08:20 CEST' } },
+    { turned: 'a demo', elsewhere: { mode: 'present', demo: true, words: 'present for a demo until 2026-10-15 11:00 CEST' } },
+  ] satisfies { turned: string; elsewhere: PresenceShown }[])('closes the Away form and forgets its words once the presence turns $turned elsewhere', async ({ elsewhere }) => {
+    await shownWith({ mode: 'quiet', demo: false, words: 'quiet' });
+    await openAway('Carry on with the lamp.');
+
+    await shownWith(elsewhere);
+    expect(header().querySelector('.sr-away')).toBeNull();
+    await shownWith({ mode: 'quiet', demo: false, words: 'quiet' });
+    button('Away').click();
+    await fixture.whenStable();
+
+    expect((header().querySelector('.sr-away__words') as HTMLInputElement).value).toBe('');
+  });
+
   function subtitle(): HTMLElement {
     return (fixture.nativeElement as HTMLElement).querySelector('.sr-brand__sub')!;
   }
@@ -88,5 +118,31 @@ describe('ConsoleHeader', () => {
 
   function presenceBlock(): HTMLElement {
     return (fixture.nativeElement as HTMLElement).querySelector('.sr-presence')!;
+  }
+
+  async function shownWith(presence: PresenceShown): Promise<void> {
+    fixture.componentRef.setInput('presence', presence);
+    await fixture.whenStable();
+  }
+
+  async function openAway(words: string): Promise<void> {
+    button('Away').click();
+    await fixture.whenStable();
+    const input = header().querySelector('.sr-away__words') as HTMLInputElement;
+    input.value = words;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  }
+
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(header().querySelectorAll<HTMLButtonElement>('.sr-presence__button')).find((each) => each.textContent?.trim() === name);
+    if (!found) {
+      throw new Error(`The header shows no ${name} button.`);
+    }
+    return found;
+  }
+
+  function header(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
   }
 });

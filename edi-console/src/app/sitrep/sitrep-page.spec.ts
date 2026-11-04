@@ -239,22 +239,6 @@ describe('SitrepPage', () => {
     expect(texts(page, '.sr-presence__button')).toEqual(['End demo']);
   });
 
-  it('puts the links of each row under it, by its task', async () => {
-    const fixture = TestBed.createComponent(SitrepPage);
-    http.expectOne('/api/sitrep').flush(
-      sitrepFixture({
-        links: {
-          'fit-lamp': { key: 'EDI-31', tracker: null, request: null, branch: { name: 'feature/EDI-31', url: 'https://github.com/example-owner/harness/tree/feature/EDI-31' },
-            board: null, report: null, brief: null, decisions: [] },
-        },
-      }),
-    );
-    await fixture.whenStable();
-    const page = fixture.nativeElement as HTMLElement;
-
-    expect(texts(page, 'app-ongoing-list .sr-chip')).toEqual(['feature/EDI-31']);
-  });
-
   it('sets quiet from the header while present', async () => {
     const fixture = await rendered();
     const page = fixture.nativeElement as HTMLElement;
@@ -293,6 +277,22 @@ describe('SitrepPage', () => {
 
     expect(page.querySelector('.sr-away')).toBeNull();
     expect(texts(page, '.sr-presence__button')).toEqual(['Present', 'Demo', 'Quiet']);
+  });
+
+  it('puts the links of each row under it, by its task', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        links: {
+          'fit-lamp': { key: 'EDI-31', tracker: null, request: null, branch: { name: 'feature/EDI-31', url: 'https://github.com/example-owner/harness/tree/feature/EDI-31' },
+            board: null, report: null, brief: null, decisions: [] },
+        },
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(texts(page, 'app-ongoing-list .sr-chip')).toEqual(['feature/EDI-31']);
   });
 
   it('opens the personality desk from the header and closes it again', async () => {

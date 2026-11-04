@@ -20,16 +20,16 @@
       <span class="sr-presence">
         <span class="sr-presence__mode sr-presence__mode--{{ mode }}" [attr.title]="presence()?.words">{{ mode }}</span>
         @if (mode !== 'present' && mode !== 'demo') {
-          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('present')">Present</button>
+          <button type="button" class="sr-presence__button" (click)="choose('present')">Present</button>
         }
         @if (mode === 'demo') {
-          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo-off')">End demo</button>
+          <button type="button" class="sr-presence__button" (click)="choose('demo-off')">End demo</button>
         } @else {
-          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo')">Demo</button>
+          <button type="button" class="sr-presence__button" (click)="choose('demo')">Demo</button>
           @if (mode !== 'quiet') {
-            <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('quiet')">Quiet</button>
+            <button type="button" class="sr-presence__button" (click)="choose('quiet')">Quiet</button>
           }
-          @if (mode !== 'away') {
+          @if (awayOffered()) {
             <button type="button" class="sr-presence__button" [attr.aria-expanded]="awayOpen()" (click)="awayOpen.set(!awayOpen())">Away</button>
           }
         }
