@@ -1,7 +1,5 @@
 package io.github.ythibos.edi.web.presence;
 
-import java.util.Set;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,12 +10,10 @@ import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.web.access.Caller;
-import io.github.ythibos.edi.web.access.NotPermitted;
 
 @RestController
 class PresenceController {
 
-    private static final Set<String> THE_CONSOLES_BUTTONS = Set.of("present", "demo", PresenceRequest.DEMO_OFF);
     private static final String AFK = "/afk";
 
     private final PresenceQuery presence;
@@ -40,18 +36,14 @@ class PresenceController {
     @PostMapping("/api/presence")
     PresenceView change(@RequestBody PresenceRequest request, Caller caller) {
         String mode = request.chosenMode();
-        requireAllowed(mode, caller);
+        requireTheCaptainOrThePrimary(caller);
         return PresenceView.of(changed(mode, request, caller), words);
     }
 
-    private static void requireAllowed(String mode, Caller caller) {
-        if (caller instanceof Caller.Captain) {
-            if (!THE_CONSOLES_BUTTONS.contains(mode)) {
-                throw new NotPermitted("The console sets presence to present or to a demo; quiet and away are set in the chat.");
-            }
-            return;
+    private static void requireTheCaptainOrThePrimary(Caller caller) {
+        if (!(caller instanceof Caller.Captain)) {
+            caller.requirePrimary("edi presence");
         }
-        caller.requirePrimary("edi presence");
     }
 
     private Presence changed(String mode, PresenceRequest request, Caller caller) {
@@ -66,7 +58,9 @@ class PresenceController {
     }
 
     private Presence away(String mandate, Caller caller) {
-        captainsWord.requireTypedWithItsCommand(caller.callingSession(), AFK, mandate);
+        if (!(caller instanceof Caller.Captain)) {
+            captainsWord.requireTypedWithItsCommand(caller.callingSession(), AFK, mandate);
+        }
         return change.away(mandate);
     }
 }
