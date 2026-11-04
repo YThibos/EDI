@@ -4,37 +4,61 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
+import java.util.function.Supplier;
+import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class SyntheticSecrets {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
     private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final GitleaksAllowlists ALLOWLISTS = GitleaksAllowlists.ofTheDefaultConfiguration();
+    private static final SyntheticSecrets UNPREDICTABLE = new SyntheticSecrets(new SecureRandom());
 
-    private SyntheticSecrets() {
+    private final RandomGenerator random;
+
+    private SyntheticSecrets(RandomGenerator random) {
+        this.random = random;
+    }
+
+    static SyntheticSecrets seeded(long seed) {
+        return new SyntheticSecrets(new Random(seed));
     }
 
     public static String awsAccessKeyId() {
-        return "AK" + "IA" + distinctFrom(BASE32, 16);
+        return UNPREDICTABLE.nextAwsAccessKeyId();
     }
 
     public static String githubToken() {
-        return "gh" + "p_" + randomFrom(ALPHANUMERIC, 36);
+        return UNPREDICTABLE.nextGithubToken();
     }
 
     public static String canary() {
-        return "canary-" + randomFrom(ALPHANUMERIC, 32);
+        return "canary-" + UNPREDICTABLE.randomFrom(ALPHANUMERIC, 32);
     }
 
-    private static String distinctFrom(String alphabet, int length) {
+    String nextAwsAccessKeyId() {
+        return firstNotAllowlisted(() -> "AK" + "IA" + distinctFrom(BASE32, 16));
+    }
+
+    String nextGithubToken() {
+        return firstNotAllowlisted(() -> "gh" + "p_" + randomFrom(ALPHANUMERIC, 36));
+    }
+
+    private static String firstNotAllowlisted(Supplier<String> draw) {
+        return Stream.generate(draw).filter(secret -> !ALLOWLISTS.allow(secret)).findFirst().orElseThrow();
+    }
+
+    private String distinctFrom(String alphabet, int length) {
         List<String> symbols = new ArrayList<>(alphabet.chars().mapToObj(Character::toString).toList());
-        Collections.shuffle(symbols, RANDOM);
+        Collections.shuffle(symbols, random);
         return String.join("", symbols.subList(0, length));
     }
 
-    private static String randomFrom(String alphabet, int length) {
-        return RANDOM.ints(length, 0, alphabet.length())
+    private String randomFrom(String alphabet, int length) {
+        return random.ints(length, 0, alphabet.length())
                 .mapToObj(index -> String.valueOf(alphabet.charAt(index)))
                 .collect(Collectors.joining());
     }
