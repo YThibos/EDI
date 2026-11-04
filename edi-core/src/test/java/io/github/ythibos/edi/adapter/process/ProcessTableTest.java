@@ -69,6 +69,38 @@ class ProcessTableTest {
     }
 
     @Test
+    void findsTheProcessesThatWorkInADirectoryOrRunAProgramFromIt() throws IOException {
+        Path copy = Files.createDirectories(directory.resolve("worktrees/harness/fit-lamp"));
+        Path sleepInside = Files.copy(Path.of("/bin/sleep").toRealPath(), copy.resolve("sleep"));
+        Process working = processes.register(new ProcessBuilder("sleep", "30").directory(copy.toFile()).start());
+        Process running = processes.register(new ProcessBuilder(sleepInside.toString(), "30").directory(directory.toFile()).start());
+        Process elsewhere = processes.register(new ProcessBuilder("sleep", "30").directory(directory.toFile()).start());
+
+        assertThat(table.heldIn(copy)).containsExactlyInAnyOrder(working.pid(), running.pid());
+        for (Process started : List.of(working, running, elsewhere)) {
+            started.destroyForcibly();
+            assertThat(TestProcesses.awaitExit(started.toHandle())).isTrue();
+        }
+    }
+
+    @Test
+    void stopsExactlyTheProcessesNamedAndNoneBelowThem() throws IOException {
+        String forkOnceSleeping = "sleep 32 & echo $!; wait";
+        Process named = processes.register(new ProcessBuilder("sh", "-c", forkOnceSleeping).start());
+        long child = Long.parseLong(named.inputReader().readLine().strip());
+        processes.register(child);
+
+        table.stopEach(List.of(named.pid()), Duration.ofMillis(200));
+
+        assertThat(TestProcesses.awaitExit(named.toHandle())).isTrue();
+        ProcessHandle below = ProcessHandle.of(child).orElseThrow();
+        assertThat(below.isAlive()).isTrue();
+        below.destroyForcibly();
+        assertThat(TestProcesses.awaitExit(below)).isTrue();
+        assertThat(table.ancestryOf(table.ownId())).startsWith(table.ownId()).contains(table.parentOf(table.ownId()).orElseThrow());
+    }
+
+    @Test
     void readsTheArgumentsOfAProcessAndEverythingBelowIt() throws IOException {
         String forkOnceSleeping = "sleep 31 & until [ \"$(cat /proc/$!/comm)\" = sleep ]; do :; done; echo forked; wait";
         Process pane = processes.register(new ProcessBuilder("sh", "-c", forkOnceSleeping, "pane").start());
