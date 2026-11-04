@@ -367,6 +367,24 @@ class ConsoleApiTest {
     }
 
     @Test
+    void servesTheWeeksWorkedTimeToTheConsoleAndThePrimaryAndRefusesAWorker() throws Exception {
+        String cookie = signedInCookie();
+        String worker = workerTokenFor("lamp-week");
+
+        HttpResponse<String> shown = send(withTheCookie("/api/week?from=2026-10-12", cookie, "application/json").GET());
+        HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/week?from=2026-10-12", "application/json").GET());
+        HttpResponse<String> toTheWorker = send(withToken(worker, "/api/week?from=2026-10-12", "application/json").GET());
+        HttpResponse<String> noDay = send(withTheCookie("/api/week?from=Monday", cookie, "application/json").GET());
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.body()).contains("\"from\":\"2026-10-12\"", "\"days\":[\"2026-10-12\",", "\"2026-10-18\"]", "\"tasks\":[");
+        assertThat(toThePrimary.statusCode()).isEqualTo(200);
+        assertThat(toTheWorker.statusCode()).isEqualTo(403);
+        assertThat(toTheWorker.body()).isEqualTo("The week's worked time is the primary's and the captain's to read; a worker reports through edi status.\n");
+        assertThat(noDay.statusCode()).isEqualTo(400);
+    }
+
+    @Test
     void showsAndKeepsThePersonalityFromTheConsoleThroughTheSameCoreAsEdiPersonality() throws Exception {
         String cookie = signedInCookie();
         String change = "{\"change\":[\"humour\",\"2\",\"formality\",\"10\"]}";

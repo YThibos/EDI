@@ -53,7 +53,7 @@ public class WorkedTimes {
         return WorkedTime.over(workMarksOf(task), until);
     }
 
-    private List<WorkMark> workMarksOf(TaskId task) {
+    public List<WorkMark> workMarksOf(TaskId task) {
         return events.ofTask(task).stream().flatMap(event -> workMarkOf(event).stream()).toList();
     }
 

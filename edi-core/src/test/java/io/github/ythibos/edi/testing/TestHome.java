@@ -161,6 +161,7 @@ import io.github.ythibos.edi.application.task.PromoteScout;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskListQuery;
+import io.github.ythibos.edi.application.task.WeekOfWork;
 import io.github.ythibos.edi.application.task.WorkedTimes;
 import io.github.ythibos.edi.application.tracker.FollowTickets;
 import io.github.ythibos.edi.application.tracker.KeyTask;
@@ -455,6 +456,10 @@ public final class TestHome {
 
     public TaskDetailQuery taskDetail() {
         return new TaskDetailQuery(tasks, decisions, deliveries, pipelineRuns, taskCosts, workedTimes(), events, clock, transaction);
+    }
+
+    public WeekOfWork weekOfWork() {
+        return new WeekOfWork(tasks, workedTimes(), registry, machineProfile(), clock, transaction);
     }
 
     public WorkedTimes workedTimes() {
