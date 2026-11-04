@@ -8,7 +8,7 @@
 | Source | EDI-75 change 1 |
 | Size | S |
 | Blocked by | nothing |
-| Status | open |
+| Status | delivered |
 | Issue | [#119](https://github.com/YThibos/EDI/issues/119) |
 | Cloud session | ok |
 
