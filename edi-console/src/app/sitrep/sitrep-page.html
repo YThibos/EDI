@@ -1,38 +1,21 @@
 <app-console-header
-  [generated]="sitrep()?.generated ?? null"
-  [zone]="sitrep()?.zone ?? null"
-  [machine]="sitrep()?.machine ?? null"
-  [presence]="sitrep()?.presence ?? null"
+  [generated]="reading.sitrep()?.generated ?? null"
+  [zone]="reading.sitrep()?.zone ?? null"
+  [machine]="reading.sitrep()?.machine ?? null"
+  [presence]="reading.sitrep()?.presence ?? null"
   [personalityOpen]="personalityOpen()"
-  [waiting]="waitingCount()"
-  (presenceChosen)="choosePresence($event)"
+  [waiting]="reading.waiting()"
+  (presenceChosen)="reading.choosePresence($event)"
   (personalityToggled)="personalityOpen.set(!personalityOpen())"
 />
 <main class="sr-main">
-  @switch (access()) {
-    @case ('signed-out') {
-      <div class="sr-panel sr-notice">
-        <div class="sr-notice__pad">
-          <h2 class="sr-notice__title">Sign in to see the sitrep</h2>
-          <p class="sr-notice__detail">Run <code>edi console</code> in a terminal, or <code>/sitrep board</code> in the primary session, for a link that signs you in.</p>
-        </div>
-      </div>
-    }
-    @case ('unreachable') {
-      <div class="sr-panel sr-notice">
-        <div class="sr-notice__pad">
-          <h2 class="sr-notice__title">My core is not answering</h2>
-          <p class="sr-notice__detail">The page reloads the sitrep as soon as the core is back; <code>edi health</code> tells whether it is running.</p>
-        </div>
-      </div>
-    }
-  }
-  @if (sitrep(); as sitrep) {
+  <app-access-notice [access]="reading.access()" />
+  @if (reading.sitrep(); as sitrep) {
     @if (personalityOpen()) {
       <app-personality-desk [demoHolds]="sitrep.presence.demo" (closed)="personalityOpen.set(false)" />
     }
     <div class="sr-glance">
-      <app-hud-strip [needYou]="waitingCount()" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
+      <app-hud-strip [needYou]="reading.waiting()" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
       <div class="sr-cols">
         <section class="sr-section">
           <div class="sr-section__head">
@@ -41,7 +24,7 @@
           </div>
           <div class="sr-section__body sr-waiting-on-you">
             @if (showsTheDeck()) {
-              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" (settled)="refresh()" />
+              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" (settled)="reading.refresh()" />
             }
             @if (sitrep.boards.length || sitrep.reviews.length || sitrep.changing.length || sitrep.workerQuestions.length) {
               <app-waiting-list
@@ -78,7 +61,7 @@
     </section>
     <footer class="sr-foot">
       <span class="sr-meta-mono">{{ sitrep.schema }} · {{ shipMoment(sitrep.generated, sitrep.zone) }}</span>
-      <span class="sr-meta-mono">{{ live() ? 'live · answers go straight to me' : 'reconnecting · answers go straight to me' }}</span>
+      <span class="sr-meta-mono">{{ reading.live() ? 'live · answers go straight to me' : 'reconnecting · answers go straight to me' }}</span>
     </footer>
   }
 </main>

@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
+import { Router, TitleStrategy } from '@angular/router';
 
 import { Sitrep } from './sitrep';
 
-const TITLE = 'SITREP · EDI';
 const ASKED = 'edi.console.notifications-asked';
 
 interface News {
@@ -14,17 +14,14 @@ interface News {
 @Injectable({ providedIn: 'root' })
 export class Attention {
   private readonly title = inject(Title);
+  private readonly router = inject(Router);
+  private readonly titles = inject(TitleStrategy);
   private seen: Set<string> | null = null;
   private asked = false;
 
   follow(sitrep: Sitrep, waiting: number): void {
-    this.title.setTitle(waiting > 0 ? `(${waiting}) ${TITLE}` : TITLE);
-    const news = newsIn(sitrep);
-    const seen = this.seen;
-    if (seen) {
-      news.filter((item) => !seen.has(item.id)).forEach(announce);
-    }
-    this.seen = new Set(news.map((item) => item.id));
+    this.title.setTitle(countedOnto(this.viewOnScreen(), waiting));
+    this.announceNews(sitrep);
   }
 
   askOnce(): void {
@@ -35,6 +32,23 @@ export class Attention {
     rememberAsking();
     Promise.resolve(Notification.requestPermission()).catch(() => undefined);
   }
+
+  private viewOnScreen(): string {
+    return this.titles.buildTitle(this.router.routerState.snapshot) ?? '';
+  }
+
+  private announceNews(sitrep: Sitrep): void {
+    const news = newsIn(sitrep);
+    const seen = this.seen;
+    if (seen) {
+      news.filter((item) => !seen.has(item.id)).forEach(announce);
+    }
+    this.seen = new Set(news.map((item) => item.id));
+  }
+}
+
+function countedOnto(view: string, waiting: number): string {
+  return waiting > 0 ? `(${waiting}) ${view}` : view;
 }
 
 function newsIn(sitrep: Sitrep): News[] {

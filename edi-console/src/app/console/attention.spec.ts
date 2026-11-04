@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
+import { Router, provideRouter } from '@angular/router';
 
 import { Attention } from './attention';
 import { DecisionCard, Sitrep } from './sitrep';
@@ -35,7 +36,16 @@ describe('Attention', () => {
   let attention: Attention;
   let title: Title;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', title: 'SITREP · EDI', children: [] },
+          { path: 'fleet', title: 'FLEET · EDI', children: [] },
+        ]),
+      ],
+    });
+    await TestBed.inject(Router).navigateByUrl('/');
     StubNotification.permission = 'granted';
     StubNotification.shown = [];
     StubNotification.requests = 0;
@@ -56,6 +66,13 @@ describe('Attention', () => {
 
     expect(counted).toBe('(2) SITREP · EDI');
     expect(title.getTitle()).toBe('SITREP · EDI');
+  });
+
+  it('counts onto the title of the view on screen', async () => {
+    await TestBed.inject(Router).navigateByUrl('/fleet');
+    attention.follow(sitrepFixture(), 1);
+
+    expect(title.getTitle()).toBe('(1) FLEET · EDI');
   });
 
   it('announces a new decision or review once, never what the page already showed when it opened', () => {

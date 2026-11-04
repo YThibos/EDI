@@ -112,6 +112,23 @@ describe('The views', () => {
     expect(location.path()).toBe('/fleet');
   });
 
+  it('counts what waits on the captain onto the title of each view', async () => {
+    const harness = await RouterTestingHarness.create();
+    const titles: string[] = [];
+
+    await harness.navigateByUrl('/');
+    http.expectOne('/api/sitrep').flush(sitrepFixture());
+    titles.push(document.title);
+    await harness.navigateByUrl('/fleet');
+    http.expectOne('/api/sitrep').flush(sitrepFixture());
+    titles.push(document.title);
+    await harness.navigateByUrl('/week');
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ decisions: [] }));
+    titles.push(document.title);
+
+    expect(titles).toEqual(['(1) SITREP · EDI', '(1) FLEET · EDI', 'WEEK · EDI']);
+  });
+
   it('counts what waits on the captain in the tab title on Fleet, and announces a new decision once it reads again on focus', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/fleet');
@@ -124,8 +141,8 @@ describe('The views', () => {
     http.expectOne('/api/sitrep').flush(sitrepFixture({ decisions: [...opened.decisions, BULB] }));
     await harness.fixture.whenStable();
 
-    expect(counted).toBe('(1) SITREP · EDI');
-    expect(document.title).toBe('(2) SITREP · EDI');
+    expect(counted).toBe('(1) FLEET · EDI');
+    expect(document.title).toBe('(2) FLEET · EDI');
     expect(StubNotification.shown).toEqual(['I need your decision on D59: Which bulb?']);
   });
 
