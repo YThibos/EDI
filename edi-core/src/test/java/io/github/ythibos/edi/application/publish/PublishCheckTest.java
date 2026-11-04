@@ -32,6 +32,29 @@ class PublishCheckTest {
 
             acme-corp.example
             """;
+    private static final String REACTOR = """
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+              <groupId>example.harness</groupId>
+              <artifactId>harness</artifactId>
+              <version>3.1.0-SNAPSHOT</version>
+            </project>
+            """;
+    private static final String MODULE = """
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+              <parent>
+                <groupId>example.harness</groupId>
+                <artifactId>harness</artifactId>
+                <version>%2$s</version>
+              </parent>
+              <artifactId>a-module</artifactId>
+              <dependencies>
+                <dependency>
+                  <artifactId>lamp</artifactId>
+                  <version>%1$s</version>
+                </dependency>
+              </dependencies>
+            </project>
+            """;
     private static final String POM = """
             <project>
               <version>%s</version>
@@ -165,6 +188,24 @@ class PublishCheckTest {
         assertThat(verdict.findings())
                 .extracting(PublishFinding::rule, PublishFinding::toString)
                 .containsExactly(tuple(PublishRule.SNAPSHOT_VERSION, "pom.xml:2 in commit " + shortHead() + ": a -SNAPSHOT version"));
+    }
+
+    @Test
+    void allowsANewModulesParentReferenceToItsOwnReactorButNotItsSnapshotDependency() throws IOException {
+        repository.write("pom.xml", REACTOR)
+                .commit("Start the reactor")
+                .branch("module")
+                .write("lamp/pom.xml", MODULE.formatted("1.2.0-SNAPSHOT", "3.1.0-SNAPSHOT"))
+                .write("horn/pom.xml", MODULE.formatted("1.2.0", "3.0.0-SNAPSHOT"))
+                .commit("Add the lamp and horn modules");
+
+        PublishVerdict verdict = check("main..module", elsewhereHome);
+
+        assertThat(verdict.findings())
+                .extracting(PublishFinding::rule, PublishFinding::toString)
+                .containsExactlyInAnyOrder(
+                        tuple(PublishRule.SNAPSHOT_VERSION, "lamp/pom.xml:11 in commit " + shortHead() + ": a -SNAPSHOT version"),
+                        tuple(PublishRule.SNAPSHOT_VERSION, "horn/pom.xml:5 in commit " + shortHead() + ": a -SNAPSHOT version"));
     }
 
     @Test

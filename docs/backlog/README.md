@@ -47,9 +47,10 @@ A session takes one item at a time, in this order.
    - `./mvnw verify` before every commit that is meant to be delivered, and `./mvnw test -Pfast` while working;
    - `./mvnw -Pnative,quick-build verify` when the change can reach the native image (`NativeImageInput` in [local-native-builds](../decisions/local-native-builds.md) lists what can), and otherwise one line saying why it was not needed;
    - the item's own "How to verify".
-   GitHub Actions does not run on this repository, so no check will appear on the pull request: the body carries the commands run and their results.
+   GitHub Actions runs the CI workflow on every pull request; the body still carries the commands run locally and their results, and names the CI run it waits on.
    A step the sandbox cannot run, such as the native build or a browser check, is said plainly with the reason; never write that it passed when it was not run.
-6. When the local verification is green, update the item: change its status in its file header to `delivered`, in the same pull request, and mark the pull request ready for review; the index below carries no status, so a delivery never edits it.
+6. When the local verification is green, update the item: change its status in its file header to `delivered`, in the same pull request, and mark the pull request ready for review once its CI run on the last pushed head is green; the index below carries no status, so a delivery never edits it.
+   A CI failure is the session's to fix, on that pull request, even when its cause came in on `main`; say in the body what failed and why.
 7. Stop.
    The captain's primary session reads, merges and processes the pull request; a session never merges.
    A session may start the next open item only when its blockers are already merged, on a new branch from a fresh `origin/main`.
@@ -84,6 +85,8 @@ An item's status is the `Status` field in its file's header, and nowhere else; `
 | `in-flight` | running on the captain's machine when the backlog was written; skip it if its pull request exists or has merged |
 | `parked` | waiting for a named event, given in its reason; skip it until that event and the captain's word |
 | `needs-captain-machine` | cannot run without the captain's machine, for the reason given; not for a cloud session |
+| `folded` | its criteria were moved into the item it names, which delivers them; skip it |
+| `dropped` | the captain dropped it, for the reason given; skip it |
 
 ## Issues
 
@@ -102,6 +105,7 @@ Order follows the waves the captain set.
 An item added later goes at the end of its section's table and takes the highest order plus one in the whole index, on `main` and on every branch awaiting merge, whatever its section, so every order stays unique and no other row changes; an item in the held section carries `-`, as its rows do.
 The waves set the order, and an item may start once every item in its blockers column has merged, even while an earlier wave is still open.
 Wave 5 is the captain's console plan and report chain, which starts once EDI-89 (the plan dispatches its slices) has merged, so every wave 5 item lists EDI-89 or an item that itself waits for it.
+On 3 November 2026 the captain lifted that wait for the slices that need neither plans nor stages, EDI-55, EDI-56, EDI-57, EDI-58, EDI-63, EDI-64 and EDI-66, which now wait on nothing.
 Sizes: XS under two hours, S about half a day, M about a day, L several days of research.
 
 ### Wave 1: no wait
@@ -111,7 +115,7 @@ Sizes: XS under two hours, S about half a day, M about a day, L several days of 
 | 1 | [EDI-81](EDI-81.md) | Learnings name their ticket | S | - |
 | 2 | [EDI-75](EDI-75.md) | Spec first for features with several slices | S | - |
 | 3 | [EDI-94](EDI-94.md) | Worklogs and stories through the tracker | M | - |
-| 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses, and Renovate runs again | M | - |
+| 4 | [EDI-118](EDI-118.md) | The weekly upkeep flags a newer JDK GraalVM supports and every version Renovate misses | M | - |
 | 47 | [EDI-143](EDI-143.md) | Every state-changing edi command answers --json on the native core | S | - |
 | 52 | [EDI-151](EDI-151.md) | Stopping a worker also ends the processes it left behind in its copy | S | - |
 | 53 | [EDI-152](EDI-152.md) | The primary has exactly one live edi wait, and a wait that goes nowhere is refused | S | - |
@@ -123,6 +127,7 @@ Sizes: XS under two hours, S about half a day, M about a day, L several days of 
 | 63 | [EDI-165](EDI-165.md) | A weekly gardening round measures slips and rules and drafts hard rules on a board | M | EDI-155, EDI-164 |
 | 64 | [EDI-166](EDI-166.md) | Sparks are captured in a second and sorted at gardening | S | EDI-132 |
 | 65 | [EDI-167](EDI-167.md) | The SNAPSHOT check accepts a new module's parent reference to its own reactor's version | XS | - |
+| 68 | [EDI-171](EDI-171.md) | The backlog is reconciled after an analysis of its overlaps | XS | - |
 | 69 | [EDI-172](EDI-172.md) | An item's status and issue live only in its own file, so deliveries stop conflicting in the index | S | - |
 | 66 | [EDI-168](EDI-168.md) | CI is green again on main | XS | - |
 
@@ -143,7 +148,7 @@ Sizes: XS under two hours, S about half a day, M about a day, L several days of 
 | 10 | [EDI-87](EDI-87.md) | The reasons a task waits, as a set | M | EDI-85 |
 | 57 | [EDI-156](EDI-156.md) | Finished work retires itself once nothing is left to do on it | S | EDI-65 |
 | 58 | [EDI-157](EDI-157.md) | A merge request's validation watch never reads as changing | XS | EDI-86 |
-| 59 | [EDI-161](EDI-161.md) | A worker's done is checked and booked by the core in one pass | M | EDI-86 |
+| 59 | [EDI-161](EDI-161.md) | A worker's done is checked and booked by the core in one pass | M | EDI-86, EDI-163 |
 | 61 | [EDI-163](EDI-163.md) | The tracker walks a ticket to a named state and checks tickets against what landed | S | - |
 
 ### Wave 4: plans dispatch themselves
@@ -162,17 +167,17 @@ Sizes: XS under two hours, S about half a day, M about a day, L several days of 
 | 15 | [EDI-90](EDI-90.md) | The captain's last look and the delta | S | EDI-65 |
 | 16 | [EDI-91](EDI-91.md) | The report's new layout | M | EDI-90, EDI-133 |
 | 17 | [EDI-92](EDI-92.md) | The stop hook's new rule | S | EDI-90 |
-| 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | EDI-89 |
-| 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | EDI-89 |
-| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | EDI-89 |
-| 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | EDI-89 |
+| 18 | [EDI-55](EDI-55.md) | Quiet delivers the primary's own notifications at once | S | - |
+| 19 | [EDI-56](EDI-56.md) | autoQuietAfter accepts PT0S | XS | - |
+| 20 | [EDI-57](EDI-57.md) | Link chips on every row | M | - |
+| 21 | [EDI-58](EDI-58.md) | View buttons in the header | S | - |
 | 22 | [EDI-59](EDI-59.md) | The task panel | M | EDI-57, EDI-58 |
 | 23 | [EDI-60](EDI-60.md) | Live check-in on a worker | M | EDI-59 |
 | 24 | [EDI-61](EDI-61.md) | The Fleet view | M | EDI-58, EDI-60 |
 | 25 | [EDI-62](EDI-62.md) | The Week view | S | EDI-58 |
-| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | EDI-89 |
-| 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | EDI-89 |
-| 28 | [EDI-66](EDI-66.md) | edi board show | S | EDI-59 |
+| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | - |
+| 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | - |
+| 28 | [EDI-66](EDI-66.md) | edi board show | S | - |
 | 29 | [EDI-68](EDI-68.md) | edi park and edi resume | M | EDI-87, EDI-89 |
 | 30 | [EDI-69](EDI-69.md) | A standing CI note per project | S | EDI-89 |
 | 31 | [EDI-72](EDI-72.md) | Spike: a steer at the next tool call | S | EDI-89 |
@@ -235,7 +240,7 @@ The section sits after the six waves; the captain may move it up.
 | - | [EDI-145](EDI-145.md) | A supervised reviewer judges each validation against the intent | L | EDI-105 |
 | - | [EDI-146](EDI-146.md) | The worker fixes findings on top, and a branch behind its base merges it | M | EDI-105, EDI-67 |
 | - | [EDI-147](EDI-147.md) | EDI publishes a validated head on the bound account and opens the draft | M | EDI-105, EDI-70 |
-| - | [EDI-148](EDI-148.md) | EDI watches a request's checks and marks it ready for review | M | EDI-105, EDI-86, EDI-69 |
+| - | [EDI-148](EDI-148.md) | EDI watches a request's checks and marks it ready for review | M | EDI-105, EDI-86 |
 | - | [EDI-149](EDI-149.md) | Projects cut over to EDI's validation, and no-mistakes is removed | L | EDI-105 |
 
 ## Not in the backlog

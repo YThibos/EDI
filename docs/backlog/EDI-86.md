@@ -32,9 +32,12 @@ The research is in [the EDI-74 plan](research/EDI-74-plan.md), sections 6.2 (def
   - a DELIVERED task and a steer sent gives CHANGING; `edi status done` is refused naming the message; after `edi inbox ack` and the run's end it is DELIVERED again;
   - DELIVERED with a pipeline run running is not READY; the run passes and the draft flag drops, then it is READY; a new run starts, then it is CHANGING.
 - The interim rules and their acceptance tests from the two console slices become transition tests; none is deleted.
+- From [EDI-157](EDI-157.md), folded in: a request whose pipeline run has reached CI-ready (no-mistakes' `ci_ready_at`, or the equivalent stage of EDI's own validation once EDI-105 lands) and whose head equals the forge's head with green checks reads as READY, not CHANGING, while the pipeline only watches it; CHANGING still shows for a new commit, a running fix round, an unacknowledged steer, a worker back at work, or checks not yet green on the head; the reason shown with CHANGING names what moves, never only a pipeline step's name.
+- Tests cover a watched ready request (READY), each true CHANGING cause, and the reason text.
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) folded EDI-157 into this item: on 2 November three ready merge requests read "Changing, hold the merge (pipeline ci)" for over an hour because no-mistakes keeps its CI step watching a request after it is CI-ready, and the captain merged one believing the warning was noise; a warning that is often false is itself a silent failure, and captain-facing text speaks in outcomes, never in internal labels such as a pipeline step's name.
 - D43 A and Q6 A as in [task-lifecycle](../decisions/task-lifecycle.md): the stage says where the work is; a merge while CHANGING leaves the task MERGED, names the commits after the merged head and raises one decision (that part is EDI-70).
 - The worker's status words carry what they promise: a scout's done needs its report, needs-decision and blocked need a key, paused needs an until (these refusals already exist; keep them).
 - Every stage change is recorded as an event through the one place that changes stages.
