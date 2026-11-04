@@ -375,6 +375,20 @@ class CommandsTest {
     }
 
     @Test
+    void showsATasksAnsweredBoardRoundsOrOneOfThem() {
+        core.answering(200, "Board rounds answered on scout (1):\n");
+
+        int all = edi("", "board", "show", "scout");
+        String allTarget = core.received().target();
+        int one = edi("", "board", "show", "scout", "--round", "2");
+
+        assertThat(all).isZero();
+        assertThat(one).isZero();
+        assertThat(allTarget).isEqualTo("/api/tasks/scout/board");
+        assertThat(core.received().target()).isEqualTo("/api/tasks/scout/board?round=2");
+    }
+
+    @Test
     void passesOnTheCoresRefusalAndFails() {
         core.answering(409, "fit-lamp is not held.\n");
 

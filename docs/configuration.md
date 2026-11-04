@@ -26,7 +26,7 @@ The session-start digest lists any of the machine profile, the personal configur
 `config/machine.yaml` describes this machine:
 
 - `workers` lists the models workers may run, strongest first, the tools they never get and their permission mode.
-- `supervision.staleAfter` and `supervision.pauseResurface` tune the supervision round, PT20M and PT4H by default (see [Workers](workers.md)).
+- `supervision.staleAfter` and `supervision.pauseResurface` tune the supervision round, PT20M and PT4H by default, and `supervision.questionReminder` sets how often a worker's unanswered question is raised to the primary again, PT10M by default (see [Workers](workers.md)).
 - `tracker` says whether this machine reaches a JIRA instance or none, and `time` switches the activity ledger and the brief's `worked:` line (see [Trackers and time](trackers-and-time.md)).
 - `memory.startupBudgetTokens` caps the startup memory, 18,000 by default.
 - `notify.windowsToast: true` raises Windows notifications while the captain is quiet or away.
@@ -56,7 +56,7 @@ An effort in the file is `low`, `medium` or `high`; only the captain's word reco
 
 ## The personal configuration
 
-`config/personal.yaml` holds the address word EDI uses for the captain and the presence settings: `presence.autoQuietAfter` (PT15M), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
+`config/personal.yaml` holds the address word EDI uses for the captain and the presence settings: `presence.autoQuietAfter` (PT15M; PT0S never turns quiet on silence, while a meeting still does), `presence.quietBatch` (PT30M) and `presence.calendarIgnore`, the calendar entries that never mark a meeting.
 
 Its `edi-personality:` section holds the personality EDI speaks with: humour, formality, verbosity, warmth, directness, initiative, depth, enthusiasm and flavour, each from 0 to 10, and under `demo:` the levels a demo overrides ([personality](decisions/personality.md)).
 A scale the section leaves out takes its Balanced level, and a demo override left out is formality 7, humour 3, verbosity 5 and flavour 7.

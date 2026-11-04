@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { fromEvent } from 'rxjs';
 
+import { Attention } from '../console/attention';
 import { ChartedList } from '../console/charted-list';
 import { ConsoleApi } from '../console/console-api';
 import { ConsoleHeader } from '../console/console-header';
@@ -27,6 +28,7 @@ const SIGNED_OUT = 401;
 })
 export class SitrepPage {
   private readonly api = inject(ConsoleApi);
+  private readonly attention = inject(Attention);
 
   protected readonly sitrep = signal<Sitrep | null>(null);
   protected readonly access = signal<Access>('loading');
@@ -43,11 +45,14 @@ export class SitrepPage {
       return '';
     }
     const waiting = this.waitingCount();
-    return waiting ? `${waiting} waiting on you, ${sitrep.address}` : `all clear, ${sitrep.address}`;
+    if (waiting) {
+      return `${waiting} waiting on you, ${sitrep.address}`;
+    }
+    return sitrep.workerQuestions.length ? `${questionsOnMe(sitrep.workerQuestions.length)}, ${sitrep.address}` : `all clear, ${sitrep.address}`;
   });
   protected readonly showsTheDeck = computed(() => {
     const sitrep = this.sitrep();
-    return !!sitrep && (sitrep.decisions.length > 0 || sitrep.answered.length > 0 || this.waitingCount() === 0);
+    return !!sitrep && (sitrep.decisions.length > 0 || sitrep.answered.length > 0 || (this.waitingCount() === 0 && sitrep.workerQuestions.length === 0));
   });
   protected readonly chartedShown = computed(() => {
     const sitrep = this.sitrep();
@@ -59,9 +64,11 @@ export class SitrepPage {
     const destroyed = inject(DestroyRef);
     const stream = inject(FleetStream).events().subscribe((event) => this.follow(event));
     const focus = fromEvent(window, 'focus').subscribe(() => this.refresh());
+    const firstAction = fromEvent(document, 'click').subscribe(() => this.attention.askOnce());
     destroyed.onDestroy(() => {
       stream.unsubscribe();
       focus.unsubscribe();
+      firstAction.unsubscribe();
     });
   }
 
@@ -90,9 +97,14 @@ export class SitrepPage {
   private shown(sitrep: Sitrep): void {
     this.sitrep.set(sitrep);
     this.access.set('signed-in');
+    this.attention.follow(sitrep, this.waitingCount());
   }
 }
 
 function openOnBoards(boards: WaitingBoard[]): number {
   return boards.reduce((open, board) => open + (board.questions > 0 ? 1 : 0) + board.decisions.length, 0);
+}
+
+function questionsOnMe(count: number): string {
+  return count === 1 ? '1 question waiting on me' : `${count} questions waiting on me`;
 }

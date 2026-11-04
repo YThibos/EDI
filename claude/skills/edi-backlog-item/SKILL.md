@@ -38,7 +38,7 @@ Restate the captain's answers as requirements, name no particular person, accoun
 1. Run `node <this skill's directory>/backlog-item.mjs --dry-run <draft>...` and read every action it would take, including the item file it would write.
 2. Run it again without `--dry-run`.
 
-It refuses a draft with a missing field or section before it changes anything.
+It refuses a draft with a missing field or section, or a spec that still holds a `TODO:` line, before it changes anything.
 It refuses an item whose key already names other work upstream, in an index row or an issue title, before it changes anything upstream.
 It fetches the EDI project's clone in the EDI home, works in a throwaway copy of it from a fresh `origin/main`, or from the item's branch when an earlier run pushed it and it has not merged, and removes the copy afterwards.
 It puts the item's row at the end of its section's table with the highest order plus one in the whole index, on `main` and on every branch awaiting merge, so every order stays unique and no other row changes; in the held section, whose rows carry `-` for their order, the row carries `-` too.

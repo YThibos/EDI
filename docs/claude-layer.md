@@ -55,6 +55,7 @@ Every command the captain types in the primary, such as `/sitrep` or `/quiet`, i
 | [edi-presence](../claude/skills/edi-presence/SKILL.md) | what present, quiet and away mean, the away mandate, the demo hold and the return brief |
 | [edi-upkeep](../claude/skills/edi-upkeep/SKILL.md) | keeping EDI and the tools it drives current, Renovate's pull requests included |
 | [edi-recover](../claude/skills/edi-recover/SKILL.md) | recovery after workers die or stop on a usage limit |
+| [introspect](../claude/skills/introspect/SKILL.md) | introspection: from the store's evidence of a failure of the primary's own to hard rules on the upstream backlog of the EDI project, with a script gathering the evidence |
 | [edi-decision-log](../claude/skills/edi-decision-log/SKILL.md) | decision records on projects that keep a decision log |
 | [stow](../claude/skills/stow/SKILL.md) | curating the captain's memory files within their startup budget |
 | [personality](../claude/skills/personality/SKILL.md) | `/personality`, which shows or changes the personality |

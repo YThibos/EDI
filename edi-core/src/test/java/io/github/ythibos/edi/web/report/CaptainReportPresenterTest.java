@@ -2,10 +2,12 @@ package io.github.ythibos.edi.web.report;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +16,7 @@ import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.board.BoardId;
@@ -28,16 +31,28 @@ import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.status.StatusReport;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.HeavyRun;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.domain.worker.HeavyRuns.WorkerRun;
+import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.domain.worker.WorkerLaunch;
+import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.PresenterFixtures;
@@ -115,6 +130,24 @@ class CaptainReportPresenterTest {
                 "║  Board for Stow the lamp-research: 1 question waiting at " + BoardRounds.LINK + "\n",
                 "║  Ready for your review: Stow the fit-lamp - https://github.com/example-owner/harness/pull/14\n")
                 .doesNotContain("Nothing waiting on you");
+    }
+
+    @Test
+    void saysNothingWaitsOnlyWhenNeitherADecisionNorAWorkerQuestionWaits() {
+        Task lamp = filed("fit-lamp", 0);
+        Worker asking = Worker.launched(WorkerId.first(lamp.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
+                        new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, FIRST_DAY, "@1", 2L),
+                        new WorkerLaunch(LaunchKind.DISPATCH, FIRST_DAY, new BootId("boot")))
+                .reported(new StatusReport(StatusState.BLOCKED, new StatusKey("socket"), null, "The socket is missing."), FIRST_DAY);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
+                List.of(new WorkerQuestion(lamp, asking, Duration.ofMinutes(5))));
+
+        String questioned = rendered(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
+        String quiet = rendered(new FleetSnapshot(NOTHING_WAITING, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
+
+        assertThat(questioned).contains("╔══ NEEDS YOUR DECISION ══ nothing open ══",
+                "║  Waiting on EDI: Stow the fit-lamp asks \"The socket is missing.\" - waiting 5 minutes\n").doesNotContain("Nothing waiting on you");
+        assertThat(quiet).contains("║  Nothing waiting on you\n").doesNotContain("Waiting on EDI");
     }
 
     @Test

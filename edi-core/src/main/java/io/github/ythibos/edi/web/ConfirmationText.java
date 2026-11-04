@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
+import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
@@ -72,8 +73,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Acknowledged acknowledged -> "Acknowledged message " + acknowledged.message().number() + ".";
             case Steered steered -> WorkerSentences.steered(steered.steered());
             case Relaunched relaunched -> WorkerSentences.relaunched(relaunched.launched());
-            case StopRequested stopped -> "Stopping " + stopped.worker().id() + ": you signalled its processes, and those still running in "
-                    + "ten seconds are killed; edi worker relaunch " + stopped.worker().id().task() + relaunchOutcomeOf(stopped.worker()) + ".";
+            case StopRequested requested -> stopping(requested.stopped());
             case DraftDelivered delivered -> DeliverySentences.delivered(delivered.delivered());
             case MergedWorkFollowedUp followed -> DeliverySentences.followedUp(followed.work());
             case CleanedUp cleanedUp -> DeliverySentences.cleanedUp(cleanedUp.task());
@@ -119,6 +119,21 @@ class ConfirmationText implements TextPresenter<Confirmation> {
 
     private static String discardedOf(List<String> discarded) {
         return discarded.isEmpty() ? "; nothing unlanded was discarded." : "; discarded: " + String.join("; ", discarded) + ".";
+    }
+
+    private static String stopping(StopWorker.StoppedWorker stopped) {
+        Worker worker = stopped.worker();
+        return "Stopping " + worker.id() + ": you signalled its processes" + leftBehindOf(stopped.leftBehind()) + ", and those still running in "
+                + "ten seconds are killed; edi worker relaunch " + worker.id().task() + relaunchOutcomeOf(worker) + ".";
+    }
+
+    private static String leftBehindOf(List<Long> leftBehind) {
+        if (leftBehind.isEmpty()) {
+            return "";
+        }
+        return leftBehind.size() == 1
+                ? " and process " + leftBehind.getFirst() + ", which it left running in its copy"
+                : " and processes " + leftBehind.stream().map(String::valueOf).collect(Collectors.joining(", ")) + ", which it left running in its copy";
     }
 
     private static String relaunchOutcomeOf(Worker stopped) {
