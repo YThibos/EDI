@@ -42,8 +42,16 @@
             @if (showsTheDeck()) {
               <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" (settled)="refresh()" />
             }
-            @if (sitrep.boards.length || sitrep.reviews.length || sitrep.changing.length) {
-              <app-waiting-list class="sr-section__body" [boards]="sitrep.boards" [reviews]="sitrep.reviews" [changing]="sitrep.changing" [links]="sitrep.links ?? {}" />
+            @if (sitrep.boards.length || sitrep.reviews.length || sitrep.changing.length || sitrep.workerQuestions.length) {
+              <app-waiting-list
+                class="sr-section__body"
+                [boards]="sitrep.boards"
+                [reviews]="sitrep.reviews"
+                [changing]="sitrep.changing"
+                [workerQuestions]="sitrep.workerQuestions"
+                [generated]="sitrep.generated"
+                [links]="sitrep.links ?? {}"
+              />
             }
           </div>
         </section>

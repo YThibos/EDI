@@ -156,6 +156,9 @@ public sealed interface DomainEvent {
     record DeclaredWaitEnded(TaskId task, WorkerId worker, StatusReport pause) implements DomainEvent {
     }
 
+    record WorkerQuestionUnanswered(TaskId task, WorkerId worker, StatusReport question, Instant askedAt) implements DomainEvent {
+    }
+
     record LostInOutage(TaskId task, WorkerId worker, int number, DeathCause cause) implements DomainEvent {
     }
 

@@ -43,6 +43,18 @@ class WorkerCommandsTest {
     }
 
     @Test
+    void showsATasksWorkerFromTheStore() {
+        core.answering(200, "fit-lamp#1, implementation, on claude-opus-5-5 at high\n");
+
+        int exitCode = edi("", "worker", "show", "fit-lamp");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().method()).isEqualTo("GET");
+        assertThat(core.received().target()).isEqualTo("/api/tasks/fit-lamp/worker");
+        assertThat(out.toString()).isEqualTo("fit-lamp#1, implementation, on claude-opus-5-5 at high\n");
+    }
+
+    @Test
     void dispatchesATaskWithItsSpecAndTheCaptainsOverride() {
         core.answering(200, "Dispatched fit-lamp to fit-lamp#1.\n");
 

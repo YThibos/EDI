@@ -24,6 +24,7 @@ import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
 import io.github.ythibos.edi.application.fleet.TaskLinks;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
@@ -51,6 +52,7 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Option;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.PresenceShown;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Recommendation;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Review;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.Question;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 
 @Component
@@ -87,6 +89,7 @@ public class SitrepConsolePresenter {
                 fleet.waiting().boards().stream().map(SitrepConsolePresenter::board).toList(),
                 fleet.waiting().reviews().stream().map(SitrepConsolePresenter::review).toList(),
                 fleet.waiting().changing().stream().map(SitrepConsolePresenter::changing).toList(),
+                fleet.waiting().workerQuestions().stream().map(SitrepConsolePresenter::workerQuestion).toList(),
                 fleet.answered().stream().map(SitrepConsolePresenter::answer).toList(),
                 fleet.ongoing().stream().map(SitrepConsolePresenter::ongoing).toList(),
                 fleet.landed().stream().limit(LANDED_SHOWN).map(SitrepConsolePresenter::landed).toList(),
@@ -150,6 +153,11 @@ public class SitrepConsolePresenter {
     private static Changing changing(ChangingRequest changing) {
         Task task = changing.task();
         return new Changing(task.id().value(), task.intake().title(), projectsOf(task), changing.delivery().address().url(), changing.whyChanging());
+    }
+
+    private static Question workerQuestion(WorkerQuestion waiting) {
+        Task task = waiting.task();
+        return new Question(task.id().value(), task.intake().title(), projectsOf(task), waiting.question(), waiting.worker().lastStatus().at());
     }
 
     private static Answer answer(RecentAnswer recent) {

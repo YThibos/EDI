@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
 import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.application.worker.StopWorker.StoppedWorker;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.Delivery;
@@ -91,9 +93,15 @@ class ConfirmationTextTest {
                 new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
         Instant stopped = PresenterFixtures.AT.plusSeconds(60);
 
-        assertThat(text.text(new Confirmation.StopRequested(lamp.stopRequested(stopped)))).isEqualTo("Stopping lantern#1: you signalled its processes,"
-                + " and those still running in ten seconds are killed; edi worker relaunch lantern resumes its session.\n");
-        assertThat(text.text(new Confirmation.StopRequested(lamp.promptSubmitted(stopped).contextFilled(stopped).stopRequested(stopped))))
+        assertThat(text.text(new Confirmation.StopRequested(new StoppedWorker(lamp.stopRequested(stopped), List.of()))))
+                .isEqualTo("Stopping lantern#1: you signalled its processes, and those still running in ten seconds are killed;"
+                        + " edi worker relaunch lantern resumes its session.\n");
+        assertThat(text.text(new Confirmation.StopRequested(new StoppedWorker(lamp.stopRequested(stopped), List.of(4101L)))))
+                .startsWith("Stopping lantern#1: you signalled its processes and process 4101, which it left running in its copy, and those still");
+        assertThat(text.text(new Confirmation.StopRequested(new StoppedWorker(lamp.stopRequested(stopped), List.of(4101L, 4102L)))))
+                .startsWith("Stopping lantern#1: you signalled its processes and processes 4101, 4102, which it left running in its copy, and");
+        assertThat(text.text(new Confirmation.StopRequested(new StoppedWorker(lamp.promptSubmitted(stopped).contextFilled(stopped).stopRequested(stopped),
+                List.of()))))
                 .endsWith("; edi worker relaunch lantern starts a fresh session with a handover, since its context is full.\n");
         assertThat(text.text(new Confirmation.Steered(new SteerWorker.Steered(InboxMessage.sent(LANTERN, 1, "Use the brass lamp.", null, stopped), lamp,
                 SteerDelivery.WAITING_FOR_A_FRESH_SESSION)))).isEqualTo("Message 1 waits for lantern#1, whose context is full; the message waits in its"

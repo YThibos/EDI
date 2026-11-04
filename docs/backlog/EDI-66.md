@@ -8,7 +8,7 @@
 | Source | EDI-52 plan, slice 15 |
 | Size | S |
 | Blocked by | nothing |
-| Status | open |
+| Status | delivered |
 | Issue | [#162](https://github.com/YThibos/EDI/issues/162) |
 | Cloud session | ok |
 

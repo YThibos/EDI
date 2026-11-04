@@ -10,6 +10,7 @@ workers:
 supervision:
   staleAfter: PT20M
   pauseResurface: PT4H
+  questionReminder: PT10M
 tracker:
   kind: jira
   baseUrl: https://jira.example.org

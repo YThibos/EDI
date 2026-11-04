@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.worker.OpenWorkerQuestions;
+import io.github.ythibos.edi.application.worker.OpenWorkerQuestionsQuery;
 import io.github.ythibos.edi.application.worker.PeekWorker;
 import io.github.ythibos.edi.application.worker.RecordStatus;
 import io.github.ythibos.edi.application.worker.RelaunchWorker;
@@ -13,6 +15,8 @@ import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.application.worker.WorkerInbox;
 import io.github.ythibos.edi.application.worker.WorkerList;
+import io.github.ythibos.edi.application.worker.WorkerDetail;
+import io.github.ythibos.edi.application.worker.WorkerDetailQuery;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -27,18 +31,23 @@ class WorkerController {
     private final SteerWorker steerWorker;
     private final WorkerListQuery list;
     private final PeekWorker peekWorker;
+    private final WorkerDetailQuery detail;
     private final RelaunchWorker relaunchWorker;
     private final StopWorker stopWorker;
+    private final OpenWorkerQuestionsQuery questions;
 
     WorkerController(RecordStatus recordStatus, WorkerInbox inbox, SteerWorker steerWorker, WorkerListQuery list, PeekWorker peekWorker,
-            RelaunchWorker relaunchWorker, StopWorker stopWorker) {
+            WorkerDetailQuery detail, RelaunchWorker relaunchWorker, StopWorker stopWorker,
+            OpenWorkerQuestionsQuery questions) {
         this.recordStatus = recordStatus;
         this.inbox = inbox;
         this.steerWorker = steerWorker;
         this.list = list;
         this.peekWorker = peekWorker;
+        this.detail = detail;
         this.relaunchWorker = relaunchWorker;
         this.stopWorker = stopWorker;
+        this.questions = questions;
     }
 
     @PostMapping("/api/status")
@@ -66,6 +75,17 @@ class WorkerController {
     @GetMapping("/api/workers")
     WorkerList workers() {
         return list.serving();
+    }
+
+    @GetMapping("/api/workers/questions")
+    OpenWorkerQuestions openQuestions(Caller caller) {
+        caller.requireTheHomeToken("edi health");
+        return questions.open();
+    }
+
+    @GetMapping("/api/tasks/{reference}/worker")
+    WorkerDetail worker(@PathVariable String reference) {
+        return detail.detail(TaskReference.parse(reference));
     }
 
     @GetMapping("/api/tasks/{reference}/peek")

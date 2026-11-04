@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.web.report;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,6 +72,7 @@ final class DecisionZone {
             case BoardQuestions board -> boardLines(board, boxWidth);
             case Review review -> singleLine(WaitingWords.review(review.title(), review.url()), boxWidth);
             case Changing changing -> singleLine(WaitingWords.changing(changing.title(), changing.url(), changing.why()), boxWidth);
+            case WorkerWaiting worker -> singleLine(WaitingWords.workerQuestion(worker.title(), worker.question(), worker.waited()), boxWidth);
         };
     }
 
@@ -172,5 +174,13 @@ final class DecisionZone {
     }
 
     record Changing(ProjectSet projects, String title, String url, String why) implements Entry {
+    }
+
+    record WorkerWaiting(ProjectSet projects, String title, String question, Duration waited) implements Entry {
+
+        @Override
+        public int open() {
+            return 0;
+        }
     }
 }

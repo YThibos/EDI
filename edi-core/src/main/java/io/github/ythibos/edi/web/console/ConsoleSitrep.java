@@ -17,6 +17,7 @@ public record ConsoleSitrep(
         List<Board> boards,
         List<Review> reviews,
         List<Changing> changing,
+        List<Question> workerQuestions,
         List<Answer> answered,
         List<Ongoing> ongoing,
         List<Landed> landed,
@@ -32,6 +33,7 @@ public record ConsoleSitrep(
         boards = List.copyOf(boards);
         reviews = List.copyOf(reviews);
         changing = List.copyOf(changing);
+        workerQuestions = List.copyOf(workerQuestions);
         answered = List.copyOf(answered);
         ongoing = List.copyOf(ongoing);
         landed = List.copyOf(landed);
@@ -66,6 +68,9 @@ public record ConsoleSitrep(
     }
 
     public record Changing(String task, String title, List<String> projects, String url, String why) {
+    }
+
+    public record Question(String task, String title, List<String> projects, String question, Instant askedAt) {
     }
 
     public record Answer(String number, String task, List<String> projects, String title, String verbatim, String option, String channel,

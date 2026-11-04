@@ -72,6 +72,7 @@ import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.board.ArmBoard;
 import io.github.ythibos.edi.application.board.PostBoardRound;
 import io.github.ythibos.edi.application.board.BoardListeners;
+import io.github.ythibos.edi.application.board.BoardRoundsQuery;
 import io.github.ythibos.edi.application.board.ReceiveBoardFeedback;
 import io.github.ythibos.edi.application.board.SettleBoardAnswers;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
@@ -166,6 +167,8 @@ import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.tracker.Trackers;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.wake.WakeStreams;
+import io.github.ythibos.edi.application.worker.OpenWorkerQuestionsQuery;
+import io.github.ythibos.edi.application.worker.RemindOfUnansweredQuestions;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
@@ -906,6 +909,14 @@ public final class TestHome {
         return new NoticeMissedStops(workerList(), workers, runtime, steerWorker(), events, clock, transaction);
     }
 
+    public RemindOfUnansweredQuestions remindOfUnansweredQuestions() {
+        return new RemindOfUnansweredQuestions(workers, inbox, presence, events, machineProfile(), clock, transaction);
+    }
+
+    public OpenWorkerQuestionsQuery openWorkerQuestions() {
+        return new OpenWorkerQuestionsQuery(workers, clock, transaction);
+    }
+
     public JudgeWorkers judgeWorkers() {
         return new JudgeWorkers(workerList(), inbox, pipelineRuns, notices, events, outageHoldList(), countRecoveryCost(), machineProfile(), clock,
                 transaction);
@@ -921,7 +932,7 @@ public final class TestHome {
     }
 
     public StopWorker stopWorker() {
-        return new StopWorker(tasks, workers, runtime, processes, events, clock, transaction);
+        return new StopWorker(home, tasks, workers, runtime, processes, events, clock, transaction);
     }
 
     public ResumeAfterUsageLimits resumeAfterUsageLimits() {
@@ -958,6 +969,10 @@ public final class TestHome {
 
     public PostBoardRound postBoardRound() {
         return new PostBoardRound(boards, events, clock, transaction);
+    }
+
+    public BoardRoundsQuery boardRounds() {
+        return new BoardRoundsQuery(tasks, events, inbox, boards, transaction);
     }
 
     public ReceiveBoardFeedback receiveBoardFeedback() {

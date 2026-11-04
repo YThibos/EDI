@@ -73,8 +73,14 @@ class PersonalConfigurationTest {
     void refusesAPresenceItCannotRead() {
         assertThatThrownBy(() -> configurationOf("presence:\n  autoQuietAfter: soon\n").presence())
                 .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("which is not a duration such as PT15M");
-        assertThatThrownBy(() -> configurationOf("presence:\n  autoQuietAfter: PT0S\n").presence())
-                .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("positive duration");
+        assertThatThrownBy(() -> configurationOf("presence:\n  autoQuietAfter: -PT1M\n").presence())
+                .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("never negative");
+    }
+
+    @Test
+    void readsAZeroAutoQuietAfterAsQuietOnSilenceTurnedOff() throws IOException {
+        assertThat(configurationOf("presence:\n  autoQuietAfter: PT0S\n").presence().quietsOnSilence()).isFalse();
+        assertThat(configurationOf("presence:\n  quietBatch: PT10M\n").presence().quietsOnSilence()).isTrue();
     }
 
     @Test

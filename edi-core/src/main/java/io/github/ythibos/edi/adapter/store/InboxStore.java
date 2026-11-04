@@ -61,6 +61,10 @@ public class InboxStore {
                 .findFirst();
     }
 
+    public List<InboxMessage> allOf(TaskId task) {
+        return messages(store.sql(SELECT_MESSAGES + "where task_id = :task order by number").param("task", task.value()));
+    }
+
     public List<InboxMessage> unacknowledgedOf(TaskId task) {
         return messages(store.sql(SELECT_MESSAGES + "where task_id = :task and acknowledged_at is null order by number")
                 .param("task", task.value()));
