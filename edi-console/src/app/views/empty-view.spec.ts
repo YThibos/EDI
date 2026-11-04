@@ -8,7 +8,28 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import { routes } from '../app.routes';
 import { EVENT_SOURCES } from '../console/fleet-stream';
+import { DecisionCard } from '../console/sitrep';
 import { sitrepFixture } from '../console/sitrep.fixture';
+
+const BULB: DecisionCard = {
+  number: 'D59',
+  task: 'bulb-choice',
+  projects: ['harness'],
+  title: 'Which bulb?',
+  context: '',
+  options: [{ key: 'A', text: 'The warm one' }],
+  recommended: { key: 'A', why: 'it is enough' },
+  raisedAt: '2026-10-15T06:10:00Z',
+};
+
+class StubNotification {
+  static readonly permission: NotificationPermission = 'granted';
+  static shown: (string | undefined)[] = [];
+
+  constructor(_title: string, options?: NotificationOptions) {
+    StubNotification.shown.push(options?.body);
+  }
+}
 
 class SilentEventSource {
   onopen: (() => void) | null = null;
@@ -37,6 +58,12 @@ describe('The views', () => {
       ],
     });
     http = TestBed.inject(HttpTestingController);
+    StubNotification.shown = [];
+    vi.stubGlobal('Notification', StubNotification);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('opens Fleet and Week by their addresses as empty views that still count what waits on the captain', async () => {
@@ -83,5 +110,44 @@ describe('The views', () => {
 
     expect(afterTheTab).toBe('/week');
     expect(location.path()).toBe('/fleet');
+  });
+
+  it('counts what waits on the captain in the tab title on Fleet, and announces a new decision once it reads again on focus', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/fleet');
+    http.expectOne('/api/sitrep').flush(sitrepFixture());
+    await harness.fixture.whenStable();
+    const counted = document.title;
+
+    window.dispatchEvent(new Event('focus'));
+    const opened = sitrepFixture();
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ decisions: [...opened.decisions, BULB] }));
+    await harness.fixture.whenStable();
+
+    expect(counted).toBe('(1) SITREP · EDI');
+    expect(document.title).toBe('(2) SITREP · EDI');
+    expect(StubNotification.shown).toEqual(['I need your decision on D59: Which bulb?']);
+  });
+
+  it('asks the captain to sign in on Week when the console has no session', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/week');
+    http.expectOne('/api/sitrep').flush('This call needs a console session.', { status: 401, statusText: 'Unauthorized' });
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    const view = harness.routeNativeElement as HTMLElement;
+
+    expect(view.querySelector('.sr-notice__title')?.textContent).toBe('Sign in to see the sitrep');
+    expect(view.textContent).not.toContain('Nothing here yet');
+  });
+
+  it('tells the captain the core is not answering on Fleet when the sitrep cannot be read', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/fleet');
+    http.expectOne('/api/sitrep').flush('The core is down.', { status: 503, statusText: 'Service Unavailable' });
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect((harness.routeNativeElement as HTMLElement).querySelector('.sr-notice__title')?.textContent).toBe('My core is not answering');
   });
 });

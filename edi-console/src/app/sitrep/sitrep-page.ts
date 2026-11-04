@@ -1,7 +1,7 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { fromEvent } from 'rxjs';
 
+import { Access, accessRefusedBy } from '../console/access';
 import { Attention } from '../console/attention';
 import { ChartedList } from '../console/charted-list';
 import { ConsoleApi } from '../console/console-api';
@@ -16,10 +16,6 @@ import { PresenceChoice, Sitrep } from '../console/sitrep';
 import { shipMoment } from '../console/stardate';
 import { waitingOn } from '../console/waiting';
 import { WaitingList } from '../console/waiting-list';
-
-type Access = 'loading' | 'signed-in' | 'signed-out' | 'unreachable';
-
-const SIGNED_OUT = 401;
 
 @Component({
   selector: 'app-sitrep-page',
@@ -73,7 +69,7 @@ export class SitrepPage {
   protected refresh(): void {
     this.api.sitrep().subscribe({
       next: (sitrep) => this.shown(sitrep),
-      error: (failed: HttpErrorResponse) => this.access.set(failed.status === SIGNED_OUT ? 'signed-out' : 'unreachable'),
+      error: (failed) => this.access.set(accessRefusedBy(failed)),
     });
   }
 
