@@ -1,0 +1,30 @@
+@if (links(); as links) {
+  <div class="sr-chips">
+    @if (showsKey() && links.key) {
+      @if (links.tracker) {
+        <a class="sr-chip sr-chip--key" [href]="links.tracker" target="_blank" rel="noopener">{{ links.key }}</a>
+      } @else {
+        <span class="sr-chip sr-chip--key">{{ links.key }}</span>
+      }
+    }
+    @if (links.request; as request) {
+      <a class="sr-chip" [href]="request.url" [title]="request.url" target="_blank" rel="noopener">{{ requestWords(request) }}</a>
+    }
+    @if (links.branch; as branch) {
+      @if (branch.url) {
+        <a class="sr-chip" [href]="branch.url" [title]="branch.url" target="_blank" rel="noopener">{{ branch.name }}</a>
+      } @else {
+        <span class="sr-chip">{{ branch.name }}</span>
+      }
+    }
+    @if (links.board) {
+      <a class="sr-chip" [href]="links.board" target="_blank" rel="noopener">board</a>
+    }
+    @if (links.report) {
+      <a class="sr-chip" [href]="links.report" target="_blank" rel="noopener">report</a>
+    }
+    @for (decision of links.decisions; track decision) {
+      <span class="sr-chip sr-chip--decision">{{ decision }}</span>
+    }
+  </div>
+}

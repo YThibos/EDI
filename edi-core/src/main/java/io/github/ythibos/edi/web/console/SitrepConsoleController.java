@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
+import io.github.ythibos.edi.application.fleet.TaskLinksQuery;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 
@@ -18,19 +19,21 @@ class SitrepConsoleController {
     private final PersonalConfiguration personal;
     private final PresenceQuery presence;
     private final Clock clock;
+    private final TaskLinksQuery links;
 
     SitrepConsoleController(FleetSnapshotQuery fleet, SitrepConsolePresenter presenter, MachineProfile machine, PersonalConfiguration personal,
-            PresenceQuery presence, Clock clock) {
+            PresenceQuery presence, Clock clock, TaskLinksQuery links) {
         this.fleet = fleet;
         this.presenter = presenter;
         this.machine = machine;
         this.personal = personal;
         this.presence = presence;
         this.clock = clock;
+        this.links = links;
     }
 
     @GetMapping("/api/sitrep")
     ConsoleSitrep sitrep() {
-        return presenter.present(fleet.snapshot(), clock.now(), clock.zone(), machine.name(), personal.address(), presence.current());
+        return presenter.present(fleet.snapshot(), clock.now(), clock.zone(), machine.name(), personal.address(), presence.current(), links::linksOf);
     }
 }

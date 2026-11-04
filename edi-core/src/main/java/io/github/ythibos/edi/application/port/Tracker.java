@@ -25,6 +25,8 @@ public interface Tracker {
 
     Optional<Ticket> found(WorkKey key);
 
+    Optional<String> browseAddressOf(WorkKey key);
+
     TicketMove transition(WorkKey key, String target);
 
     SprintPlacement addToCurrentSprint(WorkKey key);

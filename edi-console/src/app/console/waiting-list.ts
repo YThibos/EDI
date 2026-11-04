@@ -1,10 +1,12 @@
 import { Component, input } from '@angular/core';
 
 import { projectsOf } from './projects';
-import { ChangingRequest, ReadyForReview, WaitingBoard, WorkerQuestion } from './sitrep';
+import { ChangingRequest, ReadyForReview, TaskLinks, WaitingBoard, WorkerQuestion } from './sitrep';
+import { LinkChips } from './link-chips';
 
 @Component({
   selector: 'app-waiting-list',
+  imports: [LinkChips],
   templateUrl: './waiting-list.html',
   styleUrl: './waiting-list.css',
 })
@@ -12,6 +14,7 @@ export class WaitingList {
   readonly boards = input.required<WaitingBoard[]>();
   readonly reviews = input.required<ReadyForReview[]>();
   readonly changing = input.required<ChangingRequest[]>();
+  readonly links = input<Record<string, TaskLinks>>({});
   readonly workerQuestions = input<WorkerQuestion[]>([]);
   readonly generated = input<string | null>(null);
 

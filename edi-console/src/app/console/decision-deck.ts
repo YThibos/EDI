@@ -2,7 +2,7 @@ import { Component, computed, input, linkedSignal, output } from '@angular/core'
 
 import { AnsweredCard } from './answered-card';
 import { DecisionCardView } from './decision-card';
-import { AnsweredDecision, DecisionCard } from './sitrep';
+import { AnsweredDecision, DecisionCard, TaskLinks } from './sitrep';
 
 type DeckCard = { open: DecisionCard; answered?: never } | { answered: AnsweredDecision; open?: never };
 
@@ -16,6 +16,7 @@ export class DecisionDeck {
   readonly cards = input.required<DecisionCard[]>();
   readonly answered = input.required<AnsweredDecision[]>();
   readonly zone = input.required<string>();
+  readonly links = input<Record<string, TaskLinks>>({});
   readonly settled = output<void>();
 
   protected readonly deck = computed<DeckCard[]>(() => [

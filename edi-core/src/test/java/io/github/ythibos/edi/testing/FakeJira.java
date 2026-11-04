@@ -71,6 +71,11 @@ public final class FakeJira implements Tracker {
     }
 
     @Override
+    public Optional<String> browseAddressOf(WorkKey key) {
+        return Optional.of("https://jira.example.org/browse/" + key);
+    }
+
+    @Override
     public synchronized Optional<Ticket> found(WorkKey key) {
         failIfAsked();
         return Optional.ofNullable(tickets.get(key)).map(FakeTicket::asTicket);

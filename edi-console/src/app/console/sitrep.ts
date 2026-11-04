@@ -16,6 +16,18 @@ export interface Sitrep {
   landedTotal: number;
   charted: ChartedTask[];
   chartedTotal: number;
+  links?: Record<string, TaskLinks>;
+}
+
+export interface TaskLinks {
+  key: string | null;
+  tracker: string | null;
+  request: { url: string; number: number; state: string; step: string | null } | null;
+  branch: { name: string; url: string | null } | null;
+  board: string | null;
+  report: string | null;
+  brief: string | null;
+  decisions: string[];
 }
 
 export interface PresenceShown {

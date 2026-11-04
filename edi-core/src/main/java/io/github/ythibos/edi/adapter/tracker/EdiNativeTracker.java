@@ -50,6 +50,11 @@ public class EdiNativeTracker implements Tracker {
     }
 
     @Override
+    public Optional<String> browseAddressOf(WorkKey key) {
+        return Optional.empty();
+    }
+
+    @Override
     public Optional<Ticket> found(WorkKey key) {
         return Optional.of(verified(key));
     }

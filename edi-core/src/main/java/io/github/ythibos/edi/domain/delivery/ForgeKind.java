@@ -4,13 +4,15 @@ import java.util.Arrays;
 import java.util.Locale;
 
 public enum ForgeKind {
-    GITLAB("/-/merge_requests/"),
-    GITHUB("/pull/");
+    GITLAB("/-/merge_requests/", "/-/tree/"),
+    GITHUB("/pull/", "/tree/");
 
     private final String mergeRequestPath;
+    private final String treePath;
 
-    ForgeKind(String mergeRequestPath) {
+    ForgeKind(String mergeRequestPath, String treePath) {
         this.mergeRequestPath = mergeRequestPath;
+        this.treePath = treePath;
     }
 
     public static ForgeKind named(String word) {
@@ -26,5 +28,9 @@ public enum ForgeKind {
 
     String mergeRequestPath() {
         return mergeRequestPath;
+    }
+
+    String treePath() {
+        return treePath;
     }
 }

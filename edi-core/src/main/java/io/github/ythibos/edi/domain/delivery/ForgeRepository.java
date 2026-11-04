@@ -40,6 +40,10 @@ public record ForgeRepository(ForgeKind kind, String host, String path) {
         return mergeRequestPrefix() + number;
     }
 
+    public String branchUrl(String branch) {
+        return url() + kind.treePath() + branch;
+    }
+
     public boolean holds(String mergeRequestUrl) {
         return mergeRequestUrl.startsWith(mergeRequestPrefix());
     }
