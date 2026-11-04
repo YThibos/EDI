@@ -17,6 +17,6 @@ public record TurnReport(WaitingOnTheCaptain waiting, Turn turn, ReportWidth wid
     }
 
     public boolean hasNothingForTheCaptain() {
-        return !showsTheUnreadableCalendar() && waiting.isEmpty() && turn.done().isEmpty() && turn.next().isEmpty();
+        return !showsTheUnreadableCalendar() && waiting.hasNothingWaiting() && turn.done().isEmpty() && turn.next().isEmpty();
     }
 }

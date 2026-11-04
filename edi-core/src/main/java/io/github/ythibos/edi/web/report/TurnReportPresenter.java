@@ -44,7 +44,7 @@ public class TurnReportPresenter implements TextPresenter<TurnReport> {
     }
 
     private static List<String> decisionZoneOf(TurnReport report, int width) {
-        if (report.waiting().isEmpty()) {
+        if (report.waiting().hasNothingWaiting()) {
             return List.of();
         }
         return DecisionZone.lines(WaitingEntries.of(report.waiting(), new TurnWording(report.turn()), report::showsTheCardOf), width);

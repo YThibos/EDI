@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ChangingRequest, ReadyForReview, WaitingBoard } from './sitrep';
+import { ChangingRequest, ReadyForReview, WaitingBoard, WorkerQuestion } from './sitrep';
 import { WaitingList } from './waiting-list';
 
 const LAMP_BOARD: WaitingBoard = {
@@ -25,6 +25,14 @@ const LAMP_CHANGING: ChangingRequest = {
   projects: ['harness'],
   url: 'https://github.com/example-owner/harness/pull/13',
   why: 'pipeline review; steer 2 not acknowledged',
+};
+
+const LAMP_QUESTION: WorkerQuestion = {
+  task: 'fit-lamp',
+  title: 'Fit the lamp',
+  projects: ['harness'],
+  question: 'Which socket does the lamp take?',
+  askedAt: '2026-10-15T05:12:00Z',
 };
 
 describe('WaitingList', () => {
@@ -73,6 +81,25 @@ describe('WaitingList', () => {
     expect(texts(list, '.sr-waiting__link')).toEqual([LAMP_CHANGING.url]);
     expect(texts(list, '.sr-badge')).toEqual(['changing']);
     expect(list.querySelector('.sr-badge')?.classList).toContain('sr-badge--danger');
+  });
+
+  it('shows a worker question as waiting on me, with the question and how long it has waited', async () => {
+    fixture.componentRef.setInput('workerQuestions', [LAMP_QUESTION]);
+    fixture.componentRef.setInput('generated', '2026-10-15T06:17:35Z');
+    const list = await listed([], []);
+
+    expect(texts(list, '.sr-row__title')).toEqual(['Fit the lamp']);
+    expect(texts(list, '.sr-row__sub')).toEqual(['waiting on me for 1 hour 5 minutes: Which socket does the lamp take? · harness']);
+    expect(texts(list, '.sr-badge')).toEqual(['with me']);
+    expect(list.querySelector('.sr-badge')?.classList).toContain('sr-badge--info');
+  });
+
+  it('counts a question asked under an hour ago in minutes', async () => {
+    fixture.componentRef.setInput('workerQuestions', [{ ...LAMP_QUESTION, askedAt: '2026-10-15T06:16:00Z' }]);
+    fixture.componentRef.setInput('generated', '2026-10-15T06:17:35Z');
+    const list = await listed([], []);
+
+    expect(texts(list, '.sr-row__sub')).toEqual(['waiting on me for 1 minute: Which socket does the lamp take? · harness']);
   });
 
   async function listed(boards: WaitingBoard[], reviews: ReadyForReview[], changing: ChangingRequest[] = []): Promise<HTMLElement> {

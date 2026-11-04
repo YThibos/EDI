@@ -51,3 +51,4 @@ When the captain asks for a change to the report's layout, or the report is read
 - 26/10/2026: a request still changing after its done joined the zone as "Changing, hold the merge" with why, counted like a review (EDI-53).
 - 27/10/2026: the report began heading itself with the heavy runs that several workers run at once (EDI-99).
 - 28/10/2026: `edi report` became the turn report, the captain's attention list, and this layout stayed the sitrep's, which `edi sitrep --turn -` gives a state-changing turn's items (EDI-133).
+- 03/11/2026: an open worker question joined the zone as "Waiting on EDI", counted as nothing open, and `Nothing waiting on you` stopped printing while one waits (EDI-154).
