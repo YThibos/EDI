@@ -4,13 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -20,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
-import io.github.ythibos.edi.testing.Patience;
+import io.github.ythibos.edi.testing.StandInGitHub;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 
@@ -29,29 +26,15 @@ class BacklogItemSkillTest {
 
     private static final Path SCRIPT = Path.of(System.getProperty("edi.repository.root", "..")).toAbsolutePath().normalize()
             .resolve("claude/skills/edi-backlog-item/backlog-item.mjs");
-    private static final String UPSTREAM = "https://github.com/example/edi";
-    private static final String BRANCH = "chore/EDI-143";
-    private static final String ITEM = "docs/backlog/EDI-143.md";
-    private static final String INDEX = "docs/backlog/README.md";
-    private static final String THE_INDEX = """
-            # The backlog
-
-            ## The index
-
-            ### Wave 1: no wait
-
-            | Order | Item | Title | Size | Blocked by |
-            |---|---|---|---|---|
-            | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - |
-
-            ### Held, parked and needs the captain's machine, no wave
-
-            | Order | Item | Title | Size | Blocked by |
-            |---|---|---|---|---|
-            | - | [EDI-110](EDI-110.md) | The header hides its slots | XS | - |
-
-            ## Not in the backlog
-            """;
+    private static final String WORLD = """
+            {"owner": {"login": "harbour-master", "type": "User"},
+             "labels": [{"name": "cloud-ok"}, {"name": "held"}],
+             "milestones": [{"number": 1, "title": "The lighthouse", "due_on": "2026-12-18T07:00:00Z", "state": "open"}],
+             "issues": [
+               {"number": 3, "id": 1003, "title": "EDI-85 The stage is stored", "body": "", "state": "open", "milestone": 1, "labels": ["cloud-ok"]},
+               {"number": 5, "id": 1005, "title": "EDI-105 The validation pipeline", "body": "", "state": "open", "milestone": null, "labels": ["held"]}
+             ],
+             "pulls": [{"number": 8, "title": "EDI-99 Something else", "body": ""}]}""";
     private static final String SPEC = """
             ## Goal
 
@@ -82,35 +65,20 @@ class BacklogItemSkillTest {
             title: Harbour lamps light themselves at dusk
             source: The captain's word of 29 October 2026
             size: S
-            section: Wave 1
+            milestone: The lighthouse
+            parent: EDI-105
             blocked-by: EDI-85
             status: open
             ---
             """ + SPEC;
-    private static final String STAND_IN_GH = """
-            #!/bin/sh
-            echo "gh $*" >> "$STATE/calls"
-            case "$1 $2" in
-              "pr list") if [ -f "$STATE/pull" ]; then printf '[{"url":"%s"}]' "$(cat "$STATE/pull")"; else echo '[]'; fi ;;
-              "pr create") if [ -f "$STATE/pull-fails" ]; then rm "$STATE/pull-fails"; echo "connection reset" >&2; exit 1; fi
-                cat > "$STATE/pull-body"; echo https://github.com/example/edi/pull/7 | tee "$STATE/pull" ;;
-              "issue list") case "$*" in *--search*) echo '[]'; exit ;; esac
-                printf '[{"number":3,"title":"EDI-85 The stage is stored","url":"https://github.com/example/edi/issues/3"}'
-                if [ -f "$STATE/issue" ]; then printf ',{"number":9,"title":"%s","url":"https://github.com/example/edi/issues/9"}' "$(cat "$STATE/issue")"; fi
-                echo ']' ;;
-              "issue create") cat > "$STATE/issue-body"; printf '%s' "$4" > "$STATE/issue"; echo https://github.com/example/edi/issues/9 ;;
-              "label list") echo '[{"name":"cloud-ok"}]' ;;
-            esac
-            """;
     private static final String STAND_IN_EDI = """
             #!/bin/sh
-            echo "edi $*" >> "$STATE/calls"
+            echo "edi $*" >> "$STATE/edi-calls"
             case "$1 $2" in
               "task list") if [ -f "$STATE/task" ]; then echo '{"tasks":[{"id":"harbour-lamps","intake":{"title":"Harbour lamps light themselves at dusk","projects":["EDI"]}}]}'; else echo '{"tasks":[]}'; fi ;;
-              "task add") case "$*" in *--json*) echo "Record components not available" >&2; exit 1 ;; esac
-                cat > "$STATE/task"; if [ -f "$STATE/added" ]; then cat "$STATE/added"; else echo 'Queued harbour-lamps on EDI-143.'; fi ;;
+              "task add") cat > "$STATE/task"; if [ -f "$STATE/added" ]; then cat "$STATE/added"; else echo "Queued harbour-lamps on $(echo "$*" | sed 's/.*--key \\([^ ]*\\).*/\\1/')."; fi ;;
               "task show") hold=null; if [ -f "$STATE/hold" ]; then hold=$(printf '{"kind":"deferral","reason":"%s","until":null}' "$(cat "$STATE/hold")"); fi
-                printf '{"task":{"id":"harbour-lamps","intake":{"kind":"ship","title":"Harbour lamps light themselves at dusk","projects":["EDI"],"workKey":"EDI-143"},"notes":"","hold":%s}}' "$hold" ;;
+                printf '{"task":{"id":"harbour-lamps","intake":{"kind":"ship","title":"Harbour lamps light themselves at dusk","projects":["EDI"],"workKey":"EDI-9"},"notes":"","hold":%s}}' "$hold" ;;
             esac
             if [ "$1" = hold ]; then printf '%s' "$6" > "$STATE/hold"; fi
             """;
@@ -121,273 +89,187 @@ class BacklogItemSkillTest {
     @TempDir
     private Path directory;
 
-    private FixtureRepository upstream;
+    private StandInGitHub github;
     private Path state;
     private Path draft;
 
     @BeforeEach
-    void anUpstreamWithTheIndexAndAnEdiHomeCloningIt() throws IOException {
+    void anEdiHomeWhoseCloneNamesTheUpstream() throws IOException {
         assumeTrue(InstalledPrograms.answers("node", "--version"), "node is not installed");
-        FixtureRepository seed = FixtureRepository.initialise(Files.createDirectories(directory.resolve("seed"))).write(INDEX, THE_INDEX).commit("EDI-117 Add the backlog");
-        seed.run("clone", "--quiet", "--bare", ".", directory.resolve("upstream.git").toString());
-        upstream = FixtureRepository.at(directory.resolve("upstream.git"));
-        upstream.clonedInto(directory.resolve("home/projects/EDI"))
-                .configure("remote.origin.url", UPSTREAM)
-                .configure("url." + directory.resolve("upstream.git") + ".insteadOf", UPSTREAM);
-        state = Files.createDirectories(directory.resolve("state"));
-        StandInScripts.installed(directory.resolve("bin/gh"), STAND_IN_GH);
-        StandInScripts.installed(directory.resolve("bin/edi"), STAND_IN_EDI);
+        FixtureRepository.initialise(Files.createDirectories(directory.resolve("home/projects/EDI"))).configure("remote.origin.url", "https://github.com/example/edi");
+        github = StandInGitHub.serving(directory, WORLD);
+        state = directory.resolve("github-state");
+        StandInScripts.installed(github.bin().resolve("edi"), STAND_IN_EDI);
         draft = Files.writeString(directory.resolve("harbour-lamps.md"), DRAFT);
     }
 
     @Test
-    void aRunAddsTheItemAndItsRowOnABranchWithoutTrailers() throws IOException, InterruptedException {
-        Run run = backlogItem(draft.toString());
+    void aRunOpensTheIssueKeyedByItsNumberWithItsMilestoneParentAndBlockers() throws IOException, InterruptedException {
+        StandInGitHub.Run run = backlogItem(draft.toString());
 
-        assertThat(run.exitCode()).as(run.output()).isZero();
-        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).startsWith("""
-                # EDI-143 Harbour lamps light themselves at dusk
-
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(github.issue(9).get("title").asString()).isEqualTo("EDI-9 Harbour lamps light themselves at dusk");
+        assertThat(github.issue(9).get("milestone").asInt()).isEqualTo(1);
+        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\"]");
+        assertThat(github.issue(9).get("body").asString()).startsWith("""
                 | Field | Value |
                 |---|---|
-                | Key | EDI-143 |
-                | Kind | ship, a change to the repository, on branch `feature/EDI-143` |
-                | Wave and order | wave 1, order 2 |
+                | Kind | ship, a change to the repository, on a `feature/` branch named by its key |
                 | Source | The captain's word of 29 October 2026 |
                 | Size | S |
-                | Blocked by | [EDI-85](EDI-85.md) |
-                | Status | open |
-                | Issue | [#9](https://github.com/example/edi/issues/9) |
-                | Cloud session | ok |
 
                 ## Goal
-                """).contains("## How to verify").contains("## Delivery");
-        assertThat(upstream.run("diff", "main", BRANCH, "--", INDEX)).containsOnlyOnce("\n+|").contains("""
-                +| 2 | [EDI-143](EDI-143.md) | Harbour lamps light themselves at dusk | S | EDI-85 |""");
-        assertThat(upstream.run("log", "--format=%B", "main.." + BRANCH).strip()).isEqualTo("""
-                EDI-143 Name the issue of the backlog item
-
-                EDI-143 Add the backlog item: Harbour lamps light themselves at dusk""");
+                """).contains("## How to verify").doesNotContain("## Delivery");
+        assertThat(github.world().get("blockedBy").get("9").toString()).isEqualTo("[3]");
+        assertThat(github.world().get("subIssues").get("5").toString()).isEqualTo("[9]");
     }
 
     @Test
-    void aRunOpensThePullRequestAndTheIssueAndHoldsTheLocalTask() throws IOException, InterruptedException {
-        Run run = backlogItem(draft.toString());
+    void aRunQueuesTheTaskOnTheIssuesKeyAndHoldsItWithoutAPullRequest() throws IOException, InterruptedException {
+        StandInGitHub.Run run = backlogItem(draft.toString());
 
-        assertThat(run.exitCode()).as(run.output()).isZero();
-        assertThat(calls()).contains(
-                "edi task add --kind ship --project EDI --title Harbour lamps light themselves at dusk --body -",
-                "gh label create wave-1 --description Backlog wave 1 --repo github.com/example/edi",
-                "gh issue create --title EDI-143 Harbour lamps light themselves at dusk --label wave-1,cloud-ok --body-file - --repo github.com/example/edi",
-                "gh pr create --base main --head chore/EDI-143 --title EDI-143 Backlog: Harbour lamps light themselves at dusk --body-file - --repo github.com/example/edi",
-                "edi hold harbour-lamps --kind deferral --reason Backlogged upstream as https://github.com/example/edi/issues/9,"
-                        + " added by https://github.com/example/edi/pull/7; it is taken from there, never from the local queue");
-        assertThat(Files.readString(state.resolve("issue-body")))
-                .isEqualTo("The spec is [docs/backlog/EDI-143.md](https://github.com/example/edi/blob/main/docs/backlog/EDI-143.md).\nBlocked by #3.\n");
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(ediCalls()).contains(
+                "edi task add --kind ship --project EDI --title Harbour lamps light themselves at dusk --key EDI-9 --body -",
+                "edi hold harbour-lamps --kind deferral --reason Backlogged upstream as https://github.com/example/edi/issues/9;"
+                        + " it is taken from there, never from the local queue");
+        assertThat(github.writes()).noneMatch(call -> call.contains("/pulls"));
         assertThat(run.output()).contains("""
-                EDI-143
-                  doc:   docs/backlog/EDI-143.md
-                  pull:  https://github.com/example/edi/pull/7
+                EDI-9 Harbour lamps light themselves at dusk
                   issue: https://github.com/example/edi/issues/9
                 """);
-        assertThat(FixtureRepository.at(directory.resolve("home/projects/EDI")).run("worktree", "list").strip().lines()).hasSize(1);
+    }
+
+    @Test
+    void theCaptainsApprovalIsAddedOnlyWhenTheDraftNamesHisWord() throws IOException, InterruptedException {
+        backlogItem(draft.toString());
+        Files.writeString(draft, DRAFT.replace("title: Harbour lamps light themselves at dusk", "title: The beacon turns all night")
+                .replace("status: open", "status: open\ncaptain-approved: the captain's word of 4 November 2026"));
+        Files.delete(state.resolve("task"));
+
+        StandInGitHub.Run approved = backlogItem(draft.toString());
+
+        assertThat(approved.exitCode()).as(approved.all()).isZero();
+        assertThat(github.issue(9).get("labels").toString()).doesNotContain("captain-approved");
+        assertThat(github.issue(10).get("labels").toString()).contains("captain-approved");
+        assertThat(approved.output()).contains("Add captain-approved to EDI-10, on the captain's word of 4 November 2026");
+    }
+
+    @Test
+    void aHeldItemCarriesTheHeldLabelAndItsReason() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("status: open", "status: held: until the captain's word"));
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\",\"held\"]");
+        assertThat(github.issue(9).get("body").asString()).endsWith("\n## Held\n\nuntil the captain's word\n");
     }
 
     @Test
     void aDryRunNamesEveryActionAndChangesNothing() throws IOException, InterruptedException {
-        Run run = backlogItem("--dry-run", draft.toString());
+        StandInGitHub.Run run = backlogItem("--dry-run", draft.toString());
 
-        assertThat(run.exitCode()).as(run.output()).isZero();
+        assertThat(run.exitCode()).as(run.all()).isZero();
         assertThat(run.output()).contains(
-                "would queue the ship \"Harbour lamps light themselves at dusk\" with edi task add",
-                "would write docs/backlog/EDI-<new 1>.md",
-                "would commit \"EDI-<new 1> Add the backlog item: Harbour lamps light themselves at dusk\"",
-                "would open the issue \"EDI-<new 1> Harbour lamps light themselves at dusk\" labelled wave-1, cloud-ok",
-                "would push chore/EDI-<new 1>",
-                "would open the pull request",
+                "would open the issue \"Harbour lamps light themselves at dusk\" labelled cloud-ok in the milestone \"The lighthouse\":",
+                "    ## Acceptance criteria",
+                "would make EDI-<the new issue's number> a sub-issue of #5",
+                "would mark EDI-<the new issue's number> blocked by #3",
+                "would queue the ship \"Harbour lamps light themselves at dusk\" on EDI-<the new issue's number> with edi task add",
                 "would hold the new task");
-        assertThat(upstream.run("branch", "--list").strip()).isEqualTo("* main");
-        assertThat(calls()).noneMatch(call -> call.contains(" create ") || call.startsWith("edi task add") || call.startsWith("edi hold"));
+        assertThat(github.writes()).isEmpty();
+        assertThat(ediCalls()).noneMatch(call -> call.startsWith("edi task add") || call.startsWith("edi hold"));
     }
 
     @Test
-    void aRerunReusesTheItemThePullRequestAndTheIssue() throws IOException, InterruptedException {
+    void aRerunReusesTheIssueTheLinksAndTheHold() throws IOException, InterruptedException {
         backlogItem(draft.toString());
-        String delivered = upstream.run("rev-parse", BRANCH);
         Files.delete(state.resolve("calls"));
+        Files.delete(state.resolve("edi-calls"));
 
-        Run rerun = backlogItem(draft.toString());
+        StandInGitHub.Run rerun = backlogItem(draft.toString());
 
-        assertThat(rerun.exitCode()).as(rerun.output()).isZero();
-        assertThat(upstream.run("rev-parse", BRANCH)).isEqualTo(delivered);
-        assertThat(calls()).noneMatch(call -> call.contains(" create ") || call.startsWith("edi task add") || call.startsWith("edi hold")
-                || call.startsWith("edi release"));
-        assertThat(rerun.output()).contains("pull:  https://github.com/example/edi/pull/7", "issue: https://github.com/example/edi/issues/9");
+        assertThat(rerun.exitCode()).as(rerun.all()).isZero();
+        assertThat(github.writes()).isEmpty();
+        assertThat(ediCalls()).noneMatch(call -> call.startsWith("edi task add") || call.startsWith("edi hold") || call.startsWith("edi release"));
+        assertThat(rerun.output()).contains("issue: https://github.com/example/edi/issues/9");
     }
 
     @Test
-    void aRerunAfterThePullRequestFailedOpensItOnThePushedBranch() throws IOException, InterruptedException {
-        Files.writeString(state.resolve("pull-fails"), "");
-        Run failed = backlogItem(draft.toString());
-        String pushed = upstream.run("rev-parse", BRANCH);
-        Files.delete(state.resolve("calls"));
+    void aRerunAfterTheTitleWasNotKeyedKeysIt() throws IOException, InterruptedException {
+        Files.writeString(state.resolve("github.json"), WORLD.replace("""
+                   {"number": 5,""", """
+                   {"number": 9, "id": 1009, "title": "Harbour lamps light themselves at dusk", "body": "", "state": "open", "milestone": 1, "labels": ["cloud-ok"]},
+                   {"number": 5,"""));
 
-        Run rerun = backlogItem(draft.toString());
+        StandInGitHub.Run rerun = backlogItem(draft.toString());
 
-        assertThat(failed.exitCode()).isEqualTo(1);
-        assertThat(rerun.exitCode()).as(rerun.output()).isZero();
-        assertThat(upstream.run("rev-parse", BRANCH)).isEqualTo(pushed);
-        assertThat(calls()).anyMatch(call -> call.startsWith("gh pr create")).noneMatch(call -> call.startsWith("gh issue create"));
-        assertThat(rerun.output()).contains("pull:  https://github.com/example/edi/pull/7", "issue: https://github.com/example/edi/issues/9");
+        assertThat(rerun.exitCode()).as(rerun.all()).isZero();
+        assertThat(github.issue(9).get("title").asString()).isEqualTo("EDI-9 Harbour lamps light themselves at dusk");
+        assertThat(github.writes()).noneMatch(call -> call.contains("--method POST repos/example/edi/issues --input"));
     }
 
     @Test
-    void theNewTaskIsReadFromTheAnswerOfTaskAddWithItsTicketSummary() throws IOException, InterruptedException {
-        Files.writeString(state.resolve("added"), "Queued harbour-lamps on EDI-143: Harbour lamps light themselves at dusk.\n");
-
-        Run run = backlogItem(draft.toString());
-
-        assertThat(run.exitCode()).as(run.output()).isZero();
-        assertThat(calls()).contains("edi task show harbour-lamps --json");
-        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).startsWith("# EDI-143 Harbour lamps light themselves at dusk");
-    }
-
-    @Test
-    void anAnswerOfTaskAddThatNamesNoQueuedTaskIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
-        Files.writeString(state.resolve("added"), "Queued harbour-lamps; the ticket decision asks which ticket it books on, and it waits for that answer.\n");
-
-        Run run = backlogItem(draft.toString());
-
-        assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.output()).contains("edi task add answered \"Queued harbour-lamps; the ticket decision asks which ticket it books on,"
-                + " and it waits for that answer.\", which names no task queued on an EDI-<n> key.");
-        assertThat(upstream.run("branch", "--list").strip()).isEqualTo("* main");
-        assertThat(calls()).noneMatch(call -> call.startsWith("edi task show") || call.startsWith("gh issue create") || call.startsWith("edi hold"));
-    }
-
-    @Test
-    void aNewRowTakesTheHighestOrderInTheWholeIndexPlusOne() throws IOException, InterruptedException {
-        FixtureRepository.at(directory.resolve("seed"))
-                .write(INDEX, THE_INDEX.replace("### Held", """
-                        ### Wave 2: after the stage
-
-                        | Order | Item | Title | Size | Blocked by |
-                        |---|---|---|---|---|
-                        | 5 | [EDI-86](EDI-86.md) | The stage is shown | S | EDI-85 |
-
-                        ### Held"""))
-                .commit("EDI-117 Add the second wave")
-                .run("push", "--quiet", directory.resolve("upstream.git").toString(), "main");
-
-        Run run = backlogItem(draft.toString());
-
-        assertThat(run.exitCode()).as(run.output()).isZero();
-        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("| Wave and order | wave 1, order 6 |");
-        assertThat(upstream.run("diff", "main", BRANCH, "--", INDEX)).contains("""
-                 | 1 | [EDI-85](EDI-85.md) | The stage is stored | M | - |
-                +| 6 | [EDI-143](EDI-143.md) |""");
-    }
-
-    @Test
-    void aNewRowTakesNoOrderThatABranchAwaitingMergeHasTaken() throws IOException, InterruptedException {
-        FixtureRepository.at(directory.resolve("seed"))
-                .branch("chore/EDI-144")
-                .write(INDEX, THE_INDEX.replace("stored | M | - |\n","stored | M | - |\n| 2 | [EDI-144](EDI-144.md) | The tide table is posted | S | - |\n"))
-                .commit("EDI-144 Add the backlog item: The tide table is posted")
-                .run("push", "--quiet", directory.resolve("upstream.git").toString(), "chore/EDI-144");
-
-        Run run = backlogItem(draft.toString());
-
-        assertThat(run.exitCode()).as(run.output()).isZero();
-        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("| Wave and order | wave 1, order 3 |");
-    }
-
-    @Test
-    void aNewKeyThatAlreadyNamesOtherWorkUpstreamIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
-        FixtureRepository.at(directory.resolve("seed"))
-                .write(INDEX, THE_INDEX.replace("stored | M | - |\n", "stored | M | - |\n| 2 | [EDI-143](EDI-143.md) | The beacon rotates every ten seconds | S | - |\n"))
-                .commit("EDI-143 Add the backlog item: The beacon rotates every ten seconds")
-                .run("push", "--quiet", directory.resolve("upstream.git").toString(), "main");
-
-        Run run = backlogItem(draft.toString());
-
-        assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.output()).contains("EDI-143 already names \"The beacon rotates every ten seconds\" upstream");
-        assertThat(upstream.run("branch", "--list").strip()).isEqualTo("* main");
-        assertThat(calls()).noneMatch(call -> call.startsWith("gh issue create") || call.startsWith("gh pr create") || call.startsWith("edi hold"));
-    }
-
-    @Test
-    void aTopLevelHeadingBecomesASectionButACodeBlockKeepsItsComments()throws IOException, InterruptedException {
+    void aTopLevelHeadingBecomesASectionButACodeBlockKeepsItsComments() throws IOException, InterruptedException {
         Files.writeString(draft, DRAFT.replace("## Goal", "# Goal").replace("- `./mvnw verify`.", """
                 ```sh
                 # build both executables
                 ./mvnw verify
                 ```"""));
 
-        Run run = backlogItem(draft.toString());
+        StandInGitHub.Run run = backlogItem(draft.toString());
 
-        assertThat(run.exitCode()).as(run.output()).isZero();
-        assertThat(upstream.run("show", BRANCH + ":" + ITEM)).contains("\n## Goal\n").contains("```sh\n# build both executables\n./mvnw verify\n```");
-    }
-
-    @Test
-    void aDraftWhoseSpecStillHoldsATodoLineIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
-        Files.writeString(draft, DRAFT.replace("## Read first\n", "## Read first\n\n- TODO: the code the rule changes.\n"));
-
-        Run run = backlogItem(draft.toString());
-
-        assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.output()).contains("the spec still holds a TODO line; replace each one before the item is backlogged.");
-        assertThat(calls()).containsExactly("edi task list --json");
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(github.issue(9).get("body").asString()).contains("\n## Goal\n").contains("```sh\n# build both executables\n./mvnw verify\n```");
     }
 
     @Test
     void aDraftWithoutTheSpecsSectionsIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
         Files.writeString(draft, DRAFT.replace("## Read first", "## Reading"));
 
-        Run run = backlogItem(draft.toString());
+        StandInGitHub.Run run = backlogItem(draft.toString());
 
         assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.output()).contains("the spec lacks the sections \"## Read first\"");
-        assertThat(calls()).containsExactly("edi task list --json");
+        assertThat(run.errors()).contains("the spec lacks the sections \"## Read first\"");
+        assertThat(github.writes()).isEmpty();
+        assertThat(ediCalls()).containsExactly("edi task list --json");
     }
 
-    private Run backlogItem(String... arguments) throws IOException, InterruptedException {
-        ProcessBuilder builder = new ProcessBuilder(command(arguments)).directory(directory.toFile()).redirectErrorStream(true);
-        builder.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("GH_"));
-        builder.environment().putAll(isolatedFrom(builder.environment().get("PATH")));
-        Process process = processes.register(builder.start());
-        process.getOutputStream().close();
-        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        assertThat(process.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)).as("the script finished").isTrue();
-        return new Run(process.exitValue(), output);
+    @Test
+    void aDraftWhoseSpecStillHoldsATodoLineIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("## Read first\n", "## Read first\n\n- TODO: the code the rule changes.\n"));
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("the spec still holds a TODO line; replace each one before the item is backlogged.");
+        assertThat(github.writes()).isEmpty();
     }
 
-    private static List<String> command(String... arguments) {
-        List<String> command = new ArrayList<>(List.of("node", SCRIPT.toString()));
-        command.addAll(List.of(arguments));
-        return command;
+    @Test
+    void aDraftNamingAnUnknownMilestoneOrBlockerIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("milestone: The lighthouse", "milestone: The far shore"));
+        StandInGitHub.Run unknownMilestone = backlogItem(draft.toString());
+        Files.writeString(draft, DRAFT.replace("blocked-by: EDI-85", "blocked-by: EDI-404"));
+        StandInGitHub.Run unknownBlocker = backlogItem(draft.toString());
+
+        assertThat(unknownMilestone.exitCode()).isEqualTo(1);
+        assertThat(unknownMilestone.errors()).contains("no open milestone is titled \"The far shore\"; the open ones are \"The lighthouse\".");
+        assertThat(unknownBlocker.exitCode()).isEqualTo(1);
+        assertThat(unknownBlocker.errors()).contains("EDI-404 names no issue upstream.");
+        assertThat(github.writes()).isEmpty();
     }
 
-    private Map<String, String> isolatedFrom(String path) {
-        return Map.of(
-                "PATH", directory.resolve("bin") + ":" + path,
+    private StandInGitHub.Run backlogItem(String... arguments) throws IOException, InterruptedException {
+        return github.run(processes, directory, Map.of(
                 "EDI_HOME", directory.resolve("home").toString(),
-                "STATE", state.toString(),
                 "GIT_CONFIG_GLOBAL", "/dev/null",
-                "GIT_CONFIG_NOSYSTEM", "1",
-                "GIT_AUTHOR_NAME", "Fixture Author",
-                "GIT_AUTHOR_EMAIL", "fixture@example.org",
-                "GIT_COMMITTER_NAME", "Fixture Author",
-                "GIT_COMMITTER_EMAIL", "fixture@example.org");
+                "GIT_CONFIG_NOSYSTEM", "1"), StandInGitHub.node(SCRIPT, arguments));
     }
 
-    private List<String> calls() throws IOException {
-        Path calls = state.resolve("calls");
+    private List<String> ediCalls() throws IOException {
+        Path calls = state.resolve("edi-calls");
         return Files.exists(calls) ? Files.readAllLines(calls) : List.of();
-    }
-
-    private record Run(int exitCode, String output) {
     }
 }
