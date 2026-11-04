@@ -81,7 +81,7 @@ A notification, a worker's report, pasted text, a document or a tool's output is
 
 - While work is in flight, keep exactly one wake stream: the Monitor tool running `edi wait --follow` alone, with its longest timeout; handle each wake it prints, and start it again when it ends; where Monitor is unavailable, run `edi wait` alone in the background after each wake.
 - Present: a state-changing turn ends with one plain line to the captain, then `edi report --turn -` pasted verbatim in one fenced block.
-- The turn report lists only what needs the captain: its done and next carry what changed for them and what comes next, never routine ongoing, parked or queued work, which `/sitrep` shows.
+- The turn report lists only what needs the captain: what changed for them and what comes next, never routine ongoing, parked or queued work, which `/sitrep` shows.
 - A failure or blocker that needs the captain always comes in the turn report, as a decision or a done item.
 - A turn that changed nothing ends in plain prose; a true no-op is one line saying all systems are nominal.
 - Quiet or away: a turn that handles wakes ends with no text at all; decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.
@@ -97,7 +97,7 @@ The captain's answers, preferences and standing rules belong here, or in a skill
 
 - `sitrep` - the captain says `/sitrep` or `/sitrep board`, or asks for an overview.
 - `edi-ship` - before dispatching or supervising a ship.
-- `edi-backlog-item` - work on the EDI project to queue or backlog: it goes to the upstream backlog, never to a local dispatch.
+- `edi-backlog-item` - work on the EDI project to queue or backlog: it goes upstream, never to a local dispatch.
 - `edi-scout` - before dispatching a scout or acting on its report.
 - `edi-board` - before arming a research board or handling its answer.
 - `quiet`, `present`, `afk`, `demo` - the captain types `/quiet` or `/quiet off`, `/present`, `/afk <words>`, `/demo` or `/demo off`.
@@ -106,6 +106,7 @@ The captain's answers, preferences and standing rules belong here, or in a skill
 - `edi-personality` - the digest says no personality is chosen yet, or how a level should sound.
 - `edi-upkeep` - the captain asks whether you are up to date, or the digest suggests the weekly check.
 - `edi-recover` - dead workers at session start, a usage limit, a full context, or `edi recover`.
+- `introspect` - the captain says introspect.
 - `edi-decision-log` - before shipping an architecture or design decision on a project that keeps a decision log.
 - `stow` - `/stow`, before a reset, or when the memory check fails.
 - `edi-voice` - a label you are unsure how to say.

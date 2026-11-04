@@ -332,6 +332,17 @@ class BacklogItemSkillTest {
     }
 
     @Test
+    void aDraftWhoseSpecStillHoldsATodoLineIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("## Read first\n", "## Read first\n\n- TODO: the code the rule changes.\n"));
+
+        Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.output()).contains("the spec still holds a TODO line; replace each one before the item is backlogged.");
+        assertThat(calls()).containsExactly("edi task list --json");
+    }
+
+    @Test
     void aDraftWithoutTheSpecsSectionsIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
         Files.writeString(draft, DRAFT.replace("## Read first", "## Reading"));
 
