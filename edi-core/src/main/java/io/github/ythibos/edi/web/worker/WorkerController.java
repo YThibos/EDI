@@ -73,7 +73,8 @@ class WorkerController {
     }
 
     @GetMapping("/api/workers/questions")
-    OpenWorkerQuestions openQuestions() {
+    OpenWorkerQuestions openQuestions(Caller caller) {
+        caller.requireTheHomeToken("edi health");
         return questions.open();
     }
 

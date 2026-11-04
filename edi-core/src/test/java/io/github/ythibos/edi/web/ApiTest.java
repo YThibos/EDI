@@ -562,6 +562,16 @@ class ApiTest {
     }
 
     @Test
+    void showsTheOpenWorkerQuestionsUnderTheHomesOwnTokenAndToNoWorker() throws Exception {
+        HttpResponse<String> questions = get("/api/workers/questions", TEXT);
+        HttpResponse<String> toAWorker = send(as(workerTokenFor("api-questions"), "/api/workers/questions", TEXT).GET());
+
+        assertThat(questions.statusCode()).isEqualTo(200);
+        assertThat(questions.body()).containsAnyOf("No worker waits on an answer.", "Workers waiting on an answer");
+        assertRefusal(toAWorker, 403, "edi health runs under the EDI home's own token, in the captain's terminal or the primary session.");
+    }
+
+    @Test
     void refusesADispatchAboveHighUntilTheCaptainsWordOnTheTaskIsRecordedForItAndWithoutAReason() throws Exception {
         post("/api/tasks", "{\"id\":\"api-beacon\",\"kind\":\"scout\",\"projects\":[\"harness\"],\"title\":\"Map the beacon\",\"key\":\"HRN-8\"}", TEXT);
         UUID primary = UUID.randomUUID();
