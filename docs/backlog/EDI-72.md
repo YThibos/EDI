@@ -9,6 +9,7 @@
 | Size | S |
 | Blocked by | [EDI-89](EDI-89.md) |
 | Status | needs-captain-machine: the spike needs a real Claude Code worker session in a private tmux socket and a real long turn, which only the captain's machine gives. |
+| Issue | [#153](https://github.com/YThibos/EDI/issues/153) |
 | Cloud session | not yet: see the status |
 
 ## Goal
@@ -58,4 +59,4 @@ A cloud session that picks it up by mistake stops and says so on the issue.
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.

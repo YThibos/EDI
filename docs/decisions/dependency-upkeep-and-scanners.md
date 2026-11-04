@@ -16,7 +16,8 @@ Renovate runs in this repository's GitHub Actions (`renovatebot/github-action`),
 - minor, patch, pin and digest updates share a budget of ten pull requests, while each major is its own pull request within a separate budget of three;
 - Spring Boot, Angular and the console's Node are grouped, and a release must be three days old;
 - every pull request is a draft, nothing is automerged, and subjects and titles start with `EDI-1` ([work-keys-and-branches](work-keys-and-branches.md));
-- `pinDigests` is on for the GitHub Actions manager, so every `uses:` in `.github/workflows` names a full commit SHA with its tag as a comment on the same line, and Renovate moves both together; `PinnedActionsTest` fails on an action named by a tag alone.
+- `pinDigests` is on for the GitHub Actions manager, so every `uses:` in `.github/workflows` names a full commit SHA with its tag as a comment on the same line, and every service or container image names its digest beside its tag, and Renovate moves both together; `PinnedActionsTest` reads the parsed workflows, so it fails on an action named by a tag alone or an image without its digest, in any form YAML allows, and checks only the tag comment line by line.
+- Every `jdx/mise-action` step names the mise it installs through its `version:` input, and a regex manager keeps that version current from mise's GitHub releases.
 
 CI runs on every push and pull request:
 
@@ -35,6 +36,7 @@ The `edi-upkeep` skill lists Renovate's pull requests with their checks, raises 
 The same tool the captain already runs elsewhere, configured so a stalled major can never block the rest, and every upgrade proven by the full build, native included.
 Security and quality are part of green, and the gate exists to fail on exactly what it finds.
 A tag can be moved by whoever maintains an action, and once the repository is public its workflows run on whatever the tag then points at; a commit SHA cannot move, and the tag beside it keeps the pin readable.
+An image tag and an unnamed mise version move the same way, and a check that reads lines misses a `uses:` written as a flow mapping or a quoted value.
 
 ## Alternatives rejected
 
@@ -59,6 +61,7 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 27/10/2026: GraalVM Community moved to mise's `http` backend and its `graal-` release tags, so its regex manager followed, and `npm audit` found a high-severity Vite the Angular build pinned, which the console overrides (EDI-100).
 - 28/10/2026: Spring Boot 4.1.2 manages Tomcat 11.0.27, so the `tomcat.version` override and its regex manager were removed (EDI-100).
 - 28/10/2026: every GitHub Action is pinned to a full commit SHA, verified against the action's repository, with its tag beside it, and Renovate pins and keeps the digests, before the repository is made public (EDI-131).
+- 30/10/2026: `PinnedActionsTest` reads the parsed workflows, the SonarQube service image is pinned by its digest, verified against Docker Hub, and every mise-action step names the mise version it installs, verified against the tag's commit date and the three-day minimum release age; it went in as mise 2026.10.25, released on 31 October 2026, the version CI ran green on on 3 November 2026 (EDI-140).
 - 02/11/2026: `@angular/build` 22.2.5 depends on Vite 8.3.5, which carries the fix, so the console's `vite` override was removed (EDI-1).
 - 03/11/2026: CI came back red on main: a cancelled run had cached Dependency-Check's update lock, so every later run waited forty minutes for it and failed, and the `npm audit` job, installing only Node, could not render `JAVA_HOME`; the cache now keeps no cancelled run and drops a stale lock, the job installs every pinned tool, and the Dependency-Check job allows five hours instead of 150 minutes, since a run that reached 79% of a cold download at the limit was cancelled and kept nothing (EDI-168).
 - 03/11/2026: the first complete Dependency-Check run found CVEs scored up to 8.5 in sqlite-jdbc 3.53.4.0, the version Spring Boot 4.1.2 manages, so the parent overrides it with 3.54.1.0, which bundles SQLite 3.54.1, under a regex manager as Tomcat's override was (EDI-168).
