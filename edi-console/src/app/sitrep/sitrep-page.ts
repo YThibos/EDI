@@ -83,6 +83,10 @@ export class SitrepPage {
     this.api.choosePresence(mode).subscribe({ next: () => this.refresh(), error: () => this.refresh() });
   }
 
+  protected goAway(mandate: string): void {
+    this.api.goAway(mandate).subscribe({ next: () => this.refresh(), error: () => this.refresh() });
+  }
+
   private follow(event: FleetStreamEvent): void {
     this.live.set(event !== 'dropped');
     if (event !== 'dropped') {

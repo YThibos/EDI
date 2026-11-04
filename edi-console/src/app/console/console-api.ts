@@ -27,6 +27,10 @@ export class ConsoleApi {
     return this.http.post('/api/presence', { mode }, { headers: CONSOLE_REQUEST, responseType: 'text' });
   }
 
+  goAway(mandate: string): Observable<string> {
+    return this.http.post('/api/presence', { mode: 'away', mandate }, { headers: CONSOLE_REQUEST, responseType: 'text' });
+  }
+
   personality(): Observable<PersonalityShown> {
     return this.http.get<PersonalityShown>('/api/personality');
   }

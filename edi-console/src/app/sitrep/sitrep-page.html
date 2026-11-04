@@ -5,6 +5,7 @@
   [presence]="sitrep()?.presence ?? null"
   [personalityOpen]="personalityOpen()"
   (presenceChosen)="choosePresence($event)"
+  (awayChosen)="goAway($event)"
   (personalityToggled)="personalityOpen.set(!personalityOpen())"
 />
 <main class="sr-main">

@@ -13,12 +13,18 @@
       <span class="sr-presence">
         <span class="sr-presence__mode sr-presence__mode--{{ mode }}" [attr.title]="presence()?.words">{{ mode }}</span>
         @if (mode !== 'present' && mode !== 'demo') {
-          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('present')">Present</button>
+          <button type="button" class="sr-presence__button" (click)="choose('present')">Present</button>
         }
         @if (mode === 'demo') {
-          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo-off')">End demo</button>
+          <button type="button" class="sr-presence__button" (click)="choose('demo-off')">End demo</button>
         } @else {
-          <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo')">Demo</button>
+          <button type="button" class="sr-presence__button" (click)="choose('demo')">Demo</button>
+          @if (mode !== 'quiet') {
+            <button type="button" class="sr-presence__button" (click)="choose('quiet')">Quiet</button>
+          }
+          @if (awayOffered()) {
+            <button type="button" class="sr-presence__button" [attr.aria-expanded]="awayOpen()" (click)="awayOpen.set(!awayOpen())">Away</button>
+          }
         }
         <button type="button" class="sr-latch" [attr.aria-expanded]="personalityOpen()" (click)="personalityToggled.emit()">Personality</button>
       </span>
@@ -28,4 +34,19 @@
       <span class="sr-clock__home">{{ machine() ?? '-' }}</span>
     </span>
   </div>
+  @if (awayOpen()) {
+    <form class="sr-away" (submit)="$event.preventDefault(); goAway()">
+      <label class="sr-away__label" for="sr-away-mandate">What may I do while you are away?</label>
+      <input
+        id="sr-away-mandate"
+        class="sr-away__words"
+        type="text"
+        [value]="mandate()"
+        (input)="mandate.set($any($event.target).value)"
+        placeholder="Your words, such as: carry on with what runs, start nothing new"
+      />
+      <button type="submit" class="sr-presence__button" [disabled]="!mandate().trim()">Go away</button>
+      <button type="button" class="sr-presence__button" (click)="closeAway()">Cancel</button>
+    </form>
+  }
 </header>
