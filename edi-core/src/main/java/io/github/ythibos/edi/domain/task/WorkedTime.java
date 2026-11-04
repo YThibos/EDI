@@ -16,6 +16,15 @@ public record WorkedTime(Duration active, Duration wallClock) {
         return firstDispatchIn(marks).map(start -> new WorkedTime(activeIn(marks, until), Duration.between(start, until)));
     }
 
+    public static Optional<WorkedTime> within(List<WorkMark> timeline, Instant until, Instant from, Instant to) {
+        List<WorkMark> marks = marksInTimeOrderUntil(timeline, until);
+        return firstDispatchIn(marks).map(start -> new WorkedTime(activeIn(marks, until, from, to), overlapOf(start, until, from, to)));
+    }
+
+    public boolean isNothing() {
+        return active.isZero() && wallClock.isZero();
+    }
+
     public long activeMinutes() {
         return nearestMinutesOf(active);
     }
@@ -37,6 +46,19 @@ public record WorkedTime(Duration active, Duration wallClock) {
                 .filter(index -> marks.get(index).isWorking())
                 .mapToObj(index -> Duration.between(marks.get(index).at(), nextMarkOrUntil(marks, index, until)))
                 .reduce(Duration.ZERO, Duration::plus);
+    }
+
+    private static Duration activeIn(List<WorkMark> marks, Instant until, Instant from, Instant to) {
+        return IntStream.range(0, marks.size())
+                .filter(index -> marks.get(index).isWorking())
+                .mapToObj(index -> overlapOf(marks.get(index).at(), nextMarkOrUntil(marks, index, until), from, to))
+                .reduce(Duration.ZERO, Duration::plus);
+    }
+
+    private static Duration overlapOf(Instant start, Instant end, Instant from, Instant to) {
+        Instant later = start.isAfter(from) ? start : from;
+        Instant earlier = end.isBefore(to) ? end : to;
+        return later.isBefore(earlier) ? Duration.between(later, earlier) : Duration.ZERO;
     }
 
     private static Instant nextMarkOrUntil(List<WorkMark> marks, int index, Instant until) {

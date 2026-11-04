@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +25,7 @@ class DenyListImportTest {
             new RegisteredForge(new ForgeRepository(ForgeKind.GITLAB, "forge.example.org", "team/harbour"), "keeper"),
             new RegisteredForge(new ForgeRepository(ForgeKind.GITHUB, "github.com", "example-owner/EDI"), "example-owner"));
     private static final TrackerSettings TRACKER = new TrackerSettings(TrackerKind.JIRA, URI.create("https://tracker.example.org"),
-            new TrackerSettings.Credentials(Path.of("/secure/tracker-keys.yml"), "TRACKER"), Set.of(), new Workflow(List.of("To Do", "Done")), "Done",
+            new TrackerSettings.Credentials(Path.of("/secure/tracker-keys.yml"), "TRACKER"), Map.of(), new Workflow(List.of("To Do", "Done")), "Done",
             "Story", null);
 
     @Test
