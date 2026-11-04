@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.home.PersonalConfiguration;
+import io.github.ythibos.edi.adapter.home.PresenceSettings;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.application.port.Clock;
@@ -53,7 +54,8 @@ public class FollowThePresence {
         Presence demoEnded = current.demoEndedBy(now);
         Instant lastSign = lastSignOfTheCaptain(demoEnded);
         Presence afterAMeeting = meetings.isEmpty() ? demoEnded : demoEnded.quietForAMeeting(meetings.getFirst().start(), lastSign, now);
-        return afterAMeeting.quietAfterSilence(lastSign, personal.presence().autoQuietAfter(), now);
+        PresenceSettings settings = personal.presence();
+        return settings.quietsOnSilence() ? afterAMeeting.quietAfterSilence(lastSign, settings.autoQuietAfter(), now) : afterAMeeting;
     }
 
     private Instant lastSignOfTheCaptain(Presence current) {

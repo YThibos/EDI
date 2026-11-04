@@ -31,7 +31,7 @@ description: >-
 ## Supervision
 
 - Keep the one wake stream live: the Monitor tool running `edi wait --follow` alone; act on each wake it prints, and start it again when it ends.
-- `edi worker list` and `edi worker peek <task>` show a worker; `edi steer <task> [--resolves <key>]` sends it a message on standard input.
+- `edi worker list`, `edi worker show <task>` (its whole last status and open question, from the store) and `edi worker peek <task>` (its pane) show a worker; `edi steer <task> [--resolves <key>]` sends it a message on standard input.
 - The worker runs the validation pipeline and answers its gates; you never answer a worker's gate.
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.

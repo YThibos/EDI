@@ -10,6 +10,7 @@ import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 
@@ -23,7 +24,8 @@ final class WaitingEntries {
                         waiting.decisions().stream().map(open -> call(open, wording, showsTheCard)),
                         waiting.boards().stream().map(board -> boardQuestions(board, wording)),
                         waiting.reviews().stream().map(ready -> review(ready, wording)),
-                        waiting.changing().stream().map(changing -> changing(changing, wording)))
+                        waiting.changing().stream().map(changing -> changing(changing, wording)),
+                        waiting.workerQuestions().stream().map(question -> workerWaiting(question, wording)))
                 .flatMap(Function.identity())
                 .toList();
     }
@@ -53,5 +55,10 @@ final class WaitingEntries {
     private static DecisionZone.Entry changing(ChangingRequest changing, TurnWording wording) {
         return new DecisionZone.Changing(wording.projectsOf(changing.task()), wording.textOf(changing.task()), changing.delivery().address().url(),
                 changing.whyChanging());
+    }
+
+    private static DecisionZone.Entry workerWaiting(WorkerQuestion question, TurnWording wording) {
+        return new DecisionZone.WorkerWaiting(wording.projectsOf(question.task()), wording.textOf(question.task()), question.question(),
+                question.waited());
     }
 }

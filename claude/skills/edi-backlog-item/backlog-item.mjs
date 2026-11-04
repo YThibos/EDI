@@ -212,6 +212,9 @@ function specOf(path, text) {
     if (missing.length > 0) {
         throw new Refusal(`${path}: the spec lacks the sections ${missing.map(section => `"## ${section}"`).join(', ')}.`);
     }
+    if (/^(- )?TODO:/m.test(spec)) {
+        throw new Refusal(`${path}: the spec still holds a TODO line; replace each one before the item is backlogged.`);
+    }
     return spec;
 }
 

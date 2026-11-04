@@ -14,6 +14,8 @@ The overview of the fleet already has two homes that the captain opens on purpos
 `POST /api/report`, which `edi report` sends with the turn's items or, without `--turn`, an empty turn, renders a `TurnReport` with `TurnReportPresenter`; `GET /api/report` stays the sitrep and renders the boxed `CaptainReport` unchanged ([captain-report](captain-report.md)).
 The turn report holds only what needs the captain: the calendar line while the calendar cannot be read, the decision zone when something waits on him, and this turn's done and next items when there are any.
 The decision zone keeps everything that waits on him, built by `WaitingEntries` for both reports: every open decision, every research board with questions or bound decisions, every request ready for his review with its full address, and every request still changing.
+The zone also draws a `Waiting on EDI` line for each worker whose question the primary has not answered (`DecisionZone.WorkerWaiting`): the task's title, the question in its first twelve words and how long it has waited; it counts as nothing open for the captain, and goes once the steer that resolves the question's key is acknowledged.
+So the turn report leaves the zone out, and the sitrep prints `Nothing waiting on you`, only when neither a call for the captain nor a worker question waits (`WaitingOnTheCaptain.hasNothingWaiting`).
 A decision's card is drawn in full when it was raised or re-raised after the last report shown in an earlier turn of the calling session (`TurnReport.showsTheCardOf`); otherwise it is one line, `DecisionZone.Reminder`, with its number, its title and the recommended option.
 `PrimaryTurn.previousReportAt` carries that moment: a new turn takes the latest report of the turn before it, or that turn's own previous report when it rendered none, and `PrimarySessions.previousReportOf` reads it for the controller.
 A report with no session, or a session that has seen no report yet, draws every card in full.
@@ -50,3 +52,4 @@ When the captain asks for something more in the turn report, or the report is re
 ## How we got here
 
 - 28/10/2026: with many parallel tasks the report had become long scrolling, so the captain made the turn report the session's attention list and left the overview to the sitrep (EDI-133).
+- 03/11/2026: a worker waited an hour on a question the primary never saw while every turn report said nothing was waiting, so each open worker question got a `Waiting on EDI` line in the zone (EDI-154).

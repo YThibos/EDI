@@ -13,8 +13,12 @@ public record PresenceSettings(Duration autoQuietAfter, Duration quietBatch, Lis
         Objects.requireNonNull(autoQuietAfter, "presence.autoQuietAfter says after how long without a typed prompt presence turns quiet.");
         Objects.requireNonNull(quietBatch, "presence.quietBatch says how long quiet wakes are gathered.");
         calendarIgnore = List.copyOf(calendarIgnore);
-        if (autoQuietAfter.isNegative() || autoQuietAfter.isZero() || quietBatch.isNegative()) {
-            throw new IllegalArgumentException("presence.autoQuietAfter is a positive duration and presence.quietBatch is never negative.");
+        if (autoQuietAfter.isNegative() || quietBatch.isNegative()) {
+            throw new IllegalArgumentException("presence.autoQuietAfter and presence.quietBatch are never negative; PT0S turns quiet on silence off.");
         }
+    }
+
+    public boolean quietsOnSilence() {
+        return !autoQuietAfter.isZero();
     }
 }

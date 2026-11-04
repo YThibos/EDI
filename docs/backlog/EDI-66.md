@@ -7,8 +7,8 @@
 | Wave and order | wave 5, order 28 |
 | Source | EDI-52 plan, slice 15 |
 | Size | S |
-| Blocked by | [EDI-59](EDI-59.md) |
-| Status | open |
+| Blocked by | nothing |
+| Status | delivered |
 | Issue | [#162](https://github.com/YThibos/EDI/issues/162) |
 | Cloud session | ok |
 
@@ -26,10 +26,11 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), finding F8 and sl
 
 - A read-only primary command and endpoint print each round's prompts and the bound answers with their settlement.
 - After a round arrives, `edi board show <task>` prints every prompt; the message's `received_at` stays empty and no `SteerReceived` is recorded; the scout's `edi inbox` still delivers it.
-- The task panel's board tab shows the same.
+- The endpoint is what the task panel's board tab reads, which [EDI-59](EDI-59.md) builds.
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on the task panel: the command and endpoint come first, and the panel's board tab, EDI-59's, reads them.
 - F8 (captain, 26 October 2026, all thirteen findings approved): `edi board show <task> [--round N]`, read-only.
 - Never mark an inbox message received from the primary's side.
 - The caller is the primary or the captain's console session; no worker may call it.
