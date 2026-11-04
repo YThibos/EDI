@@ -5,6 +5,7 @@
       <span class="sr-decision__repo">{{ card().number }} · {{ projects() }}</span>
     </div>
     <h3 class="sr-decision__title">{{ card().title }}</h3>
+    <app-link-chips [links]="links()" />
     @if (card().context) {
       <div class="sr-ctx">
         <div class="sr-ctx__row">

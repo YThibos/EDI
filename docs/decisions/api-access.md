@@ -59,3 +59,4 @@ When workers run as another user or on another machine, or the core serves more 
 - 28/10/2026: a worker's window no longer falls back to the home token when its token file variable is unset, and the guard keeps a worker's shell from unsetting or reassigning the variables that say who it is (EDI-122).
 - 29/10/2026: the core refuses a request addressed to any host but its own loopback address and port, and forbids every page to frame it (EDI-126).
 - 30/10/2026: the record says what the worker-identity guard reads and no more, after a review found forms it missed (EDI-138).
+- 03/11/2026: the captain's console session may read a task's report and brief as a page, as the primary may, and no worker may (EDI-57).

@@ -2,8 +2,12 @@ package io.github.ythibos.edi.web.console;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -18,6 +22,7 @@ import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
+import io.github.ythibos.edi.application.fleet.TaskLinks;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
@@ -33,6 +38,7 @@ import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Answer;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Board;
@@ -65,7 +71,13 @@ public class SitrepConsolePresenter {
     }
 
     public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, ZoneId zone, String machine, CaptainAddress address, Presence presence) {
-        List<Charted> charted = chartedNext(fleet);
+        return present(fleet, generated, zone, machine, address, presence, _ -> Map.of());
+    }
+
+    public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, ZoneId zone, String machine, CaptainAddress address, Presence presence,
+            Function<Collection<Task>, Map<TaskId, TaskLinks>> linksOf) {
+        List<ChartedTask> chartedTasks = chartedTasksOf(fleet);
+        List<Charted> charted = chartedTasks.stream().map(ChartedTask::row).toList();
         return new ConsoleSitrep(
                 ConsoleSitrep.EDI_SITREP_V1,
                 generated,
@@ -83,17 +95,37 @@ public class SitrepConsolePresenter {
                 fleet.landed().stream().limit(LANDED_SHOWN).map(SitrepConsolePresenter::landed).toList(),
                 fleet.landed().size(),
                 charted.stream().limit(CHARTED_SHOWN).toList(),
-                charted.size());
+                charted.size(),
+                linksShown(linksOf.apply(tasksShown(fleet, chartedTasks))));
+    }
+
+    private static List<Task> tasksShown(FleetSnapshot fleet, List<ChartedTask> charted) {
+        return Stream.of(
+                        fleet.waiting().decisions().stream().map(OpenDecision::task),
+                        fleet.waiting().boards().stream().map(WaitingBoard::task),
+                        fleet.waiting().reviews().stream().map(ReadyForReview::task),
+                        fleet.waiting().changing().stream().map(ChangingRequest::task),
+                        fleet.ongoing().stream().map(OngoingTask::task),
+                        fleet.landed().stream().limit(LANDED_SHOWN).map(LandedTask::task),
+                        charted.stream().limit(CHARTED_SHOWN).map(ChartedTask::task))
+                .flatMap(Function.identity())
+                .toList();
+    }
+
+    private static Map<String, TaskLinks> linksShown(Map<TaskId, TaskLinks> links) {
+        Map<String, TaskLinks> shown = new LinkedHashMap<>();
+        links.forEach((task, taskLinks) -> shown.put(task.value(), taskLinks));
+        return shown;
     }
 
     private PresenceShown presenceShown(Presence presence, Instant generated) {
         return new PresenceShown(presence.mode().word(), presence.demoHoldsAt(generated), presenceWords.of(presence));
     }
 
-    private static List<Charted> chartedNext(FleetSnapshot fleet) {
+    private static List<ChartedTask> chartedTasksOf(FleetSnapshot fleet) {
         Stream<ChartedTask> queued = fleet.queued().stream().map(task -> new ChartedTask(task, queued(task)));
         Stream<ChartedTask> parked = fleet.parked().stream().map(parkedTask -> new ChartedTask(parkedTask.task(), parked(parkedTask)));
-        return Stream.concat(queued, parked).sorted(Comparator.comparing(ChartedTask::filed)).map(ChartedTask::row).toList();
+        return Stream.concat(queued, parked).sorted(Comparator.comparing(ChartedTask::filed)).toList();
     }
 
     private static Card card(OpenDecision open) {
