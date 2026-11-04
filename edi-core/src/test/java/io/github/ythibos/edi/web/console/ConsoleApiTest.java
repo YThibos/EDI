@@ -210,9 +210,10 @@ class ConsoleApiTest {
         HttpResponse<String> signIn = send(HttpRequest.newBuilder(uri("/login")).GET());
         HttpResponse<String> fleet = send(HttpRequest.newBuilder(uri("/fleet")).GET());
         HttpResponse<String> week = send(HttpRequest.newBuilder(uri("/week")).GET());
+        HttpResponse<String> task = send(HttpRequest.newBuilder(uri("/task/fit-lamp")).GET());
 
-        assertThat(Stream.of(fleet, week).map(HttpResponse::body)).allSatisfy(body -> assertThat(body).contains("<app-root></app-root>"));
-        Stream.of(console, signIn, fleet, week).forEach(page -> {
+        assertThat(Stream.of(fleet, week, task).map(HttpResponse::body)).allSatisfy(body -> assertThat(body).contains("<app-root></app-root>"));
+        Stream.of(console, signIn, fleet, week, task).forEach(page -> {
             assertThat(page.statusCode()).isEqualTo(200);
             assertThat(page.headers().firstValue("Cache-Control")).contains("no-cache");
             assertThat(page.headers().firstValue("Last-Modified")).isEmpty();

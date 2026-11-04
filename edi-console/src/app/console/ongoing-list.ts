@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { projectsOf } from './projects';
 import { OngoingTask, TaskLinks } from './sitrep';
@@ -7,7 +8,7 @@ import { toneOf } from './tone';
 
 @Component({
   selector: 'app-ongoing-list',
-  imports: [LinkChips],
+  imports: [RouterLink, LinkChips],
   templateUrl: './ongoing-list.html',
 })
 export class OngoingList {

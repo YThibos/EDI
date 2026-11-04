@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { ChangingRequest, ReadyForReview, WaitingBoard, WorkerQuestion } from './sitrep';
 import { WaitingList } from './waiting-list';
@@ -39,6 +40,7 @@ describe('WaitingList', () => {
   let fixture: ComponentFixture<WaitingList>;
 
   beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(WaitingList);
   });
 

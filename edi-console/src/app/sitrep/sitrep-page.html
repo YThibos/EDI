@@ -54,6 +54,7 @@
           </div>
           <app-charted-list class="sr-section__body" [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" [links]="sitrep.links ?? {}" />
         </section>
+        <router-outlet />
       </div>
     </div>
     <section class="sr-section">

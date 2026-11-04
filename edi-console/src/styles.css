@@ -326,6 +326,20 @@ a {
   overflow-wrap: anywhere;
 }
 
+.sr-row__open {
+  color: inherit;
+  text-decoration: none;
+  border-radius: 2px;
+}
+
+.sr-row__open:hover,
+.sr-row__open:focus-visible {
+  color: var(--ion);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
 .sr-row__key {
   font-family: var(--font-mono);
   font-weight: 500;
