@@ -41,6 +41,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskNoted;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -78,6 +79,8 @@ class WakeRuleTest {
         assertThat(WakeRule.wakeFor(new UsageLimitReached(TASK, WORKER, new UsageLimit("session limit", RESET)), THE_WORKER))
                 .contains(new Wake(WakeKind.USAGE_LIMIT, TASK, WORKER, "session limit", RESET));
         assertThat(WakeRule.wakeFor(new WorkerStale(TASK, WORKER, RESET), Actor.CORE)).contains(new Wake(WakeKind.WORKER_STALE, TASK, WORKER, "", RESET));
+        assertThat(WakeRule.wakeFor(new WorkerQuestionUnanswered(TASK, WORKER, new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null,
+                "Brass or oil?"), RESET), Actor.CORE)).contains(new Wake(WakeKind.QUESTION_UNANSWERED, TASK, WORKER, "(lamp) Brass or oil?", RESET));
     }
 
     @Test

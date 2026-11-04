@@ -37,5 +37,14 @@
         <span class="sr-badge sr-badge--danger"><span class="sr-badge__dot"></span>changing</span>
       </div>
     }
+    @for (question of workerQuestions(); track question.task) {
+      <div class="sr-row sr-waiting sr-waiting--edi">
+        <div class="sr-row__main">
+          <div class="sr-row__title">{{ question.title }}</div>
+          <div class="sr-row__sub">{{ questionSummary(question) }}</div>
+        </div>
+        <span class="sr-badge sr-badge--info"><span class="sr-badge__dot"></span>with me</span>
+      </div>
+    }
   </div>
 </div>

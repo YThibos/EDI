@@ -167,6 +167,26 @@ describe('SitrepPage', () => {
     expect(text(page, '.sr-section__head .sr-sub')).toBe('all clear, Commander');
   });
 
+  it('lists a worker question in the decision zone and never calls it all clear or nothing waiting', async () => {
+    const fixture = TestBed.createComponent(SitrepPage);
+    http.expectOne('/api/sitrep').flush(
+      sitrepFixture({
+        decisions: [],
+        answered: [],
+        workerQuestions: [
+          { task: 'fit-lamp', title: 'Fit the lamp', projects: ['harness'], question: 'Which socket does the lamp take?', askedAt: '2026-10-15T06:00:00Z' },
+        ],
+      }),
+    );
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('1 question waiting on me, Commander');
+    expect(page.querySelector('.sr-clear')).toBeNull();
+    expect(texts(page, '.sr-waiting-on-you .sr-row__title')).toEqual(['Fit the lamp']);
+    expect(text(page, '.sr-waiting-on-you .sr-row__sub')).toBe('waiting on me for 17 minutes: Which socket does the lamp take? · harness');
+  });
+
   it('puts what needs a decision, what is ongoing and what is charted next side by side, in that order', async () => {
     const page = (await rendered()).nativeElement as HTMLElement;
 

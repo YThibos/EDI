@@ -72,7 +72,7 @@ public class FleetSnapshotQuery {
             List<Task> queued = tasks.inState(TaskState.QUEUED);
             Map<TaskId, Decision> openDecisions = openDecisionsByTask();
             List<Task> openWork = Stream.concat(inFlight.stream(), queued.stream()).toList();
-            return new FleetSnapshot(waitingOnTheCaptain(openDecisions, inFlight), ongoing(unheld(inFlight)), parkedAmong(openWork, openDecisions),
+            return new FleetSnapshot(waitingOnTheCaptain(openDecisions, inFlight, now), ongoing(unheld(inFlight)), parkedAmong(openWork, openDecisions),
                     unheld(queued), landedSince(now.minus(LANDED_RECENTLY)), answeredSince(now.minus(ANSWERED_RECENTLY)));
         });
     }
@@ -83,12 +83,19 @@ public class FleetSnapshotQuery {
         return byTask;
     }
 
-    private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight) {
+    private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight, Instant now) {
         List<OpenDecision> open = decisionsOf(openDecisions);
         List<WaitingBoard> waitingBoards = waitingBoards(open);
         List<HandedOverRequest> handedOver = handedOverRequestsAmong(inFlight);
         return new WaitingOnTheCaptain(boundToNoWaitingBoard(open, waitingBoards), waitingBoards, readyForReviewAmong(handedOver),
-                stillChangingAmong(handedOver));
+                stillChangingAmong(handedOver), questionsOfWorkersAmong(inFlight, now));
+    }
+
+    private List<WorkerQuestion> questionsOfWorkersAmong(List<Task> inFlight, Instant now) {
+        return inFlight.stream()
+                .flatMap(task -> workers.latestOf(task.id()).filter(not(Worker::isRetired)).filter(Worker::waitsOnThePrimary)
+                        .map(worker -> new WorkerQuestion(task, worker, Duration.between(worker.lastStatus().at(), now))).stream())
+                .toList();
     }
 
     private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {

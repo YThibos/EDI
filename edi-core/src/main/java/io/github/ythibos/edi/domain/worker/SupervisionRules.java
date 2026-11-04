@@ -9,11 +9,12 @@ import java.util.Set;
 
 import io.github.ythibos.edi.domain.status.StatusState;
 
-public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Duration busyCeiling) {
+public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Duration busyCeiling, Duration questionReminder) {
 
     public static final Duration STALE_AFTER = Duration.ofMinutes(20);
     public static final Duration PAUSE_RESURFACE = Duration.ofHours(4);
     public static final Duration BUSY_CEILING = Duration.ofHours(3);
+    public static final Duration QUESTION_REMINDER = Duration.ofMinutes(10);
     private static final Set<StatusState> AWAITING_THE_PRIMARY =
             EnumSet.of(StatusState.DONE, StatusState.NEEDS_DECISION, StatusState.BLOCKED, StatusState.FAILED, StatusState.PAUSED);
 
@@ -21,6 +22,10 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
         Objects.requireNonNull(staleAfter, "Supervision knows when an idle worker has waited too long.");
         Objects.requireNonNull(pauseResurface, "Supervision knows when an open-ended pause resurfaces.");
         Objects.requireNonNull(busyCeiling, "Supervision knows when a busy worker has been busy too long.");
+        Objects.requireNonNull(questionReminder, "Supervision knows how often an unanswered worker question is raised again.");
+        if (questionReminder.isNegative() || questionReminder.isZero()) {
+            throw new IllegalArgumentException("supervision.questionReminder is a positive duration, such as PT10M.");
+        }
     }
 
     public WorkerHealth healthOf(Worker worker, WindowCheck window, BootId currentBoot, Instant now) {
@@ -56,6 +61,10 @@ public record SupervisionRules(Duration staleAfter, Duration pauseResurface, Dur
             case WorkerHealth.Starting _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _, WorkerHealth.ContextFull _, WorkerHealth.Stopped _,
                     WorkerHealth.LaunchFailed _, WorkerHealth.Finished _ -> Optional.empty();
         };
+    }
+
+    public boolean remindsOfTheQuestion(Worker worker, Instant lastRaised, Instant now) {
+        return worker.waitsOnThePrimary() && !worker.isRetired() && !now.isBefore(lastRaised.plus(questionReminder));
     }
 
     private WorkerHealth activityHealthOf(Worker worker, Instant now) {

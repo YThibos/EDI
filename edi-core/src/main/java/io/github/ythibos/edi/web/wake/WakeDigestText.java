@@ -1,10 +1,12 @@
 package io.github.ythibos.edi.web.wake;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.web.presence.PresenceWords;
@@ -17,10 +19,12 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
 
     private final Moments moments;
     private final PresenceWords presenceWords;
+    private final Clock clock;
 
-    WakeDigestText(Moments moments, PresenceWords presenceWords) {
+    WakeDigestText(Moments moments, PresenceWords presenceWords, Clock clock) {
         this.moments = moments;
         this.presenceWords = presenceWords;
+        this.clock = clock;
     }
 
     @Override
@@ -65,6 +69,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case BUSY_TOO_LONG -> who + " has been busy since " + moments.minute(wake.moment()) + ", past the three-hour ceiling.";
             case HEAVY_RUNS_AT_ONCE -> who + " started " + wake.detail() + "; nothing caps them, so each runs slower until they finish:"
                     + " tell the captain, whose report warns while they overlap.";
+            case QUESTION_UNANSWERED -> who + " has waited " + waitedSince(wake) + " on its question " + wake.detail()
+                    + "; answer it with edi steer " + wake.task() + " --resolves and its key, or I raise it again.";
             case WAIT_ENDED -> who + "'s declared wait has ended; verify what it waited for: " + wake.detail();
             case HOLD_DUE -> wake.task() + ": its hold until " + wake.detail() + " has come due.";
             case DRAFT_MERGED -> wake.task() + ": the captain merged " + wake.detail() + "; you refresh the clone and clean up.";
@@ -80,6 +86,10 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case BOARD_ANSWERED -> wake.task() + ": the captain answered on " + wake.detail() + "; its worker has them in its inbox.";
             case BOARD_ANSWER_REFUSED -> wake.task() + ": a board answer to " + wake.detail();
         };
+    }
+
+    private String waitedSince(Wake wake) {
+        return Words.quantity((int) Duration.between(wake.moment(), clock.now()).toMinutes(), "minute");
     }
 
     private String resumeOf(Wake wake) {

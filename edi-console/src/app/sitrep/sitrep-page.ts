@@ -41,11 +41,14 @@ export class SitrepPage {
       return '';
     }
     const waiting = this.waitingCount();
-    return waiting ? `${waiting} waiting on you, ${sitrep.address}` : `all clear, ${sitrep.address}`;
+    if (waiting) {
+      return `${waiting} waiting on you, ${sitrep.address}`;
+    }
+    return sitrep.workerQuestions.length ? `${questionsOnMe(sitrep.workerQuestions.length)}, ${sitrep.address}` : `all clear, ${sitrep.address}`;
   });
   protected readonly showsTheDeck = computed(() => {
     const sitrep = this.sitrep();
-    return !!sitrep && (sitrep.decisions.length > 0 || sitrep.answered.length > 0 || this.waitingCount() === 0);
+    return !!sitrep && (sitrep.decisions.length > 0 || sitrep.answered.length > 0 || (this.waitingCount() === 0 && sitrep.workerQuestions.length === 0));
   });
   protected readonly chartedShown = computed(() => {
     const sitrep = this.sitrep();
@@ -85,4 +88,8 @@ export class SitrepPage {
     this.sitrep.set(sitrep);
     this.access.set('signed-in');
   }
+}
+
+function questionsOnMe(count: number): string {
+  return count === 1 ? '1 question waiting on me' : `${count} questions waiting on me`;
 }

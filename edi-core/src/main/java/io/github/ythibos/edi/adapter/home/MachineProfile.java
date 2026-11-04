@@ -75,10 +75,13 @@ public class MachineProfile {
             return new SupervisionRules(
                     durationOf(supervision.staleAfter(), SupervisionRules.STALE_AFTER),
                     durationOf(supervision.pauseResurface(), SupervisionRules.PAUSE_RESURFACE),
-                    SupervisionRules.BUSY_CEILING);
+                    SupervisionRules.BUSY_CEILING,
+                    durationOf(supervision.questionReminder(), SupervisionRules.QUESTION_REMINDER));
         } catch (DateTimeParseException invalid) {
             throw new InvalidConfiguration(file, "supervision holds \"" + invalid.getParsedString()
                     + "\", which is not a duration such as PT20M.");
+        } catch (IllegalArgumentException invalid) {
+            throw new InvalidConfiguration(file, invalid.getMessage());
         }
     }
 
@@ -238,9 +241,9 @@ public class MachineProfile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record SupervisionSection(String staleAfter, String pauseResurface) {
+    record SupervisionSection(String staleAfter, String pauseResurface, String questionReminder) {
 
-        static final SupervisionSection NONE = new SupervisionSection(null, null);
+        static final SupervisionSection NONE = new SupervisionSection(null, null, null);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

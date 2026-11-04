@@ -95,6 +95,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -260,6 +261,8 @@ public class EventLog {
             case HeavyRunsAtOnce atOnce -> withEach(payload.put("worker", atOnce.worker().toString()).put("run", atOnce.run().words()), "beside",
                     atOnce.beside().stream().map(other -> other.worker() + " " + other.run().words()).toList());
             case DeclaredWaitEnded ended -> withStatus(payload.put("worker", ended.worker().toString()), ended.pause());
+            case WorkerQuestionUnanswered unanswered -> withStatus(payload.put("worker", unanswered.worker().toString())
+                    .put("askedAt", Columns.text(unanswered.askedAt())), unanswered.question());
             case LostInOutage lost -> payload.put("worker", lost.worker().toString()).put("number", lost.number()).put("cause", lost.cause().word());
             case RecoveryChosen chosen -> payload.put("number", chosen.number()).put("action", chosen.action().word());
             case RecoveryFailed failed -> payload.put("number", failed.number()).put("because", failed.because());

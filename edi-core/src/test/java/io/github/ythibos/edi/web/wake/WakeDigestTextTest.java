@@ -2,6 +2,7 @@ package io.github.ythibos.edi.web.wake;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +19,7 @@ import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.wake.WakeRule;
 import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
 class WakeDigestTextTest {
@@ -26,7 +28,17 @@ class WakeDigestTextTest {
     private static final Instant RAISED = Instant.parse("2026-10-16T09:00:00Z");
     private static final Presence PRESENT = Presence.presentSince(RAISED);
 
-    private final WakeDigestText digest = new WakeDigestText(PresenterFixtures.moments(), PresenterFixtures.presenceWords());
+    private final WakeDigestText digest = new WakeDigestText(PresenterFixtures.moments(), PresenterFixtures.presenceWords(),
+            new ManualClock(RAISED.plus(Duration.ofMinutes(25))));
+
+    @Test
+    void remindsThePrimaryOfAnUnansweredQuestionWithHowLongItHasWaited() {
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.QUESTION_UNANSWERED, LAMP, WorkerId.first(LAMP),
+                "(lamp) Brass or oil?", RAISED))), 0, 1, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp#1 has waited 25 minutes on its question (lamp) Brass or oil?; answer it with"
+                + " edi steer fit-lamp --resolves and its key, or I raise it again.\n");
+    }
 
     @Test
     void tellsThePrimaryWhatNeedsItOneNumberedLineAtATime() {

@@ -20,6 +20,7 @@ An untrusted clone's worker, or one whose mise is missing or fails, starts witho
 The window's environment carries `EDI_HOME`, `EDI_ROLE`, `EDI_TASK_ID`, `EDI_WORKER` and `EDI_TOKEN_FILE`, the path of the worker's token ([api-access](api-access.md)).
 The primary and every worker answer all seven hooks through `edi hook <event>`, and `edi` sends `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PID` as the `EDI-Session` and `EDI-Claude-Pid` headers; `HookController` routes a worker's hooks to `WorkerHooks` and the home token's to `PrimaryHooks`.
 EDI learns a worker's state from its hooks, `edi status`, the pipeline and git, never from reading panes; one narrow pane probe exists for typing and `edi worker peek` ([steering](steering.md)).
+`edi worker show` prints what the store holds of a task's latest worker, its state, its last status in full, its open question with the steer that answers it, its steers with their receipt and acknowledgement, and its pipeline run, so the primary reads a question whole without reading the pane (`WorkerDetailQuery`).
 
 ## Why
 
@@ -61,3 +62,4 @@ When Claude Code changes a hook, a flag or its trust check, or unattended headle
 - 28/10/2026: the captain chose to start a worker through `mise exec` only when mise trusts the project's clone (EDI-100).
 - 28/10/2026: the worker's and the primary's settings state `disableAllHooks: false`, after a verification showed a settings file in the working directory could switch their hooks off (EDI-125).
 - 30/10/2026: a worker's hooks call `edi` by its absolute path, and the launch refuses a copy whose settings set `env` or `disableAllHooks`, after a review found an `env` entry could redirect the bare `edi` the hooks called (EDI-138).
+- 03/11/2026: the primary read workers' panes 47 times in a week to see a question `edi worker list` cut to one line, so `edi worker show` prints it whole from the store (EDI-162).

@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.domain.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,7 +23,8 @@ class SupervisionRulesTest {
 
     private static final Instant LAUNCHED = Instant.parse("2026-10-16T09:00:00Z");
     private static final BootId BOOT = new BootId("boot-1");
-    private static final SupervisionRules RULES = new SupervisionRules(Duration.ofMinutes(20), Duration.ofHours(4), Duration.ofHours(3));
+    private static final SupervisionRules RULES = new SupervisionRules(Duration.ofMinutes(20), Duration.ofHours(4), Duration.ofHours(3),
+            Duration.ofMinutes(10));
 
     @Test
     void readsHealthFromTheHooksTheWindowAndTheBoot() {
@@ -43,6 +45,21 @@ class SupervisionRulesTest {
                 .isEqualTo(new WorkerHealth.LaunchFailed(LAUNCHED.plusSeconds(120)));
         assertThat(health(launched().launchFailed(LAUNCHED.plusSeconds(120)).started(null, null, LAUNCHED.plusSeconds(180)), WindowCheck.WINDOW_CLOSED, BOOT))
                 .isEqualTo(new WorkerHealth.Dead(DeathCause.WINDOW_CLOSED));
+    }
+
+    @Test
+    void remindsOfAQuestionToThePrimaryOnceTheIntervalHasPassedSinceItWasLastRaised() {
+        Worker asking = launched().reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), LAUNCHED);
+        Worker working = asking.reported(report(StatusState.WORKING, null), LAUNCHED.plusSeconds(60));
+        Instant tenMinutesLater = LAUNCHED.plus(Duration.ofMinutes(10));
+
+        assertThat(RULES.remindsOfTheQuestion(asking, LAUNCHED, tenMinutesLater.minusSeconds(1))).isFalse();
+        assertThat(RULES.remindsOfTheQuestion(asking, LAUNCHED, tenMinutesLater)).isTrue();
+        assertThat(RULES.remindsOfTheQuestion(asking, tenMinutesLater, tenMinutesLater.plusSeconds(60))).isFalse();
+        assertThat(RULES.remindsOfTheQuestion(working, LAUNCHED, tenMinutesLater)).isFalse();
+        assertThat(RULES.remindsOfTheQuestion(asking.retired(LAUNCHED.plusSeconds(1)), LAUNCHED, tenMinutesLater)).isFalse();
+        assertThatThrownBy(() -> new SupervisionRules(Duration.ofMinutes(20), Duration.ofHours(4), Duration.ofHours(3), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

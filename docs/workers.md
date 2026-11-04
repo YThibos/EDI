@@ -15,6 +15,7 @@ edi brief fit-the-lamp --category implementation --spec - < spec.md   # the brie
 edi dispatch fit-the-lamp --category implementation --spec - < spec.md # isolated copy, brief, worker
 edi dispatch rename-lamp --category mechanical --spec - --files src/Lamp.java < change.md
 edi worker list                                     # serving workers, their route and last status
+edi worker show fit-the-lamp                        # the worker from the store: its state, last status in full, open question, steers and pipeline
 edi worker peek fit-the-lamp                        # the worker pane's last lines and what EDI reads in them
 edi steer fit-the-lamp --resolves lamp-choice < answer.md
 edi status working -- tests pass                    # a worker reporting, under the token EDI gave it
@@ -29,7 +30,7 @@ The worker's copy is `$EDI_HOME/worktrees/<project>/<task-id>`, its brief and re
 Workers report with `edi status` and read `edi inbox`.
 `edi steer` delivers a message at the worker's next stop or its idle prompt and proves it arrived ([steering](decisions/steering.md)).
 A worker's `done` is refused while a message waits unacknowledged in its inbox ([delivery](decisions/delivery.md)).
-A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page shows its task as with EDI, and once the worker acknowledges the steer that resolves its key the question no longer shows ([fleet-snapshot](decisions/fleet-snapshot.md)).
+A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page shows its task as with EDI, the turn report and the sitrep draw a `Waiting on EDI` line for it in the decision zone, and once the worker acknowledges the steer that resolves its key the question no longer shows ([fleet-snapshot](decisions/fleet-snapshot.md)).
 
 ## Guards
 
@@ -44,7 +45,8 @@ A supervision round judges each worker from its hooks, its tmux server and the m
 It parks a worker that stopped on a usage limit and resumes it after the reset ([recovery](decisions/recovery.md)).
 It reads each working worker's transcript for a full context, which Claude Code reports through no hook, and wakes the primary at once; a steer to such a worker waits in its inbox for the fresh session ([supervision](decisions/supervision.md)).
 It reads each busy worker's transcript for a turn that ended while EDI could not take its stop hook, such as during a core outage, marks the worker idle, sends it a message to carry on so the steers that waited reach it, and wakes the primary ([supervision](decisions/supervision.md)).
-The machine profile's `supervision` section sets when an idle worker has waited too long and when a paused one resurfaces.
+The machine profile's `supervision` section sets when an idle worker has waited too long, when a paused one resurfaces, and how often an unanswered question is raised again.
+A worker's `needs-decision` or `blocked` comes back to the primary as a `question-unanswered` wake every `supervision.questionReminder` (ten minutes) until a steer that resolves its key is sent, except while the captain is away; `edi health` lists each open question with its age.
 
 ## Recovery
 
