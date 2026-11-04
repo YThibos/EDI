@@ -6,7 +6,7 @@ personal/
 node_modules/
 .angular/
 edi-console/dist/
-edi-console/node/
+edi-console/node
 edi-console/public/*.png
 
 .idea/
