@@ -8,7 +8,7 @@
 | Source | EDI-52 plan, slice 15 |
 | Size | S |
 | Blocked by | [EDI-59](EDI-59.md) |
-| Status | open |
+| Status | delivered |
 | Cloud session | ok |
 
 ## Goal

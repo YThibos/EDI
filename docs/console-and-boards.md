@@ -46,6 +46,7 @@ When the scout cannot arm it again, the primary posts the round instead:
 
 ```sh
 edi board post "$EDI_HOME/data/tasks/<task-id>/board.html" --link <url> --questions 2
+edi board show <task-id> [--round 2]                                  # what the captain answered, without delivering it
 ```
 
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops ([research-boards](decisions/research-boards.md)).

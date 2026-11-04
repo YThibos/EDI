@@ -161,6 +161,38 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void showsEachAnsweredRoundToThePrimaryWithoutDeliveringItToTheScout() {
+        Board board = armQuietly(boardFile, decision);
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "B"), List.of());
+        BoardPrompt note = new BoardPrompt("1", "message", "Brighter, please.", "Brighter, please.", "", Map.of(), List.of());
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(note), false));
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(choice), false));
+
+        AnsweredRounds shown = home.boardRounds().roundsOf(new TaskReference.ById(SCOUT), null);
+        AnsweredRounds second = home.boardRounds().roundsOf(new TaskReference.ById(SCOUT), 2);
+        boolean unreceived = message(1).receivedAt() == null && message(2).receivedAt() == null;
+        List<String> eventsBeforeTheInbox = home.eventTypesOf(SCOUT);
+        List<InboxMessage> delivered = home.workerInbox().read(scout.id());
+
+        assertThat(shown.rounds()).extracting(AnsweredRounds.Round::number).containsExactly(1, 2);
+        assertThat(shown.rounds().getFirst().prompts()).contains("Prompt 1 (message): Brighter, please.");
+        assertThat(second.rounds()).singleElement().satisfies(round -> {
+            assertThat(round.file()).isEqualTo(boardFile.toString());
+            assertThat(round.prompts()).isEqualTo(message(2).body());
+            assertThat(round.answers()).singleElement().satisfies(answer -> {
+                assertThat(answer.decision()).isEqualTo(decision);
+                assertThat(answer.settledAt()).isNotNull();
+            });
+        });
+        assertThat(unreceived).isTrue();
+        assertThat(eventsBeforeTheInbox).doesNotContain("SteerReceived");
+        assertThat(delivered).extracting(InboxMessage::number).containsExactly(1, 2);
+        assertThatThrownBy(() -> home.boardRounds().roundsOf(new TaskReference.ById(SCOUT), 3)).isInstanceOf(Refusal.class)
+                .hasMessage("lantern-research has no board round 3; edi board show lantern-research lists its rounds.");
+    }
+
+    @Test
     void raisesTheCardARoundCarriesOnItsOwnTaskAndBindsItUnderTheQuestionThatAnswersIt() {
         Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
 
