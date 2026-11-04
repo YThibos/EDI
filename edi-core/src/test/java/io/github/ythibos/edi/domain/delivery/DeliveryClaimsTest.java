@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +24,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 
 class DeliveryClaimsTest {
 
+    private static final MavenCoordinates HARNESS_REACTOR = new MavenCoordinates("example.harness", "harness", "3.1.0-SNAPSHOT");
     private static final ForgeRepository REPOSITORY = ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness");
     private static final MergeRequestAddress ADDRESS = new MergeRequestAddress(REPOSITORY, 7);
     private static final BranchName BRANCH = BranchName.parse("feature/HRN-3");
@@ -138,11 +141,51 @@ class DeliveryClaimsTest {
                 commitAdding("bbbbbbb2", new AddedLine("pom.xml", 6, "      <version>1.2.0</version>")),
                 commitAdding("ccccccc3", new AddedLine("module/pom.xml", 2, "  <version>2.0.0-SNAPSHOT</version>"))));
 
-        assertThat(SnapshotVersions.findIn(changes))
+        assertThat(SnapshotVersions.findIn(changes, commit -> new Reactor(List.of())))
                 .extracting(PublishFinding::rule, PublishFinding::toString)
                 .containsExactly(
                         tuple(PublishRule.SNAPSHOT_VERSION, "pom.xml:6 in commit aaaaaaa: a -SNAPSHOT version"),
                         tuple(PublishRule.SNAPSHOT_VERSION, "module/pom.xml:2 in commit ccccccc: a -SNAPSHOT version"));
+    }
+
+    @Test
+    void admitsOnlyAModulesParentReferenceToItsOwnReactorsVersion() {
+        Reactor reactor = new Reactor(List.of(
+                new BuildFile("pom.xml", HARNESS_REACTOR, Optional.empty()),
+                new BuildFile("lamp/pom.xml", new MavenCoordinates("example.harness", "lamp", "3.1.0-SNAPSHOT"),
+                        Optional.of(new ParentReference(HARNESS_REACTOR, 3, 7))),
+                new BuildFile("horn/pom.xml", new MavenCoordinates("example.harness", "horn", "3.0.0-SNAPSHOT"),
+                        Optional.of(new ParentReference(new MavenCoordinates("example.harness", "harness", "3.0.0-SNAPSHOT"), 3, 7))),
+                new BuildFile("bell/pom.xml", new MavenCoordinates("example.harness", "bell", "1.0.0-SNAPSHOT"),
+                        Optional.of(new ParentReference(new MavenCoordinates("example.elsewhere", "parent", "1.0.0-SNAPSHOT"), 3, 7)))));
+        List<AddedLine> added = List.of(
+                new AddedLine("lamp/pom.xml", 6, "    <version>3.1.0-SNAPSHOT</version>"),
+                new AddedLine("lamp/pom.xml", 14, "      <version>2.0.0-SNAPSHOT</version>"),
+                new AddedLine("horn/pom.xml", 6, "    <version>3.0.0-SNAPSHOT</version>"),
+                new AddedLine("bell/pom.xml", 6, "    <version>1.0.0-SNAPSHOT</version>"),
+                new AddedLine("pom.xml", 2, "  <version>3.1.0-SNAPSHOT</version>"));
+
+        assertThat(SnapshotVersions.outsideTheReactor(SnapshotVersions.addedIn(added), reactor))
+                .extracting(line -> line.path() + ":" + line.number())
+                .containsExactly("lamp/pom.xml:14", "horn/pom.xml:6", "bell/pom.xml:6", "pom.xml:2");
+    }
+
+    @Test
+    void asksForTheReactorOnlyOfACommitThatAddsASnapshotVersion() {
+        List<String> asked = new ArrayList<>();
+        OutgoingChanges changes = new OutgoingChanges(List.of(
+                commitAdding("aaaaaaa1", new AddedLine("lamp/pom.xml", 6, "    <version>3.1.0-SNAPSHOT</version>")),
+                commitAdding("bbbbbbb2", new AddedLine("pom.xml", 6, "      <version>1.2.0</version>"))));
+
+        List<PublishFinding> findings = SnapshotVersions.findIn(changes, commit -> {
+            asked.add(commit);
+            return new Reactor(List.of(new BuildFile("pom.xml", HARNESS_REACTOR, Optional.empty()),
+                    new BuildFile("lamp/pom.xml", new MavenCoordinates("example.harness", "lamp", "3.1.0-SNAPSHOT"),
+                            Optional.of(new ParentReference(HARNESS_REACTOR, 3, 7)))));
+        });
+
+        assertThat(findings).isEmpty();
+        assertThat(asked).containsExactly("aaaaaaa1");
     }
 
     @Test

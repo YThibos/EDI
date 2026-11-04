@@ -7,7 +7,7 @@
 | Wave and order | wave 5, order 20 |
 | Source | EDI-52 plan, slice 6 |
 | Size | M |
-| Blocked by | [EDI-89](EDI-89.md) |
+| Blocked by | nothing |
 | Status | open |
 | Issue | [#148](https://github.com/YThibos/EDI/issues/148) |
 | Cloud session | ok |
@@ -34,6 +34,7 @@ The research is in [the EDI-52 plan](research/EDI-52-plan.md), section 5 and sli
 
 ## Requirements from decisions and answers
 
+- The captain (3 November 2026) lifted this slice's wait on EDI-89: it needs neither plans nor stages, so it may start on its own.
 - D41 A and Q2 (captain, 26 October 2026): links a to g on every row; the brief only inside the task panel (EDI-59).
 - The tracker's browse path is a JIRA convention and belongs in the JIRA adapter, not the console, so a future tracker supplies its own.
 - Landed rows gain the same chips, which keeps a merged request and its ticket reachable for the seven days the list covers.

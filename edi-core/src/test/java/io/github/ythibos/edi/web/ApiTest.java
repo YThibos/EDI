@@ -295,6 +295,21 @@ class ApiTest {
     }
 
     @Test
+    void showsAWorkersWholeOpenQuestionFromTheStore() throws Exception {
+        String worker = workerTokenFor("api-show");
+        send(as(worker, "/api/status", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(
+                "{\"state\":\"needs-decision\",\"key\":\"lamp-colour\",\"text\":\"Brass or copper?\\nThe brass one is heavier.\"}")));
+
+        HttpResponse<String> shown = get("/api/tasks/api-show/worker", TEXT);
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.body()).startsWith("api-show#1, implementation, on claude-sonnet-5-5 at high\nState: starting since ")
+                .contains("needs-decision (lamp-colour)\n  Brass or copper?\n  The brass one is heavier.\n",
+                        "Open question lamp-colour: it waits on the primary since ", "Steers (0)\nPipeline: no run yet.\n");
+        assertRefusal(get("/api/tasks/api-never-dispatched/worker", TEXT), 404, "No task is called api-never-dispatched.");
+    }
+
+    @Test
     void tellsAWorkerFromThePrimaryByItsTokenAndKeepsEachToItsCommands() throws Exception {
         String worker = workerTokenFor("api-worker");
 
