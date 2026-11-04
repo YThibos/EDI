@@ -176,6 +176,8 @@ class ConsoleApiTest {
         HttpResponse<String> addTask = send(withTheCookie("/api/tasks", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Sneak in\"}")));
         HttpResponse<String> openAnother = send(withTheCookie("/api/console/open", cookie).header(CONSOLE_HEADER, "1").POST(BodyPublishers.noBody()));
+        HttpResponse<String> publishCheck = send(withTheCookie("/api/publish-checks", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"repository\":\"" + home + "\",\"range\":\"main..main\"}")));
         HttpResponse<String> primaryRecheck = post(withTheHomeToken("/api/decisions/" + number + "/recheck", TEXT), "{}");
 
         assertThat(recheck.statusCode()).isEqualTo(200);
@@ -183,6 +185,8 @@ class ConsoleApiTest {
         assertThat(addTask.statusCode()).isEqualTo(403);
         assertThat(addTask.body()).isEqualTo("edi task add is the primary's to run; the console answers decisions and asks for re-checks.\n");
         assertThat(openAnother.statusCode()).isEqualTo(403);
+        assertThat(publishCheck.statusCode()).isEqualTo(403);
+        assertThat(publishCheck.body()).isEqualTo("edi publish-check runs under the EDI home's own token or a worker's, never from the console.\n");
         assertThat(primaryRecheck.statusCode()).isEqualTo(403);
         assertThat(primaryRecheck.body()).isEqualTo("Asking for a re-check is the captain's, given in the EDI console.\n");
     }

@@ -118,7 +118,8 @@ class TmuxClaudeRuntimeTest {
                     .isEqualTo("worker fit-lamp fit-lamp#1 /tokens/fit-lamp-1 no-parent-session");
             JsonNode written = new JsonMapper().readTree(Files.readString(settings));
             assertThat(written.path("attribution").path("commit").asString()).isEmpty();
-            assertThat(written.path("hooks").path("PreToolUse").get(0).path("hooks").get(0).path("command").asString()).isEqualTo("edi hook pre-tool-use");
+            assertThat(written.path("hooks").path("PreToolUse").get(0).path("hooks").get(0).path("command").asString())
+                    .isEqualTo("'" + PrivateTmuxServer.STAND_IN_EDI + "' hook pre-tool-use");
             assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(settings))).isEqualTo("rw-------");
             JsonNode claudeConfig = new JsonMapper().readTree(Files.readString(claudeConfiguration.resolve(".claude.json")));
             assertThat(claudeConfig.path("projects").path(projectClone().toString()).path("hasTrustDialogAccepted").asBoolean()).isTrue();
