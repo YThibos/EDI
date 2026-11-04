@@ -31,7 +31,7 @@ Running one task above `high` effort needs a word recorded on that task for that
 An act that concerns no single task (touching a secret, deleting an unlanded branch, stopping running workers) needs a word on the home, or a dialog answer for that act (`CaptainsAuthority.onTheHome`).
 The guard refuses the primary an `AskUserQuestion` call whose answers or notes are already filled in, so only the captain answers a dialog ([pre-tool-guard](pre-tool-guard.md)).
 `PromoteScout` queues a new ship through `AddTask`, keeping the scout's projects, key, base and delivery, with the scout's notes, the captain's verbatim go and the report's path as the ship's notes.
-`DropTask` refuses while a decision waits on the task or its worker still works, runs the landed-work test, retires landed work as cleanup does, refuses unlanded work unless `--discard-work` is given, and records `TaskDropped` with the captain's words and what was discarded.
+`DropTask` refuses while a decision other than its open ticket decision waits on the task or its worker still works, closes that ticket decision with the captain's words ([trackers-and-time-booking](trackers-and-time-booking.md)), runs the landed-work test, retires landed work as cleanup does, refuses unlanded work unless `--discard-work` is given, and records `TaskDropped` with the captain's words and what was discarded.
 `DiscardWork` (`edi worktree discard`) removes the task's copy and branch whatever they hold and keeps the task in flight, so a later dispatch starts a fresh copy.
 
 ## Why
@@ -78,3 +78,4 @@ When the console gains its own promote, drop or discard actions, the captain wan
 - 28/10/2026: a typed prompt stays the only evidence, and the guard keeps a worker's shell from typing into any tmux pane, after the security review found a worker could type into the primary through the captain's default server (EDI-123).
 - 02/11/2026: the hooks store the captain's messages and dialog answers verbatim and numbered, in place of digests, so the primary cites them by number, and a dialog answer that opens with an act and names its task is the captain's word for that act (EDI-159).
 - 03/11/2026: the guard refuses the primary's shell any `edi hook` command, so only Claude Code stores the captain's messages and dialog answers (EDI-159).
+- 04/11/2026: the captain's drop word no longer waits on a task's open ticket decision but drops the task and answers that decision, after a stray task could not be dropped (EDI-179).
