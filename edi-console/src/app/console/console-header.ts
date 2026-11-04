@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import { PresenceChoice, PresenceShown } from './sitrep';
 import { shipDay, shipTime } from './stardate';
@@ -15,6 +15,7 @@ export class ConsoleHeader {
   readonly presence = input<PresenceShown | null>(null);
   readonly personalityOpen = input(false);
   readonly presenceChosen = output<PresenceChoice>();
+  readonly awayChosen = output<string>();
   readonly personalityToggled = output<void>();
 
   protected readonly day = computed(() => shipDay(this.generated() ?? '', this.zone() ?? ''));
@@ -26,4 +27,30 @@ export class ConsoleHeader {
     }
     return presence.demo ? 'demo' : presence.mode;
   });
+  protected readonly awayOffered = computed(() => this.mode() === 'present' || this.mode() === 'quiet');
+  protected readonly awayOpen = signal(false);
+  protected readonly mandate = signal('');
+
+  constructor() {
+    effect(() => {
+      if (!this.awayOffered()) {
+        this.closeAway();
+      }
+    });
+  }
+
+  protected choose(choice: PresenceChoice): void {
+    this.closeAway();
+    this.presenceChosen.emit(choice);
+  }
+
+  protected goAway(): void {
+    this.awayChosen.emit(this.mandate().trim());
+    this.closeAway();
+  }
+
+  protected closeAway(): void {
+    this.awayOpen.set(false);
+    this.mandate.set('');
+  }
 }

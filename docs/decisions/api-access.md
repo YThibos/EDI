@@ -19,7 +19,7 @@ The pre-tool guard refuses the forms it reads of a worker's shell command that u
 `ApiTokenFilter` decides on the decoded servlet path: the home token is `Caller.Primary`, or `Caller.Standby` when another session holds the primary role ([primary-role](primary-role.md)); a live worker's token is `Caller.WorkerCaller`; anything else gets a 401, and only `/api/health` and the console's files stay open.
 Controllers take the `Caller`: `requirePrimary` refuses a worker the commands that add, hold, steer, dispatch or answer, and `requireWorker` refuses the primary `edi status` and the inbox; every event records its real actor.
 The captain signs in to the console with a one-time link: `ConsoleAccess` issues 32 random bytes, keeps only their digest, and a link signs in once within two minutes; `POST /api/console/session` with the header `X-EDI-Console: 1` answers with the cookie `EDI-Console`, HttpOnly, SameSite=Strict and twelve hours long.
-A request with an open session's cookie and no bearer token is `Caller.Captain`, which may read, answer decisions, ask for re-checks, set presence to present or a demo, and change the personality; a console request that changes state without the header gets a 403, and minting a link needs the home token.
+A request with an open session's cookie and no bearer token is `Caller.Captain`, which may read, answer decisions, ask for re-checks, set presence to present, quiet, away with the mandate its form takes, or a demo, and change the personality; a console request that changes state without the header gets a 403, and minting a link needs the home token.
 `LoopbackHostFilter` runs before every other filter: a request whose `Host` is neither `127.0.0.1:<port>` nor `localhost:<port>`, for the port it reached, gets a 421 naming the two, and every response, a refusal included, carries `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
 
 ## Why
@@ -59,4 +59,5 @@ When workers run as another user or on another machine, or the core serves more 
 - 28/10/2026: a worker's window no longer falls back to the home token when its token file variable is unset, and the guard keeps a worker's shell from unsetting or reassigning the variables that say who it is (EDI-122).
 - 29/10/2026: the core refuses a request addressed to any host but its own loopback address and port, and forbids every page to frame it (EDI-126).
 - 30/10/2026: the record says what the worker-identity guard reads and no more, after a review found forms it missed (EDI-138).
+- 03/11/2026: the console may set quiet and away too, away only with the words its form takes (EDI-64).
 - 03/11/2026: the captain's console session may read a task's report and brief as a page, as the primary may, and no worker may (EDI-57).

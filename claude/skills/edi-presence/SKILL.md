@@ -8,7 +8,7 @@ user-invocable: true
 
 # edi-presence
 
-`edi presence` shows the current presence; the console shows it too, with Present and Demo buttons.
+`edi presence` shows the current presence; the console shows it too, with Present, Demo, Quiet and Away buttons, Away asking for the captain's words as its mandate.
 
 ## The captain's commands
 
