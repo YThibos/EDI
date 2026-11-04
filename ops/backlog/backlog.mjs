@@ -92,7 +92,7 @@ export function repositoryOfTheRemote(directory) {
 
 export function command(program, args, input, environment = {}) {
     try {
-        return execFileSync(program, args, { encoding: 'utf8', input, env: { ...process.env, ...environment }, stdio: ['pipe', 'pipe', 'pipe'] });
+        return execFileSync(program, args, { encoding: 'utf8', input, maxBuffer: 256 * 1024 * 1024, env: { ...process.env, ...environment }, stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (failure) {
         throw new Refusal(`${program} ${args.join(' ')} failed: ${(failure.stderr || failure.message).trim()}`);
     }
