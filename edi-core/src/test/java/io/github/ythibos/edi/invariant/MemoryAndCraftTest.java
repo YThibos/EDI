@@ -33,7 +33,6 @@ import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.console.ConsoleSitrep;
-import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
 import io.github.ythibos.edi.web.memory.MemoryCheckText;
 import io.github.ythibos.edi.web.report.ReportWidth;
 import io.github.ythibos.edi.web.report.Turn;
