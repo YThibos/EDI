@@ -2,6 +2,7 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -11,12 +12,16 @@ final class TmuxSockets {
     private static final List<String> SERVER_CONTROL_PREFIXES = List.of("kill", "send", "respawn");
     private static final Set<String> INPUT_COMMANDS = Set.of("send-keys", "send-prefix", "paste-buffer", "source-file", "run-shell", "if-shell",
             "pipe-pane", "display-popup", "display-menu", "respawn-pane", "respawn-window", "set-hook", "bind-key", "command-prompt", "confirm-before");
-    private static final Set<String> INPUT_ALIASES = Set.of("send", "pasteb", "source", "run", "if", "pipep", "popup", "menu", "respawnp", "respawnw",
-            "bind", "confirm");
-    private static final Set<String> OTHER_ALIASES = Set.of("display");
-    private static final int SHORTEST_ABBREVIATION = 4;
+    private static final Map<String, String> WINDOW_OPENERS_AND_THEIR_VALUES = Map.of("new-window", "ceFnt", "split-window", "ceFlpt",
+            "new-session", "ceFfnstxy");
+    private static final String SPLIT_WINDOW = "split-window";
+    private static final char FORWARDS_ITS_INPUT = 'I';
+    private static final Set<String> OPTION_SETTERS = Set.of("set-option", "set-window-option");
+    private static final Set<String> OPTIONS_THAT_RUN_COMMANDS = Set.of("default-command", "default-shell", "command-alias");
     private static final String SHELL_FORMAT = "#(";
     private static final String COMMAND_SEPARATOR = ";";
+    private static final String ESCAPED_SEPARATOR = "\\;";
+    private static final String END_OF_OPTIONS = "--";
 
     private TmuxSockets() {
     }
@@ -47,7 +52,7 @@ final class TmuxSockets {
     }
 
     private record Invocation(String socketName, String socketPath, boolean printsVersion, boolean controlMode, List<String> arguments,
-            List<String> commandNames) {
+            List<TmuxCall> calls) {
 
         static Invocation of(List<String> arguments) {
             String socketName = null;
@@ -70,7 +75,7 @@ final class TmuxSockets {
                 index += OPTIONS_WITH_VALUES.contains(flag) && option.length() == 2 ? 2 : 1;
             }
             List<String> commands = arguments.subList(Math.min(index, arguments.size()), arguments.size());
-            return new Invocation(socketName, socketPath, printsVersion, controlMode, commands, commandNames(commands));
+            return new Invocation(socketName, socketPath, printsVersion, controlMode, commands, callsIn(commands));
         }
 
         boolean onlyPrintsItsVersion() {
@@ -82,7 +87,7 @@ final class TmuxSockets {
         }
 
         boolean sendsInput() {
-            return controlMode || commandNames.stream().anyMatch(Invocation::sendsInput) || arguments.stream().anyMatch(word -> word.contains(SHELL_FORMAT));
+            return controlMode || calls.stream().anyMatch(TmuxCall::sendsInput) || arguments.stream().anyMatch(word -> word.contains(SHELL_FORMAT));
         }
 
         boolean isOn(String ediSocket, SocketPaths socketPaths) {
@@ -90,14 +95,7 @@ final class TmuxSockets {
         }
 
         boolean controlsTheServer() {
-            return commandNames.stream().anyMatch(name -> SERVER_CONTROL_PREFIXES.stream().anyMatch(name::startsWith));
-        }
-
-        private static boolean sendsInput(String name) {
-            if (INPUT_COMMANDS.contains(name) || INPUT_ALIASES.contains(name)) {
-                return true;
-            }
-            return !OTHER_ALIASES.contains(name) && name.length() >= SHORTEST_ABBREVIATION && INPUT_COMMANDS.stream().anyMatch(command -> command.startsWith(name));
+            return calls.stream().flatMap(call -> call.command().stream()).anyMatch(name -> SERVER_CONTROL_PREFIXES.stream().anyMatch(name::startsWith));
         }
 
         private static String valueOf(String option, List<String> arguments, int index) {
@@ -107,23 +105,82 @@ final class TmuxSockets {
             return index + 1 < arguments.size() ? arguments.get(index + 1) : "";
         }
 
-        private static List<String> commandNames(List<String> commands) {
-            List<String> names = new ArrayList<>();
-            boolean atCommandName = true;
+        private static List<TmuxCall> callsIn(List<String> commands) {
+            List<TmuxCall> calls = new ArrayList<>();
+            List<String> words = new ArrayList<>();
             for (String word : commands) {
                 if (word.equals(COMMAND_SEPARATOR)) {
-                    atCommandName = true;
-                } else if (atCommandName) {
-                    names.add(word);
-                    atCommandName = false;
+                    endTheCall(words, calls);
+                } else if (word.endsWith(COMMAND_SEPARATOR) && !word.endsWith(ESCAPED_SEPARATOR)) {
+                    words.add(word.substring(0, word.length() - COMMAND_SEPARATOR.length()));
+                    endTheCall(words, calls);
+                } else {
+                    words.add(word);
                 }
             }
-            return names;
+            endTheCall(words, calls);
+            return calls;
+        }
+
+        private static void endTheCall(List<String> words, List<TmuxCall> calls) {
+            if (!words.isEmpty()) {
+                calls.add(TmuxCall.of(words));
+                words.clear();
+            }
         }
 
         private static String lastSegmentOf(String path) {
             String trimmed = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
             return trimmed.substring(trimmed.lastIndexOf('/') + 1);
+        }
+    }
+
+    private record TmuxCall(Optional<String> command, List<String> arguments) {
+
+        static TmuxCall of(List<String> words) {
+            return new TmuxCall(TmuxCommandTable.commandNamed(words.getFirst()), List.copyOf(words.subList(1, words.size())));
+        }
+
+        boolean sendsInput() {
+            return command.filter(name -> INPUT_COMMANDS.contains(name) || opensAWindowRunningACommand(name) || setsAnOptionThatRunsCommands(name))
+                    .isPresent();
+        }
+
+        private boolean opensAWindowRunningACommand(String name) {
+            String optionsWithValues = WINDOW_OPENERS_AND_THEIR_VALUES.get(name);
+            if (optionsWithValues == null) {
+                return false;
+            }
+            int index = 0;
+            while (index < arguments.size() && arguments.get(index).startsWith("-") && arguments.get(index).length() > 1) {
+                String cluster = arguments.get(index);
+                if (cluster.equals(END_OF_OPTIONS)) {
+                    return index + 1 < arguments.size();
+                }
+                if (name.equals(SPLIT_WINDOW) && cluster.indexOf(FORWARDS_ITS_INPUT) > 0) {
+                    return true;
+                }
+                index += takesTheNextWord(cluster, optionsWithValues) ? 2 : 1;
+            }
+            return index < arguments.size();
+        }
+
+        private static boolean takesTheNextWord(String cluster, String optionsWithValues) {
+            for (int position = 1; position < cluster.length(); position++) {
+                if (optionsWithValues.indexOf(cluster.charAt(position)) >= 0) {
+                    return position == cluster.length() - 1;
+                }
+            }
+            return false;
+        }
+
+        private boolean setsAnOptionThatRunsCommands(String name) {
+            return OPTION_SETTERS.contains(name) && arguments.stream().map(TmuxCall::optionName).anyMatch(OPTIONS_THAT_RUN_COMMANDS::contains);
+        }
+
+        private static String optionName(String argument) {
+            int index = argument.indexOf('[');
+            return index < 0 ? argument : argument.substring(0, index);
         }
     }
 }

@@ -65,7 +65,7 @@ class MeetingCalendarTest {
     @Test
     void tellsTheCaptainOnceWhileQuietThatTheCalendarCannotBeRead() throws IOException {
         Instant firstFailure = home.clock().now();
-        home.windowsSide().failingToReadTheCalendar("Outlook did not answer.");
+        home.windowsSide().failingToReadTheCalendar("The stand-in calendar was told to fail.");
 
         round();
         boolean toldWhilePresent = !home.windowsSide().toasts().isEmpty();
@@ -75,19 +75,19 @@ class MeetingCalendarTest {
         assertThat(toldWhilePresent).isFalse();
         assertThat(home.meetingCalendar().unreadable()).map(UnreadableCalendar::since).contains(firstFailure);
         assertThat(home.meetingCalendar().unreadable()).map(UnreadableCalendar::reason).hasValueSatisfying(reason -> assertThat(reason)
-                .endsWith(" exited with 1: Outlook did not answer."));
+                .endsWith(" exited with 1: The stand-in calendar was told to fail."));
         assertThat(home.windowsSide().toasts()).containsExactly(UNREADABLE_TOAST);
     }
 
     @Test
     void tellsTheCaptainAgainOnlyWhenTheCalendarFailsAfterItCouldBeReadOnceMore() throws IOException {
         home.changePresence().quiet();
-        home.windowsSide().failingToReadTheCalendar("Outlook did not answer.");
+        home.windowsSide().failingToReadTheCalendar("The stand-in calendar was told to fail.");
         roundsUntil(home.clock().now().plus(Duration.ofMinutes(4)));
         home.windowsSide().showingTheCalendar("[]");
         roundsUntil(home.clock().now().plus(Duration.ofMinutes(4)));
         boolean readableAgain = home.meetingCalendar().unreadable().isEmpty();
-        home.windowsSide().failingToReadTheCalendar("Outlook is closed.");
+        home.windowsSide().failingToReadTheCalendar("The stand-in calendar was told to fail again.");
         roundsUntil(home.clock().now().plus(Duration.ofMinutes(4)));
 
         assertThat(readableAgain).isTrue();
