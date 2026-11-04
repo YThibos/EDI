@@ -238,6 +238,12 @@ describe('SitrepPage', () => {
     expect(texts(page, '.sr-presence__button')).toEqual(['End demo']);
   });
 
+  it('titles the tab with how many things wait on the captain', async () => {
+    await rendered();
+
+    expect(document.title).toBe('(1) SITREP · EDI');
+  });
+
   it('opens the personality desk from the header and closes it again', async () => {
     const fixture = await rendered();
     const page = fixture.nativeElement as HTMLElement;
