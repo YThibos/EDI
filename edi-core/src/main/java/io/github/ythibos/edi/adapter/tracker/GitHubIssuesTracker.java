@@ -30,7 +30,7 @@ public class GitHubIssuesTracker implements Tracker {
 
     @Override
     public WorkKey create(TicketDraft draft) {
-        throw new Refusal(draft.project() + " keys its work by its GitHub issue numbers, so EDI never allocates one; open the issue and give its key.");
+        throw new Refusal(draft.project() + " keys its work by its GitHub issue numbers, so I never allocate one; open the issue and give its key.");
     }
 
     @Override

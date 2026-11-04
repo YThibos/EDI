@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 
-export const SESSION_MARKER = '[EDI session]';
+export const PRIMARY_MARKER = '[EDI primary]';
 export const APPROVED = 'captain-approved';
 export const CLOUD = 'cloud-ok';
 export const MACHINE = 'needs-captain-machine';
@@ -201,8 +201,4 @@ export function sectionsOf(body) {
 export function missingSectionsOf(body) {
     const present = sectionsOf(body);
     return SPEC_SECTIONS.filter(section => !present.includes(section));
-}
-
-export function isTheCaptainsAnswer(comment, captain) {
-    return comment.user?.login === captain && !comment.body.trimStart().startsWith(SESSION_MARKER);
 }

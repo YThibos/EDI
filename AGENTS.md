@@ -13,7 +13,7 @@ The why behind every rule is in [docs/decisions](docs/decisions/README.md); read
 
 ## Queued work
 
-- The queued and held EDI work is in [docs/backlog](docs/backlog/README.md): an ordered index, the pickup protocol and one self-contained spec per item; a session that has only this repository starts there ([backlog-in-the-repository](docs/decisions/backlog-in-the-repository.md)).
+- The queued and held EDI work is one GitHub issue per item on this repository, each carrying its full spec; `node ops/backlog/pickup.mjs --next` names the issues a session may take, in order, and [docs/pickup.md](docs/pickup.md) is the pickup protocol and the trust rule; a session that has only this repository starts there ([backlog-in-the-repository](docs/decisions/backlog-in-the-repository.md)).
 
 ## Commits and branches
 

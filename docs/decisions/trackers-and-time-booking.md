@@ -13,11 +13,11 @@ The time-booking tool books worklogs from the old harness's activity ledger, one
 ## Decision
 
 `Tracker` offers `kind`, `findExisting`, `create`, `fill`, `verified`, `found`, `transition`, `addToCurrentSprint` and `link`; `found` answers no ticket where `verified` refuses one JIRA has nothing for.
-Each registry entry names its tracker with `tracker.kind` (`jira`, `edi` or `none`), and `Trackers` refuses a project on an external tracker the machine profile does not name.
+Each registry entry names its tracker with `tracker.kind` (`jira`, `edi`, `github` or `none`), and `Trackers` refuses a project on an external tracker the machine profile does not name.
 The profile's `tracker` section holds everything a JIRA instance differs in, such as its URL, credentials, evergreen tickets, workflow statuses, merged status and issue type.
 `JiraTracker` speaks REST version 2 and the agile API through `JiraCalls`, with the proxies the environment names (`EnvironmentProxies`); `EdiNativeTracker` issues keys and keeps no tickets; `NoTracker` issues none.
 `JiraCalls` reads the token from the keys file at every call, sends it only in the `Authorization` header, and writes `[secret]` for it in any message (`KeysFile`).
-At intake `AddTask` asks `TaskKeys`: a given key must belong to the project and exist; unkeyed work on an EDI-native project gets the next key; on JIRA, `TicketProposals` raises a decision with up to three matching tickets and a drafted new one.
+At intake `AddTask` asks `TaskKeys`: a given key must belong to the project and exist; unkeyed work on an EDI-native project gets the next key; unkeyed work on a project keyed by its GitHub issues is refused, since its key is its issue's number and comes with `--key`; on JIRA, `TicketProposals` raises a decision with up to three matching tickets and a drafted new one.
 The answer settles the ticket outside the transaction: an existing ticket keys the task; a new one is created after the attempt is recorded, then filled; an interrupted creation first adopts an open ticket with exactly the drafted summary; a refused choice raises a new decision on the task with the refusal in its context, the answered one kept ([captain-decisions](captain-decisions.md)); an unreachable tracker is retried every supervision round.
 The ticket card also offers to drop the task, the option that authorises `drop`; choosing it settles the proposal without a ticket and leaves the drop to `edi task drop`.
 The captain's drop word on a task whose ticket decision is open drops it and answers that decision with the same words, and a drop settles an unsettled proposal without a ticket, so no later round creates a ticket for a dropped task.
@@ -65,3 +65,4 @@ When EDI talks to a second external tracker, JIRA retires REST version 2, or the
 - 26/10/2026: EDI measures each task's active minutes from its timeline, shows them in `edi task show` and books them as `task.worked` at cleanup (EDI-54).
 - 28/10/2026: the port gained `found`, so `edi memory stow-list` tells a ticket JIRA has nothing for from one it cannot be asked about ([primary-startup-context](primary-startup-context.md), EDI-81).
 - 04/11/2026: a task queued without its key raised a ticket decision whose only option created a ticket, which neither an answer nor a drop could close; the card now offers the drop, the captain's drop word closes the decision, and `edi task key` keys a task after intake, with migration `V21__a_ticket_proposal_settles_without_a_ticket.sql` letting a proposal settle with no key (EDI-179).
+- 04/11/2026: EDI's own backlog moved into GitHub issues, so the `github` tracker kind keys a project's work by its issue numbers, served by `GitHubIssuesTracker`, which never allocates a key (EDI-176).

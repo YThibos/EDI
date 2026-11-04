@@ -13,7 +13,9 @@ The captain splits one ticket's work into several tasks on its key, and git refu
 
 A project without an external tracker gets EDI-native keys `<KEY>-<n>` from a sequence per key prefix in the store, set with `tracker.projectKey` in the registry; changing the prefix affects future tasks only.
 The next key is one above the larger of the sequence and the highest number any task already carries under the prefix, so keys given by hand or migrated are never issued again (`WorkKeySequenceStore`).
-EDI's own repository uses `EDI-<n>`, and `EDI-1` is the evergreen upkeep key, so Renovate's commits and pull requests carry a key too ([dependency-upkeep-and-scanners](dependency-upkeep-and-scanners.md)).
+A project registered with `tracker: { kind: github, projectKey: KEY }` keys its work by its GitHub issue numbers: `GitHubIssuesTracker` never allocates a key, `TaskKeys` refuses an unkeyed ship or scout on it with a message to pass `--key <KEY>-<the issue's number>`, and `WorkKeySequenceStore` serves only `edi` projects.
+EDI's own repository uses `EDI-<n>` and is such a project, since its backlog is its issues ([backlog-in-the-repository](backlog-in-the-repository.md)): an item opened since EDI-176 takes its issue's number, given with `edi task add --key EDI-<n>`, and an older item keeps its key.
+`EDI-1` is the evergreen upkeep key, so Renovate's commits and pull requests carry a key too ([dependency-upkeep-and-scanners](dependency-upkeep-and-scanners.md)).
 How a task gets its key at intake, from either kind of tracker, is in [trackers-and-time-booking](trackers-and-time-booking.md).
 `BranchName` holds a `BranchKind` and a `WorkKey` and cannot be built without a key; `BranchName.parse` refuses `fm/` and `edi/` by name and every other shape that is not kind, slash, key and an optional follow-up number.
 A dispatch builds the branch once: a scout on `research/<KEY>-<n>`, a ship on the kind its dispatch category names, which the project's `branchKinds` must allow ([dispatch-routing](dispatch-routing.md)).
@@ -36,6 +38,7 @@ A follow-up number keeps I-08's kind and key at the front of the name, and the s
 - A suffix from the task's id - long names, and a second naming scheme beside I-08's.
 - Refusing a second task on a key - the captain splits a ticket's work into tasks on purpose.
 - Reusing the number of a closed task's branch - a merged request from the old branch would answer the new task's done ([delivery](delivery.md)).
+- EDI-native keys for EDI's own work beside its issues - the sequence moves above every given key, so it would hand out a number a later issue gets, and a key would name two pieces of work.
 - Asking the clone which branches exist - a dispatch would run git inside its transaction, for branches EDI did not make.
 
 ## Consequences
@@ -53,3 +56,4 @@ When an EDI-native work board replaces the external tracker on a machine, or a b
 - 15/10/2026: the captain asked for project keys in their own development too; the specification gave untracked projects EDI-native keys and EDI the upkeep key `EDI-1`.
 - 16/10/2026: slice S3 built branch names from kind and key; slice S6 moved the key sequence into the store, seeded above every key already in use.
 - 23/10/2026: a second task on a key could not be dispatched because the first held its branch, so each task beside another on the same kind and key gets the next follow-up number (EDI-41).
+- 04/11/2026: EDI's backlog moved into GitHub issues, so the `github` tracker kind keys a project's work by its issue numbers and EDI's own new keys come from them (EDI-176).

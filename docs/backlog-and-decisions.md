@@ -7,14 +7,14 @@ A task is a ship, which changes a project, a scout, which researches or designs,
 
 ```sh
 edi project list                                    # the registry in $EDI_HOME/config/projects.yaml
-edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14
+edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14   # EDI keys its work by its issue numbers
 edi backlog --ready                                 # the queue, or only what nothing holds or blocks
 edi task show fit-the-lamp                          # a task id, or the D number of its decision
 edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-11-01
 edi release fit-the-lamp
 ```
 
-The queued and held work is also kept in the repository as one self-contained spec per item, with an ordered index and a pickup protocol for a session that has only the repository ([docs/backlog](backlog/README.md), [backlog-in-the-repository](decisions/backlog-in-the-repository.md)).
+EDI's own queued and held work is also one GitHub issue per item on its repository, each carrying its full spec, with a pickup script and protocol for a session that has only the repository ([docs/pickup.md](pickup.md), [backlog-in-the-repository](decisions/backlog-in-the-repository.md)).
 
 Every ship and scout gets its work key at intake ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)); [Trackers and time](trackers-and-time.md) explains where the key comes from.
 

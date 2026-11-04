@@ -4,7 +4,7 @@ import { dirname, join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-    APPROVED, CLOUD, GitHub, HELD, LABEL_DESCRIPTIONS, MACHINE, Refusal, SECURITY, SESSION_MARKER, command, labelsOf, refusalsReported,
+    APPROVED, CLOUD, GitHub, HELD, LABEL_DESCRIPTIONS, MACHINE, Refusal, PRIMARY_MARKER, SECURITY, command, labelsOf, refusalsReported,
 } from './backlog.mjs';
 
 const USAGE = 'Usage: migrate.mjs [--dry-run] [--from REF] [--approve "THE CAPTAIN\'S WORD"] [--plan FILE] [--repo OWNER/NAME]';
@@ -368,7 +368,7 @@ function settleTheDrift(run, github, issues, item, items) {
     }
     const carrier = settled === 'folded' ? items.find(other => other.key === (item.status.match(KEY) ?? [])[0]) : null;
     if (carrier) {
-        const note = `${SESSION_MARKER} ${item.key} was folded into ${carrier.key} (#${carrier.issue}), which carries its criteria, so this issue closes as not planned.`;
+        const note = `${PRIMARY_MARKER} ${item.key} was folded into ${carrier.key} (#${carrier.issue}), which carries its criteria, so this issue closes as not planned.`;
         act(run, `comment on #${issue.number} ${item.key}: ${note}`, () => github.post(`issues/${issue.number}/comments`, { body: note }));
     }
     act(run, `close #${issue.number} ${item.key} as ${CLOSING[settled].replace('_', ' ')}, since its file says ${settled}`,

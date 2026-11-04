@@ -306,7 +306,7 @@ kind: ship
 branch: feature
 source: Introspection of ${iso(run.until).slice(0, 10)}, after ${flag.kind}${flag.task === '-' ? ' in the primary session' : ' on ' + flag.task}
 size: S
-section: Wave 1
+milestone: -
 blocked-by: -
 status: open
 ---

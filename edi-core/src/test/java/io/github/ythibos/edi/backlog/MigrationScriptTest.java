@@ -68,7 +68,7 @@ class MigrationScriptTest {
                 .write("docs/backlog/EDI-85.md", item("EDI-85", "The stage is stored", "-", "open", "#3", """
                         ## Goal
 
-                        The stage is stored, as [the plan](research/EDI-74-plan.md#step-3) and [the record](../decisions/stages.md) say.
+                        The stage is stored, as [the plan](research/EDI-74-plan.md#step-3) and [the record](../decisions/task-lifecycle.md) say.
 
                         ## Delivery
 
@@ -137,7 +137,7 @@ class MigrationScriptTest {
                 ## Goal
 
                 The stage is stored, as [the plan](https://github.com/example/edi/blob/main/docs/research/EDI-74-plan.md#step-3) \
-                and [the record](https://github.com/example/edi/blob/main/docs/decisions/stages.md) say.
+                and [the record](https://github.com/example/edi/blob/main/docs/decisions/task-lifecycle.md) say.
 
                 The spec moved here from [docs/backlog/EDI-85.md](https://github.com/example/edi/blob/%s/docs/backlog/EDI-85.md).
                 """.formatted(commit));
@@ -181,7 +181,7 @@ class MigrationScriptTest {
         assertThat(github.issue(9).get("state_reason").asString()).isEqualTo("completed");
         assertThat(github.issue(10).get("state_reason").asString()).isEqualTo("not_planned");
         assertThat(github.world().get("comments").get("10").get(0).get("body").asString())
-                .isEqualTo("[EDI session] EDI-94 was folded into EDI-86 (#4), which carries its criteria, so this issue closes as not planned.");
+                .isEqualTo("[EDI primary] EDI-94 was folded into EDI-86 (#4), which carries its criteria, so this issue closes as not planned.");
     }
 
     @Test

@@ -311,7 +311,7 @@ The four defects as transition tests:
 
 ### 6.4 The decision record
 
-The record is in the repository: [task-lifecycle](../../decisions/task-lifecycle.md).
+The record is in the repository: [task-lifecycle](../decisions/task-lifecycle.md).
 
 ### 6.5 Against the EDI-52 slices
 
