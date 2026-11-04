@@ -70,10 +70,6 @@ public class SitrepConsolePresenter {
         this.presenceWords = presenceWords;
     }
 
-    public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, ZoneId zone, String machine, CaptainAddress address, Presence presence) {
-        return present(fleet, generated, zone, machine, address, presence, _ -> Map.of());
-    }
-
     public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, ZoneId zone, String machine, CaptainAddress address, Presence presence,
             Function<Collection<Task>, Map<TaskId, TaskLinks>> linksOf) {
         List<ChartedTask> chartedTasks = chartedTasksOf(fleet);

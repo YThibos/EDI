@@ -86,7 +86,7 @@ class TaskLinksQueryTest {
     }
 
     @Test
-    void keepsTheBoardAfterItsRoundAndLinksTheReportAndBriefOnlyOnceTheyExist() throws IOException {
+    void keepsTheBoardAfterItsRoundAndLinksTheReportOnlyOnceItExists() throws IOException {
         Task research = WorkerFixtures.queuedShip("lamp-research", "garden", "GRD-3");
         home.storing(List.of(research));
         Board board = home.boards().arm(research.id(), directory.resolve("board.html").toString(), BoardRounds.asking(1), TestHome.START);
@@ -94,15 +94,12 @@ class TaskLinksQueryTest {
         TaskLinks withoutPages = linksOf(research);
         Path taskDirectory = Files.createDirectories(home.home().taskDirectory(research.id()));
         Files.writeString(taskDirectory.resolve("report.md"), "# Findings\n");
-        Files.writeString(taskDirectory.resolve("brief.md"), "# Brief\n");
 
         TaskLinks withPages = linksOf(research);
 
         assertThat(withoutPages.board()).isEqualTo(BoardRounds.LINK);
         assertThat(withoutPages.report()).isNull();
-        assertThat(withoutPages.brief()).isNull();
         assertThat(withPages.report()).isEqualTo("/api/tasks/lamp-research/pages/report");
-        assertThat(withPages.brief()).isEqualTo("/api/tasks/lamp-research/pages/brief");
     }
 
     private TaskLinks linksOf(Task task) {

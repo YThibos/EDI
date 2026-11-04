@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -99,7 +100,7 @@ final class CaptainFacingStrings {
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), Turn.NONE,
                 ReportWidth.standard(), null, NOW)));
         views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
-                Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))))));
+                Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))), _ -> Map.of())));
         return views;
     }
 

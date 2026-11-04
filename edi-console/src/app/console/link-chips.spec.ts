@@ -10,7 +10,6 @@ const LAMP: TaskLinks = {
   branch: { name: 'feature/SVC-7', url: 'https://forge.example.org/team/harness/-/tree/feature/SVC-7' },
   board: 'http://127.0.0.1:4387/session/1a2b3c',
   report: '/api/tasks/fit-lamp/pages/report',
-  brief: '/api/tasks/fit-lamp/pages/brief',
   decisions: ['D58'],
 };
 
@@ -36,7 +35,7 @@ describe('LinkChips', () => {
 
   it('shows a key the tracker cannot link as plain text and leaves out every link it lacks', async () => {
     const chips = await shown({ key: 'GRD-2', tracker: null, request: null, branch: { name: 'feature/GRD-2', url: null }, board: null, report: null,
-      brief: null, decisions: [] });
+      decisions: [] });
 
     expect(Array.from(chips.querySelectorAll('.sr-chip')).map((chip) => [chip.tagName.toLowerCase(), chip.textContent?.trim()])).toEqual([
       ['span', 'GRD-2'],

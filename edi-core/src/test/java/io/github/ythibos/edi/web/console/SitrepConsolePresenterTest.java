@@ -227,7 +227,7 @@ class SitrepConsolePresenterTest {
     @Test
     void carriesTheLinksOfEveryTaskItShowsKeyedByTask() {
         Task horn = ship("horn", "Tune the horn");
-        TaskLinks hornLinks = new TaskLinks("SVC-7", "https://jira.example.org/browse/SVC-7", null, null, null, null, null, List.of("D58"));
+        TaskLinks hornLinks = new TaskLinks("SVC-7", "https://jira.example.org/browse/SVC-7", null, null, null, null, List.of("D58"));
         List<Task> asked = new ArrayList<>();
 
         ConsoleSitrep sitrep = presenter.present(new FleetSnapshot(NOTHING_WAITING, List.of(new OngoingTask(horn, null, null, null)), List.of(), List.of(),
@@ -255,7 +255,7 @@ class SitrepConsolePresenterTest {
     }
 
     private ConsoleSitrep presented(FleetSnapshot fleet) {
-        return presenter.present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW));
+        return presenter.present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), _ -> Map.of());
     }
 
     private static Task ship(String id, String title) {
