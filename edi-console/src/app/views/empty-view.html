@@ -1,0 +1,17 @@
+<app-console-header
+  [generated]="sitrep()?.generated ?? null"
+  [zone]="sitrep()?.zone ?? null"
+  [machine]="sitrep()?.machine ?? null"
+  [presence]="sitrep()?.presence ?? null"
+  [waiting]="waiting()"
+  [showsPersonality]="false"
+  (presenceChosen)="choosePresence($event)"
+/>
+<main class="sr-main">
+  <div class="sr-panel sr-notice">
+    <div class="sr-notice__pad">
+      <h2 class="sr-notice__title">{{ data.view }}</h2>
+      <p class="sr-notice__detail">Nothing here yet: this view will show {{ data.shows }}.</p>
+    </div>
+  </div>
+</main>

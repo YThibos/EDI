@@ -4,6 +4,7 @@
   [machine]="sitrep()?.machine ?? null"
   [presence]="sitrep()?.presence ?? null"
   [personalityOpen]="personalityOpen()"
+  [waiting]="waitingCount()"
   (presenceChosen)="choosePresence($event)"
   (personalityToggled)="personalityOpen.set(!personalityOpen())"
 />

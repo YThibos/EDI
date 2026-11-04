@@ -56,3 +56,4 @@ When the captain asks for a different look, reads the sitrep on a screen of anot
 - 21/10/2026: the page was relaid in three columns above what landed so it fits one laptop screen, checked at 1920 by 950, 1536 by 730, 1280 by 720 and 390 CSS pixels ([docs/images/sitrep/](../images/sitrep/)).
 - 27/10/2026: the personality desk opens above the glance from a latch in the header (EDI-98).
 - 28/10/2026: the captain asked for a browser-tab icon after EDI's mainframe hologram; an original drawing became the SVG favicon with PNGs rendered from it, checked in light and dark browser tabs ([docs/images/sitrep/](../images/sitrep/)) (EDI-116).
+- 03/11/2026: the header gained Sitrep, Fleet and Week tabs in the mono face, the active one in ion, the Sitrep tab with the waiting count in an amber pill; Fleet and Week are `EmptyView` until EDI-61 and EDI-62 fill them (EDI-58).

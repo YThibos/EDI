@@ -1,10 +1,12 @@
 import { Component, computed, input, output } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { PresenceChoice, PresenceShown } from './sitrep';
 import { shipDay, shipTime } from './stardate';
 
 @Component({
   selector: 'app-console-header',
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './console-header.html',
   styleUrl: './console-header.css',
 })
@@ -14,6 +16,8 @@ export class ConsoleHeader {
   readonly machine = input<string | null>(null);
   readonly presence = input<PresenceShown | null>(null);
   readonly personalityOpen = input(false);
+  readonly waiting = input(0);
+  readonly showsPersonality = input(true);
   readonly presenceChosen = output<PresenceChoice>();
   readonly personalityToggled = output<void>();
 

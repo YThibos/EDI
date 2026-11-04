@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { EVENT_SOURCES } from '../console/fleet-stream';
 import { personalityFixture } from '../console/personality.fixture';
@@ -29,7 +30,7 @@ describe('SitrepPage', () => {
   beforeEach(() => {
     source = new FakeEventSource();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: EVENT_SOURCES, useValue: () => source }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: EVENT_SOURCES, useValue: () => source }],
     });
     http = TestBed.inject(HttpTestingController);
   });

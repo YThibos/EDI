@@ -9,6 +9,13 @@
       <span class="sr-brand__wm">EDI</span>
       <h1 class="sr-brand__sub">Sitrep</h1>
     </span>
+    <nav class="sr-views" aria-label="Views">
+      <a class="sr-view" routerLink="/" routerLinkActive="sr-view--on" [routerLinkActiveOptions]="{ exact: true }">
+        Sitrep@if (waiting() > 0) {<span class="sr-view__count">{{ waiting() }}</span>}
+      </a>
+      <a class="sr-view" routerLink="/fleet" routerLinkActive="sr-view--on">Fleet</a>
+      <a class="sr-view" routerLink="/week" routerLinkActive="sr-view--on">Week</a>
+    </nav>
     @if (mode(); as mode) {
       <span class="sr-presence">
         <span class="sr-presence__mode sr-presence__mode--{{ mode }}" [attr.title]="presence()?.words">{{ mode }}</span>
@@ -20,7 +27,9 @@
         } @else {
           <button type="button" class="sr-presence__button" (click)="presenceChosen.emit('demo')">Demo</button>
         }
-        <button type="button" class="sr-latch" [attr.aria-expanded]="personalityOpen()" (click)="personalityToggled.emit()">Personality</button>
+        @if (showsPersonality()) {
+          <button type="button" class="sr-latch" [attr.aria-expanded]="personalityOpen()" (click)="personalityToggled.emit()">Personality</button>
+        }
       </span>
     }
     <span class="sr-clock">

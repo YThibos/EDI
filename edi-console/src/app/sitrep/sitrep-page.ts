@@ -11,8 +11,9 @@ import { HudStrip } from '../console/hud-strip';
 import { LandedList } from '../console/landed-list';
 import { OngoingList } from '../console/ongoing-list';
 import { PersonalityDesk } from '../console/personality-desk';
-import { PresenceChoice, Sitrep, WaitingBoard } from '../console/sitrep';
+import { PresenceChoice, Sitrep } from '../console/sitrep';
 import { shipMoment } from '../console/stardate';
+import { waitingOn } from '../console/waiting';
 import { WaitingList } from '../console/waiting-list';
 
 type Access = 'loading' | 'signed-in' | 'signed-out' | 'unreachable';
@@ -33,10 +34,7 @@ export class SitrepPage {
   protected readonly live = signal(false);
   protected readonly personalityOpen = signal(false);
   protected readonly shipMoment = shipMoment;
-  protected readonly waitingCount = computed(() => {
-    const sitrep = this.sitrep();
-    return sitrep ? sitrep.decisions.length + openOnBoards(sitrep.boards) + sitrep.reviews.length + sitrep.changing.length : 0;
-  });
+  protected readonly waitingCount = computed(() => waitingOn(this.sitrep()));
   protected readonly waitingOnTheCaptain = computed(() => {
     const sitrep = this.sitrep();
     if (!sitrep) {
@@ -87,8 +85,4 @@ export class SitrepPage {
     this.sitrep.set(sitrep);
     this.access.set('signed-in');
   }
-}
-
-function openOnBoards(boards: WaitingBoard[]): number {
-  return boards.reduce((open, board) => open + (board.questions > 0 ? 1 : 0) + board.decisions.length, 0);
 }

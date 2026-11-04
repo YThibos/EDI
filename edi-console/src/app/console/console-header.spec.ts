@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { ConsoleHeader } from './console-header';
 
@@ -6,6 +7,7 @@ describe('ConsoleHeader', () => {
   let fixture: ComponentFixture<ConsoleHeader>;
 
   beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(ConsoleHeader);
   });
 
@@ -25,5 +27,24 @@ describe('ConsoleHeader', () => {
 
     expect(header.querySelector('.sr-clock__sd')?.textContent).toBe('-');
     expect(header.querySelector('.sr-clock__day')).toBeNull();
+  });
+
+  it('offers the three views as tabs, the Sitrep tab counting what waits on the captain', async () => {
+    fixture.componentRef.setInput('waiting', 3);
+    await fixture.whenStable();
+    const header: HTMLElement = fixture.nativeElement;
+
+    expect(Array.from(header.querySelectorAll('.sr-view')).map((view) => [view.textContent?.trim(), view.getAttribute('href')])).toEqual([
+      ['Sitrep3', '/'],
+      ['Fleet', '/fleet'],
+      ['Week', '/week'],
+    ]);
+    expect(header.querySelector('.sr-view__count')?.textContent).toBe('3');
+  });
+
+  it('leaves the count out while nothing waits', async () => {
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.sr-view__count')).toBeNull();
   });
 });

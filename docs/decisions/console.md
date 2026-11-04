@@ -12,6 +12,7 @@ The reproducible build stamps every jar entry with the same date in 1980.
 ## Decision
 
 The console is an Angular single-page application in `edi-console`, compiled into static resources that `edi-core` serves on its loopback port, with a sign-in page and the sitrep page ([console-look](console-look.md)).
+The header's Sitrep, Fleet and Week buttons are tabs over three routed views, `/`, `/fleet` and `/week`, which the core serves as the console's page so an address opens its view and the browser's back button returns to the view before; the Sitrep tab carries the count of what waits on the captain from every view, and Fleet and Week stay empty views until their items fill them ([console-look](console-look.md)).
 The sitrep page reads `GET /api/sitrep` ([fleet-snapshot](fleet-snapshot.md)) and posts answers and re-checks under the captain's console session ([api-access](api-access.md), [captain-decisions](captain-decisions.md)).
 Its header's Personality latch opens the personality desk above the sitrep, which reads and keeps the personality through `/api/personality`, the path `edi personality` takes, and reads it again on focus while no change waits to be kept ([personality](personality.md)).
 `ConsoleStream` keeps one `SseEmitter` per open page and, on every `EventRecorded`, sends a `fleet` event carrying only the event's sequence; the page reads the sitrep again on every signal, on every reconnect and on focus, and every stream is completed when the core begins to shut down.
@@ -62,3 +63,4 @@ When the console must run without the core, more than a few pages stay open, the
 - 27/10/2026: the personality desk joined the sitrep page behind a latch in its header (EDI-98).
 - 29/10/2026: the sign-in link reaches the browser through a short-lived owner-only hand-off page instead of the opener's command line, and the transcript keeps the link only when nothing opened (EDI-127).
 - 03/11/2026: Windows opened the hand-off page's `.html` file in Edge while the captain's default web browser is Vivaldi, so the hand-off moved to a once-only http address of the console and the core no longer needs the distribution's name (EDI-169).
+- 03/11/2026: the captain asked for buttons on top that open other views without crowding the sitrep, so the header gained Sitrep, Fleet and Week tabs with their own addresses (EDI-58).
