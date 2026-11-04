@@ -9,6 +9,7 @@
 | Size | XS |
 | Blocked by | nothing |
 | Status | delivered |
+| Issue | - |
 | Cloud session | no: the check needs the captain's machine |
 
 ## Goal
@@ -55,4 +56,4 @@ The check needs the captain's machine, for the captain's registry access and loc
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.
