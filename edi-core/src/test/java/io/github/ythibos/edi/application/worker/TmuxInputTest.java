@@ -66,9 +66,22 @@ class TmuxInputTest {
     }
 
     @Test
+    void readsTheWorkingDirectoryInASocketPathAsTheShellWould() throws IOException {
+        Path sockets = Files.createDirectories(directory.resolve("sockets"));
+        Path ediSocket = Files.createFile(sockets.resolve(home.runtime().socket()));
+        Files.createSymbolicLink(worktree.resolve("harbour"), ediSocket);
+
+        for (String command : List.of("tmux -S \"$PWD/harbour\" kill-server", "tmux -S \"${PWD}/harbour\" kill-window -t @3")) {
+            HookAnswer answer = shell(command);
+            assertThat(answer.verdict()).as(command).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
+            assertThat(answer.reason()).as(command).contains("belong to the core");
+        }
+    }
+
+    @Test
     void letsAWorkerReadAnyServerAndControlItsOwnPrivateOne() {
         for (String command : List.of("tmux -L default list-sessions", "tmux -L edi capture-pane -p -t @3", "tmux -L edi-test-42 kill-server",
-                "tmux -L edi-test-42 new-session -d -s probe 'sleep 5'")) {
+                "tmux -L edi-test-42 new-session -d -s probe")) {
             assertThat(shell(command)).as(command).isEqualTo(HookAnswer.PROCEED);
         }
     }
