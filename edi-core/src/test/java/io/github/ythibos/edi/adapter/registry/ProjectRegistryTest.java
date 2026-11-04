@@ -122,7 +122,7 @@ class ProjectRegistryTest {
 
         register("projects:\n  - name: service\n    tracker: { projectKey: SVC }\n");
         assertThatThrownBy(() -> registry().entryOf(new ProjectName("service"))).isInstanceOf(UnreadableRegistry.class)
-                .hasMessageContaining("A project's tracker names its kind: jira, edi or none.");
+                .hasMessageContaining("A project's tracker names its kind: jira, edi, github or none.");
     }
 
     @Test

@@ -62,6 +62,7 @@ import io.github.ythibos.edi.adapter.store.WakeStreamStore;
 import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.adapter.tracker.EdiNativeTracker;
+import io.github.ythibos.edi.adapter.tracker.GitHubIssuesTracker;
 import io.github.ythibos.edi.adapter.tracker.NoTracker;
 import io.github.ythibos.edi.adapter.windows.OutlookCalendar;
 import io.github.ythibos.edi.adapter.windows.WindowsToasts;
@@ -388,7 +389,7 @@ public final class TestHome {
     }
 
     public Trackers trackers() {
-        return new Trackers(List.of(jiraAdapter, new EdiNativeTracker(workKeySequences), new NoTracker()), machineProfile());
+        return new Trackers(List.of(jiraAdapter, new EdiNativeTracker(workKeySequences), new GitHubIssuesTracker(), new NoTracker()), machineProfile());
     }
 
     public TaskKeys taskKeys() {

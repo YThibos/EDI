@@ -61,6 +61,10 @@ public class TaskKeys {
             requireNoDetails(details);
             return new WorkKeying.Unkeyed();
         }
+        if (tracked.tracker().keysByIssueNumber()) {
+            throw new Refusal(project.project().name() + " keys its work by its GitHub issue numbers, so a " + intake.kind().word()
+                    + " on it is added with --key " + tracked.key() + "-<the issue's number>, once its issue is open.");
+        }
         TicketDraft draft = details.draftFor(tracked.key(), trackers.usualIssueType(project), intake.title(), notes);
         if (!tracked.tracker().isExternal()) {
             requireNoDetails(details);
