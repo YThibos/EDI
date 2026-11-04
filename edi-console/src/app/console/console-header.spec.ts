@@ -9,6 +9,7 @@ describe('ConsoleHeader', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(ConsoleHeader);
+    fixture.componentRef.setInput('view', 'Sitrep');
   });
 
   it('shows the stardate clock in the machine’s zone, with the day apart so a phone can leave it out', async () => {
@@ -40,6 +41,13 @@ describe('ConsoleHeader', () => {
       ['Week', '/week'],
     ]);
     expect(header.querySelector('.sr-view__count')?.textContent).toBe('3');
+  });
+
+  it('names the view on screen beside the wordmark', async () => {
+    fixture.componentRef.setInput('view', 'Fleet');
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('h1.sr-brand__sub')?.textContent).toBe('Fleet');
   });
 
   it('leaves the count out while nothing waits', async () => {

@@ -112,6 +112,21 @@ describe('The views', () => {
     expect(location.path()).toBe('/fleet');
   });
 
+  it('names the view on screen in the header of each view', async () => {
+    const harness = await RouterTestingHarness.create();
+    const page = harness.fixture.nativeElement as HTMLElement;
+    const named: (string | undefined)[] = [];
+
+    for (const address of ['/', '/fleet', '/week']) {
+      await harness.navigateByUrl(address);
+      http.expectOne('/api/sitrep').flush(sitrepFixture());
+      harness.detectChanges();
+      named.push(page.querySelector('h1.sr-brand__sub')?.textContent);
+    }
+
+    expect(named).toEqual(['Sitrep', 'Fleet', 'Week']);
+  });
+
   it('counts what waits on the captain onto the title of each view', async () => {
     const harness = await RouterTestingHarness.create();
     const titles: string[] = [];

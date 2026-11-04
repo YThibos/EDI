@@ -11,6 +11,7 @@ import { shipDay, shipTime } from './stardate';
   styleUrl: './console-header.css',
 })
 export class ConsoleHeader {
+  readonly view = input.required<string>();
   readonly generated = input<string | null>(null);
   readonly zone = input<string | null>(null);
   readonly machine = input<string | null>(null);
