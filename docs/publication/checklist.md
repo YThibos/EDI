@@ -1,6 +1,6 @@
 # Making the repository public
 
-This checklist follows the findings of [EDI-132](../backlog/EDI-132.md) and records what was done and what is left.
+This checklist follows the findings of EDI-132 (issue 136) and records what was done and what is left.
 A box is ticked when the step is done; a step marked *captain's machine* needs the account that owns the repository and the captain's word in the session that does it.
 The patterns that find personal material live in the EDI home, never here.
 

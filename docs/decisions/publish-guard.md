@@ -38,7 +38,7 @@ A request's title and description pass the same guard before EDI posts or accept
 
 A finding names its place, `the title` or `line 3 of the description`, and its rule or deny-list entry, never the value.
 `edi deliver` checks the draft it would open and refuses to post it, and checks a request the pipeline already opened before it records it; a ship's done is refused while its request's text fails the check, so the request never shows as ready for review, and the refusal tells the worker to rewrite the text on the forge (`DoneClaims`).
-The forges read a request's text through `Forge.textOf`; EDI posts no comment and edits no request, and once EDI's own Publish slice ([EDI-147](../backlog/EDI-147.md)) posts the pipeline's descriptions, the check sits in that slice's posting path.
+The forges read a request's text through `Forge.textOf`; EDI posts no comment and edits no request, and once EDI's own Publish slice (EDI-147, issue 91) posts the pipeline's descriptions, the check sits in that slice's posting path.
 
 ## Why
 
