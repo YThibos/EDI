@@ -328,8 +328,11 @@ class DecisionsAndReportingTest {
             home.workerInbox().read(worker.id());
             home.workerInbox().acknowledge(worker.id(), 1);
             ConsoleSitrep.Ongoing settled = consoleSitrep(home).ongoing().getFirst();
+            String settledReport = captainReport(home, Turn.NONE);
 
-            assertThat(report).contains("nothing open").doesNotContain("review finding");
+            assertThat(report).contains("nothing open", "Waiting on EDI: Work on fit-lamp asks \"Fix the review finding or skip it?\"")
+                    .doesNotContain("Nothing waiting on you");
+            assertThat(settledReport).contains("Nothing waiting on you").doesNotContain("Waiting on EDI");
             assertThat(brief).contains("Needs your decision (0)");
             assertThat(asked).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing).containsExactly("with me", "I am settling a question");
             assertThat(steered.state()).isEqualTo("with me");

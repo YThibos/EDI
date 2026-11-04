@@ -3,6 +3,7 @@ package io.github.ythibos.edi.web.console;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +21,7 @@ import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.delivery.Delivery;
@@ -179,6 +181,19 @@ class SitrepConsolePresenterTest {
     }
 
     @Test
+    void presentsAWorkersOpenQuestionInTheZoneWithWhenItWasAsked() {
+        Task horn = ship("horn", "Tune the horn");
+        Instant asked = NOW.minus(Duration.ofMinutes(20));
+        Worker gated = workerOn(horn).reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("pitch"), null, "Which pitch?"), asked);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
+                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20))));
+
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
+
+        assertThat(sitrep.workerQuestions()).containsExactly(new ConsoleSitrep.Question("horn", "Tune the horn", List.of("harness"), "Which pitch?", asked));
+    }
+
+    @Test
     void chartsQueuedAndParkedWorkInQueueOrderAndCountsWhatItLeavesOut() {
         List<Task> queued = IntStream.rangeClosed(1, 22).mapToObj(index -> ship("work-" + index, "Queued work " + index, PresenterFixtures.AT.plusSeconds(index)))
                 .toList();
@@ -213,7 +228,7 @@ class SitrepConsolePresenterTest {
         String json = new JsonMapper().writeValueAsString(sitrep);
 
         assertThat(json).contains("\"schema\":\"edi-sitrep.v1\"", "\"generated\":\"2026-10-15T10:30:00Z\"", "\"zone\":\"UTC\"", "\"number\":\"D58\"",
-                "\"recommended\":{\"key\":\"A\",\"why\":\"it is enough\"}", "\"boards\":[]", "\"reviews\":[]", "\"landedTotal\":0", "\"chartedTotal\":0");
+                "\"recommended\":{\"key\":\"A\",\"why\":\"it is enough\"}", "\"boards\":[]", "\"reviews\":[]", "\"workerQuestions\":[]", "\"landedTotal\":0", "\"chartedTotal\":0");
     }
 
     private static WaitingOnTheCaptain theLampDecision() {
