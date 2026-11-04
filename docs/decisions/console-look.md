@@ -58,3 +58,4 @@ When the captain asks for a different look, reads the sitrep on a screen of anot
 - 28/10/2026: the captain asked for a browser-tab icon after EDI's mainframe hologram; an original drawing became the SVG favicon with PNGs rendered from it, checked in light and dark browser tabs ([docs/images/sitrep/](../images/sitrep/)) (EDI-116).
 - 03/11/2026: the header gained Sitrep, Fleet and Week tabs in the mono face, the active one in ion, the Sitrep tab with the waiting count in an amber pill; Fleet and Week are `EmptyView` until EDI-61 and EDI-62 fill them (EDI-58).
 - 04/11/2026: the subtitle beside the EDI wordmark names the view on screen, Sitrep, Fleet, Week or Sign in, as the tab title does (EDI-58).
+- 04/11/2026: the subtitle takes the width of its longest name, Sign in, and the tabs hold beside the brand with the presence beside the clock, so the tabs keep their place across views and on signing in (EDI-58).

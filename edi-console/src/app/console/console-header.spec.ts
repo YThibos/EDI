@@ -50,9 +50,43 @@ describe('ConsoleHeader', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('h1.sr-brand__sub')?.textContent).toBe('Fleet');
   });
 
+  it('gives the view’s name one width whichever view is on screen, so the tabs keep their place', async () => {
+    const widths: string[] = [];
+    for (const view of ['Sitrep', 'Fleet', 'Week', 'Sign in']) {
+      fixture.componentRef.setInput('view', view);
+      await fixture.whenStable();
+      widths.push(getComputedStyle(subtitle()).width);
+    }
+
+    expect(widths[0]).not.toMatch(/^(auto)?$/);
+    expect(new Set(widths).size).toBe(1);
+  });
+
+  it('keeps the tabs beside the brand and the presence beside the clock, signed in or out', async () => {
+    await fixture.whenStable();
+    expect(getComputedStyle(views()).marginRight).toBe('auto');
+
+    fixture.componentRef.setInput('presence', { mode: 'present', demo: false, words: 'Present' });
+    await fixture.whenStable();
+    expect(getComputedStyle(views()).marginRight).toBe('auto');
+    expect(getComputedStyle(presenceBlock()).marginLeft).not.toBe('auto');
+  });
+
   it('leaves the count out while nothing waits', async () => {
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('.sr-view__count')).toBeNull();
   });
+
+  function subtitle(): HTMLElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('.sr-brand__sub')!;
+  }
+
+  function views(): HTMLElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('.sr-views')!;
+  }
+
+  function presenceBlock(): HTMLElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('.sr-presence')!;
+  }
 });
