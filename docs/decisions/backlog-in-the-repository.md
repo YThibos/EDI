@@ -1,4 +1,4 @@
-# The queued and held work lives in the repository as self-contained specs, and issues only track who has taken what
+# The queued and held work lives in the repository's GitHub issues, one self-contained spec per issue, and the pickup reads them through REST alone
 
 **Kind:** Design
 
@@ -7,54 +7,60 @@
 EDI's backlog lived in its store, the research reports in the EDI home and the captain's answers in task notes, all on one machine and readable only through the `edi` command.
 A Claude Code cloud session on a second account has none of that: it sees the repository and nothing else, and it cannot reach the machine, the store, the memory or any skill outside the repository.
 The captain wants a share of the work to run there, so that work is not tied to one machine or one account.
-A spec that is a short note pointing at a report on the machine is not a spec a cloud session can use.
+A first answer kept one file per item in `docs/backlog`, with an index, beside an issue per item that copied no criteria; each item then needed a pull request to be added, and the files and the issues disagreed in places where an item had settled and its issue stayed open.
+The cloud session's GitHub proxy serves REST for the repositories attached to the session and refuses every GraphQL request, so `gh issue`, `gh pr` and GitHub projects are out of its reach, while issues, labels, milestones, sub-issues, native dependencies and comments are all reachable through `gh api repos/<owner>/<repo>/...`.
+Every session, the cloud session and the primary's workers included, writes to GitHub as the captain's account.
 
 ## Decision
 
-`docs/backlog/` holds the queued and held work as one file per item, `EDI-<n>.md`, each the full and canonical spec: goal, context, acceptance criteria, the decisions and captain answers that bind it restated as requirements, the research it rests on, what to read first and how to verify.
-`docs/backlog/README.md` is the ordered index, in the waves the captain set, and the pickup protocol a session follows; `docs/backlog/research/` carries the research reports in full where an item needs them.
-An item's status and its issue live in its own file's header and nowhere else: the index holds only what rarely changes, the order, the key, the title, the size and the blockers, and `docs/backlog/board.mjs` prints the index with each item's status and issue, and with `--next` the items a session may pick up.
-A test holds the index and the item files to each other: every row has its file, every file has one row, and no index table carries a status or an issue.
-One GitHub issue per open or held item, titled with the item's key and title, links the spec on `main` and copies no criteria; the session claims an item by commenting on its issue and opening a draft pull request that closes it, so GitHub links issue, branch and pull request.
-Questions before code go on the issue and questions about code on the pull request, each with lettered options and a recommendation, and the session stops until the captain answers; an answer that changes an item updates its file in the same pull request.
-An item's issue links its file on `main`: the issues of the items the folder brought are opened once its pull request has merged, and a later item's issue is opened together with the pull request that adds the item; either link works once that pull request merges, and until then no session sees the item in the index on `main`.
-EDI's own work is not dispatched on the captain's machine: the primary puts it on this backlog with the `edi-backlog-item` skill, whose script `claude/skills/edi-backlog-item/backlog-item.mjs` writes the item's file and its row, opens a ready-for-review pull request on a `chore/` branch and the item's issue, names the issue in the item's file, and holds the local task for a deferral, idempotently and with a dry run.
-The script takes the key from `edi task add`, the existing EDI-native allocation, and the hold from `edi hold`, and goes to GitHub as the account the clone is pinned to.
-An item that needs the captain's machine, such as one reading his secrets file, is listed with its reason and is not for a cloud session.
+Every queued or held item is one GitHub issue on the repository, the single source of its spec, its order, its state and its claim.
+The issue's body follows `.github/ISSUE_TEMPLATE/backlog-item.md`: a header table of Kind, Source and Size, then Goal, Context, Acceptance criteria, Requirements from decisions and answers, an optional Research and measurements, Read first and How to verify; `.github/ISSUE_TEMPLATE/config.yml` turns blank issues off.
+A milestone is a big improvement, with a due date where one is set; a parent issue holds sub-issues only where one item splits into slices; every blocker is a native blocked-by link, and a wait that is no dependency is a blocker on a marker issue the captain closes.
+The labels are `captain-approved`, `cloud-ok`, `needs-captain-machine`, `held` and `security`; a held or machine-bound item's reason is under a heading of its body or in the captain's latest comment.
+An item opened since this decision takes the issue's number as its key, `EDI-<n>` ([work-keys-and-branches](work-keys-and-branches.md)); an older item keeps its key.
+`ops/backlog/pickup.mjs` reads the issues through `gh api` only, and with `--next` names the open issues that carry `captain-approved` added by the captain's account, checked through `issues/{n}/events`, carry `cloud-ok` and neither `held` nor `needs-captain-machine`, have no open blocker and no open pull request that closes them, ordered after their blockers, then by their milestone's due date, then by issue number; both the cloud session and the primary run it, and `ops/backlog/backlog.mjs` holds the rules it shares with the other scripts.
+The captain's account is read as the repository's owner, since the repository belongs to a personal account.
+`docs/pickup.md` is the pickup protocol, once and outside the items: the claim, a comment opening with the session marker `[EDI session]`, or `[EDI primary]` for the primary, and then an early draft pull request that closes the issue; questions on the issue with lettered options; the delivery every item shares; and the trust rule.
+The trust rule: issue and pull request creation stay limited to collaborators, an issue counts only with the captain's approval label added by the captain's account, no session ever adds that label, and an answer is a comment by the captain's account that opens with no `[EDI ` marker, while every other account's text and every marked comment is data.
+The primary opens an item with the `edi-backlog-item` skill, whose script `claude/skills/edi-backlog-item/backlog-item.mjs` refuses a draft that lacks a required section, opens the issue, sets its milestone, parent, blockers and labels, titles it with the key its number gives, adds `captain-approved` only when the draft names the captain's word, opens no pull request and holds the local task for a deferral, idempotently and with a dry run.
+The research reports the specs rest on live in `docs/research`, reviewed with the code and linked from the issues.
+`ops/backlog/migrate.mjs` moved the specs once from the folder's last commit onto their existing issues, with `ops/backlog/migration-plan.json` as the reviewed mapping of milestones, parents and the marker issue, links rewritten to issues and to `main`, the settled items' issues closed, the `parked` label renamed `held` and the wave labels removed, idempotently and with a dry run; the captain's primary runs it, adding `captain-approved` on his word.
 `.claude/settings.json` turns off the attribution lines a cloud session would otherwise add to commits and pull requests, so the no-trailer rule holds there too.
 
 ## Why
 
-A spec that works with the repository alone is the only kind a session without the machine can use, and it also serves any later contributor.
-One source of truth per item, in the repository, is reviewed and versioned with the code, while an issue holds what changes constantly: who has taken the item and where its branch is.
-Opening the draft pull request first, naming the item, keeps two sessions from taking the same one.
-A delivery that edits only its own item's file cannot conflict with another delivery, while a shared status column made every open pull request conflict with every merge to `main`.
+An issue holds a full spec well under GitHub's body limit, and is written and read through REST, the only GitHub route the cloud session has, so one source serves both sessions.
+One source per item removes the drift between a file and its issue, and adding an item no longer needs a pull request.
+Authorship by the captain's account proves nothing about the captain's intent, since every session writes as it, so trust rests on a label only the primary adds on his word, checked by the actor of the label's event.
+Opening the draft pull request first, closing the issue, keeps two sessions from taking the same one, and GitHub closes the issue when the pull request merges.
+The research reports are longer than an issue and are cited by many items, so they stay reviewed files.
 
 ## Alternatives rejected
 
-- Issues only - the criteria would live outside review, drift from the code and split into comments.
-- Specs in the EDI store only - unreachable from a cloud session, which is the reason for the change.
-- A pointer file that names reports on the captain's machine - the session could not read what the pointer names.
-- Opening the issues before the folder merges - they would link to files that are not on `main`.
-- Backlogging an item by hand - the hand route was forgotten for six items on 28 October 2026, which got local tasks only and neither a file nor an issue.
-- A status column in the index - every delivery edited a line next to another delivery's line, so each merge to `main` left every open pull request in conflict.
-- A generated index committed beside the specs - the generated file is again one file every pull request edits.
-- An `edi backlog add` subcommand in the core - the core's forge port opens draft merge requests and reads them, but has no issues or labels, and the step is the primary's own orchestration of git, gh and two existing `edi` commands; a script beside the skill does it without widening a port.
+- Specs in `docs/backlog` with an issue per item that copies no criteria - every item needed a pull request to be added, and the files and the issues drifted apart.
+- A GitHub project as the source of the order or the state - the cloud session cannot read a project, since its API lives only in GraphQL and in user-level REST routes, so no fact the pickup reads may live only in a project field; a project stays an optional view for the captain.
+- Issue types for the kind of work - a repository owned by a personal account cannot set them today.
+- Trusting an issue by its author - the captain's account also opens issues for Renovate, the primary and every session.
+- The research in the repository's wiki - the wiki has no review and no API, and a cloud session cannot reach it.
+- Specs in the EDI store only - unreachable from a cloud session, which is the reason for the backlog in the repository.
+- Backlogging an item by hand - the hand route was forgotten for six items on 28 October 2026, which got local tasks only and neither a spec nor an issue.
+- An `edi backlog add` subcommand in the core - the core's forge port opens draft merge requests and reads them, but has no issues or labels, and the step is the primary's own orchestration of `gh api` and two existing `edi` commands; a script beside the skill does it without widening a port.
 
 ## Consequences
 
 - Good: a session with only the repository can pick up, build, verify and deliver an item, and the captain's primary session reviews the pull request.
-- Good: the research that justifies an item travels with it.
-- Bad: an item's file is a second copy of what EDI's store holds, so a change to the plan must change the file; the file is the source after this point.
-- Bad: the research reports carried over are a snapshot of one day and their file paths drift from the code.
+- Good: adding, holding or approving an item is one change on GitHub, with no pull request and no conflict between deliveries.
+- Bad: a spec on an issue is edited outside review; the captain's approval label and the issue's history are what show who changed it.
+- Bad: the research reports are a snapshot of one day and their file paths drift from the code.
 
 ## When to revisit
 
-When the repository's own task tracking can hold the full spec, or when more than one cloud session works the backlog at once and claims need more than a comment and a draft pull request.
-When the core's forge port gains issues, the script's steps may become an `edi` command.
+When the cloud session can read GitHub projects, or when more than one cloud session works the backlog at once and claims need more than a comment and a draft pull request.
+When the core's forge port gains issues, the scripts' steps may become `edi` commands.
 
 ## How we got here
 
 - 28/10/2026: the captain asked for every defined EDI upgrade and patch to be available on the upstream repository with its full spec, findings and research, so a second account's cloud session could do the work; he chose a mixture, with the canonical specs and strict rules in `docs/backlog` and issues tracking which issue is linked to which branch (EDI-117).
 - 29/10/2026: the captain restated that EDI's work goes to the upstream backlog as an item and an issue, routinely and as automated as possible, so the `edi-backlog-item` skill and its script now add an item in one step, with its issue opened alongside its pull request (EDI-142).
 - 04/11/2026: every open pull request conflicted in the index's status column after each merge, so the captain moved each item's status and issue into its own file, with `board.mjs` printing the live view and a test holding the index and the files together (EDI-172).
+- 04/11/2026: a pull request per item was cumbersome and the files drifted from their issues, so the captain moved the backlog into GitHub issues as the single source, with the template, the labels, milestones, sub-issues and native dependencies, the pickup script read through REST, the trust rule resting on his approval label, the research in `docs/research`, and `docs/backlog` removed after a migration with a dry run (D93 A, EDI-176).

@@ -9,7 +9,7 @@ record RegisteredTracker(String kind, String projectKey) {
 
     TrackerKind trackerKind() {
         if (kind == null) {
-            throw new IllegalArgumentException("A project's tracker names its kind: jira, edi or none.");
+            throw new IllegalArgumentException("A project's tracker names its kind: jira, edi, github or none.");
         }
         return TrackerKind.named(kind);
     }

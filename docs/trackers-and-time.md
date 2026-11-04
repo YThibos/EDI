@@ -14,7 +14,8 @@ edi decision answer D59 --option B --text "D59 B"                              #
 
 ## Trackers
 
-A project's registry entry names its tracker, `tracker: { kind: jira|edi|none, projectKey: KEY }`, and the tracker port has an adapter for each kind ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
+A project's registry entry names its tracker, `tracker: { kind: jira|edi|github|none, projectKey: KEY }`, and the tracker port has an adapter for each kind ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
+A `github` project keys its work by its GitHub issue numbers: EDI never allocates a key there, and a ship or scout is added with `--key <KEY>-<the issue's number>` once its issue is open ([work-keys-and-branches](decisions/work-keys-and-branches.md)).
 The machine profile's `tracker` section says whether this machine reaches a JIRA instance (`kind: jira`, with its `baseUrl`, the keys file section holding the access token, the evergreen tickets, the workflow's statuses in their forward order, the `mergedStatus`, the `issueType` and the `epicLinkField`) or none (`kind: none`).
 EDI reads the access token at the moment of each call and never shows it ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
 A JIRA ticket joins the active sprint when work starts, links the draft, and moves to the after-merge status once the merge is followed ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).

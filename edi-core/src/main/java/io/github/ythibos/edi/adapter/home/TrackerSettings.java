@@ -27,8 +27,8 @@ public record TrackerSettings(
     public TrackerSettings {
         Objects.requireNonNull(kind, "The machine profile names its tracker.");
         evergreen = Set.copyOf(evergreen);
-        if (kind == TrackerKind.EDI) {
-            throw new IllegalArgumentException("tracker.kind is jira or none: EDI-native keys need no tracker on the machine.");
+        if (kind == TrackerKind.EDI || kind == TrackerKind.GITHUB) {
+            throw new IllegalArgumentException("tracker.kind is jira or none: EDI-native keys and issue-number keys need no tracker on the machine.");
         }
         if (kind == TrackerKind.JIRA) {
             requireAJiraConnection(baseUrl, credentials);

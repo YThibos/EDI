@@ -79,6 +79,26 @@ class WorkKeysAtIntakeTest {
     }
 
     @Test
+    void refusesUnkeyedWorkOnAProjectKeyedByItsIssueNumbersAndTakesTheIssuesKey() throws IOException {
+        TestHome beacon = TestHome.in(directory.resolve("beacon")).on(MachineFixture.LAPTOP).registering("""
+                projects:
+                  - name: beacon
+                    tracker: { kind: github, projectKey: BCN }
+                    base: main
+                """);
+
+        assertThatThrownBy(() -> beacon.addTask().add(TrackerFixtures.ship("turn-beacon", "beacon", "Turn the beacon", null), Actor.PRIMARY))
+                .isInstanceOf(Refusal.class)
+                .hasMessage("beacon keys its work by its GitHub issue numbers, so a ship on it is added with --key BCN-<the issue's number>, once its issue is open.");
+        AddedTask added = beacon.addTask().add(TrackerFixtures.ship("light-beacon", "beacon", "Light the beacon", "BCN-224"), Actor.PRIMARY);
+
+        assertThat(added.ticket()).isEqualTo(Ticket.keyedOnly(WorkKey.parse("BCN-224")));
+        assertThat(beacon.tasks().contains(new TaskId("turn-beacon"))).isFalse();
+        assertThatThrownBy(() -> beacon.addTask().add(TrackerFixtures.ship("paint-beacon", "beacon", "Paint the beacon", "HRN-3"), Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessage("HRN-3 is not a beacon key: its work is keyed BCN-<n>.");
+    }
+
+    @Test
     void queuesUnkeyedWorkOnAProjectWithoutATrackerForItsKeyToBeGivenBeforeDispatch() {
         AddedTask added = home.addTask().add(TrackerFixtures.ship("weed-garden", "garden", "Weed the garden", null), Actor.PRIMARY);
 

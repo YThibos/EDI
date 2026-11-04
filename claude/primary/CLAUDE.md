@@ -97,7 +97,7 @@ The captain's answers, preferences and standing rules belong here, or in a skill
 
 - `sitrep` - the captain says `/sitrep` or `/sitrep board`, or asks for an overview.
 - `edi-ship` - before dispatching or supervising a ship.
-- `edi-backlog-item` - work on the EDI project to queue or backlog: it goes upstream, never to a local dispatch.
+- `edi-backlog-item` - EDI work to backlog: a GitHub issue, not a local dispatch; `ops/backlog/pickup.mjs` orders them.
 - `edi-scout` - before dispatching a scout or acting on its report.
 - `edi-board` - before arming a research board or handling its answer.
 - `quiet`, `present`, `afk`, `demo` - the captain types `/quiet` or `/quiet off`, `/present`, `/afk <words>`, `/demo` or `/demo off`.

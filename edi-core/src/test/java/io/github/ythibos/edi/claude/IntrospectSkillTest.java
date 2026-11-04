@@ -137,7 +137,7 @@ class IntrospectSkillTest {
                 branch: feature
                 source: Introspection of 2026-10-15, after question-left-open on fit-lamp
                 size: S
-                section: Wave 1
+                milestone: -
                 blocked-by: -
                 status: open
                 ---
