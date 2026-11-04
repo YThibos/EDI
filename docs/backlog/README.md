@@ -167,7 +167,7 @@ The Issue column shows `-` until the item's issue is opened.
 | 23 | [EDI-60](EDI-60.md) | Live check-in on a worker | M | EDI-59 | open | - |
 | 24 | [EDI-61](EDI-61.md) | The Fleet view | M | EDI-58, EDI-60 | open | - |
 | 25 | [EDI-62](EDI-62.md) | The Week view | S | EDI-58 | open | - |
-| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | EDI-89 | open | - |
+| 26 | [EDI-63](EDI-63.md) | Tab title and browser notification | S | EDI-89 | delivered | - |
 | 27 | [EDI-64](EDI-64.md) | Quiet and away buttons | S | EDI-89 | open | - |
 | 28 | [EDI-66](EDI-66.md) | edi board show | S | EDI-59 | open | - |
 | 29 | [EDI-68](EDI-68.md) | edi park and edi resume | M | EDI-87, EDI-89 | open | - |
