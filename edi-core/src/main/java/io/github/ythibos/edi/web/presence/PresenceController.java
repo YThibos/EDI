@@ -17,7 +17,7 @@ import io.github.ythibos.edi.web.access.NotPermitted;
 @RestController
 class PresenceController {
 
-    private static final Set<String> THE_CONSOLES_BUTTONS = Set.of("present", "demo", PresenceRequest.DEMO_OFF);
+    private static final Set<String> THE_CONSOLES_BUTTONS = Set.of("present", "quiet", "away", "demo", PresenceRequest.DEMO_OFF);
     private static final String AFK = "/afk";
 
     private final PresenceQuery presence;
@@ -47,7 +47,7 @@ class PresenceController {
     private static void requireAllowed(String mode, Caller caller) {
         if (caller instanceof Caller.Captain) {
             if (!THE_CONSOLES_BUTTONS.contains(mode)) {
-                throw new NotPermitted("The console sets presence to present or to a demo; quiet and away are set in the chat.");
+                throw new NotPermitted("The console sets presence to present, quiet, away or a demo, not " + mode + ".");
             }
             return;
         }
@@ -66,7 +66,9 @@ class PresenceController {
     }
 
     private Presence away(String mandate, Caller caller) {
-        captainsWord.requireTypedWithItsCommand(caller.callingSession(), AFK, mandate);
+        if (!(caller instanceof Caller.Captain)) {
+            captainsWord.requireTypedWithItsCommand(caller.callingSession(), AFK, mandate);
+        }
         return change.away(mandate);
     }
 }

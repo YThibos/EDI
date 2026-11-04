@@ -7,6 +7,7 @@
   [waiting]="reading.waiting()"
   [showsPersonality]="false"
   (presenceChosen)="reading.choosePresence($event)"
+  (awayChosen)="reading.goAway($event)"
 />
 <main class="sr-main">
   <app-access-notice [access]="reading.access()">

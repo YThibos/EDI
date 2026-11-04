@@ -7,6 +7,7 @@
   [personalityOpen]="personalityOpen()"
   [waiting]="reading.waiting()"
   (presenceChosen)="reading.choosePresence($event)"
+  (awayChosen)="reading.goAway($event)"
   (personalityToggled)="personalityOpen.set(!personalityOpen())"
 />
 <main class="sr-main">

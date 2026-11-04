@@ -44,6 +44,10 @@ export class SitrepReading {
     this.api.choosePresence(mode).subscribe({ next: () => this.refresh(), error: () => this.refresh() });
   }
 
+  goAway(mandate: string): void {
+    this.api.goAway(mandate).subscribe({ next: () => this.refresh(), error: () => this.refresh() });
+  }
+
   private follow(event: FleetStreamEvent): void {
     this.streaming.set(event !== 'dropped');
     if (event !== 'dropped') {

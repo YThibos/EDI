@@ -313,23 +313,34 @@ class ConsoleApiTest {
     }
 
     @Test
-    void choosesPresentOrADemoFromTheConsoleAndNothingElse() throws Exception {
+    void choosesPresentADemoQuietOrAwayWithItsMandateFromTheConsoleAndNothingElse() throws Exception {
         String cookie = signedInCookie();
 
-        HttpResponse<String> demo = send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
-                .POST(BodyPublishers.ofString("{\"mode\":\"demo\"}")));
+        HttpResponse<String> demo = presence(cookie, "{\"mode\":\"demo\"}");
         String sitrep = send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body();
-        HttpResponse<String> quiet = send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
-                .POST(BodyPublishers.ofString("{\"mode\":\"quiet\"}")));
-        HttpResponse<String> demoOff = send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
-                .POST(BodyPublishers.ofString("{\"mode\":\"demo-off\"}")));
+        HttpResponse<String> demoOff = presence(cookie, "{\"mode\":\"demo-off\"}");
+        HttpResponse<String> quiet = presence(cookie, "{\"mode\":\"quiet\"}");
+        HttpResponse<String> awayWithoutWords = presence(cookie, "{\"mode\":\"away\"}");
+        HttpResponse<String> away = presence(cookie, "{\"mode\":\"away\",\"mandate\":\"Carry on with the lamp; nothing new.\"}");
+        String awaySitrep = send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body();
+        HttpResponse<String> asleep = presence(cookie, "{\"mode\":\"asleep\"}");
 
         assertThat(demo.statusCode()).isEqualTo(200);
         assertThat(demo.body()).startsWith("Presence: present for a demo until ");
         assertThat(sitrep).contains("\"presence\":{\"mode\":\"present\",\"demo\":true,\"words\":\"present for a demo until ");
-        assertThat(quiet.statusCode()).isEqualTo(403);
-        assertThat(quiet.body()).isEqualTo("The console sets presence to present or to a demo; quiet and away are set in the chat.\n");
         assertThat(demoOff.body()).isEqualTo("Presence: present.\n");
+        assertThat(quiet.statusCode()).isEqualTo(200);
+        assertThat(quiet.body()).startsWith("Presence: quiet since ");
+        assertThat(awayWithoutWords.statusCode()).isEqualTo(400);
+        assertThat(away.statusCode()).isEqualTo(200);
+        assertThat(away.body()).startsWith("Presence: away since ");
+        assertThat(awaySitrep).contains("\"mode\":\"away\"");
+        assertThat(asleep.statusCode()).isEqualTo(403);
+        assertThat(asleep.body()).isEqualTo("The console sets presence to present, quiet, away or a demo, not asleep.\n");
+    }
+
+    private HttpResponse<String> presence(String cookie, String body) throws Exception {
+        return send(withTheCookie("/api/presence", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON).POST(BodyPublishers.ofString(body)));
     }
 
     @Test

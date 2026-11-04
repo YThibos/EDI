@@ -36,7 +36,7 @@ export interface PresenceShown {
   words: string;
 }
 
-export type PresenceChoice = 'present' | 'demo' | 'demo-off';
+export type PresenceChoice = 'present' | 'quiet' | 'demo' | 'demo-off';
 
 export interface DecisionCard {
   number: string;
