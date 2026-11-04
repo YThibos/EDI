@@ -9,6 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
@@ -33,15 +34,25 @@ class TicketProposalTest {
                 These open SVC tickets match its words.""");
         assertThat(card.options()).extracting(DecisionOption::text).containsExactly(
                 "Book it on SVC-40: Harbour lamps (In Progress)",
-                "Create a Story \"Fit the harbour lamp\" in epic SVC-9, labelled lighting, priority Major in SVC");
+                "Create a Story \"Fit the harbour lamp\" in epic SVC-9, labelled lighting, priority Major in SVC",
+                "Drop this task, with no ticket");
         assertThat(card.recommendation().key()).isEqualTo(new OptionKey('A'));
+    }
+
+    @Test
+    void offersToDropTheTaskOnTheCaptainsWordBesideCreatingTheTicket() {
+        DecisionCard card = new TicketProposal(new TaskId("fit-lamp"), DRAFT, List.of()).card();
+
+        assertThat(card.options()).extracting(DecisionOption::key).containsExactly(new OptionKey('A'), new OptionKey('B'));
+        assertThat(card.authorises(new OptionKey('B'), CaptainWordAct.DROP)).isTrue();
+        assertThat(card.authorises(new OptionKey('A'), CaptainWordAct.DROP)).isFalse();
     }
 
     @Test
     void recommendsCreatingATicketWhenNoneMatches() {
         DecisionCard card = new TicketProposal(new TaskId("fit-lamp"), DRAFT, List.of()).card();
 
-        assertThat(card.options()).hasSize(1);
+        assertThat(card.options()).extracting(DecisionOption::text).first().asString().startsWith("Create a Story");
         assertThat(card.recommendation().why()).isEqualTo("no open ticket matches the work");
     }
 
@@ -49,8 +60,9 @@ class TicketProposalTest {
     void choosesOnlyByAnOptionTheCardOffers() {
         assertThat(PROPOSAL.choiceFor(new OptionKey('A'))).isEqualTo(new TicketChoice.BookOn(LAMPS.key()));
         assertThat(PROPOSAL.choiceFor(new OptionKey('B'))).isEqualTo(new TicketChoice.Create(DRAFT));
-        assertThatThrownBy(() -> PROPOSAL.choiceFor(new OptionKey('C'))).isInstanceOf(Refusal.class)
-                .hasMessage("The ticket decision for fit-lamp offers no option C.");
+        assertThat(PROPOSAL.choiceFor(new OptionKey('C'))).isEqualTo(new TicketChoice.DropTheTask());
+        assertThatThrownBy(() -> PROPOSAL.choiceFor(new OptionKey('D'))).isInstanceOf(Refusal.class)
+                .hasMessage("The ticket decision for fit-lamp offers no option D.");
         assertThatThrownBy(() -> PROPOSAL.choiceFor((OptionKey) null)).isInstanceOf(Refusal.class)
                 .hasMessage("The ticket decision for fit-lamp is answered with one of its options.");
     }

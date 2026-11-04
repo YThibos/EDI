@@ -10,6 +10,7 @@ import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.task.PromotedScout;
+import io.github.ythibos.edi.application.tracker.KeyedTask;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.authority.Authorisation;
@@ -91,6 +92,9 @@ public sealed interface Confirmation {
     }
 
     record Dropped(DroppedTask dropped) implements Confirmation {
+    }
+
+    record Keyed(KeyedTask keyed) implements Confirmation {
     }
 
     record Adopted(AdoptedTask adopted) implements Confirmation {

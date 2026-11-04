@@ -19,6 +19,7 @@ import io.github.ythibos.edi.application.task.TaskDetail;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
 import io.github.ythibos.edi.application.task.TaskList;
 import io.github.ythibos.edi.application.task.TaskListQuery;
+import io.github.ythibos.edi.application.tracker.KeyTask;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -35,16 +36,18 @@ class TaskController {
     private final NoteTask noteTask;
     private final PromoteScout promoteScout;
     private final DropTask dropTask;
+    private final KeyTask keyTask;
     private final AdoptForkTask adoptForkTask;
 
     TaskController(TaskListQuery list, TaskDetailQuery detail, AddTask addTask, NoteTask noteTask, PromoteScout promoteScout, DropTask dropTask,
-            AdoptForkTask adoptForkTask) {
+            KeyTask keyTask, AdoptForkTask adoptForkTask) {
         this.list = list;
         this.detail = detail;
         this.addTask = addTask;
         this.noteTask = noteTask;
         this.promoteScout = promoteScout;
         this.dropTask = dropTask;
+        this.keyTask = keyTask;
         this.adoptForkTask = adoptForkTask;
     }
 
@@ -82,6 +85,13 @@ class TaskController {
     Confirmation drop(@PathVariable String reference, @RequestBody DropRequest request, Caller caller) {
         caller.requirePrimary("edi task drop");
         return new Confirmation.Dropped(dropTask.drop(TaskReference.parse(reference), request.discardingWork(), caller.callingSession(),
+                caller.actor()));
+    }
+
+    @PostMapping("/{reference}/key")
+    Confirmation key(@PathVariable String reference, @RequestBody KeyRequest request, Caller caller) {
+        caller.requirePrimary("edi task key");
+        return new Confirmation.Keyed(keyTask.key(TaskReference.parse(reference), request.workKey(), request.citation(), caller.callingSession(),
                 caller.actor()));
     }
 

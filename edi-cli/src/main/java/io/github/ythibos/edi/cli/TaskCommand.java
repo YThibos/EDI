@@ -4,9 +4,9 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "task",
-        description = "Adds, shows, lists, notes, promotes, drops and adopts tasks.",
+        description = "Adds, shows, lists, notes, keys, promotes, drops and adopts tasks.",
         synopsisSubcommandLabel = "COMMAND",
-        subcommands = {TaskAddCommand.class, TaskShowCommand.class, TaskListCommand.class, TaskNoteCommand.class, TaskPromoteCommand.class,
+        subcommands = {TaskAddCommand.class, TaskShowCommand.class, TaskListCommand.class, TaskNoteCommand.class, TaskKeyCommand.class, TaskPromoteCommand.class,
             TaskDropCommand.class, TaskAdoptCommand.class})
 final class TaskCommand extends CommandGroup {
 }

@@ -37,6 +37,13 @@ public class TaskKeys {
         return intake.workKey() == null ? keyingOfUnkeyedWork(project, intake, notes, details) : givenKey(project, intake.workKey(), details);
     }
 
+    public Ticket verified(Intake intake, WorkKey key) {
+        if (intake.kind() == TaskKind.CAPTAIN) {
+            return Ticket.keyedOnly(key);
+        }
+        return givenKey(registry.entryOf(intake.projects().getFirst()), key, TicketDetails.NONE).ticket();
+    }
+
     public WorkKey issue(ProjectName project, TicketDraft draft) {
         return trackers.serving(registry.entryOf(project)).create(draft);
     }
@@ -65,7 +72,7 @@ public class TaskKeys {
         return new WorkKeying.ToPropose(draft, trackers.serving(project).findExisting(new TicketContext(tracked.key(), intake.title())));
     }
 
-    private WorkKeying givenKey(ProjectEntry project, WorkKey key, TicketDetails details) {
+    private WorkKeying.Given givenKey(ProjectEntry project, WorkKey key, TicketDetails details) {
         requireNoDetails(details);
         trackers.tracked(project).requireOwns(key);
         return new WorkKeying.Given(trackers.serving(project).verified(key));

@@ -10,10 +10,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
+import io.github.ythibos.edi.application.delivery.DroppedTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges.CleanUp;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.task.AddedTask;
+import io.github.ythibos.edi.application.tracker.KeyedTask;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.StopWorker.StoppedWorker;
@@ -84,6 +86,18 @@ class ConfirmationTextTest {
                 .endsWith(" Its ticket is not settled yet: JIRA cannot be reached. You try again every 30 seconds.\n");
         assertThat(answerWith(new TicketSettlement.AskedAgain("JIRA found nothing for the ticket SVC-77 (HTTP 404).")))
                 .endsWith(" You could not carry out the answer, so you raised the decision again: JIRA found nothing for the ticket SVC-77 (HTTP 404).\n");
+        assertThat(answerWith(new TicketSettlement.DropChosen())).endsWith(" It books on no ticket; the answer authorises edi task drop lamp-choice.\n");
+    }
+
+    @Test
+    void confirmsAKeyGivenAfterIntakeAndTheTicketDecisionItOrADropAnswers() {
+        Task lantern = PresenterFixtures.lantern();
+
+        assertThat(text.text(new Confirmation.Keyed(new KeyedTask(lantern, null)))).isEqualTo("Keyed lantern on HRN-3.\n");
+        assertThat(text.text(new Confirmation.Keyed(new KeyedTask(lantern, new DecisionNumber(87)))))
+                .isEqualTo("Keyed lantern on HRN-3; the key answers D87, its ticket decision, and releases it.\n");
+        assertThat(text.text(new Confirmation.Dropped(new DroppedTask(lantern, List.of(), new DecisionNumber(87)))))
+                .isEqualTo("Dropped lantern on the captain's word; the drop answers D87, its ticket decision; nothing unlanded was discarded.\n");
     }
 
     @Test
