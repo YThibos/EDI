@@ -19,7 +19,7 @@ Away's mandate must be words the captain typed in the exchange ([captains-word](
 A demo holds present until `/demo off`, the end of the meeting in progress, or three hours.
 In quiet and away, routine wake turns end without chat text and are batched every `presence.quietBatch` (30 minutes); `NotifyTheCaptain`, a follower of the event log ([events-and-followers](events-and-followers.md)), raises one notification for each event since quiet began that concerns the captain, such as a decision, a draft for review, a failed or blocked status, a death or a failed delivery (`CaptainNotices`).
 When the captain's typed prompt ends quiet or away, `PrimaryHooks` answers it with a return brief built by `ReturnBriefQuery` from the snapshot and the event log since presence left present: decisions waiting, landed work, setbacks and running work; when the console ended it, `unbriefed_absence` keeps the brief for the next typed prompt.
-The console shows the presence with Present and Demo buttons, but quiet and away are set only in the chat, and the sitrep's captain report heads itself with the presence when it is not plainly present; the turn report leaves it out ([turn-report](turn-report.md)).
+The console shows the presence with Present, Demo, Quiet and Away buttons; Away asks in a small form for the captain's words, which become its mandate, as the signed-in console session is the captain's own, while in the chat away still needs the `/afk` words the captain typed; and the sitrep's captain report heads itself with the presence when it is not plainly present; the turn report leaves it out ([turn-report](turn-report.md)).
 
 ## Why
 
@@ -33,7 +33,7 @@ The event log holds every captain-relevant fact once, with its time, so each not
 - Automatic away - would let silence authorise work.
 - Quiet for every meeting entry in progress - would turn quiet again while the captain types during a meeting.
 - Notifying from wakes or from the primary's turns - decisions the primary raises create no wake, and a quiet primary says nothing.
-- Every mode on the console - away needs a mandate typed in the chat, where it can be verified.
+- Every mode on the console - rejected at first, since away needs a mandate the core can verify; reversed on 3 November 2026, as the console's session is the captain's and the form takes the mandate in the captain's own words.
 
 ## Consequences
 
@@ -50,3 +50,4 @@ When the thresholds prove wrong in daily use, the notifications prove too many, 
 - 17/10/2026: slice S8 built presence in the core, notifications from an event follower, the return brief and the console's buttons.
 - 22/10/2026: the presence commands became skills of their own names ([primary-anchor-and-skills](primary-anchor-and-skills.md)).
 - 28/10/2026: the turn report stopped showing the presence, which stays in the sitrep (EDI-133).
+- 03/11/2026: the captain wanted quiet and away on the page too, so the console gained Quiet and Away, Away with a form for its mandate; the return brief still comes at the next typed prompt (EDI-64).

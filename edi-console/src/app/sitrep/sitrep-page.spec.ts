@@ -204,7 +204,7 @@ describe('SitrepPage', () => {
 
     expect(text(page, '.sr-presence__mode')).toBe('quiet');
     expect(page.querySelector('.sr-presence__mode')?.getAttribute('title')).toContain('after a stretch without a typed message');
-    expect(texts(page, '.sr-presence__button')).toEqual(['Present', 'Demo']);
+    expect(texts(page, '.sr-presence__button')).toEqual(['Present', 'Demo', 'Away']);
 
     (page.querySelectorAll('.sr-presence__button')[1] as HTMLButtonElement).click();
     const chosen = http.expectOne('/api/presence');
@@ -216,6 +216,46 @@ describe('SitrepPage', () => {
 
     expect(text(page, '.sr-presence__mode')).toBe('demo');
     expect(texts(page, '.sr-presence__button')).toEqual(['End demo']);
+  });
+
+  it('sets quiet from the header while present', async () => {
+    const fixture = await rendered();
+    const page = fixture.nativeElement as HTMLElement;
+    http.expectNone('/api/presence');
+    source.listeners.get('fleet')?.();
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'present', demo: false, words: 'present' } }));
+    await fixture.whenStable();
+
+    expect(texts(page, '.sr-presence__button')).toEqual(['Demo', 'Quiet', 'Away']);
+    (page.querySelectorAll('.sr-presence__button')[1] as HTMLButtonElement).click();
+
+    expect(http.expectOne('/api/presence').request.body).toEqual({ mode: 'quiet' });
+  });
+
+  it('goes away from the header only with the captain\'s own words as its mandate', async () => {
+    const fixture = await rendered();
+    const page = fixture.nativeElement as HTMLElement;
+    const away = Array.from(page.querySelectorAll<HTMLButtonElement>('.sr-presence__button')).find((button) => button.textContent?.trim() === 'Away');
+
+    away?.click();
+    await fixture.whenStable();
+    const goAway = Array.from(page.querySelectorAll<HTMLButtonElement>('.sr-away button')).find((button) => button.textContent?.trim() === 'Go away');
+    expect(goAway?.disabled).toBe(true);
+    const words = page.querySelector('.sr-away__words') as HTMLInputElement;
+    words.value = '  Carry on with the lamp; start nothing new.  ';
+    words.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(goAway?.disabled).toBe(false);
+    goAway?.click();
+
+    const chosen = http.expectOne('/api/presence');
+    expect(chosen.request.body).toEqual({ mode: 'away', mandate: 'Carry on with the lamp; start nothing new.' });
+    chosen.flush('Presence: away since 2026-10-15 08:20 CEST.');
+    http.expectOne('/api/sitrep').flush(sitrepFixture({ presence: { mode: 'away', demo: false, words: 'away since 2026-10-15 08:20 CEST' } }));
+    await fixture.whenStable();
+
+    expect(page.querySelector('.sr-away')).toBeNull();
+    expect(texts(page, '.sr-presence__button')).toEqual(['Present', 'Demo', 'Quiet']);
   });
 
   it('opens the personality desk from the header and closes it again', async () => {
