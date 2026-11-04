@@ -1,0 +1,21 @@
+<app-console-header
+  [view]="data.view"
+  [generated]="reading.sitrep()?.generated ?? null"
+  [zone]="reading.sitrep()?.zone ?? null"
+  [machine]="reading.sitrep()?.machine ?? null"
+  [presence]="reading.sitrep()?.presence ?? null"
+  [waiting]="reading.waiting()"
+  [showsPersonality]="false"
+  (presenceChosen)="reading.choosePresence($event)"
+  (awayChosen)="reading.goAway($event)"
+/>
+<main class="sr-main">
+  <app-access-notice [access]="reading.access()">
+    <div class="sr-panel sr-notice">
+      <div class="sr-notice__pad">
+        <h2 class="sr-notice__title">{{ data.view }}</h2>
+        <p class="sr-notice__detail">Nothing here yet: this view will show {{ data.shows }}.</p>
+      </div>
+    </div>
+  </app-access-notice>
+</main>

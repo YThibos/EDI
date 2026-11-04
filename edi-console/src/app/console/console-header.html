@@ -7,8 +7,15 @@
         <circle cx="29.2" cy="11.6" r="1.4" fill="currentColor" stroke="none" />
       </svg>
       <span class="sr-brand__wm">EDI</span>
-      <h1 class="sr-brand__sub">Sitrep</h1>
+      <h1 class="sr-brand__sub">{{ view() }}</h1>
     </span>
+    <nav class="sr-views" aria-label="Views">
+      <a class="sr-view" routerLink="/" routerLinkActive="sr-view--on" [routerLinkActiveOptions]="{ exact: true }">
+        Sitrep@if (waiting() > 0) {<span class="sr-view__count">{{ waiting() }}</span>}
+      </a>
+      <a class="sr-view" routerLink="/fleet" routerLinkActive="sr-view--on">Fleet</a>
+      <a class="sr-view" routerLink="/week" routerLinkActive="sr-view--on">Week</a>
+    </nav>
     @if (mode(); as mode) {
       <span class="sr-presence">
         <span class="sr-presence__mode sr-presence__mode--{{ mode }}" [attr.title]="presence()?.words">{{ mode }}</span>
@@ -26,7 +33,9 @@
             <button type="button" class="sr-presence__button" [attr.aria-expanded]="awayOpen()" (click)="awayOpen.set(!awayOpen())">Away</button>
           }
         }
-        <button type="button" class="sr-latch" [attr.aria-expanded]="personalityOpen()" (click)="personalityToggled.emit()">Personality</button>
+        @if (showsPersonality()) {
+          <button type="button" class="sr-latch" [attr.aria-expanded]="personalityOpen()" (click)="personalityToggled.emit()">Personality</button>
+        }
       </span>
     }
     <span class="sr-clock">

@@ -41,5 +41,6 @@ describe('SignInPage', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.sr-notice__title')?.textContent).toBe('This sign-in link no longer works');
+    expect(fixture.nativeElement.querySelector('h1.sr-brand__sub')?.textContent).toBe('Sign in');
   });
 });
