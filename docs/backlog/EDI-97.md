@@ -9,6 +9,7 @@
 | Size | M |
 | Blocked by | [EDI-62](EDI-62.md) |
 | Status | open |
+| Issue | [#165](https://github.com/YThibos/EDI/issues/165) |
 | Cloud session | ok |
 
 ## Goal
@@ -52,4 +53,4 @@ The research is in [the EDI-75 measurements](research/EDI-75-measurements.md), s
 
 ## Delivery
 
-Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status and the index row updated in the same pull request.
+Deliver this item as the [pickup protocol](README.md#pickup-protocol) says: a draft pull request that names the item and closes its issue, local verification in the pull request body, a question with lettered options instead of a guess, and this file's status updated in the same pull request.
