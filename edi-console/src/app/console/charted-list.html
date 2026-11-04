@@ -10,6 +10,7 @@
             }
             {{ projectsOf(charted.projects, charted.task) }}
           </div>
+          <app-link-chips [links]="links()[charted.task]" />
         </div>
         @if (charted.waiting) {
           <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>waiting</span>

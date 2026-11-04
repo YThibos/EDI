@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -20,6 +22,7 @@ import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.application.fleet.TaskLinks;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
@@ -219,6 +222,22 @@ class SitrepConsolePresenterTest {
         assertThat(sitrep.landedTotal()).isEqualTo(12);
         assertThat(sitrep.landed()).hasSize(SitrepConsolePresenter.LANDED_SHOWN);
         assertThat(sitrep.landed().getFirst().draft()).isEqualTo(DRAFT.url());
+    }
+
+    @Test
+    void carriesTheLinksOfEveryTaskItShowsKeyedByTask() {
+        Task horn = ship("horn", "Tune the horn");
+        TaskLinks hornLinks = new TaskLinks("SVC-7", "https://jira.example.org/browse/SVC-7", null, null, null, null, null, List.of("D58"));
+        List<Task> asked = new ArrayList<>();
+
+        ConsoleSitrep sitrep = presenter.present(new FleetSnapshot(NOTHING_WAITING, List.of(new OngoingTask(horn, null, null, null)), List.of(), List.of(),
+                List.of(), List.of()), NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), tasks -> {
+                    asked.addAll(tasks);
+                    return Map.of(horn.id(), hornLinks);
+                });
+
+        assertThat(asked).extracting(Task::id).containsExactly(horn.id());
+        assertThat(sitrep.links()).containsExactly(Map.entry("horn", hornLinks));
     }
 
     @Test

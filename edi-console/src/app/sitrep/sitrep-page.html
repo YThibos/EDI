@@ -40,7 +40,7 @@
           </div>
           <div class="sr-section__body sr-waiting-on-you">
             @if (showsTheDeck()) {
-              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" (settled)="refresh()" />
+              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" (settled)="refresh()" />
             }
             @if (sitrep.boards.length || sitrep.reviews.length || sitrep.changing.length || sitrep.workerQuestions.length) {
               <app-waiting-list
@@ -50,6 +50,7 @@
                 [changing]="sitrep.changing"
                 [workerQuestions]="sitrep.workerQuestions"
                 [generated]="sitrep.generated"
+                [links]="sitrep.links ?? {}"
               />
             }
           </div>
@@ -58,14 +59,14 @@
           <div class="sr-section__head">
             <h2 class="sr-sign"><span class="sr-sign__no">02</span>Ongoing</h2>
           </div>
-          <app-ongoing-list class="sr-section__body" [tasks]="sitrep.ongoing" />
+          <app-ongoing-list class="sr-section__body" [tasks]="sitrep.ongoing" [links]="sitrep.links ?? {}" />
         </section>
         <section class="sr-section">
           <div class="sr-section__head">
             <h2 class="sr-sign"><span class="sr-sign__no">03</span>Charted next</h2>
             <span class="sr-sub">{{ chartedShown() }}</span>
           </div>
-          <app-charted-list class="sr-section__body" [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" />
+          <app-charted-list class="sr-section__body" [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" [links]="sitrep.links ?? {}" />
         </section>
       </div>
     </div>
@@ -73,7 +74,7 @@
       <div class="sr-section__head">
         <h2 class="sr-sign"><span class="sr-sign__no">04</span>Recently landed</h2>
       </div>
-      <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" [zone]="sitrep.zone" />
+      <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" />
     </section>
     <footer class="sr-foot">
       <span class="sr-meta-mono">{{ sitrep.schema }} · {{ shipMoment(sitrep.generated, sitrep.zone) }}</span>

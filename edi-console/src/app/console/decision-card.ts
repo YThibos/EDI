@@ -5,17 +5,20 @@ import { Observable } from 'rxjs';
 import { refusalOf } from './answer-sentence';
 import { ConsoleApi } from './console-api';
 import { projectsOf } from './projects';
-import { DecisionCard, GivenAnswer } from './sitrep';
+import { DecisionCard, GivenAnswer, TaskLinks } from './sitrep';
+import { LinkChips } from './link-chips';
 
 const RECONCILE = 'reconcile';
 
 @Component({
   selector: 'app-decision-card',
+  imports: [LinkChips],
   templateUrl: './decision-card.html',
   styleUrl: './decision-card.css',
 })
 export class DecisionCardView {
   readonly card = input.required<DecisionCard>();
+  readonly links = input<TaskLinks | undefined>(undefined);
   readonly settled = output<void>();
 
   private readonly api = inject(ConsoleApi);

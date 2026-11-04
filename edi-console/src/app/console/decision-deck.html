@@ -9,7 +9,7 @@
     @if (current(); as card) {
       @if (card.open; as open) {
         @for (decision of [open]; track decision.number) {
-          <app-decision-card [card]="decision" (settled)="settled.emit()" />
+          <app-decision-card [card]="decision" [links]="links()[decision.task]" (settled)="settled.emit()" />
         }
       } @else if (card.answered; as answered) {
         <app-answered-card [answer]="answered" [zone]="zone()" />
