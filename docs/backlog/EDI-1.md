@@ -9,7 +9,7 @@
 | Size | XS |
 | Blocked by | nothing |
 | Status | delivered |
-| Issue | - |
+| Issue | [#134](https://github.com/YThibos/EDI/issues/134) |
 | Cloud session | no: the check needs the captain's machine |
 
 ## Goal
