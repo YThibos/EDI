@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { Levels, PersonalityShown, personalityChange } from './personality';
 import { GivenAnswer, PresenceChoice, Sitrep } from './sitrep';
 import { AnsweredRounds, TaskDetail, TaskPageName } from './task-detail';
+import { WorkedWeek } from '../week/worked-week';
 
 const CONSOLE_REQUEST = new HttpHeaders({ 'X-EDI-Console': '1' });
 
@@ -18,6 +19,10 @@ export class ConsoleApi {
 
   task(task: string): Observable<TaskDetail> {
     return this.http.get<TaskDetail>(`/api/tasks/${encodeURIComponent(task)}`, { headers: { Accept: 'application/json' } });
+  }
+
+  week(from: string | null): Observable<WorkedWeek> {
+    return this.http.get<WorkedWeek>('/api/week', { params: from ? { from } : {}, headers: { Accept: 'application/json' } });
   }
 
   taskPage(task: string, page: TaskPageName): Observable<string> {

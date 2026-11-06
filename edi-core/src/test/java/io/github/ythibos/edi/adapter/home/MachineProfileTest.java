@@ -57,6 +57,8 @@ class MachineProfileTest {
         assertThat(tracker.baseUrl()).hasToString("https://jira.example.org");
         assertThat(tracker.credentials()).isEqualTo(new TrackerSettings.Credentials(Path.of("/path/to/tracker-keys.yml"), "JIRA"));
         assertThat(tracker.evergreen()).containsExactlyInAnyOrder(WorkKey.parse("EXAMPLE-1"), WorkKey.parse("EXAMPLE-2"));
+        assertThat(tracker.evergreenTicket("tooling")).contains(WorkKey.parse("EXAMPLE-2"));
+        assertThat(tracker.evergreenTicket("travel")).isEmpty();
         assertThat(tracker.mergedStatus()).isEqualTo("In Test");
         assertThat(profile.time()).isEqualTo(new TimeSettings(true, true));
     }

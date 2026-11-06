@@ -72,3 +72,4 @@ When the console must run without the core, more than a few pages stay open, the
 - 03/11/2026: the page held almost everything for one-click navigation without rendering it, so every row gained link chips and a task's report a read-only page (EDI-57).
 - 04/11/2026: merging EDI-63 into the views, the count and the notifications follow the captain to Fleet and Week, counted onto the title of the view on screen (EDI-58).
 - 04/11/2026: the captain's one-glance sitrep gained the task panel he chose in D41, opening over the right-hand columns at `/task/<id>` with the task's record, brief, report and board rounds, read-only (EDI-59).
+- 06/11/2026: the Week view reads `GET /api/week`, the current week by default and the week its `from` names otherwise, and its address keeps the week shown (EDI-62).

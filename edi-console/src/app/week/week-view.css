@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.sr-weekhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.sr-weekhead__steps {
+  display: flex;
+  gap: 8px;
+}
+
+.sr-weekhead__step {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+}
+
+.sr-weekhead__step:hover,
+.sr-weekhead__step:focus-visible {
+  color: var(--text-hi);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.sr-weeknote {
+  margin: 8px 0 0;
+  white-space: normal;
+}

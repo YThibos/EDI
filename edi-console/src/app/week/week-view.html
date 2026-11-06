@@ -1,0 +1,30 @@
+<app-console-header
+  view="Week"
+  [generated]="reading.sitrep()?.generated ?? null"
+  [zone]="reading.sitrep()?.zone ?? null"
+  [machine]="reading.sitrep()?.machine ?? null"
+  [presence]="reading.sitrep()?.presence ?? null"
+  [waiting]="reading.waiting()"
+  [showsPersonality]="false"
+  (presenceChosen)="reading.choosePresence($event)"
+  (awayChosen)="reading.goAway($event)"
+/>
+<main class="sr-main">
+  <app-access-notice [access]="reading.access()">
+    @if (week(); as week) {
+      <section class="sr-section">
+        <div class="sr-section__head sr-weekhead">
+          <h2 class="sr-sign">Week of {{ dayOf(week.from) }}</h2>
+          <nav class="sr-weekhead__steps" aria-label="Weeks">
+            <a class="sr-weekhead__step" routerLink="/week" [queryParams]="{ from: weekAround(week.from, -1) }">Week before</a>
+            @if (week.from < week.thisWeek) {
+              <a class="sr-weekhead__step" routerLink="/week" [queryParams]="{ from: weekAround(week.from, 1) }">Week after</a>
+            }
+          </nav>
+        </div>
+        <app-week-table [week]="week" />
+        <p class="sr-meta-mono sr-weeknote">Active of wall-clock time per day in {{ week.zone }}; Copy puts a task's days on the clipboard as timesheet lines.</p>
+      </section>
+    }
+  </app-access-notice>
+</main>

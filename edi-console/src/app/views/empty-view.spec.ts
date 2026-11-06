@@ -66,7 +66,7 @@ describe('The views', () => {
     vi.unstubAllGlobals();
   });
 
-  it('opens Fleet and Week by their addresses as empty views that still count what waits on the captain', async () => {
+  it('opens Fleet by its address as an empty view, and Week as the week, both still counting what waits on the captain', async () => {
     const harness = await RouterTestingHarness.create();
 
     await harness.navigateByUrl('/fleet');
@@ -87,7 +87,12 @@ describe('The views', () => {
     harness.detectChanges();
     await harness.fixture.whenStable();
 
-    expect((harness.routeNativeElement as HTMLElement).querySelector('.sr-notice__title')?.textContent).toBe('Week');
+    http.expectOne((request) => request.url === '/api/week').flush({ from: '2026-10-12', thisWeek: '2026-10-12', zone: 'Europe/Brussels', days: [], tasks: [] });
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect((harness.routeNativeElement as HTMLElement).querySelector('.sr-notice__title')).toBeNull();
+    expect((harness.routeNativeElement as HTMLElement).querySelector('h2.sr-sign')?.textContent).toBe('Week of 12 October 2026');
     expect(page.querySelector('.sr-view__count')).toBeNull();
   });
 
