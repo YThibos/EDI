@@ -3,7 +3,9 @@ package io.github.ythibos.edi.adapter.home;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import io.github.ythibos.edi.domain.Refusal;
@@ -15,18 +17,18 @@ public record TrackerSettings(
         TrackerKind kind,
         URI baseUrl,
         Credentials credentials,
-        Set<WorkKey> evergreen,
+        Map<String, WorkKey> evergreenTickets,
         Workflow workflow,
         String mergedStatus,
         String issueType,
         String epicLinkField) {
 
     private static final String LOOPBACK = "127.0.0.1";
-    private static final TrackerSettings NONE = new TrackerSettings(TrackerKind.NONE, null, null, Set.of(), null, null, null, null);
+    private static final TrackerSettings NONE = new TrackerSettings(TrackerKind.NONE, null, null, Map.of(), null, null, null, null);
 
     public TrackerSettings {
         Objects.requireNonNull(kind, "The machine profile names its tracker.");
-        evergreen = Set.copyOf(evergreen);
+        evergreenTickets = Map.copyOf(evergreenTickets);
         if (kind == TrackerKind.EDI || kind == TrackerKind.GITHUB) {
             throw new IllegalArgumentException("tracker.kind is jira or none: EDI-native keys and issue-number keys need no tracker on the machine.");
         }
@@ -41,6 +43,14 @@ public record TrackerSettings(
 
     public static TrackerSettings none() {
         return NONE;
+    }
+
+    public Set<WorkKey> evergreen() {
+        return Set.copyOf(evergreenTickets.values());
+    }
+
+    public Optional<WorkKey> evergreenTicket(String role) {
+        return Optional.ofNullable(evergreenTickets.get(role));
     }
 
     public boolean isJira() {

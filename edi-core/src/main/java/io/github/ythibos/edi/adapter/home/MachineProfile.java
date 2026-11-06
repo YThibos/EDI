@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -263,12 +262,13 @@ public class MachineProfile {
                 return TrackerSettings.none();
             }
             return new TrackerSettings(trackerKind, baseUrl == null ? null : URI.create(baseUrl.strip()),
-                    credentials == null ? null : credentials.asCredentials(), evergreenKeys(), workflow == null ? null : new Workflow(workflow),
+                    credentials == null ? null : credentials.asCredentials(), evergreenTickets(), workflow == null ? null : new Workflow(workflow),
                     mergedStatus, issueType, epicLinkField);
         }
 
-        private Set<WorkKey> evergreenKeys() {
-            return Objects.requireNonNullElse(evergreen, Map.<String, String>of()).values().stream().map(WorkKey::parse).collect(Collectors.toSet());
+        private Map<String, WorkKey> evergreenTickets() {
+            return Objects.requireNonNullElse(evergreen, Map.<String, String>of()).entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, ticket -> WorkKey.parse(ticket.getValue())));
         }
     }
 
