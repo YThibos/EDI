@@ -69,6 +69,10 @@ class Tmux {
         return tmux(List.of("capture-pane", "-p", "-t", windowId)).lines().toList();
     }
 
+    List<String> visibleLinesWithColours(String windowId) {
+        return tmux(List.of("capture-pane", "-p", "-e", "-t", windowId)).lines().toList();
+    }
+
     void typeLiterally(String windowId, String text) {
         tmux(List.of("send-keys", "-t", windowId, "-l", "--", text));
     }

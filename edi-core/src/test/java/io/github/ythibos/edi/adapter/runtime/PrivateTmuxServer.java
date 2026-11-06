@@ -73,6 +73,14 @@ public final class PrivateTmuxServer implements AutoCloseable {
         return window;
     }
 
+    public WorkerWindow windowPrinting(String text, Path directory) {
+        Tmux.OpenedWindow opened = tmux.openWindow("printing", directory, Map.of(), List.of("sh", "-c", "printf '%b' \"$0\"; exec cat", text));
+        Tmux.ServerIdentity server = tmux.server();
+        WorkerWindow window = new WorkerWindow(tmux.socket(), server.pid(), server.startedAt(), opened.windowId(), opened.panePid());
+        awaitLines(window, lines -> lines.stream().anyMatch(line -> !line.isBlank()));
+        return window;
+    }
+
     public List<String> visibleLines(WorkerWindow window) {
         return tmux.visibleLines(window.windowId());
     }

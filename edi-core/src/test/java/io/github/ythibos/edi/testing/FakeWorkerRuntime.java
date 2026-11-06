@@ -28,6 +28,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final List<String> typedLines = new ArrayList<>();
     private final Set<UUID> sessionsWithoutATranscript = new HashSet<>();
     private PaneState pane = PaneState.IDLE_PROMPT;
+    private List<String> mirrored = List.of("\u001b[1m❯\u001b[0m");
+    private int mirrors;
     private boolean paneFails;
     private boolean serverRunning = true;
     private long serverPid = 4242;
@@ -84,6 +86,23 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     @Override
     public synchronized PaneReading peek(WorkerWindow window) {
         return new PaneReading(pane, List.of("❯"));
+    }
+
+    @Override
+    public synchronized List<String> mirror(WorkerWindow window) {
+        mirrors++;
+        if (!openWindows.contains(window.windowId())) {
+            throw new Refusal("The worker's tmux window " + window.windowId() + " is no longer on the " + window.socket() + " server.");
+        }
+        return mirrored;
+    }
+
+    public synchronized int mirrors() {
+        return mirrors;
+    }
+
+    public synchronized void showsInThePane(List<String> lines) {
+        mirrored = List.copyOf(lines);
     }
 
     @Override
