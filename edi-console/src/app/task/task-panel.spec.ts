@@ -35,6 +35,7 @@ const LAMP: TaskDetail = {
   },
   delivery: { address: { number: 12 }, draft: true, state: 'open' },
   worked: { active: 'PT1H5M', wallClock: 'PT3H' },
+  cost: null,
   timeline: [
     { sequence: 1, at: '2026-10-15T06:00:00Z', actor: 'primary', type: 'TaskAdded' },
     { sequence: 2, at: '2026-10-15T06:10:00Z', actor: 'worker:fit-lamp#1', type: 'DecisionRaised' },
@@ -190,7 +191,7 @@ describe('TaskPanel', () => {
 
     expect(requests.map((request) => request.request.method)).toEqual(['GET', 'GET', 'GET']);
     expect(panel.querySelectorAll('input, textarea, select, form')).toHaveLength(0);
-    expect(texts(panel, 'button')).toEqual(['Close', 'Timeline', 'Decisions', 'Brief', 'Report', 'Board rounds']);
+    expect(texts(panel, 'button')).toEqual(['Close', 'Timeline', 'Live', 'Decisions', 'Brief', 'Report', 'Board rounds']);
   });
 
   let harness: RouterTestingHarness;

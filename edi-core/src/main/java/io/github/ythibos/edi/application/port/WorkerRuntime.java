@@ -34,6 +34,8 @@ public interface WorkerRuntime {
 
     PaneReading peek(WorkerWindow window);
 
+    List<String> mirror(WorkerWindow window);
+
     void press(WorkerWindow window, Keystroke keystroke);
 
     void close(WorkerWindow window);

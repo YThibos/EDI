@@ -19,6 +19,7 @@ export interface TaskDetail {
   decision: TaskDecision | null;
   delivery: { address: { number: number }; draft: boolean; state: string } | null;
   worked: { active: string; wallClock: string } | null;
+  cost: { workers: TokenUsage; pipeline: TokenUsage } | null;
   timeline: TimelineEvent[];
 }
 
@@ -52,3 +53,15 @@ export interface AnsweredRounds {
 }
 
 export type TaskPageName = 'brief' | 'report';
+
+export interface TokenUsage {
+  input: number;
+  cacheRead: number;
+  cacheWrite: number;
+  output: number;
+}
+
+export interface WorkerDetail {
+  worker: { id: string; route: { model: string; effort: string }; activity: string };
+  steers: { number: number; body: string; createdAt: string; acknowledgedAt: string | null }[];
+}
