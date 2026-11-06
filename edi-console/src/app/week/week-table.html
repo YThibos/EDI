@@ -30,7 +30,7 @@
                 }
               </td>
             }
-            <td class="sr-week__day sr-week__active">{{ hoursAndMinutes(totalActive(task)) }}</td>
+            <td class="sr-week__day sr-week__total">{{ hoursAndMinutes(totalActive(task)) }}</td>
             <td>
               <button type="button" class="sr-week__copy" (click)="copy(task)" [title]="'Copy the timesheet lines of ' + task.title">
                 {{ copied() === task.task ? 'Copied' : 'Copy' }}

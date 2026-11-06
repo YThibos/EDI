@@ -52,6 +52,11 @@
   color: var(--text-hi);
 }
 
+.sr-week__total {
+  font-weight: 600;
+  color: var(--text-hi);
+}
+
 .sr-week__wall {
   display: block;
   font-size: var(--fs-xs);
