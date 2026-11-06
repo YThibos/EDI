@@ -376,6 +376,7 @@ class ConsoleApiTest {
         HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/week?from=2026-10-12", "application/json").GET());
         HttpResponse<String> toTheWorker = send(withToken(worker, "/api/week?from=2026-10-12", "application/json").GET());
         HttpResponse<String> noDay = send(withTheCookie("/api/week?from=Monday", cookie, "application/json").GET());
+        HttpResponse<String> thisWeek = send(withTheCookie("/api/week", cookie, "application/json").GET());
 
         assertThat(shown.statusCode()).isEqualTo(200);
         assertThat(shown.body()).contains("\"from\":\"2026-10-12\"", "\"days\":[\"2026-10-12\",", "\"2026-10-18\"]", "\"tasks\":[");
@@ -383,6 +384,8 @@ class ConsoleApiTest {
         assertThat(toTheWorker.statusCode()).isEqualTo(403);
         assertThat(toTheWorker.body()).isEqualTo("The week's worked time is the primary's and the captain's to read; a worker reads its brief and edi inbox.\n");
         assertThat(noDay.statusCode()).isEqualTo(400);
+        assertThat(thisWeek.statusCode()).isEqualTo(200);
+        assertThat(thisWeek.body()).matches("\\{\"from\":\"(\\d{4}-\\d{2}-\\d{2})\",\"thisWeek\":\"\\1\",.*");
     }
 
     @Test

@@ -7,7 +7,7 @@ import java.util.List;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 
-public record WorkedWeek(LocalDate from, ZoneId zone, List<LocalDate> days, List<WorkedTask> tasks) {
+public record WorkedWeek(LocalDate from, LocalDate thisWeek, ZoneId zone, List<LocalDate> days, List<WorkedTask> tasks) {
 
     public WorkedWeek {
         days = List.copyOf(days);

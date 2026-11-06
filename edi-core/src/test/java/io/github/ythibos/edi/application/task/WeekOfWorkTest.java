@@ -75,6 +75,16 @@ class WeekOfWorkTest {
     }
 
     @Test
+    void startsThisWeekOnTheMondayOfTheMachinesDayAndNamesItOnEveryWeek() {
+        WorkedWeek thisWeek = home.weekOfWork().thisWeek();
+        WorkedWeek weekBefore = home.weekOfWork().from(MONDAY.minusWeeks(1));
+
+        assertThat(thisWeek.from()).isEqualTo(MONDAY);
+        assertThat(thisWeek.thisWeek()).isEqualTo(MONDAY);
+        assertThat(weekBefore.thisWeek()).isEqualTo(MONDAY);
+    }
+
+    @Test
     void leavesOutATaskWithNoActiveTimeInTheWeek() {
         WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/SVC-40").reported(StatusState.WORKING, null, "SVC-40 started").after(Duration.ofMinutes(20));
 

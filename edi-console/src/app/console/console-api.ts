@@ -21,8 +21,8 @@ export class ConsoleApi {
     return this.http.get<TaskDetail>(`/api/tasks/${encodeURIComponent(task)}`, { headers: { Accept: 'application/json' } });
   }
 
-  week(from: string): Observable<WorkedWeek> {
-    return this.http.get<WorkedWeek>('/api/week', { params: { from }, headers: { Accept: 'application/json' } });
+  week(from: string | null): Observable<WorkedWeek> {
+    return this.http.get<WorkedWeek>('/api/week', { params: from ? { from } : {}, headers: { Accept: 'application/json' } });
   }
 
   taskPage(task: string, page: TaskPageName): Observable<string> {

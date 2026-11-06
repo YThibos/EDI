@@ -1,8 +1,10 @@
 package io.github.ythibos.edi.application.task;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -41,14 +43,22 @@ public class WeekOfWork {
         this.transaction = transaction;
     }
 
+    public WorkedWeek thisWeek() {
+        return from(mondayOfThisWeek());
+    }
+
     public WorkedWeek from(LocalDate first) {
         ZoneId zone = clock.zone();
         List<LocalDate> days = IntStream.range(0, DAYS).mapToObj(first::plusDays).toList();
         Instant now = clock.now();
-        return transaction.execute(_ -> new WorkedWeek(first, zone, days, tasks.ids().stream()
+        return transaction.execute(_ -> new WorkedWeek(first, mondayOfThisWeek(), zone, days, tasks.ids().stream()
                 .map(tasks::get)
                 .flatMap(task -> workedIn(task, days, zone, now).stream())
                 .toList()));
+    }
+
+    private LocalDate mondayOfThisWeek() {
+        return LocalDate.ofInstant(clock.now(), clock.zone()).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 
     private Optional<WorkedWeek.WorkedTask> workedIn(Task task, List<LocalDate> days, ZoneId zone, Instant now) {

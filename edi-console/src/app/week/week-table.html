@@ -9,6 +9,7 @@
             <th scope="col" class="sr-week__day">{{ dayName(day) }}</th>
           }
           <th scope="col" class="sr-week__day">Week</th>
+          <th scope="col"><span class="sr-week__hidden">Timesheet</span></th>
         </tr>
       </thead>
       <tbody>
@@ -30,6 +31,11 @@
               </td>
             }
             <td class="sr-week__day sr-week__active">{{ hoursAndMinutes(totalActive(task)) }}</td>
+            <td>
+              <button type="button" class="sr-week__copy" (click)="copy(task)" [title]="'Copy the timesheet lines of ' + task.title">
+                {{ copied() === task.task ? 'Copied' : 'Copy' }}
+              </button>
+            </td>
           </tr>
         }
       </tbody>

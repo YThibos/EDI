@@ -21,8 +21,8 @@ class WeekController {
     }
 
     @GetMapping("/api/week")
-    WorkedWeek week(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from, Caller caller) {
+    WorkedWeek week(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from, Caller caller) {
         caller.requireThePrimaryOrTheCaptain("The week's worked time");
-        return week.from(from);
+        return from == null ? week.thisWeek() : week.from(from);
     }
 }
