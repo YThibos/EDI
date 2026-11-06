@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.ythibos.edi.application.task.WeekOfWork;
 import io.github.ythibos.edi.application.task.WorkedWeek;
 import io.github.ythibos.edi.web.access.Caller;
-import io.github.ythibos.edi.web.access.NotPermitted;
 
 @RestController
 class WeekController {
@@ -23,9 +22,7 @@ class WeekController {
 
     @GetMapping("/api/week")
     WorkedWeek week(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from, Caller caller) {
-        if (caller instanceof Caller.WorkerCaller) {
-            throw new NotPermitted("The week's worked time is the primary's and the captain's to read; a worker reports through edi status.");
-        }
+        caller.requireThePrimaryOrTheCaptain("The week's worked time");
         return week.from(from);
     }
 }

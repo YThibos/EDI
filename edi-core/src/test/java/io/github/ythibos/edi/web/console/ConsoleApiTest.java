@@ -381,7 +381,7 @@ class ConsoleApiTest {
         assertThat(shown.body()).contains("\"from\":\"2026-10-12\"", "\"days\":[\"2026-10-12\",", "\"2026-10-18\"]", "\"tasks\":[");
         assertThat(toThePrimary.statusCode()).isEqualTo(200);
         assertThat(toTheWorker.statusCode()).isEqualTo(403);
-        assertThat(toTheWorker.body()).isEqualTo("The week's worked time is the primary's and the captain's to read; a worker reports through edi status.\n");
+        assertThat(toTheWorker.body()).isEqualTo("The week's worked time is the primary's and the captain's to read; a worker reads its brief and edi inbox.\n");
         assertThat(noDay.statusCode()).isEqualTo(400);
     }
 
