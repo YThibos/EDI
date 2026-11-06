@@ -1,0 +1,24 @@
+<div class="sr-live">
+  <dl class="sr-live__facts">
+    @if (worker(); as worker) {
+      <div><dt>Worker</dt><dd>{{ worker.worker.id }} · {{ worker.worker.activity }}</dd></div>
+      <div><dt>Model</dt><dd>{{ worker.worker.route.model }}</dd></div>
+      <div><dt>Effort</dt><dd>{{ worker.worker.route.effort }}</dd></div>
+    }
+    @if (tokens() !== null) {
+      <div><dt>Tokens</dt><dd>{{ tokens()?.toLocaleString('en-GB') }}</dd></div>
+    }
+    @if (detail()?.worked; as worked) {
+      <div><dt>Active</dt><dd>{{ durationOf(worked.active) }} of {{ durationOf(worked.wallClock) }}</dd></div>
+    }
+    <div><dt>Context</dt><dd>on the pane's status line</dd></div>
+  </dl>
+  @for (steer of waitingSteers(); track steer.number) {
+    <p class="sr-live__steer"><span class="sr-row__key">steer {{ steer.number }}</span> waiting: {{ steer.body }}</p>
+  }
+  @if (ended(); as why) {
+    <div class="sr-empty">{{ why }}</div>
+  }
+  <pre class="sr-live__pane" aria-label="The worker's pane, read-only" aria-live="off">@for (line of lines(); track $index) {<span class="sr-live__line">@for (segment of line; track $index) {<span [style.color]="segment.colour" [style.background-color]="segment.background" [class.sr-live__bold]="segment.bold" [class.sr-live__dim]="segment.dim">{{ segment.text }}</span>}</span>
+}</pre>
+</div>
