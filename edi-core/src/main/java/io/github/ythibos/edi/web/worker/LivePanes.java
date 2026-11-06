@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.ContextClosedEvent;
@@ -46,7 +47,7 @@ class LivePanes implements AutoCloseable {
         emitter.onTimeout(emitter::complete);
         emitter.onError(_ -> pane.stop());
         live.add(pane);
-        pane.ticks = captures.scheduleWithFixedDelay(pane::capture, 0, EVERY.toMillis(), TimeUnit.MILLISECONDS);
+        pane.ticks.set(captures.scheduleWithFixedDelay(pane::capture, 0, EVERY.toMillis(), TimeUnit.MILLISECONDS));
         return emitter;
     }
 
@@ -68,7 +69,7 @@ class LivePanes implements AutoCloseable {
 
         private final Worker worker;
         private final SseEmitter emitter;
-        private volatile ScheduledFuture<?> ticks;
+        private final AtomicReference<ScheduledFuture<?>> ticks = new AtomicReference<>();
         private volatile boolean stopped;
         private List<String> shown;
 
@@ -110,8 +111,9 @@ class LivePanes implements AutoCloseable {
 
         private void stop() {
             stopped = true;
-            if (ticks != null) {
-                ticks.cancel(false);
+            ScheduledFuture<?> scheduled = ticks.get();
+            if (scheduled != null) {
+                scheduled.cancel(false);
             }
             if (live.remove(this)) {
                 events.publishEvent(new LivePaneStopped(worker.id().task()));

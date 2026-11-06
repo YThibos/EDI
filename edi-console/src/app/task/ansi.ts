@@ -15,8 +15,9 @@ interface Pen {
 
 const BASIC = ['#1c2a52', '#ff6479', '#3ee0a1', '#ffb84d', '#7aa7ff', '#8f7dff', '#56c8ff', '#b9c6ea'];
 const BRIGHT = ['#65739f', '#ff8597', '#6ff0bd', '#ffd08a', '#a3c2ff', '#b3a6ff', '#8ad9ff', '#eaf0ff'];
-const SGR = /\u001b\[([0-9;]*)m/g;
-const OTHER_ESCAPES = /\u001b\[[0-9;?]*[A-Za-ln-z]|\u001b[()][0-9A-Za-z]|\u001b[=>]/g;
+const ESCAPE = String.fromCharCode(27);
+const SGR = new RegExp(`${ESCAPE}\\[([0-9;]*)m`, 'g');
+const OTHER_ESCAPES = new RegExp(`${ESCAPE}\\[[0-9;?]*[A-Za-ln-z]|${ESCAPE}[()][0-9A-Za-z]|${ESCAPE}[=>]`, 'g');
 
 export function segmentsOf(line: string): Segment[] {
   const segments: Segment[] = [];
