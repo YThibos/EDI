@@ -12,7 +12,7 @@ On the captain's 1920 by 1080 laptop screen, at 100% and 125% scaling, the first
 
 The console uses the approved skin: deep-space navy, an ion-blue signal colour, amber for anything waiting on the captain, green for nominal and red for trouble, with Exo 2, Inter and JetBrains Mono; dark only, its colour tokens fixed in `edi-console/src/styles.css`.
 Dark-proofing is the `color-scheme` and `darkreader-lock` meta tags, `data-theme="dark"` and `:root { color-scheme: dark }`, and nothing more.
-The console is a zoneless Angular application of standalone components driven by signals; the sitrep page is composed of `ConsoleHeader`, `AccessNotice`, `HudStrip`, `DecisionDeck` with `DecisionCardView` and `AnsweredCard`, `OngoingList`, `ChartedList`, `LandedList`, the waiting list and `PersonalityDesk`, every class prefixed `sr-`.
+The console is a zoneless Angular application of standalone components driven by signals; the sitrep page is composed of `ConsoleHeader`, `AccessNotice`, `HudStrip`, `DecisionDeck` with `DecisionCardView` and `AnsweredCard`, `OngoingList`, `ChartedList`, `LandedList`, the waiting list and `PersonalityDesk`, with `TaskPanel` routed over it, every class prefixed `sr-`.
 The header's subtitle beside the EDI wordmark names the view on screen, as wide as its longest name, Sign in; the Sitrep, Fleet and Week tabs follow it in the mono face, the active one in ion and the Sitrep tab with the waiting count in an amber pill, while the presence sits beside the clock, so the tabs keep their place across views and on signing in.
 Fleet and Week are an `EmptyView` under the same header and `AccessNotice` until their items fill them.
 The personality desk opens from a Personality latch beside the presence buttons, on the Sitrep view only, and sits above the HUD strip while it is open, pushing the glance down the page; its sliders take the ion-blue fill up to the thumb's centre over a line-coloured track, and below 761 pixels its sample moves under the sliders.
@@ -21,6 +21,7 @@ The browser tab shows EDI's mainframe hologram as an original drawing: a dotted 
 Before every build `edi-console/render-icons.mjs` renders it with resvg into `favicon-32.png` and the 180-pixel `apple-touch-icon.png`, which `index.html` names beside the SVG; research boards stay in Lavish ([research-boards](research-boards.md)), so only the console's pages carry the icon.
 The three font families are bundled from the open-source `@fontsource` packages, latin subsets of the weights used, and served by the core.
 The page shows the HUD strip, then three columns side by side, needs your decision, ongoing and charted next, with recently landed below at full width; from 1200 CSS pixels wide the strip and columns fit the viewport's height, and a column taller than its share scrolls inside itself.
+From 1200 CSS pixels wide the task panel covers the ongoing and charted columns and leaves the decision column beside it, the three columns placed explicitly so the panel overlaps them; narrower, the panel takes the whole page.
 Narrower, the deck takes the left column and the lists stack on the right; below 761 pixels everything is one column, and at phone width the gutters drop to 16 pixels with no horizontal scroll.
 The charted list has no dispatch picker, because the console's only writes are answers, re-checks, presence and the personality ([console](console.md)).
 
@@ -61,3 +62,4 @@ When the captain asks for a different look, reads the sitrep on a screen of anot
 - 03/11/2026: the header gained Sitrep, Fleet and Week tabs in the mono face, the active one in ion, the Sitrep tab with the waiting count in an amber pill; Fleet and Week are `EmptyView` until EDI-61 and EDI-62 fill them (EDI-58).
 - 04/11/2026: the subtitle beside the EDI wordmark names the view on screen, Sitrep, Fleet, Week or Sign in, as the tab title does (EDI-58).
 - 04/11/2026: the subtitle takes the width of its longest name, Sign in, and the tabs hold beside the brand with the presence beside the clock, so the tabs keep their place across views and on signing in (EDI-58).
+- 04/11/2026: the task panel opens over the ongoing and charted columns from 1200 pixels wide, keeping the decision column in sight, and takes the page below that (EDI-59).

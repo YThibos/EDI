@@ -52,6 +52,12 @@ public sealed interface Caller {
         }
     }
 
+    default void requireThePrimaryOrTheCaptain(String request) {
+        if (this instanceof WorkerCaller) {
+            throw new NotPermitted(request + " is the primary's and the captain's to read; a worker reads its brief and edi inbox.");
+        }
+    }
+
     default void requireTheCaptain(String request) {
         if (!(this instanceof Captain)) {
             throw new NotPermitted(request + " is the captain's, given in the EDI console.");

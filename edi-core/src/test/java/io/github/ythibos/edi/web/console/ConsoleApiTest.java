@@ -210,9 +210,10 @@ class ConsoleApiTest {
         HttpResponse<String> signIn = send(HttpRequest.newBuilder(uri("/login")).GET());
         HttpResponse<String> fleet = send(HttpRequest.newBuilder(uri("/fleet")).GET());
         HttpResponse<String> week = send(HttpRequest.newBuilder(uri("/week")).GET());
+        HttpResponse<String> task = send(HttpRequest.newBuilder(uri("/task/fit-lamp")).GET());
 
-        assertThat(Stream.of(fleet, week).map(HttpResponse::body)).allSatisfy(body -> assertThat(body).contains("<app-root></app-root>"));
-        Stream.of(console, signIn, fleet, week).forEach(page -> {
+        assertThat(Stream.of(fleet, week, task).map(HttpResponse::body)).allSatisfy(body -> assertThat(body).contains("<app-root></app-root>"));
+        Stream.of(console, signIn, fleet, week, task).forEach(page -> {
             assertThat(page.statusCode()).isEqualTo(200);
             assertThat(page.headers().firstValue("Cache-Control")).contains("no-cache");
             assertThat(page.headers().firstValue("Last-Modified")).isEmpty();
@@ -364,6 +365,23 @@ class ConsoleApiTest {
         assertThat(noBrief.statusCode()).isEqualTo(404);
         assertThat(noBrief.body()).isEqualTo("cave-map has no brief yet.\n");
         assertThat(toTheWorker.statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void servesATasksDetailToTheConsoleAndThePrimaryAndRefusesAWorker() throws Exception {
+        String cookie = signedInCookie();
+        String worker = workerTokenFor("lamp-panel");
+        post(withTheHomeToken("/api/tasks", TEXT), "{\"id\":\"lamp-room\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Paint the lamp room\",\"key\":\"HRN-7\"}");
+
+        HttpResponse<String> shown = send(withTheCookie("/api/tasks/lamp-room", cookie, "application/json").GET());
+        HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/tasks/lamp-room", "application/json").GET());
+        HttpResponse<String> toTheWorker = send(withToken(worker, "/api/tasks/lamp-room", "application/json").GET());
+
+        assertThat(shown.statusCode()).isEqualTo(200);
+        assertThat(shown.body()).contains("\"id\":\"lamp-room\"", "\"title\":\"Paint the lamp room\"", "\"workKey\":\"HRN-7\"", "\"timeline\":[");
+        assertThat(toThePrimary.statusCode()).isEqualTo(200);
+        assertThat(toTheWorker.statusCode()).isEqualTo(403);
+        assertThat(toTheWorker.body()).isEqualTo("A task's whole record is the primary's and the captain's to read; a worker reads its brief and edi inbox.\n");
     }
 
     @Test

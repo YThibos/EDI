@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { OngoingList } from './ongoing-list';
 import { OngoingTask } from './sitrep';
@@ -20,6 +21,7 @@ describe('OngoingList', () => {
   let fixture: ComponentFixture<OngoingList>;
 
   beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(OngoingList);
   });
 
