@@ -1,0 +1,124 @@
+<div class="sr-task">
+  <header class="sr-task__head">
+    <div class="sr-task__heading">
+      <span class="sr-meta-mono">{{ task() }}</span>
+      <h2 class="sr-task__title">{{ title() }}</h2>
+    </div>
+    <button type="button" class="sr-task__close" (click)="close()" aria-label="Close the panel" title="Close (Esc)">Close</button>
+  </header>
+  @if (detail().refusal; as refusal) {
+    <div class="sr-empty">{{ refusal }}</div>
+  }
+  @if (detail().value; as detail) {
+    <dl class="sr-task__facts">
+      <div><dt>Kind</dt><dd>{{ detail.task.intake.kind }}</dd></div>
+      <div><dt>State</dt><dd><span class="sr-badge" [class]="'sr-badge--' + toneOf(detail.task.state)"><span class="sr-badge__dot"></span>{{ detail.task.state }}</span></dd></div>
+      <div><dt>Projects</dt><dd>{{ projectsOf(detail.task.intake.projects, detail.task.id) }}</dd></div>
+      @if (detail.task.intake.workKey; as key) {
+        <div><dt>Work key</dt><dd>{{ key }}</dd></div>
+      }
+      @if (detail.task.intake.base; as base) {
+        <div><dt>Base</dt><dd>{{ base }}</dd></div>
+      }
+      @if (detail.blockers.length) {
+        <div><dt>Blocked by</dt><dd>{{ blockersOf(detail) }}</dd></div>
+      }
+      @if (detail.task.hold; as hold) {
+        <div><dt>Held</dt><dd>{{ hold.reason }}, until {{ hold.until ?? 'released' }}</dd></div>
+      }
+      @if (detail.delivery; as delivery) {
+        <div><dt>Request</dt><dd>#{{ delivery.address.number }} · {{ delivery.state }}{{ delivery.draft ? ' · draft' : '' }}</dd></div>
+      }
+      @if (detail.worked; as worked) {
+        <div><dt>Worked</dt><dd>active {{ durationOf(worked.active) }} of {{ durationOf(worked.wallClock) }}</dd></div>
+      }
+      <div><dt>Added</dt><dd>{{ shipMoment(detail.task.created, zone()) }}</dd></div>
+    </dl>
+  }
+  <app-link-chips [links]="links()" />
+  <nav class="sr-task__tabs" aria-label="The task's record">
+    @for (shown of tabs; track shown.tab) {
+      <button type="button" class="sr-task__tab" [class.sr-task__tab--on]="tab() === shown.tab" [attr.aria-pressed]="tab() === shown.tab" (click)="choose(shown.tab)">
+        {{ shown.name }}
+      </button>
+    }
+  </nav>
+  <section class="sr-task__body">
+    @switch (tab()) {
+      @case ('timeline') {
+        @if (detail().value; as detail) {
+          <ol class="sr-task__timeline">
+            @for (event of detail.timeline; track event.sequence) {
+              <li><span class="sr-meta-mono">{{ shipMoment(event.at, zone()) }}</span> {{ wordsOf(event.type) }} <span class="sr-task__actor">· {{ event.actor }}</span></li>
+            } @empty {
+              <li class="sr-empty">Nothing has happened to this task yet.</li>
+            }
+          </ol>
+        }
+      }
+      @case ('decisions') {
+        @if (detail().value?.decision; as decision) {
+          <article class="sr-task__decision">
+            <h3><span class="sr-row__key">{{ decision.number }}</span> {{ decision.card.title }}</h3>
+            @if (decision.card.context) {
+              <p>{{ decision.card.context }}</p>
+            }
+            <ul>
+              @for (option of decision.card.options; track option.key) {
+                <li [class.sr-task__chosen]="decision.answer?.option === option.key"><b>{{ option.key }}</b> {{ option.text }}</li>
+              }
+            </ul>
+            @if (decision.card.recommendation; as recommended) {
+              <p class="sr-row__sub">I recommended {{ recommended.key }}: {{ recommended.why }}</p>
+            }
+            @if (decision.answer; as answer) {
+              <p class="sr-row__sub">Answered "{{ answer.verbatim }}" in the {{ answer.channel }}, {{ shipMoment(answer.answeredAt, zone()) }}</p>
+            } @else {
+              <p class="sr-row__sub">Waiting on your answer since {{ shipMoment(decision.raisedAt, zone()) }}</p>
+            }
+          </article>
+        } @else {
+          <div class="sr-empty">This task has no decision.</div>
+        }
+        @if ((links()?.decisions ?? []).length > 1) {
+          <p class="sr-row__sub">Its decisions: {{ links()?.decisions?.join(', ') }}</p>
+        }
+      }
+      @case ('board') {
+        @if (rounds().refusal; as refusal) {
+          <div class="sr-empty">{{ refusal }}</div>
+        }
+        @if (rounds().value; as rounds) {
+          @for (round of rounds.rounds; track round.number) {
+            <article class="sr-task__round">
+              <h3>Round {{ round.number }} · answered {{ shipMoment(round.answeredAt, zone()) }}</h3>
+              <ul>
+                @for (answer of round.answers; track $index) {
+                  <li>
+                    @if (answer.decision) {
+                      <span class="sr-row__key">{{ answer.decision }}</span>
+                    }
+                    {{ answer.option ?? '' }} "{{ answer.verbatim }}"
+                    @if (answer.refusedBecause) {
+                      <span class="sr-row__sub">· not taken: {{ answer.refusedBecause }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </article>
+          } @empty {
+            <div class="sr-empty">No board round of this task is answered yet.</div>
+          }
+        }
+      }
+      @default {
+        @if (page().refusal; as refusal) {
+          <div class="sr-empty">{{ refusal }}</div>
+        }
+        @if (page().value; as html) {
+          <div class="sr-task__page" [innerHTML]="html"></div>
+        }
+      }
+    }
+  </section>
+</div>

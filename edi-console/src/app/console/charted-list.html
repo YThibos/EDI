@@ -3,7 +3,7 @@
     @for (charted of tasks(); track charted.task) {
       <div class="sr-row">
         <div class="sr-row__main">
-          <div class="sr-row__title">{{ charted.title }}</div>
+          <div class="sr-row__title"><a class="sr-row__open" [routerLink]="['/task', charted.task]">{{ charted.title }}</a></div>
           <div class="sr-row__sub">
             @if (charted.waiting) {
               {{ charted.waiting }} ·

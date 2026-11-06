@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
 import { AccessNotice } from '../console/access-notice';
 import { ChartedList } from '../console/charted-list';
@@ -14,7 +15,7 @@ import { WaitingList } from '../console/waiting-list';
 
 @Component({
   selector: 'app-sitrep-page',
-  imports: [AccessNotice, ConsoleHeader, PersonalityDesk, HudStrip, DecisionDeck, WaitingList, OngoingList, LandedList, ChartedList],
+  imports: [RouterOutlet, AccessNotice, ConsoleHeader, PersonalityDesk, HudStrip, DecisionDeck, WaitingList, OngoingList, LandedList, ChartedList],
   templateUrl: './sitrep-page.html',
   styleUrl: './sitrep-page.css',
   providers: [SitrepReading],

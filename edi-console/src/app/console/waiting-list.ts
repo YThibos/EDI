@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { projectsOf } from './projects';
 import { ChangingRequest, ReadyForReview, TaskLinks, WaitingBoard, WorkerQuestion } from './sitrep';
@@ -6,7 +7,7 @@ import { LinkChips } from './link-chips';
 
 @Component({
   selector: 'app-waiting-list',
-  imports: [LinkChips],
+  imports: [RouterLink, LinkChips],
   templateUrl: './waiting-list.html',
   styleUrl: './waiting-list.css',
 })

@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { projectsOf } from './projects';
 import { LandedTask, TaskLinks } from './sitrep';
@@ -7,7 +8,7 @@ import { stardate } from './stardate';
 
 @Component({
   selector: 'app-landed-list',
-  imports: [LinkChips],
+  imports: [RouterLink, LinkChips],
   templateUrl: './landed-list.html',
 })
 export class LandedList {

@@ -41,6 +41,7 @@ Port 5490 spells E-D-I by the letters' places in the alphabet, so the captain re
 ## Consequences
 
 - Good: the authority classes are enforced at one boundary, and the timeline shows which worker did what.
+- Good: a task's whole record, its report, its brief and its board rounds reach the captain's console session and the primary, never a worker (`Caller.requireThePrimaryOrTheCaptain`).
 - Bad: each request with a worker token costs one indexed read, and a worker can still read the home token from the home it shares, which the guard keeps from its shell and its `Read` ([pre-tool-guard](pre-tool-guard.md)).
 - Bad: the Host check stops only a browser misled by DNS; any program on the machine names `127.0.0.1` freely, and a page on another loopback port still sends the console's cookie with its requests, which only the console header and the browser's same-origin policy keep from changing state or reading an answer.
 - Bad: workers run as the captain's own user, so the client's refusal and the guard are a denylist, not a boundary: a script file the guard does not open, a shell builtin it does not read as an assignment, such as `read`, `printf -v` or a `for` loop, or a program that starts a command in a clean environment, such as `sudo` or a container runtime, can still clear `EDI_TOKEN_FILE` and every marker of the window together, and `edi` then falls back to the home token; only workers running as another user would close that (EDI-137, issue 96).
@@ -61,3 +62,4 @@ When workers run as another user or on another machine, or the core serves more 
 - 30/10/2026: the record says what the worker-identity guard reads and no more, after a review found forms it missed (EDI-138).
 - 03/11/2026: the captain's console session may read a task's report and brief as a page, as the primary may, and no worker may (EDI-57).
 - 03/11/2026: the console may set quiet and away too, away only with the words its form takes (EDI-64).
+- 04/11/2026: a task's whole record, `GET /api/tasks/<id>`, is read by the captain's console session and the primary, and refused to a worker (EDI-59).

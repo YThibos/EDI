@@ -64,7 +64,8 @@ class TaskController {
     }
 
     @GetMapping("/{reference}")
-    TaskDetail task(@PathVariable String reference) {
+    TaskDetail task(@PathVariable String reference, Caller caller) {
+        caller.requireThePrimaryOrTheCaptain("A task's whole record");
         return detail.detail(TaskReference.parse(reference));
     }
 
