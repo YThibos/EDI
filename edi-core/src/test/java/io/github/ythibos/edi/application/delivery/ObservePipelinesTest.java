@@ -127,6 +127,26 @@ class ObservePipelinesTest {
     }
 
     @Test
+    void keepsReadingAHandedOverPipelineThatEndedWithoutPassedChecksUntilAGreenRunFollows() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().marksReady(draft.address());
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", null, "1111", draft.address().url(), false));
+        home.observePipelines().observe();
+        home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
+        WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
+
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "ci", "1111", draft.address().url(), true));
+        home.observePipelines().observe();
+        WaitingOnTheCaptain reRun = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(failed.changing()).extracting(ChangingRequest::whyChanging).containsExactly("pipeline failed without passed checks");
+        assertThat(reRun.changing()).isEmpty();
+        assertThat(reRun.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+    }
+
+    @Test
     void keepsAnIdleWorkerWhosePipelineRunsFromBeingStale() {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         Worker worker = dispatched.launched().worker();
