@@ -13,13 +13,11 @@ import io.github.ythibos.edi.domain.worker.TokenUsage;
 
 final class PipelineSpend {
 
-    private static final String SPEND_OF_A_BRANCH = """
-            select count(*) as invocations,
-                   count(invocation.delta_input_tokens) as counted,
-                   coalesce(sum(invocation.delta_input_tokens), 0) as input,
-                   coalesce(sum(invocation.delta_cache_read_tokens), 0) as cache_read,
-                   coalesce(sum(invocation.cache_creation_tokens), 0) as cache_write,
-                   coalesce(sum(invocation.delta_output_tokens), 0) as output
+    private static final String INVOCATIONS_ON_A_BRANCH = """
+            select invocation.delta_input_tokens as input,
+                   invocation.delta_cache_read_tokens as cache_read,
+                   invocation.cache_creation_tokens as cache_write,
+                   invocation.delta_output_tokens as output
             from agent_invocations invocation
             join runs run on run.id = invocation.run_id
             join repos repository on repository.id = run.repo_id
@@ -33,7 +31,7 @@ final class PipelineSpend {
             return Optional.empty();
         }
         try (Connection database = PipelineState.readOnly(stateDatabase);
-                PreparedStatement query = database.prepareStatement(SPEND_OF_A_BRANCH)) {
+                PreparedStatement query = database.prepareStatement(INVOCATIONS_ON_A_BRANCH)) {
             PipelineState.bindTheBranch(query, projectClone, branch);
             return spendOf(query);
         } catch (SQLException unreadable) {
@@ -42,12 +40,34 @@ final class PipelineSpend {
     }
 
     private static Optional<TokenUsage> spendOf(PreparedStatement query) throws SQLException {
-        try (ResultSet spend = query.executeQuery()) {
-            return spend.next() && spend.getLong("invocations") == spend.getLong("counted") ? Optional.of(tokensOf(spend)) : Optional.empty();
+        try (ResultSet invocations = query.executeQuery()) {
+            TokenUsage spend = TokenUsage.NONE;
+            while (invocations.next()) {
+                if (invocations.getObject("input") == null) {
+                    return Optional.empty();
+                }
+                spend = spend.plus(spentBy(invocations));
+            }
+            return Optional.of(spend);
         }
     }
 
-    private static TokenUsage tokensOf(ResultSet spend) throws SQLException {
-        return new TokenUsage(spend.getLong("input"), spend.getLong("cache_read"), spend.getLong("cache_write"), spend.getLong("output"));
+    private static TokenUsage spentBy(ResultSet invocation) throws SQLException {
+        long input = invocation.getLong("input");
+        long cacheRead = invocation.getLong("cache_read");
+        long cacheWrite = invocation.getLong("cache_write");
+        return new TokenUsage(uncachedInput(input, cacheRead, cacheWrite), cacheRead, cacheWrite, invocation.getLong("output"));
+    }
+
+    private static long uncachedInput(long input, long cacheRead, long cacheWrite) {
+        return inputHoldsItsCache(input, cacheRead, cacheWrite) ? freshInput(input, cacheRead) - cacheWrite : input;
+    }
+
+    private static boolean inputHoldsItsCache(long input, long cacheRead, long cacheWrite) {
+        return input >= cacheRead + cacheWrite;
+    }
+
+    private static long freshInput(long input, long cacheRead) {
+        return input - cacheRead;
     }
 }

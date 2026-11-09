@@ -101,4 +101,18 @@ class DeliveryStoresTest {
         assertThat(home.taskCosts().of(LAMP)).contains(unknown);
         assertThat(home.taskCosts().of(LAMP).orElseThrow().pipelineIfKnown()).isEmpty();
     }
+
+    @Test
+    void keepsEachCountOfThePipelinesSpendInItsOwnColumn() {
+        TaskCost cost = new TaskCost(LAMP, new TokenUsage(1, 2, 3, 4), new TokenUsage(40, 900000, 5000, 700), TestHome.START);
+        home.taskCosts().save(cost);
+
+        assertThat(home.jdbc().sql("""
+                        select pipeline_input_tokens, pipeline_cache_read_tokens, pipeline_cache_write_tokens, pipeline_output_tokens
+                        from task_cost where task_id = :task""")
+                .param("task", LAMP.value())
+                .query((row, _) -> List.of(row.getLong(1), row.getLong(2), row.getLong(3), row.getLong(4)))
+                .single()).containsExactly(40L, 900000L, 5000L, 700L);
+        assertThat(home.taskCosts().of(LAMP)).contains(cost);
+    }
 }

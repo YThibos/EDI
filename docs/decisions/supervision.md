@@ -33,6 +33,7 @@ It then reads, through `ClaudeTranscript.errorStop`, a turn whose last turn reco
 `WorkerHooks` records a session's transcript path from `UserPromptSubmit` as well as `SessionStart`, so a worker whose session start was missed can still be read.
 `ObservePipelines` reads, every `edi.delivery.pipelines` (PT60S), the latest run of each `draft-review` ship whose work is not handed over or whose stored latest run is still running ([fleet-snapshot](fleet-snapshot.md)), through `NoMistakesPipeline.latestRunOf`, which runs `no-mistakes axi status` in the copy and reads its `run:` block (`AxiStatus`); `PipelineRunStore` keeps the latest reading, and every status but the finished ones counts as running.
 `NoMistakesPipeline.tokensSpentOn` opens the pipeline's `state.sqlite` read-only and sums each invocation's token deltas for the branch, or keeps the spend unknown ([cleanup](cleanup.md)).
+An invocation whose input is at least its cache reads and writes together counts them in its input, as the pipeline has since 2 November 2026; its uncached input is then its fresh input, the input less its cache reads, less its cache writes, so each token lands in one column of the task's cost (`PipelineSpend`).
 
 ## Why
 
@@ -79,3 +80,4 @@ When the round's tmux calls show up in its time, Claude Code reports a pending p
 - 27/10/2026: the round began noticing native builds and test runs that several workers run at once ([local-native-builds](local-native-builds.md), EDI-99).
 - 27/10/2026: EDI began naming the steps every pipeline run skips in the brief's pipeline call ([pipeline-steps](pipeline-steps.md), EDI-104).
 - 03/11/2026: a needs-decision wake was taken by a stray `edi wait` and the worker waited an hour on a question nothing raised again, so an unanswered question comes back to the primary every ten minutes until a resolving steer is sent (EDI-153).
+- 09/11/2026: the pipeline began counting cache reads and writes in its input on 2 November 2026, which EDI took as uncached input and so recorded every ship's pipeline cost several times too high, so an invocation's input is read less the cache tokens it holds (EDI-235).

@@ -50,8 +50,30 @@ class PipelineSpendTest {
     }
 
     @Test
-    void sumsTheRoundsOfEveryRunOnTheBranchOfTheClone() {
+    void sumsTheRoundsOfEveryRunOnTheBranchOfTheCloneInAStoreFromBeforeItHadFreshInput() {
         assertThat(PipelineSpend.recordedIn(state, clone, BRANCH)).contains(new TokenUsage(123, 1230, 62, 13));
+    }
+
+    @Test
+    void readsTheInputOfAStoreWhoseInputHoldsItsCacheReadsAndWritesFromItsFreshInputLessItsCacheWrites() throws SQLException {
+        execute("""
+                alter table agent_invocations add column fresh_input_tokens integer;
+                insert into runs values ('run-5', 'repo', 'feature/HRN-5');
+                insert into agent_invocations values ('g', 'run-5', 'review', 1, 'ok', 905040, 700, 900000, 5000, 905040, 700, 900000, 5040);
+                """);
+
+        assertThat(PipelineSpend.recordedIn(state, clone, BranchName.parse("feature/HRN-5"))).contains(new TokenUsage(40, 900000, 5000, 700));
+    }
+
+    @Test
+    void countsEachRoundOfABranchByTheAccountingItWasRecordedWith() throws SQLException {
+        execute("""
+                alter table agent_invocations add column fresh_input_tokens integer;
+                insert into runs values ('run-5', 'repo', 'feature/HRN-3');
+                insert into agent_invocations values ('g', 'run-5', 'review', 1, 'ok', 905040, 700, 900000, 5000, 905040, 700, 900000, 5040);
+                """);
+
+        assertThat(PipelineSpend.recordedIn(state, clone, BRANCH)).contains(new TokenUsage(163, 901230, 5062, 713));
     }
 
     @Test
