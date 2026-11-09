@@ -97,6 +97,7 @@ public enum Rule {
     STOP_WITH_WORKERS(RuleArea.CORE, "The core stays up while workers run, unless the captain's word stops them too."),
     CONFIGURATION_VALID(RuleArea.CORE, "The home's configuration files are readable and complete."),
     FORGE_ACCOUNT(RuleArea.CORE, "A forge is reached only under the account its repository is bound to."),
+    FLIGHT_RECORDING(RuleArea.CORE, "A flight recording is written out only by a core that keeps one."),
     OUTAGE_LIST(RuleArea.RECOVERY, "A worker lost in an outage is relaunched or dropped only from the outage list, once its limit has reset."),
     ADOPTABLE(RuleArea.MIGRATION, "Only open work in an old isolated copy of one project, on its own branch, is taken over."),
     COMMIT_WORK_KEY(RuleArea.COMMIT, "Every commit subject starts with the task's work key (I-10)."),

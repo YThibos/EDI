@@ -2,6 +2,7 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -21,9 +23,11 @@ public class WakeStore {
     private static final String SELECT_WAKES = "select number, kind, task_id, worker_id, detail, moment, raised_at, delivered_to from wake ";
 
     private final JdbcClient store;
+    private final CoreMeters meters;
 
-    public WakeStore(JdbcClient store) {
+    public WakeStore(JdbcClient store, CoreMeters meters) {
         this.store = store;
+        this.meters = meters;
     }
 
     void enqueue(long eventSequence, Wake wake, Instant at) {
@@ -68,43 +72,49 @@ public class WakeStore {
     }
 
     public void printed(List<Long> numbers, UUID stream, UUID session, Instant at) {
-        numbers.forEach(number -> {
-            int delivered = store.sql("""
-                            update wake set delivered_to = :session, delivered_at = :at, offered_to = null
-                            where number = :number and offered_to = :stream""")
-                    .param("session", session.toString())
-                    .param("at", Columns.text(at))
-                    .param("number", number)
-                    .param("stream", stream.toString())
-                    .update();
-            if (delivered > 0) {
-                acknowledgeWhatSupersedes(number, at);
-            }
-        });
+        numbers.forEach(number -> store.sql("""
+                        update wake set delivered_to = :session, delivered_at = :at, offered_to = null
+                        where number = :number and offered_to = :stream
+                        returning raised_at""")
+                .param("session", session.toString())
+                .param("at", Columns.text(at))
+                .param("number", number)
+                .param("stream", stream.toString())
+                .query((row, _) -> Columns.instant(row.getString("raised_at")))
+                .optional()
+                .ifPresent(raised -> {
+                    meters.wakePrinted(Duration.between(raised, at));
+                    acknowledgeWhatSupersedes(number, at);
+                }));
     }
 
     public void acknowledgeActedOn(TaskId task, Instant at) {
-        store.sql("update wake set acknowledged_at = :at where acknowledged_at is null and delivered_to is not null and task_id = :task")
-                .param("at", Columns.text(at))
-                .param("task", task.value())
-                .update();
+        acknowledged(store.sql("""
+                        update wake set acknowledged_at = :at
+                        where acknowledged_at is null and delivered_to is not null and task_id = :task
+                        returning delivered_at""")
+                .param("task", task.value()), at);
     }
 
     public void acknowledgeDeliveredTo(UUID session, Instant at) {
-        store.sql("update wake set acknowledged_at = :at where acknowledged_at is null and delivered_to = :session")
-                .param("at", Columns.text(at))
-                .param("session", session.toString())
-                .update();
+        acknowledged(store.sql("update wake set acknowledged_at = :at where acknowledged_at is null and delivered_to = :session returning delivered_at")
+                .param("session", session.toString()), at);
     }
 
     private void acknowledgeWhatSupersedes(long number, Instant at) {
-        store.sql("""
+        acknowledged(store.sql("""
                         update wake set acknowledged_at = :at
                         where acknowledged_at is null and delivered_to is not null and number < :number
-                          and task_id = (select task_id from wake where number = :number)""")
-                .param("at", Columns.text(at))
-                .param("number", number)
-                .update();
+                          and task_id = (select task_id from wake where number = :number)
+                        returning delivered_at""")
+                .param("number", number), at);
+    }
+
+    private void acknowledged(StatementSpec acknowledgement, Instant at) {
+        acknowledgement.param("at", Columns.text(at))
+                .query((row, _) -> Columns.instant(row.getString("delivered_at")))
+                .list()
+                .forEach(printed -> meters.wakeAcknowledged(Duration.between(printed, at)));
     }
 
     private List<QueuedWake> wakes(StatementSpec query) {

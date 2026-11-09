@@ -599,6 +599,31 @@ class ApiTest {
     }
 
     @Test
+    void reportsTheCoresOwnHealthAndWritesOutItsFlightRecordingForThePrimaryOnly() throws Exception {
+        String worker = workerTokenFor("api-telemetry");
+        get("/api/backlog", TEXT);
+
+        HttpResponse<String> asText = get("/api/telemetry", TEXT);
+        HttpResponse<String> asJson = get("/api/telemetry?days=1", JSON);
+        HttpResponse<String> meters = get("/api/metrics", JSON);
+        HttpResponse<String> storeTime = get("/api/metrics/edi.store.transaction", JSON);
+        HttpResponse<String> dumped = post("/api/telemetry/recordings", "{}", TEXT);
+        HttpResponse<String> dumpedByAWorker = send(as(worker, "/api/telemetry/recordings", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{}")));
+
+        assertThat(asText.body()).startsWith("The core's health since ")
+                .containsPattern("\n  request GET /api/backlog +\\d+ times? +mean \\d+ ms +max ")
+                .containsPattern("\n  store transaction +\\d+ times +mean ")
+                .contains("\nMemory in use: ", "\nFlight recording: running, ");
+        assertThat(asJson.body()).contains("\"timings\":[", "\"measure\":\"store transaction\"", "\"recording\":{\"running\":true");
+        assertThat(meters.body()).contains("\"edi.store.transaction\"", "\"edi.memory.used\"", "\"http.server.requests\"");
+        assertThat(storeTime.body()).contains("\"name\":\"edi.store.transaction\"", "\"statistic\":\"COUNT\"");
+        assertThat(dumped.statusCode()).isEqualTo(201);
+        assertThat(Files.readAllBytes(dumpedRecordingIn(dumped.body()))).startsWith('F', 'L', 'R', 0);
+        assertThat(dumpedByAWorker.statusCode()).isEqualTo(403);
+    }
+
+    @Test
     void preparesThePrimarySessionForEdiUp() throws Exception {
         HttpResponse<String> launch = post("/api/primary/launch", "{}", TEXT);
 
@@ -708,6 +733,10 @@ class ApiTest {
                 WINDOW_OF_NO_PROCESS,
                 new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
         return Files.readString(token.file());
+    }
+
+    private static Path dumpedRecordingIn(String said) {
+        return Path.of(said.substring(said.indexOf(" to ") + " to ".length(), said.indexOf("; open")));
     }
 
     private static String statusLinePayload() throws IOException {

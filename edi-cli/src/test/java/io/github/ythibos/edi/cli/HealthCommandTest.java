@@ -12,6 +12,8 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -33,7 +35,11 @@ class HealthCommandTest {
     private static final String NO_QUESTION = "No worker waits on an answer.\n";
     private static final String MISSING_WAIT = "No edi wait is live while 2 tasks are in flight: start edi wait --follow alone with the Monitor tool.\n";
 
+    private static final String MEASURED = "The core's health since 2026-11-02 18:00 CET:\n  supervision round  2016 times  mean 41 ms  max 2.3 s\n";
+    private static final String DUMPED = "The flight recording is written to /tmp/edi/data/recordings/core-20261109-180000.jfr.\n";
+
     private HttpServer core;
+    private final List<String> asked = new ArrayList<>();
     private String primaryWait = LIVE_WAIT;
     private String openQuestions = NO_QUESTION;
     private final StringWriter out = new StringWriter();
@@ -155,6 +161,17 @@ class HealthCommandTest {
                 .execute(arguments);
     }
 
+    @Test
+    void addsTheCoresOwnHealthOverAPeriodAndWritesOutItsFlightRecording() throws IOException {
+        int port = startStubCoreAnswering(200);
+
+        int exitCode = edi("health", "--metrics", "--days", "30", "--dump-recording");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT + NO_QUESTION + MEASURED + DUMPED);
+        assertThat(asked).containsExactly("GET /api/telemetry?days=30", "POST /api/telemetry/recordings");
+    }
+
     private int startStubCoreAnswering(int status) throws IOException {
         core = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         core.createContext("/api/health", exchange -> {
@@ -170,6 +187,13 @@ class HealthCommandTest {
         core.createContext("/api/workers/questions", exchange -> {
             byte[] body = openQuestions.getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        core.createContext("/api/telemetry", exchange -> {
+            asked.add(exchange.getRequestMethod() + " " + exchange.getRequestURI());
+            byte[] body = (exchange.getRequestMethod().equals("POST") ? DUMPED : MEASURED).getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(exchange.getRequestMethod().equals("POST") ? 201 : 200, body.length);
             exchange.getResponseBody().write(body);
             exchange.close();
         });

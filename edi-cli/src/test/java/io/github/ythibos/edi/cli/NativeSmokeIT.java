@@ -128,6 +128,24 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCoreMeasuresItsOwnHealthAndWritesOutItsFlightRecording() throws Exception {
+        edi("", "backlog");
+
+        HttpResponse<String> meters = send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/metrics/edi.store.transaction"))
+                .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")).strip()));
+        CommandRun health = edi("", "health", "--metrics", "--dump-recording");
+
+        assertThat(meters.statusCode()).isEqualTo(200);
+        assertThat(meters.body()).contains("\"name\":\"edi.store.transaction\"", "\"statistic\":\"COUNT\"");
+        assertThat(health.exitCode()).isZero();
+        assertThat(health.output()).contains("The core's health since ", "\n  store transaction ", "\nMemory in use: ", "\nFlight recording: running, ",
+                "\nThe flight recording is written to " + home.resolve("data/recordings/core-"));
+        try (Stream<Path> recordings = Files.list(home.resolve("data/recordings"))) {
+            assertThat(recordings.toList()).singleElement().satisfies(recording -> assertThat(Files.readAllBytes(recording)).startsWith('F', 'L', 'R', 0));
+        }
+    }
+
+    @Test
     void theCoreKeepsAFreshStoreInItsHome() {
         assertThat(home.resolve("data/edi.db")).isRegularFile().isNotEmptyFile();
     }
@@ -382,6 +400,8 @@ class NativeSmokeIT {
         CommandRun cleanup = edi("", "cleanup", "native-worker");
         assertThat(cleanup.exitCode()).isOne();
         assertThat(cleanup.output()).contains("native-worker is not cleaned up, because its work is not landed", "\"HRN-7 Add the stub file\" is not in origin/main");
+        assertThat(edi("", "rules").output()).containsPattern("\n  guard\\.signal-by-pattern +1 +1 refused +last ")
+                .containsPattern("\n  cleanup\\.landed-before-discard +1 +1 refused +last ");
         assertThat(worktree).isDirectory();
         stopTheWorkerServer();
     }

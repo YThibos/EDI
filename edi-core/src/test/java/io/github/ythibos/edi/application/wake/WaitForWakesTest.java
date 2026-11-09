@@ -8,12 +8,14 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -86,6 +88,22 @@ class WaitForWakesTest {
         primaryActsOn("fit-lamp");
 
         assertThat(home.wakes().unacknowledged()).isEmpty();
+    }
+
+    @Test
+    void measuresHowLongAWakeWaitsToBePrintedAndThenToBeActedOn() {
+        UUID primary = primarySession();
+        WakeStream stream = followedBy(primary);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        WakeDelivery delivery = home.waitForWakes().deliverTo(stream).orElseThrow();
+        home.clock().advance(Duration.ofSeconds(30));
+        printed(primary, stream, delivery);
+        home.clock().advance(Duration.ofSeconds(90));
+
+        primaryActsOn("fit-lamp");
+
+        assertThat(List.of(timed(CoreMeters.WAKE_PRINTED), timed(CoreMeters.WAKE_ACKNOWLEDGED))).containsExactly(Duration.ofSeconds(30),
+                Duration.ofSeconds(90));
     }
 
     @Test
@@ -304,5 +322,9 @@ class WaitForWakesTest {
 
     private void primaryActsOn(String task) {
         home.noteTask().note(TaskReference.parse(task), "Asked the captain.", Actor.PRIMARY);
+    }
+
+    private Duration timed(String timer) {
+        return Duration.ofMillis(Math.round(home.meters().registry().get(timer).timer().totalTime(TimeUnit.MILLISECONDS)));
     }
 }

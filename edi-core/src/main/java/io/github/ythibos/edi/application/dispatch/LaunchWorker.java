@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.WorkerSettings;
@@ -88,14 +89,15 @@ public class LaunchWorker {
     private final Pipeline pipeline;
     private final ProcessTable processes;
     private final MachineBoot boot;
+    private final CoreMeters meters;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
             WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
-            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, Clock clock,
-            TransactionTemplate transaction) {
+            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, CoreMeters meters,
+            Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
@@ -118,6 +120,7 @@ public class LaunchWorker {
         this.pipeline = pipeline;
         this.processes = processes;
         this.boot = boot;
+        this.meters = meters;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -156,6 +159,10 @@ public class LaunchWorker {
     }
 
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
+        return meters.workerLaunch(() -> launchedNow(dispatch, kind, answered, because, actor));
+    }
+
+    private Launched launchedNow(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
         Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());

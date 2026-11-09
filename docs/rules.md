@@ -100,6 +100,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `core.stop-with-workers` | `StopTheCore` | The core stays up while workers run, unless the captain's word stops them too. |
 | `core.configuration-valid` | `InvalidConfiguration`, `PipelineConfiguration`, `ProjectEntry` | The home's configuration files are readable and complete. |
 | `core.forge-account` | `GitLabForge` | A forge is reached only under the account its repository is bound to. |
+| `core.flight-recording` | `FlightRecording` | A flight recording is written out only by a core that keeps one. |
 | `recovery.outage-list` | `DropFromOutage`, `RecoverFromOutage` | A worker lost in an outage is relaunched or dropped only from the outage list, once its limit has reset. |
 | `migration.adoptable` | `AdoptForkTask`, `ForkMigrationPlanner`, `MigrateFirstofficer` | Only open work in an old isolated copy of one project, on its own branch, is taken over. |
 | `commit.work-key` | `commit-msg` | Every commit subject starts with the task's work key (I-10). |

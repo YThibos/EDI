@@ -34,4 +34,10 @@ management:
     web:
       base-path: /api
       exposure:
-        include: health
+        include: health,metrics
+  metrics:
+    distribution:
+      expiry:
+        all: ${edi.health.sample-every:PT10M}
+      buffer-length:
+        all: 1

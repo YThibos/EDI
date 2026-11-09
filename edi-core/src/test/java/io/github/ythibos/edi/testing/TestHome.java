@@ -21,6 +21,7 @@ import io.github.ythibos.edi.adapter.fork.ForkBacklogReader;
 import io.github.ythibos.edi.adapter.fork.ForkEnvironment;
 import io.github.ythibos.edi.adapter.fork.ForkRoutingRulesReader;
 import io.github.ythibos.edi.adapter.git.Git;
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.HomeSetup;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
@@ -201,6 +202,7 @@ import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.json.JsonMapper;
 
 public final class TestHome {
@@ -217,6 +219,7 @@ public final class TestHome {
     private final ProjectRegistry registry;
     private final MachineProfile machineProfile;
     private final JsonMapper json = new JsonMapper();
+    private final CoreMeters meters = new CoreMeters(new SimpleMeterRegistry());
     private final DispatchStore dispatches;
     private final WorkerStore workers;
     private final InboxStore inbox;
@@ -268,7 +271,7 @@ public final class TestHome {
         this.transaction = new TransactionTemplate(new JdbcTransactionManager(store));
         this.tasks = new TaskStore(jdbc);
         this.decisions = new DecisionStore(jdbc);
-        this.wakes = new WakeStore(jdbc);
+        this.wakes = new WakeStore(jdbc, meters);
         this.events = new EventLog(jdbc, json, wakes, _ -> { });
         this.ruleFirings = new RuleFirings(jdbc);
         this.registry = new ProjectRegistry(home);
@@ -380,6 +383,14 @@ public final class TestHome {
 
     public DecisionStore decisions() {
         return decisions;
+    }
+
+    public TransactionTemplate transaction() {
+        return transaction;
+    }
+
+    public CoreMeters meters() {
+        return meters;
     }
 
     public FiredRules firedRules() {
@@ -666,7 +677,7 @@ public final class TestHome {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), runtime, pipeline, processes, machineBoot(), clock, transaction);
+                workerTokens(), runtime, pipeline, processes, machineBoot(), meters, clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {
