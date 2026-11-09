@@ -369,14 +369,14 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST, false), TestHome.START);
             home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Amend the record too.", null, Actor.PRIMARY);
 
             String report = captainReport(home, Turn.NONE);
             String brief = returnBrief(home);
             ConsoleSitrep onTheConsole = consoleSitrep(home);
-            String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST), TestHome.START);
+            String digest = digestOf(home);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST, false), TestHome.START);
             home.workerInbox().acknowledge(worker.id(), 1);
             String settled = captainReport(home, Turn.NONE);
 
@@ -391,6 +391,46 @@ class DecisionsAndReportingTest {
             assertThat(onTheConsole.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST,
                     "pipeline review; steer 1 not acknowledged"));
             assertThat(settled).contains("║  Ready for your review: Work on fit-lamp - " + REQUEST + "\n").doesNotContain("Changing");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-19 a finished request whose pipeline only watches its passed checks for the merge reads as ready on every surface,"
+                + " and as changing again once the watch's checks stop passing")
+        void aRequestWhosePipelineOnlyWatchesPassedChecksShowsAsReady() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
+            home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
+            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", "abc123", REQUEST, true);
+            home.pipelineRuns().save(worker.id().task(), watching, TestHome.START);
+
+            String report = captainReport(home, Turn.NONE);
+            String brief = returnBrief(home);
+            ConsoleSitrep onTheConsole = consoleSitrep(home);
+            String digest = digestOf(home);
+            home.pipelineRuns().save(worker.id().task(), watching.withChecksPassed(false), TestHome.START);
+            String fixing = captainReport(home, Turn.NONE);
+            String fixingBrief = returnBrief(home);
+            ConsoleSitrep fixingOnTheConsole = consoleSitrep(home);
+            String fixingDigest = digestOf(home);
+
+            String ready = "Ready for your review: Work on fit-lamp - " + REQUEST;
+            assertThat(report).contains("║  " + ready + "\n").doesNotContain("Changing");
+            assertThat(brief).contains("  " + ready + "\n").doesNotContain("Changing");
+            assertThat(onTheConsole.changing()).isEmpty();
+            assertThat(onTheConsole.reviews()).extracting(ConsoleSitrep.Review::url).containsExactly(REQUEST);
+            assertThat(digest).contains("  review  fit-lamp  " + REQUEST + "\n").doesNotContain("hold the merge");
+            String changing = "Changing, hold the merge: Work on fit-lamp (pipeline ci) - " + REQUEST;
+            assertThat(fixing).contains("║  " + changing + "\n").doesNotContain("Ready for your review");
+            assertThat(fixingBrief).contains("  " + changing + "\n").doesNotContain("Ready for your review");
+            assertThat(fixingOnTheConsole.reviews()).isEmpty();
+            assertThat(fixingOnTheConsole.changing()).extracting(ConsoleSitrep.Changing::why).containsExactly("pipeline ci");
+            assertThat(fixingDigest).contains("changing  fit-lamp  " + REQUEST + "  hold the merge: pipeline ci\n");
+        }
+
+        private static String digestOf(TestHome home) {
+            return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
         }
 
         private static MergeRequestView request(MergeRequestState state) {

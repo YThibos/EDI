@@ -3,9 +3,10 @@ package io.github.ythibos.edi.domain.delivery;
 import java.util.Objects;
 import java.util.Set;
 
-public record PipelineRun(String id, String status, String activeStep, String headCommit, String mergeRequestUrl) {
+public record PipelineRun(String id, String status, String activeStep, String headCommit, String mergeRequestUrl, boolean checksPassed) {
 
     private static final Set<String> FINISHED = Set.of("completed", "failed", "cancelled", "canceled", "aborted");
+    private static final String CI_WATCH = "ci";
 
     public PipelineRun {
         if (id == null || id.isBlank()) {
@@ -16,11 +17,23 @@ public record PipelineRun(String id, String status, String activeStep, String he
         mergeRequestUrl = mergeRequestUrl == null || mergeRequestUrl.isBlank() ? null : mergeRequestUrl;
     }
 
+    public PipelineRun withChecksPassed(boolean passed) {
+        return new PipelineRun(id, status, activeStep, headCommit, mergeRequestUrl, passed);
+    }
+
     public boolean isRunning() {
         return !FINISHED.contains(status);
     }
 
+    public boolean stillChangesTheRequest() {
+        return isRunning() && !onlyWatchesPassedChecks();
+    }
+
     public String currentStep() {
         return activeStep == null ? status : activeStep;
+    }
+
+    private boolean onlyWatchesPassedChecks() {
+        return CI_WATCH.equals(activeStep) && checksPassed;
     }
 }

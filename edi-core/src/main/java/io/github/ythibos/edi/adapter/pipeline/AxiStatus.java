@@ -27,7 +27,7 @@ final class AxiStatus {
         if (!branch.equals(fields.get("branch")) || !fields.containsKey("id") || !fields.containsKey("status")) {
             return Optional.empty();
         }
-        return Optional.of(new PipelineRun(fields.get("id"), fields.get("status"), activeStepIn(block), fields.get("head_sha"), fields.get("pr")));
+        return Optional.of(new PipelineRun(fields.get("id"), fields.get("status"), activeStepIn(block), fields.get("head_sha"), fields.get("pr"), false));
     }
 
     private static List<String> runBlockOf(List<String> lines) {

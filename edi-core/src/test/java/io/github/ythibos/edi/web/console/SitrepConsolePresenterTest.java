@@ -98,7 +98,7 @@ class SitrepConsolePresenterTest {
         Task bell = ship("bell", "Polish the bell");
         Task mast = ship("mast", "Paint the mast");
         Worker reporting = workerOn(horn).reported(new StatusReport(StatusState.WORKING, null, null, "Fitting the brass."), NOW);
-        PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", "abc123", null);
+        PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", "abc123", null, false);
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
                 new OngoingTask(horn, reporting, null, delivery(horn)),
@@ -172,7 +172,7 @@ class SitrepConsolePresenterTest {
     @Test
     void presentsARequestStillChangingWithWhyInsteadOfAsReady() {
         Task lamp = ship("fit-lamp", "Fit the lamp");
-        PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url());
+        PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url(), false);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
                 List.of(new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2))));
 

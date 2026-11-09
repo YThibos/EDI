@@ -196,10 +196,10 @@ class FleetSnapshotQueryTest {
     @Test
     void holdsAHandedOverRequestAsChangingWhileItsPipelineRuns() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST.url()), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST.url(), false), TestHome.START);
 
         WaitingOnTheCaptain running = home.fleetSnapshot().snapshot().waiting();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST.url()), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST.url(), false), TestHome.START);
         WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(running.reviews()).isEmpty();
@@ -211,6 +211,41 @@ class FleetSnapshotQueryTest {
         assertThat(running.count()).isEqualTo(1);
         assertThat(finished.changing()).isEmpty();
         assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void putsAHandedOverRequestBeforeTheCaptainWhileItsPipelineOnlyWatchesItsPassedChecks() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
+
+        WaitingOnTheCaptain watching = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(watching.changing()).isEmpty();
+        assertThat(watching.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingWhileItsPipelineWatchesChecksThatHaveNotPassed() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), watchingTheChecks(false), TestHome.START.plusSeconds(60));
+
+        WaitingOnTheCaptain fixing = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(fixing.reviews()).isEmpty();
+        assertThat(fixing.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline ci"));
+    }
+
+    @Test
+    void holdsAHandedOverRequestWhosePipelineWatchesPassedChecksAsChangingWhileASteerWaits() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
+        home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
+
+        WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(steered.reviews()).isEmpty();
+        assertThat(steered.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("steer 1 not acknowledged"));
     }
 
     @Test
@@ -356,7 +391,7 @@ class FleetSnapshotQueryTest {
         add(ship("anchor", "Raise the anchor"));
         add(captainItem("lamp-choice", "Choose the lamp"));
         home.putInFlight(new TaskId("horn"));
-        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", "abc123", null), TestHome.START);
+        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", "abc123", null, false), TestHome.START);
         home.markDone(new TaskId("anchor"));
         home.clock().advance(Duration.ofDays(8));
         home.markDone(new TaskId("lantern"));
@@ -385,6 +420,10 @@ class FleetSnapshotQueryTest {
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
         return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+    }
+
+    private static PipelineRun watchingTheChecks(boolean passed) {
+        return new PipelineRun("01RUN", "running", "ci", "2222", REQUEST.url(), passed);
     }
 
     private Task handedOverWithAnOpenRequest() {
