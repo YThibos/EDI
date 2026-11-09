@@ -24,7 +24,6 @@ import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunFinished;
 import io.github.ythibos.edi.domain.event.DomainEvent.PipelineRunSeen;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.worker.Worker;
 
 @Service
 public class ObservePipelines {
@@ -58,16 +57,10 @@ public class ObservePipelines {
 
     private List<Workplace> workplacesWithAPipeline() {
         return transaction.execute(_ -> workers.serving().stream()
-                .filter(this::hasAPipelineToWatch)
-                .map(Worker::id)
-                .map(worker -> context.of(worker.task()))
+                .map(worker -> context.of(worker.id().task()))
                 .filter(workplace -> workplace.isAShip() && workplace.delivery() == DeliveryMode.DRAFT_REVIEW)
                 .filter(workplace -> Files.isDirectory(workplace.worktree()))
                 .toList());
-    }
-
-    private boolean hasAPipelineToWatch(Worker worker) {
-        return !worker.handedItsWorkOver() || runs.latestOf(worker.id().task()).filter(PipelineRun::isRunning).isPresent();
     }
 
     private void observe(Workplace workplace) {

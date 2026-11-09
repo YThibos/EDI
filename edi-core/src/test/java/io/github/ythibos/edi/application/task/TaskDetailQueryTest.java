@@ -13,14 +13,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.Holds;
+import io.github.ythibos.edi.domain.task.StageReached;
+import io.github.ythibos.edi.domain.task.StageTrigger;
+import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.WorkedTime;
+import io.github.ythibos.edi.domain.worker.WorkerId;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkEvents;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
 @Tag("adapter")
 class TaskDetailQueryTest {
+
+    private static final TaskId LAMPS = new TaskId("fix-lamps");
 
     @TempDir
     private Path directory;
@@ -31,6 +42,23 @@ class TaskDetailQueryTest {
     void storeAShip() throws IOException {
         home = TestHome.in(directory);
         home.storing(List.of(WorkerFixtures.queuedShip("fix-lamps", "harness", "HRN-40")));
+    }
+
+    @Test
+    void readsTheStageOfATaskWithEveryStageItReached() {
+        home.inOneTransaction(() -> {
+            Task working = home.taskStages().moved(home.tasks().get(LAMPS), new StageTrigger.Dispatch(Holds.none(), List.of(), true), Actor.PRIMARY,
+                    TestHome.START);
+            home.taskStages().moved(working, new StageTrigger.DoneReported(List.of(), List.of(), List.of(), false, List.of(), true),
+                    Actor.worker(WorkerId.first(LAMPS)), TestHome.START.plus(Duration.ofHours(2)));
+        });
+
+        TaskDetail detail = home.taskDetail().detail(TaskReference.parse("fix-lamps"));
+
+        assertThat(detail.task().stage()).isEqualTo(TaskStage.DELIVERED);
+        assertThat(detail.stages()).containsExactly(
+                new StageReached(TestHome.START, TaskStage.WORKING, "dispatched"),
+                new StageReached(TestHome.START.plus(Duration.ofHours(2)), TaskStage.DELIVERED, "its worker reported done"));
     }
 
     @Test
@@ -49,8 +77,7 @@ class TaskDetailQueryTest {
 
     @Test
     void measuresTheActiveTimeOfAClosedTaskUpToItsClosing() {
-        home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-41").dispatched()
-                .cleanedUp(TestHome.START.plus(Duration.ofMinutes(20)))));
+        home.storing(List.of(Stages.retired(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-41"), TestHome.START.plus(Duration.ofMinutes(20)))));
         WorkEvents.of(home, "fit-horn").dispatchedTo(1, "feature/HRN-41")
                 .reported(StatusState.WORKING, null, "HRN-41 set-up done")
                 .after(Duration.ofHours(3));
@@ -104,8 +131,7 @@ class TaskDetailQueryTest {
 
     @Test
     void endsTheStretchAMessageStartsWhenTheWorkersTurnEnds() {
-        home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-41").dispatched()
-                .cleanedUp(TestHome.START.plus(Duration.ofHours(27)))));
+        home.storing(List.of(Stages.retired(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-41"), TestHome.START.plus(Duration.ofHours(27)))));
         WorkEvents.of(home, "fit-horn").dispatchedTo(1, "feature/HRN-41")
                 .reported(StatusState.WORKING, null, "HRN-41 set-up done")
                 .after(Duration.ofHours(2))

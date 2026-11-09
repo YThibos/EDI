@@ -24,6 +24,7 @@ import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.StageChange;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.HeavyRun;
@@ -60,6 +61,14 @@ public sealed interface DomainEvent {
     }
 
     record TaskDone(TaskId task) implements DomainEvent {
+    }
+
+    record StageChanged(StageChange change) implements DomainEvent {
+
+        @Override
+        public TaskId task() {
+            return change.task();
+        }
     }
 
     record DispatchDeferred(TaskId task, ProjectName project, CategoryId category, int running, int capacity) implements DomainEvent {

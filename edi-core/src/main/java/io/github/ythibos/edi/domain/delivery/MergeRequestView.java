@@ -50,6 +50,10 @@ public record MergeRequestView(
         return state == MergeRequestState.MERGED;
     }
 
+    public String mergedHead() {
+        return headCommit == null || headCommit.isBlank() ? landedCommit : headCommit;
+    }
+
     public boolean mergedSince(Instant moment) {
         return isMerged() && !mergedAt.isBefore(moment);
     }

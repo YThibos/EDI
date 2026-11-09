@@ -20,7 +20,7 @@ The snapshot's first part, `WaitingOnTheCaptain`, holds everything that waits on
 - `changing`: every such request whose pipeline run is still running or whose inbox still holds an unacknowledged steer, and every open request of a task in flight whose event log holds an accepted done its latest worker no longer stands by (`ChangingRequest`), with why it is changing (`ChangingRequest.whyChanging`: "worker back at work", the pipeline's step and the steers' numbers); a first-pass draft whose task never had a done accepted is in neither list.
 
 Then come `ongoing` (in-flight tasks nothing holds, each an `OngoingTask` with its latest worker, pipeline run and delivery), `parked` (every held task except one that waits only for its decision, with its D number and the open tasks it waits for, `ParkedTask.whyParked`), and `queued`, each in the store's row order, plus the tasks landed in the last seven days and the answers of the last 24 hours.
-EDI keeps observing a handed-over task's pipeline while its stored run is running (`ObservePipelines`), so the run is seen to finish and the request becomes ready for review.
+EDI keeps observing the pipeline of every task a worker still serves, before and after its done (`ObservePipelines`), so a run started after the done is recorded and a run is seen to finish.
 Every surface shows a changing request as "Changing, hold the merge" with why, never as ready for review, and the console gives it a red `changing` badge in place of the amber `review` badge.
 `WaitingOnTheCaptain.count` counts each decision, review, changing request and board with questions of its own once; a board that only binds decisions counts as those decisions, and its line names no question count.
 The snapshot is quiet only when nothing waits on the captain and nothing is ongoing.
@@ -70,3 +70,4 @@ When a presenter needs data the snapshot cannot carry cheaply, the work board ne
 - 26/10/2026: the report printed a scout's board decisions with their full cards beside the board the captain answers them on, so a waiting board carries the open decisions it binds and every surface shows each under its board (EDI-51).
 - 26/10/2026: a request was merged while a steer its worker had not yet received was still changing it, so a handed-over request shows as changing, not ready, while its pipeline runs, a steer waits unacknowledged or its worker is back at work after an accepted done (EDI-53).
 - 03/11/2026: a worker's question to the primary showed only as an ongoing task's `with EDI`, so it went unseen for an hour; the open questions joined the decision zone as waiting on EDI (EDI-154).
+- 09/11/2026: a run started after a done went unrecorded, so EDI observes a served task's pipeline whatever its worker reported (EDI-85).

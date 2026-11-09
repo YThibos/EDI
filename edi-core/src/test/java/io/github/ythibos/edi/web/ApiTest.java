@@ -118,7 +118,7 @@ class ApiTest {
         assertThat(added.body()).isEqualTo("Queued api-lantern on HRN-3.\n");
         assertThat(get("/api/tasks/api-lantern", TEXT).body()).startsWith("api-lantern  ship  queued\nRework the lantern\nProjects: harness\nWork key: HRN-3\nBase: develop\n");
         assertThat(get("/api/tasks/api-lantern", JSON).body()).contains(
-                "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"state\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"");
+                "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"stage\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"");
     }
 
     @Test

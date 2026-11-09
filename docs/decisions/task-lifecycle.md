@@ -11,7 +11,7 @@ A task can wait on the captain, be parked for the night and have a dead worker a
 
 ## Decision
 
-`domain/task/TaskStage` holds where a task is in its life: QUEUED, WORKING, DELIVERED, CHANGING, READY, MERGED, LANDED, RETIRED and DROPPED, to be stored in `task.stage`.
+`domain/task/TaskStage` holds where a task is in its life: QUEUED, WORKING, DELIVERED, CHANGING, READY, MERGED, LANDED, RETIRED and DROPPED, stored in `task.stage`.
 `domain/task/StageTransitions` is the only place a stage changes: `move` takes the stage and a `StageTrigger` carrying the facts its guard reads, and either refuses, naming every gap, or returns the `StageChange` a `StageChanged` event is to record, with the stage before and after and the reason.
 
 | From | To | Trigger | Guard |
@@ -33,7 +33,11 @@ A hold added never replaces another, a hold of each kind is held once (a decisio
 `WorkerHealth` stays the worker's own condition, derived from the worker row as today; a stage transition may read it, but it is never a stage.
 `FleetSnapshotQuery` is to read the stage and the holds instead of combining the done check, the delivery and the run: Ongoing is WORKING and CHANGING (`TaskStage.isOngoing`), ready for review is READY, "report ready" is a delivered scout, and a MERGED task with a commit not landed shows in red with the commit named.
 A merge with commits after the merged head, whatever the stage before it (`StageChange.raisesAFollowUpDecision`), raises one decision on the task naming those commits: deliver them as a follow-up request from the same branch, or discard them, the option that authorises `discard-work`.
-The domain carries the stages, the transitions and the holds; until the stage is stored and every application service changes a task through `StageTransitions`, `TaskState` and `CaptainHold` are what the services read.
+The stored stage is the one answer: `TaskState` (queued, in flight, done, dropped) is only its coarse projection (`TaskStage.state`) for the readers that still ask it.
+Every application service that changes a task's stage moves it through `StageTransitions` and `TaskStages`, which records a `StageChanged` event with the stage before and after, the reason and any commit not landed, and `edi task show` prints the stages a task reached.
+`V24__the_stage_is_stored.sql` derived the stage of every task once from the facts stored before it, with a `StageDerived` event for each task in flight: merged when its request was merged, naming as not landed the heads its pipeline runs reached after the merged head; delivered when its latest worker's done stands; changing when an earlier done no longer does; working otherwise.
+A ship cleaned up without a followed merge, such as one delivered to the captain's checkout, is recorded merged at the branch head that landed before it becomes landed.
+Until the delivery guard, the triggers into CHANGING and READY arrive (EDI-86), a done the claims accept moves an ongoing task to DELIVERED and only its worker reporting working moves it to CHANGING; `CaptainHold` stays the one hold the services read until `Holds` replaces it (EDI-87).
 
 ## Why
 
@@ -63,3 +67,4 @@ When a delivery mode appears whose work is neither merged nor reported, or when 
 - 26/10/2026: the EDI-74 scout traced four defects of week one to state inferred from several fields, and proposed the stages, the holds as a set and the worker's own machine; the captain chose it as D43.
 - 27/10/2026: `TaskStage`, `StageTransitions` and `Holds` entered the domain with the transition table and the four defects as tests, and a captain item's answer became its own transition to RETIRED, since a captain item never gets a worker (EDI-84).
 - 27/10/2026: the captain widened Q6 A so a merge while the task was still working also asks: any merge with commits after the merged head raises the follow-up decision, whatever the stage before it (EDI-84).
+- 09/11/2026: `task.stage` replaced `task.state`, derived once for every task; every service moved it through `StageTransitions` with a `StageChanged` event, and `ObservePipelines` and `FollowMerges` kept observing a delivered task's runs, head and draft flag (EDI-85).

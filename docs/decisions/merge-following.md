@@ -13,6 +13,8 @@ The captain may mark a request ready and merge it before the worker reports done
 `Forge.mergeRequestsFrom` lists every request from a branch, and `DeliveryRecords.requestFrom` takes the open one as the task's, or a merged one only when it was merged at or after the task's dispatch and EDI has not recorded it for another task.
 `FollowMerges` records a `draft-review` ship's request as soon as it exists (`DraftRecorded`): each time the task's pipeline run changes, each time its worker reports a status, and when a done is accepted.
 `DeliveryRound` asks `FollowMerges` every `edi.delivery.drafts` (PT10M by default) to view each open delivery of a task in flight, on the account its project binds now; only an exact `merged` state counts.
+Each view saves a change of the request's head, draft flag or state, so an open request stays current after the done as before it.
+A followed merge moves the task to MERGED ([task-lifecycle](task-lifecycle.md)) and names the branch's commits after the merged head as not landed.
 A merge records `DraftMerged` with the commit it landed and a `CloneRefresh`; a closed request records `DraftClosed`; both wake the primary.
 `edi merged <task|url>` asks the forge at once, so the captain's word is followed the same way and never taken alone; a task delivered to the captain's checkout goes straight to its clean-up, whose landed-work test decides.
 `CloneRefreshes` fetches the clone and verifies a refresh once the merge commit is an ancestor of `origin/<base>`; `DispatchTask` refreshes the project before it launches anything there, refuses while a refresh is unverified, and keeps a deferred dispatch deferred.
@@ -47,3 +49,4 @@ When the forges offer a cheap local notification of a new or merged request.
 - 15/10/2026: the specification settled observing merges every ten minutes besides the captain's word.
 - 16/10/2026: slice S5 followed merges, refreshed clones and released clean-ups.
 - 21/10/2026: a request marked ready and merged before its done was never recorded, so EDI started recording requests as soon as they exist and following merged ones it finds (EDI-23).
+- 09/11/2026: an open request's head and draft flag went stale after the done, so every view of it is saved, and a followed merge names the commits after the merged head (EDI-85).

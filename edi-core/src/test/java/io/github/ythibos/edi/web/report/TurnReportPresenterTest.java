@@ -45,6 +45,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.web.PresenterFixtures;
 
 class TurnReportPresenterTest {
@@ -210,8 +211,8 @@ class TurnReportPresenterTest {
     }
 
     private static Task runningShip(String id, String project) {
-        return Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), null, null, List.of(), null), "",
-                NOW).dispatched();
+        return Stages.working(Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), null, null,
+                List.of(), null), "", NOW));
     }
 
     private static Decision urgent(Decision decision) {

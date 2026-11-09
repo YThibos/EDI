@@ -99,7 +99,8 @@ public class DispatchTask {
     }
 
     private Dispatching dispatching(TaskReference reference, DispatchRequest request) {
-        Task task = tasks.get(reference).dispatched();
+        Task task = tasks.get(reference);
+        task.requireFreeToWork();
         requireUnblocked(task);
         ProjectEntry project = registry.entryOf(onlyProjectOf(task));
         WorkerSettings settings = machine.workers();

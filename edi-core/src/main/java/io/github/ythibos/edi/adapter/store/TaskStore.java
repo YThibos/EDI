@@ -3,6 +3,7 @@ package io.github.ythibos.edi.adapter.store;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,13 +27,14 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
 
 @Component
 public class TaskStore {
 
-    private static final String SELECT_TASKS = "select id, kind, title, state, work_key, base, delivery, notes, created_at, closed_at from task ";
+    private static final String SELECT_TASKS = "select id, kind, title, stage, work_key, base, delivery, notes, created_at, closed_at from task ";
 
     private final JdbcClient store;
 
@@ -61,12 +63,12 @@ public class TaskStore {
 
     public void insert(Task task) {
         store.sql("""
-                        insert into task (id, kind, title, state, work_key, base, delivery, notes, created_at, closed_at)
-                        values (:id, :kind, :title, :state, :workKey, :base, :delivery, :notes, :created, :closed)""")
+                        insert into task (id, kind, title, stage, work_key, base, delivery, notes, created_at, closed_at)
+                        values (:id, :kind, :title, :stage, :workKey, :base, :delivery, :notes, :created, :closed)""")
                 .param("id", task.id().value())
                 .param("kind", task.intake().kind().word())
                 .param("title", task.intake().title())
-                .param("state", task.state().word())
+                .param("stage", task.stage().word())
                 .param("workKey", Columns.textOf(task.intake().workKey()))
                 .param("base", Columns.textOf(task.intake().base()))
                 .param("delivery", task.intake().delivery() == null ? null : task.intake().delivery().word())
@@ -80,9 +82,9 @@ public class TaskStore {
     }
 
     public void update(Task task) {
-        store.sql("update task set state = :state, work_key = :workKey, notes = :notes, closed_at = :closed where id = :id")
+        store.sql("update task set stage = :stage, work_key = :workKey, notes = :notes, closed_at = :closed where id = :id")
                 .param("id", task.id().value())
-                .param("state", task.state().word())
+                .param("stage", task.stage().word())
                 .param("workKey", Columns.textOf(task.intake().workKey()))
                 .param("notes", task.notes())
                 .param("closed", Columns.text(task.closed()))
@@ -105,12 +107,12 @@ public class TaskStore {
     }
 
     public List<Task> inState(TaskState state) {
-        return tasks(store.sql(SELECT_TASKS + "where state = :state order by rowid").param("state", state.word()));
+        return tasks(store.sql(SELECT_TASKS + "where stage in (:stages) order by rowid").param("stages", stageWordsOf(state)));
     }
 
     public List<Task> closedSince(TaskState state, Instant since) {
-        return tasks(store.sql(SELECT_TASKS + "where state = :state and closed_at >= :since order by closed_at desc, rowid desc")
-                .param("state", state.word())
+        return tasks(store.sql(SELECT_TASKS + "where stage in (:stages) and closed_at >= :since order by closed_at desc, rowid desc")
+                .param("stages", stageWordsOf(state))
                 .param("since", Columns.text(since)));
     }
 
@@ -128,9 +130,9 @@ public class TaskStore {
         if (blockedBy.isEmpty()) {
             return List.of();
         }
-        Map<String, TaskState> states = store.sql("select id, state from task where id in (:ids)")
+        Map<String, TaskState> states = store.sql("select id, stage from task where id in (:ids)")
                 .param("ids", blockedBy.stream().map(TaskId::value).toList())
-                .query((row, _) -> Map.entry(row.getString("id"), TaskState.named(row.getString("state"))))
+                .query((row, _) -> Map.entry(row.getString("id"), TaskStage.named(row.getString("stage")).state()))
                 .list()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -198,7 +200,7 @@ public class TaskStore {
                 row.getString("id"),
                 row.getString("kind"),
                 row.getString("title"),
-                row.getString("state"),
+                row.getString("stage"),
                 row.getString("work_key"),
                 row.getString("base"),
                 row.getString("delivery"),
@@ -238,6 +240,10 @@ public class TaskStore {
         return entries.stream().collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
     }
 
+    private static List<String> stageWordsOf(TaskState state) {
+        return Arrays.stream(TaskStage.values()).filter(stage -> stage.state() == state).map(TaskStage::word).toList();
+    }
+
     private record TaskParts(Map<String, List<ProjectName>> projects, Map<String, List<TaskId>> blockers, Map<String, CaptainHold> holds) {
     }
 
@@ -245,7 +251,7 @@ public class TaskStore {
             String id,
             String kind,
             String title,
-            String state,
+            String stage,
             String workKey,
             String base,
             String delivery,
@@ -265,7 +271,7 @@ public class TaskStore {
             return new Task(
                     new TaskId(id),
                     intake,
-                    TaskState.named(state),
+                    TaskStage.named(stage),
                     notes,
                     parts.holds().get(id),
                     Columns.instant(created),

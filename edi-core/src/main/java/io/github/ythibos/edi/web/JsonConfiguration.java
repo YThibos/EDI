@@ -28,6 +28,7 @@ import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.PaneState;
@@ -73,6 +74,7 @@ class JsonConfiguration {
                 .addSerializer(PaneState.class, new AsText<>(PaneState.class, PaneState::word))
                 .addSerializer(TaskKind.class, new AsText<>(TaskKind.class, TaskKind::word))
                 .addSerializer(TaskState.class, new AsText<>(TaskState.class, TaskState::word))
+                .addSerializer(TaskStage.class, new AsText<>(TaskStage.class, TaskStage::word))
                 .addSerializer(HoldKind.class, new AsText<>(HoldKind.class, HoldKind::word))
                 .addSerializer(AnswerChannel.class, new AsText<>(AnswerChannel.class, AnswerChannel::word))
                 .addSerializer(HoldUntil.class, new AsText<>(HoldUntil.class, JsonConfiguration::dayOrCaptainsWord));

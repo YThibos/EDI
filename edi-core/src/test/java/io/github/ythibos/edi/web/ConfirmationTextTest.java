@@ -48,6 +48,7 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.testing.Stages;
 
 class ConfirmationTextTest {
 
@@ -67,9 +68,8 @@ class ConfirmationTextTest {
 
     @Test
     void confirmsAnAnswerAndWhatBecameOfItsTask() {
-        Task closed = PresenterFixtures.captainItem()
-                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask())
-                .decisionAnswered(Instant.parse("2026-10-15T10:00:00Z"));
+        Task closed = Stages.answered(PresenterFixtures.captainItem()
+                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
 
         assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), closed, TicketSettlement.none())))
                 .isEqualTo("Recorded the answer to D58 (option A); lamp-choice is done.\n");
@@ -177,9 +177,8 @@ class ConfirmationTextTest {
     }
 
     private String answerWith(TicketSettlement ticket) {
-        Task released = PresenterFixtures.captainItem()
-                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask())
-                .decisionAnswered(Instant.parse("2026-10-15T10:00:00Z"));
+        Task released = Stages.answered(PresenterFixtures.captainItem()
+                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
         return text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, ticket));
     }
 

@@ -25,7 +25,7 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
-import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.task.TaskStage;
 
 final class ForkEntryMapping {
 
@@ -93,15 +93,15 @@ final class ForkEntryMapping {
     }
 
     private Task taskOf(ForkEntry entry, TaskId id, Decision decision) {
-        TaskState state = stateOf(entry.section());
+        TaskStage stage = stageOf(entry.section());
         return new Task(
                 id,
                 intakeOf(entry, id),
-                state,
+                stage,
                 String.join("\n", entry.body()),
-                state == TaskState.DONE ? null : holdOf(entry, id, decision),
+                stage.isClosed() ? null : holdOf(entry, id, decision),
                 createdAt(entry),
-                state == TaskState.DONE ? closedAt(entry) : null);
+                stage.isClosed() ? closedAt(entry) : null);
     }
 
     private Instant heldSince(ForkEntry entry) {
@@ -117,11 +117,11 @@ final class ForkEntryMapping {
         return startOf(entry.tags().closed(), heldSince(entry));
     }
 
-    private static TaskState stateOf(ForkSection section) {
+    private static TaskStage stageOf(ForkSection section) {
         return switch (section) {
-            case IN_FLIGHT -> TaskState.IN_FLIGHT;
-            case QUEUED -> TaskState.QUEUED;
-            case DONE -> TaskState.DONE;
+            case IN_FLIGHT -> TaskStage.WORKING;
+            case QUEUED -> TaskStage.QUEUED;
+            case DONE -> TaskStage.RETIRED;
         };
     }
 

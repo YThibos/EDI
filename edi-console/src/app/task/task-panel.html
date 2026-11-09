@@ -12,7 +12,7 @@
   @if (detail().value; as detail) {
     <dl class="sr-task__facts">
       <div><dt>Kind</dt><dd>{{ detail.task.intake.kind }}</dd></div>
-      <div><dt>State</dt><dd><span class="sr-badge" [class]="'sr-badge--' + toneOf(detail.task.state)"><span class="sr-badge__dot"></span>{{ detail.task.state }}</span></dd></div>
+      <div><dt>Stage</dt><dd><span class="sr-badge" [class]="'sr-badge--' + toneOf(detail.task.stage)"><span class="sr-badge__dot"></span>{{ detail.task.stage }}</span></dd></div>
       <div><dt>Projects</dt><dd>{{ projectsOf(detail.task.intake.projects, detail.task.id) }}</dd></div>
       @if (detail.task.intake.workKey; as key) {
         <div><dt>Work key</dt><dd>{{ key }}</dd></div>

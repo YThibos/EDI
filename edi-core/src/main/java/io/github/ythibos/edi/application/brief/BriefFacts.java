@@ -56,7 +56,7 @@ public record BriefFacts(
     }
 
     BriefFacts withoutTheCaptainsNotesOrResearchPlan() {
-        Task unnoted = new Task(task.id(), task.intake(), task.state(), "", task.hold(), task.created(), task.closed());
+        Task unnoted = new Task(task.id(), task.intake(), task.stage(), "", task.hold(), task.created(), task.closed());
         return new BriefFacts(unnoted, worker, project, dispatch, base, worktree, taskDirectory, ediSocket, craftRules, null, asksForTheTimeWorked);
     }
 }

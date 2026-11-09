@@ -28,10 +28,14 @@ import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
+import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.FixtureRepository;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -69,8 +73,47 @@ class FollowMergesTest {
         assertThat(home.deliveries().of(LAMP).orElseThrow().state()).isEqualTo(MergeRequestState.MERGED);
         assertThat(home.eventTypesOf(LAMP)).containsSubsequence("DraftMerged", "CloneRefreshed", "TaskCostRecorded", "TaskCleanedUp");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+        assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage)
+                .containsExactly(TaskStage.WORKING, TaskStage.DELIVERED, TaskStage.MERGED, TaskStage.LANDED, TaskStage.RETIRED);
         assertThat(copy.root()).doesNotExist();
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).contains(WakeKind.DRAFT_MERGED);
+    }
+
+    @Test
+    void namesACommitAfterTheMergedHeadAsNotLandedAndKeepsTheTaskMerged() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        String mergedHead = copy.head();
+        String landed = squashedOntoMain(copy);
+        String steered = copy.write("cap.txt", "brass\n").commit("HRN-3 Fit the cap the steer asked for").head();
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), landed);
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.MERGED);
+        assertThat(home.events().stagesOf(LAMP)).last().extracting(StageReached::reason)
+                .isEqualTo("merged at " + mergedHead + "; 1 commit not landed: " + steered.substring(0, 12));
+        assertThat(home.jdbc().sql("select json_extract(payload, '$.notLanded[0].subject') from event where type = 'StageChanged' and "
+                + "json_extract(payload, '$.to') = 'merged'").query(String.class).single()).isEqualTo("HRN-3 Fit the cap the steer asked for");
+        assertThat(home.eventTypesOf(LAMP)).contains("CleanupRefused").doesNotContain("TaskCleanedUp");
+    }
+
+    @Test
+    void keepsTheHeadAndTheDraftFlagOfAnOpenRequestAfterTheDone() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        Worker worker = DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        String pushed = copy.write("cap.txt", "brass\n").commit("HRN-3 Fit the cap").head();
+        WorkerFixtures.opensTheDraftOf(home, worker);
+        home.forge().marksReady(home.deliveries().of(LAMP).orElseThrow().address());
+
+        home.followMerges().watchTheOpenDrafts();
+
+        Delivery observed = home.deliveries().of(LAMP).orElseThrow();
+        assertThat(observed.draft()).isFalse();
+        assertThat(observed.headCommit()).isEqualTo(pushed);
+        assertThat(home.eventTypesOf(LAMP)).doesNotContain("DraftClosed");
     }
 
     @Test
@@ -231,7 +274,7 @@ class FollowMergesTest {
 
     @Test
     void followsAMergeEdiNeverRecordedPastAnInFlightTaskThatWasNeverDispatched() throws IOException {
-        home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4").dispatched()));
+        home.storing(List.of(Stages.working(WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"))));
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());

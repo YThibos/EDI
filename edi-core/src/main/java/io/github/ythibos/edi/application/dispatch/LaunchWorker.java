@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -36,6 +37,8 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.task.TaskHolds;
+import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.application.worker.WorkerTokens.IssuedToken;
 import io.github.ythibos.edi.domain.OperationalText;
@@ -52,8 +55,12 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.Adoption;
+import io.github.ythibos.edi.domain.task.Blocker;
+import io.github.ythibos.edi.domain.task.StageChange;
+import io.github.ythibos.edi.domain.task.StageTrigger;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -87,14 +94,16 @@ public class LaunchWorker {
     private final Pipeline pipeline;
     private final ProcessTable processes;
     private final MachineBoot boot;
+    private final TaskHolds holds;
+    private final TaskStages stages;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
             WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
-            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, Clock clock,
-            TransactionTemplate transaction) {
+            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, TaskHolds holds,
+            TaskStages stages, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
         this.dispatches = dispatches;
@@ -117,6 +126,8 @@ public class LaunchWorker {
         this.pipeline = pipeline;
         this.processes = processes;
         this.boot = boot;
+        this.holds = holds;
+        this.stages = stages;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -156,6 +167,7 @@ public class LaunchWorker {
 
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
+        Optional<StageChange> start = transaction.execute(_ -> startOf(incarnation));
         Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
@@ -165,7 +177,25 @@ public class LaunchWorker {
         String firstPrompt = firstPromptFor(incarnation, worktree, reason);
         prepareThePipelineFor(incarnation);
         WorkerWindow window = runtime.launch(launchOf(incarnation, worktree, taskDirectory, stateDirectory, token, firstPrompt));
-        return transaction.execute(_ -> recorded(incarnation, window, token, worktree, reason, actor));
+        return transaction.execute(_ -> recorded(incarnation, start, window, token, worktree, reason, actor));
+    }
+
+    private Optional<StageChange> startOf(Incarnation incarnation) {
+        Task task = incarnation.task();
+        if (task.stage() != TaskStage.QUEUED) {
+            return Optional.empty();
+        }
+        return Optional.of(task.transitions().move(task.stage(), dispatchOf(task, incarnation.project())));
+    }
+
+    private StageTrigger.Dispatch dispatchOf(Task task, ProjectEntry project) {
+        List<TaskId> unmetWaits = tasks.blockersOf(task).stream().filter(blocker -> !blocker.isResolved()).map(Blocker::id).toList();
+        return new StageTrigger.Dispatch(holds.of(task), unmetWaits, hasRoomOn(project));
+    }
+
+    private boolean hasRoomOn(ProjectEntry project) {
+        OptionalInt capacity = project.workerCapacity();
+        return capacity.isEmpty() || places.occupiedOn(project.project().name()) < capacity.getAsInt();
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {
@@ -179,7 +209,8 @@ public class LaunchWorker {
     }
 
     private Incarnation incarnationFor(Dispatch dispatch, LaunchKind kind, OutageEntry answered) {
-        Task task = withoutTheOutageHold(tasks.get(dispatch.task()), answered).dispatched();
+        Task task = withoutTheOutageHold(tasks.get(dispatch.task()), answered);
+        task.requireFreeToWork();
         ProjectEntry project = registry.entryOf(task.intake().projects().getFirst());
         WorkerSettings settings = machine.workers();
         DispatchRules rules = rulesFile.validatedAgainst(settings.models());
@@ -268,16 +299,17 @@ public class LaunchWorker {
                 incarnation.settings().disallowedTools(), incarnation.settings().permissionMode(), firstPrompt);
     }
 
-    private Launched recorded(Incarnation incarnation, WorkerWindow window, IssuedToken token, Path worktree, String because, Actor actor) {
+    private Launched recorded(Incarnation incarnation, Optional<StageChange> start, WorkerWindow window, IssuedToken token, Path worktree,
+            String because, Actor actor) {
         Instant now = clock.now();
         Worker worker = Worker.launched(incarnation.worker(), incarnation.session(), incarnation.dispatch().category(),
                 incarnation.route(), window, new WorkerLaunch(incarnation.launchedAs(), now, boot.current()));
         retireTheEarlierWorker(incarnation, now, actor);
         workers.insert(worker, token.digest());
         settleTheOutageEntry(incarnation, now, actor);
-        tasks.update(tasks.get(incarnation.task().id()).dispatched());
         dispatches.save(incarnation.dispatch().undeferred());
         events.record(launchEventOf(incarnation, worker, because), actor, now);
+        start.ifPresent(change -> stages.changed(tasks.get(change.task()), change, actor, now));
         return new Launched(worker, incarnation.dispatch().branch(), worktree, incarnation.unresumable());
     }
 

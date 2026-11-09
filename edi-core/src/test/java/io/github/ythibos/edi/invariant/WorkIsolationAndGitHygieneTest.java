@@ -270,7 +270,7 @@ class WorkIsolationAndGitHygieneTest {
             home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "The lamp is fitted.");
 
             assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
-            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("StatusReported", "DraftRecorded");
+            assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("StatusReported", "StageChanged", "DraftRecorded");
         }
 
         @Test

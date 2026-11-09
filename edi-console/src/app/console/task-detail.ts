@@ -10,7 +10,7 @@ export interface TaskDetail {
       blockedBy: string[];
       delivery: string | null;
     };
-    state: string;
+    stage: string;
     notes: string;
     hold: { kind: string; reason: string; until: string | null; setAt: string } | null;
     created: string;

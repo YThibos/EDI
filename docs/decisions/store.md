@@ -52,3 +52,4 @@ When EDI needs concurrent writers from more than one process, long-running reade
 - 15/10/2026: the specification chose SQLite with Flyway; slice S0 proved the driver and Flyway in the native image, and slice S1 created the first eight tables and made every transaction immediate.
 - 16/10/2026 to 19/10/2026: slices S3 to S10 added workers and inboxes, supervision state, deliveries, tracker and follower state, console sessions and boards, presence and memory, and migration and adoption, one migration each.
 - 21/10/2026: `V9__waiting_on_the_captain.sql` added board links and dropped dependencies on closed tasks.
+- 09/11/2026: `V24__the_stage_is_stored.sql` rebuilt `task` with `stage` in place of `state` and derived each task's stage once from the stored facts ([task-lifecycle](task-lifecycle.md), EDI-85).

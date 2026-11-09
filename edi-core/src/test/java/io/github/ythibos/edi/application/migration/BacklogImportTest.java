@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.Intakes;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
 
 @Tag("adapter")
@@ -34,7 +35,7 @@ class BacklogImportTest {
     @Test
     void keepsOnlyTheBlockersThatAreStillOpenInEdi() {
         TaskId lantern = home.addTask().add(ship("lantern", "Light the lantern"), Actor.PRIMARY).id();
-        home.tasks().update(home.tasks().get(lantern).dispatched().cleanedUp(TestHome.START));
+        home.tasks().update(Stages.retired(home.tasks().get(lantern), TestHome.START));
         TaskId mast = home.addTask().add(ship("mast", "Raise the mast"), Actor.PRIMARY).id();
 
         home.backlogImport().importInto(List.of(new MigratedEntry(oldTask("fog-horn", "lantern", "mast", "elsewhere"), null)),

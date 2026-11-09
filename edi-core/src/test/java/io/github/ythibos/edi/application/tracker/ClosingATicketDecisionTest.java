@@ -74,7 +74,7 @@ class ClosingATicketDecisionTest {
         assertThat(closed.answer().verbatim()).isEqualTo("Drop the lamps.");
         assertThat(home.decisions().open()).isEmpty();
         assertThat(home.ticketProposalStore().of(LAMPS).orElseThrow().isSettled()).isTrue();
-        assertThat(home.eventTypesOf(LAMPS)).endsWith("DecisionAnswered", "TaskDropped");
+        assertThat(home.eventTypesOf(LAMPS)).endsWith("DecisionAnswered", "StageChanged", "TaskDropped");
     }
 
     @Test
