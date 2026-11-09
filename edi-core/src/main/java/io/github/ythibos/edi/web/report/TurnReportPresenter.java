@@ -8,7 +8,9 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.web.presence.PresenceWords;
+import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
 @Component
@@ -17,9 +19,11 @@ public class TurnReportPresenter implements TextPresenter<TurnReport> {
     static final String NOTHING_FOR_THE_CAPTAIN = "Nothing needs you; /sitrep shows the rest.\n";
 
     private final PresenceWords presenceWords;
+    private final Moments moments;
 
-    public TurnReportPresenter(PresenceWords presenceWords) {
+    public TurnReportPresenter(PresenceWords presenceWords, Moments moments) {
         this.presenceWords = presenceWords;
+        this.moments = moments;
     }
 
     @Override
@@ -43,11 +47,18 @@ public class TurnReportPresenter implements TextPresenter<TurnReport> {
         return ReportLines.standing("Calendar: " + presenceWords.ofTheUnreadableCalendar(report.unreadableCalendar()), width);
     }
 
-    private static List<String> decisionZoneOf(TurnReport report, int width) {
+    private List<String> decisionZoneOf(TurnReport report, int width) {
         if (report.waiting().hasNothingWaiting()) {
             return List.of();
         }
-        return DecisionZone.lines(WaitingEntries.of(report.waiting(), new TurnWording(report.turn()), report::showsTheCardOf), width);
+        return DecisionZone.lines(WaitingEntries.of(report.waiting(), new TurnWording(report.turn()), open -> showingOf(open, report)), width);
+    }
+
+    private DecisionShowing showingOf(OpenDecision open, TurnReport report) {
+        if (report.holdsForTheGatheringRound(open.decision())) {
+            return new DecisionShowing.InTheRound(moments.clockTime(report.gatheringRound().closes()));
+        }
+        return report.showsTheCardOf(open) ? DecisionShowing.IN_FULL : DecisionShowing.AS_A_REMINDER;
     }
 
     private static List<String> doneOf(Turn turn, int width) {

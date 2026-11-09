@@ -17,6 +17,7 @@ import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.presence.CaptainNotices;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
+import io.github.ythibos.edi.domain.decision.DecisionRound;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -95,10 +96,12 @@ final class CaptainFacingStrings {
         views.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE, ReportWidth.standard(),
                 Presence.presentSince(TestHome.START), null, null)));
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(),
-                new UnreadableCalendar(NOW, "Outlook did not answer."), null)));
-        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(), null, NOW)));
+                new UnreadableCalendar(NOW, "Outlook did not answer."), null, null)));
+        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(), null, NOW, null)));
+        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(), null, NOW,
+                new DecisionRound(NOW, fleet.waiting().decisions().stream().map(open -> open.decision().number()).toList()))));
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), Turn.NONE,
-                ReportWidth.standard(), null, NOW)));
+                ReportWidth.standard(), null, NOW, null)));
         views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))), _ -> Map.of())));
         return views;

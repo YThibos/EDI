@@ -19,6 +19,7 @@ const BULB: DecisionCard = {
   context: '',
   options: [{ key: 'A', text: 'The warm one' }],
   recommended: { key: 'A', why: 'it is enough' },
+  urgent: false,
   raisedAt: '2026-10-15T06:10:00Z',
 };
 

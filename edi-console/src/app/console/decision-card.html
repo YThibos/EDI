@@ -1,7 +1,11 @@
 <div class="sr-panel sr-decision">
   <div class="sr-decision__pad">
     <div class="sr-decision__top">
-      <span class="sr-badge sr-badge--solid"><span class="sr-badge__dot"></span>decision</span>
+      @if (card().urgent) {
+        <span class="sr-badge sr-badge--danger"><span class="sr-badge__dot"></span>urgent decision</span>
+      } @else {
+        <span class="sr-badge sr-badge--solid"><span class="sr-badge__dot"></span>decision</span>
+      }
       <span class="sr-decision__repo">{{ card().number }} · {{ projects() }}</span>
     </div>
     <h3 class="sr-decision__title">{{ card().title }}</h3>

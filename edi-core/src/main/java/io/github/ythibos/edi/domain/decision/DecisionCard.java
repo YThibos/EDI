@@ -5,7 +5,7 @@ import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 
-public record DecisionCard(String title, String context, List<DecisionOption> options, Recommendation recommendation) {
+public record DecisionCard(String title, String context, List<DecisionOption> options, Recommendation recommendation, boolean urgent) {
 
     public DecisionCard {
         title = title.strip();
@@ -23,6 +23,10 @@ public record DecisionCard(String title, String context, List<DecisionOption> op
         if (!offers(options, recommendation.key())) {
             throw new IllegalArgumentException("The card recommends option " + recommendation.key() + ", which it does not offer.");
         }
+    }
+
+    public DecisionCard(String title, String context, List<DecisionOption> options, Recommendation recommendation) {
+        this(title, context, options, recommendation, false);
     }
 
     public boolean offers(OptionKey key) {

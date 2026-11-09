@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
 import io.github.ythibos.edi.domain.wake.Wake;
+import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
@@ -38,12 +39,25 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
         delivery.wakes().forEach(queued -> lines.add(queued.number() + ". " + sentenceOf(queued.wake())));
         lines.add("Fleet: " + Words.quantity(delivery.openDecisions(), "open decision") + ", " + Words.quantity(delivery.ongoing(), "task") + " in flight, "
                 + delivery.outageEntries() + " on the outage hold list.");
+        if (bringsARoundOfDecisions(delivery) && !delivery.presence().keepsTheChatQuiet()) {
+            lines.add(roundAdvice(delivery));
+        }
         if (delivery.presence().keepsTheChatQuiet()) {
             lines.add("The captain is " + presenceWords.of(delivery.presence()) + ": handle these and end the turn with no text for the captain;"
                     + " decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.");
         }
         lines.add(closingAdvice(delivery));
         return String.join("\n", lines) + "\n";
+    }
+
+    private static boolean bringsARoundOfDecisions(WakeDelivery delivery) {
+        return delivery.wakes().stream().anyMatch(queued -> queued.wake().kind() == WakeKind.DECISION_ROUND);
+    }
+
+    private static String roundAdvice(WakeDelivery delivery) {
+        int open = delivery.openDecisions();
+        return "A round of decisions is due: tell the captain in one line that " + Words.quantity(open, "open decision") + (open == 1 ? " waits" : " wait")
+                + " for them in the console, then end the turn with the turn report; never put them to the captain one by one.";
     }
 
     private String sentenceOf(Wake wake) {
@@ -78,6 +92,7 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case DELIVERY_FAILED -> wake.task() + ": its delivery to the captain's checkout failed: " + wake.detail();
             case CLEANUP_REFUSED -> wake.task() + " was not cleaned up after its merge: " + wake.detail();
             case DECISION_RAISED -> wake.task() + ": you raised " + wake.detail() + "; put it before the captain.";
+            case DECISION_ROUND -> wake.task() + ": " + wake.detail() + " is in the round of decisions due now.";
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";
             case TICKET_REFUSED -> wake.task() + ": the tracker refused " + wake.detail();
             case DECISION_ANSWERED -> wake.task() + ": the captain answered " + wake.detail() + "; carry the answer to its work.";

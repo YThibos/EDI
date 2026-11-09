@@ -56,6 +56,9 @@ public sealed interface DomainEvent {
     record DecisionAnswered(TaskId task, DecisionNumber number, CaptainAnswer answer) implements DomainEvent {
     }
 
+    record DecisionRoundClosed(TaskId task, DecisionNumber number, String title, Instant opened) implements DomainEvent {
+    }
+
     record TaskDone(TaskId task) implements DomainEvent {
     }
 

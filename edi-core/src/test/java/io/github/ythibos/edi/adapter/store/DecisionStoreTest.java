@@ -76,6 +76,20 @@ class DecisionStoreTest {
     }
 
     @Test
+    void keepsWhetherTheCardIsUrgentAcrossARaiseAgain() {
+        DecisionCard calm = card();
+        Decision urgent = Decision.raised(new DecisionNumber(58), LAMP,
+                new DecisionCard(calm.title(), calm.context(), calm.options(), calm.recommendation(), true), AT);
+        decisions.save(urgent);
+
+        assertThat(decisions.get(new DecisionNumber(58)).card().urgent()).isTrue();
+
+        decisions.save(urgent.reraised(calm, AT));
+
+        assertThat(decisions.get(new DecisionNumber(58)).card().urgent()).isFalse();
+    }
+
+    @Test
     void keepsEveryDecisionOfATaskAndNamesTheLatestAsItsDecision() {
         Decision answered = Decision.raised(new DecisionNumber(58), LAMP, card(), AT)
                 .answered(new CaptainAnswer("A", new OptionKey('A'), "", AT, AnswerChannel.CHAT));

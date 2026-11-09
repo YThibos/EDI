@@ -33,6 +33,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
+import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeferredLaunchFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
@@ -212,8 +213,11 @@ public class EventLog {
             case TaskAdded added -> withIntake(payload, added.intake());
             case TaskNoted noted -> payload.put("note", noted.note());
             case TaskHeld held -> withHold(payload, held.hold());
-            case DecisionRaised raised -> payload.put("number", raised.number().toString()).put("title", raised.card().title());
+            case DecisionRaised raised -> payload.put("number", raised.number().toString()).put("title", raised.card().title())
+                    .put("urgent", raised.card().urgent());
             case DecisionAnswered answered -> withAnswer(payload.put("number", answered.number().toString()), answered.answer());
+            case DecisionRoundClosed closed -> payload.put("number", closed.number().toString()).put("title", closed.title())
+                    .put("opened", Columns.text(closed.opened()));
             case TaskReleased _, TaskDone _ -> payload;
             case DispatchDeferred deferred -> payload.put("project", deferred.project().value())
                     .put("category", deferred.category().value())

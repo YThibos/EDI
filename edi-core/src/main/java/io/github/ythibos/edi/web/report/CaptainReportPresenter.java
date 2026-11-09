@@ -5,12 +5,13 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
+import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -24,7 +25,7 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static final int BACKLOG_SHOWN = 5;
     private static final Comparator<Task> NEWEST_FILED_FIRST = Comparator.comparing(CaptainReportPresenter::filedOn).reversed();
-    private static final Predicate<Decision> EVERY_CARD = _ -> true;
+    private static final Function<OpenDecision, DecisionShowing> EVERY_CARD = _ -> DecisionShowing.IN_FULL;
 
     private final PresenceWords presenceWords;
 

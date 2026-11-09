@@ -69,6 +69,7 @@ final class DecisionZone {
         return switch (entry) {
             case Call call -> decisionLines(call, boxWidth);
             case Reminder reminder -> reminderLines(reminder, boxWidth);
+            case InTheRound inTheRound -> inTheRoundLines(inTheRound, boxWidth);
             case BoardQuestions board -> boardLines(board, boxWidth);
             case Review review -> singleLine(WaitingWords.review(review.title(), review.url()), boxWidth);
             case Changing changing -> singleLine(WaitingWords.changing(changing.title(), changing.url(), changing.why()), boxWidth);
@@ -96,6 +97,14 @@ final class DecisionZone {
         List<String> lines = new ArrayList<>();
         lines.add(RAIL);
         lines.addAll(onTheRail(WordWrap.hanging(line, boxWidth, numbered(reminder.number()), CARD_INDENT)));
+        return lines;
+    }
+
+    private static List<String> inTheRoundLines(InTheRound inTheRound, int boxWidth) {
+        String line = Glyphs.safe(inTheRound.card().title()) + " » " + WaitingWords.inTheRound(inTheRound.closesAt());
+        List<String> lines = new ArrayList<>();
+        lines.add(RAIL);
+        lines.addAll(onTheRail(WordWrap.hanging(line, boxWidth, numbered(inTheRound.number()), CARD_INDENT)));
         return lines;
     }
 
@@ -153,6 +162,9 @@ final class DecisionZone {
     }
 
     record Reminder(DecisionNumber number, ProjectSet projects, DecisionCard card) implements Entry {
+    }
+
+    record InTheRound(DecisionNumber number, ProjectSet projects, DecisionCard card, String closesAt) implements Entry {
     }
 
     record BoardQuestions(ProjectSet projects, String title, int questions, String link, List<BoardDecision> decisions) implements Entry {

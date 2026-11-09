@@ -45,6 +45,7 @@ export interface DecisionCard {
   context: string;
   options: DecisionOption[];
   recommended: Recommendation;
+  urgent: boolean;
   raisedAt: string;
 }
 

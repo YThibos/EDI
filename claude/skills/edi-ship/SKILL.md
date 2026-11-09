@@ -35,6 +35,8 @@ description: >-
 - `edi worker list`, `edi worker show <task>` (its whole last status and open question, from the store) and `edi worker peek <task>` (its pane) show a worker; `edi steer <task> [--resolves <key>]` sends it a message on standard input.
 - The worker runs the validation pipeline and answers its gates; you never answer a worker's gate.
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
+- Such a decision waits in the console for its round of decisions, and the core wakes you when the round is due: never put it to the captain on its own before then.
+- Only a decision that blocks the captain's current work gets `"urgent": true` on its card, which puts it before them at once.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
 - Carry the captain's answer back with `edi steer <task> --resolves <key>`.
 - A steer that changes a task's scope is first recorded with `edi task note <task>`, which rewrites the brief and the pipeline intent, so the pipeline's review counts it as asked for.
