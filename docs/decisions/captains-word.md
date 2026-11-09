@@ -15,6 +15,7 @@ In the week of 26 October 2026 the primary retyped the captain's words in 139 ca
 The primary's `UserPromptSubmit` hook stores every prompt the captain types, verbatim, as a numbered `TypedMessage` of its session with the time it arrived (`PrimaryHooks.promptSubmitted`, `CaptainMessageStore`, table `captain_message`); a prompt opening with `<task-notification>` or EDI's operational mark is not the captain's and is not stored.
 Its `PostToolUse` hook on `AskUserQuestion` stores each answered question as a numbered `DialogAnswer`: the question, the option the captain chose or the text they gave for "Other", and their notes (`PrimaryHooks.dialogAnswered`, `DialogAnswers` in the hook controller).
 Numbers count from 1 in each session, over both kinds; `edi captain messages` lists them compactly (`CaptainMessagesText`).
+A typed message that opens with `Spark:` or `spark:` is stored like any other and is also caught as the captain's spark ([sparks](sparks.md)).
 A worker's hooks never reach the store, whatever session id they carry.
 Claude Code marks pasted text as `<pasted_content id="...">` up to `</pasted_content id="...">`; a stored message keeps that text and its marks, and `TypedMessage.lines` marks every line from an opening tag up to the closing tag with the same id as pasted.
 A closing tag inside a paste with another id, or none, is pasted text and ends nothing, and a paste that never closes runs to the end of the message.
@@ -78,4 +79,5 @@ When the console gains its own promote, drop or discard actions, the captain wan
 - 28/10/2026: a typed prompt stays the only evidence, and the guard keeps a worker's shell from typing into any tmux pane, after the security review found a worker could type into the primary through the captain's default server (EDI-123).
 - 02/11/2026: the hooks store the captain's messages and dialog answers verbatim and numbered, in place of digests, so the primary cites them by number, and a dialog answer that opens with an act and names its task is the captain's word for that act (EDI-159).
 - 03/11/2026: the guard refuses the primary's shell any `edi hook` command, so only Claude Code stores the captain's messages and dialog answers (EDI-159).
+- 09/11/2026: the same hook catches a typed message that opens with `Spark:` as the captain's spark (EDI-166).
 - 04/11/2026: the captain's drop word no longer waits on a task's open ticket decision but drops the task and answers that decision, after a stray task could not be dropped (EDI-179).

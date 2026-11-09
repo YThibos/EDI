@@ -18,6 +18,20 @@ EDI's own queued and held work is also one GitHub issue per item on its reposito
 
 Every ship and scout gets its work key at intake ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)); [Trackers and time](trackers-and-time.md) explains where the key comes from.
 
+## Sparks
+
+An idea that is not thought through yet is caught as a spark, not put on the backlog, and the weekly round sorts it with the captain ([sparks](decisions/sparks.md)).
+A message the captain types in the primary that opens with `Spark:` or `spark:` is caught the same way, as the captain's spark.
+
+```sh
+edi spark "A tide clock on the harbour wall"     # the time, the author, the session and the task acted on last
+edi spark "Paint it blue" --project EDI          # or name the task or project it is about
+edi spark list                                   # the open sparks, oldest first; --json for the whole record
+edi spark backlog 3 EDI-190                      # it became that backlog item
+edi spark fold 4 EDI-120                         # an existing item already covers it
+edi spark drop 5 --reason "One lighthouse is enough."
+```
+
 ## Decisions
 
 ```sh

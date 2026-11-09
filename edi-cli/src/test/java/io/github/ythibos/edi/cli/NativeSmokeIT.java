@@ -289,6 +289,23 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandCatchesTheCaptainsSparkAndSortsIt() throws Exception {
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+        String session = "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"";
+        ediIn(Path.of(""), primary, session + "}", "hook", "session-start");
+
+        CommandRun heard = ediIn(Path.of(""), primary, session + ",\"prompt\":\"Spark: a native tide clock\"}", "hook", "user-prompt-submit");
+        CommandRun listed = edi("", "spark", "list", "--json");
+        CommandRun dropped = edi("", "spark", "drop", "1", "--reason", "Natively enough.");
+
+        assertThat(heard.output()).contains("you caught it as spark 1");
+        assertThat(listed.output()).contains("\"text\":\"a native tide clock\"", "\"author\":\"captain\"",
+                "\"session\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"");
+        assertThat(dropped.output()).isEqualTo("Dropped spark 1: Natively enough.\n");
+        assertThat(edi("", "spark", "list").output()).isEqualTo("Open sparks (0)\n");
+    }
+
+    @Test
     void theCommandRendersTheCaptainReportInAnyLocale() throws Exception {
         edi("", "task", "add", "--kind", "captain", "--id", "native-report-call", "--title", "Choose for the report");
         String number = edi("{\"title\":\"Which lantern?\",\"options\":[{\"key\":\"A\",\"text\":\"Brass\"}],\"recommend\":{\"key\":\"A\",\"why\":\"it shines\"}}",
