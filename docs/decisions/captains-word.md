@@ -79,5 +79,5 @@ When the console gains its own promote, drop or discard actions, the captain wan
 - 28/10/2026: a typed prompt stays the only evidence, and the guard keeps a worker's shell from typing into any tmux pane, after the security review found a worker could type into the primary through the captain's default server (EDI-123).
 - 02/11/2026: the hooks store the captain's messages and dialog answers verbatim and numbered, in place of digests, so the primary cites them by number, and a dialog answer that opens with an act and names its task is the captain's word for that act (EDI-159).
 - 03/11/2026: the guard refuses the primary's shell any `edi hook` command, so only Claude Code stores the captain's messages and dialog answers (EDI-159).
-- 09/11/2026: the same hook catches a typed message that opens with `Spark:` as the captain's spark (EDI-166).
 - 04/11/2026: the captain's drop word no longer waits on a task's open ticket decision but drops the task and answers that decision, after a stray task could not be dropped (EDI-179).
+- 09/11/2026: the hook that stores the captain's messages also catches a typed message that opens with `Spark:` as the captain's spark (EDI-166).
