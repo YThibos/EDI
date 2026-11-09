@@ -437,6 +437,51 @@ class ApiTest {
     }
 
     @Test
+    void catchesTheCaptainsSparkAtTheHookAndThePrimarysByCommandListsThemAndSortsThem() throws Exception {
+        String worker = workerTokenFor("api-spark");
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+
+        HttpResponse<String> heard = primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Spark: a tide clock on the harbour wall\"}");
+        HttpResponse<String> plain = primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Carry on with the lamp.\"}");
+        HttpResponse<String> caught = send(inSession(primary, "/api/sparks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"text\":\"Log the lamp's hours\\nper night\",\"project\":\"harness\"}")));
+        HttpResponse<String> fromTheTerminal = post("/api/sparks", "{\"text\":\"A spare bulb\",\"task\":\"api-spark\"}", TEXT);
+        HttpResponse<String> byTheWorker = send(as(worker, "/api/sparks", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{\"text\":\"Mine\"}")));
+        HttpResponse<String> listed = get("/api/sparks", TEXT);
+        HttpResponse<String> listedAsJson = get("/api/sparks", JSON);
+        HttpResponse<String> backlogged = post("/api/sparks/1/backlog", "{\"key\":\"HRN-12\"}", TEXT);
+        HttpResponse<String> folded = post("/api/sparks/2/fold", "{\"key\":\"HRN-3\"}", TEXT);
+        HttpResponse<String> dropped = post("/api/sparks/3/drop", "{\"reason\":\"The store keeps spares.\"}", TEXT);
+        HttpResponse<String> again = post("/api/sparks/3/drop", "{\"reason\":\"Twice.\"}", TEXT);
+        HttpResponse<String> unknown = post("/api/sparks/9/backlog", "{\"key\":\"HRN-12\"}", TEXT);
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(new JsonMapper().readTree(heard.body()).path("hookSpecificOutput").path("additionalContext").asString())
+                .isEqualTo("The captain's message is a spark: you caught it as spark 1, focused on the task api-spark, and it waits for the weekly"
+                        + " gardening. Acknowledge it in one line and carry on with the work in hand; do not act on the idea itself.");
+        assertThat(plain.statusCode()).isEqualTo(204);
+        assertThat(caught.statusCode()).isEqualTo(201);
+        assertThat(caught.body()).isEqualTo("Caught spark 2 from the primary, focused on the project harness; it waits for the weekly gardening.\n");
+        assertThat(fromTheTerminal.body()).isEqualTo("Caught spark 3 from the captain, focused on the task api-spark; it waits for the weekly gardening.\n");
+        assertRefusal(byTheWorker, 403, "edi spark runs under the EDI home's own token, in the captain's terminal or the primary session.");
+        assertThat(listed.body().lines().toList()).satisfiesExactly(
+                heading -> assertThat(heading).isEqualTo("Open sparks (3)"),
+                first -> assertThat(first).matches("  1  \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\S+  captain  task api-spark   a tide clock on the harbour wall"),
+                second -> assertThat(second).matches("  2  \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\S+  primary  project harness  Log the lamp's hours"),
+                continued -> assertThat(continued).isEqualTo("      per night"),
+                third -> assertThat(third).matches("  3  \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\S+  captain  task api-spark   A spare bulb"));
+        assertThat(listedAsJson.body()).contains("\"number\":1", "\"text\":\"a tide clock on the harbour wall\"", "\"author\":\"captain\"",
+                "\"session\":\"" + primary + "\"", "\"focus\":{\"task\":\"api-spark\",\"project\":null}", "\"sorting\":null,\"open\":true");
+        assertThat(backlogged.body()).isEqualTo("Spark 1 is backlogged as HRN-12.\n");
+        assertThat(folded.body()).isEqualTo("Spark 2 is folded into HRN-3.\n");
+        assertThat(dropped.body()).isEqualTo("Dropped spark 3: The store keeps spares.\n");
+        assertRefusal(again, 409, "Spark 3 was already dropped; a spark is sorted once.");
+        assertRefusal(unknown, 404, "No spark is numbered 9; edi spark list shows the open ones.");
+        assertThat(get("/api/sparks", TEXT).body()).isEqualTo("Open sparks (0)\n");
+    }
+
+    @Test
     void movesThePrimaryRoleToTheSessionTheCaptainTypedInAndRefusesTheStandbysChanges() throws Exception {
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();

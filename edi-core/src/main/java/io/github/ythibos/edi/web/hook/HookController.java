@@ -3,7 +3,9 @@ package io.github.ythibos.edi.web.hook;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
+import io.github.ythibos.edi.application.spark.CatchSpark;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.worker.ToolCall;
@@ -30,6 +33,7 @@ import io.github.ythibos.edi.web.access.NotPermitted;
 import io.github.ythibos.edi.web.console.ConsoleAddress;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
+import io.github.ythibos.edi.web.spark.SparkSentences;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -46,17 +50,19 @@ class HookController {
     private final WorkerHooks workerHooks;
     private final PrimaryHooks primaryHooks;
     private final GuardToolCall guard;
+    private final CatchSpark catchSpark;
     private final OpenTheSitrepAtSessionStart sitrep;
     private final SessionStartDigestQuery digests;
     private final SessionStartDigestText digestText;
     private final ReturnBriefText returnBriefText;
     private final JsonMapper json;
 
-    HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, OpenTheSitrepAtSessionStart sitrep,
+    HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, CatchSpark catchSpark, OpenTheSitrepAtSessionStart sitrep,
             SessionStartDigestQuery digests, SessionStartDigestText digestText, ReturnBriefText returnBriefText, JsonMapper json) {
         this.workerHooks = workerHooks;
         this.primaryHooks = primaryHooks;
         this.guard = guard;
+        this.catchSpark = catchSpark;
         this.sitrep = sitrep;
         this.digests = digests;
         this.digestText = digestText;
@@ -109,9 +115,13 @@ class HookController {
     }
 
     private ResponseEntity<String> promptSubmitted(UUID session, String prompt) {
-        return primaryHooks.promptSubmitted(session, prompt)
-                .map(brief -> asJson(additionalContext(HookEvent.USER_PROMPT_SUBMIT, returnBriefText.text(brief))))
-                .orElseGet(() -> ResponseEntity.noContent().build());
+        Optional<String> returnBrief = primaryHooks.promptSubmitted(session, prompt).map(returnBriefText::text);
+        Optional<String> spark = catchSpark.fromTheCaptainsMessage(session, prompt).map(SparkSentences::caughtFromTheCaptainsMessage);
+        return contextIfAny(HookEvent.USER_PROMPT_SUBMIT, Stream.of(returnBrief, spark).flatMap(Optional::stream).toList());
+    }
+
+    private ResponseEntity<String> contextIfAny(HookEvent hook, List<String> context) {
+        return context.isEmpty() ? ResponseEntity.noContent().build() : asJson(additionalContext(hook, String.join("\n", context)));
     }
 
     private HookAnswer toolUsed(UUID session, JsonNode payload) {

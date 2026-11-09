@@ -21,6 +21,8 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.spark.SparkAuthor;
+import io.github.ythibos.edi.domain.spark.SparkOutcome;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -75,6 +77,8 @@ class JsonConfiguration {
                 .addSerializer(TaskState.class, new AsText<>(TaskState.class, TaskState::word))
                 .addSerializer(HoldKind.class, new AsText<>(HoldKind.class, HoldKind::word))
                 .addSerializer(AnswerChannel.class, new AsText<>(AnswerChannel.class, AnswerChannel::word))
+                .addSerializer(SparkAuthor.class, new AsText<>(SparkAuthor.class, SparkAuthor::word))
+                .addSerializer(SparkOutcome.class, new AsText<>(SparkOutcome.class, SparkOutcome::word))
                 .addSerializer(HoldUntil.class, new AsText<>(HoldUntil.class, JsonConfiguration::dayOrCaptainsWord));
     }
 
