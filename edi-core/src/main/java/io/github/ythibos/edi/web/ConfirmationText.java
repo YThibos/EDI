@@ -7,13 +7,17 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.delivery.DroppedTask;
+import io.github.ythibos.edi.application.delivery.RecountedCosts;
+import io.github.ythibos.edi.application.delivery.RecountedCosts.Recount;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.tracker.KeyedTask;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.web.Confirmation.Acknowledged;
 import io.github.ythibos.edi.web.Confirmation.Adopted;
@@ -23,6 +27,7 @@ import io.github.ythibos.edi.web.Confirmation.BoardRoundPosted;
 import io.github.ythibos.edi.web.Confirmation.CaptainHeard;
 import io.github.ythibos.edi.web.Confirmation.CleanedUp;
 import io.github.ythibos.edi.web.Confirmation.CoreStopping;
+import io.github.ythibos.edi.web.Confirmation.CostsRecounted;
 import io.github.ythibos.edi.web.Confirmation.Deferred;
 import io.github.ythibos.edi.web.Confirmation.Dispatched;
 import io.github.ythibos.edi.web.Confirmation.DraftDelivered;
@@ -90,6 +95,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Dropped dropped -> dropped(dropped.dropped());
             case Keyed keyed -> keyed(keyed.keyed());
             case Adopted adopted -> adopted(adopted.adopted());
+            case CostsRecounted recounted -> costsRecounted(recounted.recounted());
             case WorkDiscarded discarded -> "Discarded the isolated copy and the branch of " + discarded.discarded().task()
                     + " on the captain's word" + discardedOf(discarded.discarded().discarded());
             case CoreStopping stopping -> coreStopping(stopping);
@@ -117,6 +123,26 @@ class ConfirmationText implements TextPresenter<Confirmation> {
         }
         return "Took over " + adopted.task() + ": the old copy " + adopted.oldCopy() + " moved to " + adopted.copy() + " with its uncommitted work, on "
                 + adopted.branch() + " at " + adopted.head() + ", and " + next + ".";
+    }
+
+    private static String costsRecounted(RecountedCosts recounted) {
+        return "Recounted the pipeline's spend of " + Words.quantity(recounted.counted(), "task cost") + " counted since " + recounted.since() + "; "
+                + changedOf(recounted.changed());
+    }
+
+    private static String changedOf(List<Recount> changed) {
+        if (changed.isEmpty()) {
+            return "none changed.";
+        }
+        return changed.size() + " changed: " + changed.stream().map(ConfirmationText::recount).collect(Collectors.joining("; ")) + ".";
+    }
+
+    private static String recount(Recount recount) {
+        return recount.after().task() + " from " + pipelineTokensOf(recount.before()) + " to " + pipelineTokensOf(recount.after()) + " tokens";
+    }
+
+    private static String pipelineTokensOf(TaskCost cost) {
+        return cost.pipelineIfKnown().map(TokenUsage::total).map(String::valueOf).orElse("unknown");
     }
 
     private static String captainHeard(CaptainHeard heard) {

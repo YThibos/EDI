@@ -32,10 +32,12 @@ edi deliver fit-the-lamp                            # open the draft from the pu
 edi merged fit-the-lamp                             # the captain merged it: check the forge, refresh the clone, clean up
 edi merged https://github.com/owner/repo/pull/7     # the same, by the draft's address
 edi cleanup fit-the-lamp                            # retire a landed task's copy, branch and workers
+edi task recount-costs --since 2026-11-02           # recount the pipeline's spend of the task costs counted since that day
 ```
 
 `edi deliver` opens the draft the pipeline could not ([delivery](decisions/delivery.md)).
 `edi task show` names a ship's draft, its latest pipeline run, its active time and, once cleaned up, what it cost.
+`edi task recount-costs` reads the pipeline's spend of each task cost counted since a day again and records every cost it changes ([cleanup](decisions/cleanup.md)).
 A cleanup that finds unlanded work lists every uncommitted path and unlanded commit and changes nothing.
 
 ## The publish check

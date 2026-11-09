@@ -225,6 +225,9 @@ public sealed interface DomainEvent {
     record TaskCostRecorded(TaskId task, TaskCost cost) implements DomainEvent {
     }
 
+    record TaskCostRecounted(TaskId task, TaskCost before, TaskCost after) implements DomainEvent {
+    }
+
     record PipelineRunSeen(TaskId task, PipelineRun run) implements DomainEvent {
     }
 

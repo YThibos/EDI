@@ -244,6 +244,17 @@ class CommandsTest {
     }
 
     @Test
+    void recountsTheTaskCostsCountedSinceADay() {
+        core.answering(200, "Recounted\n");
+
+        int exitCode = edi("", "task", "recount-costs", "--since", "2026-11-02");
+
+        assertThat(exitCode).isZero();
+        assertThat(core.received().target()).isEqualTo("/api/tasks/recount-costs");
+        assertThat(core.received().body()).isEqualTo("{\"since\":\"2026-11-02\"}");
+    }
+
+    @Test
     void sendsTheTurnFromStandardInputForTheCaptainReport() {
         core.answering(200, "╔══ NEEDS YOUR DECISION ══ nothing open\n");
         String turn = "{\"done\":[{\"projects\":[],\"text\":\"Fitted the lamp\"}],\"next\":[],\"tasks\":{}}";

@@ -15,6 +15,10 @@ public record TaskCost(TaskId task, TokenUsage workers, TokenUsage pipeline, Ins
         Objects.requireNonNull(countedAt, () -> "The cost of " + task + " records when it was counted.");
     }
 
+    public TaskCost withPipelineSpend(TokenUsage spentByThePipeline) {
+        return new TaskCost(task, workers, spentByThePipeline, countedAt);
+    }
+
     public Optional<TokenUsage> pipelineIfKnown() {
         return Optional.ofNullable(pipeline);
     }

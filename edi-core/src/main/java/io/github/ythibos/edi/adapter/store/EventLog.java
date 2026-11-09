@@ -67,6 +67,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdopted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
@@ -285,6 +286,7 @@ public class EventLog {
             case CleanupRefused refused -> withEach(payload, "findings", refused.findings());
             case TaskCleanedUp _ -> payload;
             case TaskCostRecorded recorded -> withCost(payload, recorded.cost());
+            case TaskCostRecounted recounted -> withRecount(payload, recounted);
             case PipelineRunSeen seen -> withRun(payload, seen.run());
             case PipelineRunFinished finished -> withRun(payload, finished.run());
             case TaskKeyed keyed -> payload.put("key", keyed.key().toString());
@@ -348,6 +350,12 @@ public class EventLog {
     private ObjectNode withCost(ObjectNode payload, TaskCost cost) {
         withTokens(payload.putObject("workers"), cost.workers());
         cost.pipelineIfKnown().ifPresentOrElse(pipeline -> withTokens(payload.putObject("pipeline"), pipeline), () -> payload.putNull("pipeline"));
+        return payload;
+    }
+
+    private ObjectNode withRecount(ObjectNode payload, TaskCostRecounted recounted) {
+        withCost(payload.putObject("before"), recounted.before());
+        withCost(payload.putObject("after"), recounted.after());
         return payload;
     }
 

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.delivery.DropTask;
+import io.github.ythibos.edi.application.delivery.RecountTaskCosts;
 import io.github.ythibos.edi.application.migration.AdoptForkTask;
 import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.NoteTask;
@@ -38,9 +39,10 @@ class TaskController {
     private final DropTask dropTask;
     private final KeyTask keyTask;
     private final AdoptForkTask adoptForkTask;
+    private final RecountTaskCosts recountTaskCosts;
 
     TaskController(TaskListQuery list, TaskDetailQuery detail, AddTask addTask, NoteTask noteTask, PromoteScout promoteScout, DropTask dropTask,
-            KeyTask keyTask, AdoptForkTask adoptForkTask) {
+            KeyTask keyTask, AdoptForkTask adoptForkTask, RecountTaskCosts recountTaskCosts) {
         this.list = list;
         this.detail = detail;
         this.addTask = addTask;
@@ -49,6 +51,7 @@ class TaskController {
         this.dropTask = dropTask;
         this.keyTask = keyTask;
         this.adoptForkTask = adoptForkTask;
+        this.recountTaskCosts = recountTaskCosts;
     }
 
     @GetMapping
@@ -102,5 +105,11 @@ class TaskController {
         caller.requirePrimary("edi task adopt");
         return new Confirmation.Adopted(adoptForkTask.adopt(new TaskId(id), request.oldHome(), request.branchName(), request.oldCopy(),
                 request.sessionToResume(), caller.actor()));
+    }
+
+    @PostMapping("/recount-costs")
+    Confirmation recountCosts(@RequestBody RecountCostsRequest request, Caller caller) {
+        caller.requirePrimary("edi task recount-costs");
+        return new Confirmation.CostsRecounted(recountTaskCosts.recountSince(request.day(), caller.actor()));
     }
 }
