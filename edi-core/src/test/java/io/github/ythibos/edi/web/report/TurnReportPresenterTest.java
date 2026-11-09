@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
+import io.github.ythibos.edi.domain.decision.DecisionRound;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.delivery.Delivery;
@@ -136,6 +137,27 @@ class TurnReportPresenterTest {
     }
 
     @Test
+    void keepsARunningShipsDecisionToItsRoundAndDrawsAnUrgentOneInFull() {
+        Task lamp = runningShip("fit-lamp", "harness");
+        Task paint = runningShip("paint-tower", "harness");
+        Task bell = runningShip("hang-bell", "harness");
+        Decision wentOut = raised(59, lamp, "Which lamp?", NOW.minus(Duration.ofMinutes(10)));
+        Decision gathering = raised(60, paint, "Which paint?", NOW.minus(Duration.ofMinutes(1)));
+        Decision urgent = urgent(raised(61, bell, "Which bell?", NOW));
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(wentOut, lamp), new OpenDecision(gathering, paint),
+                new OpenDecision(urgent, bell)), List.of(), List.of(), List.of());
+        DecisionRound round = new DecisionRound(gathering.raisedAt(), List.of(gathering.number()));
+
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, NOW.minus(Duration.ofMinutes(30)), round));
+
+        assertThat(report).contains(
+                "║  D59   Which lamp? » Recommended: A - The simple way\n",
+                "║  D60   Which paint? » waits in the console for your round at 09:34\n",
+                "║  D61   Which bell?\n",
+                "║        (A)  The simple way\n");
+    }
+
+    @Test
     void leavesTheDecisionZoneOutWhenNothingWaitsOnTheCaptain() {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(), Map.of());
 
@@ -185,6 +207,17 @@ class TurnReportPresenterTest {
     private static Task captainItem(String id, String project) {
         return Task.queued(new TaskId(id), new Intake(TaskKind.CAPTAIN, "Choose " + id.replace("-choice", ""), List.of(new ProjectName(project)), null, null,
                 List.of(), null), "", NOW);
+    }
+
+    private static Task runningShip(String id, String project) {
+        return Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), null, null, List.of(), null), "",
+                NOW).dispatched();
+    }
+
+    private static Decision urgent(Decision decision) {
+        DecisionCard card = decision.card();
+        return Decision.raised(decision.number(), decision.task(),
+                new DecisionCard(card.title(), card.context(), card.options(), card.recommendation(), true), decision.raisedAt());
     }
 
     private static Decision raised(int number, Task task, String title, Instant at) {

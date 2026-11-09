@@ -25,7 +25,7 @@ public final class WaitingWords {
     }
 
     public static String inTheRound(String closesAt) {
-        return "in the console now, and in your round of decisions at " + closesAt;
+        return "waits in the console for your round at " + closesAt;
     }
 
     public static String workerQuestion(String task, String question, Duration waited) {
