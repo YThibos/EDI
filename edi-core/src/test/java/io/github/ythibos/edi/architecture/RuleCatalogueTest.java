@@ -35,7 +35,7 @@ class RuleCatalogueTest {
     private static final Path CATALOGUE = REPOSITORY.resolve("docs/rules.md");
     private static final Path COMMAND_SOURCES = REPOSITORY.resolve("edi-cli/src/main/java");
     private static final Path GIT_HOOKS = REPOSITORY.resolve("edi-core/src/main/resources/git-hooks");
-    private static final Pattern CATALOGUE_ROW = Pattern.compile("^\\| `([^`]+)` \\| (.*) \\| (.*) \\|$");
+    private static final Pattern CATALOGUE_ROW = Pattern.compile("^\\| `([^`]+)` \\| ([^|]*) \\| ([^|]*) \\|$");
     private static final Pattern PLACE = Pattern.compile("`([^`]+)`");
     private static final Pattern COMMAND_RULE = Pattern.compile("static final String ([A-Z_]+) = \"([^\"]+)\";");
     private static final Pattern HOOK_RULE = Pattern.compile("refuse ([a-z]+\\.[a-z0-9-]+) ");

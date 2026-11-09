@@ -11,7 +11,7 @@ public record RuleReason(String text) {
     private static final List<Redaction> REDACTIONS = List.of(
             new Redaction(Pattern.compile("\"[^\"]*\"|“[^”]*”"), "\"(quoted)\""),
             new Redaction(Pattern.compile("[^\\s,;]*[/\\\\][^\\s,;]*?(?=[.,;:)]*(?:\\s|$))"), "(path)"),
-            new Redaction(Pattern.compile("[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+"), "(address)"),
+            new Redaction(Pattern.compile("[\\w.+-]+@[\\w-]+\\.[\\w.-]*\\w"), "(address)"),
             new Redaction(Pattern.compile("(?<![\\w.])\\d{1,3}(?:\\.\\d{1,3}){3}(?![\\w.])"), "(address)"),
             new Redaction(Pattern.compile("(?<![\\w.:-])[a-z0-9][a-z0-9.-]*:\\d{2,5}(?![\\w:])", Pattern.CASE_INSENSITIVE), "(address)"),
             new Redaction(Pattern.compile("(?<![\\w-])[A-Za-z0-9_+=-]{32,}(?![\\w-])"), "(token)"));
