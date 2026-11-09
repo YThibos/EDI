@@ -25,6 +25,7 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 
@@ -58,7 +59,7 @@ public class CopyRetirement {
         transaction.execute(_ -> workers.latestOf(workplace.task().id()))
                 .filter(worker -> !worker.isRetired() && !worker.handedItsWorkOver() && runtime.isRunning(worker.window()))
                 .ifPresent(working -> {
-                    throw new Refusal(working.id() + " still works on " + workplace.task().id() + "; " + remedy);
+                    throw new Refusal(Rule.NO_WORKER_AT_WORK, working.id() + " still works on " + workplace.task().id() + "; " + remedy);
                 });
     }
 

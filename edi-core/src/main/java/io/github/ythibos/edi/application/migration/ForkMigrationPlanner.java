@@ -23,6 +23,7 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -63,12 +64,12 @@ public class ForkMigrationPlanner {
         MigrationNotes notes = new MigrationNotes();
         MappedBacklog backlog = mapped(ForkHome.at(oldHome), notes);
         if (backlog.oldHarnessWork().contains(task.value())) {
-            throw new Refusal(task + " improves the old harness itself, which I replace, so I do not take it over.");
+            throw new Refusal(Rule.ADOPTABLE, task + " improves the old harness itself, which I replace, so I do not take it over.");
         }
         return backlog.migrated().stream()
                 .filter(entry -> entry.task().id().equals(task))
                 .findFirst()
-                .orElseThrow(() -> new Refusal(task + " is not a task I import from " + oldHome + whyNot(task, notes) + "."));
+                .orElseThrow(() -> new Refusal(Rule.ADOPTABLE, task + " is not a task I import from " + oldHome + whyNot(task, notes) + "."));
     }
 
     private MappedBacklog mapped(ForkHome home, MigrationNotes notes) {

@@ -13,6 +13,7 @@ import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.worker.Worker;
 
 @Service
@@ -37,7 +38,7 @@ public class StopTheCore {
             return running;
         }
         if (stop != CoreStop.WITH_ITS_WORKERS) {
-            throw new Refusal(workersRunning(running) + " (" + running.stream().map(worker -> worker.id().toString())
+            throw new Refusal(Rule.STOP_WITH_WORKERS, workersRunning(running) + " (" + running.stream().map(worker -> worker.id().toString())
                     .collect(Collectors.joining(", ")) + "), so the core stays up; edi down --force-stop-workers stops them too, on the captain's word.");
         }
         captainsWord.requireOnTheHome(calling, CaptainWordAct.STOP_RUNNING_WORKERS);

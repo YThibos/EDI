@@ -11,6 +11,7 @@ import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candidates) {
@@ -40,7 +41,7 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
 
     public TicketChoice choiceFor(OptionKey option) {
         if (option == null) {
-            throw new Refusal("The ticket decision for " + task + " is answered with one of its options.");
+            throw new Refusal(Rule.TICKET_CHOICE, "The ticket decision for " + task + " is answered with one of its options.");
         }
         int position = option.letter() - 'A';
         if (position < candidates.size()) {
@@ -52,7 +53,7 @@ public record TicketProposal(TaskId task, TicketDraft draft, List<Ticket> candid
         if (position == candidates.size() + 1) {
             return new TicketChoice.DropTheTask();
         }
-        throw new Refusal("The ticket decision for " + task + " offers no option " + option + ".");
+        throw new Refusal(Rule.TICKET_CHOICE, "The ticket decision for " + task + " offers no option " + option + ".");
     }
 
     private String title() {

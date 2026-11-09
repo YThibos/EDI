@@ -15,6 +15,7 @@ import io.github.ythibos.edi.application.brief.BriefFacts;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -51,7 +52,7 @@ public class GatherBriefFacts {
         try {
             return Files.readString(home.craftRules(), StandardCharsets.UTF_8);
         } catch (NoSuchFileException absent) {
-            throw new Refusal(project.project().name() + " follows the craft rules, but " + home.craftRules() + " is missing; write the rules block there first.");
+            throw new Refusal(Rule.CRAFT_RULES, project.project().name() + " follows the craft rules, but " + home.craftRules() + " is missing; write the rules block there first.");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

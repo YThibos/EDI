@@ -17,6 +17,7 @@ import io.github.ythibos.edi.adapter.runtime.Tmux.OpenedWindow;
 import io.github.ythibos.edi.adapter.runtime.Tmux.ServerIdentity;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LimitStop;
@@ -150,14 +151,14 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         if (!edi.isBlank()) {
             return Path.of(edi);
         }
-        return EdiOnThePath.in(System.getenv("PATH")).orElseThrow(() -> new Refusal("The edi command is on none of the directories of the core's PATH,"
+        return EdiOnThePath.in(System.getenv("PATH")).orElseThrow(() -> new Refusal(Rule.EDI_ON_PATH, "The edi command is on none of the directories of the core's PATH,"
                 + " and a worker's hooks call it by its absolute path; put edi on that PATH or set edi.workers.edi to it."));
     }
 
     private void typeIntoTheIdlePrompt(WorkerWindow window, Keystroke.Line line) {
         PaneState state = peek(window).state();
         if (!state.acceptsALine()) {
-            throw new Refusal("The worker's pane shows " + state.word() + ", not the idle prompt, so nothing is typed into it.");
+            throw new Refusal(Rule.PANE_TYPING, "The worker's pane shows " + state.word() + ", not the idle prompt, so nothing is typed into it.");
         }
         tmux.typeLiterally(window.windowId(), line.text());
         submit(window, line.text());
@@ -173,10 +174,10 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
                 return;
             }
             if (probe.classify(lines).isADialog()) {
-                throw new Refusal("A dialog opened over the worker's composer, so nothing more is pressed.");
+                throw new Refusal(Rule.PANE_TYPING, "A dialog opened over the worker's composer, so nothing more is pressed.");
             }
         }
-        throw new Refusal("The worker's composer kept the line after " + SUBMIT_ATTEMPTS + " presses of Enter.");
+        throw new Refusal(Rule.PANE_TYPING, "The worker's composer kept the line after " + SUBMIT_ATTEMPTS + " presses of Enter.");
     }
 
     private static void settle() {
@@ -184,7 +185,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
             Thread.sleep(SETTLE);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new Refusal("Typing into the worker's pane was interrupted.");
+            throw new Refusal(Rule.PANE_TYPING, "Typing into the worker's pane was interrupted.");
         }
     }
 
@@ -195,7 +196,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
 
     private void requireRunning(WorkerWindow window) {
         if (!isRunning(window)) {
-            throw new Refusal("The worker's tmux window " + window.windowId() + " is no longer on the " + window.socket() + " server.");
+            throw new Refusal(Rule.PANE_TYPING, "The worker's tmux window " + window.windowId() + " is no longer on the " + window.socket() + " server.");
         }
     }
 }

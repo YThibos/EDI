@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Component
@@ -61,7 +62,7 @@ public class DeliveryRecords {
     }
 
     public MergeRequestView requireTheRequestFrom(Workplace workplace) {
-        return requestFrom(workplace).orElseThrow(() -> new Refusal("There is no merge request to follow: " + noRequestFrom(workplace) + "."));
+        return requestFrom(workplace).orElseThrow(() -> new Refusal(Rule.DELIVERY_RECORDED, "There is no merge request to follow: " + noRequestFrom(workplace) + "."));
     }
 
     public String noRequestFrom(Workplace workplace) {

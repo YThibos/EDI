@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
@@ -23,14 +24,14 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     public Decision reraised(DecisionCard newCard, Instant at) {
         if (!isOpen()) {
-            throw new Refusal(number + " is already answered: " + answer.verbatim() + "; a new card on " + task + " is a new decision with its own number.");
+            throw new Refusal(Rule.ANSWERED_ONCE, number + " is already answered: " + answer.verbatim() + "; a new card on " + task + " is a new decision with its own number.");
         }
         return raised(number, task, newCard, at);
     }
 
     public Decision answered(CaptainAnswer captainsAnswer) {
         if (!isOpen()) {
-            throw new Refusal(number + " is already answered: " + answer.verbatim());
+            throw new Refusal(Rule.ANSWERED_ONCE, number + " is already answered: " + answer.verbatim());
         }
         return new Decision(number, task, card, raisedAt, captainsAnswer);
     }

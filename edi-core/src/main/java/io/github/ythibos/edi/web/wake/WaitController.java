@@ -15,6 +15,7 @@ import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
 import io.github.ythibos.edi.application.wake.WakeSignal;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.wake.WakeStream;
 import io.github.ythibos.edi.web.access.Caller;
 
@@ -43,7 +44,7 @@ class WaitController {
     private UUID thePrimarysSession(Caller caller) {
         caller.requirePrimary("edi wait");
         UUID session = caller.claudeSession()
-                .orElseThrow(() -> new Refusal("edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID."));
+                .orElseThrow(() -> new Refusal(Rule.ONE_WAKE_STREAM, "edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID."));
         waits.requireThePrimary(session);
         return session;
     }

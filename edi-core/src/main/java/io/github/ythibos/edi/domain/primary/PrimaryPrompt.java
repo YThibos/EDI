@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.memory.MemoryFile;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public final class PrimaryPrompt {
 
@@ -31,7 +32,7 @@ public final class PrimaryPrompt {
     private static void requireTheAnchorWithinItsBudget(String anchor, String personalAddendum) {
         int bytes = utf8Bytes(anchor) + utf8Bytes(personalAddendum);
         if (bytes > ANCHOR_BUDGET_BYTES) {
-            throw new Refusal("The primary's anchor and its personal addendum hold " + bytes + " bytes, above the " + ANCHOR_BUDGET_BYTES
+            throw new Refusal(Rule.ANCHOR_BUDGET, "The primary's anchor and its personal addendum hold " + bytes + " bytes, above the " + ANCHOR_BUDGET_BYTES
                     + " the anchor may load (I-35); shorten personal/anchor.local.md.");
         }
     }

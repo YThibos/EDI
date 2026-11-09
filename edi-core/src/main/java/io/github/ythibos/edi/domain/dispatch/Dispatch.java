@@ -6,6 +6,7 @@ import java.util.Objects;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 public record Dispatch(
@@ -25,7 +26,7 @@ public record Dispatch(
         Objects.requireNonNull(requestedAt, () -> "The dispatch of " + task + " records when it was asked for.");
         spec = Objects.requireNonNullElse(spec, "").strip();
         if (category.isMechanical() && expectedChange == null) {
-            throw new Refusal("A mechanical task states its exact expected change and names every file it touches.");
+            throw new Refusal(Rule.MECHANICAL_SHAPE, "A mechanical task states its exact expected change and names every file it touches.");
         }
     }
 

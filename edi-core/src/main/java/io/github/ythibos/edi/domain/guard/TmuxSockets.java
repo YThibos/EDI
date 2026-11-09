@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class TmuxSockets {
 
     private static final Set<String> OPTIONS_WITH_VALUES = Set.of("-L", "-S", "-f", "-c", "-T");
@@ -35,15 +37,15 @@ final class TmuxSockets {
             return Optional.empty();
         }
         if (!tmux.namesItsServer()) {
-            return Optional.of(new GuardRefusal(GuardRule.TMUX_WITHOUT_SOCKET,
+            return Optional.of(new GuardRefusal(Rule.TMUX_WITHOUT_SOCKET,
                     "tmux without -L or -S reaches whichever server it finds, often the captain's own; name the socket with -L or -S (I-31)."));
         }
         if (tmux.isOn(ediSocket, socketPaths) && tmux.controlsTheServer()) {
-            return Optional.of(new GuardRefusal(GuardRule.EDI_SERVER_CONTROL,
+            return Optional.of(new GuardRefusal(Rule.EDI_SERVER_CONTROL,
                     "the " + ediSocket + " tmux server and its windows belong to the core: message a worker with edi steer and never send it keys or kill its windows (I-28, I-31)."));
         }
         if (forAWorker && tmux.sendsInput()) {
-            return Optional.of(new GuardRefusal(GuardRule.TMUX_INPUT,
+            return Optional.of(new GuardRefusal(Rule.TMUX_INPUT,
                     "this tmux command types, pastes or runs commands into a pane, and on the captain's server that pane may be the primary session,"
                             + " where typed text counts as the captain's word; a worker never sends input to a tmux pane, on any socket:"
                             + " report with edi status and let the primary steer (I-06, I-31)."));

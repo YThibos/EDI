@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class SkippedHooks {
 
     private static final String NO_VERIFY = "--no-verify";
@@ -67,7 +69,7 @@ final class SkippedHooks {
     }
 
     private static GuardRefusal refusal(String bypass, String checks, String remedy) {
-        return new GuardRefusal(GuardRule.SKIPPED_HOOKS, bypass + " skips " + checks + "; " + remedy);
+        return new GuardRefusal(Rule.SKIPPED_HOOKS, bypass + " skips " + checks + "; " + remedy);
     }
 
     private static Optional<GuardRefusal> refusalForSubcommand(String subcommand, List<String> arguments) {

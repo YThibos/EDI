@@ -8,6 +8,7 @@ import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 
@@ -34,7 +35,7 @@ public class WorkerDetailQuery {
 
     private WorkerDetail detailOf(TaskId task) {
         return new WorkerDetail(
-                workers.latestOf(task).orElseThrow(() -> new Refusal(task + " has had no worker; dispatch it first.")),
+                workers.latestOf(task).orElseThrow(() -> new Refusal(Rule.TASK_DISPATCHED, task + " has had no worker; dispatch it first.")),
                 inbox.allOf(task),
                 pipelineRuns.latestOf(task).orElse(null));
     }

@@ -6,6 +6,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class GitPushes {
 
     private static final Set<String> GLOBAL_OPTIONS_WITH_VALUES = Set.of("-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--config-env");
@@ -87,7 +89,7 @@ final class GitPushes {
                 return Optional.of(MergingCommands.refusal());
             }
             if (forced || refspecs.stream().anyMatch(refspec -> refspec.startsWith("+"))) {
-                return Optional.of(new GuardRefusal(GuardRule.FORCED_PUSH,
+                return Optional.of(new GuardRefusal(Rule.FORCED_PUSH,
                         "a forced push rewrites published history, so none is made; push new commits on top instead."));
             }
             if (everyBranch) {
@@ -116,7 +118,7 @@ final class GitPushes {
         }
 
         private static GuardRefusal baseBranchPush(String target) {
-            return new GuardRefusal(GuardRule.BASE_BRANCH_PUSH,
+            return new GuardRefusal(Rule.BASE_BRANCH_PUSH,
                     "a push to " + target + " lands work on a base branch, which only the captain does by merging a draft; push the task's own branch (I-03).");
         }
     }

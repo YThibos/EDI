@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class BranchDeletions {
 
     private BranchDeletions() {
@@ -40,7 +42,7 @@ final class BranchDeletions {
     }
 
     private static GuardRefusal refusal(String branch) {
-        return new GuardRefusal(GuardRule.UNLANDED_BRANCH_DELETION, "it deletes " + branch
+        return new GuardRefusal(Rule.UNLANDED_BRANCH_DELETION, "it deletes " + branch
                 + ", the branch of a task whose work has not landed, and deleting it needs the captain's word in this session (I-06).");
     }
 }

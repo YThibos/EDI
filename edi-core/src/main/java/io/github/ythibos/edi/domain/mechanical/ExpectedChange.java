@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record ExpectedChange(String description, List<String> files) {
 
@@ -15,7 +16,7 @@ public record ExpectedChange(String description, List<String> files) {
         description = Objects.requireNonNullElse(description, "").strip();
         files = List.copyOf(Objects.requireNonNullElse(files, List.of()));
         if (description.isEmpty() || files.isEmpty()) {
-            throw new Refusal("A mechanical task states its exact expected change and names every file it touches.");
+            throw new Refusal(Rule.MECHANICAL_SHAPE, "A mechanical task states its exact expected change and names every file it touches.");
         }
         files.forEach(ExpectedChange::requireRepositoryPath);
         files.forEach(ExpectedChange::requireNotProtected);
@@ -42,7 +43,7 @@ public record ExpectedChange(String description, List<String> files) {
 
     private static void requireNotProtected(String file) {
         ProtectedFile.of(file).ifPresent(kind -> {
-            throw new Refusal("A mechanical task never edits " + kind.description() + ", and " + file + " is one; dispatch it as implementation.");
+            throw new Refusal(Rule.PROTECTED_FILES, "A mechanical task never edits " + kind.description() + ", and " + file + " is one; dispatch it as implementation.");
         });
     }
 }

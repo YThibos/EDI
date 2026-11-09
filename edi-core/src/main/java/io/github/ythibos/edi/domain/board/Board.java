@@ -11,6 +11,7 @@ import java.util.function.Function;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 public record Board(BoardId id, TaskId task, String file, String link, List<BoardBinding> bindings, int rounds, int openQuestions, Instant armedAt,
@@ -78,7 +79,7 @@ public record Board(BoardId id, TaskId task, String file, String link, List<Boar
 
     private void refuseUnlessListening() {
         if (!isListening()) {
-            throw new Refusal("Board " + id + " of " + task + " no longer listens: its session ended or its task was cleaned up.");
+            throw new Refusal(Rule.BOARD_LISTENING, "Board " + id + " of " + task + " no longer listens: its session ended or its task was cleaned up.");
         }
     }
 

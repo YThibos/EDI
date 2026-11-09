@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -63,7 +64,7 @@ public class AddTask {
 
     private static void requireItsProject(Intake intake) {
         if (!intake.namesTheProjectItWorksOn()) {
-            throw new Refusal("A " + intake.kind().word() + " names the project it works on.");
+            throw new Refusal(Rule.TASK_INTAKE, "A " + intake.kind().word() + " names the project it works on.");
         }
     }
 
@@ -73,7 +74,7 @@ public class AddTask {
                 .filter(project -> !registered.contains(project))
                 .findFirst()
                 .ifPresent(unregistered -> {
-                    throw new Refusal(unregistered + " is not a registered project; add it to the project registry first.");
+                    throw new Refusal(Rule.TASK_INTAKE, unregistered + " is not a registered project; add it to the project registry first.");
                 });
     }
 
@@ -83,7 +84,7 @@ public class AddTask {
                 .filter(Task::isClosed)
                 .findFirst()
                 .ifPresent(closed -> {
-                    throw new Refusal(closed.id() + " is already " + closed.state().word() + ", so no task can wait for it.");
+                    throw new Refusal(Rule.TASK_STAGE, closed.id() + " is already " + closed.state().word() + ", so no task can wait for it.");
                 });
     }
 
@@ -114,7 +115,7 @@ public class AddTask {
             return tasks.firstFreeIdFrom(TaskId.sluggedFrom(newTask.intake().title()));
         }
         if (tasks.contains(newTask.chosenId())) {
-            throw new Refusal(newTask.chosenId() + " already exists, and a task id is never reused.");
+            throw new Refusal(Rule.TASK_INTAKE, newTask.chosenId() + " already exists, and a task id is never reused.");
         }
         return newTask.chosenId();
     }

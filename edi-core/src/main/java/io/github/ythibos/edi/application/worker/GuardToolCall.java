@@ -31,11 +31,11 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.guard.GuardRefusal;
-import io.github.ythibos.edi.domain.guard.GuardRule;
 import io.github.ythibos.edi.domain.guard.SecretReads;
 import io.github.ythibos.edi.domain.guard.Secrets;
 import io.github.ythibos.edi.domain.guard.SettingsWrites;
 import io.github.ythibos.edi.domain.guard.ShellGuard;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -44,10 +44,10 @@ public class GuardToolCall {
 
     private static final Set<String> USUAL_BASES = Set.of("main", "master");
     private static final String CLAUDE_DIRECTORY = ".claude";
-    private static final Map<GuardRule, CaptainWordAct> ALLOWED_ON_THE_CAPTAINS_WORD = Map.of(
-            GuardRule.SECRET, CaptainWordAct.TOUCH_A_SECRET,
-            GuardRule.UNLANDED_BRANCH_DELETION, CaptainWordAct.DELETE_UNLANDED_BRANCH);
-    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(GuardRule.DIALOG_ANSWERED_AHEAD,
+    private static final Map<Rule, CaptainWordAct> ALLOWED_ON_THE_CAPTAINS_WORD = Map.of(
+            Rule.SECRET, CaptainWordAct.TOUCH_A_SECRET,
+            Rule.UNLANDED_BRANCH_DELETION, CaptainWordAct.DELETE_UNLANDED_BRANCH);
+    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(Rule.DIALOG_ANSWERED_AHEAD,
             "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
 
     private final EdiHome home;
@@ -196,7 +196,7 @@ public class GuardToolCall {
     private static Optional<GuardRefusal> outsideTheWorkplace(Path file, Workplace workplace) {
         Path written = RealPaths.of(file);
         boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(RealPaths::of).anyMatch(written::startsWith);
-        return inside ? Optional.empty() : Optional.of(new GuardRefusal(GuardRule.OUTSIDE_ISOLATED_COPY,
+        return inside ? Optional.empty() : Optional.of(new GuardRefusal(Rule.OUTSIDE_ISOLATED_COPY,
                 "a worker writes only inside its isolated copy " + workplace.worktree() + " and its task directory "
                         + workplace.taskDirectory() + ", and " + file + " is outside both (I-07)."));
     }

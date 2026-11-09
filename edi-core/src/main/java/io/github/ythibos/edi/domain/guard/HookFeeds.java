@@ -2,6 +2,8 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.Optional;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class HookFeeds {
 
     private static final String EDI = "edi";
@@ -19,7 +21,7 @@ final class HookFeeds {
     }
 
     private static GuardRefusal refusal() {
-        return new GuardRefusal(GuardRule.HOOK_FROM_THE_SHELL, "only Claude Code feeds the hooks, with what really happened in the session;"
+        return new GuardRefusal(Rule.HOOK_FROM_THE_SHELL, "only Claude Code feeds the hooks, with what really happened in the session;"
                 + " a hook fed from the primary's shell would let made-up text pass as the captain's words.");
     }
 }

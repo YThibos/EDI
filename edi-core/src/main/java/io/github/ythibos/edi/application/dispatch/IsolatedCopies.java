@@ -15,6 +15,7 @@ import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -54,16 +55,16 @@ public class IsolatedCopies {
         Path copy = realPathOf(worktree);
         requireInsideTheWorktrees(worktree);
         if (copy.equals(realPathOf(project.projectClone())) || !git.isRepository(copy) || isAPrimaryCheckout(copy)) {
-            throw new Refusal(worktree + " is the primary directory of a clone, not an isolated copy, so no worker is launched there.");
+            throw new Refusal(Rule.ISOLATED_COPY, worktree + " is the primary directory of a clone, not an isolated copy, so no worker is launched there.");
         }
         if (!realPathOf(git.commonDirectory(copy)).equals(realPathOf(git.gitDirectory(project.projectClone())))) {
-            throw new Refusal(worktree + " is not an isolated copy of " + project.project().name() + "'s clone.");
+            throw new Refusal(Rule.ISOLATED_COPY, worktree + " is not an isolated copy of " + project.project().name() + "'s clone.");
         }
     }
 
     public void requireAClone(ProjectEntry project) {
         if (!git.isRepository(project.projectClone())) {
-            throw new Refusal(project.project().name() + " has no clone at " + project.projectClone() + "; clone it there first.");
+            throw new Refusal(Rule.ISOLATED_COPY, project.project().name() + " has no clone at " + project.projectClone() + "; clone it there first.");
         }
     }
 
@@ -74,7 +75,7 @@ public class IsolatedCopies {
 
     private void requireInsideTheWorktrees(Path path) {
         if (!realPathOf(path).startsWith(realPathOf(home.worktrees()))) {
-            throw new Refusal(path + " is outside " + home.worktrees() + ", so no worker is launched there.");
+            throw new Refusal(Rule.ISOLATED_COPY, path + " is outside " + home.worktrees() + ", so no worker is launched there.");
         }
     }
 
@@ -87,7 +88,7 @@ public class IsolatedCopies {
         } else {
             String startPoint = ORIGIN + "/" + base;
             if (!git.hasRef(clone, startPoint)) {
-                throw new Refusal(startPoint + " does not exist in " + clone + " after a fetch, so the isolated copy has nothing to start from.");
+                throw new Refusal(Rule.ISOLATED_COPY, startPoint + " does not exist in " + clone + " after a fetch, so the isolated copy has nothing to start from.");
             }
             git.addWorktreeOnNewBranch(clone, worktree, branch, startPoint);
         }
@@ -105,7 +106,7 @@ public class IsolatedCopies {
     private void requireOnItsBranch(Path worktree, BranchName branch) {
         String current = git.currentBranch(worktree);
         if (!current.equals(branch.toString())) {
-            throw new Refusal(worktree + " has " + current + " checked out, not " + branch + ".");
+            throw new Refusal(Rule.ISOLATED_COPY, worktree + " has " + current + " checked out, not " + branch + ".");
         }
     }
 

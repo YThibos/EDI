@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
@@ -30,7 +31,7 @@ public class GitHubIssuesTracker implements Tracker {
 
     @Override
     public WorkKey create(TicketDraft draft) {
-        throw new Refusal(draft.project() + " keys its work by its GitHub issue numbers, so I never allocate one; open the issue and give its key.");
+        throw new Refusal(Rule.WORK_KEY, draft.project() + " keys its work by its GitHub issue numbers, so I never allocate one; open the issue and give its key.");
     }
 
     @Override

@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkDiscarded;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 
 @Service
@@ -59,7 +60,7 @@ public class DiscardWork {
 
     private static void requireInFlight(Workplace workplace) {
         if (workplace.task().isClosed()) {
-            throw new Refusal(workplace.task().id() + " is " + workplace.task().state().word() + ", so it keeps no isolated copy to discard.");
+            throw new Refusal(Rule.TASK_STAGE, workplace.task().id() + " is " + workplace.task().state().word() + ", so it keeps no isolated copy to discard.");
         }
     }
 

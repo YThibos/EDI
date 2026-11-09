@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.publish.RequestText;
+import io.github.ythibos.edi.domain.rule.Rule;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -85,7 +86,7 @@ public class GitLabForge implements Forge {
         String user = calls.run(ForgeCommand.GLAB_API_USER, List.of("--hostname", forge.repository().host()), Map.of(), null);
         String loggedIn = json.readTree(user).path("username").asString("");
         if (!forge.account().equals(loggedIn)) {
-            throw new Refusal("glab is logged in to " + forge.repository().host() + " as " + (loggedIn.isEmpty() ? "nobody" : loggedIn)
+            throw new Refusal(Rule.FORGE_ACCOUNT, "glab is logged in to " + forge.repository().host() + " as " + (loggedIn.isEmpty() ? "nobody" : loggedIn)
                     + ", but " + forge.repository() + " is bound to " + forge.account() + "; log that account in with glab auth login first.");
         }
     }

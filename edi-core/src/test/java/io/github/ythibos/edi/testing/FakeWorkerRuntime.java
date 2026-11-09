@@ -11,6 +11,7 @@ import java.util.UUID;
 import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LimitStop;
@@ -92,7 +93,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     public synchronized List<String> mirror(WorkerWindow window) {
         mirrors++;
         if (!openWindows.contains(window.windowId())) {
-            throw new Refusal("The worker's tmux window " + window.windowId() + " is no longer on the " + window.socket() + " server.");
+            throw new Refusal(Rule.PANE_TYPING, "The worker's tmux window " + window.windowId() + " is no longer on the " + window.socket() + " server.");
         }
         return mirrored;
     }
@@ -112,7 +113,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
         }
         if (keystroke instanceof Keystroke.Line line) {
             if (!pane.acceptsALine()) {
-                throw new Refusal("The pane shows " + pane.word() + ".");
+                throw new Refusal(Rule.PANE_TYPING, "The pane shows " + pane.word() + ".");
             }
             typedLines.add(line.text());
         }

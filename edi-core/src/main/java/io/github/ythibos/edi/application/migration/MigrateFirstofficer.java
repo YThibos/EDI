@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 @Service
 public class MigrateFirstofficer {
@@ -42,7 +43,7 @@ public class MigrateFirstofficer {
 
     private void requireAFreshHomeUnless(boolean overwrite, MigrationReport surveyed) {
         if (!overwrite && surveyed.meetsAHomeInUse()) {
-            throw new Refusal(home.root() + " already holds " + String.join(" and ", whatTheHomeHolds(surveyed))
+            throw new Refusal(Rule.ADOPTABLE, home.root() + " already holds " + String.join(" and ", whatTheHomeHolds(surveyed))
                     + "; the dry run lists them, and --overwrite imports beside my own work, keeping each replaced file as <file>"
                     + HomeWriter.KEPT_SUFFIX + ".");
         }

@@ -34,6 +34,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdopted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskKeyed;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Adoption;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
@@ -90,16 +91,16 @@ public class AdoptForkTask {
 
     private Path oldHomeHolding(Path oldCopy) {
         if (!git.isRepository(oldCopy)) {
-            throw new Refusal(oldCopy + " is not a git copy, so it names no old home; name the old home with --from.");
+            throw new Refusal(Rule.ADOPTABLE, oldCopy + " is not a git copy, so it names no old home; name the old home with --from.");
         }
         return ForkHome.holdingTheClone(git.commonDirectory(oldCopy).getParent())
-                .orElseThrow(() -> new Refusal(oldCopy + " is not a copy of a clone in a firstofficer home; name the old home with --from."));
+                .orElseThrow(() -> new Refusal(Rule.ADOPTABLE, oldCopy + " is not a copy of a clone in a firstofficer home; name the old home with --from."));
     }
 
     private static MigratedEntry keyedByItsBranch(MigratedEntry entry, BranchName branch) {
         Task task = entry.task();
         if (task.isClosed()) {
-            throw new Refusal(task.id() + " is " + task.state().word() + " in the old home, and only open work is taken over.");
+            throw new Refusal(Rule.ADOPTABLE, task.id() + " is " + task.state().word() + " in the old home, and only open work is taken over.");
         }
         if (task.intake().workKey() == null) {
             return new MigratedEntry(task.keyedOn(branch.workKey()), entry.decision());
@@ -119,7 +120,7 @@ public class AdoptForkTask {
     private static ProjectName onlyProjectOf(Task task) {
         List<ProjectName> projects = task.intake().projects();
         if (projects.size() != 1) {
-            throw new Refusal(task.id() + " works on " + projects.size() + " projects, and I take over the isolated copy of exactly one.");
+            throw new Refusal(Rule.ONE_PROJECT, task.id() + " works on " + projects.size() + " projects, and I take over the isolated copy of exactly one.");
         }
         return projects.getFirst();
     }
@@ -128,7 +129,7 @@ public class AdoptForkTask {
         if (session == null) {
             return Optional.empty();
         }
-        return Optional.of(sessions.transcriptOf(session).orElseThrow(() -> new Refusal("No Claude Code transcript of session " + session
+        return Optional.of(sessions.transcriptOf(session).orElseThrow(() -> new Refusal(Rule.ADOPTABLE, "No Claude Code transcript of session " + session
                 + " exists on this machine, so I could not resume it; adopt without --session to start the next worker afresh.")));
     }
 
@@ -160,7 +161,7 @@ public class AdoptForkTask {
 
     private static void requireTheBranchKey(Task task, BranchName branch) {
         if (!task.intake().workKey().equals(branch.workKey())) {
-            throw new Refusal(task.id() + " books its work on " + task.intake().workKey() + ", but " + branch + " carries " + branch.workKey() + ".");
+            throw new Refusal(Rule.WORK_KEY, task.id() + " books its work on " + task.intake().workKey() + ", but " + branch + " carries " + branch.workKey() + ".");
         }
     }
 
@@ -175,14 +176,14 @@ public class AdoptForkTask {
 
     private void requireTheBranchIn(Path oldCopy, BranchName branch) {
         if (!git.isRepository(oldCopy)) {
-            throw new Refusal(oldCopy + " is not a git copy, so it holds no branch to take over.");
+            throw new Refusal(Rule.ADOPTABLE, oldCopy + " is not a git copy, so it holds no branch to take over.");
         }
         if (git.gitDirectory(oldCopy).equals(git.commonDirectory(oldCopy))) {
-            throw new Refusal(oldCopy + " is the primary directory of a clone, not an isolated copy; name the copy that holds the task's branch.");
+            throw new Refusal(Rule.ADOPTABLE, oldCopy + " is the primary directory of a clone, not an isolated copy; name the copy that holds the task's branch.");
         }
         String checkedOut = git.currentBranch(oldCopy);
         if (!checkedOut.equals(branch.toString())) {
-            throw new Refusal(oldCopy + " has " + checkedOut + " checked out, not " + branch + "; name the copy that holds the task's branch.");
+            throw new Refusal(Rule.ADOPTABLE, oldCopy + " has " + checkedOut + " checked out, not " + branch + "; name the copy that holds the task's branch.");
         }
     }
 
@@ -229,7 +230,7 @@ public class AdoptForkTask {
 
     private static void requireNoCopyAt(Path copy) {
         if (Files.exists(copy, LinkOption.NOFOLLOW_LINKS)) {
-            throw new Refusal("I already hold an isolated copy at " + copy + ", so the old copy cannot take its place.");
+            throw new Refusal(Rule.ADOPTABLE, "I already hold an isolated copy at " + copy + ", so the old copy cannot take its place.");
         }
     }
 
@@ -247,7 +248,7 @@ public class AdoptForkTask {
         try {
             git.fetchBranchInto(project.projectClone(), oldCopy, branch);
         } catch (ProgramFailure diverged) {
-            throw new Refusal(project.project().name() + "'s clone holds " + branch + " at a commit the old copy does not build on, so I cannot take it"
+            throw new Refusal(Rule.ADOPTABLE, project.project().name() + "'s clone holds " + branch + " at a commit the old copy does not build on, so I cannot take it"
                     + " over: " + diverged.getMessage());
         }
     }

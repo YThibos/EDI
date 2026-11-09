@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
@@ -30,7 +31,7 @@ public class NoTracker implements Tracker {
 
     @Override
     public WorkKey create(TicketDraft draft) {
-        throw new Refusal("The project names no tracker that could key its work, so the task needs its key given with --key.");
+        throw new Refusal(Rule.WORK_KEY, "The project names no tracker that could key its work, so the task needs its key given with --key.");
     }
 
     @Override

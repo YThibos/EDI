@@ -10,6 +10,7 @@ import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -48,10 +49,10 @@ public class RelaunchWorker {
             case WorkerHealth.Stopped _ -> worker.hasAFullContext() ? FULL_CONTEXT : "it was stopped";
             case WorkerHealth.LaunchFailed _ -> "its launch failed";
             case WorkerHealth.Finished _ -> "its session ended";
-            case WorkerHealth.ContextFull _ -> throw new Refusal(worker.id() + "'s context is full and its session still runs; stop it first with edi worker"
+            case WorkerHealth.ContextFull _ -> throw new Refusal(Rule.RELAUNCH_STOPPED_FIRST, worker.id() + "'s context is full and its session still runs; stop it first with edi worker"
                     + " stop, then relaunch it for a fresh session with a handover.");
             case WorkerHealth.Starting _, WorkerHealth.Busy _, WorkerHealth.Idle _, WorkerHealth.Waiting _, WorkerHealth.LimitParked _ ->
-                    throw new Refusal(worker.id() + " is still running; stop it first with edi worker stop, then relaunch it.");
+                    throw new Refusal(Rule.RELAUNCH_STOPPED_FIRST, worker.id() + " is still running; stop it first with edi worker stop, then relaunch it.");
         };
     }
 
@@ -61,7 +62,7 @@ public class RelaunchWorker {
 
     private static void requireNoHold(Task task) {
         if (task.isHeld()) {
-            throw new Refusal(task.id() + " is held: " + task.hold().reason() + ".");
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " is held: " + task.hold().reason() + ".");
         }
     }
 

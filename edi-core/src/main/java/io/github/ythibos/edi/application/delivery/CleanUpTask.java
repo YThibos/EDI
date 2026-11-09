@@ -28,6 +28,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
 import io.github.ythibos.edi.domain.landing.LandedWork;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -102,7 +103,7 @@ public class CleanUpTask {
         }
         boolean doneAccepted = transaction.execute(_ -> workers.latestOf(workplace.task().id())).filter(Worker::handedItsWorkOver).isPresent();
         if (!doneAccepted || !Files.isRegularFile(workplace.report())) {
-            throw new Refusal(workplace.task().id() + " is a scout, and a scout is cleaned up only after its done was accepted and its report "
+            throw new Refusal(Rule.SCOUT_REPORT, workplace.task().id() + " is a scout, and a scout is cleaned up only after its done was accepted and its report "
                     + workplace.report() + " exists.");
         }
     }
@@ -118,7 +119,7 @@ public class CleanUpTask {
             return;
         }
         transaction.executeWithoutResult(_ -> events.record(new CleanupRefused(workplace.task().id(), landed.findings()), actor, clock.now()));
-        throw new Refusal(workplace.task().id() + " is not cleaned up, because its work is not landed: " + String.join("; ", landed.findings())
+        throw new Refusal(Rule.LANDED_BEFORE_DISCARD, workplace.task().id() + " is not cleaned up, because its work is not landed: " + String.join("; ", landed.findings())
                 + ". Nothing is discarded without the captain's word.");
     }
 

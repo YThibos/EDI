@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record CaptainMessages(List<CaptainMessage> messages) {
 
@@ -34,12 +35,12 @@ public record CaptainMessages(List<CaptainMessage> messages) {
         return messages.stream()
                 .filter(message -> message.number() == number)
                 .findFirst()
-                .orElseThrow(() -> new Refusal("The captain sent no message " + number + " in this session; edi captain messages lists them."));
+                .orElseThrow(() -> new Refusal(Rule.TYPED_WORDS, "The captain sent no message " + number + " in this session; edi captain messages lists them."));
     }
 
     private static CitedWords wholeOf(CaptainMessage message) {
         if (message.holdsPastedContent()) {
-            throw new Refusal("Message " + message.number() + " holds pasted content, which is never the captain's word;"
+            throw new Refusal(Rule.TYPED_WORDS, "Message " + message.number() + " holds pasted content, which is never the captain's word;"
                     + " cite one line the captain typed with --line.");
         }
         return new CitedWords(message.wholeText(), message);
@@ -49,9 +50,9 @@ public record CaptainMessages(List<CaptainMessage> messages) {
         MessageLine line = message.lines().stream()
                 .filter(candidate -> candidate.number() == number)
                 .findFirst()
-                .orElseThrow(() -> new Refusal("Message " + message.number() + " has no line " + number + "."));
+                .orElseThrow(() -> new Refusal(Rule.TYPED_WORDS, "Message " + message.number() + " has no line " + number + "."));
         if (!line.isCitable()) {
-            throw new Refusal("Line " + number + " of message " + message.number() + " is " + (line.pasted() ? "pasted" : "blank")
+            throw new Refusal(Rule.TYPED_WORDS, "Line " + number + " of message " + message.number() + " is " + (line.pasted() ? "pasted" : "blank")
                     + ", so it is not the captain's word.");
         }
         return new CitedWords(line.text().strip(), message);
@@ -62,7 +63,7 @@ public record CaptainMessages(List<CaptainMessage> messages) {
                 .flatMap(CaptainMessages::citableWordsOf)
                 .filter(saying(words))
                 .max(typedBeforeDialogAnswersThenLatest())
-                .orElseThrow(() -> new Refusal("The captain did not type \"" + words.strip() + "\" in this session; cite their message with"
+                .orElseThrow(() -> new Refusal(Rule.TYPED_WORDS, "The captain did not type \"" + words.strip() + "\" in this session; cite their message with"
                         + " --message <n>, or one line of it with --line, as edi captain messages lists them."));
     }
 

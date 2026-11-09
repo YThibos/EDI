@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
@@ -43,7 +44,7 @@ public class BoardRoundsQuery {
             TaskId task = tasks.get(reference).id();
             List<Round> rounds = roundsIn(task).stream().filter(shown -> round == null || shown.number() == round).toList();
             if (round != null && rounds.isEmpty()) {
-                throw new Refusal(task + " has no board round " + round + "; edi board show " + task + " lists its rounds.");
+                throw new Refusal(Rule.BOARD_FILE, task + " has no board round " + round + "; edi board show " + task + " lists its rounds.");
             }
             return new AnsweredRounds(task, rounds);
         });

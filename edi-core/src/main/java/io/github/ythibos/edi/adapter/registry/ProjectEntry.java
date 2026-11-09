@@ -14,6 +14,7 @@ import io.github.ythibos.edi.domain.project.AiScaffolding;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
@@ -48,14 +49,14 @@ public record ProjectEntry(
 
     public BaseBranch requireBase() {
         if (base == null) {
-            throw new Refusal(project.name() + " names no base branch in the project registry; add base: to its entry.");
+            throw new Refusal(Rule.CONFIGURATION_VALID, project.name() + " names no base branch in the project registry; add base: to its entry.");
         }
         return base;
     }
 
     public RegisteredForge requireForge() {
         if (forge == null) {
-            throw new Refusal(project.name() + " registers no forge, so its work has no repository to go to; add forge: to its entry.");
+            throw new Refusal(Rule.CONFIGURATION_VALID, project.name() + " registers no forge, so its work has no repository to go to; add forge: to its entry.");
         }
         return forge;
     }

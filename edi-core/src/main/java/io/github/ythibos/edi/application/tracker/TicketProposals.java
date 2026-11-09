@@ -32,6 +32,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TicketChoiceRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketCreated;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.ProposedTicket;
@@ -235,7 +236,7 @@ public class TicketProposals {
 
     private static CaptainAnswer answerOfTheKey(Decision open, WorkKey key, String captainsWords, Instant at) {
         if (captainsWords == null) {
-            throw new Refusal(open.number() + " asks which ticket " + open.task() + " books on, so its key answers that decision: cite the captain's words"
+            throw new Refusal(Rule.WORK_KEY, open.number() + " asks which ticket " + open.task() + " books on, so its key answers that decision: cite the captain's words"
                     + " that give " + key + " with --message <n> or --text.");
         }
         return new CaptainAnswer(captainsWords, null, "Book it on " + key + ".", at, AnswerChannel.CHAT);

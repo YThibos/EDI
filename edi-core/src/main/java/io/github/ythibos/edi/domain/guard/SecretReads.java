@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 public final class SecretReads {
 
     private static final Set<String> SHOW_TOKEN_OPTIONS = Set.of("-t", "--show-token");
@@ -69,7 +71,7 @@ public final class SecretReads {
     }
 
     private static Optional<GuardRefusal> refusal(String what) {
-        return Optional.of(new GuardRefusal(GuardRule.SECRET, what
+        return Optional.of(new GuardRefusal(Rule.SECRET, what
                 + "; secrets are read only by the core's adapters, at the moment of the call (I-32), and anything else that touches one needs"
                 + " the captain's word in this session (I-06)."));
     }

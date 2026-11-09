@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -83,25 +84,25 @@ public class ArmBoard {
 
     private static void requireItsOwnWorker(Task task, WorkerId worker) {
         if (!worker.task().equals(task.id())) {
-            throw new Refusal(worker + " arms boards for its own task, " + worker.task() + ", not for " + task.id() + ".");
+            throw new Refusal(Rule.OWN_TASK_BOARD, worker + " arms boards for its own task, " + worker.task() + ", not for " + task.id() + ".");
         }
     }
 
     private Path boardFileOf(Task task, Path file) {
         Path taskDirectory = home.taskDirectory(task.id());
         if (!file.isAbsolute() || !file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(HTML) || !Files.isRegularFile(file)) {
-            throw new Refusal("A research board is an HTML file that exists, named by its absolute path; " + file + " is not.");
+            throw new Refusal(Rule.BOARD_FILE, "A research board is an HTML file that exists, named by its absolute path; " + file + " is not.");
         }
         Path real = realPathOf(file);
         if (!Files.isDirectory(taskDirectory) || !real.startsWith(realPathOf(taskDirectory))) {
-            throw new Refusal("A research board lives in its task's directory, " + taskDirectory + "; " + file + " does not.");
+            throw new Refusal(Rule.BOARD_FILE, "A research board lives in its task's directory, " + taskDirectory + "; " + file + " does not.");
         }
         return real;
     }
 
     private void requireOpen(DecisionNumber number) {
         if (!decisions.get(number).isOpen()) {
-            throw new Refusal(number + " is already answered; a board answers only open decisions.");
+            throw new Refusal(Rule.ANSWERED_ONCE, number + " is already answered; a board answers only open decisions.");
         }
     }
 
@@ -127,14 +128,14 @@ public class ArmBoard {
     }
 
     private static void refuseToAskAgain(Decision answered) {
-        throw new Refusal(answered.number() + " on " + answered.task() + " already holds the captain's answer to \"" + answered.card().title() + "\" (\""
+        throw new Refusal(Rule.ANSWERED_ONCE, answered.number() + " on " + answered.task() + " already holds the captain's answer to \"" + answered.card().title() + "\" (\""
                 + answered.answer().verbatim() + "\"), so a board round raises it no more; arm the round without --card, or give a new question its own "
                 + "title.");
     }
 
     private static void requireRaisedAgainOnlyFromItsOwnBoard(Decision open, BoardCard card, Optional<Board> listening) {
         if (!open.card().equals(card.card()) && listening.filter(board -> board.bindings().contains(card.raisedAs(open.number()))).isEmpty()) {
-            throw new Refusal(open.number() + " already waits on the captain on " + open.task() + " (\"" + open.card().title()
+            throw new Refusal(Rule.OPEN_CARD, open.number() + " already waits on the captain on " + open.task() + " (\"" + open.card().title()
                     + "\"); if the board answers it, arm the round with that very card under --card, or report the new question to EDI with "
                     + "edi status needs-decision --key <question>.");
         }
@@ -142,7 +143,7 @@ public class ArmBoard {
 
     private Board postedAgain(Board listening, Task task, BoardRound round) {
         if (!listening.task().equals(task.id())) {
-            throw new Refusal(listening.file() + " is already armed for " + listening.task() + ".");
+            throw new Refusal(Rule.BOARD_FILE, listening.file() + " is already armed for " + listening.task() + ".");
         }
         Board posted = listening.posted(round.carryingForward(openBindingsOf(listening)));
         boards.update(posted);
@@ -157,7 +158,7 @@ public class ArmBoard {
         try {
             return path.toRealPath();
         } catch (IOException unreadable) {
-            throw new Refusal(path + " cannot be read: " + unreadable.getMessage());
+            throw new Refusal(Rule.BOARD_FILE, path + " cannot be read: " + unreadable.getMessage());
         }
     }
 }
