@@ -121,7 +121,7 @@ class WaitCommandTest {
         assertThat(shut).isOne();
         assertThat(err.toString()).contains("edi wait refuses to start: its standard output is closed");
         assertThat(out.toString()).isEmpty();
-        assertThat(core.requests()).isEmpty();
+        assertThat(core.requests()).extracting(StubCore.Request::target).containsExactly("/api/rules/fired", "/api/rules/fired");
     }
 
     @Test
@@ -133,7 +133,7 @@ class WaitCommandTest {
         assertThat(exitCode).isOne();
         assertThat(err.toString()).startsWith("edi wait refuses to start: its standard output is closed");
         assertThat(out.toString()).isEmpty();
-        assertThat(core.requests()).isEmpty();
+        assertThat(core.requests()).extracting(StubCore.Request::target).containsExactly("/api/rules/fired");
     }
 
     @Test

@@ -10,6 +10,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -452,6 +453,37 @@ class CommandsTest {
     void asksForASubcommand() {
         assertThat(edi("", "task")).isEqualTo(2);
         assertThat(err.toString()).startsWith("Name a subcommand; edi task --help lists them.");
+    }
+
+    @Test
+    void readsTheRulesThatFiredInAPeriod() {
+        core.answering(200, "Rules that fired since 2026-11-02 09:00 CET: 0.\n");
+
+        int lastWeek = edi("", "rules");
+        String lastWeekAsked = core.received().target();
+        edi("", "rules", "--days", "30", "--json");
+        String monthAsked = core.received().target();
+        edi("", "rules", "--since", "2026-11-02");
+
+        assertThat(lastWeek).isZero();
+        assertThat(List.of(lastWeekAsked, monthAsked, core.received().target()))
+                .containsExactly("/api/rules?days=7", "/api/rules?days=30", "/api/rules?since=2026-11-02");
+    }
+
+    @Test
+    void recordsARuleFiredOutsideTheCoreOrKeepsItInTheHomeWhileTheCoreIsDown() throws IOException {
+        core.answering(204, "");
+
+        int recorded = edi("", "rules", "fired", "commit.work-key", "--reason", "the subject starts with the work key HRN-3.");
+        StubCore.Request told = core.received();
+        core.stopAnswering();
+        int spooled = edi("", "rules", "fired", "commit.co-author-trailer", "--outcome", "refused", "--reason", "a commit carries no Co-authored-by line.");
+
+        assertThat(List.of(recorded, spooled)).containsOnly(0);
+        assertThat(told.target()).isEqualTo("/api/rules/fired");
+        assertThat(told.body()).isEqualTo("{\"rule\":\"commit.work-key\",\"outcome\":\"refused\",\"reason\":\"the subject starts with the work key HRN-3.\"}");
+        assertThat(Files.readString(home.resolve("state/rules-fired.jsonl"))).startsWith("{\"rule\":\"commit.co-author-trailer\",\"outcome\":\"refused\","
+                + "\"reason\":\"a commit carries no Co-authored-by line.\",\"at\":\"").endsWith("\"actor\":\"primary\"}\n");
     }
 
     private int edi(String input, String... arguments) {

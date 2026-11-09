@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -209,6 +210,14 @@ class ClaudeLayerCommandsTest {
         assertThat(other).isEqualTo(2);
         assertThat(feedingAHook).isEqualTo(2);
         assertThat(forAWorker).isEqualTo(2);
+        assertThat(Files.readAllLines(home.resolve("state/rules-fired.jsonl")))
+                .extracting(line -> line.substring(0, line.indexOf(",\"reason\"")))
+                .containsExactly(
+                        "{\"rule\":\"guard.core-unreachable\",\"outcome\":\"allowed\"",
+                        "{\"rule\":\"guard.core-unreachable\",\"outcome\":\"refused\"",
+                        "{\"rule\":\"guard.core-unreachable\",\"outcome\":\"refused\"",
+                        "{\"rule\":\"guard.core-unreachable\",\"outcome\":\"refused\"");
+        assertThat(Files.readString(home.resolve("state/rules-fired.jsonl"))).contains("\"actor\":\"primary\"", "\"at\":\"");
     }
 
     @Test

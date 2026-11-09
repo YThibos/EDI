@@ -63,7 +63,7 @@ public final class Edi implements Runnable {
     private static final String WORKER = "EDI_WORKER";
     private static final String WORKER_ROLE = "worker";
     private static final String WORKER_TOKEN_FILE = "access.worker-token-file";
-    private static final String ARGUMENTS = "command.arguments";
+    private static final String COMMAND_ARGUMENTS = "command.arguments";
 
     private final Map<String, String> environment;
     private final InputStream input;
@@ -92,7 +92,7 @@ public final class Edi implements Runnable {
         CommandLine commandLine = new CommandLine(edi);
         IParameterExceptionHandler readingFailed = commandLine.getParameterExceptionHandler();
         return commandLine.setParameterExceptionHandler((unreadable, arguments) -> {
-            new RuleFirings(edi).fired(ARGUMENTS, RuleFirings.REFUSED, unreadable.getMessage());
+            new RuleFirings(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadable.getMessage());
             return readingFailed.handleParseException(unreadable, arguments);
         });
     }

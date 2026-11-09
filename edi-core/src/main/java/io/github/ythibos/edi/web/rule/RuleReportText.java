@@ -27,13 +27,20 @@ class RuleReportText implements TextPresenter<RuleReport> {
 
     @Override
     public String text(RuleReport report) {
-        Table table = new Table("  ");
-        table.line("Rules that fired since " + moments.minute(report.since()) + ": " + report.fired().size() + ".");
-        report.fired().forEach(rule -> table.row(rule.rule(), String.valueOf(rule.fired()), outcomesOf(rule),
+        return firedRules(report) + quietRules(report);
+    }
+
+    private String firedRules(RuleReport report) {
+        Table fired = new Table("  ").line("Rules that fired since " + moments.minute(report.since()) + ": " + report.fired().size() + ".");
+        report.fired().forEach(rule -> fired.row(rule.rule(), String.valueOf(rule.fired()), outcomesOf(rule),
                 "last " + moments.minute(rule.lastFired())));
-        table.line("Rules that never fired in that time: " + report.neverFired().size() + ".");
-        report.neverFired().forEach(rule -> table.row(rule.rule(), rule.protects()));
-        return table.text();
+        return fired.text();
+    }
+
+    private static String quietRules(RuleReport report) {
+        Table quiet = new Table("  ").line("Rules that never fired in that time: " + report.neverFired().size() + ".");
+        report.neverFired().forEach(rule -> quiet.row(rule.rule(), rule.protects()));
+        return quiet.text();
     }
 
     private static String outcomesOf(FiredRule rule) {

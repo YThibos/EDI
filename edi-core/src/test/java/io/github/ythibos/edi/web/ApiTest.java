@@ -573,6 +573,32 @@ class ApiTest {
     }
 
     @Test
+    void recordsEveryRefusedCallAsTheFiringOfItsRuleAndReportsWhatFiredAndWhatNeverDid() throws Exception {
+        String worker = workerTokenFor("api-rules");
+
+        HttpResponse<String> byAWorker = send(as(worker, "/api/week", TEXT).GET());
+        HttpResponse<String> malformed = get("/api/rules?days=0", TEXT);
+        HttpResponse<String> heldTwice = post("/api/tasks/api-rules/hold", "{\"kind\":\"deferral\",\"reason\":\"later\"}", TEXT);
+        HttpResponse<String> again = post("/api/tasks/api-rules/hold", "{\"kind\":\"deferral\",\"reason\":\"later\"}", TEXT);
+        HttpResponse<String> firedInAHook = send(as(worker, "/api/rules/fired", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(
+                "{\"rule\":\"commit.work-key\",\"outcome\":\"refused\",\"reason\":\"the subject starts with the work key HRN-3.\"}")));
+        HttpResponse<String> unknownRule = post("/api/rules/fired", "{\"rule\":\"commit.made-up\",\"outcome\":\"refused\",\"reason\":\"no\"}", TEXT);
+        HttpResponse<String> asText = get("/api/rules", TEXT);
+        HttpResponse<String> asJson = get("/api/rules?since=2026-01-01", JSON);
+
+        assertThat(List.of(byAWorker.statusCode(), malformed.statusCode(), heldTwice.statusCode(), again.statusCode(), firedInAHook.statusCode(),
+                unknownRule.statusCode())).containsExactly(403, 400, 200, 409, 204, 400);
+        assertThat(asText.body()).startsWith("Rules that fired since ")
+                .containsPattern("\n  access\\.caller-role +\\d+ +\\d+ refused +last ")
+                .containsPattern("\n  task\\.hold +\\d+ +\\d+ refused +last ")
+                .containsPattern("\n  commit\\.work-key +1 +1 refused +last ")
+                .contains("Rules that never fired in that time: ")
+                .containsPattern("\n  guard\\.forced-push +History on a remote is never rewritten by a forced push \\(I-03\\)\\.\n");
+        assertThat(asJson.body()).contains("\"since\":\"", "\"rule\":\"request.valid\"", "\"neverFired\":[",
+                "{\"rule\":\"guard.merge\",\"protects\":\"Only the captain merges (I-03).\"}");
+    }
+
+    @Test
     void preparesThePrimarySessionForEdiUp() throws Exception {
         HttpResponse<String> launch = post("/api/primary/launch", "{}", TEXT);
 
