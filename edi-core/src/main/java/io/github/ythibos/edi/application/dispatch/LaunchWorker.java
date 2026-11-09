@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -190,12 +189,7 @@ public class LaunchWorker {
 
     private StageTrigger.Dispatch dispatchOf(Task task, ProjectEntry project) {
         List<TaskId> unmetWaits = tasks.blockersOf(task).stream().filter(blocker -> !blocker.isResolved()).map(Blocker::id).toList();
-        return new StageTrigger.Dispatch(holds.of(task), unmetWaits, hasRoomOn(project));
-    }
-
-    private boolean hasRoomOn(ProjectEntry project) {
-        OptionalInt capacity = project.workerCapacity();
-        return capacity.isEmpty() || places.occupiedOn(project.project().name()) < capacity.getAsInt();
+        return new StageTrigger.Dispatch(holds.of(task), unmetWaits, places.hasRoomOn(project));
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {

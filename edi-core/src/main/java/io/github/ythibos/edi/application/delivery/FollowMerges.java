@@ -180,7 +180,7 @@ public class FollowMerges {
 
     private RequestMerged followedMergeOf(TaskId task, MergeRequestView view) {
         Workplace workplace = transaction.execute(_ -> context.of(task));
-        return new RequestMerged(view.mergedHead(), landedWork.commitsAfter(workplace, view.mergedHead()));
+        return new RequestMerged(view.headCommit(), landedWork.commitsAfter(workplace, view.headCommit()));
     }
 
     private Delivery recordedAsMerged(Delivery delivery, MergeRequestView view, RequestMerged merge, Actor actor) {

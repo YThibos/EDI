@@ -2,9 +2,11 @@ package io.github.ythibos.edi.application.dispatch;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -45,6 +47,11 @@ public class WorkerPlaces {
                 .filter(Worker::countsAgainstCapacity)
                 .filter(worker -> runtime.isRunning(worker.window()))
                 .toList();
+    }
+
+    public boolean hasRoomOn(ProjectEntry project) {
+        OptionalInt capacity = project.workerCapacity();
+        return capacity.isEmpty() || occupiedOn(project.project().name()) < capacity.getAsInt();
     }
 
     public int occupiedOn(ProjectName project) {
