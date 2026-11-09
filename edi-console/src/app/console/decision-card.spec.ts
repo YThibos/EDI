@@ -24,6 +24,16 @@ describe('DecisionCardView', () => {
 
   afterEach(() => http.verify());
 
+  it('calls a card a decision, and an urgent card an urgent decision', async () => {
+    expect(badge()).toBe('decision');
+
+    fixture.componentRef.setInput('card', { ...sitrepFixture().decisions[0], urgent: true });
+    await fixture.whenStable();
+
+    expect(badge()).toBe('urgent decision');
+    expect(card.querySelector('.sr-badge')?.classList).toContain('sr-badge--danger');
+  });
+
   it('marks the recommended option and waits for a choice before it answers', () => {
     const options = Array.from(card.querySelectorAll('.sr-opt'));
 
@@ -104,5 +114,9 @@ describe('DecisionCardView', () => {
 
   function button(): HTMLButtonElement {
     return card.querySelector<HTMLButtonElement>('.sr-btn')!;
+  }
+
+  function badge(): string | undefined {
+    return card.querySelector('.sr-badge')?.textContent?.trim();
   }
 });

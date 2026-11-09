@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
+import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeclaredWaitEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeferredLaunchFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
@@ -123,6 +124,7 @@ public final class WakeRule {
             case ChangeNotApplied notApplied -> wake(WakeKind.DELIVERY_FAILED, notApplied, null, notApplied.because());
             case CleanupRefused refused -> wake(WakeKind.CLEANUP_REFUSED, refused, null, String.join("; ", refused.findings()));
             case DecisionRaised raised -> wake(WakeKind.DECISION_RAISED, raised, null, raised.number() + " " + raised.card().title());
+            case DecisionRoundClosed closed -> wake(WakeKind.DECISION_ROUND, closed, null, closed.number() + " " + closed.title());
             case TicketUpdateRefused refused -> wake(WakeKind.TICKET_REFUSED, refused, null,
                     refused.update() + " of " + refused.key() + ": " + refused.because());
             case TaskKeyed keyed -> wake(WakeKind.TASK_KEYED, keyed, null, keyed.key().toString());

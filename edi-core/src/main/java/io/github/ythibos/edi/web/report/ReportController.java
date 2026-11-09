@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.decision.DecisionRoundQuery;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.presence.MeetingCalendar;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
@@ -27,15 +28,17 @@ class ReportController {
     private final PrimarySessions sessions;
     private final PrimaryHooks primaryHooks;
     private final NoticeHeavyRunsAtOnce heavyRuns;
+    private final DecisionRoundQuery decisionRounds;
 
     ReportController(FleetSnapshotQuery fleet, PresenceQuery presence, MeetingCalendar calendar, PrimarySessions sessions, PrimaryHooks primaryHooks,
-            NoticeHeavyRunsAtOnce heavyRuns) {
+            NoticeHeavyRunsAtOnce heavyRuns, DecisionRoundQuery decisionRounds) {
         this.fleet = fleet;
         this.presence = presence;
         this.calendar = calendar;
         this.sessions = sessions;
         this.primaryHooks = primaryHooks;
         this.heavyRuns = heavyRuns;
+        this.decisionRounds = decisionRounds;
     }
 
     @GetMapping("/api/report")
@@ -55,7 +58,7 @@ class ReportController {
     @PostMapping("/api/report")
     TurnReport turnReport(@RequestBody JsonNode turn, @RequestParam(required = false) Integer paneWidth, Caller caller) {
         TurnReport report = new TurnReport(fleet.snapshot().waiting(), checked(turn), widthFor(paneWidth), calendar.unreadable().orElse(null),
-                previousReportShownTo(caller));
+                previousReportShownTo(caller), decisionRounds.gathering().orElse(null));
         recordTheReportShownTo(caller);
         return report;
     }

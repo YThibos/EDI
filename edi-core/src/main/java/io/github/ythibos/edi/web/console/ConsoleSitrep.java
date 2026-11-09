@@ -45,7 +45,7 @@ public record ConsoleSitrep(
     }
 
     public record Card(String number, String task, List<String> projects, String title, String context, List<Option> options,
-            Recommendation recommended, Instant raisedAt) {
+            Recommendation recommended, boolean urgent, Instant raisedAt) {
     }
 
     public record Option(String key, String text) {

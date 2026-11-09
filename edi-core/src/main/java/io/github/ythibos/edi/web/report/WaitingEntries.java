@@ -2,7 +2,6 @@ package io.github.ythibos.edi.web.report;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import io.github.ythibos.edi.application.fleet.ChangingRequest;
@@ -19,9 +18,9 @@ final class WaitingEntries {
     private WaitingEntries() {
     }
 
-    static List<DecisionZone.Entry> of(WaitingOnTheCaptain waiting, TurnWording wording, Predicate<Decision> showsTheCard) {
+    static List<DecisionZone.Entry> of(WaitingOnTheCaptain waiting, TurnWording wording, Function<OpenDecision, DecisionShowing> showing) {
         return Stream.of(
-                        waiting.decisions().stream().map(open -> call(open, wording, showsTheCard)),
+                        waiting.decisions().stream().map(open -> call(open, wording, showing)),
                         waiting.boards().stream().map(board -> boardQuestions(board, wording)),
                         waiting.reviews().stream().map(ready -> review(ready, wording)),
                         waiting.changing().stream().map(changing -> changing(changing, wording)),
@@ -30,12 +29,14 @@ final class WaitingEntries {
                 .toList();
     }
 
-    private static DecisionZone.Entry call(OpenDecision open, TurnWording wording, Predicate<Decision> showsTheCard) {
+    private static DecisionZone.Entry call(OpenDecision open, TurnWording wording, Function<OpenDecision, DecisionShowing> showing) {
         Decision decision = open.decision();
         ProjectSet projects = wording.projectsOf(open.task());
-        return showsTheCard.test(decision)
-                ? new DecisionZone.Call(decision.number(), projects, decision.card())
-                : new DecisionZone.Reminder(decision.number(), projects, decision.card());
+        return switch (showing.apply(open)) {
+            case DecisionShowing.InFull _ -> new DecisionZone.Call(decision.number(), projects, decision.card());
+            case DecisionShowing.AsAReminder _ -> new DecisionZone.Reminder(decision.number(), projects, decision.card());
+            case DecisionShowing.InTheRound round -> new DecisionZone.InTheRound(decision.number(), projects, decision.card(), round.closesAt());
+        };
     }
 
     private static DecisionZone.Entry boardQuestions(WaitingBoard waiting, TurnWording wording) {

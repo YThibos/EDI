@@ -57,7 +57,7 @@ class TurnReportPresenterTest {
 
     @Test
     void saysInOneLineThatNothingNeedsTheCaptain() {
-        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("Nothing needs you; /sitrep shows the rest.\n");
     }
@@ -76,7 +76,7 @@ class TurnReportPresenterTest {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(new TurnItem(List.of(), "Choose the paint")),
                 Map.of());
 
-        String report = presenter.text(new TurnReport(waiting, turn, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(waiting, turn, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 ╔══ NEEDS YOUR DECISION ══ 4 open ══════════════════════════════════════
@@ -119,7 +119,7 @@ class TurnReportPresenterTest {
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", NOW.minus(Duration.ofDays(9))), lamp)),
                 List.of(), List.of(), List.of());
 
-        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, null));
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, null, null));
 
         assertThat(report).contains("║  D41   Which lamp?\n", "║        (A)  The simple way\n", "║        » Recommended: A - it is enough\n");
     }
@@ -130,7 +130,7 @@ class TurnReportPresenterTest {
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", PREVIOUS_REPORT), lamp)),
                 List.of(), List.of(), List.of());
 
-        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).contains("║  D41   Which lamp? » Recommended: A - The simple way\n").doesNotContain("(A)");
     }
@@ -139,7 +139,7 @@ class TurnReportPresenterTest {
     void leavesTheDecisionZoneOutWhenNothingWaitsOnTheCaptain() {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(), Map.of());
 
-        String report = presenter.text(new TurnReport(NOTHING_WAITING, turn, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(NOTHING_WAITING, turn, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 DONE THIS TURN  (1)
@@ -156,7 +156,7 @@ class TurnReportPresenterTest {
                 List.of(new WorkerQuestion(lamp, asking(lamp, "Which socket does the lamp take, the bayonet one or the screw one the old lamp used?"),
                         Duration.ofMinutes(65))));
 
-        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 ╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════
@@ -174,7 +174,7 @@ class TurnReportPresenterTest {
     void headsTheReportWithTheCalendarItCannotRead() {
         UnreadableCalendar unreadable = new UnreadableCalendar(Instant.parse("2026-10-15T08:02:00Z"), "Outlook did not answer.");
 
-        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, unreadable, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, unreadable, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 Calendar: I can't read your calendar since 2026-10-15 08:02 UTC, so a

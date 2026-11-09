@@ -68,7 +68,7 @@ public final class PresenterFixtures {
     }
 
     public static TurnReportPresenter turnReportPresenter() {
-        return new TurnReportPresenter(presenceWords());
+        return new TurnReportPresenter(presenceWords(), moments());
     }
 
     public static ReturnBriefText returnBriefText() {
