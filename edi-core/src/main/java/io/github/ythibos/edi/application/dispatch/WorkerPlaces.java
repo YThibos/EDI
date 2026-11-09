@@ -2,7 +2,6 @@ package io.github.ythibos.edi.application.dispatch;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 
 import org.springframework.stereotype.Component;
 
@@ -49,12 +48,12 @@ public class WorkerPlaces {
                 .toList();
     }
 
-    public boolean hasRoomOn(ProjectEntry project) {
-        OptionalInt capacity = project.workerCapacity();
-        return capacity.isEmpty() || occupiedOn(project.project().name()) < capacity.getAsInt();
+    public ProjectRoom roomOn(ProjectEntry project) {
+        ProjectName name = project.project().name();
+        return new ProjectRoom(name, occupiedOn(name), project.workerCapacity());
     }
 
-    public int occupiedOn(ProjectName project) {
+    private int occupiedOn(ProjectName project) {
         return (int) workers.serving().stream()
                 .filter(Worker::countsAgainstCapacity)
                 .filter(worker -> tasks.get(worker.id().task()).intake().projects().contains(project))

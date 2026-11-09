@@ -189,7 +189,7 @@ public class LaunchWorker {
 
     private StageTrigger.Dispatch dispatchOf(Task task, ProjectEntry project) {
         List<TaskId> unmetWaits = tasks.blockersOf(task).stream().filter(blocker -> !blocker.isResolved()).map(Blocker::id).toList();
-        return new StageTrigger.Dispatch(holds.of(task), unmetWaits, places.hasRoomOn(project));
+        return new StageTrigger.Dispatch(holds.of(task), unmetWaits, places.roomOn(project).hasRoom());
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {

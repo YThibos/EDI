@@ -57,7 +57,7 @@ public class LaunchDeferredDispatches {
     private boolean hasRoom(Dispatch dispatch) {
         return transaction.execute(_ -> {
             ProjectEntry project = registry.entryOf(tasks.get(dispatch.task()).intake().projects().getFirst());
-            return places.hasRoomOn(project) && awayLimit.hasRoomForAnotherWorker();
+            return places.roomOn(project).hasRoom() && awayLimit.hasRoomForAnotherWorker();
         });
     }
 
