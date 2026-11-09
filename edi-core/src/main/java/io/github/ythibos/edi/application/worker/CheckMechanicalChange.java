@@ -12,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.build.ProjectBuild;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.RuleFirings;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.delivery.DeliverAcceptedWork;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
@@ -22,6 +23,8 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeRefused;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -38,11 +41,12 @@ public class CheckMechanicalChange {
     private final LaunchWorker launcher;
     private final DeliverAcceptedWork acceptedWork;
     private final EventLog events;
+    private final RuleFirings firings;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public CheckMechanicalChange(WorkerStore workers, WorkerContext context, Git git, ProjectBuild build, WorkerRuntime runtime,
-            LaunchWorker launcher, DeliverAcceptedWork acceptedWork, EventLog events, Clock clock, TransactionTemplate transaction) {
+            LaunchWorker launcher, DeliverAcceptedWork acceptedWork, EventLog events, RuleFirings firings, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.context = context;
         this.git = git;
@@ -51,6 +55,7 @@ public class CheckMechanicalChange {
         this.launcher = launcher;
         this.acceptedWork = acceptedWork;
         this.events = events;
+        this.firings = firings;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -109,6 +114,7 @@ public class CheckMechanicalChange {
             Worker checked = WorkerLookup.serving(workers, id).doneChecked(false);
             workers.update(checked);
             events.record(new MechanicalChangeRefused(id.task(), id, because), Actor.CORE, now);
+            firings.record(RuleFired.refused(Rule.CHANGE_MATCHES_ITS_BRIEF, Actor.worker(id), id.task(), because), now);
             return checked;
         });
         runtime.close(refused.window());

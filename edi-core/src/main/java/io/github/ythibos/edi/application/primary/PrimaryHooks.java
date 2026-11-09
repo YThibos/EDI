@@ -20,9 +20,11 @@ import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBrief;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
+import io.github.ythibos.edi.application.rule.FiredRules;
 import io.github.ythibos.edi.application.wake.WakeStreams;
 import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.authority.AnsweredQuestion;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
@@ -33,6 +35,10 @@ import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.primary.TurnCircumstances;
 import io.github.ythibos.edi.domain.primary.TurnEnd;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
+import io.github.ythibos.edi.domain.rule.RuleOutcome;
+import io.github.ythibos.edi.domain.rule.RuleReason;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.LimitStop;
 
@@ -51,12 +57,13 @@ public class PrimaryHooks {
     private final WakeStreams streams;
     private final WakeStore wakes;
     private final WorkerRuntime runtime;
+    private final FiredRules firedRules;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainMessageStore captainMessages, ChangePresence presence,
             PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, EventLog events, ProcessTable processes, WakeStreams streams,
-            WakeStore wakes, WorkerRuntime runtime, Clock clock, TransactionTemplate transaction) {
+            WakeStore wakes, WorkerRuntime runtime, FiredRules firedRules, Clock clock, TransactionTemplate transaction) {
         this.sessions = sessions;
         this.roles = roles;
         this.captainMessages = captainMessages;
@@ -69,6 +76,7 @@ public class PrimaryHooks {
         this.streams = streams;
         this.wakes = wakes;
         this.runtime = runtime;
+        this.firedRules = firedRules;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -113,7 +121,12 @@ public class PrimaryHooks {
     }
 
     public HookAnswer stopping(UUID id) {
-        return transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(HookAnswer.PROCEED));
+        HookAnswer answer = transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(HookAnswer.PROCEED));
+        if (answer.blocksTheStop()) {
+            firedRules.record(new RuleFired(Rule.TURN_END_WITH_WORK_PENDING, RuleOutcome.REFUSED, Actor.PRIMARY, null, id,
+                    RuleReason.of(answer.reason())));
+        }
+        return answer;
     }
 
     public HookAnswer stopFailed(UUID id, String transcript) {

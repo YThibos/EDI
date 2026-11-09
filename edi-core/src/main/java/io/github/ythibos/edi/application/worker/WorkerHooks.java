@@ -14,6 +14,7 @@ import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
+import io.github.ythibos.edi.application.rule.FiredRules;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
@@ -23,6 +24,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -40,16 +43,18 @@ public class WorkerHooks {
     private final EventLog events;
     private final WorkerRuntime runtime;
     private final CountRecoveryCost recoveryCost;
+    private final FiredRules firedRules;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public WorkerHooks(WorkerStore workers, InboxStore inbox, EventLog events, WorkerRuntime runtime, CountRecoveryCost recoveryCost, Clock clock,
-            TransactionTemplate transaction) {
+    public WorkerHooks(WorkerStore workers, InboxStore inbox, EventLog events, WorkerRuntime runtime, CountRecoveryCost recoveryCost,
+            FiredRules firedRules, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.inbox = inbox;
         this.events = events;
         this.runtime = runtime;
         this.recoveryCost = recoveryCost;
+        this.firedRules = firedRules;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -76,6 +81,14 @@ public class WorkerHooks {
     }
 
     public HookAnswer stopping(WorkerId id) {
+        HookAnswer answer = answerTheStopOf(id);
+        if (answer.blocksTheStop()) {
+            firedRules.record(RuleFired.refused(Rule.STOP_WITH_UNREAD_INBOX, Actor.worker(id), id.task(), answer.reason()));
+        }
+        return answer;
+    }
+
+    private HookAnswer answerTheStopOf(WorkerId id) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             Worker worker = WorkerLookup.serving(workers, id);

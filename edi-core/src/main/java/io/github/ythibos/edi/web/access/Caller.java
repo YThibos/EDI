@@ -7,6 +7,7 @@ import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public sealed interface Caller {
@@ -52,6 +53,12 @@ public sealed interface Caller {
         }
     }
 
+    default void requireThePrimaryOrAWorker(String request) {
+        if (this instanceof Captain) {
+            throw new NotPermitted(request + " is recorded by the primary or a worker, never from the console.");
+        }
+    }
+
     default void requireThePrimaryOrTheCaptain(String request) {
         if (this instanceof WorkerCaller) {
             throw new NotPermitted(request + " is the primary's and the captain's to read; a worker reads its brief and edi inbox.");
@@ -78,6 +85,10 @@ public sealed interface Caller {
             case Standby standby -> Optional.of(standby.session());
             case WorkerCaller _, Captain _ -> Optional.empty();
         };
+    }
+
+    default Optional<TaskId> task() {
+        return this instanceof WorkerCaller caller ? Optional.of(caller.worker().task()) : Optional.empty();
     }
 
     default CallingSession callingSession() {

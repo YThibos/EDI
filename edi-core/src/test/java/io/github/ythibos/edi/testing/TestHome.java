@@ -53,6 +53,7 @@ import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
+import io.github.ythibos.edi.adapter.store.RuleFirings;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
@@ -147,6 +148,9 @@ import io.github.ythibos.edi.application.primary.PrimaryWaitQuery;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
+import io.github.ythibos.edi.application.rule.FiredRules;
+import io.github.ythibos.edi.application.rule.RuleReportQuery;
+import io.github.ythibos.edi.application.rule.TakeInSpooledFirings;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
@@ -209,6 +213,7 @@ public final class TestHome {
     private final TaskStore tasks;
     private final DecisionStore decisions;
     private final EventLog events;
+    private final RuleFirings ruleFirings;
     private final ProjectRegistry registry;
     private final MachineProfile machineProfile;
     private final JsonMapper json = new JsonMapper();
@@ -265,6 +270,7 @@ public final class TestHome {
         this.decisions = new DecisionStore(jdbc);
         this.wakes = new WakeStore(jdbc);
         this.events = new EventLog(jdbc, json, wakes, _ -> { });
+        this.ruleFirings = new RuleFirings(jdbc);
         this.registry = new ProjectRegistry(home);
         this.machineProfile = new MachineProfile(home);
         this.dispatches = new DispatchStore(jdbc);
@@ -376,6 +382,18 @@ public final class TestHome {
         return decisions;
     }
 
+    public FiredRules firedRules() {
+        return new FiredRules(ruleFirings, clock, transaction);
+    }
+
+    public TakeInSpooledFirings takeInSpooledFirings() {
+        return new TakeInSpooledFirings(home, ruleFirings, json, transaction);
+    }
+
+    public RuleReportQuery ruleReport() {
+        return new RuleReportQuery(ruleFirings, transaction);
+    }
+
     public EventLog events() {
         return events;
     }
@@ -401,7 +419,8 @@ public final class TestHome {
     }
 
     public TicketProposals ticketProposals() {
-        return new TicketProposals(ticketProposals, tasks, decisions, raiseDecision(), events, registry, trackers(), clock, transaction);
+        return new TicketProposals(ticketProposals, tasks, decisions, raiseDecision(), events, ruleFirings, registry, trackers(), clock,
+                transaction);
     }
 
     public KeyTask keyTask() {
@@ -585,7 +604,7 @@ public final class TestHome {
     }
 
     public DailyMemoryCheck dailyMemoryCheck() {
-        return new DailyMemoryCheck(memory(), new MemoryCheckStore(jdbc), windowsToasts(), clock, transaction);
+        return new DailyMemoryCheck(memory(), new MemoryCheckStore(jdbc), windowsToasts(), firedRules(), clock, transaction);
     }
 
     public synchronized MeetingCalendar meetingCalendar() {
@@ -783,7 +802,7 @@ public final class TestHome {
 
     public EventFollowers eventFollowers() {
         EmitFleetLedger fleetLedger = new EmitFleetLedger(machineProfile(), new FleetLedger(home, json), tasks, workedTimes(), transaction);
-        FollowTickets tickets = new FollowTickets(tasks, registry, trackers(), events, clock, transaction);
+        FollowTickets tickets = new FollowTickets(tasks, registry, trackers(), events, ruleFirings, clock, transaction);
         ResearchFirstPilot pilot = new ResearchFirstPilot(unplannedShips, tasks, taskCosts, reviews, dispatches, raiseDecision(), events, clock,
                 transaction);
         return new EventFollowers(fleetLedger, tickets, pilot, notifyTheCaptain(), events, eventCursors, transaction);
@@ -830,11 +849,12 @@ public final class TestHome {
     }
 
     public WorkerHooks workerHooks() {
-        return new WorkerHooks(workers, inbox, events, runtime, countRecoveryCost(), clock, transaction);
+        return new WorkerHooks(workers, inbox, events, runtime, countRecoveryCost(), firedRules(), clock, transaction);
     }
 
     public GuardToolCall guardToolCall() {
-        return new GuardToolCall(home, workerContext(), registry, dispatches, machineProfile(), captainsWord(), runtime, events, clock, transaction);
+        return new GuardToolCall(home, workerContext(), registry, dispatches, machineProfile(), captainsWord(), runtime, events,
+                firedRules(), clock, transaction);
     }
 
     public NoticeOverdueSteers noticeOverdueSteers() {
@@ -879,7 +899,7 @@ public final class TestHome {
 
     public PrimaryHooks primaryHooks() {
         return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
-                processes, wakeStreams(), wakes, runtime, clock, transaction);
+                processes, wakeStreams(), wakes, runtime, firedRules(), clock, transaction);
     }
 
     public WorkerListQuery workerList() {
@@ -971,7 +991,7 @@ public final class TestHome {
 
     public CheckMechanicalChange checkMechanicalChange() {
         return new CheckMechanicalChange(workers, workerContext(), git, new ProjectBuild(programs), runtime, launchWorker(), deliverAcceptedWork(),
-                events, clock, transaction);
+                events, ruleFirings, clock, transaction);
     }
 
     public BoardStore boards() {
@@ -1006,7 +1026,7 @@ public final class TestHome {
     }
 
     public SettleBoardAnswers settleBoardAnswers() {
-        return new SettleBoardAnswers(boards, decisions, events, inbox, workers, new InboxNotice(runtime), answerDecision(), clock, transaction);
+        return new SettleBoardAnswers(boards, decisions, events, ruleFirings, inbox, workers, new InboxNotice(runtime), answerDecision(), clock, transaction);
     }
 
     public ConsoleAccess consoleAccess() {

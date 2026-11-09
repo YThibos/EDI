@@ -14,8 +14,11 @@ import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.domain.publish.FindingPlace;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleOutcome;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.web.access.Caller;
+import io.github.ythibos.edi.web.access.CallerFirings;
 import io.github.ythibos.edi.web.access.NotPermitted;
 
 @RestController
@@ -31,10 +34,12 @@ class PublishCheckController {
 
     private final PublishCheck publishCheck;
     private final PublicationTargets targets;
+    private final CallerFirings firings;
 
-    PublishCheckController(PublishCheck publishCheck, PublicationTargets targets) {
+    PublishCheckController(PublishCheck publishCheck, PublicationTargets targets, CallerFirings firings) {
         this.publishCheck = publishCheck;
         this.targets = targets;
+        this.firings = firings;
     }
 
     @PostMapping("/api/publish-checks")
@@ -44,6 +49,9 @@ class PublishCheckController {
         PublishVerdict verdict = request.namesThePushTarget()
                 ? publishCheck.checkPush(request.repositoryPath(), outgoing, request.remoteUrl())
                 : publishCheck.check(request.repositoryPath(), outgoing);
+        if (!verdict.allowsPush()) {
+            firings.fired(Rule.OUTGOING_CLEAN, RuleOutcome.REFUSED, caller, verdict.conclusion(outgoing));
+        }
         return ResponseEntity.status(verdict.allowsPush() ? HttpStatus.OK : HttpStatus.CONFLICT)
                 .body(new PublishCheckResult(outgoing, verdict));
     }

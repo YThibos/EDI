@@ -4,22 +4,25 @@ message=$(grep -v '^#' "$1")
 subject=$(printf '%s\n' "$message" | sed -n '/[^[:space:]]/{p;q;}')
 
 refuse() {
-    printf 'EDI commit-msg hook: %s\n' "$1" >&2
+    printf 'EDI commit-msg hook: %s\n' "$2" >&2
+    if command -v edi >/dev/null 2>&1; then
+        edi rules fired "$1" --reason "The commit-msg hook refused a commit: $2" >/dev/null 2>&1
+    fi
     exit 1
 }
 
 case "$subject" in
     "$work_key" | "$work_key "* | "$work_key:"*) ;;
-    *) refuse "the subject starts with the work key $work_key." ;;
+    *) refuse commit.work-key "the subject starts with the work key $work_key." ;;
 esac
 if printf '%s\n' "$message" | grep -qi '^[[:space:]]*co-authored-by:'; then
-    refuse "a commit carries no Co-authored-by line."
+    refuse commit.co-author-trailer "a commit carries no Co-authored-by line."
 fi
 if printf '%s\n' "$message" | grep -i '^[[:space:]]*signed-off-by:' \
     | grep -qiE '(^|[^[:alnum:]])(claude|anthropic|openai|chatgpt|gpt|codex|copilot|gemini|cursor|devin|aider|agent|assistant|bot|llm|ai|model|edi|firstmate|firstofficer|no-mistakes|renovate|dependabot)([^[:alnum:]]|$)'; then
-    refuse "a Signed-off-by line names a person, never a model, an agent or a tool."
+    refuse commit.model-sign-off "a Signed-off-by line names a person, never a model, an agent or a tool."
 fi
 if printf '%s\n' "$message" | grep -qiE '^[^[:alnum:]]*generated with'; then
-    refuse "a commit carries no \"Generated with\" line."
+    refuse commit.generated-with-line "a commit carries no \"Generated with\" line."
 fi
 exit 0

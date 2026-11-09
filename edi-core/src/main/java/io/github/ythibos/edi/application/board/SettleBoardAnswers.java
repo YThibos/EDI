@@ -10,6 +10,7 @@ import io.github.ythibos.edi.adapter.store.BoardStore;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
+import io.github.ythibos.edi.adapter.store.RuleFirings;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.GivenAnswer;
@@ -25,6 +26,8 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.worker.Worker;
 
 @Service
@@ -33,6 +36,7 @@ public class SettleBoardAnswers {
     private final BoardStore boards;
     private final DecisionStore decisions;
     private final EventLog events;
+    private final RuleFirings firings;
     private final InboxStore inbox;
     private final WorkerStore workers;
     private final InboxNotice notice;
@@ -40,11 +44,12 @@ public class SettleBoardAnswers {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public SettleBoardAnswers(BoardStore boards, DecisionStore decisions, EventLog events, InboxStore inbox, WorkerStore workers, InboxNotice notice,
-            AnswerDecision answerDecision, Clock clock, TransactionTemplate transaction) {
+    public SettleBoardAnswers(BoardStore boards, DecisionStore decisions, EventLog events, RuleFirings firings, InboxStore inbox, WorkerStore workers,
+            InboxNotice notice, AnswerDecision answerDecision, Clock clock, TransactionTemplate transaction) {
         this.boards = boards;
         this.decisions = decisions;
         this.events = events;
+        this.firings = firings;
         this.inbox = inbox;
         this.workers = workers;
         this.notice = notice;
@@ -84,6 +89,7 @@ public class SettleBoardAnswers {
 
     private RefusalNotice refusalRecorded(Board board, BoardAnswer answer, String because, Instant now) {
         events.record(new BoardAnswerRefused(board.task(), answer.decision(), board.id(), because), Actor.CORE, now);
+        firings.record(RuleFired.refused(Rule.BOARD_ANSWER, Actor.CAPTAIN, board.task(), because), now);
         InboxMessage message = InboxMessage.sent(board.task(), inbox.nextNumber(board.task()), refusalWords(answer, because), null, now);
         inbox.save(message);
         events.record(new SteerSent(board.task(), message.number(), null), Actor.CORE, now);

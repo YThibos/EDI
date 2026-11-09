@@ -98,8 +98,9 @@ public final class FixtureRepository {
         ProcessBuilder git = new ProcessBuilder(Stream.concat(Stream.of("git", "-c", WITHOUT_BACKGROUND_MAINTENANCE), Stream.of(arguments)).toList())
                 .directory(root.toFile())
                 .redirectErrorStream(true);
-        git.environment().keySet().removeIf(FixtureRepository::injectsConfiguration);
+        git.environment().keySet().removeIf(variable -> injectsConfiguration(variable) || namesAnEdiCaller(variable));
         git.environment().putAll(isolatedEnvironment(identity));
+        git.environment().put("EDI_HOME", root.resolveSibling(root.getFileName() + ".hook-home").toString());
         Process process = git.start();
         process.getOutputStream().close();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -110,6 +111,10 @@ public final class FixtureRepository {
     private static boolean injectsConfiguration(String variable) {
         return variable.equals("GIT_CONFIG_COUNT") || variable.equals("GIT_CONFIG_PARAMETERS")
                 || variable.startsWith("GIT_CONFIG_KEY_") || variable.startsWith("GIT_CONFIG_VALUE_");
+    }
+
+    private static boolean namesAnEdiCaller(String variable) {
+        return variable.startsWith("EDI_") || variable.startsWith("CLAUDE_CODE_");
     }
 
     private static Map<String, String> isolatedEnvironment(String identity) {

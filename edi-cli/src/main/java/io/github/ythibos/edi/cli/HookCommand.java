@@ -18,6 +18,8 @@ final class HookCommand implements Callable<Integer> {
     private static final int NOT_ANSWERED = 1;
     private static final int BLOCKED = 2;
     private static final String GUARD = "pre-tool-use";
+    private static final String CORE_UNREACHABLE = "guard.core-unreachable";
+    private static final String HOOK_NOT_TAKEN = "hook.not-taken";
 
     @ParentCommand
     private Edi edi;
@@ -40,7 +42,8 @@ final class HookCommand implements Callable<Integer> {
             CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload, "application/json");
             return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip());
         } catch (CoreUnavailable unavailable) {
-            return thePrimaryMayGoOnWithoutTheCore(payload) ? ANSWERED : unanswered(unavailable.getMessage());
+            String reason = unavailable.getMessage();
+            return thePrimaryMayGoOnWithoutTheCore(payload) ? allowedWithoutTheCore(reason) : unanswered(reason);
         }
     }
 
@@ -50,6 +53,11 @@ final class HookCommand implements Callable<Integer> {
 
     private boolean thePrimaryMayGoOnWithoutTheCore(String payload) {
         return event.equals(GUARD) && !edi.runsForAWorker() && (PlainEdiCall.isIn(payload) || UnansweredDialog.isIn(payload));
+    }
+
+    private int allowedWithoutTheCore(String reason) {
+        new RuleFirings(edi).fired(CORE_UNREACHABLE, RuleFirings.ALLOWED, "A plain edi call or an unanswered dialog went ahead while " + reason);
+        return ANSWERED;
     }
 
     private int answered(String answer) {
@@ -62,11 +70,15 @@ final class HookCommand implements Callable<Integer> {
     private int unanswered(String reason) {
         PrintWriter err = spec.commandLine().getErr();
         if (event.equals(GUARD)) {
-            err.println("The guard could not check this tool call, so it is refused: " + reason);
+            String refusal = "The guard could not check this tool call, so it is refused: " + reason;
+            new RuleFirings(edi).fired(CORE_UNREACHABLE, RuleFirings.REFUSED, refusal);
+            err.println(refusal);
             err.flush();
             return BLOCKED;
         }
-        err.println("The " + event + " hook could not be taken: " + reason);
+        String warning = "The " + event + " hook could not be taken: " + reason;
+        new RuleFirings(edi).fired(HOOK_NOT_TAKEN, RuleFirings.WARNED, warning);
+        err.println(warning);
         err.flush();
         return NOT_ANSWERED;
     }

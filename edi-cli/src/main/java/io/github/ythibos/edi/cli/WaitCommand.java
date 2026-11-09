@@ -23,6 +23,7 @@ final class WaitCommand implements Callable<Integer> {
     private static final int NOT_WAITING = 1;
     private static final int NOTHING_YET = 204;
     private static final String OFFERED_WAKES = "EDI-Wakes";
+    private static final String WAIT_READ = "wake.wait-read";
     private static final Duration RETRY = Duration.ofSeconds(2);
     private static final Duration PATIENCE_WITH_AN_ABSENT_CORE = Duration.ofSeconds(60);
 
@@ -59,9 +60,11 @@ final class WaitCommand implements Callable<Integer> {
     }
 
     private int refusedBecause(String unread) {
+        String refusal = "edi wait refuses to start: " + unread + ", so every wake it took would be lost. Start the one wake stream with the Monitor"
+                + " tool running edi wait --follow alone; where Monitor is unavailable, run edi wait alone as a background command.";
+        new RuleFirings(edi).fired(WAIT_READ, RuleFirings.REFUSED, refusal);
         PrintWriter err = spec.commandLine().getErr();
-        err.println("edi wait refuses to start: " + unread + ", so every wake it took would be lost. Start the one wake stream with the Monitor"
-                + " tool running edi wait --follow alone; where Monitor is unavailable, run edi wait alone as a background command.");
+        err.println(refusal);
         err.flush();
         return NOT_WAITING;
     }

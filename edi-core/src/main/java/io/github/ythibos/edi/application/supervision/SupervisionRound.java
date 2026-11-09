@@ -14,6 +14,7 @@ import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
+import io.github.ythibos.edi.application.rule.TakeInSpooledFirings;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.NoticeFullContexts;
@@ -44,6 +45,7 @@ public class SupervisionRound implements AutoCloseable {
     private final NoticeHeavyRunsAtOnce heavyRuns;
     private final RemindOfUnansweredQuestions unansweredQuestions;
     private final CloseDecisionRounds decisionRounds;
+    private final TakeInSpooledFirings spooledFirings;
     private final ExecutorService checks = Executors.newVirtualThreadPerTaskExecutor();
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
@@ -51,7 +53,7 @@ public class SupervisionRound implements AutoCloseable {
             LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, NoticeFullContexts fullContexts,
             NoticeMissedStops missedStops, JudgeWorkers judgeWorkers, ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals,
             FollowThePresence presence, NoticeTheUnreadableCalendar unreadableCalendar, NoticeHeavyRunsAtOnce heavyRuns,
-            RemindOfUnansweredQuestions unansweredQuestions, CloseDecisionRounds decisionRounds) {
+            RemindOfUnansweredQuestions unansweredQuestions, CloseDecisionRounds decisionRounds, TakeInSpooledFirings spooledFirings) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
@@ -67,6 +69,7 @@ public class SupervisionRound implements AutoCloseable {
         this.heavyRuns = heavyRuns;
         this.unansweredQuestions = unansweredQuestions;
         this.decisionRounds = decisionRounds;
+        this.spooledFirings = spooledFirings;
     }
 
     @Scheduled(fixedDelayString = "${edi.supervision.round:PT30S}", initialDelayString = "${edi.supervision.round:PT30S}")
@@ -86,6 +89,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("follow the captain's presence", presence::follow);
         attempt("tell the captain the calendar cannot be read", unreadableCalendar::notice);
         attempt("notice heavy runs at once", heavyRuns::notice);
+        attempt("take in the rule firings spooled while the core was out of reach", spooledFirings::takeIn);
     }
 
     @Override

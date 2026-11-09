@@ -486,6 +486,8 @@ class AuthorityAndInterfaceTest {
             assertThat(guardedRead(home, current)).isEqualTo(HookAnswer.PROCEED);
             assertThat(guardedFileRead(home, current)).isEqualTo(HookAnswer.PROCEED);
             assertThat(guarded(home, current, "git branch -D feature/HRN-3")).isEqualTo(HookAnswer.PROCEED);
+            assertThat(home.ruleReport().since(TestHome.START).fired()).filteredOn(fired -> fired.rule().equals("guard.secret")).singleElement()
+                    .satisfies(secret -> assertThat(List.of(secret.refused(), secret.allowed())).containsExactly(3L, 2L));
             assertThat(lampCopy).doesNotExist();
             assertThat(doorCopy).doesNotExist();
             assertThat(home.git().commitAt(home.home().root().resolve("projects/harness"), "refs/heads/feature/HRN-7")).isEmpty();

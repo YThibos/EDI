@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +24,12 @@ final class LoopbackHostFilter extends OncePerRequestFilter {
     private static final String FRAME_OPTIONS = "X-Frame-Options";
     private static final String DENY = "DENY";
 
+    private final CallerFirings firings;
+
+    LoopbackHostFilter(CallerFirings firings) {
+        this.firings = firings;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
@@ -29,7 +37,7 @@ final class LoopbackHostFilter extends OncePerRequestFilter {
         if (isAddressedToThisCore(request)) {
             chain.doFilter(request, response);
         } else {
-            refuse(response, request.getLocalPort());
+            refuse(request, response);
         }
     }
 
@@ -47,10 +55,12 @@ final class LoopbackHostFilter extends OncePerRequestFilter {
         return LOOPBACK_NAMES.stream().map(name -> name + ":" + port).toList();
     }
 
-    private static void refuse(HttpServletResponse response, int port) throws IOException {
+    private void refuse(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String refusal = "This core answers only a request addressed to " + String.join(" or ", hostsOf(request.getLocalPort())) + ".";
+        firings.refused(Rule.LOOPBACK_HOST, request, refusal);
         response.setStatus(HttpStatus.MISDIRECTED_REQUEST.value());
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().println("This core answers only a request addressed to " + String.join(" or ", hostsOf(port)) + ".");
+        response.getWriter().println(refusal);
     }
 }
