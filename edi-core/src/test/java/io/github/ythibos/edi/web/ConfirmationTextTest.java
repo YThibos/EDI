@@ -114,10 +114,10 @@ class ConfirmationTextTest {
         List<Recount> changed = List.of(new Recount(inflated, inflated.withPipelineSpend(spent)), new Recount(unknown, unknown.withPipelineSpend(spent)));
 
         assertThat(text.text(new Confirmation.CostsRecounted(new RecountedCosts(since, 3, changed)))).isEqualTo(
-                "Recounted the pipeline's spend of the 3 task costs counted since 2026-11-02; 2 changed: lantern from 1810740 to 905740 tokens;"
+                "Recounted the pipeline's spend of 3 task costs counted since 2026-11-02; 2 changed: lantern from 1810740 to 905740 tokens;"
                         + " lamp from unknown to 905740 tokens.\n");
-        assertThat(text.text(new Confirmation.CostsRecounted(new RecountedCosts(since, 3, List.of()))))
-                .isEqualTo("Recounted the pipeline's spend of the 3 task costs counted since 2026-11-02; none changed.\n");
+        assertThat(text.text(new Confirmation.CostsRecounted(new RecountedCosts(since, 1, List.of()))))
+                .isEqualTo("Recounted the pipeline's spend of 1 task cost counted since 2026-11-02; none changed.\n");
     }
 
     @Test

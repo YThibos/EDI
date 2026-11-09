@@ -126,7 +126,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     }
 
     private static String costsRecounted(RecountedCosts recounted) {
-        return "Recounted the pipeline's spend of the " + recounted.counted() + " task costs counted since " + recounted.since() + "; "
+        return "Recounted the pipeline's spend of " + Words.quantity(recounted.counted(), "task cost") + " counted since " + recounted.since() + "; "
                 + changedOf(recounted.changed());
     }
 

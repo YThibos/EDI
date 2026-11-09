@@ -151,7 +151,7 @@ class ApiTest {
         HttpResponse<String> recounted = post("/api/tasks/recount-costs", "{\"since\":\"2026-11-02\"}", TEXT);
 
         assertThat(recounted.statusCode()).isEqualTo(200);
-        assertThat(recounted.body()).isEqualTo("Recounted the pipeline's spend of the 0 task costs counted since 2026-11-02; none changed.\n");
+        assertThat(recounted.body()).isEqualTo("Recounted the pipeline's spend of 0 task costs counted since 2026-11-02; none changed.\n");
     }
 
     @Test
