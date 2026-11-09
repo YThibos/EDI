@@ -436,7 +436,7 @@ class DecisionsAndReportingTest {
         private static MergeRequestView request(MergeRequestState state) {
             MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
             boolean merged = state == MergeRequestState.MERGED;
-            return new MergeRequestView(address, state, true, "feature/HRN-3", "main", "abc123", merged ? "def456" : null, merged ? TestHome.START : null);
+            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", merged ? "def456" : null, merged ? TestHome.START : null);
         }
 
         private static CallingSession captainSays(TestHome home, String words, String task) {

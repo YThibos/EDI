@@ -237,6 +237,40 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void putsAHandedOverRequestBeforeTheCaptainOnceItsPipelineEndedOnPassedChecks() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "handed_off", null, "2222", REQUEST.url(), true), TestHome.START);
+
+        WaitingOnTheCaptain handedOff = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(handedOff.changing()).isEmpty();
+        assertThat(handedOff.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingOnceItsWatchWasInterruptedBeforeItsChecksPassed() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "ci_monitor_interrupted", null, "2222", REQUEST.url(), false), TestHome.START);
+
+        WaitingOnTheCaptain interrupted = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(interrupted.reviews()).isEmpty();
+        assertThat(interrupted.changing()).singleElement()
+                .satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline ci_monitor_interrupted without passed checks"));
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingWhileItIsStillADraft() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(stillADraft(), TestHome.START));
+
+        WaitingOnTheCaptain draft = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(draft.reviews()).isEmpty();
+        assertThat(draft.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("still a draft"));
+    }
+
+    @Test
     void holdsAHandedOverRequestWhosePipelineWatchesPassedChecksAsChangingWhileASteerWaits() {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
@@ -419,7 +453,11 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
-        return new MergeRequestView(REQUEST, state, true, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+    }
+
+    private static MergeRequestView stillADraft() {
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null, null);
     }
 
     private static PipelineRun watchingTheChecks(boolean passed) {

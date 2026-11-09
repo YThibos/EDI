@@ -5,7 +5,9 @@ import java.util.Set;
 
 public record PipelineRun(String id, String status, String activeStep, String headCommit, String mergeRequestUrl, boolean checksPassed) {
 
-    private static final Set<String> FINISHED = Set.of("completed", "failed", "cancelled", "canceled", "aborted");
+    private static final Set<String> FINISHED =
+            Set.of("completed", "failed", "cancelled", "canceled", "aborted", "checks_passed", "handed_off", "ci_monitor_interrupted");
+    private static final String COMPLETED = "completed";
     private static final String CI_WATCH = "ci";
 
     public PipelineRun {
@@ -26,7 +28,7 @@ public record PipelineRun(String id, String status, String activeStep, String he
     }
 
     public boolean stillChangesTheRequest() {
-        return isRunning() && !onlyWatchesPassedChecks();
+        return isRunning() ? !onlyWatchesPassedChecks() : endedWithoutPassedChecks();
     }
 
     public String currentStep() {
@@ -35,5 +37,9 @@ public record PipelineRun(String id, String status, String activeStep, String he
 
     private boolean onlyWatchesPassedChecks() {
         return CI_WATCH.equals(activeStep) && checksPassed;
+    }
+
+    private boolean endedWithoutPassedChecks() {
+        return !COMPLETED.equals(status) && !checksPassed;
     }
 }

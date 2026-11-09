@@ -16,15 +16,23 @@ public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAt
     }
 
     public String whyChanging() {
-        return Stream.of(workerStillAtWork(), pipelineStillChanging(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
+        return Stream.of(workerStillAtWork(), stillADraft(), pipelineStillChanging(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
     }
 
     private Optional<String> workerStillAtWork() {
         return workerBackAtWork ? Optional.of("worker back at work") : Optional.empty();
     }
 
+    private Optional<String> stillADraft() {
+        return delivery.draft() ? Optional.of("still a draft") : Optional.empty();
+    }
+
     private Optional<String> pipelineStillChanging() {
-        return Optional.ofNullable(changingPipeline).map(run -> "pipeline " + run.currentStep());
+        return Optional.ofNullable(changingPipeline).map(ChangingRequest::whyThePipelineStillChangesIt);
+    }
+
+    private static String whyThePipelineStillChangesIt(PipelineRun run) {
+        return run.isRunning() ? "pipeline " + run.currentStep() : "pipeline " + run.status() + " without passed checks";
     }
 
     private Optional<String> steersStillWaiting() {

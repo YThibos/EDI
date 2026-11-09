@@ -180,7 +180,7 @@ class SitrepConsolePresenterTest {
 
         assertThat(sitrep.reviews()).isEmpty();
         assertThat(sitrep.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(),
-                "pipeline running; steer 2 not acknowledged"));
+                "still a draft; pipeline running; steer 2 not acknowledged"));
     }
 
     @Test

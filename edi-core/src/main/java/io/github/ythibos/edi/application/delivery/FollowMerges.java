@@ -75,7 +75,7 @@ public class FollowMerges {
 
     public void followTheRequestOf(TaskId task) {
         try {
-            followedOnceItExists(transaction.execute(_ -> context.of(task)));
+            followedAsTheForgeShowsIt(transaction.execute(_ -> context.of(task)));
         } catch (Refusal | ProgramFailure unfollowable) {
             LOG.warn("Could not look up the merge request of {}: {}", task, unfollowable.getMessage());
         }
@@ -237,9 +237,12 @@ public class FollowMerges {
         return cleanedUpOnceMerged(merged, actor);
     }
 
-    private void followedOnceItExists(Workplace workplace) {
+    private void followedAsTheForgeShowsIt(Workplace workplace) {
+        TaskId task = workplace.task().id();
         if (transaction.execute(_ -> records.awaitsTheRequestOf(workplace))) {
-            records.requestFrom(workplace).ifPresent(request -> followedOnceFound(workplace.task().id(), request, Actor.CORE));
+            records.requestFrom(workplace).ifPresent(request -> followedOnceFound(task, request, Actor.CORE));
+        } else {
+            transaction.execute(_ -> records.followedDeliveryOf(task)).filter(Delivery::isOpen).ifPresent(this::observed);
         }
     }
 
@@ -277,8 +280,10 @@ public class FollowMerges {
         MergeRequestView view = viewOf(delivery);
         if (view.isMerged()) {
             followed(delivery, view, Actor.CORE);
-        } else {
+        } else if (view.state() == MergeRequestState.CLOSED) {
             noticeAClosure(delivery, view, Actor.CORE);
+        } else {
+            keptAsTheForgeShowsIt(delivery, view);
         }
     }
 
