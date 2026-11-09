@@ -96,6 +96,12 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
+    public List<String> mirror(WorkerWindow window) {
+        requireRunning(window);
+        return tmux.visibleLinesWithColours(window.windowId());
+    }
+
+    @Override
     public void press(WorkerWindow window, Keystroke keystroke) {
         switch (keystroke) {
             case Keystroke.Line line -> typeIntoTheIdlePrompt(window, line);

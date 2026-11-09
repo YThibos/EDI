@@ -5,13 +5,14 @@ import { map } from 'rxjs';
 
 import { ConsoleApi } from '../console/console-api';
 import { LinkChips } from '../console/link-chips';
+import { LivePane } from './live-pane';
 import { projectsOf } from '../console/projects';
 import { SitrepReading } from '../console/sitrep-reading';
 import { shipMoment } from '../console/stardate';
 import { AnsweredRounds, TaskDetail, TaskPageName } from '../console/task-detail';
 import { toneOf } from '../console/tone';
 
-export type PanelTab = 'timeline' | 'decisions' | 'brief' | 'report' | 'board';
+export type PanelTab = 'timeline' | 'live' | 'decisions' | 'brief' | 'report' | 'board';
 
 interface Shown<T> {
   value?: T;
@@ -20,6 +21,7 @@ interface Shown<T> {
 
 const TABS: { tab: PanelTab; name: string }[] = [
   { tab: 'timeline', name: 'Timeline' },
+  { tab: 'live', name: 'Live' },
   { tab: 'decisions', name: 'Decisions' },
   { tab: 'brief', name: 'Brief' },
   { tab: 'report', name: 'Report' },
@@ -28,7 +30,7 @@ const TABS: { tab: PanelTab; name: string }[] = [
 
 @Component({
   selector: 'app-task-panel',
-  imports: [LinkChips],
+  imports: [LinkChips, LivePane],
   templateUrl: './task-panel.html',
   styleUrl: './task-panel.css',
   host: { class: 'sr-task-panel', role: 'dialog', '[attr.aria-label]': 'title()' },
