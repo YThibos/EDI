@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.DroppedTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges.CleanUp;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
+import io.github.ythibos.edi.application.delivery.RecountedCosts;
+import io.github.ythibos.edi.application.delivery.RecountedCosts.Recount;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.tracker.KeyedTask;
@@ -27,6 +30,7 @@ import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
@@ -39,6 +43,7 @@ import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -98,6 +103,21 @@ class ConfirmationTextTest {
                 .isEqualTo("Keyed lantern on HRN-3; the key answers D87, its ticket decision, and releases it.\n");
         assertThat(text.text(new Confirmation.Dropped(new DroppedTask(lantern, List.of(), new DecisionNumber(87)))))
                 .isEqualTo("Dropped lantern on the captain's word; the drop answers D87, its ticket decision; nothing unlanded was discarded.\n");
+    }
+
+    @Test
+    void confirmsARecountOfTaskCostsWithEachCostItChanged() {
+        LocalDate since = LocalDate.parse("2026-11-02");
+        TaskCost inflated = new TaskCost(new TaskId("lantern"), new TokenUsage(1, 2, 3, 4), new TokenUsage(905040, 900000, 5000, 700), Instant.parse("2026-11-02T08:00:00Z"));
+        TaskCost unknown = new TaskCost(new TaskId("lamp"), new TokenUsage(1, 2, 3, 4), null, Instant.parse("2026-11-02T08:00:00Z"));
+        TokenUsage spent = new TokenUsage(40, 900000, 5000, 700);
+        List<Recount> changed = List.of(new Recount(inflated, inflated.withPipelineSpend(spent)), new Recount(unknown, unknown.withPipelineSpend(spent)));
+
+        assertThat(text.text(new Confirmation.CostsRecounted(new RecountedCosts(since, 3, changed)))).isEqualTo(
+                "Recounted the pipeline's spend of the 3 task costs counted since 2026-11-02; 2 changed: lantern from 1810740 to 905740 tokens;"
+                        + " lamp from unknown to 905740 tokens.\n");
+        assertThat(text.text(new Confirmation.CostsRecounted(new RecountedCosts(since, 3, List.of()))))
+                .isEqualTo("Recounted the pipeline's spend of the 3 task costs counted since 2026-11-02; none changed.\n");
     }
 
     @Test

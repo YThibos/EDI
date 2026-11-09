@@ -96,6 +96,7 @@ import io.github.ythibos.edi.application.delivery.FollowMerges;
 import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.application.delivery.LandedWorkCheck;
 import io.github.ythibos.edi.application.delivery.ObservePipelines;
+import io.github.ythibos.edi.application.delivery.RecountTaskCosts;
 import io.github.ythibos.edi.application.delivery.TaskCosts;
 import io.github.ythibos.edi.application.dispatch.AwayLimit;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
@@ -710,6 +711,10 @@ public final class TestHome {
     public CleanUpTask cleanUpTask() {
         return new CleanUpTask(tasks, workers, deliveries, taskCosts, reviews, events, workerContext(), landedWork(),
                 new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), clock, transaction);
+    }
+
+    public RecountTaskCosts recountTaskCosts() {
+        return new RecountTaskCosts(taskCosts, workerContext(), pipeline, events, clock, transaction);
     }
 
     public CopyRetirement copyRetirement() {

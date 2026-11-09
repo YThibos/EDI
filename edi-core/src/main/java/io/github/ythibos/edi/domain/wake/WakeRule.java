@@ -54,6 +54,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdopted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCleanedUp;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.TaskCostRecounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
@@ -136,7 +137,7 @@ public final class WakeRule {
                     ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
                     WorkerNotified _, WorkerSessionEnded _, WorkerTurnEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _, RecoveryFailed _,
                     WorkerStopRequested _, RecoveryCostRecorded _, DeliveryRefused _, DraftRecorded _, DraftOpened _, CloneRefreshed _,
-                    ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, PipelineRunSeen _, PipelineRunFinished _,
+                    ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, TaskCostRecounted _, PipelineRunSeen _, PipelineRunFinished _,
                     TicketCreated _, TicketChoiceRefused _, TicketAddedToSprint _, TicketLinked _, TicketTransitioned _, ResearchQueuedFirst _,
                     ReviewCounted _, BoardArmed _, BoardRoundPosted _, BoardClosed _, BoardRetired _, CaptainSaid _, ScoutPromoted _, TaskDropped _,
                     WorkDiscarded _, TaskImported _, TaskAdopted _ -> Optional.empty();

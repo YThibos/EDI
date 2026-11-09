@@ -147,6 +147,14 @@ class ApiTest {
     }
 
     @Test
+    void recountsTheTaskCostsCountedSinceADay() throws Exception {
+        HttpResponse<String> recounted = post("/api/tasks/recount-costs", "{\"since\":\"2026-11-02\"}", TEXT);
+
+        assertThat(recounted.statusCode()).isEqualTo(200);
+        assertThat(recounted.body()).isEqualTo("Recounted the pipeline's spend of the 0 task costs counted since 2026-11-02; none changed.\n");
+    }
+
+    @Test
     void answersEveryRefusalInOnePlainSentence() throws Exception {
         post("/api/tasks", "{\"id\":\"api-horn\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Tune the horn\"}", TEXT);
 
@@ -157,6 +165,7 @@ class ApiTest {
         assertRefusal(get("/api/tasks?state=flying", TEXT), 400, "A task state is queued, in-flight, done or dropped, not flying.");
         assertRefusal(post("/api/tasks/api-horn/hold", "{\"kind\":\"deferral\",\"reason\":\"later\",\"until\":\"soon\"}", TEXT),
                 400, "A hold lasts until a date such as 2026-11-01, not soon.");
+        assertRefusal(post("/api/tasks/recount-costs", "{\"since\":\"lately\"}", TEXT), 400, "A recount starts on a day such as 2026-11-02, not lately.");
         assertRefusal(get("/api/migrations/firstofficer/plan?from=relative", TEXT), 400, "Name the old home by its absolute path, not relative.");
     }
 

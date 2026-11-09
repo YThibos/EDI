@@ -6,6 +6,7 @@ import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.DiscardedWork;
 import io.github.ythibos.edi.application.delivery.DroppedTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
+import io.github.ythibos.edi.application.delivery.RecountedCosts;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
@@ -98,6 +99,9 @@ public sealed interface Confirmation {
     }
 
     record Adopted(AdoptedTask adopted) implements Confirmation {
+    }
+
+    record CostsRecounted(RecountedCosts recounted) implements Confirmation {
     }
 
     record WorkDiscarded(DiscardedWork discarded) implements Confirmation {

@@ -2,6 +2,8 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -41,6 +43,21 @@ public class TaskCostStore {
                 .update();
     }
 
+    public void updatePipelineSpend(TaskCost cost) {
+        Optional<TokenUsage> pipeline = cost.pipelineIfKnown();
+        store.sql("""
+                        update task_cost
+                        set pipeline_input_tokens = :pipelineInput, pipeline_cache_read_tokens = :pipelineCacheRead,
+                            pipeline_cache_write_tokens = :pipelineCacheWrite, pipeline_output_tokens = :pipelineOutput
+                        where task_id = :task""")
+                .param("task", cost.task().value())
+                .param("pipelineInput", pipeline.map(TokenUsage::input).orElse(null))
+                .param("pipelineCacheRead", pipeline.map(TokenUsage::cacheRead).orElse(null))
+                .param("pipelineCacheWrite", pipeline.map(TokenUsage::cacheWrite).orElse(null))
+                .param("pipelineOutput", pipeline.map(TokenUsage::output).orElse(null))
+                .update();
+    }
+
     public Optional<TaskCost> of(TaskId task) {
         return store.sql("""
                         select task_id, worker_input_tokens, worker_cache_read_tokens, worker_cache_write_tokens, worker_output_tokens,
@@ -49,6 +66,16 @@ public class TaskCostStore {
                 .param("task", task.value())
                 .query((row, _) -> costOf(row))
                 .optional();
+    }
+
+    public List<TaskCost> countedSince(Instant from) {
+        return store.sql("""
+                        select task_id, worker_input_tokens, worker_cache_read_tokens, worker_cache_write_tokens, worker_output_tokens,
+                               pipeline_input_tokens, pipeline_cache_read_tokens, pipeline_cache_write_tokens, pipeline_output_tokens, counted_at
+                        from task_cost where counted_at >= :from order by counted_at, task_id""")
+                .param("from", Columns.text(from))
+                .query((row, _) -> costOf(row))
+                .list();
     }
 
     private static TaskCost costOf(ResultSet row) throws SQLException {
