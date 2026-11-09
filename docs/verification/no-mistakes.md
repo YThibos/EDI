@@ -28,6 +28,10 @@ The state database is `state.sqlite` in the pipeline's home.
 `agent_invocations` holds one row per agent call with `run_id`, `step_name`, `round`, `exit_status`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens` and the per-round deltas `delta_input_tokens`, `delta_output_tokens` and `delta_cache_read_tokens`; failed rounds have rows of their own.
 On the runs inspected, every delta equalled its total, because each round started a fresh agent session.
 
+On no-mistakes v1.106.1, read read-only on 09/11/2026, `agent_invocations` also holds `fresh_input_tokens`, and an invocation's input counts its cache reads and writes.
+On every one of the 466 invocations with a fresh input, `delta_input_tokens` was `delta_cache_read_tokens` plus `fresh_input_tokens`, and the fresh input held the cache writes, so the uncached input is the input less its cache reads, less its cache writes ([supervision](../decisions/supervision.md)).
+The 1,775 invocations from before the change hold no fresh input, and each one's input was below its cache reads and writes together, or it had none.
+
 ## Agent route
 
 Verified on no-mistakes 1.84.0, 23/10/2026, from `axi run --help`, the commented global configuration and the command lines of the running daemon's agent processes.
