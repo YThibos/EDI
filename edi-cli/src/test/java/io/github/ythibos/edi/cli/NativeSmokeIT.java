@@ -37,6 +37,7 @@ import org.junit.jupiter.api.parallel.Isolated;
 import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
+import jdk.jfr.consumer.RecordingFile;
 
 @Isolated
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
@@ -137,11 +138,15 @@ class NativeSmokeIT {
 
         assertThat(meters.statusCode()).isEqualTo(200);
         assertThat(meters.body()).contains("\"name\":\"edi.store.transaction\"", "\"statistic\":\"COUNT\"");
-        assertThat(health.exitCode()).isZero();
+        assertThat(health.exitCode()).as(health.output()).isZero();
         assertThat(health.output()).contains("The core's health since ", "\n  store transaction ", "\nMemory in use: ", "\nFlight recording: running, ",
                 "\nThe flight recording is written to " + home.resolve("data/recordings/core-"));
         try (Stream<Path> recordings = Files.list(home.resolve("data/recordings"))) {
-            assertThat(recordings.toList()).singleElement().satisfies(recording -> assertThat(Files.readAllBytes(recording)).startsWith('F', 'L', 'R', 0));
+            assertThat(recordings.toList()).singleElement().satisfies(recording -> assertThat(RecordingFile.readAllEvents(recording))
+                    .isNotEmpty()
+                    .extracting(event -> event.getEventType().getName())
+                    .allMatch(type -> type.startsWith("jdk.") && !type.contains("Environment") && !type.contains("SystemProperty")
+                            && !type.contains("File") && !type.contains("Socket") && !type.contains("Process") && !type.contains("JVMInformation")));
         }
     }
 

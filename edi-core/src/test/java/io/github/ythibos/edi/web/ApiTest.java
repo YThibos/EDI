@@ -52,6 +52,7 @@ import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
+import jdk.jfr.consumer.RecordingFile;
 import tools.jackson.databind.json.JsonMapper;
 
 @Tag("adapter")
@@ -619,7 +620,10 @@ class ApiTest {
         assertThat(meters.body()).contains("\"edi.store.transaction\"", "\"edi.memory.used\"", "\"http.server.requests\"");
         assertThat(storeTime.body()).contains("\"name\":\"edi.store.transaction\"", "\"statistic\":\"COUNT\"");
         assertThat(dumped.statusCode()).isEqualTo(201);
-        assertThat(Files.readAllBytes(dumpedRecordingIn(dumped.body()))).startsWith('F', 'L', 'R', 0);
+        assertThat(RecordingFile.readAllEvents(dumpedRecordingIn(dumped.body()))).isNotEmpty()
+                .extracting(event -> event.getEventType().getName())
+                .allMatch(type -> type.startsWith("jdk.") && !type.contains("Environment") && !type.contains("SystemProperty")
+                        && !type.contains("File") && !type.contains("Socket") && !type.contains("Process") && !type.contains("JVMInformation"));
         assertThat(dumpedByAWorker.statusCode()).isEqualTo(403);
     }
 

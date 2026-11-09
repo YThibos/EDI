@@ -11,6 +11,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +30,7 @@ import jdk.jfr.Recording;
 public class FlightRecording implements AutoCloseable {
 
     private static final String NAME = "edi-core";
+    private static final String DUMPING_THREAD = "edi-flight-recording-dump";
     private static final int DUMPS_KEPT = 5;
     private static final DateTimeFormatter DUMP_NAME = DateTimeFormatter.ofPattern("'core-'yyyyMMdd-HHmmss'.jfr'").withZone(ZoneOffset.UTC);
     private static final String SLOWER_THAN = "20 ms";
@@ -74,7 +77,7 @@ public class FlightRecording implements AutoCloseable {
         Path dumped = dumps.resolve(DUMP_NAME.format(clock.now()));
         try {
             Files.createDirectories(dumps);
-            running.dump(dumped);
+            dumpedOnAPlatformThread(running, dumped);
             keepTheLatestDumps();
             return dumped;
         } catch (IOException unwritable) {
@@ -95,6 +98,22 @@ public class FlightRecording implements AutoCloseable {
         recording.setMaxAge(maxAge);
         recording.start();
         return recording;
+    }
+
+    private static void dumpedOnAPlatformThread(Recording running, Path dumped) throws IOException {
+        FutureTask<Path> written = new FutureTask<>(() -> {
+            running.dump(dumped);
+            return dumped;
+        });
+        Thread.ofPlatform().name(DUMPING_THREAD).start(written);
+        try {
+            written.get();
+        } catch (ExecutionException failed) {
+            throw failed.getCause() instanceof IOException unwritable ? unwritable : new IOException(failed.getCause());
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IOException("The flight recording was not written out: its writing was interrupted.", interrupted);
+        }
     }
 
     private void keepTheLatestDumps() throws IOException {
