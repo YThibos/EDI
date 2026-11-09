@@ -36,7 +36,7 @@ edi task recount-costs --since 2026-11-02           # recount the pipeline's spe
 ```
 
 `edi deliver` opens the draft the pipeline could not ([delivery](decisions/delivery.md)).
-`edi task show` names a ship's draft, its latest pipeline run, its active time and, once cleaned up, what it cost.
+`edi task show` names a task's stage and the stages it reached, a ship's draft, its latest pipeline run, its active time and, once cleaned up, what it cost.
 `edi task recount-costs` reads the pipeline's spend of each task cost counted since a day again and records every cost it changes ([cleanup](decisions/cleanup.md)).
 A cleanup that finds unlanded work lists every uncommitted path and unlanded commit and changes nothing.
 
