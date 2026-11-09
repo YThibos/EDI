@@ -12,8 +12,9 @@ On the captain's delegation the primary settled on a time window over waiting fo
 ## Decision
 
 A decision waits for its round when its card is not urgent and its task is a ship in flight (`DecisionRound.waitsForItsRound`); a captain item, a scout, a queued ship's ticket proposal and an urgent card reach the captain as before.
+A decision bound to a listening research board stays out of every round, since the captain answers it on that board and the turn report draws it there.
 A card is urgent when it is raised with `"urgent": true` (`DecisionCard.urgent`, `CardRequest`), which the primary sets only when the decision blocks the captain's current work; migration `V22__an_urgent_decision_skips_its_round.sql` keeps it in the `decision` table, `DecisionRaised` carries it in its payload, and the console marks such a card as an urgent decision.
-`DecisionRoundQuery.gathering` finds the gathering round: every open decision that waits for its round and has no `DecisionRoundClosed` event since it was last raised, opened at the earliest of them (`DecisionRound.gatheredFrom`).
+`DecisionRoundQuery.gathering` finds the gathering round: every open decision that waits for its round, is bound to no listening board, and has no `DecisionRoundClosed` event since it was last raised, opened at the earliest of them (`DecisionRound.gatheredFrom`).
 `CloseDecisionRounds`, a step of every supervision round, closes the gathering round once `DecisionRound.WINDOW`, five minutes, has passed since it opened, and records one `DecisionRoundClosed` per decision in it, with the round's opening, in one transaction.
 So a decision raised after the window but before the supervision round that closes it still joins the round, and a decision raised again after its round waits for the next.
 Each `DecisionRoundClosed` wakes the primary with a `decision-round` wake, and the digest of a delivery that holds one tells the primary, while the captain is present, to tell the captain in one line that the open decisions wait for him in the console and to end the turn with the turn report, never asking them one by one (`WakeDigestText`).

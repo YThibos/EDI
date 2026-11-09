@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,11 +18,14 @@ import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionRound;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.wake.WakeKind;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -93,6 +97,20 @@ class CloseDecisionRoundsTest {
         raise(CHOOSE_BULB, "Which bulb?");
 
         assertThat(home.decisionRounds().gathering()).map(DecisionRound::decisions).contains(List.of(lamp));
+    }
+
+    @Test
+    void aDecisionBoundToAResearchBoardStaysOutOfTheRoundAndIsAnsweredOnTheBoard() throws IOException {
+        DecisionNumber lamp = raise(FIT_LAMP, "Which lamp?");
+        DecisionNumber paint = raise(PAINT_TOWER, "Which paint?");
+        Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("survey-lamps", TaskKind.SCOUT, "harness", "HRN-6"), CategoryId.RESEARCH);
+        Path board = Files.writeString(Files.createDirectories(home.home().taskDirectory(scout.id().task())).resolve("board.html"), "<!doctype html>\n");
+        home.boardHost().holdsTheNextPollOpen();
+        home.armBoard().arm(scout.id(), new TaskReference.ById(scout.id().task()), board, BoardRounds.binding(lamp));
+        home.clock().advance(DecisionRound.WINDOW);
+        home.closeDecisionRounds().closeTheDueRound();
+
+        assertThat(roundsClosed()).extracting(event -> event.text("number")).containsExactly(paint.toString());
     }
 
     @Test

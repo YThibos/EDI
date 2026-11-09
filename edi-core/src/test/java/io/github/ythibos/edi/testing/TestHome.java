@@ -445,7 +445,7 @@ public final class TestHome {
     }
 
     public DecisionRoundQuery decisionRounds() {
-        return new DecisionRoundQuery(decisions, tasks, events, transaction);
+        return new DecisionRoundQuery(decisions, tasks, boards, events, transaction);
     }
 
     public CloseDecisionRounds closeDecisionRounds() {
