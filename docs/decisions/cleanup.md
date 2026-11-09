@@ -18,7 +18,7 @@ When the copy is gone the branch in the clone stands in for it; each failure is 
 A refusal records `CleanupRefused` with the findings and says that nothing is discarded without the captain's word.
 A landed task is retired by `CopyRetirement`: its cost is counted (`TaskCosts`, each transcript once from its earliest launch, plus the pipeline's spend or unknown), its worker windows are closed, the copy is removed with `git worktree remove`, the branch is deleted, the workers' state directories with their settings and tokens are deleted, and in one transaction the workers and boards are retired and the task is done, with `TaskCostRecorded` and `TaskCleanedUp`.
 Dropping a task and discarding work share the same retirement steps on the captain's word ([captains-word](captains-word.md)).
-`edi task recount-costs --since <date>` recounts the pipeline's spend of every task cost counted since that day (`RecountTaskCosts`): it reads the spend of each task's branch again, keeps what the workers spent and when the cost was counted, and saves each cost it changes with `TaskCostRecounted`, the cost before and after; a spend the pipeline no longer knows leaves the recorded one.
+`edi task recount-costs --since <date>` recounts the pipeline's spend of every task cost counted since that day (`RecountTaskCosts`): it reads the spend of each task's branch again, keeps what the workers spent and when the cost was counted, and saves each cost it changes with `TaskCostRecounted`, the cost before and after; a spend the pipeline no longer knows, because its store is unreadable or holds no run of the branch any more, leaves the recorded one.
 
 ## Why
 

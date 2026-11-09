@@ -54,6 +54,7 @@ public class RecountTaskCosts {
 
     private Optional<Recount> recounted(TaskCost cost) {
         return spentByThePipelineOn(cost)
+                .filter(RecountTaskCosts::stillHeldByThePipeline)
                 .map(cost::withPipelineSpend)
                 .filter(recount -> !recount.equals(cost))
                 .map(recount -> new Recount(cost, recount));
@@ -62,6 +63,10 @@ public class RecountTaskCosts {
     private Optional<TokenUsage> spentByThePipelineOn(TaskCost cost) {
         Workplace workplace = transaction.execute(_ -> context.of(cost.task()));
         return pipeline.tokensSpentOn(workplace.project().projectClone(), workplace.dispatch().branch());
+    }
+
+    private static boolean stillHeldByThePipeline(TokenUsage spend) {
+        return !spend.equals(TokenUsage.NONE);
     }
 
     private void record(Recount recount, Actor actor) {

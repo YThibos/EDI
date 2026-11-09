@@ -70,6 +70,16 @@ class RecountTaskCostsTest {
         assertThat(home.eventTypesOf(earlier.task())).doesNotContain("TaskCostRecounted");
     }
 
+    @Test
+    void leavesACostWhoseBranchTheStoreHoldsNoRunOfAnyMore() {
+        TaskCost pruned = counted("fit-lamp", "HRN-3", SPENT, "2026-11-02T08:00:00Z");
+        home.pipeline().spent(TokenUsage.NONE);
+
+        assertThat(home.recountTaskCosts().recountSince(SINCE, Actor.PRIMARY)).isEqualTo(new RecountedCosts(SINCE, 1, List.of()));
+        assertThat(home.taskCosts().of(pruned.task())).contains(pruned);
+        assertThat(home.eventTypesOf(pruned.task())).doesNotContain("TaskCostRecounted");
+    }
+
     private TaskCost counted(String task, String key, TokenUsage pipeline, String at) {
         DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip(task, "harness", key));
         TaskCost cost = new TaskCost(new TaskId(task), WORKERS, pipeline, Instant.parse(at));
