@@ -31,7 +31,8 @@ public class GitHubIssuesTracker implements Tracker {
 
     @Override
     public WorkKey create(TicketDraft draft) {
-        throw new Refusal(Rule.WORK_KEY, draft.project() + " keys its work by its GitHub issue numbers, so I never allocate one; open the issue and give its key.");
+        throw new Refusal(Rule.WORK_KEY, draft.project()
+                + " keys its work by its GitHub issue numbers, so I never allocate one; open the issue and give its key.");
     }
 
     @Override

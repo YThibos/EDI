@@ -221,7 +221,8 @@ public class JiraTracker implements Tracker {
 
     private static JsonNode theOnlyOne(List<JsonNode> active, WorkKey key) {
         if (active.size() > 1) {
-            throw new Refusal(Rule.TRACKER_ANSWERED, "several " + key.project() + " sprints are active (" + active.stream().map(JiraTracker::nameOf).collect(Collectors.joining(", "))
+            throw new Refusal(Rule.TRACKER_ANSWERED, "several " + key.project() + " sprints are active ("
+                    + active.stream().map(JiraTracker::nameOf).collect(Collectors.joining(", "))
                     + "), so " + key + " joins none of them");
         }
         return active.getFirst();

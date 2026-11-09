@@ -81,7 +81,8 @@ public class WakeStreams {
     }
 
     private static Refusal refusalNaming(WakeStream live) {
-        return new Refusal(Rule.ONE_WAKE_STREAM, "edi wait is refused: the primary's wake stream is already live as " + live.command() + " in process " + live.process().pid()
+        return new Refusal(Rule.ONE_WAKE_STREAM, "edi wait is refused: the primary's wake stream is already live as " + live.command()
+                + " in process " + live.process().pid()
                 + ", and it keeps the wakes. " + THE_ONE_WAY + " Leave the live one running.");
     }
 }

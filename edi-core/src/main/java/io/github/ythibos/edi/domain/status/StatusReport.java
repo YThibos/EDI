@@ -52,7 +52,8 @@ public record StatusReport(StatusState state, StatusKey key, Instant until, Stri
 
     private void requireTheKeyOfAQuestion() {
         if (isForThePrimary() && key == null) {
-            throw new Refusal(Rule.QUESTION_KEY, "A " + state.word() + " status names what it waits on with --key, so the message that answers it can settle it.");
+            throw new Refusal(Rule.QUESTION_KEY, "A " + state.word()
+                    + " status names what it waits on with --key, so the message that answers it can settle it.");
         }
     }
 

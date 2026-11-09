@@ -43,7 +43,8 @@ public record ExpectedChange(String description, List<String> files) {
 
     private static void requireNotProtected(String file) {
         ProtectedFile.of(file).ifPresent(kind -> {
-            throw new Refusal(Rule.PROTECTED_FILES, "A mechanical task never edits " + kind.description() + ", and " + file + " is one; dispatch it as implementation.");
+            throw new Refusal(Rule.PROTECTED_FILES, "A mechanical task never edits " + kind.description() + ", and " + file
+                    + " is one; dispatch it as implementation.");
         });
     }
 }

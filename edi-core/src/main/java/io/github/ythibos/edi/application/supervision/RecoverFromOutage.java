@@ -69,7 +69,8 @@ public class RecoverFromOutage {
             return launcher.relaunch(entry.task(), launchKindOf(action), choice.captainsOverride(), entry, entry.cause().sentence(), actor);
         } catch (RuntimeException failed) {
             transaction.executeWithoutResult(_ -> events.record(new RecoveryFailed(entry.task(), number, failed.getMessage()), Actor.CORE, clock.now()));
-            throw new Refusal(Rule.OUTAGE_LIST, "Number " + number + " on the outage hold list could not be relaunched, so it stays on the list: " + failed.getMessage());
+            throw new Refusal(Rule.OUTAGE_LIST, "Number " + number + " on the outage hold list could not be relaunched, so it stays on the list: "
+                    + failed.getMessage());
         }
     }
 

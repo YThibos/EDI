@@ -21,7 +21,8 @@ final class KeysFile {
     static String tokenIn(Credentials credentials) {
         JsonNode token = sectionOf(credentials).path(TOKEN_FIELD);
         if (!token.isString() || token.asString().isBlank()) {
-            throw new Refusal(Rule.TRACKER_CONFIGURED, "The keys file " + credentials.keysFile() + " holds no " + TOKEN_FIELD + " in its " + credentials.section() + " section.");
+            throw new Refusal(Rule.TRACKER_CONFIGURED, "The keys file " + credentials.keysFile() + " holds no " + TOKEN_FIELD + " in its "
+                    + credentials.section() + " section.");
         }
         return token.asString().strip();
     }
@@ -30,7 +31,8 @@ final class KeysFile {
         try {
             return YAML.readTree(Files.readString(credentials.keysFile())).path(credentials.section());
         } catch (IOException unreadable) {
-            throw new Refusal(Rule.TRACKER_CONFIGURED, "The keys file " + credentials.keysFile() + " cannot be read: " + unreadable.getClass().getSimpleName() + ".");
+            throw new Refusal(Rule.TRACKER_CONFIGURED, "The keys file " + credentials.keysFile() + " cannot be read: "
+                    + unreadable.getClass().getSimpleName() + ".");
         } catch (JacksonException malformed) {
             throw new Refusal(Rule.TRACKER_CONFIGURED, "The keys file " + credentials.keysFile() + " is not readable YAML.");
         }

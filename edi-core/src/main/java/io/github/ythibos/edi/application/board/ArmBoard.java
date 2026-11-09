@@ -128,7 +128,8 @@ public class ArmBoard {
     }
 
     private static void refuseToAskAgain(Decision answered) {
-        throw new Refusal(Rule.ANSWERED_ONCE, answered.number() + " on " + answered.task() + " already holds the captain's answer to \"" + answered.card().title() + "\" (\""
+        throw new Refusal(Rule.ANSWERED_ONCE, answered.number() + " on " + answered.task() + " already holds the captain's answer to \""
+                + answered.card().title() + "\" (\""
                 + answered.answer().verbatim() + "\"), so a board round raises it no more; arm the round without --card, or give a new question its own "
                 + "title.");
     }

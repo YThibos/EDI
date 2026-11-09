@@ -88,7 +88,8 @@ public class IsolatedCopies {
         } else {
             String startPoint = ORIGIN + "/" + base;
             if (!git.hasRef(clone, startPoint)) {
-                throw new Refusal(Rule.ISOLATED_COPY, startPoint + " does not exist in " + clone + " after a fetch, so the isolated copy has nothing to start from.");
+                throw new Refusal(Rule.ISOLATED_COPY, startPoint + " does not exist in " + clone
+                        + " after a fetch, so the isolated copy has nothing to start from.");
             }
             git.addWorktreeOnNewBranch(clone, worktree, branch, startPoint);
         }

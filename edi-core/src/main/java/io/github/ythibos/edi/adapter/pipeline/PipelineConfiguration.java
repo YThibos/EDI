@@ -35,9 +35,11 @@ final class PipelineConfiguration {
         try {
             changeEntryIn(globalConfiguration, key, change);
         } catch (IOException unwritable) {
-            throw new Refusal(Rule.CONFIGURATION_VALID, "The pipeline configuration " + globalConfiguration + " cannot be read or replaced: " + unwritable.getClass().getSimpleName() + ".");
+            throw new Refusal(Rule.CONFIGURATION_VALID, "The pipeline configuration " + globalConfiguration + " cannot be read or replaced: "
+                    + unwritable.getClass().getSimpleName() + ".");
         } catch (JacksonException malformed) {
-            throw new Refusal(Rule.CONFIGURATION_VALID, "The pipeline configuration " + globalConfiguration + " is not readable YAML: " + malformed.getOriginalMessage());
+            throw new Refusal(Rule.CONFIGURATION_VALID, "The pipeline configuration " + globalConfiguration + " is not readable YAML: "
+                    + malformed.getOriginalMessage());
         }
     }
 

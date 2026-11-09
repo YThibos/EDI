@@ -161,7 +161,8 @@ public class AdoptForkTask {
 
     private static void requireTheBranchKey(Task task, BranchName branch) {
         if (!task.intake().workKey().equals(branch.workKey())) {
-            throw new Refusal(Rule.WORK_KEY, task.id() + " books its work on " + task.intake().workKey() + ", but " + branch + " carries " + branch.workKey() + ".");
+            throw new Refusal(Rule.WORK_KEY, task.id() + " books its work on " + task.intake().workKey() + ", but " + branch + " carries "
+                    + branch.workKey() + ".");
         }
     }
 
@@ -179,7 +180,8 @@ public class AdoptForkTask {
             throw new Refusal(Rule.ADOPTABLE, oldCopy + " is not a git copy, so it holds no branch to take over.");
         }
         if (git.gitDirectory(oldCopy).equals(git.commonDirectory(oldCopy))) {
-            throw new Refusal(Rule.ADOPTABLE, oldCopy + " is the primary directory of a clone, not an isolated copy; name the copy that holds the task's branch.");
+            throw new Refusal(Rule.ADOPTABLE, oldCopy
+                    + " is the primary directory of a clone, not an isolated copy; name the copy that holds the task's branch.");
         }
         String checkedOut = git.currentBranch(oldCopy);
         if (!checkedOut.equals(branch.toString())) {
@@ -248,7 +250,8 @@ public class AdoptForkTask {
         try {
             git.fetchBranchInto(project.projectClone(), oldCopy, branch);
         } catch (ProgramFailure diverged) {
-            throw new Refusal(Rule.ADOPTABLE, project.project().name() + "'s clone holds " + branch + " at a commit the old copy does not build on, so I cannot take it"
+            throw new Refusal(Rule.ADOPTABLE, project.project().name() + "'s clone holds " + branch
+                    + " at a commit the old copy does not build on, so I cannot take it"
                     + " over: " + diverged.getMessage());
         }
     }

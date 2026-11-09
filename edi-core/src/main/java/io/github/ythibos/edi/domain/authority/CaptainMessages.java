@@ -35,7 +35,8 @@ public record CaptainMessages(List<CaptainMessage> messages) {
         return messages.stream()
                 .filter(message -> message.number() == number)
                 .findFirst()
-                .orElseThrow(() -> new Refusal(Rule.TYPED_WORDS, "The captain sent no message " + number + " in this session; edi captain messages lists them."));
+                .orElseThrow(() -> new Refusal(Rule.TYPED_WORDS, "The captain sent no message " + number
+                        + " in this session; edi captain messages lists them."));
     }
 
     private static CitedWords wholeOf(CaptainMessage message) {

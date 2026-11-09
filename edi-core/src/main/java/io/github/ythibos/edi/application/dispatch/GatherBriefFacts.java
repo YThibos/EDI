@@ -52,7 +52,8 @@ public class GatherBriefFacts {
         try {
             return Files.readString(home.craftRules(), StandardCharsets.UTF_8);
         } catch (NoSuchFileException absent) {
-            throw new Refusal(Rule.CRAFT_RULES, project.project().name() + " follows the craft rules, but " + home.craftRules() + " is missing; write the rules block there first.");
+            throw new Refusal(Rule.CRAFT_RULES, project.project().name() + " follows the craft rules, but " + home.craftRules()
+                    + " is missing; write the rules block there first.");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

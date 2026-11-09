@@ -55,7 +55,8 @@ public class PublicationTargets {
                 .orElseThrow(() -> new Refusal(Rule.CHECKABLE_TARGET, "The publish check runs only in a registered project's clone or a task's isolated copy under "
                         + home.worktrees() + ", and " + repository + " is neither."));
         workersOwnTask.map(task -> home.worktreeOf(project, task)).filter(ownCopy -> !realPathOf(ownCopy).equals(real)).ifPresent(ownCopy -> {
-            throw new Refusal(Rule.CHECKABLE_TARGET, "A worker runs the publish check only in its own isolated copy, " + ownCopy + ", and " + repository + " is not it.");
+            throw new Refusal(Rule.CHECKABLE_TARGET, "A worker runs the publish check only in its own isolated copy, " + ownCopy + ", and "
+                    + repository + " is not it.");
         });
     }
 
@@ -87,7 +88,8 @@ public class PublicationTargets {
 
     private void requireTheWorkflowScope(RegisteredForge forge, OutgoingChanges changes) {
         if (forge.takesWorkflowChangesIn(changes) && !forges.serving(forge).mayChangeWorkflows(forge)) {
-            throw new Refusal(Rule.WORKFLOW_SCOPE, "The push changes " + forge.repository().host() + " workflows, which needs the workflow scope on " + forge.account()
+            throw new Refusal(Rule.WORKFLOW_SCOPE, "The push changes " + forge.repository().host() + " workflows, which needs the workflow scope on "
+                    + forge.account()
                     + "; the captain grants it with gh auth refresh --hostname " + forge.repository().host() + " --user " + forge.account()
                     + " --scopes workflow.");
         }

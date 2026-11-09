@@ -51,7 +51,8 @@ public record RegisteredForge(ForgeRepository repository, String account) {
     }
 
     private Refusal unregistered(String target) {
-        return new Refusal(Rule.REGISTERED_FORGE, "This work is published only to " + repository + ", the repository its project registers, and the push goes to "
+        return new Refusal(Rule.REGISTERED_FORGE, "This work is published only to " + repository
+                + ", the repository its project registers, and the push goes to "
                 + target + ".");
     }
 }

@@ -27,7 +27,8 @@ final class LocalHooks {
         Path localSettings = worktree.resolve(LOCAL_SETTINGS);
         readable(localSettings, json).ifPresent(settings -> {
             if (isSet(settings.path(HOOKS))) {
-                throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, localSettings + " defines hooks, which Claude Code would run beside the hooks a worker gets at launch; remove them before launching a worker there.");
+                throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, localSettings
+                        + " defines hooks, which Claude Code would run beside the hooks a worker gets at launch; remove them before launching a worker there.");
             }
             refuseWhatSwitchesTheGuardOff(localSettings, settings);
         });
@@ -42,7 +43,8 @@ final class LocalHooks {
         try {
             return Optional.of(json.readTree(Files.readString(settings)));
         } catch (JacksonException unreadable) {
-            throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, settings + " is not JSON Claude Code can read, so whether it switches a worker's hooks off is unclear; fix or remove it.");
+            throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, settings
+                    + " is not JSON Claude Code can read, so whether it switches a worker's hooks off is unclear; fix or remove it.");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
@@ -54,12 +56,14 @@ final class LocalHooks {
 
     private static void refuseWhatSwitchesTheGuardOff(Path file, JsonNode settings) {
         if (isSet(settings.path(ENVIRONMENT))) {
-            throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, file + " sets environment variables for the session, which could point a worker's hooks or its edi command elsewhere;"
+            throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, file
+                    + " sets environment variables for the session, which could point a worker's hooks or its edi command elsewhere;"
                     + " remove env from it before launching a worker there.");
         }
         JsonNode hooksSwitch = settings.path(HOOKS_SWITCH);
         if (!hooksSwitch.isMissingNode() && !(hooksSwitch.isBoolean() && !hooksSwitch.asBoolean())) {
-            throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, file + " sets disableAllHooks, which would switch off the hooks that guard a worker; remove it before launching a worker there.");
+            throw new Refusal(Rule.LAUNCH_HOOKS_INTACT, file
+                    + " sets disableAllHooks, which would switch off the hooks that guard a worker; remove it before launching a worker there.");
         }
     }
 }

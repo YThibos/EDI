@@ -56,7 +56,8 @@ public record ProjectEntry(
 
     public RegisteredForge requireForge() {
         if (forge == null) {
-            throw new Refusal(Rule.CONFIGURATION_VALID, project.name() + " registers no forge, so its work has no repository to go to; add forge: to its entry.");
+            throw new Refusal(Rule.CONFIGURATION_VALID, project.name()
+                    + " registers no forge, so its work has no repository to go to; add forge: to its entry.");
         }
         return forge;
     }

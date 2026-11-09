@@ -150,7 +150,8 @@ public class LaunchWorker {
         Path worktree = home.worktreeOf(transaction.execute(_ -> tasks.get(task)).intake().projects().getFirst(), task);
         List<Long> holders = processes.workingIn(worktree);
         if (!holders.isEmpty()) {
-            throw new Refusal(Rule.RELAUNCH_STOPPED_FIRST, "Processes " + holders + " still work in " + worktree + "; a worker is relaunched only in a copy nothing else holds.");
+            throw new Refusal(Rule.RELAUNCH_STOPPED_FIRST, "Processes " + holders + " still work in " + worktree
+                    + "; a worker is relaunched only in a copy nothing else holds.");
         }
     }
 
@@ -177,7 +178,8 @@ public class LaunchWorker {
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {
-        Dispatch dispatch = dispatches.of(task).orElseThrow(() -> new Refusal(Rule.TASK_DISPATCHED, task + " was never dispatched, so there is nothing to relaunch."));
+        Dispatch dispatch = dispatches.of(task).orElseThrow(() -> new Refusal(Rule.TASK_DISPATCHED, task
+                + " was never dispatched, so there is nothing to relaunch."));
         if (captainsOverride == null) {
             return dispatch;
         }
@@ -226,7 +228,8 @@ public class LaunchWorker {
             throw new Refusal(Rule.TASK_DISPATCHED, task.id() + " never had a worker, so there is no session to resume.");
         }
         if (earlier.hasAFullContext()) {
-            throw new Refusal(Rule.RELAUNCH_STOPPED_FIRST, earlier.id() + "'s context is full, so a resumed session would stop on it again; start it fresh instead.");
+            throw new Refusal(Rule.RELAUNCH_STOPPED_FIRST, earlier.id()
+                    + "'s context is full, so a resumed session would stop on it again; start it fresh instead.");
         }
         return earlier.session();
     }

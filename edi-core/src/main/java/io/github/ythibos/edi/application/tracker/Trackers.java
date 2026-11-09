@@ -62,7 +62,8 @@ public class Trackers {
 
     private void requireReachable(ProjectEntry project) {
         if (project.tracker().isExternal() && machine.tracker().kind() != project.tracker()) {
-            throw new Refusal(Rule.TRACKER_CONFIGURED, project.project().name() + " books its work on " + project.tracker().word() + ", but this machine's profile names no "
+            throw new Refusal(Rule.TRACKER_CONFIGURED, project.project().name() + " books its work on " + project.tracker().word()
+                    + ", but this machine's profile names no "
                     + project.tracker().word() + " tracker; register the project with EDI-native keys on this machine.");
         }
     }

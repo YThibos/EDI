@@ -128,7 +128,8 @@ public class DispatchTask {
     private static ProjectName onlyProjectOf(Task task) {
         List<ProjectName> projects = task.intake().projects();
         if (projects.size() != 1) {
-            throw new Refusal(Rule.ONE_PROJECT, task.id() + " works on " + projects.size() + " projects, and a worker works in the isolated copy of exactly one.");
+            throw new Refusal(Rule.ONE_PROJECT, task.id() + " works on " + projects.size()
+                    + " projects, and a worker works in the isolated copy of exactly one.");
         }
         return projects.getFirst();
     }
@@ -141,7 +142,8 @@ public class DispatchTask {
 
     private static void requireACauseOnlyForABugfix(DispatchRequest request, DispatchCategory category) {
         if (request.causeUnknown() && !category.id().equals(CategoryId.BUGFIX)) {
-            throw new Refusal(Rule.CATEGORY, "Only a " + CategoryId.BUGFIX + " dispatch says its cause is unknown; " + category.id() + " work is planned or not.");
+            throw new Refusal(Rule.CATEGORY, "Only a " + CategoryId.BUGFIX + " dispatch says its cause is unknown; " + category.id()
+                    + " work is planned or not.");
         }
     }
 
@@ -185,7 +187,8 @@ public class DispatchTask {
             return null;
         }
         if (project.verify() == null) {
-            throw new Refusal(Rule.MECHANICAL_SHAPE, project.project().name() + " names no verify command in the project registry, which a mechanical task is checked against.");
+            throw new Refusal(Rule.MECHANICAL_SHAPE, project.project().name()
+                    + " names no verify command in the project registry, which a mechanical task is checked against.");
         }
         return new ExpectedChange(spec, files);
     }

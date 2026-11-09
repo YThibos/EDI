@@ -92,7 +92,8 @@ public class DropTask {
             return List.of();
         }
         if (!discardingWork) {
-            throw new Refusal(Rule.LANDED_BEFORE_DISCARD, workplace.task().id() + " is not dropped, because its work is not landed: " + String.join("; ", landed.findings())
+            throw new Refusal(Rule.LANDED_BEFORE_DISCARD, workplace.task().id() + " is not dropped, because its work is not landed: "
+                    + String.join("; ", landed.findings())
                     + ". Drop it with --discard-work only on the captain's word to discard that work.");
         }
         retirement.retireDiscarding(workplace);

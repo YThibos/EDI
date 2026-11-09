@@ -62,7 +62,8 @@ public class DeliveryRecords {
     }
 
     public MergeRequestView requireTheRequestFrom(Workplace workplace) {
-        return requestFrom(workplace).orElseThrow(() -> new Refusal(Rule.DELIVERY_RECORDED, "There is no merge request to follow: " + noRequestFrom(workplace) + "."));
+        return requestFrom(workplace).orElseThrow(() -> new Refusal(Rule.DELIVERY_RECORDED, "There is no merge request to follow: "
+                + noRequestFrom(workplace) + "."));
     }
 
     public String noRequestFrom(Workplace workplace) {
