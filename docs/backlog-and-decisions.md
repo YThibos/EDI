@@ -28,13 +28,14 @@ edi decision list --open
 
 A decision holds its task until the captain answers it ([captain-decisions](decisions/captain-decisions.md)), and its D number is assigned once and never reused.
 Raising a card again on a task updates its open decision under the same number; once the captain answered, the new card is a new decision with a new number, and the answered one stays as he left it ([captain-decisions](decisions/captain-decisions.md)).
-A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}}`.
+A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}, "urgent"}`.
 An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
+A running ship's decision waits in the console and reaches the captain in a round with the others raised within five minutes of the round's first; the optional `"urgent": true` is for a decision that blocks the captain's current work, which reaches him at once ([decision-rounds](decisions/decision-rounds.md)).
 
 ## Reports
 
 One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi sitrep` prints it as the boxed captain report ([captain-report](decisions/captain-report.md)).
-`edi report` prints the turn report that ends a turn: only what needs the captain, with a decision card in full in the turn it is raised and one line after that ([turn-report](decisions/turn-report.md)).
+`edi report` prints the turn report that ends a turn: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision always on one line ([turn-report](decisions/turn-report.md)).
 What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions or bound decisions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
 A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 
