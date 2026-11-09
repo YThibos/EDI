@@ -15,6 +15,7 @@ A task keeps every decision raised on it, and its latest decision is its decisio
 `RaiseDecision` updates the task's open decision under its number with the new card, and otherwise gives the task a new decision with the next number from `decision_seq`, so a task holds at most one open decision and an answered decision keeps its card and its answer for good; `Decision.reraised` refuses an answered decision.
 A decision named by its number resolves to exactly that decision (`DecisionStore.namedBy`, `TaskReference` reading `D58`) when it is answered, re-checked or raised again; raising by the number of an answered decision updates its task's open decision, or raises a new one when none is open.
 Either way the decision holds its task until answered.
+A card may be urgent; a running ship's decision whose card is not reaches the captain in a round of decisions rather than on its own ([decision-rounds](decision-rounds.md)).
 `AnswerDecision` records the words exactly as given, the option only when the card offers it, the interpretation, the time and the channel; the answer releases the task, and a captain item, whose only purpose was the decision, is done.
 `edi hold` takes `deferral` and `approval` only, because a decision hold without its card would be a decision without a number, and `edi release` never releases a decision.
 The open decisions are the decisions without an answer, and every report surface draws its decision zone from those rows ([fleet-snapshot](fleet-snapshot.md)).
@@ -53,3 +54,4 @@ When a task genuinely needs two open decisions at once.
 - 15/10/2026: slice S1 tied each decision to its held task and made answers verbatim.
 - 17/10/2026: slice S7 answered through the same use case from the console and boards, and added Reconcile.
 - 22/10/2026: raising on a task whose decision was answered had silently replaced the answered card and reopened its number, so a task keeps every decision, a card raised after an answer gets a new number, and a decision named by number resolves to exactly that one (EDI-40).
+- 09/11/2026: a card gained its urgent flag, and a running ship's decision without it waits for its round (EDI-96).

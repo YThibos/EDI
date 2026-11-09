@@ -551,7 +551,7 @@ class DecisionsAndReportingTest {
 
     private static String turnReport(TestHome home, UUID session) {
         TurnReport report = new TurnReport(home.fleetSnapshot().snapshot().waiting(), Turn.NONE, ReportWidth.standard(), null,
-                home.primarySessions().previousReportOf(session).orElse(null));
+                home.primarySessions().previousReportOf(session).orElse(null), null);
         home.primaryHooks().reportRendered(session);
         return PresenterFixtures.turnReportPresenter().text(report);
     }

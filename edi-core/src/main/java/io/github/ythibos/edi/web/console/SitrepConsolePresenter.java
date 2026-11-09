@@ -128,7 +128,7 @@ public class SitrepConsolePresenter {
         DecisionCard card = open.decision().card();
         return new Card(open.decision().number().toString(), open.task().id().value(), projectsOf(open.task()), card.title(), card.context(),
                 card.options().stream().map(option -> new Option(option.key().toString(), option.text())).toList(),
-                new Recommendation(card.recommendation().key().toString(), card.recommendation().why()), open.decision().raisedAt());
+                new Recommendation(card.recommendation().key().toString(), card.recommendation().why()), card.urgent(), open.decision().raisedAt());
     }
 
     private static Board board(WaitingBoard waiting) {

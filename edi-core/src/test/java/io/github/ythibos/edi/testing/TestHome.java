@@ -80,7 +80,9 @@ import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
 import io.github.ythibos.edi.application.decision.AskForARecheck;
+import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
+import io.github.ythibos.edi.application.decision.DecisionRoundQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.delivery.CaptainCheckouts;
 import io.github.ythibos.edi.application.delivery.CleanUpTask;
@@ -440,6 +442,14 @@ public final class TestHome {
 
     public RaiseDecision raiseDecision() {
         return new RaiseDecision(tasks, decisions, events, clock, transaction);
+    }
+
+    public DecisionRoundQuery decisionRounds() {
+        return new DecisionRoundQuery(decisions, tasks, boards, events, transaction);
+    }
+
+    public CloseDecisionRounds closeDecisionRounds() {
+        return new CloseDecisionRounds(decisionRounds(), decisions, events, clock, transaction);
     }
 
     public AnswerDecision answerDecision() {

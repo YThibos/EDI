@@ -147,6 +147,18 @@ class ApiTest {
     }
 
     @Test
+    void keepsTheUrgentFlagACardIsRaisedWith() throws Exception {
+        post("/api/tasks", "{\"id\":\"api-gate\",\"kind\":\"captain\",\"title\":\"Choose the gate\"}", TEXT);
+
+        String number = post("/api/tasks/api-gate/decision", """
+                {"title":"Which gate?","context":"","options":[{"key":"A","text":"Iron"}],"recommend":{"key":"A","why":"it holds"},"urgent":true}""", TEXT)
+                .body().strip();
+
+        assertThat(number).matches("D\\d+");
+        assertThat(get("/api/decisions?open=true", JSON).body()).contains("\"title\":\"Which gate?\"", "\"urgent\":true");
+    }
+
+    @Test
     void answersEveryRefusalInOnePlainSentence() throws Exception {
         post("/api/tasks", "{\"id\":\"api-horn\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Tune the horn\"}", TEXT);
 

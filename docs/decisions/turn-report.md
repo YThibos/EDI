@@ -16,7 +16,8 @@ The turn report holds only what needs the captain: the calendar line while the c
 The decision zone keeps everything that waits on him, built by `WaitingEntries` for both reports: every open decision, every research board with questions or bound decisions, every request ready for his review with its full address, and every request still changing.
 The zone also draws a `Waiting on EDI` line for each worker whose question the primary has not answered (`DecisionZone.WorkerWaiting`): the task's title, the question in its first twelve words and how long it has waited; it counts as nothing open for the captain, and goes once the steer that resolves the question's key is acknowledged.
 So the turn report leaves the zone out, and the sitrep prints `Nothing waiting on you`, only when neither a call for the captain nor a worker question waits (`WaitingOnTheCaptain.hasNothingWaiting`).
-A decision's card is drawn in full when it was raised or re-raised after the last report shown in an earlier turn of the calling session (`TurnReport.showsTheCardOf`); otherwise it is one line, `DecisionZone.Reminder`, with its number, its title and the recommended option.
+A decision's card is drawn in full when it was raised or re-raised after the last report shown in an earlier turn of the calling session and it does not wait for a round of decisions (`TurnReport.showsTheCardOf`); otherwise it is one line, `DecisionZone.Reminder`, with its number, its title and the recommended option.
+A decision in the gathering round is one line, `DecisionZone.InTheRound`, saying it waits in the console for the captain's round at the round's closing time ([decision-rounds](decision-rounds.md)).
 `PrimaryTurn.previousReportAt` carries that moment: a new turn takes the latest report of the turn before it, or that turn's own previous report when it rendered none, and `PrimarySessions.previousReportOf` reads it for the controller.
 A report with no session, or a session that has seen no report yet, draws every card in full.
 Ongoing work, parked work, the backlog, the presence and the heavy-runs `Builds:` line are state, not calls for the captain, so the turn report leaves them out.
@@ -53,3 +54,4 @@ When the captain asks for something more in the turn report, or the report is re
 
 - 28/10/2026: with many parallel tasks the report had become long scrolling, so the captain made the turn report the session's attention list and left the overview to the sitrep (EDI-133).
 - 03/11/2026: a worker waited an hour on a question the primary never saw while every turn report said nothing was waiting, so each open worker question got a `Waiting on EDI` line in the zone (EDI-154).
+- 09/11/2026: 28 of 33 chat answer rounds carried a single decision, so a running ship's decision waits in the console for its round, shown as one line, and is never drawn in full in the turn report (EDI-96).

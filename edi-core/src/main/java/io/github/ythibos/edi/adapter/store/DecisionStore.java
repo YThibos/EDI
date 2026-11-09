@@ -31,7 +31,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 public class DecisionStore {
 
     private static final String SELECT_DECISIONS = """
-            select number, task_id, title, context, recommended, recommended_because, raised_at,
+            select number, task_id, title, context, recommended, recommended_because, urgent, raised_at,
                    answer_verbatim, answer_option, answer_interpretation, answered_at, answer_channel
             from decision
             """;
@@ -57,13 +57,13 @@ public class DecisionStore {
 
     public void save(Decision decision) {
         store.sql("""
-                        insert into decision (number, task_id, title, context, recommended, recommended_because, raised_at,
+                        insert into decision (number, task_id, title, context, recommended, recommended_because, urgent, raised_at,
                                               answer_verbatim, answer_option, answer_interpretation, answered_at, answer_channel)
-                        values (:number, :task, :title, :context, :recommended, :because, :raised,
+                        values (:number, :task, :title, :context, :recommended, :because, :urgent, :raised,
                                 :verbatim, :option, :interpretation, :answered, :channel)
                         on conflict (number) do update set
                             title = excluded.title, context = excluded.context, recommended = excluded.recommended,
-                            recommended_because = excluded.recommended_because, raised_at = excluded.raised_at,
+                            recommended_because = excluded.recommended_because, urgent = excluded.urgent, raised_at = excluded.raised_at,
                             answer_verbatim = excluded.answer_verbatim, answer_option = excluded.answer_option,
                             answer_interpretation = excluded.answer_interpretation, answered_at = excluded.answered_at,
                             answer_channel = excluded.answer_channel""")
@@ -73,6 +73,7 @@ public class DecisionStore {
                 .param("context", decision.card().context())
                 .param("recommended", decision.card().recommendation().key().toString())
                 .param("because", decision.card().recommendation().why())
+                .param("urgent", decision.card().urgent() ? 1 : 0)
                 .param("raised", Columns.text(decision.raisedAt()))
                 .params(AnswerColumns.of(decision.answer()).asParameters())
                 .update();
@@ -150,6 +151,7 @@ public class DecisionStore {
                 row.getString("context"),
                 row.getString("recommended"),
                 row.getString("recommended_because"),
+                row.getBoolean("urgent"),
                 row.getString("raised_at"),
                 new AnswerColumns(
                         row.getString("answer_verbatim"),
@@ -183,11 +185,12 @@ public class DecisionStore {
             String context,
             String recommended,
             String recommendedBecause,
+            boolean urgent,
             String raised,
             AnswerColumns answer) {
 
         Decision decision(List<DecisionOption> options) {
-            DecisionCard card = new DecisionCard(title, context, options, new Recommendation(OptionKey.parse(recommended), recommendedBecause));
+            DecisionCard card = new DecisionCard(title, context, options, new Recommendation(OptionKey.parse(recommended), recommendedBecause), urgent);
             return new Decision(new DecisionNumber(number), new TaskId(task), card, Columns.instant(raised), answer.captainAnswer());
         }
     }

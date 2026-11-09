@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
+import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
@@ -99,6 +100,12 @@ class WakeRuleTest {
         assertThat(WakeRule.wakeFor(new DeliveryRefused(TASK, WORKER, List.of("not a draft")), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new DraftRecorded(TASK, draft), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new TaskCleanedUp(TASK), Actor.CORE)).isEmpty();
+    }
+
+    @Test
+    void wakesThePrimaryForEveryDecisionInARoundThatCloses() {
+        assertThat(WakeRule.wakeFor(new DecisionRoundClosed(TASK, D58, "Which lamp?", RESET), Actor.CORE))
+                .contains(new Wake(WakeKind.DECISION_ROUND, TASK, null, "D58 Which lamp?", null));
     }
 
     @Test

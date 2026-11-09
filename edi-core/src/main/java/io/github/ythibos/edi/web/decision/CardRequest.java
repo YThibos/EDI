@@ -10,14 +10,15 @@ import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
 
-public record CardRequest(String title, String context, List<Option> options, Recommend recommend) {
+public record CardRequest(String title, String context, List<Option> options, Recommend recommend, Boolean urgent) {
 
     public DecisionCard card() {
         return new DecisionCard(
                 required(title, "title"),
                 orEmpty(context),
                 options == null ? List.of() : options.stream().map(Option::option).toList(),
-                required(recommend, "recommendation").recommendation());
+                required(recommend, "recommendation").recommendation(),
+                Boolean.TRUE.equals(urgent));
     }
 
     private static <T> T required(T value, String name) {

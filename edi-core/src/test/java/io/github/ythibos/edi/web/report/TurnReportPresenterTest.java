@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
+import io.github.ythibos.edi.domain.decision.DecisionRound;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.delivery.Delivery;
@@ -57,7 +58,7 @@ class TurnReportPresenterTest {
 
     @Test
     void saysInOneLineThatNothingNeedsTheCaptain() {
-        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("Nothing needs you; /sitrep shows the rest.\n");
     }
@@ -76,7 +77,7 @@ class TurnReportPresenterTest {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(new TurnItem(List.of(), "Choose the paint")),
                 Map.of());
 
-        String report = presenter.text(new TurnReport(waiting, turn, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(waiting, turn, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 ╔══ NEEDS YOUR DECISION ══ 4 open ══════════════════════════════════════
@@ -119,7 +120,7 @@ class TurnReportPresenterTest {
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", NOW.minus(Duration.ofDays(9))), lamp)),
                 List.of(), List.of(), List.of());
 
-        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, null));
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, null, null));
 
         assertThat(report).contains("║  D41   Which lamp?\n", "║        (A)  The simple way\n", "║        » Recommended: A - it is enough\n");
     }
@@ -130,16 +131,37 @@ class TurnReportPresenterTest {
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", PREVIOUS_REPORT), lamp)),
                 List.of(), List.of(), List.of());
 
-        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).contains("║  D41   Which lamp? » Recommended: A - The simple way\n").doesNotContain("(A)");
+    }
+
+    @Test
+    void keepsARunningShipsDecisionToItsRoundAndDrawsAnUrgentOneInFull() {
+        Task lamp = runningShip("fit-lamp", "harness");
+        Task paint = runningShip("paint-tower", "harness");
+        Task bell = runningShip("hang-bell", "harness");
+        Decision wentOut = raised(59, lamp, "Which lamp?", NOW.minus(Duration.ofMinutes(10)));
+        Decision gathering = raised(60, paint, "Which paint?", NOW.minus(Duration.ofMinutes(1)));
+        Decision urgent = urgent(raised(61, bell, "Which bell?", NOW));
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(wentOut, lamp), new OpenDecision(gathering, paint),
+                new OpenDecision(urgent, bell)), List.of(), List.of(), List.of());
+        DecisionRound round = new DecisionRound(gathering.raisedAt(), List.of(gathering.number()));
+
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, NOW.minus(Duration.ofMinutes(30)), round));
+
+        assertThat(report).contains(
+                "║  D59   Which lamp? » Recommended: A - The simple way\n",
+                "║  D60   Which paint? » waits in the console for your round at 09:34\n",
+                "║  D61   Which bell?\n",
+                "║        (A)  The simple way\n");
     }
 
     @Test
     void leavesTheDecisionZoneOutWhenNothingWaitsOnTheCaptain() {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(), Map.of());
 
-        String report = presenter.text(new TurnReport(NOTHING_WAITING, turn, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(NOTHING_WAITING, turn, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 DONE THIS TURN  (1)
@@ -156,7 +178,7 @@ class TurnReportPresenterTest {
                 List.of(new WorkerQuestion(lamp, asking(lamp, "Which socket does the lamp take, the bayonet one or the screw one the old lamp used?"),
                         Duration.ofMinutes(65))));
 
-        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 ╔══ NEEDS YOUR DECISION ══ nothing open ════════════════════════════════
@@ -174,7 +196,7 @@ class TurnReportPresenterTest {
     void headsTheReportWithTheCalendarItCannotRead() {
         UnreadableCalendar unreadable = new UnreadableCalendar(Instant.parse("2026-10-15T08:02:00Z"), "Outlook did not answer.");
 
-        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, unreadable, PREVIOUS_REPORT));
+        String report = presenter.text(new TurnReport(NOTHING_WAITING, Turn.NONE, WIDTH, unreadable, PREVIOUS_REPORT, null));
 
         assertThat(report).isEqualTo("""
                 Calendar: I can't read your calendar since 2026-10-15 08:02 UTC, so a
@@ -185,6 +207,17 @@ class TurnReportPresenterTest {
     private static Task captainItem(String id, String project) {
         return Task.queued(new TaskId(id), new Intake(TaskKind.CAPTAIN, "Choose " + id.replace("-choice", ""), List.of(new ProjectName(project)), null, null,
                 List.of(), null), "", NOW);
+    }
+
+    private static Task runningShip(String id, String project) {
+        return Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), null, null, List.of(), null), "",
+                NOW).dispatched();
+    }
+
+    private static Decision urgent(Decision decision) {
+        DecisionCard card = decision.card();
+        return Decision.raised(decision.number(), decision.task(),
+                new DecisionCard(card.title(), card.context(), card.options(), card.recommendation(), true), decision.raisedAt());
     }
 
     private static Decision raised(int number, Task task, String title, Instant at) {

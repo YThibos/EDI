@@ -20,6 +20,7 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
           { key: 'B', text: 'The thorough way' },
         ],
         recommended: { key: 'A', why: 'it is enough' },
+        urgent: false,
         raisedAt: '2026-10-15T06:00:00Z',
       },
     ],

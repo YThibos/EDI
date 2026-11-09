@@ -25,6 +25,7 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 class WakeDigestTextTest {
 
     private static final TaskId LAMP = new TaskId("fit-lamp");
+    private static final TaskId PAINT = new TaskId("paint-tower");
     private static final Instant RAISED = Instant.parse("2026-10-16T09:00:00Z");
     private static final Presence PRESENT = Presence.presentSince(RAISED);
 
@@ -119,6 +120,29 @@ class WakeDigestTextTest {
             String text = digest.text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0, PRESENT, true));
             assertThat(text).as(kind.word()).contains("1. fit-lamp");
         }
+    }
+
+    @Test
+    void asksForOneLineToTheCaptainWhenARoundOfDecisionsIsDue() {
+        WakeDelivery delivery = new WakeDelivery(List.of(
+                queued(1, new Wake(WakeKind.DECISION_ROUND, LAMP, null, "D58 Which lamp?", null)),
+                queued(2, new Wake(WakeKind.DECISION_ROUND, PAINT, null, "D59 Which paint?", null))), 3, 2, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery)).contains("""
+                1. fit-lamp: D58 Which lamp? is in the round of decisions due now.
+                2. paint-tower: D59 Which paint? is in the round of decisions due now.
+                Fleet: 3 open decisions, 2 tasks in flight, 0 on the outage hold list.
+                A round of decisions is due: tell the captain in one line that 3 open decisions wait for them in the console, then end the turn with the \
+                turn report; never put them to the captain one by one.
+                """);
+    }
+
+    @Test
+    void leavesTheRoundOfDecisionsToTheReturnBriefWhileTheCaptainKeepsTheChatQuiet() {
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.DECISION_ROUND, LAMP, null, "D58 Which lamp?", null))), 1, 1, 0,
+                PRESENT.quiet(RAISED.plusSeconds(60)), true);
+
+        assertThat(digest.text(delivery)).doesNotContain("A round of decisions is due");
     }
 
     @Test

@@ -21,6 +21,11 @@ public final class Cards {
                 new Recommendation(new OptionKey('A'), "it is enough"));
     }
 
+    public static DecisionCard urgent(String title) {
+        DecisionCard card = card(title);
+        return new DecisionCard(card.title(), card.context(), card.options(), card.recommendation(), true);
+    }
+
     public static DecisionCard authorising(String title, CaptainWordAct act) {
         return new DecisionCard(
                 title,

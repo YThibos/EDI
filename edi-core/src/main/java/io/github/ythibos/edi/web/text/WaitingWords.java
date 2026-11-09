@@ -24,6 +24,10 @@ public final class WaitingWords {
         return "Changing, hold the merge: " + task + " (" + why + ") - " + address;
     }
 
+    public static String inTheRound(String closesAt) {
+        return "waits in the console for your round at " + closesAt;
+    }
+
     public static String workerQuestion(String task, String question, Duration waited) {
         return "Waiting on EDI: " + task + " asks \"" + inAFewWords(question) + "\" - waiting " + forHowLong(waited);
     }
