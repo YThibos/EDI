@@ -622,8 +622,8 @@ class ApiTest {
         assertThat(dumped.statusCode()).isEqualTo(201);
         assertThat(RecordingFile.readAllEvents(dumpedRecordingIn(dumped.body()))).isNotEmpty()
                 .extracting(event -> event.getEventType().getName())
-                .allMatch(type -> type.startsWith("jdk.") && !type.contains("Environment") && !type.contains("SystemProperty")
-                        && !type.contains("File") && !type.contains("Socket") && !type.contains("Process") && !type.contains("JVMInformation"));
+                .isSubsetOf("jdk.ExecutionSample", "jdk.GarbageCollection", "jdk.GCHeapSummary", "jdk.CPULoad", "jdk.ThreadCPULoad",
+                        "jdk.JavaMonitorEnter", "jdk.ThreadPark", "jdk.VirtualThreadPinned", "jdk.ObjectAllocationSample");
         assertThat(dumpedByAWorker.statusCode()).isEqualTo(403);
     }
 

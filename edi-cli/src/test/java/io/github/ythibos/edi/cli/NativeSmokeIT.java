@@ -145,8 +145,8 @@ class NativeSmokeIT {
             assertThat(recordings.toList()).singleElement().satisfies(recording -> assertThat(RecordingFile.readAllEvents(recording))
                     .isNotEmpty()
                     .extracting(event -> event.getEventType().getName())
-                    .allMatch(type -> type.startsWith("jdk.") && !type.contains("Environment") && !type.contains("SystemProperty")
-                            && !type.contains("File") && !type.contains("Socket") && !type.contains("Process") && !type.contains("JVMInformation")));
+                    .isSubsetOf("jdk.ExecutionSample", "jdk.GarbageCollection", "jdk.GCHeapSummary", "jdk.CPULoad", "jdk.ThreadCPULoad",
+                            "jdk.JavaMonitorEnter", "jdk.ThreadPark", "jdk.VirtualThreadPinned", "jdk.ObjectAllocationSample"));
         }
     }
 

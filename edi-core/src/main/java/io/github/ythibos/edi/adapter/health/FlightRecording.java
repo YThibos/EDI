@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.rule.Rule;
+import jdk.jfr.EventType;
 import jdk.jfr.FlightRecorder;
 import jdk.jfr.Recording;
 
@@ -34,6 +36,7 @@ public class FlightRecording implements AutoCloseable {
     private static final int DUMPS_KEPT = 5;
     private static final DateTimeFormatter DUMP_NAME = DateTimeFormatter.ofPattern("'core-'yyyyMMdd-HHmmss'.jfr'").withZone(ZoneOffset.UTC);
     private static final String SLOWER_THAN = "20 ms";
+    private static final String ENABLED = "#enabled";
     private static final Map<String, String> EVENTS_WITHOUT_PERSONAL_CONTENT = Map.ofEntries(
             Map.entry("jdk.ExecutionSample#enabled", "true"),
             Map.entry("jdk.ExecutionSample#period", "20 ms"),
@@ -91,7 +94,7 @@ public class FlightRecording implements AutoCloseable {
     }
 
     private static Recording started(DataSize maxSize, Duration maxAge) {
-        Recording recording = new Recording(EVENTS_WITHOUT_PERSONAL_CONTENT);
+        Recording recording = new Recording(onlyTheEventsWithoutPersonalContent());
         recording.setName(NAME);
         recording.setToDisk(true);
         recording.setMaxSize(maxSize.toBytes());
@@ -114,6 +117,15 @@ public class FlightRecording implements AutoCloseable {
             Thread.currentThread().interrupt();
             throw new IOException("The flight recording was not written out: its writing was interrupted.", interrupted);
         }
+    }
+
+    private static Map<String, String> onlyTheEventsWithoutPersonalContent() {
+        Map<String, String> settings = new HashMap<>(EVENTS_WITHOUT_PERSONAL_CONTENT);
+        FlightRecorder.getFlightRecorder().getEventTypes().stream()
+                .map(EventType::getName)
+                .filter(name -> !settings.containsKey(name + ENABLED))
+                .forEach(name -> settings.put(name + ENABLED, "false"));
+        return settings;
     }
 
     private void keepTheLatestDumps() throws IOException {
