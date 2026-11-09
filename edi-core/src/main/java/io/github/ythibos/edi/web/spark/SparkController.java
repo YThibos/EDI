@@ -30,7 +30,7 @@ class SparkController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     CaughtSpark caught(@RequestBody CatchRequest request, Caller caller) {
-        caller.requireTheHomeToken("edi spark");
+        caller.requirePrimary("edi spark");
         return new CaughtSpark(catchSpark.caught(request.by(authorOf(caller), caller.claudeSession().orElse(null))));
     }
 
