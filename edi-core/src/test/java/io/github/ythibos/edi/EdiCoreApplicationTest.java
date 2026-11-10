@@ -73,7 +73,7 @@ class EdiCoreApplicationTest {
                 .query(String.class).list())
                 .containsExactly("adoption", "board", "board_answer", "board_decision", "captain_hold", "captain_message", "captain_word", "clone_refresh", "console_session",
                         "console_sign_in", "decision", "decision_option", "delivery", "dispatch", "dispatch_file", "event", "event_cursor", "hold_notice",
-                        "inbox_message", "memory_check", "meta", "outage_entry", "pipeline_run", "presence", "primary_session", "recovery_cost", "task",
+                        "inbox_message", "memory_check", "meta", "outage_entry", "pipeline_run", "presence", "primary_session", "recovery_cost", "spark", "task",
                         "task_cost", "task_dependency", "task_project", "task_review", "ticket_candidate", "ticket_proposal",
                         "unbriefed_absence", "unplanned_ship", "wake", "wake_stream", "work_key_sequence", "worker", "worker_notice");
         assertThat(store.sql("pragma journal_mode").query(String.class).single()).isEqualToIgnoringCase("wal");

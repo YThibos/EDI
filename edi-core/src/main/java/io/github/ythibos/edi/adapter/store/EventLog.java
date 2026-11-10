@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -166,6 +167,13 @@ public class EventLog {
                 .param("task", task.value())
                 .query((row, _) -> loggedEvent(row))
                 .list();
+    }
+
+    public Optional<TaskId> latestTaskActedOnBy(Set<Actor> actors) {
+        return store.sql("select task_id from event where actor in (:actors) and task_id is not null order by sequence desc limit 1")
+                .param("actors", actors.stream().map(Actor::name).toList())
+                .query((row, _) -> new TaskId(row.getString("task_id")))
+                .optional();
     }
 
     public long latestSequence() {

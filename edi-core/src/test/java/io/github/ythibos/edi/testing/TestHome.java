@@ -53,6 +53,7 @@ import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
+import io.github.ythibos.edi.adapter.store.SparkStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
@@ -147,6 +148,8 @@ import io.github.ythibos.edi.application.primary.PrimaryWaitQuery;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
+import io.github.ythibos.edi.application.spark.CatchSpark;
+import io.github.ythibos.edi.application.spark.SortSpark;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
@@ -243,6 +246,7 @@ public final class TestHome {
     private final BoardStore boards;
     private final CaptainWordStore captainWords;
     private final CaptainMessageStore captainMessages;
+    private final SparkStore sparks;
     private final PresenceStore presence;
     private final AdoptionStore adoptions;
     private String oldPauseResurfaceSeconds = "";
@@ -286,6 +290,7 @@ public final class TestHome {
         this.boards = new BoardStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
         this.captainMessages = new CaptainMessageStore(jdbc);
+        this.sparks = new SparkStore(jdbc);
         this.presence = new PresenceStore(jdbc, _ -> { });
         this.adoptions = new AdoptionStore(jdbc);
     }
@@ -875,6 +880,14 @@ public final class TestHome {
 
     public PrimaryWaitQuery primaryWaits() {
         return new PrimaryWaitQuery(primarySessions(), wakeStreams(), tasks, transaction);
+    }
+
+    public CatchSpark catchSpark() {
+        return new CatchSpark(sparks, tasks, events, registry, clock, transaction);
+    }
+
+    public SortSpark sortSpark() {
+        return new SortSpark(sparks, clock, transaction);
     }
 
     public PrimaryHooks primaryHooks() {
