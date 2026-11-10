@@ -39,7 +39,7 @@ Checking the global configuration before asking `claude auth status` keeps that 
 
 - Good: a second subscription carries the projects the registry assigns to it, with the same harness, guard, hooks and supervision as any other worker.
 - Good: an unready login is a refusal at dispatch with the fix in it, not a missed launch.
-- Bad: every dispatch and launch runs `claude auth status` once more, about half a second each.
+- Bad: a dispatch checks its login twice, once before its branch is reserved and once more at the launch, and a ship that plans its work in a research task first checks three times, so `claude auth status` adds about half a second per check while the launcher holds its lock; a relaunch and a deferred launch check once.
 - Bad: until a relaunch keeps its login, a worker on another login than `default` loses its session at every relaunch and continues from a handover.
 - Bad: a core started with `CLAUDE_CONFIG_DIR` exported no longer passes it on; the profile has to name the `default` login's directory instead.
 
