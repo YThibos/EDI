@@ -13,6 +13,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
+import io.github.ythibos.edi.domain.worker.LoginName;
 
 @Tag("adapter")
 class ClaudeSessionsTest {
@@ -29,7 +31,7 @@ class ClaudeSessionsTest {
     }
 
     @Test
-    void findsASessionInAnyFolderOfTheDefaultLoginAndCarriesItBesideANewWorkingDirectory() throws IOException {
+    void findsAnAdoptedSessionInAnyFolderOfTheDefaultLoginAndCarriesItBesideANewWorkingDirectory() throws IOException {
         Path sessions = directory.resolve("home/.claude/projects");
         UUID session = UUID.randomUUID();
         Path transcript = Files.createDirectories(sessions.resolve("-pool-1-lamp")).resolve(session + ".jsonl");
@@ -37,15 +39,15 @@ class ClaudeSessionsTest {
         ClaudeSessions claude = sessionsWithTheProfile("machine: example\n");
         Path copy = Path.of("/home/keeper/.edi/worktrees/lighthouse/lantern-rework");
 
-        claude.carryInto(claude.transcriptOf(session).orElseThrow(), copy);
+        claude.carryInto(claude.transcriptOnTheDefaultLoginOf(session).orElseThrow(), copy);
         claude.carryInto(transcript, copy);
 
         assertThat(sessions.resolve(ClaudeSessions.folderOf(copy)).resolve(session + ".jsonl")).hasSameTextualContentAs(transcript);
-        assertThat(claude.transcriptOf(UUID.randomUUID())).isEmpty();
+        assertThat(claude.transcriptOnTheDefaultLoginOf(UUID.randomUUID())).isEmpty();
     }
 
     @Test
-    void looksInTheDirectoryTheMachineProfileNamesForTheDefaultLoginAndInNoOtherLogins() throws IOException {
+    void looksForAnAdoptedSessionInTheDirectoryTheMachineProfileNamesForTheDefaultLoginAndInNoOtherLogins() throws IOException {
         UUID onTheDefault = UUID.randomUUID();
         UUID onAnother = UUID.randomUUID();
         Files.writeString(Files.createDirectories(directory.resolve("logins/main/projects/-pool-1-lamp")).resolve(onTheDefault + ".jsonl"), "{}\n");
@@ -53,9 +55,28 @@ class ClaudeSessionsTest {
         ClaudeSessions claude = sessionsWithTheProfile("claude:\n  logins:\n    default: { configDirectory: %s }\n    hobby: { configDirectory: %s }\n"
                 .formatted(directory.resolve("logins/main"), directory.resolve("logins/hobby")));
 
-        assertThat(claude.transcriptOf(onTheDefault)).isPresent();
-        assertThat(claude.transcriptOf(onAnother)).isEmpty();
-        assertThat(sessionsWithTheProfile("machine: example\n").transcriptOf(onTheDefault)).isEmpty();
+        assertThat(claude.transcriptOnTheDefaultLoginOf(onTheDefault)).isPresent();
+        assertThat(claude.transcriptOnTheDefaultLoginOf(onAnother)).isEmpty();
+        assertThat(sessionsWithTheProfile("machine: example\n").transcriptOnTheDefaultLoginOf(onTheDefault)).isEmpty();
+    }
+
+    @Test
+    void looksForASessionInTheSessionsFolderOfTheLoginItIsAskedAboutOnly() throws IOException {
+        UUID onTheFirst = UUID.randomUUID();
+        UUID onTheSecond = UUID.randomUUID();
+        Files.writeString(Files.createDirectories(directory.resolve("logins/first/projects/-pool-1-lamp")).resolve(onTheFirst + ".jsonl"), "{}\n");
+        Files.writeString(Files.createDirectories(directory.resolve("logins/second/projects/-pool-1-lamp")).resolve(onTheSecond + ".jsonl"), "{}\n");
+        Files.writeString(Files.createDirectories(directory.resolve("home/.claude/projects/-pool-1-lamp")).resolve(onTheFirst + ".jsonl"), "{}\n");
+        ClaudeSessions claude = sessionsWithTheProfile("machine: example\n");
+        Login first = new Login(new LoginName("first"), directory.resolve("logins/first"));
+        Login second = new Login(new LoginName("second"), directory.resolve("logins/second"));
+
+        assertThat(claude.transcriptOf(onTheFirst, first)).isPresent();
+        assertThat(claude.transcriptOf(onTheSecond, first)).isEmpty();
+        assertThat(claude.transcriptOf(onTheSecond, second)).isPresent();
+        assertThat(claude.transcriptOf(onTheFirst, second)).isEmpty();
+        assertThat(claude.transcriptOf(onTheFirst, new Login(LoginName.DEFAULT, null))).isPresent();
+        assertThat(claude.transcriptOf(onTheSecond, new Login(LoginName.DEFAULT, null))).isEmpty();
     }
 
     private ClaudeSessions sessionsWithTheProfile(String profile) throws IOException {

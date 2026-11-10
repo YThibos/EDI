@@ -44,6 +44,7 @@ import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -125,7 +126,7 @@ class ConfirmationTextTest {
     void confirmsAStopAndASteerWithWhatAFullContextNeeds() {
         Worker lamp = Worker.launched(WorkerId.first(LANTERN), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
         Instant stopped = PresenterFixtures.AT.plusSeconds(60);
 
         assertThat(text.text(new Confirmation.StopRequested(new StoppedWorker(lamp.stopRequested(stopped), List.of()))))
@@ -187,6 +188,6 @@ class ConfirmationTextTest {
     private static Worker relaunchedAs(LaunchKind kind) {
         return Worker.launched(WorkerId.first(LANTERN).next(), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@2", 3L),
-                new WorkerLaunch(kind, PresenterFixtures.AT, new BootId("boot")));
+                new WorkerLaunch(kind, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
     }
 }

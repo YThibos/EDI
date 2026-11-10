@@ -94,9 +94,12 @@ class WorkerController {
     }
 
     @PostMapping("/api/tasks/{reference}/relaunch")
-    Confirmation relaunch(@PathVariable String reference, Caller caller) {
+    Confirmation relaunch(@PathVariable String reference, @RequestBody(required = false) RelaunchBody body, Caller caller) {
         caller.requirePrimary("edi worker relaunch");
-        return new Confirmation.Relaunched(relaunchWorker.relaunch(TaskReference.parse(reference), caller.actor()));
+        TaskReference task = TaskReference.parse(reference);
+        return new Confirmation.Relaunched(body != null && body.startsFresh()
+                ? relaunchWorker.relaunchFresh(task, caller.actor())
+                : relaunchWorker.relaunch(task, caller.actor()));
     }
 
     @PostMapping("/api/tasks/{reference}/stop")

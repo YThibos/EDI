@@ -52,6 +52,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -163,7 +164,7 @@ class LivePaneTest {
                 Instant.parse("2026-10-15T09:00:00Z")));
         WorkerTokens.IssuedToken token = workerTokens.issueInto(home.resolve("state/workers/" + task));
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH),
-                runtime.openWindow(), new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
+                runtime.openWindow(), new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null, LoginName.DEFAULT)), token.digest());
         return Files.readString(token.file());
     }
 

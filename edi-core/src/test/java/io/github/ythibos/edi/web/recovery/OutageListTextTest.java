@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -43,7 +44,7 @@ class OutageListTextTest {
         Task task = Task.queued(new TaskId("tune-horn"), new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(), null), "", AT)
                 .held(entry.hold());
         Worker worker = Worker.launched(entry.worker(), SESSION, CategoryId.IMPLEMENTATION, new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
-                new WorkerWindow("edi", 7, AT, "@1", 8), new WorkerLaunch(LaunchKind.DISPATCH, AT, null))
+                new WorkerWindow("edi", 7, AT, "@1", 8), new WorkerLaunch(LaunchKind.DISPATCH, AT, null, LoginName.DEFAULT))
                 .reported(new StatusReport(StatusState.WORKING, null, null, "Tests pass."), AT);
         OutageList list = new OutageList(List.of(new OutageList.Entry(entry, task, worker, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH),
                 null, 1, new UnpushedWork(true, 2, true), Path.of("/home/edi/worktrees/harness/tune-horn"))),
