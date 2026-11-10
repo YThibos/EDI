@@ -53,12 +53,12 @@ A session takes one issue at a time, in this order.
    - never push to `main`, never force-push, never merge into `main`; the captain merges;
    - when `origin/main` has moved, merge it into the branch with a merge commit and never rebase;
    - code carries no explanatory comments, tests are fast and deterministic, and writing is United Kingdom English with a plain `-`, one sentence per line in Markdown.
-6. Verify locally, as [AGENTS.md](../AGENTS.md) says, and put the commands and their results in the pull request body:
-   - `./mvnw verify` before every commit that is meant to be delivered, and `./mvnw test -Pfast` while working;
-   - `./mvnw -Pnative,quick-build verify` when the change can reach the native image (`NativeImageInput` in [local-native-builds](decisions/local-native-builds.md) lists what can), and otherwise one line saying why it was not needed;
-   - the issue's own "How to verify".
-   GitHub Actions runs the CI workflow on every pull request; the body still carries the commands run locally and their results, and names the CI run it waits on.
-   A step the sandbox cannot run, such as the native build or a browser check, is said plainly with the reason; never write that it passed when it was not run.
+6. Verify as [AGENTS.md](../AGENTS.md) says, and put the commands and their results in the pull request body:
+   - locally, the tests the change touches, `./mvnw test -Pfast`, and the issue's own "How to verify";
+   - the full build on CI: GitHub Actions runs the CI workflow, `./mvnw verify` and the optimised native build, on every pull request, so push early and run neither locally; the body names the CI run it rests on;
+   - a wider local build only to diagnose a CI failure;
+   - where CI cannot run, `./mvnw verify` before every commit that is meant to be delivered, and `./mvnw -Pnative,quick-build verify` when the change can reach the native image (`NativeImageInput` in [local-native-builds](decisions/local-native-builds.md) lists what can), and otherwise one line saying why it was not needed.
+   A step the sandbox cannot run, such as a browser check, is said plainly with the reason; never write that it passed when it was not run.
 7. Mark the pull request ready for review once its CI run on the last pushed head is green.
    A CI failure is the session's to fix, on that pull request, even when its cause came in on `main`; say in the body what failed and why.
 8. Stop.
@@ -67,7 +67,7 @@ A session takes one issue at a time, in this order.
 
 ## Delivery
 
-Every issue is delivered the same way, so no issue repeats it: a draft pull request that closes the issue, local verification in the pull request body, a question with lettered options instead of a guess, and the issue itself updated when an answer changes it.
+Every issue is delivered the same way, so no issue repeats it: a draft pull request that closes the issue, the CI run and the targeted local checks in the pull request body, a question with lettered options instead of a guess, and the issue itself updated when an answer changes it.
 
 ## Open questions
 

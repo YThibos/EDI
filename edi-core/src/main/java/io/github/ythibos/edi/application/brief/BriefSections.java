@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.NativeImageInput;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -59,7 +60,8 @@ final class BriefSections {
                     + "Write the report to `" + facts.reportPath() + "`; a report never authorises implementation.\n"
                     + researchBoard(facts);
         }
-        return facts.project().buildsANativeImage() ? nativeBuildRule(facts) + "\n\n" + shipDelivery(facts) : shipDelivery(facts);
+        String localChecks = localChecks(facts);
+        return localChecks.isEmpty() ? shipDelivery(facts) : localChecks + "\n\n" + shipDelivery(facts);
     }
 
     static String definitionOfDone(BriefFacts facts) {
@@ -84,6 +86,32 @@ final class BriefSections {
                 + "EDI raises the card on your task and binds it before the captain sees the board, so his choice there is his word for it.";
     }
 
+    private static String localChecks(BriefFacts facts) {
+        if (ciCarriesTheFullBuild(facts)) {
+            return fullBuildLeftToCi(facts);
+        }
+        return facts.project().buildsANativeImage() ? nativeBuildRule(facts) : "";
+    }
+
+    private static boolean ciCarriesTheFullBuild(BriefFacts facts) {
+        return facts.delivery() == DeliveryMode.DRAFT_REVIEW && facts.project().ciRuns();
+    }
+
+    private static String fullBuildLeftToCi(BriefFacts facts) {
+        return "Leave the full build to CI: locally, run the tests the change touches and the change's own end-to-end checks, and "
+                + fullBuildsNotRunLocally(facts) + ".\n"
+                + "Push early: run the pipeline as soon as those checks pass, so CI starts on the merge request; its run on your last commit is"
+                + " the full-build evidence.\n"
+                + "Run a wider local build only to diagnose a CI failure.\n"
+                + "The merge request body names the CI run it rests on and the targeted checks run locally, and never says a step passed that was not run.";
+    }
+
+    private static String fullBuildsNotRunLocally(BriefFacts facts) {
+        return facts.project().buildsANativeImage()
+                ? "neither " + jvmVerificationOf(facts) + " nor `" + facts.project().nativeBuild() + "`"
+                : "not " + jvmVerificationOf(facts);
+    }
+
     private static String nativeBuildRule(BriefFacts facts) {
         return "Run the local native build `" + facts.project().nativeBuild() + "` only when the change can reach the native image: it touches "
                 + whatReachesTheNativeImage() + ".\n"
@@ -105,13 +133,9 @@ final class BriefSections {
 
     private static String whereTheSkippedNativeBuildIsExplained(BriefFacts facts) {
         return switch (facts.delivery()) {
-            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why" + whatIsLeftToCi(facts) + ".";
+            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why.";
             case LOCAL_BRANCH, LOCAL_APPLY, REPORT -> "`" + facts.reportPath() + "` says the native build was not needed and why.";
         };
-    }
-
-    private static String whatIsLeftToCi(BriefFacts facts) {
-        return facts.project().ciRuns() ? ", and the full optimised native build is left to CI" : "";
     }
 
     private static String shipDelivery(BriefFacts facts) {

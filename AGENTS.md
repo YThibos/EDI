@@ -6,10 +6,9 @@ The why behind every rule is in [docs/decisions](docs/decisions/README.md); read
 ## Build and test
 
 - `mise install` installs the pinned toolchain: GraalVM Community Edition for Java 25, Node for the console build, gitleaks.
-- `./mvnw verify` runs the JVM build and every test; run it before every commit.
-- `./mvnw test -Pfast` runs the domain, application and architecture tests only.
-- `./mvnw -Pnative,quick-build verify` builds both native executables in GraalVM's quick-build mode and runs the native smoke test; run it only when the change can reach the native image, as `NativeImageInput` lists, and otherwise say in the pull request why it was not needed ([local-native-builds](docs/decisions/local-native-builds.md)).
-- `./mvnw -Pnative verify` builds the full optimised executables, as CI and the install do.
+- `./mvnw verify` runs the JVM build and every test, and `./mvnw -Pnative verify` builds the full optimised executables, as the install does; CI runs both on every pull request, and its run on the last commit is the full-build evidence, so a session runs neither locally ([worker-brief](docs/decisions/worker-brief.md)).
+- Locally, run the tests the change touches, `./mvnw test -Pfast` for the domain, application and architecture tests, and the change's own end-to-end checks; push early so CI starts, and run a wider build only to diagnose a CI failure.
+- Where CI cannot run, `./mvnw verify` before every commit is the fallback evidence, with `./mvnw -Pnative,quick-build verify`, both native executables in GraalVM's quick-build mode and the native smoke test, when the change can reach the native image, as `NativeImageInput` lists; otherwise say in the pull request why it was not needed ([local-native-builds](docs/decisions/local-native-builds.md)).
 
 ## Queued work
 
