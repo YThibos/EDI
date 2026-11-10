@@ -41,7 +41,7 @@ final class BriefSections {
             rules.add("Below version 1.0.0 nothing legacy lingers: no deprecation shims and no \"previously\" prose.");
             rules.add("No `-SNAPSHOT` version in any `pom.xml` the branch touches.");
         }
-        if (facts.dispatch().expectedChange() != null) {
+        if (isMechanical(facts)) {
             rules.addAll(mechanicalRules(facts.dispatch().expectedChange()));
         }
         String bullets = rules.stream().map(rule -> "- " + rule).collect(Collectors.joining("\n"));
@@ -67,8 +67,8 @@ final class BriefSections {
     static String definitionOfDone(BriefFacts facts) {
         String done = isAShip(facts) ? shipDone(facts) : scoutDone(facts);
         String timed = facts.asksForTheTimeWorked() ? done + "\n" + workedLine(facts) : done;
-        if (facts.dispatch().expectedChange() != null) {
-            return timed + "\nEDI accepts the done only when the project's verify command passes and the change touches only the named files;"
+        if (isMechanical(facts)) {
+            return timed + "\nEDI accepts the done only when the project's verify command, which EDI runs itself, passes and the change touches only the named files;"
                     + " otherwise it hands the task to an implementation worker.";
         }
         return timed;
@@ -76,6 +76,10 @@ final class BriefSections {
 
     private static boolean isAShip(BriefFacts facts) {
         return facts.task().intake().kind() == TaskKind.SHIP;
+    }
+
+    private static boolean isMechanical(BriefFacts facts) {
+        return facts.dispatch().expectedChange() != null;
     }
 
     private static String researchBoard(BriefFacts facts) {
@@ -100,6 +104,7 @@ final class BriefSections {
     private static String fullBuildLeftToCi(BriefFacts facts) {
         return "Leave the full build to CI: locally, run the tests the change touches and the change's own end-to-end checks, and "
                 + fullBuildsNotRunLocally(facts) + ".\n"
+                + verificationLeftToEdi(facts)
                 + "Push early: run the pipeline as soon as those checks pass, so CI starts on the merge request; its run on your last commit is"
                 + " the full-build evidence.\n"
                 + "Run a wider local build only to diagnose a CI failure.\n"
@@ -110,6 +115,12 @@ final class BriefSections {
         return facts.project().buildsANativeImage()
                 ? "neither " + jvmVerificationOf(facts) + " nor `" + facts.project().nativeBuild() + "`"
                 : "not " + jvmVerificationOf(facts);
+    }
+
+    private static String verificationLeftToEdi(BriefFacts facts) {
+        return isMechanical(facts)
+                ? "EDI runs " + jvmVerificationOf(facts) + " itself when it checks the done of this mechanical task, so you do not run it.\n"
+                : "";
     }
 
     private static String nativeBuildRule(BriefFacts facts) {

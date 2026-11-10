@@ -68,6 +68,18 @@ class WorkerBriefsTest {
     }
 
     @Test
+    void tellsAMechanicalWorkerThatEdiRunsTheVerifyCommandItselfWhereTheProjectsCiRuns() {
+        String brief = briefs.briefFor(BriefFixtures.largestShip("Rename the lamp.", "Rename Lamp to Lantern."));
+
+        assertThat(brief).contains("and neither `./mvnw -B verify` nor `./mvnw -B -Pnative,quick-build verify`.\n"
+                + "EDI runs `./mvnw -B verify` itself when it checks the done of this mechanical task, so you do not run it.\n"
+                + "Push early:")
+                .contains("EDI accepts the done only when the project's verify command, which EDI runs itself, passes and the change touches only the"
+                        + " named files;");
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true))).doesNotContain("EDI runs", "mechanical task");
+    }
+
+    @Test
     void asksForTheLocalNativeBuildOnlyWhenTheChangeCanReachTheNativeImageWhereTheProjectsCiDoesNotRun() {
         String brief = briefs.briefFor(BriefFixtures.shipWhereCi(false));
 
