@@ -218,6 +218,7 @@ public class DispatchTask {
 
     private DispatchOutcome carriedOut(Dispatching dispatching, Actor actor) {
         launcher.requireABriefWithinItsLength(dispatching.dispatch());
+        launcher.requireAReadyLoginFor(dispatching.project());
         refreshes.requireFresh(dispatching.project());
         if (dispatching.researchFirst().queuesResearch()) {
             return researchFirst(dispatching.dispatch(), actor);

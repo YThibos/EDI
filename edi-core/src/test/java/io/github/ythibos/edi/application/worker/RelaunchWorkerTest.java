@@ -12,10 +12,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -45,7 +47,7 @@ class RelaunchWorkerTest {
         Launch resumed = home.runtime().lastLaunch();
         assertThat(resumed.kind()).isEqualTo(LaunchKind.RESUME);
         assertThat(resumed.session()).isEqualTo(lamp.session());
-        assertThat(relaunched.unresumableSession()).isNull();
+        assertThat(relaunched.unresumed()).isNull();
     }
 
     @Test
@@ -62,7 +64,25 @@ class RelaunchWorkerTest {
         assertThat(fresh.firstPrompt()).isEqualTo("⁣EDI_OP: fresh start after " + because + ": read the handover " + handover
                 + " and carry on from where it leaves off");
         assertThat(handover).content().contains("fit-lamp#2 takes over from fit-lamp#1 in the same isolated copy, because " + because + ".");
-        assertThat(relaunched.unresumableSession()).isEqualTo(lamp.session());
+        assertThat(relaunched.unresumed().session()).isEqualTo(lamp.session());
         assertThat(relaunched.worker().launch().kind()).isEqualTo(LaunchKind.FRESH);
+    }
+
+    @Test
+    void startsAWorkerOnAnotherLoginThanTheDefaultAfreshWithAHandoverOnItsProjectsLogin() throws IOException {
+        Path secondLogin = directory.resolve("logins/second");
+        home = WorkerFixtures.homeWithHarnessOnTheLogin(directory.resolve("on-a-login"), "second", secondLogin);
+        Worker kite = WorkerFixtures.dispatchedShip(home, "fly-kite", "HRN-5");
+        home.runtime().closeEveryWindow();
+
+        Launched relaunched = home.relaunchWorker().relaunch(new TaskReference.ById(new TaskId("fly-kite")), Actor.PRIMARY);
+
+        Launch fresh = home.runtime().lastLaunch();
+        assertThat(fresh.kind()).isEqualTo(LaunchKind.FRESH);
+        assertThat(fresh.session()).isNotEqualTo(kite.session());
+        assertThat(fresh.login()).isEqualTo(new Login(new LoginName("second"), secondLogin));
+        assertThat(fresh.firstPrompt()).contains("fresh start after its window closed and session " + kite.session()
+                + " is not resumed on the Claude login second yet: read the handover ");
+        assertThat(relaunched.unresumed().session()).isEqualTo(kite.session());
     }
 }

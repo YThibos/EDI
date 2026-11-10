@@ -1,6 +1,7 @@
 #!/bin/sh
 set -u
 
+[ "${1-}" != auth ] || exit 0
 launched_with="$*"
 session=""
 source="startup"

@@ -17,6 +17,7 @@ import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.delivery.RecountedCosts;
 import io.github.ythibos.edi.application.delivery.RecountedCosts.Recount;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
+import io.github.ythibos.edi.application.dispatch.DispatchOutcome.UnresumedSession;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.tracker.KeyedTask;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
@@ -154,7 +155,7 @@ class ConfirmationTextTest {
                 + " (implementation, claude-opus-5-5 at high), resuming session " + resumed.session() + ", in /edi/worktrees/harness/lantern.\n");
         assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, null))))
                 .contains(", with a fresh session and a handover, in /edi/worktrees/harness/lantern.\n");
-        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, lost)))).contains(", with a fresh session and a handover"
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, UnresumedSession.withoutATranscript(lost))))).contains(", with a fresh session and a handover"
                 + " because session 4d532fb2-0000-4000-8000-000000000001 left no transcript to resume, in /edi/worktrees/harness/lantern.\n");
     }
 

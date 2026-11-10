@@ -71,6 +71,11 @@ public final class WorkerFixtures {
                 .writing("memory/craft-rules.md", CRAFT_RULES);
     }
 
+    public static TestHome homeWithHarnessOnTheLogin(Path directory, String login, Path configDirectory) throws IOException {
+        return homeWithProjects(directory).withTheClaudeLogin(login, configDirectory)
+                .registering(REGISTRY.replace("    verify: \"true\"\n", "    verify: \"true\"\n    login: " + login + "\n"));
+    }
+
     public static TestHome homeWithProjectsOn(Path directory, ForgeKind kind) throws IOException {
         TestHome home = homeWithProjects(directory);
         return kind == ForgeKind.GITLAB ? home.registering(REGISTRY.replace(GITHUB_HARNESS, GITLAB_HARNESS)) : home;

@@ -6,6 +6,7 @@ import java.util.UUID;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 
 public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plannedShip) {
@@ -36,7 +37,22 @@ public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plann
         return plannedShip != null;
     }
 
-    public record Launched(Worker worker, BranchName branch, Path worktree, UUID unresumableSession) {
+    public record Launched(Worker worker, BranchName branch, Path worktree, UnresumedSession unresumed) {
+    }
+
+    public record UnresumedSession(UUID session, String why) {
+
+        public static UnresumedSession withoutATranscript(UUID session) {
+            return new UnresumedSession(session, "left no transcript to resume");
+        }
+
+        public static UnresumedSession onTheLogin(UUID session, LoginName login) {
+            return new UnresumedSession(session, "is not resumed on the Claude login " + login + " yet");
+        }
+
+        public String sentence() {
+            return "session " + session + " " + why;
+        }
     }
 
     public record Deferred(TaskId task, ProjectName project, int running, int capacity) {

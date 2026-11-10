@@ -15,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.testing.ExampleHome;
 
@@ -157,6 +159,32 @@ class MachineProfileTest {
         assertThat(absent).isEqualTo(Duration.ofMinutes(10));
         assertThat(set).isEqualTo(Duration.ofMinutes(5));
         assertThatThrownBy(never::supervision).isInstanceOf(InvalidConfiguration.class).hasMessageContaining("supervision.questionReminder");
+    }
+
+    @Test
+    void mapsEachClaudeLoginToItsConfigurationDirectoryAndKeepsTheDefaultInClaudeCodesOwnUnlessItIsNamed() throws IOException {
+        ClaudeLogins example = profileOf(ExampleHome.file("config/machine.yaml")).claudeLogins();
+        assertThat(example.named(new LoginName("hobby"))).isEqualTo(new Login(new LoginName("hobby"), Path.of(System.getProperty("user.home"), ".claude-hobby")));
+
+        ClaudeLogins none = profileOf("machine: laptop\n").claudeLogins();
+        assertThat(none.named(LoginName.DEFAULT).keepsClaudeCodesOwnDirectory()).isTrue();
+        assertThat(none.names(new LoginName("hobby"))).isFalse();
+        assertThatThrownBy(() -> none.named(new LoginName("hobby"))).hasMessageContaining("names no Claude login hobby under claude.logins");
+
+        ClaudeLogins named = profileOf("claude:\n  logins:\n    default: { configDirectory: /logins/main }\n    hobby: { configDirectory: ~/.claude-hobby }\n")
+                .claudeLogins();
+        assertThat(named.named(LoginName.DEFAULT).configDirectory()).isEqualTo(Path.of("/logins/main"));
+        assertThat(named.names(new LoginName("hobby"))).isTrue();
+    }
+
+    @Test
+    void refusesALoginWithoutAnAbsoluteConfigurationDirectoryOrWithAMalformedName() throws IOException {
+        assertThatThrownBy(profileOf("claude:\n  logins:\n    hobby: {}\n")::claudeLogins)
+                .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("claude.logins.hobby names no configDirectory");
+        assertThatThrownBy(profileOf("claude:\n  logins:\n    hobby: { configDirectory: logins/hobby }\n")::claudeLogins).isInstanceOf(InvalidConfiguration.class)
+                .hasMessageContaining("claude.logins.hobby.configDirectory is \"logins/hobby\", which is neither an absolute path nor one under ~/.");
+        assertThatThrownBy(profileOf("claude:\n  logins:\n    Hobby Login: { configDirectory: /logins/hobby }\n")::claudeLogins)
+                .isInstanceOf(InvalidConfiguration.class).hasMessageContaining("Hobby Login");
     }
 
     private MachineProfile profileOf(String yaml) throws IOException {
