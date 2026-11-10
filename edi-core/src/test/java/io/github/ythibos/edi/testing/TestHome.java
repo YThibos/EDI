@@ -11,7 +11,6 @@ import java.util.UUID;
 import javax.sql.DataSource;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.EdiHome;
@@ -48,6 +47,7 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.MemoryCheckStore;
 import io.github.ythibos.edi.adapter.store.NoticeStore;
+import io.github.ythibos.edi.adapter.store.OneTransactionAtATime;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
@@ -267,7 +267,7 @@ public final class TestHome {
         this.forge = new FakeForge(ForgeKind.GITHUB, clock);
         this.gitLabForge = new FakeForge(ForgeKind.GITLAB, clock);
         this.jdbc = JdbcClient.create(store);
-        this.transaction = new TransactionTemplate(new JdbcTransactionManager(store));
+        this.transaction = new TransactionTemplate(new OneTransactionAtATime(store));
         this.tasks = new TaskStore(jdbc);
         this.decisions = new DecisionStore(jdbc);
         this.wakes = new WakeStore(jdbc);
