@@ -70,10 +70,10 @@ class DeliveryStoresTest {
 
     @Test
     void keepsTheLatestReadingOfAPipelineRun() {
-        home.pipelineRuns().save(LAMP, new PipelineRun("01A", "running", "review", "2222", null), TestHome.START);
-        home.pipelineRuns().save(LAMP, new PipelineRun("01A", "running", "ci", "2222", DRAFT.url()), TestHome.START.plusSeconds(60));
+        home.pipelineRuns().save(LAMP, new PipelineRun("01A", "running", "review", "2222", null, false), TestHome.START);
+        home.pipelineRuns().save(LAMP, new PipelineRun("01A", "running", "ci", "2222", DRAFT.url(), false), TestHome.START.plusSeconds(60));
 
-        assertThat(home.pipelineRuns().latestOf(LAMP)).contains(new PipelineRun("01A", "running", "ci", "2222", DRAFT.url()));
+        assertThat(home.pipelineRuns().latestOf(LAMP)).contains(new PipelineRun("01A", "running", "ci", "2222", DRAFT.url(), false));
         assertThat(home.pipelineRuns().latestOf(new TaskId("tune-horn"))).isEmpty();
     }
 

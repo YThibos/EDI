@@ -67,7 +67,11 @@ public class ObservePipelines {
     }
 
     private boolean hasAPipelineToWatch(Worker worker) {
-        return !worker.handedItsWorkOver() || runs.latestOf(worker.id().task()).filter(PipelineRun::isRunning).isPresent();
+        return !worker.handedItsWorkOver() || runs.latestOf(worker.id().task()).filter(ObservePipelines::mayStillChangeItsVerdict).isPresent();
+    }
+
+    private static boolean mayStillChangeItsVerdict(PipelineRun run) {
+        return run.isRunning() || run.stillChangesTheRequest();
     }
 
     private void observe(Workplace workplace) {

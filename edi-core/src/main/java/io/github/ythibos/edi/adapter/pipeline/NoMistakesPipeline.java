@@ -42,7 +42,7 @@ public class NoMistakesPipeline implements Pipeline {
     @Override
     public Optional<PipelineRun> latestRunOf(Path worktree, BranchName branch) {
         String status = programs.run(ProgramCall.of(Program.NO_MISTAKES, executable, worktree, List.of("axi", "status"))).outputOfSuccess();
-        return AxiStatus.currentRunIn(status, branch.toString());
+        return AxiStatus.currentRunIn(status, branch.toString()).map(this::withItsChecksVerdict);
     }
 
     @Override
@@ -63,5 +63,9 @@ public class NoMistakesPipeline implements Pipeline {
     @Override
     public synchronized void keyCommitsPushedTo(String remoteUrl) {
         CommitKeys.keyCommitsPushedTo(globalConfiguration, remoteUrl);
+    }
+
+    private PipelineRun withItsChecksVerdict(PipelineRun run) {
+        return run.withChecksPassed(PassedChecks.recordedIn(stateDatabase, run.id()));
     }
 }
