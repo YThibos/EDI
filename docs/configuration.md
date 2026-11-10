@@ -131,4 +131,5 @@ The publish check refuses outgoing commits that carry any of them (see [Delivery
 | `EDI_BIN` | `~/.local/bin` | where `ops/install.sh` installs the executables |
 | `SERVER_PORT` | `5490` | the core's port |
 
-The core's own setting `edi.pipeline.home` names the validation pipeline's home when it is not `~/.no-mistakes`, and `edi.workers.claude-home` names the home directory whose `.claude` and `.claude.json` are Claude Code's own directory when it is not the user's home.
+The core's own setting `edi.pipeline.home` names the validation pipeline's home when it is not `~/.no-mistakes`.
+The `default` login moves to another directory through `claude.logins.default` in the machine profile (see [Claude logins](#claude-logins)), never through a setting of the core.

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
@@ -53,23 +54,28 @@ final class ClaudeCommandLine {
         return environment;
     }
 
-    private static List<String> withoutInheritedOverrides(Set<String> inheritedVariables, Login login) {
-        Stream<String> overrides = inheritedVariables.stream().filter(variable -> belongsToTheLaunchingSession(variable) || isAGitConfigurationEntry(variable));
-        Stream<String> unset = Stream.of(GIT_COMMAND_SCOPE_SWITCHES.stream(), overrides, claudeCodesOwnDirectoryFor(login)).flatMap(variables -> variables)
-                .distinct().sorted();
-        return Stream.concat(Stream.of("env"), unset.flatMap(variable -> Stream.of("-u", variable))).toList();
+    static Set<String> withheldFromClaudeCode(Login login, Set<String> inheritedVariables) {
+        Stream<String> launchingSession = inheritedVariables.stream().filter(ClaudeCommandLine::belongsToTheLaunchingSession);
+        return Stream.concat(launchingSession, claudeCodesOwnDirectoryFor(login)).collect(Collectors.toSet());
     }
 
     private static boolean belongsToTheLaunchingSession(String variable) {
         return variable.startsWith(CLAUDE_CODE_SESSION_VARIABLES) && !variable.equals(CONFIG_DIRECTORY);
     }
 
-    private static boolean isAGitConfigurationEntry(String variable) {
-        return GIT_COMMAND_SCOPE_ENTRIES.stream().anyMatch(variable::startsWith);
-    }
-
     private static Stream<String> claudeCodesOwnDirectoryFor(Login login) {
         return login.keepsClaudeCodesOwnDirectory() ? Stream.of(CONFIG_DIRECTORY) : Stream.empty();
+    }
+
+    private static List<String> withoutInheritedOverrides(Set<String> inheritedVariables, Login login) {
+        Stream<String> gitOverrides = inheritedVariables.stream().filter(ClaudeCommandLine::isAGitConfigurationEntry);
+        Stream<String> unset = Stream.of(GIT_COMMAND_SCOPE_SWITCHES.stream(), gitOverrides, withheldFromClaudeCode(login, inheritedVariables).stream())
+                .flatMap(variables -> variables).distinct().sorted();
+        return Stream.concat(Stream.of("env"), unset.flatMap(variable -> Stream.of("-u", variable))).toList();
+    }
+
+    private static boolean isAGitConfigurationEntry(String variable) {
+        return GIT_COMMAND_SCOPE_ENTRIES.stream().anyMatch(variable::startsWith);
     }
 
     private static List<String> onTheCopysPinnedToolchain(String mise, boolean cloneTrustedByMise) {

@@ -27,12 +27,14 @@ final class ClaudeLoginReadiness {
     private final String claudeCode;
     private final ClaudeLoginFiles logins;
     private final JsonMapper json;
+    private final Set<String> inheritedVariables;
 
-    ClaudeLoginReadiness(ExternalPrograms programs, String claudeCode, ClaudeLoginFiles logins, JsonMapper json) {
+    ClaudeLoginReadiness(ExternalPrograms programs, String claudeCode, ClaudeLoginFiles logins, JsonMapper json, Set<String> inheritedVariables) {
         this.programs = programs;
         this.claudeCode = claudeCode;
         this.logins = logins;
         this.json = json;
+        this.inheritedVariables = Set.copyOf(inheritedVariables);
     }
 
     void requireReady(Login login) {
@@ -76,8 +78,9 @@ final class ClaudeLoginReadiness {
     }
 
     private ProgramCall authStatusOn(Login login) {
-        ProgramCall authStatus = ProgramCall.of(Program.CLAUDE_CODE, claudeCode, Path.of(System.getProperty("java.io.tmpdir")), AUTH_STATUS);
-        return login.keepsClaudeCodesOwnDirectory() ? authStatus.withholding(Set.of(ClaudeCommandLine.CONFIG_DIRECTORY))
+        ProgramCall authStatus = ProgramCall.of(Program.CLAUDE_CODE, claudeCode, Path.of(System.getProperty("java.io.tmpdir")), AUTH_STATUS)
+                .withholding(ClaudeCommandLine.withheldFromClaudeCode(login, inheritedVariables));
+        return login.keepsClaudeCodesOwnDirectory() ? authStatus
                 : authStatus.withVariables(Map.of(ClaudeCommandLine.CONFIG_DIRECTORY, login.configDirectory().toString()));
     }
 }
