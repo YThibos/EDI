@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.NativeImageInput;
 import io.github.ythibos.edi.domain.project.ShipBriefRule;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -40,7 +41,7 @@ final class BriefSections {
             rules.add("Below version 1.0.0 nothing legacy lingers: no deprecation shims and no \"previously\" prose.");
             rules.add("No `-SNAPSHOT` version in any `pom.xml` the branch touches.");
         }
-        if (facts.dispatch().expectedChange() != null) {
+        if (isMechanical(facts)) {
             rules.addAll(mechanicalRules(facts.dispatch().expectedChange()));
         }
         String bullets = rules.stream().map(rule -> "- " + rule).collect(Collectors.joining("\n"));
@@ -59,14 +60,15 @@ final class BriefSections {
                     + "Write the report to `" + facts.reportPath() + "`; a report never authorises implementation.\n"
                     + researchBoard(facts);
         }
-        return facts.project().buildsANativeImage() ? nativeBuildRule(facts) + "\n\n" + shipDelivery(facts) : shipDelivery(facts);
+        String localChecks = localChecks(facts);
+        return localChecks.isEmpty() ? shipDelivery(facts) : localChecks + "\n\n" + shipDelivery(facts);
     }
 
     static String definitionOfDone(BriefFacts facts) {
         String done = isAShip(facts) ? shipDone(facts) : scoutDone(facts);
         String timed = facts.asksForTheTimeWorked() ? done + "\n" + workedLine(facts) : done;
-        if (facts.dispatch().expectedChange() != null) {
-            return timed + "\nEDI accepts the done only when the project's verify command passes and the change touches only the named files;"
+        if (isMechanical(facts)) {
+            return timed + "\nEDI accepts the done only when the project's verify command, which EDI runs itself, passes and the change touches only the named files;"
                     + " otherwise it hands the task to an implementation worker.";
         }
         return timed;
@@ -76,12 +78,49 @@ final class BriefSections {
         return facts.task().intake().kind() == TaskKind.SHIP;
     }
 
+    private static boolean isMechanical(BriefFacts facts) {
+        return facts.dispatch().expectedChange() != null;
+    }
+
     private static String researchBoard(BriefFacts facts) {
         return "A research board lives in the task directory and reaches the captain through `edi board arm <board.html> --task " + facts.task().id()
                 + " --link <url> --questions <n>`, where the count leaves out its decision card.\n"
                 + "A decision the board asks is a card you pass with `--card <card.json>`, never one you only draw: the card as `edi decision raise --help`"
                 + " describes it, plus `question`, the `data-lavish-question` of its form, whose answer data is `{question, answer}` with the option's letter.\n"
                 + "EDI raises the card on your task and binds it before the captain sees the board, so his choice there is his word for it.";
+    }
+
+    private static String localChecks(BriefFacts facts) {
+        if (ciCarriesTheFullBuild(facts)) {
+            return fullBuildLeftToCi(facts);
+        }
+        return facts.project().buildsANativeImage() ? nativeBuildRule(facts) : "";
+    }
+
+    private static boolean ciCarriesTheFullBuild(BriefFacts facts) {
+        return facts.delivery() == DeliveryMode.DRAFT_REVIEW && facts.project().ciRuns();
+    }
+
+    private static String fullBuildLeftToCi(BriefFacts facts) {
+        return "Leave the full build to CI: locally, run the tests the change touches and the change's own end-to-end checks, and "
+                + fullBuildsNotRunLocally(facts) + ".\n"
+                + verificationLeftToEdi(facts)
+                + "Push early: run the pipeline as soon as those checks pass, so CI starts on the merge request; its run on your last commit is"
+                + " the full-build evidence.\n"
+                + "Run a wider local build only to diagnose a CI failure.\n"
+                + "The merge request body names the CI run it rests on and the targeted checks run locally, and never says a step passed that was not run.";
+    }
+
+    private static String fullBuildsNotRunLocally(BriefFacts facts) {
+        return facts.project().buildsANativeImage()
+                ? "neither " + jvmVerificationOf(facts) + " nor `" + facts.project().nativeBuild() + "`"
+                : "not " + jvmVerificationOf(facts);
+    }
+
+    private static String verificationLeftToEdi(BriefFacts facts) {
+        return isMechanical(facts)
+                ? "EDI runs " + jvmVerificationOf(facts) + " itself when it checks the done of this mechanical task, so you do not run it.\n"
+                : "";
     }
 
     private static String nativeBuildRule(BriefFacts facts) {
@@ -105,13 +144,9 @@ final class BriefSections {
 
     private static String whereTheSkippedNativeBuildIsExplained(BriefFacts facts) {
         return switch (facts.delivery()) {
-            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why" + whatIsLeftToCi(facts) + ".";
+            case DRAFT_REVIEW -> "the merge request body says the native build was not needed and why.";
             case LOCAL_BRANCH, LOCAL_APPLY, REPORT -> "`" + facts.reportPath() + "` says the native build was not needed and why.";
         };
-    }
-
-    private static String whatIsLeftToCi(BriefFacts facts) {
-        return facts.project().ciRuns() ? ", and the full optimised native build is left to CI" : "";
     }
 
     private static String shipDelivery(BriefFacts facts) {

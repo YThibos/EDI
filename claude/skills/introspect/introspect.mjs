@@ -338,7 +338,8 @@ ${around.map(line => `- ${clock(line.at)} ${line.task}: ${fenced(safe(line.text,
 
 ## How to verify
 
-- \`./mvnw verify\`.
+- TODO: the tests the change touches, then \`./mvnw test -Pfast\` locally.
+- The pull request's CI run on the last commit is the full-build evidence.
 `;
 }
 

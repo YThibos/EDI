@@ -40,17 +40,65 @@ class WorkerBriefsTest {
     }
 
     @Test
-    void asksForTheLocalNativeBuildOnlyWhenTheChangeCanReachTheNativeImage() {
-        String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage(DeliveryMode.DRAFT_REVIEW));
+    void leavesTheFullBuildAndTheNativeBuildToCiWhereTheProjectsCiRuns() {
+        String brief = briefs.briefFor(BriefFixtures.shipWhereCi(true));
+
+        assertThat(brief).contains("## Validation and delivery\n\n"
+                + "Leave the full build to CI: locally, run the tests the change touches and the change's own end-to-end checks, and neither"
+                + " `./mvnw -B verify` nor `./mvnw -B -Pnative,quick-build verify`.\n"
+                + "Push early: run the pipeline as soon as those checks pass, so CI starts on the merge request; its run on your last commit is the"
+                + " full-build evidence.\n"
+                + "Run a wider local build only to diagnose a CI failure.\n"
+                + "The merge request body names the CI run it rests on and the targeted checks run locally, and never says a step passed that was not"
+                + " run.\n\n"
+                + "Commit on `feature/HRN-3`")
+                .doesNotContain("Run the local native build", "local evidence", "local verification");
+    }
+
+    @Test
+    void leavesTheFullBuildToCiWhereTheProjectsCiRunsAndItBuildsNoNativeImage() {
+        String brief = briefs.briefFor(BriefFixtures.shipWithoutANativeImageWhereCi(true));
+
+        assertThat(brief).contains("## Validation and delivery\n\n"
+                + "Leave the full build to CI: locally, run the tests the change touches and the change's own end-to-end checks, and not"
+                + " `./mvnw -B verify`.\n"
+                + "Push early:")
+                .contains("Run a wider local build only to diagnose a CI failure.\n")
+                .doesNotContain("native", "local verification");
+    }
+
+    @Test
+    void tellsAMechanicalWorkerThatEdiRunsTheVerifyCommandItselfWhereTheProjectsCiRuns() {
+        String brief = briefs.briefFor(BriefFixtures.largestShip("Rename the lamp.", "Rename Lamp to Lantern."));
+
+        assertThat(brief).contains("and neither `./mvnw -B verify` nor `./mvnw -B -Pnative,quick-build verify`.\n"
+                + "EDI runs `./mvnw -B verify` itself when it checks the done of this mechanical task, so you do not run it.\n"
+                + "Push early:")
+                .contains("EDI accepts the done only when the project's verify command, which EDI runs itself, passes and the change touches only the"
+                        + " named files;");
+        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true))).doesNotContain("EDI runs", "mechanical task");
+    }
+
+    @Test
+    void asksForTheLocalNativeBuildOnlyWhenTheChangeCanReachTheNativeImageWhereTheProjectsCiDoesNotRun() {
+        String brief = briefs.briefFor(BriefFixtures.shipWhereCi(false));
 
         assertThat(brief).contains("## Validation and delivery\n\n"
                 + "Run the local native build `./mvnw -B -Pnative,quick-build verify` only when the change can reach the native image: it touches"
                 + " reflection or serialisation-bound types, resources the image reads, Spring configuration, native-image configuration, dependencies"
                 + " or build files.\n"
-                + "Otherwise `./mvnw -B verify` is the local evidence: the merge request body says the native build was not needed and why,"
-                + " and the full optimised native build is left to CI.\n\n"
-                + "Commit on `feature/HRN-3`");
-        assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).doesNotContain("native");
+                + "Otherwise `./mvnw -B verify` is the local evidence: the merge request body says the native build was not needed and why.\n\n"
+                + "Commit on `feature/HRN-3`")
+                .doesNotContain("Leave the full build to CI", "left to CI", "Run a wider local build");
+    }
+
+    @Test
+    void asksForTheLocalVerificationAloneWhereTheProjectsCiDoesNotRunAndItBuildsNoNativeImage() {
+        String brief = briefs.briefFor(BriefFixtures.shipWithoutANativeImageWhereCi(false));
+
+        assertThat(brief).contains("## Validation and delivery\n\nCommit on `feature/HRN-3`")
+                .contains("## Definition of done\n\nYour last commit passes the local verification (`./mvnw -B verify`), and")
+                .doesNotContain("native", "Leave the full build to CI", "Run a wider local build");
     }
 
     @Test
@@ -91,21 +139,13 @@ class WorkerBriefsTest {
     }
 
     @Test
-    void leavesNoNativeBuildToCiWhereTheProjectsCiDoesNotRun() {
-        String skipped = "Otherwise `./mvnw -B verify` is the local evidence: the merge request body says the native build was not needed and why";
-
-        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(true))).contains(skipped + ", and the full optimised native build is left to CI.\n");
-        assertThat(briefs.briefFor(BriefFixtures.shipWhereCi(false))).contains(skipped + ".\n").doesNotContain("left to CI");
-    }
-
-    @Test
     void asksForTheReasonTheNativeBuildWasSkippedInTheReportWhenNoMergeRequestCarriesIt() {
         String brief = briefs.briefFor(BriefFixtures.shipBuildingANativeImage(DeliveryMode.REPORT));
 
         assertThat(brief).contains("Otherwise `./mvnw -B verify` is the local evidence:"
                 + " `/home/developer/.edi/data/tasks/fit-lamp/report.md` says the native build was not needed and why.\n\n"
                 + "This work is delivered by its report")
-                .doesNotContain("merge request body", "left to CI");
+                .doesNotContain("merge request body", "Leave the full build to CI");
     }
 
     @Test

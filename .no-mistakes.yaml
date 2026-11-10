@@ -1,5 +1,5 @@
 commands:
-  test: "./mvnw -B -ntp verify"
+  test: "./mvnw -B -ntp test -Pfast"
 
 commit:
   branch_pattern: '([A-Z][A-Z0-9]*-[0-9]+)'
