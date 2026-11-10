@@ -26,6 +26,7 @@ The session-start digest lists any of the machine profile, the personal configur
 `config/machine.yaml` describes this machine:
 
 - `workers` lists the models workers may run, strongest first, the tools they never get and their permission mode.
+- `claude.logins` names each Claude login a project's workers may run on, with its configuration directory (see [Claude logins](#claude-logins)).
 - `supervision.staleAfter` and `supervision.pauseResurface` tune the supervision round, PT20M and PT4H by default, and `supervision.questionReminder` sets how often a worker's unanswered question is raised to the primary again, PT10M by default (see [Workers](workers.md)).
 - `tracker` says whether this machine reaches a JIRA instance or none, and `time` switches the activity ledger and the brief's `worked:` line (see [Trackers and time](trackers-and-time.md)).
 - `memory.startupBudgetTokens` caps the startup memory, 18,000 by default.
@@ -42,9 +43,49 @@ A project's entry names:
 - its `forge`, `{ kind: github|gitlab, host, path, account }`, and every forge call for the project runs under that account ([forge-adapters](decisions/forge-adapters.md));
 - its `delivery`, `draft-review` (the default) or `local-branch` with a `captainCheckout` (see [Delivery](delivery.md));
 - its `tracker`, `{ kind: jira|edi|github|none, projectKey: KEY }`;
+- its `login`, the Claude login its workers run on, `default` when the entry names none (see [Claude logins](#claude-logins));
 - `craftRules: true` when its briefs carry the craftsmanship rules;
 - `nativeBuild`, the command of its local native build, when its briefs say when a change needs one ([local-native-builds](decisions/local-native-builds.md)).
 - `ciRuns: false` when its forge's CI does not run, so its validation pipeline runs skip the CI step as well as the rebase step every run skips ([pipeline-steps](decisions/pipeline-steps.md)).
+
+`edi project list` shows a project's login when it is not `default`.
+A registry whose entry names a login the machine profile does not name is refused, naming the entry and the login.
+
+## Claude logins
+
+A Claude login is one Claude Code configuration directory: its credentials, its global configuration with the trust entries, its user settings, its skills and its transcripts ([claude-logins](decisions/claude-logins.md)).
+The login named `default` is Claude Code's own directory, `~/.claude` with `~/.claude.json` beside it, unless the machine profile names a directory for it.
+Every other login is named in the machine profile with its directory, and a registry entry runs its project's workers on it:
+
+```yaml
+# config/machine.yaml
+claude:
+  logins:
+    hobby: { configDirectory: ~/.claude-hobby }
+
+# config/projects.yaml
+projects:
+  - name: hobby-tool
+    login: hobby
+```
+
+Every launch states its worker's directory itself: `CLAUDE_CONFIG_DIR` set in the worker's window for a named directory, and unset in the worker's command for Claude Code's own.
+A `CLAUDE_CONFIG_DIR` exported in the shell that starts the core or the workers' tmux server decides nothing; to move the `default` login, name its directory under `claude.logins.default`.
+The trust entry of a launch goes into the global configuration of the launch's login, and EDI writes nothing else into a login's directory.
+
+A dispatch or a relaunch onto a login that is not ready is refused before a copy, a branch or a window exists.
+A login is ready when `claude auth status` exits 0 for its directory and its global configuration, `.claude.json`, exists and records its first run as finished.
+The refusal names the login, what it lacks and the command that fixes it.
+
+A second login is set up once, by hand:
+
+1. Finish its first run: `CLAUDE_CONFIG_DIR=~/.claude-hobby claude`, sign in, choose the theme and pass the first screens; a directory logged in without that run still stops a worker on the theme picker.
+2. Link your own skills into it one by one, such as `ln -s ~/.claude/skills/no-mistakes ~/.claude-hobby/skills/no-mistakes`; never link the `skills` folder itself, because Claude Code keeps a folder of each account's own in it.
+3. Link your user settings: `ln -s ~/.claude/settings.json ~/.claude-hobby/settings.json`, which carries the bypass-permissions acceptance, your permissions and your hooks.
+4. Name the login in the machine profile and on the projects that run on it in the registry, as above.
+
+`~/.claude/CLAUDE.md` needs no link: Claude Code loads it as project memory for any working directory under the home, whichever directory the session runs on.
+A relaunch does not yet stay on the login it was launched on: until it does, a relaunch of a worker on another login than `default` starts fresh, with a handover, on the project's login.
 
 ## The dispatch rules
 
@@ -90,4 +131,4 @@ The publish check refuses outgoing commits that carry any of them (see [Delivery
 | `EDI_BIN` | `~/.local/bin` | where `ops/install.sh` installs the executables |
 | `SERVER_PORT` | `5490` | the core's port |
 
-The core's own setting `edi.pipeline.home` names the validation pipeline's home when it is not `~/.no-mistakes`.
+The core's own setting `edi.pipeline.home` names the validation pipeline's home when it is not `~/.no-mistakes`, and `edi.workers.claude-home` names the home directory whose `.claude` and `.claude.json` are Claude Code's own directory when it is not the user's home.

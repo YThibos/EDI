@@ -2,8 +2,10 @@ package io.github.ythibos.edi.testing;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -14,6 +16,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LimitStop;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.WindowCheck;
@@ -27,6 +30,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
     private final Set<UUID> sessionsWithoutATranscript = new HashSet<>();
+    private final Map<LoginName, String> unreadyLogins = new HashMap<>();
+    private final List<Login> readinessChecks = new ArrayList<>();
     private PaneState pane = PaneState.IDLE_PROMPT;
     private List<String> mirrored = List.of("\u001b[1m❯\u001b[0m");
     private int mirrors;
@@ -45,6 +50,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     @Override
     public String socket() {
         return SOCKET;
+    }
+
+    @Override
+    public synchronized void requireReady(Login login) {
+        readinessChecks.add(login);
+        if (unreadyLogins.containsKey(login.name())) {
+            throw new Refusal(unreadyLogins.get(login.name()));
+        }
     }
 
     @Override
@@ -159,6 +172,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void failingEveryKeystroke() {
         paneFails = true;
+    }
+
+    public synchronized void loginIsNotReady(LoginName login, String refusal) {
+        unreadyLogins.put(login, refusal);
+    }
+
+    public synchronized List<Login> readinessChecks() {
+        return List.copyOf(readinessChecks);
     }
 
     public synchronized void leaveNoTranscriptOf(UUID session) {

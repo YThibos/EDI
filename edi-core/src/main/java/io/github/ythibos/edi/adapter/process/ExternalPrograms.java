@@ -47,6 +47,16 @@ public class ExternalPrograms {
         }
     }
 
+    public int exitValueOf(ProgramCall call) {
+        try {
+            Process process = start(call, Redirect.DISCARD, Redirect.DISCARD);
+            awaitCompletion(call.program(), process, PATIENCE);
+            return process.exitValue();
+        } catch (IOException unstartable) {
+            throw new ProgramFailure(call.program().executable() + " could not run: " + unstartable.getMessage(), unstartable);
+        }
+    }
+
     public boolean endsInFailureWithin(ProgramCall call, Duration patience) {
         try {
             Process process = start(call, Redirect.DISCARD, Redirect.DISCARD);

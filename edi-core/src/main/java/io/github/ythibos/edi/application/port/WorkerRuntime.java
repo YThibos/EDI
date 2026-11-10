@@ -13,6 +13,7 @@ import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LimitStop;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -23,6 +24,8 @@ import io.github.ythibos.edi.domain.worker.WorkerWindow;
 public interface WorkerRuntime {
 
     String socket();
+
+    void requireReady(Login login);
 
     WorkerWindow launch(Launch launch);
 
@@ -57,6 +60,7 @@ public interface WorkerRuntime {
             LaunchKind kind,
             UUID session,
             Route route,
+            Login login,
             Path worktree,
             Path projectClone,
             Path taskDirectory,
@@ -71,6 +75,7 @@ public interface WorkerRuntime {
             Objects.requireNonNull(kind, () -> worker + " is launched by a dispatch, a resume or a fresh start.");
             Objects.requireNonNull(session, () -> worker + " is launched with the session id chosen for it.");
             Objects.requireNonNull(route, () -> worker + " is launched with an explicit model and effort.");
+            Objects.requireNonNull(login, () -> worker + " is launched on a named Claude login.");
             Objects.requireNonNull(worktree, () -> worker + " is launched in its isolated copy.");
             Objects.requireNonNull(projectClone, () -> worker + " is launched in a copy of a known clone.");
             environment = Map.copyOf(environment);
@@ -81,6 +86,17 @@ public interface WorkerRuntime {
 
         public boolean resumesTheSession() {
             return kind == LaunchKind.RESUME;
+        }
+    }
+
+    record Login(LoginName name, Path configDirectory) {
+
+        public Login {
+            Objects.requireNonNull(name, "A Claude login has a name.");
+        }
+
+        public boolean keepsClaudeCodesOwnDirectory() {
+            return configDirectory == null;
         }
     }
 

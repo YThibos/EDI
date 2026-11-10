@@ -32,6 +32,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.WorkerActivity;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -64,6 +65,7 @@ class JsonConfiguration {
                 .addSerializer(CategoryId.class, ToStringSerializer.instance)
                 .addSerializer(BranchName.class, ToStringSerializer.instance)
                 .addSerializer(WorkerId.class, ToStringSerializer.instance)
+                .addSerializer(LoginName.class, ToStringSerializer.instance)
                 .addSerializer(StatusKey.class, ToStringSerializer.instance)
                 .addSerializer(MergeRequestAddress.class, ToStringSerializer.instance)
                 .addSerializer(ForgeRepository.class, ToStringSerializer.instance)

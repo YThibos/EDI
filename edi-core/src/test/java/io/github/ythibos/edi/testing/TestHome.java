@@ -32,6 +32,7 @@ import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.runtime.ClaudeLoginFiles;
 import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
@@ -201,6 +202,8 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 public final class TestHome {
 
@@ -269,8 +272,8 @@ public final class TestHome {
         this.decisions = new DecisionStore(jdbc);
         this.wakes = new WakeStore(jdbc);
         this.events = new EventLog(jdbc, json, wakes, _ -> { });
-        this.registry = new ProjectRegistry(home);
         this.machineProfile = new MachineProfile(home);
+        this.registry = new ProjectRegistry(home, machineProfile);
         this.dispatches = new DispatchStore(jdbc);
         this.workers = new WorkerStore(jdbc);
         this.inbox = new InboxStore(jdbc);
@@ -328,6 +331,15 @@ public final class TestHome {
         Files.createDirectories(home.projectRegistry().getParent());
         Files.writeString(home.projectRegistry(), projectsYaml);
         return this;
+    }
+
+    public TestHome withTheClaudeLogin(String login, Path configDirectory) throws IOException {
+        YAMLMapper yaml = new YAMLMapper();
+        ObjectNode profile = (ObjectNode) yaml.readTree(Files.readString(home.machineProfile()));
+        ObjectNode claude = profile.get("claude") instanceof ObjectNode existing ? existing : profile.putObject("claude");
+        ObjectNode logins = claude.get("logins") instanceof ObjectNode existing ? existing : claude.putObject("logins");
+        logins.putObject(login).put("configDirectory", configDirectory.toString());
+        return writing("config/machine.yaml", yaml.writeValueAsString(profile));
     }
 
     public TestHome writing(String file, String content) throws IOException {
@@ -513,7 +525,7 @@ public final class TestHome {
     }
 
     public ClaudeSessions claudeSessions() {
-        return new ClaudeSessions(claudeSessionFolders());
+        return new ClaudeSessions(new ClaudeLoginFiles(home.root()), machineProfile());
     }
 
     public Path claudeSessionFolders() {

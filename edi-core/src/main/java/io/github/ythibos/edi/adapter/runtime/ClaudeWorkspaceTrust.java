@@ -9,9 +9,10 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
+import io.github.ythibos.edi.domain.Refusal;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -19,21 +20,21 @@ import tools.jackson.databind.node.ObjectNode;
 @Component
 public class ClaudeWorkspaceTrust {
 
-    private static final String CONFIG_FILE = ".claude.json";
     private static final String PROJECTS = "projects";
     private static final String TRUST_ACCEPTED = "hasTrustDialogAccepted";
 
-    private final Path configFile;
+    private final ClaudeLoginFiles logins;
     private final JsonMapper json;
 
-    public ClaudeWorkspaceTrust(@Value("${edi.workers.claude-config}") Path configDirectory, JsonMapper json) {
-        this.configFile = configDirectory.resolve(CONFIG_FILE);
+    public ClaudeWorkspaceTrust(ClaudeLoginFiles logins, JsonMapper json) {
+        this.logins = logins;
         this.json = json;
     }
 
-    public synchronized void trust(Path directory) {
+    public synchronized void trust(Path directory, Login login) {
+        Path configFile = logins.globalConfigurationOf(login);
         if (!Files.isRegularFile(configFile)) {
-            return;
+            throw new Refusal("The Claude login " + login.name() + " has no global configuration " + configFile + " to record its trust in " + directory + ".");
         }
         ObjectNode config = (ObjectNode) json.readTree(contentOf(configFile));
         String key = directory.toAbsolutePath().normalize().toString();
@@ -62,7 +63,7 @@ public class ClaudeWorkspaceTrust {
     private static void replace(Path file, String content) {
         try {
             Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
-            Path written = Files.createTempFile(file.getParent(), CONFIG_FILE + "-", ".tmp");
+            Path written = Files.createTempFile(file.getParent(), file.getFileName() + "-", ".tmp");
             Files.writeString(written, content, StandardCharsets.UTF_8);
             Files.setPosixFilePermissions(written, permissions);
             Files.move(written, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);

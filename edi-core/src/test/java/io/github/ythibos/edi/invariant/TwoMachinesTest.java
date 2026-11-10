@@ -36,6 +36,7 @@ import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.MachineFixture;
@@ -93,7 +94,7 @@ class TwoMachinesTest {
         }
 
         @Test
-        @DisplayName("AT-37 the two fixture profiles differ in the tracker, the ledger and the worked line, and nothing else decides by machine")
+        @DisplayName("AT-37 the two fixture profiles differ in the tracker, the ledger, the worked line and the Claude logins, and nothing else decides by machine")
         void theProfilesDifferOnlyInWhatTheMachineHolds() throws IOException {
             TestHome laptop = TestHome.in(directory.resolve("laptop")).on(MachineFixture.LAPTOP);
             TestHome desktop = TestHome.in(directory.resolve("desktop")).on(MachineFixture.DESKTOP);
@@ -102,6 +103,8 @@ class TwoMachinesTest {
             assertThat(laptop.machineProfile().time()).isEqualTo(new TimeSettings(true, true));
             assertThat(desktop.machineProfile().tracker().kind()).isEqualTo(TrackerKind.NONE);
             assertThat(desktop.machineProfile().time()).isEqualTo(new TimeSettings(false, false));
+            assertThat(laptop.machineProfile().claudeLogins().names(new LoginName("side"))).isTrue();
+            assertThat(desktop.machineProfile().claudeLogins().names(new LoginName("side"))).isFalse();
             assertThat(laptop.machineProfile().workers()).isEqualTo(desktop.machineProfile().workers());
         }
     }

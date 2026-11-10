@@ -34,8 +34,7 @@ final class WorkerSentences {
             return "resuming session " + worker.session();
         }
         String fresh = "with a fresh session and a handover";
-        return launched.unresumableSession() == null ? fresh
-                : fresh + " because session " + launched.unresumableSession() + " left no transcript to resume";
+        return launched.unresumed() == null ? fresh : fresh + " because " + launched.unresumed().sentence();
     }
 
     static String deferred(DispatchOutcome.Deferred deferred) {
