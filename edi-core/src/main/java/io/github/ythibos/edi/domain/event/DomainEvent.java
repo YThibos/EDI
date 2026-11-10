@@ -29,6 +29,7 @@ import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.HeavyRun;
 import io.github.ythibos.edi.domain.worker.HeavyRuns.WorkerRun;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
@@ -123,6 +124,9 @@ public sealed interface DomainEvent {
     }
 
     record WorkerStoppedOnAnError(TaskId task, WorkerId worker, String error) implements DomainEvent {
+    }
+
+    record WorkerRanOnAnotherLogin(TaskId task, WorkerId worker, LoginName login, String ranIn, String shouldHaveRunIn) implements DomainEvent {
     }
 
     record UsageLimitReached(TaskId task, WorkerId worker, UsageLimit limit) implements DomainEvent {

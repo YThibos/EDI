@@ -85,7 +85,9 @@ A second login is set up once, by hand:
 4. Name the login in the machine profile and on the projects that run on it in the registry, as above.
 
 `~/.claude/CLAUDE.md` needs no link: Claude Code loads it as project memory for any working directory under the home, whichever directory the session runs on.
-A relaunch does not yet stay on the login it was launched on: until it does, a relaunch of a worker on another login than `default` starts fresh, with a handover, on the project's login.
+Every worker records the login it was launched on, and a relaunch resumes its session on that login even after its project moved to another one; a fresh start takes the project's login at that moment.
+A worker whose first hook shows it ran on another directory than its login's is stopped, and the primary is woken with both directories.
+Take a login out of the machine profile only once none of its workers waits for a resume: a resume on a login the profile no longer names is refused, and `edi worker relaunch <task> --fresh` starts such a worker afresh on its project's login.
 
 ## The dispatch rules
 

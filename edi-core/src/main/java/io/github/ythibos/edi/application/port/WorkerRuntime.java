@@ -43,7 +43,9 @@ public interface WorkerRuntime {
 
     void close(WorkerWindow window);
 
-    boolean hasATranscriptOf(UUID session);
+    boolean hasATranscriptOf(UUID session, Login login);
+
+    Optional<LoginMismatch> loginMismatchOf(String transcript, Login login);
 
     Optional<LimitStop> usageLimitStopIn(String transcript, Instant since);
 
@@ -97,6 +99,14 @@ public interface WorkerRuntime {
 
         public boolean keepsClaudeCodesOwnDirectory() {
             return configDirectory == null;
+        }
+    }
+
+    record LoginMismatch(Path ranIn, Path shouldHaveRunIn) {
+
+        public LoginMismatch {
+            Objects.requireNonNull(ranIn, "A login mismatch names the directory the session ran in.");
+            Objects.requireNonNull(shouldHaveRunIn, "A login mismatch names the directory of the recorded login.");
         }
     }
 

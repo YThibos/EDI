@@ -77,6 +77,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerLaunchFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerNotified;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRanOnAnotherLogin;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
@@ -110,6 +111,8 @@ public final class WakeRule {
                     String.valueOf(missed.message()), missed.stoppedAt()));
             case LimitResumeHeldBack heldBack -> wake(WakeKind.LIMIT_RESUME_HELD_BACK, heldBack, heldBack.worker(), heldBack.pane().word());
             case WorkerDied died -> wake(WakeKind.WORKER_DIED, died, died.worker(), died.cause().sentence());
+            case WorkerRanOnAnotherLogin ran -> wake(WakeKind.ON_ANOTHER_LOGIN, ran, ran.worker(),
+                    ran.ranIn() + " instead of the Claude login " + ran.login() + "'s " + ran.shouldHaveRunIn());
             case LostInOutage lost -> wake(WakeKind.LOST_IN_OUTAGE, lost, lost.worker(), lost.number() + ": " + lost.cause().sentence());
             case WorkerStale stale -> Optional.of(new Wake(WakeKind.WORKER_STALE, stale.task(), stale.worker(), "", stale.quietSince()));
             case WorkerBusyTooLong busy -> Optional.of(new Wake(WakeKind.BUSY_TOO_LONG, busy.task(), busy.worker(), "", busy.busySince()));

@@ -21,8 +21,8 @@ import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
-import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.TaskLinks;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
@@ -51,6 +51,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -273,7 +274,7 @@ class SitrepConsolePresenterTest {
     private static Worker workerOn(Task task) {
         return Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
     }
 
     private static Delivery delivery(Task task) {

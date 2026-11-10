@@ -78,6 +78,6 @@ class WorkerTest {
 
     private static Worker launched(CategoryId category) {
         return Worker.launched(WorkerId.first(new TaskId("fit-lamp")), UUID.randomUUID(), category, new Route(new ModelId("claude-haiku-5-5"), null),
-                WINDOW, new WorkerLaunch(LaunchKind.DISPATCH, LAUNCHED, new BootId("boot-1")));
+                WINDOW, new WorkerLaunch(LaunchKind.DISPATCH, LAUNCHED, new BootId("boot-1"), LoginName.DEFAULT));
     }
 }

@@ -133,6 +133,7 @@ import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.port.Tracker;
+import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.MeetingCalendar;
@@ -661,10 +662,14 @@ public final class TestHome {
     }
 
     public LaunchWorker launchWorker() {
+        return launchWorkerOn(runtime);
+    }
+
+    public LaunchWorker launchWorkerOn(WorkerRuntime workerRuntime) {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
-                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
+                isolatedCopies(), new WorkerPlaces(workers, tasks, workerRuntime), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), runtime, pipeline, processes, machineBoot(), clock, transaction);
+                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {
@@ -847,7 +852,7 @@ public final class TestHome {
     }
 
     public WorkerHooks workerHooks() {
-        return new WorkerHooks(workers, inbox, events, runtime, countRecoveryCost(), clock, transaction);
+        return new WorkerHooks(workers, inbox, events, runtime, countRecoveryCost(), stopWorker(), machineProfile(), clock, transaction);
     }
 
     public GuardToolCall guardToolCall() {

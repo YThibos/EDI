@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.AsciiCharacters;
 import io.github.ythibos.edi.domain.worker.LoginName;
 
@@ -28,8 +29,8 @@ public class ClaudeSessions {
         this.machine = machine;
     }
 
-    public Optional<Path> transcriptOf(UUID session) {
-        Path sessions = sessionsOfTheDefaultLogin();
+    public Optional<Path> transcriptOf(UUID session, Login login) {
+        Path sessions = logins.sessionsOf(login);
         if (!Files.isDirectory(sessions)) {
             return Optional.empty();
         }
@@ -40,8 +41,12 @@ public class ClaudeSessions {
         }
     }
 
+    public Optional<Path> transcriptOnTheDefaultLoginOf(UUID session) {
+        return transcriptOf(session, theDefaultLogin());
+    }
+
     public void carryInto(Path transcript, Path workingDirectory) {
-        Path carried = sessionsOfTheDefaultLogin().resolve(folderOf(workingDirectory)).resolve(transcript.getFileName());
+        Path carried = logins.sessionsOf(theDefaultLogin()).resolve(folderOf(workingDirectory)).resolve(transcript.getFileName());
         if (Files.exists(carried)) {
             return;
         }
@@ -53,8 +58,8 @@ public class ClaudeSessions {
         }
     }
 
-    private Path sessionsOfTheDefaultLogin() {
-        return logins.sessionsOf(machine.claudeLogins().named(LoginName.DEFAULT));
+    private Login theDefaultLogin() {
+        return machine.claudeLogins().named(LoginName.DEFAULT);
     }
 
     static String folderOf(Path workingDirectory) {

@@ -128,7 +128,7 @@ class SupervisionRulesTest {
     private static Worker launched() {
         return Worker.launched(WorkerId.first(new TaskId("fit-lamp")), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 7, LAUNCHED, "@1", 8),
-                new WorkerLaunch(LaunchKind.DISPATCH, LAUNCHED, BOOT));
+                new WorkerLaunch(LaunchKind.DISPATCH, LAUNCHED, BOOT, LoginName.DEFAULT));
     }
 
     private static StatusReport report(StatusState state, Instant until) {

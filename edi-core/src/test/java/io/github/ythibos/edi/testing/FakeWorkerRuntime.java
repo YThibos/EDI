@@ -32,6 +32,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final Set<UUID> sessionsWithoutATranscript = new HashSet<>();
     private final Map<LoginName, String> unreadyLogins = new HashMap<>();
     private final List<Login> readinessChecks = new ArrayList<>();
+    private final List<Login> transcriptLookups = new ArrayList<>();
+    private LoginMismatch loginMismatch;
     private PaneState pane = PaneState.IDLE_PROMPT;
     private List<String> mirrored = List.of("\u001b[1m❯\u001b[0m");
     private int mirrors;
@@ -137,8 +139,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
-    public synchronized boolean hasATranscriptOf(UUID session) {
+    public synchronized boolean hasATranscriptOf(UUID session, Login login) {
+        transcriptLookups.add(login);
         return !sessionsWithoutATranscript.contains(session);
+    }
+
+    @Override
+    public synchronized Optional<LoginMismatch> loginMismatchOf(String transcript, Login login) {
+        return transcript == null ? Optional.empty() : Optional.ofNullable(loginMismatch);
     }
 
     @Override
@@ -180,6 +188,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized List<Login> readinessChecks() {
         return List.copyOf(readinessChecks);
+    }
+
+    public synchronized List<Login> transcriptLookups() {
+        return List.copyOf(transcriptLookups);
+    }
+
+    public synchronized void runsEverySessionIn(LoginMismatch mismatch) {
+        loginMismatch = mismatch;
     }
 
     public synchronized void leaveNoTranscriptOf(UUID session) {

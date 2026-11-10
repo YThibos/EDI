@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -96,6 +97,6 @@ class WorkerDetailTextTest {
     private static Worker launched() {
         return Worker.launched(WorkerId.first(LAMP), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, AT, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, AT, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, AT, new BootId("boot"), LoginName.DEFAULT));
     }
 }

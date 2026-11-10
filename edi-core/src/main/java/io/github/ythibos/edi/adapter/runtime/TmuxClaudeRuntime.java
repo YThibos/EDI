@@ -43,6 +43,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final String mise;
     private final MiseTrust miseTrust;
     private final ClaudeLoginReadiness readiness;
+    private final ClaudeLoginFiles logins;
     private final String edi;
 
     public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, ClaudeLoginFiles logins, JsonMapper json,
@@ -58,6 +59,7 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.mise = mise.isBlank() ? Program.MISE.executable() : mise;
         this.miseTrust = new MiseTrust(programs, this.mise, Path.of(System.getProperty("user.home")));
         this.readiness = new ClaudeLoginReadiness(programs, this.claudeCode, logins, json, System.getenv().keySet());
+        this.logins = logins;
         this.edi = edi;
     }
 
@@ -124,8 +126,13 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
-    public boolean hasATranscriptOf(UUID session) {
-        return sessions.transcriptOf(session).isPresent();
+    public boolean hasATranscriptOf(UUID session, Login login) {
+        return sessions.transcriptOf(session, login).isPresent();
+    }
+
+    @Override
+    public Optional<LoginMismatch> loginMismatchOf(String transcript, Login login) {
+        return transcript == null ? Optional.empty() : logins.mismatchOf(Path.of(transcript), login);
     }
 
     @Override

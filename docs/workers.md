@@ -51,10 +51,12 @@ A worker's `needs-decision` or `blocked` comes back to the primary as a `questio
 ## Recovery
 
 Two or more dead workers go on a numbered outage hold list that `edi recover` answers one number at a time, resuming the recorded session in the task's own copy ([recovery](decisions/recovery.md)).
-A worker whose context is full, whose session left no transcript, or whose project runs on another Claude login than `default` (see [Claude logins](configuration.md#claude-logins)), cannot be resumed, so `edi worker relaunch` and `edi recover <n> resume` start it afresh in its own copy and say so; every fresh start writes `handover.md` beside the brief with the branch, the commits, the uncommitted changes, the pipeline, the plan and the last status ([recovery](decisions/recovery.md)).
+A resume runs on the Claude login the worker was launched on (see [Claude logins](configuration.md#claude-logins)).
+A worker whose context is full, or whose session left no transcript on that login, cannot be resumed, so `edi worker relaunch` and `edi recover <n> resume` start it afresh in its own copy on its project's login and say so; every fresh start writes `handover.md` beside the brief with the branch, the commits, the uncommitted changes, the pipeline, the plan and the last status ([recovery](decisions/recovery.md)).
 
 ```sh
 edi worker relaunch fit-lamp                        # resume a dead or stopped worker's session in its own copy, or start a full context afresh
+edi worker relaunch fit-lamp --fresh                # start a dead or stopped worker afresh with a handover, on the captain's word
 edi worker stop fit-lamp                            # signal the worker's processes and what it left running in its copy
 edi recover                                         # put dead workers on the numbered outage hold list and show it
 edi recover 2 resume                                # answer one number, as the captain named it

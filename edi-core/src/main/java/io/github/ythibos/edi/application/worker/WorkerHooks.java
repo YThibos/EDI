@@ -9,21 +9,26 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
+import io.github.ythibos.edi.application.port.WorkerRuntime.LoginMismatch;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerNotified;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRanOnAnotherLogin;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStarted;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.worker.LimitStop;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -40,29 +45,29 @@ public class WorkerHooks {
     private final EventLog events;
     private final WorkerRuntime runtime;
     private final CountRecoveryCost recoveryCost;
+    private final StopWorker stopWorker;
+    private final MachineProfile machine;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public WorkerHooks(WorkerStore workers, InboxStore inbox, EventLog events, WorkerRuntime runtime, CountRecoveryCost recoveryCost, Clock clock,
-            TransactionTemplate transaction) {
+    public WorkerHooks(WorkerStore workers, InboxStore inbox, EventLog events, WorkerRuntime runtime, CountRecoveryCost recoveryCost,
+            StopWorker stopWorker, MachineProfile machine, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.inbox = inbox;
         this.events = events;
         this.runtime = runtime;
         this.recoveryCost = recoveryCost;
+        this.stopWorker = stopWorker;
+        this.machine = machine;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public HookAnswer sessionStarted(WorkerId id, UUID session, String transcript) {
-        transaction.executeWithoutResult(_ -> {
-            Instant now = clock.now();
-            Worker worker = WorkerLookup.serving(workers, id);
-            workers.update(worker.started(session, transcript, now));
-            if (worker.startedAt() == null) {
-                events.record(new WorkerStarted(id.task(), id), Actor.worker(id), now);
-            }
-        });
+        boolean onAnotherLogin = transaction.execute(_ -> recordedStartRanOnAnotherLogin(id, session, transcript));
+        if (onAnotherLogin) {
+            stopWorker.stop(new TaskReference.ById(id.task()), Actor.CORE);
+        }
         return HookAnswer.PROCEED;
     }
 
@@ -127,6 +132,25 @@ public class WorkerHooks {
         });
         recoveryCost.countWhenARecovery(ended);
         return HookAnswer.PROCEED;
+    }
+
+    private boolean recordedStartRanOnAnotherLogin(WorkerId id, UUID session, String transcript) {
+        Instant now = clock.now();
+        Worker worker = WorkerLookup.serving(workers, id);
+        workers.update(worker.started(session, transcript, now));
+        if (worker.startedAt() != null) {
+            return false;
+        }
+        events.record(new WorkerStarted(id.task(), id), Actor.worker(id), now);
+        return recordedALoginMismatch(worker, transcript, now);
+    }
+
+    private boolean recordedALoginMismatch(Worker worker, String transcript, Instant now) {
+        LoginName recorded = worker.launch().login();
+        Optional<LoginMismatch> mismatch = runtime.loginMismatchOf(transcript, machine.claudeLogins().named(recorded));
+        mismatch.ifPresent(found -> events.record(new WorkerRanOnAnotherLogin(worker.id().task(), worker.id(), recorded, found.ranIn().toString(),
+                found.shouldHaveRunIn().toString()), Actor.CORE, now));
+        return mismatch.isPresent();
     }
 
     private List<InboxMessage> unreceived(WorkerId id) {

@@ -136,6 +136,14 @@ public final class PrivateTmuxServer implements AutoCloseable {
         return output;
     }
 
+    public boolean awaitClosed(WorkerWindow window) {
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
+        while (System.nanoTime() < deadline && tmux.windowIds().contains(window.windowId())) {
+            pause();
+        }
+        return !tmux.windowIds().contains(window.windowId());
+    }
+
     public List<String> awaitLines(WorkerWindow window, Predicate<List<String>> shown) {
         long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
         List<String> lines = visibleLines(window);

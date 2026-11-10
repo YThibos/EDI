@@ -19,7 +19,8 @@ A dispatch, a relaunch and a deferred launch first require the login to be ready
 `claude auth status` runs without the inherited `CLAUDE*` variables the worker's command withholds (`ClaudeCommandLine.withheldFromClaudeCode`), so it judges the environment the worker starts in.
 Nothing but that exit code is read from Claude Code, and no credentials file is opened; the refusal names the login, what it lacks and the command that fixes it.
 EDI creates nothing else in a login's directory: the captain finishes its first run once and links their own skills, one by one, and `settings.json` into it, as the configuration guide describes.
-Until a relaunch records and keeps its login, a resume of a worker whose project runs on another login than `default` starts fresh with a handover on the project's login, and `ClaudeSessions` looks for transcripts in the `default` login's directory only.
+Every launch records its login on the worker by name, never its directory, and a resume runs on the recorded login, whose sessions folder `ClaudeSessions` searches for its transcript, while a dispatch and a fresh start take the login the project's registry entry names at that moment ([recovery](recovery.md)).
+A worker's first hook proves its login: a transcript path outside the recorded login's directory stops the worker, and the event names both directories.
 The core's setting `edi.workers.claude-home`, the user's home by default, names the home whose `.claude` and `.claude.json` are Claude Code's own directory, so a test names its directories through that setting or the machine profile.
 
 ## Why
@@ -41,7 +42,6 @@ Checking the global configuration before asking `claude auth status` keeps that 
 - Good: a second subscription carries the projects the registry assigns to it, with the same harness, guard, hooks and supervision as any other worker.
 - Good: an unready login is a refusal at dispatch with the fix in it, not a missed launch.
 - Bad: a dispatch checks its login twice, once before its branch is reserved and once more at the launch, and a ship that plans its work in a research task first checks three times, so `claude auth status` adds about half a second per check while the launcher holds its lock; a relaunch and a deferred launch check once.
-- Bad: until a relaunch keeps its login, a worker on another login than `default` loses its session at every relaunch and continues from a handover.
 - Bad: a core started with `CLAUDE_CONFIG_DIR` exported no longer passes it on; the profile has to name the `default` login's directory instead.
 
 ## When to revisit
@@ -51,3 +51,4 @@ When Claude Code offers a login per session without a configuration directory, o
 ## How we got here
 
 - 10/11/2026: two research runs measured two configuration directories side by side, and the captain chose the profile's named logins, a login per registry entry, `default` as Claude Code's own directory and a readiness check at every dispatch (EDI-249, EDI-253).
+- 10/11/2026: a worker records the login it was launched on, so a relaunch resumes its session on that login, and its first hook proves it (EDI-254).
