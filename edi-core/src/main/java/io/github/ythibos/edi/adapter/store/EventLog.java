@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -91,6 +92,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerBusyTooLong;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerLaunchFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerNotified;
+import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRanOnAnotherLogin;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerSessionEnded;
@@ -174,6 +176,13 @@ public class EventLog {
                 .param("task", task.value())
                 .query((row, _) -> loggedEvent(row))
                 .list();
+    }
+
+    public Optional<TaskId> latestTaskActedOnBy(Set<Actor> actors) {
+        return store.sql("select task_id from event where actor in (:actors) and task_id is not null order by sequence desc limit 1")
+                .param("actors", actors.stream().map(Actor::name).toList())
+                .query((row, _) -> new TaskId(row.getString("task_id")))
+                .optional();
     }
 
     public long latestSequence() {
@@ -269,6 +278,10 @@ public class EventLog {
             case WorkerSessionEnded ended -> payload.put("worker", ended.worker().toString()).put("reason", ended.reason());
             case WorkerTurnEnded ended -> payload.put("worker", ended.worker().toString());
             case WorkerStoppedOnAnError stopped -> payload.put("worker", stopped.worker().toString()).put("error", stopped.error());
+            case WorkerRanOnAnotherLogin ran -> payload.put("worker", ran.worker().toString())
+                    .put("login", ran.login().value())
+                    .put("ranIn", ran.ranIn())
+                    .put("shouldHaveRunIn", ran.shouldHaveRunIn());
             case UsageLimitReached reached -> payload.put("worker", reached.worker().toString())
                     .put("limit", reached.limit().name())
                     .put("resetsAt", Columns.text(reached.limit().resetsAt()));

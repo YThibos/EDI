@@ -14,6 +14,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 import io.github.ythibos.edi.testing.InstalledPrograms;
@@ -54,10 +56,12 @@ public final class PrivateTmuxServer implements AutoCloseable {
         return tmux.socket();
     }
 
-    public TmuxClaudeRuntime runtime(Path claudeConfiguration, String claudeCode, String mise) {
+    public TmuxClaudeRuntime runtime(Path claudeCodesHome, String claudeCode, String mise) {
         JsonMapper json = new JsonMapper();
-        return new TmuxClaudeRuntime(tmux, new TmuxPaneProbe(), new ClaudeWorkspaceTrust(claudeConfiguration, json),
-                new ClaudeSessions(claudeConfiguration.resolve("projects")), json, new ExternalPrograms(), claudeCode, mise, STAND_IN_EDI);
+        ClaudeLoginFiles logins = new ClaudeLoginFiles(claudeCodesHome);
+        ClaudeSessions sessions = new ClaudeSessions(logins, new MachineProfile(new EdiHome(claudeCodesHome.resolve("edi-home"))));
+        return new TmuxClaudeRuntime(tmux, new TmuxPaneProbe(), new ClaudeWorkspaceTrust(logins, json), sessions, logins, json, new ExternalPrograms(),
+                claudeCode, mise, STAND_IN_EDI);
     }
 
     public WorkerWindow windowShowing(String fixture, Path directory, Path received) throws IOException {
@@ -130,6 +134,14 @@ public final class PrivateTmuxServer implements AutoCloseable {
             Thread.currentThread().interrupt();
         }
         return output;
+    }
+
+    public boolean awaitClosed(WorkerWindow window) {
+        long deadline = System.nanoTime() + Patience.FOR_REAL_WORK.toNanos();
+        while (System.nanoTime() < deadline && tmux.windowIds().contains(window.windowId())) {
+            pause();
+        }
+        return !tmux.windowIds().contains(window.windowId());
     }
 
     public List<String> awaitLines(WorkerWindow window, Predicate<List<String>> shown) {

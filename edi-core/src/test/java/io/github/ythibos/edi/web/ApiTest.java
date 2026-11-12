@@ -44,6 +44,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -64,6 +65,7 @@ class ApiTest {
     private static final WorkerWindow WINDOW_OF_NO_PROCESS = new WorkerWindow("edi-test", ABOVE_THE_HIGHEST_LINUX_PID + 1,
             Instant.parse("2026-10-15T09:00:00Z"), "@1", ABOVE_THE_HIGHEST_LINUX_PID + 2);
     private static final String JSON = "application/json";
+    private static final String CREDENTIALS = ".credentials.json";
 
     @TempDir
     private static Path home;
@@ -81,6 +83,11 @@ class ApiTest {
     static void prepareTheHome() throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/projects.yaml"), Intakes.REGISTRY);
+        Files.writeString(home.resolve("config/machine.yaml"), "claude:\n  logins:\n    second: { configDirectory: " + home.resolve("logins/second") + " }\n");
+        for (Path login : List.of(home.resolve("claude-home/.claude"), home.resolve("logins/second"))) {
+            Files.createDirectories(login);
+            Files.writeString(login.resolve(CREDENTIALS), "{\"stand-in\":\"for the test only\"}\n");
+        }
     }
 
     @DynamicPropertySource
@@ -89,6 +96,7 @@ class ApiTest {
         properties.add("edi.checkout", () -> home.resolve("checkout").toString());
         properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
         properties.add("edi.supervision.round", () -> "PT1H");
+        properties.add("edi.workers.claude-home", () -> home.resolve("claude-home").toString());
     }
 
     @Test
@@ -391,6 +399,25 @@ class ApiTest {
     }
 
     @Test
+    void refusesAWorkerAndThePrimaryTheCredentialsOfEveryClaudeLogin() throws Exception {
+        String worker = workerTokenFor("api-credentials");
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+
+        for (Path login : List.of(home.resolve("claude-home/.claude"), home.resolve("logins/second"))) {
+            String read = "{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"" + login.resolve(CREDENTIALS) + "\"},\"cwd\":\"/tmp\"}";
+            String shell = "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"cat " + login.resolve(CREDENTIALS) + "\"},\"cwd\":\"/tmp\"}";
+            String search = "{\"tool_name\":\"Glob\",\"tool_input\":{\"pattern\":\".cred*\",\"path\":\"" + login + "\"},\"cwd\":\"/tmp\"}";
+
+            assertThat(hook(worker, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
+            assertThat(hook(worker, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "this command touches a secret");
+            assertThat(hook(worker, "pre-tool-use", search).body()).as(search).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
+            assertThat(primaryHook(primary, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
+            assertThat(primaryHook(primary, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "edi captain said");
+        }
+    }
+
+    @Test
     void storesWhatTheCaptainTypesAndChoosesInADialogAndListsItForThePrimaryAlone() throws Exception {
         String worker = workerTokenFor("api-dialog");
         UUID primary = UUID.randomUUID();
@@ -434,6 +461,58 @@ class ApiTest {
                 choice -> assertThat(choice).matches("  5  \\d\\d:\\d\\d  dialog answer  The brass one \\(with notes\\) - to: Which lamp\\?"),
                 another -> assertThat(another).matches("  6  \\d\\d:\\d\\d  dialog answer  Today - to: When\\?"));
         assertRefusal(toTheWorker, 403, "edi captain messages is the primary's to run; a worker reports through edi status and reads edi inbox.");
+    }
+
+    @Test
+    void catchesTheCaptainsSparkAtTheHookAndThePrimarysByCommandListsThemAndSortsThem() throws Exception {
+        String worker = workerTokenFor("api-spark");
+        UUID primary = UUID.randomUUID();
+        UUID standby = UUID.randomUUID();
+        primaryHook(standby, "session-start", "{}");
+        primaryHook(primary, "session-start", "{}");
+
+        HttpResponse<String> heard = primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Spark: a tide clock on the harbour wall\"}");
+        HttpResponse<String> plain = primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Carry on with the lamp.\"}");
+        HttpResponse<String> caught = send(inSession(primary, "/api/sparks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"text\":\"Log the lamp's hours\\nper night\",\"project\":\"harness\"}")));
+        HttpResponse<String> fromTheTerminal = post("/api/sparks", "{\"text\":\"A spare bulb\",\"task\":\"api-spark\"}", TEXT);
+        HttpResponse<String> byTheWorker = send(as(worker, "/api/sparks", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{\"text\":\"Mine\"}")));
+        HttpResponse<String> byTheStandby = send(inSession(standby, "/api/sparks", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"text\":\"A second lamp\"}")));
+        HttpResponse<String> listed = get("/api/sparks", TEXT);
+        HttpResponse<String> listedAsJson = get("/api/sparks", JSON);
+        HttpResponse<String> backlogged = post("/api/sparks/1/backlog", "{\"key\":\"HRN-12\"}", TEXT);
+        HttpResponse<String> folded = post("/api/sparks/2/fold", "{\"key\":\"HRN-3\"}", TEXT);
+        HttpResponse<String> dropped = post("/api/sparks/3/drop", "{\"reason\":\"The store keeps spares.\"}", TEXT);
+        HttpResponse<String> again = post("/api/sparks/3/drop", "{\"reason\":\"Twice.\"}", TEXT);
+        HttpResponse<String> unknown = post("/api/sparks/9/backlog", "{\"key\":\"HRN-12\"}", TEXT);
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+        primaryHook(standby, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(new JsonMapper().readTree(heard.body()).path("hookSpecificOutput").path("additionalContext").asString())
+                .isEqualTo("The captain's message is a spark: you caught it as spark 1, focused on the task api-spark, and it waits for the weekly"
+                        + " gardening. Acknowledge it in one line and carry on with the work in hand; do not act on the idea itself.");
+        assertThat(plain.statusCode()).isEqualTo(204);
+        assertThat(caught.statusCode()).isEqualTo(201);
+        assertThat(caught.body()).isEqualTo("Caught spark 2 from the primary, focused on the project harness; it waits for the weekly gardening.\n");
+        assertThat(fromTheTerminal.body()).isEqualTo("Caught spark 3 from the captain, focused on the task api-spark; it waits for the weekly gardening.\n");
+        assertRefusal(byTheWorker, 403, "edi spark is the primary's to run; a worker reports through edi status and reads edi inbox.");
+        assertThat(byTheStandby.statusCode()).isEqualTo(403);
+        assertThat(byTheStandby.body()).startsWith("This session is standby: the captain typed last in another EDI session");
+        assertThat(listed.body().lines().toList()).satisfiesExactly(
+                heading -> assertThat(heading).isEqualTo("Open sparks (3)"),
+                first -> assertThat(first).matches("  1  \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\S+  captain  task api-spark   a tide clock on the harbour wall"),
+                second -> assertThat(second).matches("  2  \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\S+  primary  project harness  Log the lamp's hours"),
+                continued -> assertThat(continued).isEqualTo("      per night"),
+                third -> assertThat(third).matches("  3  \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\S+  captain  task api-spark   A spare bulb"));
+        assertThat(listedAsJson.body()).contains("\"number\":1", "\"text\":\"a tide clock on the harbour wall\"", "\"author\":\"captain\"",
+                "\"session\":\"" + primary + "\"", "\"focus\":{\"task\":\"api-spark\",\"project\":null}", "\"sorting\":null,\"open\":true");
+        assertThat(backlogged.body()).isEqualTo("Spark 1 is backlogged as HRN-12.\n");
+        assertThat(folded.body()).isEqualTo("Spark 2 is folded into HRN-3.\n");
+        assertThat(dropped.body()).isEqualTo("Dropped spark 3: The store keeps spares.\n");
+        assertRefusal(again, 409, "Spark 3 was already dropped; a spark is sorted once.");
+        assertRefusal(unknown, 404, "No spark is numbered 9; edi spark list shows the open ones.");
+        assertThat(get("/api/sparks", TEXT).body()).isEqualTo("Open sparks (0)\n");
     }
 
     @Test
@@ -680,7 +759,7 @@ class ApiTest {
         workers.insert(Worker.launched(WorkerId.first(id), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
                 WINDOW_OF_NO_PROCESS,
-                new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null)), token.digest());
+                new WorkerLaunch(LaunchKind.DISPATCH, Instant.parse("2026-10-15T09:00:00Z"), null, LoginName.DEFAULT)), token.digest());
         return Files.readString(token.file());
     }
 

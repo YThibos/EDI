@@ -41,6 +41,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -230,7 +231,7 @@ class TurnReportPresenterTest {
     private static Worker asking(Task task, String question) {
         Worker launched = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, NOW, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, NOW, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, NOW, new BootId("boot"), LoginName.DEFAULT));
         return launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("socket"), null, question), NOW);
     }
 

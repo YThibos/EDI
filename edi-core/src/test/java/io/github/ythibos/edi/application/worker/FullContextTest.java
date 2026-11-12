@@ -128,7 +128,7 @@ class FullContextTest {
         home.workerHooks().promptSubmitted(lamp.id(), "Fit the lamp.", null);
         home.recordStatus().report(lamp.id(), StatusState.WORKING, null, null, "commit 1 of 2 done; next: the brass horn");
         FixtureRepository.at(copy).write("lamp.txt", "brass\n").commit("HRN-3 Fit the lamp").write("horn.txt", "half a horn\n");
-        home.pipelineRuns().save(lamp.id().task(), new PipelineRun("01RUN", "awaiting_approval", "review", null, null), home.clock().now());
+        home.pipelineRuns().save(lamp.id().task(), new PipelineRun("01RUN", "awaiting_approval", "review", null, null, false), home.clock().now());
         home.runtime().transcriptEndsOnAFullContextAt(home.clock().now());
         home.noticeFullContexts().notice();
         home.workers().update(home.workers().get(lamp.id()).orElseThrow().stopRequested(home.clock().now()));

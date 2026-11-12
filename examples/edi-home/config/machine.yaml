@@ -7,6 +7,9 @@ workers:
       ignoresEffort: true
   disallowedTools: []
   permissionMode: bypass
+claude:
+  logins:
+    hobby: { configDirectory: ~/.claude-hobby }
 supervision:
   staleAfter: PT20M
   pauseResurface: PT4H

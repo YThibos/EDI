@@ -49,4 +49,4 @@ When a delivery mode lands work without its commits or content reaching the base
 - 17/10/2026: slice S7 retired board listeners at cleanup; slice S8 shared the retirement with dropping and discarding.
 - 21/10/2026: a merge the forge shows started to hand a busy worker's work over (EDI-23).
 - 09/11/2026: the pipeline's spend had been read with its cache reads and writes counted again as input since 2 November 2026, so `edi task recount-costs` recounts the costs recorded since a day (EDI-235).
-- 09/11/2026: the stored stage replaced the task's state, so a cleanup moves the task through LANDED to RETIRED and a scout's accepted done is its DELIVERED stage (EDI-85).
+- 12/11/2026: the stored stage replaced the task's state, so a cleanup moves the task through LANDED to RETIRED and a scout's accepted done is its DELIVERED stage (EDI-85).

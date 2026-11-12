@@ -39,7 +39,7 @@ class StageMigrationTest {
     @BeforeEach
     void storeATaskInEveryStateBeforeStages() throws IOException {
         store = StoreFile.openedAt(directory.resolve("edi.db"));
-        Flyway.configure().dataSource(store).target("22").load().migrate();
+        Flyway.configure().dataSource(store).target("25").load().migrate();
         jdbc = JdbcClient.create(store);
         task("fit-horn", "ship", "queued", null);
         task("fit-lamp", "ship", "in-flight", null);

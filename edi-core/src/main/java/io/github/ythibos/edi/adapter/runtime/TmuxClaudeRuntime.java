@@ -42,10 +42,12 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     private final String claudeCode;
     private final String mise;
     private final MiseTrust miseTrust;
+    private final ClaudeLoginReadiness readiness;
+    private final ClaudeLoginFiles logins;
     private final String edi;
 
-    public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, JsonMapper json, ExternalPrograms programs,
-            @Value("${edi.workers.claude-code:}") String claudeCode, @Value("${edi.workers.mise:}") String mise,
+    public TmuxClaudeRuntime(Tmux tmux, TmuxPaneProbe probe, ClaudeWorkspaceTrust trust, ClaudeSessions sessions, ClaudeLoginFiles logins, JsonMapper json,
+            ExternalPrograms programs, @Value("${edi.workers.claude-code:}") String claudeCode, @Value("${edi.workers.mise:}") String mise,
             @Value("${edi.workers.edi:}") String edi) {
         this.tmux = tmux;
         this.probe = probe;
@@ -56,6 +58,8 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
         this.claudeCode = claudeCode.isBlank() ? Program.CLAUDE_CODE.executable() : claudeCode;
         this.mise = mise.isBlank() ? Program.MISE.executable() : mise;
         this.miseTrust = new MiseTrust(programs, this.mise, Path.of(System.getProperty("user.home")));
+        this.readiness = new ClaudeLoginReadiness(programs, this.claudeCode, logins, json, System.getenv().keySet());
+        this.logins = logins;
         this.edi = edi;
     }
 
@@ -65,13 +69,18 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
+    public void requireReady(Login login) {
+        readiness.requireReady(login);
+    }
+
+    @Override
     public WorkerWindow launch(Launch launch) {
         LocalHooks.refuseHooksIn(launch.worktree(), json);
-        trust.trust(launch.projectClone());
+        trust.trust(launch.projectClone(), launch.login());
         Path settings = WorkerSettingsFile.writtenInto(launch.stateDirectory(), ediCommand(), json);
         List<String> claude = ClaudeCommandLine.of(claudeCode, mise, miseTrust.trusts(launch.projectClone()), launch, settings,
                 ClaudeLayer.read(ClaudeLayer.WORKER_SYSTEM_PROMPT), System.getenv().keySet());
-        OpenedWindow opened = tmux.openWindow(launch.worker().task().value(), launch.worktree(), launch.environment(), claude);
+        OpenedWindow opened = tmux.openWindow(launch.worker().task().value(), launch.worktree(), ClaudeCommandLine.windowEnvironment(launch), claude);
         ServerIdentity server = tmux.server();
         return new WorkerWindow(tmux.socket(), server.pid(), server.startedAt(), opened.windowId(), opened.panePid());
     }
@@ -117,8 +126,18 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
-    public boolean hasATranscriptOf(UUID session) {
-        return sessions.transcriptOf(session).isPresent();
+    public boolean hasATranscriptOf(UUID session, Login login) {
+        return sessions.transcriptOf(session, login).isPresent();
+    }
+
+    @Override
+    public Optional<LoginMismatch> loginMismatchOf(String transcript, Login login) {
+        return transcript == null ? Optional.empty() : logins.mismatchOf(Path.of(transcript), login);
+    }
+
+    @Override
+    public Path credentialsOf(Login login) {
+        return logins.credentialsOf(login);
     }
 
     @Override

@@ -82,7 +82,7 @@ public class FollowMerges {
 
     public void followTheRequestOf(TaskId task) {
         try {
-            followedOnceItExists(transaction.execute(_ -> context.of(task)));
+            followedAsTheForgeShowsIt(transaction.execute(_ -> context.of(task)));
         } catch (Refusal | ProgramFailure unfollowable) {
             LOG.warn("Could not look up the merge request of {}: {}", task, unfollowable.getMessage());
         }
@@ -116,7 +116,7 @@ public class FollowMerges {
         }
         MergeRequestView view = viewOf(delivery);
         if (!view.isMerged()) {
-            noticeAChange(delivery, view, actor);
+            noticeAClosure(delivery, view, actor);
             throw notMerged(view);
         }
         return followed(delivery, view, actor);
@@ -155,16 +155,14 @@ public class FollowMerges {
         return forge;
     }
 
-    private void noticeAChange(Delivery delivery, MergeRequestView view, Actor actor) {
-        if (!delivery.changesWith(view)) {
+    private void noticeAClosure(Delivery delivery, MergeRequestView view, Actor actor) {
+        if (view.state() != MergeRequestState.CLOSED || !delivery.changesWith(view)) {
             return;
         }
         transaction.executeWithoutResult(_ -> {
             Instant now = clock.now();
             deliveries.save(delivery.observed(view, now));
-            if (delivery.closesWith(view)) {
-                events.record(new DraftClosed(delivery.task(), delivery.address()), actor, now);
-            }
+            events.record(new DraftClosed(delivery.task(), delivery.address()), actor, now);
         });
     }
 
@@ -251,9 +249,12 @@ public class FollowMerges {
         return cleanedUpOnceMerged(merged, actor);
     }
 
-    private void followedOnceItExists(Workplace workplace) {
+    private void followedAsTheForgeShowsIt(Workplace workplace) {
+        TaskId task = workplace.task().id();
         if (transaction.execute(_ -> records.awaitsTheRequestOf(workplace))) {
-            records.requestFrom(workplace).ifPresent(request -> followedOnceFound(workplace.task().id(), request, Actor.CORE));
+            records.requestFrom(workplace).ifPresent(request -> followedOnceFound(task, request, Actor.CORE));
+        } else {
+            transaction.execute(_ -> records.followedDeliveryOf(task)).filter(Delivery::isOpen).ifPresent(this::observed);
         }
     }
 
@@ -291,8 +292,10 @@ public class FollowMerges {
         MergeRequestView view = viewOf(delivery);
         if (view.isMerged()) {
             followed(delivery, view, Actor.CORE);
+        } else if (view.state() == MergeRequestState.CLOSED) {
+            noticeAClosure(delivery, view, Actor.CORE);
         } else {
-            noticeAChange(delivery, view, Actor.CORE);
+            keptAsTheForgeShowsIt(delivery, view);
         }
     }
 

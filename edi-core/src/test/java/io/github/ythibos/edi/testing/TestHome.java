@@ -11,7 +11,6 @@ import java.util.UUID;
 import javax.sql.DataSource;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.EdiHome;
@@ -32,6 +31,7 @@ import io.github.ythibos.edi.adapter.machine.MachineBoot;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.ProcessTable;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.runtime.ClaudeLoginFiles;
 import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
@@ -47,12 +47,14 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.MemoryCheckStore;
 import io.github.ythibos.edi.adapter.store.NoticeStore;
+import io.github.ythibos.edi.adapter.store.OneTransactionAtATime;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
+import io.github.ythibos.edi.adapter.store.SparkStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
@@ -131,6 +133,7 @@ import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.port.Tracker;
+import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.MeetingCalendar;
@@ -147,6 +150,8 @@ import io.github.ythibos.edi.application.primary.PrimaryWaitQuery;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
+import io.github.ythibos.edi.application.spark.CatchSpark;
+import io.github.ythibos.edi.application.spark.SortSpark;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
@@ -202,6 +207,8 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 public final class TestHome {
 
@@ -247,6 +254,7 @@ public final class TestHome {
     private final BoardStore boards;
     private final CaptainWordStore captainWords;
     private final CaptainMessageStore captainMessages;
+    private final SparkStore sparks;
     private final PresenceStore presence;
     private final AdoptionStore adoptions;
     private String oldPauseResurfaceSeconds = "";
@@ -264,13 +272,13 @@ public final class TestHome {
         this.forge = new FakeForge(ForgeKind.GITHUB, clock);
         this.gitLabForge = new FakeForge(ForgeKind.GITLAB, clock);
         this.jdbc = JdbcClient.create(store);
-        this.transaction = new TransactionTemplate(new JdbcTransactionManager(store));
+        this.transaction = new TransactionTemplate(new OneTransactionAtATime(store));
         this.tasks = new TaskStore(jdbc);
         this.decisions = new DecisionStore(jdbc);
         this.wakes = new WakeStore(jdbc);
         this.events = new EventLog(jdbc, json, wakes, _ -> { });
-        this.registry = new ProjectRegistry(home);
         this.machineProfile = new MachineProfile(home);
+        this.registry = new ProjectRegistry(home, machineProfile);
         this.dispatches = new DispatchStore(jdbc);
         this.workers = new WorkerStore(jdbc);
         this.inbox = new InboxStore(jdbc);
@@ -290,6 +298,7 @@ public final class TestHome {
         this.boards = new BoardStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
         this.captainMessages = new CaptainMessageStore(jdbc);
+        this.sparks = new SparkStore(jdbc);
         this.presence = new PresenceStore(jdbc, _ -> { });
         this.adoptions = new AdoptionStore(jdbc);
     }
@@ -327,6 +336,15 @@ public final class TestHome {
         Files.createDirectories(home.projectRegistry().getParent());
         Files.writeString(home.projectRegistry(), projectsYaml);
         return this;
+    }
+
+    public TestHome withTheClaudeLogin(String login, Path configDirectory) throws IOException {
+        YAMLMapper yaml = new YAMLMapper();
+        ObjectNode profile = (ObjectNode) yaml.readTree(Files.readString(home.machineProfile()));
+        ObjectNode claude = profile.get("claude") instanceof ObjectNode existing ? existing : profile.putObject("claude");
+        ObjectNode logins = claude.get("logins") instanceof ObjectNode existing ? existing : claude.putObject("logins");
+        logins.putObject(login).put("configDirectory", configDirectory.toString());
+        return writing("config/machine.yaml", yaml.writeValueAsString(profile));
     }
 
     public TestHome writing(String file, String content) throws IOException {
@@ -526,7 +544,7 @@ public final class TestHome {
     }
 
     public ClaudeSessions claudeSessions() {
-        return new ClaudeSessions(claudeSessionFolders());
+        return new ClaudeSessions(new ClaudeLoginFiles(home.root()), machineProfile());
     }
 
     public Path claudeSessionFolders() {
@@ -662,10 +680,14 @@ public final class TestHome {
     }
 
     public LaunchWorker launchWorker() {
+        return launchWorkerOn(runtime);
+    }
+
+    public LaunchWorker launchWorkerOn(WorkerRuntime workerRuntime) {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
-                isolatedCopies(), workerPlaces(), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
+                isolatedCopies(), new WorkerPlaces(workers, tasks, workerRuntime), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), runtime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), clock, transaction);
+                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {
@@ -853,7 +875,7 @@ public final class TestHome {
     }
 
     public WorkerHooks workerHooks() {
-        return new WorkerHooks(workers, inbox, events, runtime, countRecoveryCost(), clock, transaction);
+        return new WorkerHooks(workers, inbox, events, runtime, countRecoveryCost(), stopWorker(), machineProfile(), clock, transaction);
     }
 
     public GuardToolCall guardToolCall() {
@@ -898,6 +920,14 @@ public final class TestHome {
 
     public PrimaryWaitQuery primaryWaits() {
         return new PrimaryWaitQuery(primarySessions(), wakeStreams(), tasks, transaction);
+    }
+
+    public CatchSpark catchSpark() {
+        return new CatchSpark(sparks, tasks, events, registry, clock, transaction);
+    }
+
+    public SortSpark sortSpark() {
+        return new SortSpark(sparks, clock, transaction);
     }
 
     public PrimaryHooks primaryHooks() {

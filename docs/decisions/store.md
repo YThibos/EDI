@@ -20,13 +20,15 @@ Columns are strict SQLite types; times are ISO-8601 instants in UTC and days ISO
 Each slice adds the tables it writes in its own migration once it knows their columns, and each table has one store class that reads and writes it, such as `TaskStore`, `WorkerStore` or `DeliveryStore`.
 Derived facts are not stored twice: a worker's health and a worktree's path are computed, never kept.
 Every connection opens with SQLite's transaction mode `IMMEDIATE`, so each transaction takes the write lock when it begins; every use case runs inside one `TransactionTemplate` call, queries included, and there are no `@Transactional` annotations.
-`TestHome` builds the same use cases over a temporary store with a `JdbcTransactionManager`, so tests exercise the real transactions and rollbacks.
+The core's transaction manager, `OneTransactionAtATime`, lets one transaction at a time into the store, in the order they asked, so a transaction waiting for its turn parks in Java instead of in SQLite's busy handler.
+`TestHome` builds the same use cases over a temporary store with `OneTransactionAtATime`, so tests exercise the real transactions and rollbacks.
 
 ## Why
 
 One file, transactional, and no server: decision numbers become a sequence, and hook writes are serialised by the database instead of lock files.
 A query reads committed truth from plain tables, the history needed for timelines and answers is kept without being needed to compute the present, and a crash cannot leave a change without its event.
 Immediate transactions mean a command never fails because another committed while it was reading, and a refused command leaves nothing behind, not even a consumed number.
+SQLite's busy handler waits in native code, which pins a virtual thread to its carrier; with as many transactions waiting there as the machine has processors, the transaction holding the write lock could not run again to commit, and every waiter failed with `SQLITE_BUSY` after the busy timeout.
 
 ## Alternatives rejected
 
@@ -52,4 +54,5 @@ When EDI needs concurrent writers from more than one process, long-running reade
 - 15/10/2026: the specification chose SQLite with Flyway; slice S0 proved the driver and Flyway in the native image, and slice S1 created the first eight tables and made every transaction immediate.
 - 16/10/2026 to 19/10/2026: slices S3 to S10 added workers and inboxes, supervision state, deliveries, tracker and follower state, console sessions and boards, presence and memory, and migration and adoption, one migration each.
 - 21/10/2026: `V9__waiting_on_the_captain.sql` added board links and dropped dependencies on closed tasks.
-- 09/11/2026: `V24__the_stage_is_stored.sql` rebuilt `task` with `stage` in place of `state` and derived each task's stage once from the stored facts ([task-lifecycle](task-lifecycle.md), EDI-85).
+- 10/11/2026: transactions take their turn in `OneTransactionAtATime` before they reach SQLite, after waiters pinned in the busy handler starved the transaction holding the write lock and refused web requests with a server error.
+- 12/11/2026: `V26__the_stage_is_stored.sql` rebuilt `task` with `stage` in place of `state` and derived each task's stage once from the stored facts ([task-lifecycle](task-lifecycle.md), EDI-85).

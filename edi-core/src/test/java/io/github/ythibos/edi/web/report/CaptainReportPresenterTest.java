@@ -49,6 +49,7 @@ import io.github.ythibos.edi.domain.worker.HeavyRun;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.domain.worker.HeavyRuns.WorkerRun;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -137,7 +138,7 @@ class CaptainReportPresenterTest {
         Task lamp = filed("fit-lamp", 0);
         Worker asking = Worker.launched(WorkerId.first(lamp.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                         new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, FIRST_DAY, "@1", 2L),
-                        new WorkerLaunch(LaunchKind.DISPATCH, FIRST_DAY, new BootId("boot")))
+                        new WorkerLaunch(LaunchKind.DISPATCH, FIRST_DAY, new BootId("boot"), LoginName.DEFAULT))
                 .reported(new StatusReport(StatusState.BLOCKED, new StatusKey("socket"), null, "The socket is missing."), FIRST_DAY);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
                 List.of(new WorkerQuestion(lamp, asking, Duration.ofMinutes(5))));

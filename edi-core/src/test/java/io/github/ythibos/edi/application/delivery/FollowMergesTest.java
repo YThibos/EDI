@@ -117,6 +117,26 @@ class FollowMergesTest {
     }
 
     @Test
+    void seesAnOpenRequestLeaveDraftWhenItIsWatchedOrFollowedAfterItsPipelineMoves() throws IOException {
+        DispatchOutcome lamp = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(lamp, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, lamp);
+        DispatchOutcome horn = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"));
+        DeliveryFixtures.committedIn(horn, "horn.txt", "loud\n", "HRN-4 Fit the horn");
+        DeliveryFixtures.deliveredAsADraft(home, horn);
+        home.forge().marksReady(home.deliveries().of(LAMP).orElseThrow().address());
+
+        home.followMerges().watchTheOpenDrafts();
+        home.forge().marksReady(home.deliveries().of(HORN).orElseThrow().address());
+        boolean hornWasADraft = home.deliveries().of(HORN).orElseThrow().draft();
+        home.followMerges().followTheRequestOf(HORN);
+
+        assertThat(home.deliveries().of(LAMP).orElseThrow().draft()).isFalse();
+        assertThat(hornWasADraft).isTrue();
+        assertThat(home.deliveries().of(HORN).orElseThrow().draft()).isFalse();
+    }
+
+    @Test
     void followsTheOtherDraftsWhenTheForgeCannotShowOne() throws IOException {
         DispatchOutcome lamp = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         DeliveryFixtures.committedIn(lamp, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");

@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LimitPark;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.Worker.ReportedStatus;
@@ -37,7 +38,7 @@ public class WorkerStore {
             select task_id, incarnation, session_id, launch_kind, boot_id, category, model, effort, tmux_socket, server_pid,
                    server_started_at, window_id, pane_pid, activity, activity_at, launched_at, started_at, briefed_at, transcript_path,
                    ended_at, stop_requested_at, launch_failed_at, retired_at, status_state, status_key, status_until, status_text,
-                   status_at, done_check, limit_name, limit_resets_at, limit_parked_at, context_full_since
+                   status_at, done_check, limit_name, limit_resets_at, limit_parked_at, context_full_since, claude_login
             from worker
             """;
 
@@ -50,9 +51,10 @@ public class WorkerStore {
     public void insert(Worker worker, String tokenDigest) {
         WorkerWindow window = worker.window();
         store.sql("""
-                        insert into worker (id, task_id, incarnation, session_id, launch_kind, boot_id, category, model, effort, token_hash,
-                                            tmux_socket, server_pid, server_started_at, window_id, pane_pid, activity, activity_at, launched_at)
-                        values (:id, :task, :incarnation, :session, :launchKind, :boot, :category, :model, :effort, :token, :socket,
+                        insert into worker (id, task_id, incarnation, session_id, launch_kind, boot_id, claude_login, category, model, effort,
+                                            token_hash, tmux_socket, server_pid, server_started_at, window_id, pane_pid, activity, activity_at,
+                                            launched_at)
+                        values (:id, :task, :incarnation, :session, :launchKind, :boot, :login, :category, :model, :effort, :token, :socket,
                                 :serverPid, :serverStarted, :window, :panePid, :activity, :activityAt, :launched)""")
                 .param("id", worker.id().toString())
                 .param("task", worker.id().task().value())
@@ -60,6 +62,7 @@ public class WorkerStore {
                 .param("session", worker.session().toString())
                 .param("launchKind", worker.launch().kind().word())
                 .param("boot", Columns.textOf(worker.launch().boot()))
+                .param("login", worker.launch().login().value())
                 .param("category", worker.category().value())
                 .param("model", worker.route().model().value())
                 .param("effort", worker.route().namesAnEffort() ? worker.route().effort().word() : null)
@@ -172,7 +175,7 @@ public class WorkerStore {
     private static WorkerLaunch launch(ResultSet row) throws SQLException {
         String boot = row.getString("boot_id");
         return new WorkerLaunch(LaunchKind.named(row.getString("launch_kind")), Columns.instant(row.getString("launched_at")),
-                boot == null ? null : new BootId(boot));
+                boot == null ? null : new BootId(boot), new LoginName(row.getString("claude_login")));
     }
 
     private static ReportedStatus reportedStatus(ResultSet row) throws SQLException {

@@ -2,18 +2,23 @@ package io.github.ythibos.edi.adapter.runtime;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 
 final class ClaudeCommandLine {
 
+    static final String CONFIG_DIRECTORY = "CLAUDE_CONFIG_DIR";
+
     private static final String CLAUDE_CODE_SESSION_VARIABLES = "CLAUDE";
-    private static final String CLAUDE_CODE_CONFIGURATION = "CLAUDE_CONFIG_DIR";
     private static final List<String> GIT_COMMAND_SCOPE_SWITCHES = List.of("GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS");
     private static final List<String> GIT_COMMAND_SCOPE_ENTRIES = List.of("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_");
     private static final String NO_TOOL_INSTALLS_AT_LAUNCH = "MISE_EXEC_AUTO_INSTALL=false";
@@ -23,7 +28,7 @@ final class ClaudeCommandLine {
 
     static List<String> of(String claudeCode, String mise, boolean cloneTrustedByMise, Launch launch, Path settings, String systemPrompt,
             Set<String> inheritedVariables) {
-        List<String> words = new ArrayList<>(withoutInheritedOverrides(inheritedVariables));
+        List<String> words = new ArrayList<>(withoutInheritedOverrides(inheritedVariables, launch.login()));
         words.addAll(onTheCopysPinnedToolchain(mise, cloneTrustedByMise));
         words.add(claudeCode);
         if (!launch.disallowedTools().isEmpty()) {
@@ -41,14 +46,32 @@ final class ClaudeCommandLine {
         return words;
     }
 
-    private static List<String> withoutInheritedOverrides(Set<String> inheritedVariables) {
-        Stream<String> overrides = inheritedVariables.stream().filter(variable -> belongsToTheLaunchingSession(variable) || isAGitConfigurationEntry(variable));
-        Stream<String> unset = Stream.concat(GIT_COMMAND_SCOPE_SWITCHES.stream(), overrides).distinct().sorted();
-        return Stream.concat(Stream.of("env"), unset.flatMap(variable -> Stream.of("-u", variable))).toList();
+    static Map<String, String> windowEnvironment(Launch launch) {
+        Map<String, String> environment = new HashMap<>(launch.environment());
+        if (!launch.login().keepsClaudeCodesOwnDirectory()) {
+            environment.put(CONFIG_DIRECTORY, launch.login().configDirectory().toString());
+        }
+        return environment;
+    }
+
+    static Set<String> withheldFromClaudeCode(Login login, Set<String> inheritedVariables) {
+        Stream<String> launchingSession = inheritedVariables.stream().filter(ClaudeCommandLine::belongsToTheLaunchingSession);
+        return Stream.concat(launchingSession, claudeCodesOwnDirectoryFor(login)).collect(Collectors.toSet());
     }
 
     private static boolean belongsToTheLaunchingSession(String variable) {
-        return variable.startsWith(CLAUDE_CODE_SESSION_VARIABLES) && !variable.equals(CLAUDE_CODE_CONFIGURATION);
+        return variable.startsWith(CLAUDE_CODE_SESSION_VARIABLES) && !variable.equals(CONFIG_DIRECTORY);
+    }
+
+    private static Stream<String> claudeCodesOwnDirectoryFor(Login login) {
+        return login.keepsClaudeCodesOwnDirectory() ? Stream.of(CONFIG_DIRECTORY) : Stream.empty();
+    }
+
+    private static List<String> withoutInheritedOverrides(Set<String> inheritedVariables, Login login) {
+        Stream<String> gitOverrides = inheritedVariables.stream().filter(ClaudeCommandLine::isAGitConfigurationEntry);
+        Stream<String> unset = Stream.of(GIT_COMMAND_SCOPE_SWITCHES.stream(), gitOverrides, withheldFromClaudeCode(login, inheritedVariables).stream())
+                .flatMap(variables -> variables).distinct().sorted();
+        return Stream.concat(Stream.of("env"), unset.flatMap(variable -> Stream.of("-u", variable))).toList();
     }
 
     private static boolean isAGitConfigurationEntry(String variable) {

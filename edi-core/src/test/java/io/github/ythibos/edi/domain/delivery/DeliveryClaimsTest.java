@@ -220,13 +220,33 @@ class DeliveryClaimsTest {
 
     @Test
     void countsEveryRunStatusButAFinishedOneAsRunning() {
-        for (String finished : List.of("completed", "failed", "cancelled", "aborted")) {
-            assertThat(new PipelineRun("01RUN", finished, null, HEAD, null).isRunning()).as(finished).isFalse();
+        for (String finished : List.of("completed", "failed", "cancelled", "aborted", "checks_passed", "handed_off", "ci_monitor_interrupted")) {
+            assertThat(new PipelineRun("01RUN", finished, null, HEAD, null, false).isRunning()).as(finished).isFalse();
         }
         for (String running : List.of("pending", "running", "fixing", "awaiting-review")) {
-            assertThat(new PipelineRun("01RUN", running, "ci", HEAD, "").isRunning()).as(running).isTrue();
+            assertThat(new PipelineRun("01RUN", running, "ci", HEAD, "", false).isRunning()).as(running).isTrue();
         }
-        assertThat(new PipelineRun("01RUN", "running", " ", HEAD, "").activeStep()).isNull();
+        assertThat(new PipelineRun("01RUN", "running", " ", HEAD, "", false).activeStep()).isNull();
+    }
+
+    @Test
+    void stopsChangingTheRequestOnlyWhileItsOnlyStepWatchesChecksThatPassed() {
+        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", HEAD, "https://forge.example.org/team/harness/-/merge_requests/5", true);
+
+        assertThat(watching.stillChangesTheRequest()).isFalse();
+        assertThat(watching.withChecksPassed(false).stillChangesTheRequest()).as("a watch on pending, failing or fixed checks").isTrue();
+        assertThat(new PipelineRun("01RUN", "running", "review", HEAD, null, true).stillChangesTheRequest()).as("another step").isTrue();
+        assertThat(new PipelineRun("01RUN", "completed", null, HEAD, null, false).stillChangesTheRequest()).as("a completed run").isFalse();
+    }
+
+    @Test
+    void stopsChangingTheRequestAfterARunThatEndedShortOfCompletionOnlyWhenItsChecksHadPassed() {
+        for (String ended : List.of("checks_passed", "handed_off", "ci_monitor_interrupted", "failed", "cancelled")) {
+            PipelineRun passed = new PipelineRun("01RUN", ended, null, HEAD, "https://forge.example.org/team/harness/-/merge_requests/5", true);
+
+            assertThat(passed.stillChangesTheRequest()).as(ended + " on passed checks").isFalse();
+            assertThat(passed.withChecksPassed(false).stillChangesTheRequest()).as(ended + " before its checks passed").isTrue();
+        }
     }
 
     @Test

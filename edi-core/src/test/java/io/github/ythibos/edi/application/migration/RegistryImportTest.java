@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.fork.ForkProject;
+import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.registry.NewProject;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
@@ -96,7 +97,7 @@ class RegistryImportTest {
     void rewritesARegistryItCannotAppendTo() throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/projects.yaml"), "projects: [{ name: lighthouse, tracker: { kind: edi, projectKey: LHT } }]\n");
-        ProjectRegistry registry = new ProjectRegistry(new EdiHome(home));
+        ProjectRegistry registry = new ProjectRegistry(new EdiHome(home), new MachineProfile(new EdiHome(home)));
 
         Files.writeString(home.resolve("config/projects.yaml"), registry.contentWith(List.of(new NewProject(new ProjectName("ledger"), null, null,
                 DeliveryMode.LOCAL_BRANCH, null, null, false))));
@@ -113,6 +114,6 @@ class RegistryImportTest {
         if (!Files.exists(home.resolve("config/projects.yaml"))) {
             Files.writeString(home.resolve("config/projects.yaml"), REGISTERED);
         }
-        return new ProjectRegistry(new EdiHome(home));
+        return new ProjectRegistry(new EdiHome(home), new MachineProfile(new EdiHome(home)));
     }
 }

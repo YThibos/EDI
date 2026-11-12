@@ -19,4 +19,9 @@ class StoreConfiguration {
     DataSource store(EdiHome home) throws IOException {
         return StoreFile.openedAt(home.store());
     }
+
+    @Bean
+    OneTransactionAtATime transactionManager(DataSource store) {
+        return new OneTransactionAtATime(store);
+    }
 }

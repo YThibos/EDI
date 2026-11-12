@@ -1,9 +1,12 @@
 package io.github.ythibos.edi.testing;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -14,6 +17,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.worker.ErrorStop;
 import io.github.ythibos.edi.domain.worker.Keystroke;
 import io.github.ythibos.edi.domain.worker.LimitStop;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.WindowCheck;
@@ -23,10 +27,17 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public static final String SOCKET = "edi";
 
+    private static final String CREDENTIALS = ".credentials.json";
+
     private final List<Launch> launches = new ArrayList<>();
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
     private final Set<UUID> sessionsWithoutATranscript = new HashSet<>();
+    private final Map<LoginName, String> unreadyLogins = new HashMap<>();
+    private final List<Login> readinessChecks = new ArrayList<>();
+    private final List<Login> transcriptLookups = new ArrayList<>();
+    private LoginMismatch loginMismatch;
+    private Path claudeCodesOwnDirectory = Path.of("/nonexistent/claude-home/.claude");
     private PaneState pane = PaneState.IDLE_PROMPT;
     private List<String> mirrored = List.of("\u001b[1m❯\u001b[0m");
     private int mirrors;
@@ -45,6 +56,14 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     @Override
     public String socket() {
         return SOCKET;
+    }
+
+    @Override
+    public synchronized void requireReady(Login login) {
+        readinessChecks.add(login);
+        if (unreadyLogins.containsKey(login.name())) {
+            throw new Refusal(unreadyLogins.get(login.name()));
+        }
     }
 
     @Override
@@ -124,8 +143,19 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
-    public synchronized boolean hasATranscriptOf(UUID session) {
+    public synchronized boolean hasATranscriptOf(UUID session, Login login) {
+        transcriptLookups.add(login);
         return !sessionsWithoutATranscript.contains(session);
+    }
+
+    @Override
+    public synchronized Optional<LoginMismatch> loginMismatchOf(String transcript, Login login) {
+        return transcript == null ? Optional.empty() : Optional.ofNullable(loginMismatch);
+    }
+
+    @Override
+    public synchronized Path credentialsOf(Login login) {
+        return (login.keepsClaudeCodesOwnDirectory() ? claudeCodesOwnDirectory : login.configDirectory()).resolve(CREDENTIALS);
     }
 
     @Override
@@ -159,6 +189,26 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void failingEveryKeystroke() {
         paneFails = true;
+    }
+
+    public synchronized void loginIsNotReady(LoginName login, String refusal) {
+        unreadyLogins.put(login, refusal);
+    }
+
+    public synchronized List<Login> readinessChecks() {
+        return List.copyOf(readinessChecks);
+    }
+
+    public synchronized List<Login> transcriptLookups() {
+        return List.copyOf(transcriptLookups);
+    }
+
+    public synchronized void runsEverySessionIn(LoginMismatch mismatch) {
+        loginMismatch = mismatch;
+    }
+
+    public synchronized void keepsClaudeCodesOwnDirectoryIn(Path directory) {
+        claudeCodesOwnDirectory = directory;
     }
 
     public synchronized void leaveNoTranscriptOf(UUID session) {

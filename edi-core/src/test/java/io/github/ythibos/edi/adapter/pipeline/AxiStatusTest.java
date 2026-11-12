@@ -16,7 +16,7 @@ class AxiStatusTest {
     void readsTheRunningRunOfTheCurrentBranchWithItsActiveStep() throws IOException {
         assertThat(AxiStatus.currentRunIn(fixture("status-with-a-running-run.toon"), "feature/HRN-3")).contains(new PipelineRun(
                 "01M527P0FFESZMZCVXFT9VHVW5", "running", "ci", "aacda7bfd12398c1d7960f58d68177e003550ad7",
-                "https://github.com/example-owner/harness/pull/6"));
+                "https://github.com/example-owner/harness/pull/6", false));
     }
 
     @Test

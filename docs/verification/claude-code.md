@@ -220,3 +220,32 @@ Six lines were pasted into the composer with a bracketed paste (`tmux paste-buff
 - `PostToolUse` after an option was chosen carried a `tool_response` with `questions`, `answers`, such as `{"Which colour?": "Blue"}`, and `annotations` (`{}`), the shape of the transcript's `toolUseResult`, and its `tool_input` carried the same `answers` and `annotations`.
 
 Not verified: a note on a chosen option, since the 2.1.317 dialog offered no key to add one, so a non-empty `annotations` was not observed in a hook payload.
+
+## Two configuration directories, on 2.1.322
+
+Verified on Claude Code 2.1.322 and tmux 3.4 on WSL2, 10/11/2026, in throwaway directories, for the Claude logins ([claude-logins](../decisions/claude-logins.md)).
+No credentials file was opened: `claude auth status` was read by its exit code, or through `jq` for named keys only, and a credentials file by `stat -c '%n %a'`.
+Claude Code ran through `env -i` or with `CLAUDE_CONFIG_DIR` named on the command, so no variable of the checking session reached it.
+
+| Fact | Shown by |
+|---|---|
+| A directory that holds no login reports `loggedIn: false`, and `claude auth status` exits 1 for it; a logged-in directory exits 0; either answer comes in about half a second. | `time (CLAUDE_CONFIG_DIR=<dir> claude auth status --json; echo $?)` on a logged-in and an empty directory |
+| `claude auth status` on an empty directory writes a `.claude.json` without `hasCompletedOnboarding`, and a `backups` folder, into it. | `CLAUDE_CONFIG_DIR=<empty> claude auth status; ls -A <empty>; jq -c keys <empty>/.claude.json` |
+| With `CLAUDE_CONFIG_DIR` set, the global configuration is `.claude.json` inside that directory, beside its backups, and the credentials file is `.credentials.json` inside it, mode 600; without it they are `~/.claude.json` and `~/.claude/.credentials.json`. | `find` on a throwaway directory after a login; `stat -c '%n %a'` on both credentials files |
+| A tmux window opened by a client whose environment holds another `CLAUDE_CONFIG_DIR` gets the tmux server's value; only `-e` on the window changes it. | `env CLAUDE_CONFIG_DIR=/server/dir tmux -L <socket> new-session -d -s workers`, then `env CLAUDE_CONFIG_DIR=/client/dir tmux -L <socket> new-window -d -t workers:`, then the same with `-e CLAUDE_CONFIG_DIR=/named/dir`, then `/proc/<pane pid>/environ` of each pane |
+| A directory whose first run is unfinished, logged in or not, opens an interactive session on the theme picker and fires no `SessionStart` hook. | `CLAUDE_CONFIG_DIR=<dir> timeout 15 script -qfec "claude --dangerously-skip-permissions --settings <hooks.json>" <out>` with a recording hook, on an empty directory and on a logged-in one |
+| A directory can be logged in and still be in that state: a login made without an interactive first run leaves `hasCompletedOnboarding` unset. | `CLAUDE_CONFIG_DIR=<dir> claude auth status --json \| jq -c '{loggedIn}'`, `jq -c '{onboarded: .hasCompletedOnboarding}' <dir>/.claude.json` |
+| Once the first run is finished, the first screens come in this order: the trust dialog with "No, exit" selected, then the bypass-permissions warning with "No, exit" selected, then the prompt. | the same interactive run, adding `hasCompletedOnboarding`, then a trust entry, then `skipDangerousModePermissionPrompt`, one at a time |
+| Trust is per directory: a trust entry in one directory's global configuration does not suppress the trust dialog of a session on another directory. | the same working directory, trusted in a stand-in home's `.claude.json` only, opened with `HOME=<stand-in>` and with and without `CLAUDE_CONFIG_DIR` |
+| `skipDangerousModePermissionPrompt` skips the bypass-permissions warning from the directory's `settings.json`, and equally from the file passed with `--settings`. | the interactive run with the key in either file |
+| A session on a second directory takes its user settings and its skills from that directory alone. | `--debug-file <log>`, then `grep -E "Loading skills from\|Loaded [0-9]+ unique skills" <log>`, and a recording hook in each `settings.json` |
+| It still loads `~/.claude/CLAUDE.md`, as project memory, whenever its working directory lies under the home directory, so that file needs no link. | `grep "Loaded [0-9]+ CLAUDE.md" <log>`: "[Project] ~/.claude/CLAUDE.md" |
+| A second directory whose `settings.json` and skills are links loads both. | a recording hook in the linked settings; "Loaded 1 unique skills (user: 1)" in the debug file |
+| Each login's `skills` folder holds a `synced` folder Claude Code keeps per account, so the user's own skills are linked one by one, never the folder. | `ls -la ~/.claude/skills <second>/skills` |
+| Two print-mode sessions started in the same second, one per directory, each answered, and each transcript landed in its own directory's `projects` only. | `CLAUDE_CONFIG_DIR=<second> claude -p "Reply with the single word ok" --output-format json` and the same on the default directory, started together; `ls` of both `projects` folders |
+| A session resumes only on the directory that holds its transcript: from another directory `claude --resume <uuid>` answers "No conversation found with session ID: <uuid>". | `CLAUDE_CONFIG_DIR=<first> claude -p "say hi" --session-id <uuid>`, then `claude --resume <uuid> -p "say hi"` with `CLAUDE_CONFIG_DIR=<first>` and with `<second>` |
+| The `SessionStart` payload's `transcript_path` lies under the `projects` folder of the directory the session runs on, and names the file before it exists; the file appears with the session's first message. | a recording hook on a session of the second directory, and `ls` of the path it reported before and after the first prompt |
+
+- So a worker's directory is whatever its tmux window's environment holds, which is the tmux server's unless the launch names it, and EDI states it at every launch.
+- So a resume runs on the login that holds the session's transcript, and the transcript path of a worker's first hook shows which directory it really runs on.
+- A worker on a directory whose first run is unfinished stops on the theme picker and is seen only as a missed launch, so EDI checks the global configuration before it asks `claude auth status`, which would otherwise write that file itself.

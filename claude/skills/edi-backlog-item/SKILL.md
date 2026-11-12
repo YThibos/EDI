@@ -2,7 +2,7 @@
 name: edi-backlog-item
 description: >-
   Owns putting work on the EDI project on its upstream backlog: the GitHub issue that carries the item's full spec, its milestone, parent, blockers and labels, its key from the issue's number, and the hold on the local task, in one scripted step.
-  Load it whenever EDI work is backlogged or queued for the cloud session, or when the captain says to put EDI work on the backlog.
+  Load it whenever EDI work is backlogged or queued for the cloud session, or when the captain says to put EDI work on the backlog; a half-formed idea is caught with `edi spark` instead.
 user-invocable: true
 ---
 
@@ -11,6 +11,12 @@ user-invocable: true
 Work on the EDI project goes to the backlog of its upstream repository, one GitHub issue per item, where the captain's cloud session picks it up, and is not dispatched on this machine.
 `backlog-item.mjs`, beside this file, does every step; never open the issue, set its fields or queue its task by hand.
 The pickup protocol the issue is taken by is [docs/pickup.md](../../../docs/pickup.md).
+
+## Sparks first
+
+An idea that is not thought through yet is no backlog item: catch it as a spark with `edi spark "<idea>"`, adding `--task` or `--project` when the task you acted on last is not what it is about.
+The captain's message that opens with `Spark:` is caught by the hook already; acknowledge it in one line and carry on.
+Sparks reach the backlog only when the weekly round of `edi-upkeep` sorts them with the captain; an item drafted from a spark is followed by `edi spark backlog <n> <the item's key>`.
 
 ## The draft
 

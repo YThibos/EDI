@@ -21,6 +21,8 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.spark.SparkAuthor;
+import io.github.ythibos.edi.domain.spark.SparkOutcome;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -31,6 +33,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PaneState;
 import io.github.ythibos.edi.domain.worker.WorkerActivity;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -63,6 +66,7 @@ class JsonConfiguration {
                 .addSerializer(CategoryId.class, ToStringSerializer.instance)
                 .addSerializer(BranchName.class, ToStringSerializer.instance)
                 .addSerializer(WorkerId.class, ToStringSerializer.instance)
+                .addSerializer(LoginName.class, ToStringSerializer.instance)
                 .addSerializer(StatusKey.class, ToStringSerializer.instance)
                 .addSerializer(MergeRequestAddress.class, ToStringSerializer.instance)
                 .addSerializer(ForgeRepository.class, ToStringSerializer.instance)
@@ -77,6 +81,8 @@ class JsonConfiguration {
                 .addSerializer(TaskStage.class, new AsText<>(TaskStage.class, TaskStage::word))
                 .addSerializer(HoldKind.class, new AsText<>(HoldKind.class, HoldKind::word))
                 .addSerializer(AnswerChannel.class, new AsText<>(AnswerChannel.class, AnswerChannel::word))
+                .addSerializer(SparkAuthor.class, new AsText<>(SparkAuthor.class, SparkAuthor::word))
+                .addSerializer(SparkOutcome.class, new AsText<>(SparkOutcome.class, SparkOutcome::word))
                 .addSerializer(HoldUntil.class, new AsText<>(HoldUntil.class, JsonConfiguration::dayOrCaptainsWord));
     }
 

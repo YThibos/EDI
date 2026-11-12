@@ -47,10 +47,6 @@ public record Delivery(
     }
 
     public boolean changesWith(MergeRequestView view) {
-        return view.state() != state || view.draft() != draft || !Objects.equals(view.headCommit(), headCommit);
-    }
-
-    public boolean closesWith(MergeRequestView view) {
-        return view.state() == MergeRequestState.CLOSED && state != MergeRequestState.CLOSED;
+        return view.state() != state;
     }
 }

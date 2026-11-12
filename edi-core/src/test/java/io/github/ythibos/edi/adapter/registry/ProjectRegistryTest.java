@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
@@ -21,6 +22,7 @@ import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 
 @Tag("adapter")
 class ProjectRegistryTest {
@@ -138,8 +140,42 @@ class ProjectRegistryTest {
         assertThat(registry().entryOf(new ProjectName("harness")).skippedPipelineSteps()).containsExactly(PipelineStep.REBASE, PipelineStep.CI);
     }
 
+    @Test
+    void runsAProjectOnTheClaudeLoginItsEntryNamesAndOneThatNamesNoneOnTheDefault() throws IOException {
+        profile("claude:\n  logins:\n    hobby: { configDirectory: /logins/hobby }\n");
+        register("""
+                projects:
+                  - name: service
+                  - name: tool
+                    login: hobby
+                  - name: harness
+                    login: default
+                """);
+
+        assertThat(registry().entryOf(new ProjectName("service")).login()).isEqualTo(LoginName.DEFAULT);
+        assertThat(registry().entryOf(new ProjectName("tool")).login()).isEqualTo(new LoginName("hobby"));
+        assertThat(registry().entries()).extracting(ProjectEntry::login).containsExactly(LoginName.DEFAULT, new LoginName("hobby"), LoginName.DEFAULT);
+    }
+
+    @Test
+    void refusesARegistryWhoseEntryNamesALoginTheMachineProfileDoesNotName() throws IOException {
+        profile("claude:\n  logins:\n    hobby: { configDirectory: /logins/hobby }\n");
+        register("projects:\n  - name: service\n  - name: tool\n    login: garden\n");
+
+        assertThatThrownBy(() -> registry().entries()).isInstanceOf(UnreadableRegistry.class)
+                .hasMessageContaining("tool runs on the Claude login garden, which the machine profile does not name under claude.logins.");
+        assertThatThrownBy(() -> registry().entryOf(new ProjectName("tool"))).isInstanceOf(UnreadableRegistry.class)
+                .hasMessageContaining("tool runs on the Claude login garden");
+    }
+
     private ProjectRegistry registry() {
-        return new ProjectRegistry(new EdiHome(home));
+        return new ProjectRegistry(new EdiHome(home), new MachineProfile(new EdiHome(home)));
+    }
+
+    private void profile(String yaml) throws IOException {
+        Path file = new EdiHome(home).machineProfile();
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, yaml);
     }
 
     private void register(String yaml) throws IOException {
