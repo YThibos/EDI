@@ -2,6 +2,9 @@ package io.github.ythibos.edi.application.rule;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -10,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,30 +52,37 @@ public class TakeInSpooledFirings {
 
     public void takeIn() {
         Path spool = home.spooledRuleFirings();
-        Path takenIn = spool.resolveSibling(spool.getFileName() + TAKING_IN);
+        Path takingIn = spool.resolveSibling(spool.getFileName() + TAKING_IN);
+        recordedAndDeleted(takingIn);
         if (Files.exists(spool)) {
-            moved(spool, takenIn);
+            moved(spool, takingIn);
+            recordedAndDeleted(takingIn);
         }
-        if (Files.exists(takenIn)) {
-            List<SpooledFiring> spooled = linesOf(takenIn).stream().flatMap(line -> firingOn(line).stream()).toList();
+    }
+
+    private void recordedAndDeleted(Path takingIn) {
+        if (Files.exists(takingIn)) {
+            List<SpooledFiring> spooled = linesOf(takingIn).flatMap(line -> firingOn(line).stream()).toList();
             transaction.executeWithoutResult(_ -> spooled.forEach(firing -> firings.record(firing.fired(), firing.at())));
-            deleted(takenIn);
+            deleted(takingIn);
         }
     }
 
-    private static void moved(Path spool, Path takenIn) {
+    private static Stream<String> linesOf(Path takingIn) {
         try {
-            Files.move(spool, takenIn, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException unmovable) {
-            throw new UncheckedIOException(unmovable);
-        }
-    }
-
-    private static List<String> linesOf(Path takenIn) {
-        try {
-            return Files.readAllLines(takenIn);
+            return new String(Files.readAllBytes(takingIn), StandardCharsets.ISO_8859_1).lines().flatMap(line -> decoded(line).stream());
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
+        }
+    }
+
+    private static Optional<String> decoded(String undecodedLine) {
+        ByteBuffer bytes = ByteBuffer.wrap(undecodedLine.getBytes(StandardCharsets.ISO_8859_1));
+        try {
+            return Optional.of(StandardCharsets.UTF_8.newDecoder().decode(bytes).toString());
+        } catch (CharacterCodingException undecodable) {
+            LOG.warn("A rule firing spooled while the core was out of reach is not UTF-8, so it is left out.");
+            return Optional.empty();
         }
     }
 
@@ -106,11 +117,19 @@ public class TakeInSpooledFirings {
         return session == null ? null : UUID.fromString(session);
     }
 
-    private static void deleted(Path takenIn) {
+    private static void deleted(Path takingIn) {
         try {
-            Files.delete(takenIn);
+            Files.delete(takingIn);
         } catch (IOException undeletable) {
             throw new UncheckedIOException(undeletable);
+        }
+    }
+
+    private static void moved(Path spool, Path takingIn) {
+        try {
+            Files.move(spool, takingIn, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException unmovable) {
+            throw new UncheckedIOException(unmovable);
         }
     }
 

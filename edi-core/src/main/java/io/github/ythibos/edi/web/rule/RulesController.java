@@ -1,9 +1,7 @@
 package io.github.ythibos.edi.web.rule;
 
 import java.time.Duration;
-import java.time.LocalDate;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,10 +32,9 @@ class RulesController {
     }
 
     @GetMapping("/api/rules")
-    RuleReport rules(@RequestParam(defaultValue = "7") int days,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate since, Caller caller) {
+    RuleReport rules(@RequestParam(defaultValue = "7") int days, Caller caller) {
         caller.requireThePrimaryOrTheCaptain("The rules' firings");
-        return report.since(since == null ? clock.now().minus(Duration.ofDays(periodOf(days))) : since.atStartOfDay(clock.zone()).toInstant());
+        return report.since(clock.now().minus(Duration.ofDays(periodOf(days))));
     }
 
     @PostMapping("/api/rules/fired")

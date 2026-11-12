@@ -87,7 +87,13 @@ public class CoreMeasures {
     private record Reading(Meter.Id timer, String measure, Taken before, Taken now, double maxMillis) {
 
         HealthSample sample() {
-            return new HealthSample(measure, now.count() - before.count(), now.totalMillis() - before.totalMillis(), maxMillis);
+            long count = now.count() - before.count();
+            double totalMillis = now.totalMillis() - before.totalMillis();
+            return new HealthSample(measure, count, totalMillis, Math.max(maxMillis, meanOf(count, totalMillis)));
+        }
+
+        private static double meanOf(long count, double totalMillis) {
+            return count == 0 ? 0 : totalMillis / count;
         }
     }
 

@@ -93,8 +93,9 @@ public final class Edi implements Runnable {
         CommandLine commandLine = new CommandLine(edi);
         IParameterExceptionHandler readingFailed = commandLine.getParameterExceptionHandler();
         return commandLine.setParameterExceptionHandler((unreadable, arguments) -> {
-            new RuleFirings(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadable.getMessage());
-            return readingFailed.handleParseException(unreadable, arguments);
+            int refused = readingFailed.handleParseException(unreadable, arguments);
+            RuleFirings.throughTheCore(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadable.getMessage());
+            return refused;
         });
     }
 
@@ -166,7 +167,7 @@ public final class Edi implements Runnable {
     private void recordTheTokenFileRefusal(String refusal) {
         if (!tokenFileRefusalRecorded) {
             tokenFileRefusalRecorded = true;
-            new RuleFirings(this).firedWithoutTheCore(WORKER_TOKEN_FILE, RuleFirings.REFUSED, refusal);
+            RuleFirings.intoTheSpool(this).fired(WORKER_TOKEN_FILE, RuleFirings.REFUSED, refusal);
         }
     }
 

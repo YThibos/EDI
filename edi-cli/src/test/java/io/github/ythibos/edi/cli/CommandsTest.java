@@ -500,12 +500,9 @@ class CommandsTest {
         int lastWeek = edi("", "rules");
         String lastWeekAsked = core.received().target();
         edi("", "rules", "--days", "30", "--json");
-        String monthAsked = core.received().target();
-        edi("", "rules", "--since", "2026-11-02");
 
         assertThat(lastWeek).isZero();
-        assertThat(List.of(lastWeekAsked, monthAsked, core.received().target()))
-                .containsExactly("/api/rules?days=7", "/api/rules?days=30", "/api/rules?since=2026-11-02");
+        assertThat(List.of(lastWeekAsked, core.received().target())).containsExactly("/api/rules?days=7", "/api/rules?days=30");
     }
 
     @Test

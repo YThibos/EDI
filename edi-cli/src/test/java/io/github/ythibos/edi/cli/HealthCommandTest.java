@@ -162,14 +162,14 @@ class HealthCommandTest {
     }
 
     @Test
-    void addsTheCoresOwnHealthOverAPeriodAndWritesOutItsFlightRecording() throws IOException {
+    void addsTheCoresOwnHealthOverTheLastWeekAndWritesOutItsFlightRecording() throws IOException {
         int port = startStubCoreAnswering(200);
 
-        int exitCode = edi("health", "--metrics", "--days", "30", "--dump-recording");
+        int exitCode = edi("health", "--metrics", "--dump-recording");
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT + NO_QUESTION + MEASURED + DUMPED);
-        assertThat(asked).containsExactly("GET /api/telemetry?days=30", "POST /api/telemetry/recordings");
+        assertThat(asked).containsExactly("GET /api/telemetry", "POST /api/telemetry/recordings");
     }
 
     private int startStubCoreAnswering(int status) throws IOException {

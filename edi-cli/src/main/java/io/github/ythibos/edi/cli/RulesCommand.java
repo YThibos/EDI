@@ -20,12 +20,9 @@ final class RulesCommand implements Callable<Integer> {
     @Option(names = "--days", paramLabel = "N", defaultValue = "7", description = "The period: the last N days, 7 unless given.")
     private int days;
 
-    @Option(names = "--since", paramLabel = "DATE", description = "The period: from the start of this day, such as 2026-11-02, instead of --days.")
-    private String since;
-
     @Override
     public Integer call() {
-        return core.get(since == null ? "/api/rules?days=" + days : "/api/rules?since=" + CoreExchange.encoded(since));
+        return core.get("/api/rules?days=" + days);
     }
 
     Edi edi() {

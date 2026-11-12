@@ -39,4 +39,4 @@ management:
       expiry:
         all: ${edi.health.sample-every:PT10M}
       buffer-length:
-        all: 1
+        all: 2

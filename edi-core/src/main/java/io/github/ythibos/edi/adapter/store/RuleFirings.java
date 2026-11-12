@@ -32,6 +32,10 @@ public class RuleFirings {
                 .update();
     }
 
+    public void forgetBefore(Instant moment) {
+        store.sql("delete from rule_fired where julianday(at) < julianday(:moment)").param("moment", Columns.text(moment)).update();
+    }
+
     public List<FiringCount> countedSince(Instant since) {
         return store.sql("""
                         select rule, outcome, count(*) as fired, max(julianday(at)) as last_day, at as last_at

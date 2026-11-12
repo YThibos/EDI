@@ -4,6 +4,7 @@ Every rule EDI enforces has one stable id, and every refusal, warning or check t
 `edi rules` counts the firings of a period, names the last one of each rule and lists the rules that never fired, so the weekly gardening reads what fires from recorded data.
 This table is the catalogue: each rule's id, the classes or scripts that fire it, and what it protects.
 `RuleCatalogueTest` keeps it true: a rule in the code that is missing here, a row for a rule the code no longer has, a place that no longer fires the rule, or a sentence that differs from the code's fails the build.
+`CommandRuleFiringsTest` and `CommitMsgHookFiringsTest` do the same for the command and the `commit-msg` hook, by running them and comparing what fires with the rules this table names for them.
 A refusal cannot be written without its rule, because `Refusal` takes one, and a command or a git hook names its rule by the catalogue's id.
 
 | Rule | Where it lives | What it protects |

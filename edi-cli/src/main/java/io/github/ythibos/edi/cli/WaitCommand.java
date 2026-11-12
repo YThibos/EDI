@@ -62,10 +62,10 @@ final class WaitCommand implements Callable<Integer> {
     private int refusedBecause(String unread) {
         String refusal = "edi wait refuses to start: " + unread + ", so every wake it took would be lost. Start the one wake stream with the Monitor"
                 + " tool running edi wait --follow alone; where Monitor is unavailable, run edi wait alone as a background command.";
-        new RuleFirings(edi).fired(WAIT_READ, RuleFirings.REFUSED, refusal);
         PrintWriter err = spec.commandLine().getErr();
         err.println(refusal);
         err.flush();
+        RuleFirings.throughTheCore(edi).fired(WAIT_READ, RuleFirings.REFUSED, refusal);
         return NOT_WAITING;
     }
 

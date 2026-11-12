@@ -57,7 +57,7 @@ final class LoopbackHostFilter extends OncePerRequestFilter {
 
     private void refuse(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String refusal = "This core answers only a request addressed to " + String.join(" or ", hostsOf(request.getLocalPort())) + ".";
-        firings.refused(Rule.LOOPBACK_HOST, request, refusal);
+        firings.turnedAway(Rule.LOOPBACK_HOST, request, refusal);
         response.setStatus(HttpStatus.MISDIRECTED_REQUEST.value());
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
         response.setCharacterEncoding("UTF-8");

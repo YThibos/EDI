@@ -11,7 +11,7 @@ import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
 @Command(name = "health", description = "Reports whether EDI's core is running and healthy, and whether the primary's edi wait is live;"
-        + " --metrics adds the core's own health over a period, and --dump-recording writes out its flight recording for profiling.")
+        + " --metrics adds the core's own health over the last seven days, and --dump-recording writes out its flight recording for profiling.")
 final class HealthCommand implements Callable<Integer> {
 
     private static final int HEALTHY = 0;
@@ -23,11 +23,9 @@ final class HealthCommand implements Callable<Integer> {
     @Spec
     private CommandSpec spec;
 
-    @Option(names = "--metrics", description = "Also print the core's own health: request, wake, store, supervision and launch times, and memory.")
+    @Option(names = "--metrics", description = "Also print the core's own health over the last seven days: request, wake, store, supervision"
+            + " and launch times, and memory.")
     private boolean metrics;
-
-    @Option(names = "--days", paramLabel = "N", defaultValue = "7", description = "The period --metrics covers: the last N days, 7 unless given.")
-    private int days;
 
     @Option(names = "--dump-recording", description = "Also write out the core's flight recording into the EDI home and print where it is.")
     private boolean dumpRecording;
@@ -55,7 +53,7 @@ final class HealthCommand implements Callable<Integer> {
         if (reported("/api/primary/wait", "whether the primary's edi wait is live")) {
             reported("/api/workers/questions", "which worker questions wait on an answer");
         }
-        boolean measured = !metrics || reported("/api/telemetry?days=" + days, "the core's own health");
+        boolean measured = !metrics || reported("/api/telemetry", "the core's own health");
         boolean dumped = !dumpRecording || written("/api/telemetry/recordings", "for the core's flight recording");
         return measured && dumped ? HEALTHY : UNHEALTHY;
     }

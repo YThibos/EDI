@@ -664,7 +664,7 @@ class ApiTest {
                 "{\"rule\":\"commit.work-key\",\"outcome\":\"refused\",\"reason\":\"the subject starts with the work key HRN-3.\"}")));
         HttpResponse<String> unknownRule = post("/api/rules/fired", "{\"rule\":\"commit.made-up\",\"outcome\":\"refused\",\"reason\":\"no\"}", TEXT);
         HttpResponse<String> asText = get("/api/rules", TEXT);
-        HttpResponse<String> asJson = get("/api/rules?since=2026-01-01", JSON);
+        HttpResponse<String> asJson = get("/api/rules?days=30", JSON);
 
         assertThat(List.of(byAWorker.statusCode(), malformed.statusCode(), heldTwice.statusCode(), again.statusCode(), firedInAHook.statusCode(),
                 unknownRule.statusCode())).containsExactly(403, 400, 200, 409, 204, 400);
@@ -684,7 +684,7 @@ class ApiTest {
         get("/api/backlog", TEXT);
 
         HttpResponse<String> asText = get("/api/telemetry", TEXT);
-        HttpResponse<String> asJson = get("/api/telemetry?days=1", JSON);
+        HttpResponse<String> asJson = get("/api/telemetry", JSON);
         HttpResponse<String> meters = get("/api/metrics", JSON);
         HttpResponse<String> storeTime = get("/api/metrics/edi.store.transaction", JSON);
         HttpResponse<String> dumped = post("/api/telemetry/recordings", "{}", TEXT);

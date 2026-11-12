@@ -12,8 +12,8 @@ The core ships as a native image, where the JDK Flight Recorder exists only when
 ## Decision
 
 `CoreMeters` names the core's own Micrometer timers: `edi.store.transaction` around every `TransactionTemplate` call through `MeasuredTransactions`, the wait for the write lock included, `edi.supervision.round` around `SupervisionRound.run`, `edi.worker.launch` around `LaunchWorker`'s launch, `edi.wake.printed` from a wake's raising to its printing and `edi.wake.acknowledged` from its printing to the primary acting on it, both read by `WakeStore` from the rows it updates, and the gauge `edi.memory.used`; Spring Boot's `http.server.requests` times each endpoint.
-`CoreMeasures` reads those meters, and `RecordCoreHealth` writes what each counted since its last sample to the `health_sample` table every `edi.health.sample-every` (PT10M), forgetting samples older than `edi.health.kept` (P35D); Micrometer's maximum decays over the same period, so each sample's maximum is the maximum of its own period.
-`edi health --metrics` prints, from `GET /api/telemetry` and `CoreHealthQuery`, each measure's count, mean and maximum over `--days` (7 by default, at most 35) with what was counted since the last sample, the memory in use on average and at its peak, and the state of the flight recording; `/api/metrics`, the actuator's endpoint behind the API token, shows the live meters.
+`CoreMeasures` reads those meters, and `RecordCoreHealth` writes what each counted since its last sample to the `health_sample` table every `edi.health.sample-every` (PT10M), forgetting samples older than `edi.health.kept` (P35D); Micrometer keeps each timer's maximum over the last one to two such periods (`buffer-length` 2), so a sample's maximum covers its own period, sometimes with part of the one before, and a sample never records a maximum below its own mean.
+`edi health --metrics` prints, from `GET /api/telemetry` and `CoreHealthQuery`, each measure's count, mean and maximum over the last seven days with what was counted since the last sample, the memory in use on average and at its peak, and the state of the flight recording; `/api/metrics`, the actuator's endpoint behind the API token, shows the live meters.
 `FlightRecording` starts one continuous flight recording at start, at most `edi.health.recording.max-size` (64MB) and `edi.health.recording.max-age` (P1D), with only CPU samples, garbage collections, the heap, CPU load, contended monitors, parked and pinned threads slower than 20 ms, and sampled allocations, every other event type registered at start switched off, a library's own events included, so it holds class and method names and no environment, property, argument, process, file or network address.
 `edi health --dump-recording` writes it out through `POST /api/telemetry/recordings` to `data/recordings` in the EDI home, keeping the five latest, for JDK Mission Control or `jfr`.
 The native image of the core is built with `--enable-monitoring=jfr`; a core without a flight recorder says so, and refuses a dump under `core.flight-recording` ([rule-firings](rule-firings.md)).
@@ -35,7 +35,7 @@ A recording with only these events is safe to keep on the machine and to open wi
 
 - Good: the gardening and the captain read the core's latencies and memory for any recent period with one command and no model tokens.
 - Good: a recording is a command away, with no restart and nothing personal in it.
-- Bad: a timer joined by a nested transaction counts it twice, and a sample's maximum is only as fine as its period.
+- Bad: a timer joined by a nested transaction counts it twice, and a sample's maximum can repeat one from the period before, so it is only as fine as two periods.
 - Bad: the flight recorder adds a little to every core's CPU and disk, and to the native image's size.
 
 ## When to revisit
@@ -45,3 +45,4 @@ When the core runs on more than one machine, or the gardening needs percentiles 
 ## How we got here
 
 - 09/11/2026: the captain asked for the core to be measured, with JDK profiling and telemetry; `CoreMeters`, `health_sample`, `edi health --metrics` and the flight recording were built (EDI-164).
+- 12/11/2026: the review kept each timer's maximum over two periods so that no sample loses the maximum of its own, kept every sample's maximum at or above its mean, and fixed `edi health --metrics` to the last seven days (EDI-164).

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -412,7 +413,7 @@ public final class TestHome {
     }
 
     public FiredRules firedRules() {
-        return new FiredRules(ruleFirings, clock, transaction);
+        return new FiredRules(ruleFirings, Duration.ofDays(400), clock, transaction);
     }
 
     public TakeInSpooledFirings takeInSpooledFirings() {

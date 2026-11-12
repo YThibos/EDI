@@ -36,14 +36,13 @@ final class HookCommand implements Callable<Integer> {
         try {
             payload = payload();
         } catch (IOException unreadable) {
-            return unanswered(unreadable.getMessage());
+            return unanswered(unreadable.getMessage(), RuleFirings.throughTheCore(edi));
         }
         try {
             CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload, "application/json");
-            return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip());
+            return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip(), RuleFirings.throughTheCore(edi));
         } catch (CoreUnavailable unavailable) {
-            String reason = unavailable.getMessage();
-            return thePrimaryMayGoOnWithoutTheCore(payload) ? allowedWithoutTheCore(reason) : unanswered(reason);
+            return withoutTheCore(payload, unavailable.getMessage());
         }
     }
 
@@ -51,13 +50,20 @@ final class HookCommand implements Callable<Integer> {
         return new String(edi.input().readAllBytes(), StandardCharsets.UTF_8);
     }
 
-    private boolean thePrimaryMayGoOnWithoutTheCore(String payload) {
-        return event.equals(GUARD) && !edi.runsForAWorker() && (PlainEdiCall.isIn(payload) || UnansweredDialog.isIn(payload));
-    }
-
-    private int allowedWithoutTheCore(String reason) {
-        new RuleFirings(edi).fired(CORE_UNREACHABLE, RuleFirings.ALLOWED, "A plain edi call or an unanswered dialog went ahead while " + reason);
-        return ANSWERED;
+    private int unanswered(String reason, RuleFirings firings) {
+        PrintWriter err = spec.commandLine().getErr();
+        if (event.equals(GUARD)) {
+            String refusal = "The guard could not check this tool call, so it is refused: " + reason;
+            err.println(refusal);
+            err.flush();
+            firings.fired(CORE_UNREACHABLE, RuleFirings.REFUSED, refusal);
+            return BLOCKED;
+        }
+        String warning = "The " + event + " hook could not be taken: " + reason;
+        err.println(warning);
+        err.flush();
+        firings.fired(HOOK_NOT_TAKEN, RuleFirings.WARNED, warning);
+        return NOT_ANSWERED;
     }
 
     private int answered(String answer) {
@@ -67,19 +73,17 @@ final class HookCommand implements Callable<Integer> {
         return ANSWERED;
     }
 
-    private int unanswered(String reason) {
-        PrintWriter err = spec.commandLine().getErr();
-        if (event.equals(GUARD)) {
-            String refusal = "The guard could not check this tool call, so it is refused: " + reason;
-            new RuleFirings(edi).fired(CORE_UNREACHABLE, RuleFirings.REFUSED, refusal);
-            err.println(refusal);
-            err.flush();
-            return BLOCKED;
-        }
-        String warning = "The " + event + " hook could not be taken: " + reason;
-        new RuleFirings(edi).fired(HOOK_NOT_TAKEN, RuleFirings.WARNED, warning);
-        err.println(warning);
-        err.flush();
-        return NOT_ANSWERED;
+    private int withoutTheCore(String payload, String reason) {
+        RuleFirings spooled = RuleFirings.intoTheSpool(edi);
+        return thePrimaryMayGoOnWithoutTheCore(payload) ? allowedWithoutTheCore(reason, spooled) : unanswered(reason, spooled);
+    }
+
+    private boolean thePrimaryMayGoOnWithoutTheCore(String payload) {
+        return event.equals(GUARD) && !edi.runsForAWorker() && (PlainEdiCall.isIn(payload) || UnansweredDialog.isIn(payload));
+    }
+
+    private int allowedWithoutTheCore(String reason, RuleFirings spooled) {
+        spooled.fired(CORE_UNREACHABLE, RuleFirings.ALLOWED, "A plain edi call or an unanswered dialog went ahead while " + reason);
+        return ANSWERED;
     }
 }

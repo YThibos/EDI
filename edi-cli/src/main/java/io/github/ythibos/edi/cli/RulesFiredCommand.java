@@ -27,7 +27,7 @@ final class RulesFiredCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        new RuleFirings(rules.edi()).fired(rule, outcome, reason);
+        RuleFirings.throughTheCore(rules.edi()).fired(rule, outcome, reason);
         return RECORDED;
     }
 }

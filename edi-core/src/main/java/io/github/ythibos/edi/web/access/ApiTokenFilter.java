@@ -16,7 +16,6 @@ import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.rule.Rule;
-import io.github.ythibos.edi.domain.rule.RuleOutcome;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -61,10 +60,10 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         String bearer = bearerTokenOf(request);
         Optional<Caller> caller = bearer == null ? captainSignedInBy(request) : callerHolding(bearer, sessionOf(request));
         if (caller.isEmpty()) {
-            firings.refused(Rule.API_TOKEN, request, REFUSAL);
+            firings.turnedAway(Rule.API_TOKEN, request, REFUSAL);
             refuse(response, HttpStatus.UNAUTHORIZED, REFUSAL);
         } else if (isAConsoleChangeWithoutItsHeader(caller.get(), request)) {
-            firings.fired(Rule.CONSOLE_HEADER, RuleOutcome.REFUSED, caller.get(), CONSOLE_HEADER_REFUSAL);
+            firings.turnedAway(Rule.CONSOLE_HEADER, caller.get(), CONSOLE_HEADER_REFUSAL);
             refuse(response, HttpStatus.FORBIDDEN, CONSOLE_HEADER_REFUSAL);
         } else {
             request.setAttribute(Caller.ATTRIBUTE, caller.get());

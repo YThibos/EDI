@@ -15,7 +15,10 @@ import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.adapter.store.HealthSamples;
 import io.github.ythibos.edi.adapter.store.HealthSamples.HealthSample;
 import io.github.ythibos.edi.testing.TestHome;
+import io.micrometer.core.instrument.MockClock;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleConfig;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class CoreMeasuresTest {
 
@@ -49,6 +52,21 @@ class CoreMeasuresTest {
                 .containsExactly(tuple("request GET /api/rules", 2L, 50.0, 40.0), tuple("wake raised to printed", 2L, 4000.0, 3000.0));
         assertThat(measures.taken()).extracting(HealthSample::measure).containsExactly(CoreMeasures.MEMORY_IN_USE);
         assertThat(measures.pending()).singleElement().satisfies(memory -> assertThat(memory.total()).isPositive());
+    }
+
+    @Test
+    void takesNoMaximumBelowTheMeanOnceTheTimersOwnMaximumHasDecayed() {
+        MockClock clock = new MockClock();
+        CoreMeters decaying = new CoreMeters(new SimpleMeterRegistry(SimpleConfig.DEFAULT, clock));
+        decaying.workerLaunch(() -> {
+            clock.add(Duration.ofSeconds(40));
+            return "launched";
+        });
+        clock.add(Duration.ofMinutes(10));
+
+        assertThat(new CoreMeasures(decaying).taken()).filteredOn(sample -> sample.measure().equals("worker launch"))
+                .extracting(HealthSample::count, HealthSample::total, HealthSample::max)
+                .containsExactly(tuple(1L, 40_000.0, 40_000.0));
     }
 
     @Test

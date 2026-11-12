@@ -5,7 +5,6 @@ import java.time.Duration;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,7 +17,7 @@ import io.github.ythibos.edi.web.access.Caller;
 @RestController
 class TelemetryController {
 
-    private static final int LONGEST_PERIOD_IN_DAYS = 35;
+    private static final Duration A_WEEK = Duration.ofDays(7);
 
     private final CoreHealthQuery health;
     private final FlightRecording recording;
@@ -31,9 +30,9 @@ class TelemetryController {
     }
 
     @GetMapping("/api/telemetry")
-    CoreHealthReport telemetry(@RequestParam(defaultValue = "7") int days, Caller caller) {
+    CoreHealthReport telemetry(Caller caller) {
         caller.requireThePrimaryOrTheCaptain("The core's own health");
-        return health.since(clock.now().minus(Duration.ofDays(periodOf(days))));
+        return health.since(clock.now().minus(A_WEEK));
     }
 
     @PostMapping("/api/telemetry/recordings")
@@ -41,14 +40,6 @@ class TelemetryController {
     DumpedRecording dump(Caller caller) {
         caller.requirePrimary("edi health --dump-recording");
         return new DumpedRecording(recording.dump().toString());
-    }
-
-    private static int periodOf(int days) {
-        if (days < 1 || days > LONGEST_PERIOD_IN_DAYS) {
-            throw new IllegalArgumentException("The core keeps its health for " + LONGEST_PERIOD_IN_DAYS + " days, so a period runs from 1 to "
-                    + LONGEST_PERIOD_IN_DAYS + " days, not " + days + ".");
-        }
-        return days;
     }
 
     record DumpedRecording(String file) {

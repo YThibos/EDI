@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +27,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
@@ -121,6 +125,45 @@ class RuleFiringsTest {
                 tuple("commit.work-key", "refused", "worker:fit-lamp#1", "fit-lamp", null));
         assertThat(spool).doesNotExist();
         assertThat(spool.resolveSibling(spool.getFileName() + ".taking-in")).doesNotExist();
+    }
+
+    @Test
+    void takesInTheBatchAnEarlierRoundLeftBeforeTheNewSpoolAndLeavesOutALineThatIsNotUtf8() throws IOException {
+        Path spool = home.home().spooledRuleFirings();
+        Files.createDirectories(spool.getParent());
+        Files.writeString(spool.resolveSibling(spool.getFileName() + ".taking-in"), spooledLine("guard.core-unreachable"));
+        Files.write(spool, bytesOf(spooledLine("commit.work-key"), "{\"rule\":\"hook.not-taken\",\"reason\":\"\u00c3(\"}\n",
+                spooledLine("hook.not-taken")));
+
+        home.takeInSpooledFirings().takeIn();
+
+        assertThat(firings()).extracting(firing -> firing.toList().getFirst())
+                .containsExactly("guard.core-unreachable", "commit.work-key", "hook.not-taken");
+        assertThat(spool).doesNotExist();
+    }
+
+    @Test
+    void forgetsTheFiringsKeptLongerThanFourHundredDays() {
+        FiredRules fired = home.firedRules();
+        fired.record(RuleFired.refused(Rule.MERGE, Actor.PRIMARY, null, "only the captain merges."));
+        home.clock().advance(Duration.ofDays(200));
+        fired.record(RuleFired.refused(Rule.FORCED_PUSH, Actor.PRIMARY, null, "a forced push rewrites history on the remote (I-03)."));
+        home.clock().advance(Duration.ofDays(201));
+
+        fired.forgetTheFiringsPastTheirKeeping();
+
+        assertThat(firings()).extracting(firing -> firing.toList().getFirst()).containsExactly("guard.forced-push");
+    }
+
+    private static String spooledLine(String rule) {
+        return "{\"rule\":\"" + rule + "\",\"outcome\":\"refused\",\"reason\":\"fired while the core was down\",\"at\":\"2026-11-09T08:00:00Z\","
+                + "\"actor\":\"primary\"}\n";
+    }
+
+    private static byte[] bytesOf(String before, String notUtf8, String after) {
+        byte[] invalid = notUtf8.getBytes(StandardCharsets.ISO_8859_1);
+        ByteBuffer bytes = ByteBuffer.allocate(before.length() + invalid.length + after.length());
+        return bytes.put(before.getBytes(StandardCharsets.UTF_8)).put(invalid).put(after.getBytes(StandardCharsets.UTF_8)).array();
     }
 
     private List<Tuple> firings() {

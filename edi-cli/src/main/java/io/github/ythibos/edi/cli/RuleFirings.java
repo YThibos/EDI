@@ -19,9 +19,19 @@ final class RuleFirings {
     private static final String PRIMARY = "primary";
 
     private final Edi edi;
+    private final boolean coreMayAnswer;
 
-    RuleFirings(Edi edi) {
+    private RuleFirings(Edi edi, boolean coreMayAnswer) {
         this.edi = edi;
+        this.coreMayAnswer = coreMayAnswer;
+    }
+
+    static RuleFirings throughTheCore(Edi edi) {
+        return new RuleFirings(edi, true);
+    }
+
+    static RuleFirings intoTheSpool(Edi edi) {
+        return new RuleFirings(edi, false);
     }
 
     static Path spoolIn(Path home) {
@@ -30,18 +40,14 @@ final class RuleFirings {
 
     void fired(String rule, String outcome, String reason) {
         JsonBody firing = new JsonBody().with("rule", rule).with("outcome", outcome).with("reason", reason);
-        if (!toldTheCore(firing)) {
+        if (!coreMayAnswer || !toldTheCore(firing)) {
             spool(firing);
         }
     }
 
-    void firedWithoutTheCore(String rule, String outcome, String reason) {
-        spool(new JsonBody().with("rule", rule).with("outcome", outcome).with("reason", reason));
-    }
-
     private boolean toldTheCore(JsonBody firing) {
         try {
-            return new CoreClient().post(edi.core(), FIRED, firing.text(), "text/plain").succeeded();
+            return new CoreClient().post(edi.core(), FIRED, firing.text(), "text/plain", CoreClient.PATIENCE).succeeded();
         } catch (CoreUnavailable unavailable) {
             return false;
         }

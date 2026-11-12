@@ -10,7 +10,7 @@ import java.time.Duration;
 
 final class CoreClient {
 
-    private static final Duration PATIENCE = Duration.ofSeconds(5);
+    static final Duration PATIENCE = Duration.ofSeconds(5);
     private static final Duration ANSWER_PATIENCE = Duration.ofSeconds(60);
     private static final int OK = 200;
     private static final String JSON = "application/json";
