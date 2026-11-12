@@ -65,6 +65,7 @@ class ApiTest {
     private static final WorkerWindow WINDOW_OF_NO_PROCESS = new WorkerWindow("edi-test", ABOVE_THE_HIGHEST_LINUX_PID + 1,
             Instant.parse("2026-10-15T09:00:00Z"), "@1", ABOVE_THE_HIGHEST_LINUX_PID + 2);
     private static final String JSON = "application/json";
+    private static final String CREDENTIALS = ".credentials.json";
 
     @TempDir
     private static Path home;
@@ -82,6 +83,11 @@ class ApiTest {
     static void prepareTheHome() throws IOException {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/projects.yaml"), Intakes.REGISTRY);
+        Files.writeString(home.resolve("config/machine.yaml"), "claude:\n  logins:\n    second: { configDirectory: " + home.resolve("logins/second") + " }\n");
+        for (Path login : List.of(home.resolve("claude-home/.claude"), home.resolve("logins/second"))) {
+            Files.createDirectories(login);
+            Files.writeString(login.resolve(CREDENTIALS), "{\"stand-in\":\"for the test only\"}\n");
+        }
     }
 
     @DynamicPropertySource
@@ -90,6 +96,7 @@ class ApiTest {
         properties.add("edi.checkout", () -> home.resolve("checkout").toString());
         properties.add("edi.workers.socket", () -> "edi-test-" + UUID.randomUUID());
         properties.add("edi.supervision.round", () -> "PT1H");
+        properties.add("edi.workers.claude-home", () -> home.resolve("claude-home").toString());
     }
 
     @Test
@@ -389,6 +396,25 @@ class ApiTest {
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"tmux kill-server\"}}"))).body())
                 .contains("\"permissionDecision\":\"deny\"", "name the socket with -L or -S");
+    }
+
+    @Test
+    void refusesAWorkerAndThePrimaryTheCredentialsOfEveryClaudeLogin() throws Exception {
+        String worker = workerTokenFor("api-credentials");
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+
+        for (Path login : List.of(home.resolve("claude-home/.claude"), home.resolve("logins/second"))) {
+            String read = "{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"" + login.resolve(CREDENTIALS) + "\"},\"cwd\":\"/tmp\"}";
+            String shell = "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"cat " + login.resolve(CREDENTIALS) + "\"},\"cwd\":\"/tmp\"}";
+            String search = "{\"tool_name\":\"Glob\",\"tool_input\":{\"pattern\":\".cred*\",\"path\":\"" + login + "\"},\"cwd\":\"/tmp\"}";
+
+            assertThat(hook(worker, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
+            assertThat(hook(worker, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "this command touches a secret");
+            assertThat(hook(worker, "pre-tool-use", search).body()).as(search).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
+            assertThat(primaryHook(primary, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
+            assertThat(primaryHook(primary, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "edi captain said");
+        }
     }
 
     @Test
