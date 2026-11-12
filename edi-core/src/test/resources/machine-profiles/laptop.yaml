@@ -5,6 +5,9 @@ workers:
     - id: claude-sonnet-5-5
     - id: claude-haiku-5-5
       ignoresEffort: true
+claude:
+  logins:
+    side: { configDirectory: /nonexistent/claude-side }
 tracker:
   kind: jira
   baseUrl: https://tracker.example.org

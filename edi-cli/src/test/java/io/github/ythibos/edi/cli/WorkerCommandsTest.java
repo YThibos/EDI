@@ -231,8 +231,20 @@ class WorkerCommandsTest {
         edi("", "worker", "stop", "fit-lamp");
 
         assertThat(relaunched.target()).isEqualTo("/api/tasks/fit-lamp/relaunch");
+        assertThat(relaunched.body()).isEqualTo("{}");
         assertThat(core.received().target()).isEqualTo("/api/tasks/fit-lamp/stop");
         assertThat(core.received().method()).isEqualTo("POST");
+    }
+
+    @Test
+    void relaunchesATasksWorkerAfreshOnTheCaptainsWord() {
+        core.answering(200, "ok\n");
+
+        edi("", "worker", "relaunch", "fit-lamp", "--fresh");
+
+        StubCore.Request relaunched = core.received();
+        assertThat(relaunched.target()).isEqualTo("/api/tasks/fit-lamp/relaunch");
+        assertThat(relaunched.body()).isEqualTo("{\"fresh\":true}");
     }
 
     private int edi(String input, String... arguments) {

@@ -1,4 +1,4 @@
-# A worker builds the native image only when its change can reach it, in quick-build mode, and EDI warns of heavy runs at once instead of capping them
+# A worker builds the native image only where CI does not build it and its change can reach it, in quick-build mode, and EDI warns of heavy runs at once instead of capping them
 
 **Kind:** Design
 
@@ -9,11 +9,14 @@ Most changes cannot alter what the native image holds: only reflection or serial
 GraalVM's quick-build mode (`-Ob`) builds an image much faster with fewer optimisations, which proves the image builds and starts but is not the image EDI installs.
 Several workers once ran native builds and test runs at the same time and slowed each other down; such a pile-up is rare, and the captain chose a warning over a cap that would slow every native build and test run.
 Every native build builds both executables, whichever module changed.
+On a project whose CI runs, CI builds the full optimised image on every merge request ([worker-brief](worker-brief.md)).
 
 ## Decision
 
 `NativeImageInput` lists what can reach the native image, and it is the one place that rule lives.
-A project registers its local native build as `nativeBuild` in the project registry (`ProjectEntry.nativeBuild`); a ship's brief for such a project then says, from `NativeImageInput`, to run that build only when the change touches one of those inputs, and otherwise to take the project's `verify` as the local evidence and say why the native build was not needed: in the merge request body, leaving the full optimised native build to CI where the project's CI runs ([pipeline-steps](pipeline-steps.md)), or, for a delivery without a merge request, in the task's report (`BriefSections.delivery`).
+A project registers its local native build as `nativeBuild` in the project registry (`ProjectEntry.nativeBuild`).
+A ship's brief for such a project asks for no local native build when the project's CI runs and a merge request carries the change, since CI builds the image ([worker-brief](worker-brief.md)).
+Otherwise it says, from `NativeImageInput`, to run that build only when the change touches one of those inputs, and else to take the project's `verify` as the local evidence and say why the native build was not needed: in the merge request body where the project's CI does not run ([pipeline-steps](pipeline-steps.md)), or, for a delivery without a merge request, in the task's report (`BriefSections.delivery`).
 The `quick-build` Maven profile sets `native.optimisation` to `-Ob`, which the root `pom.xml` passes to `native-maven-plugin`; without it the build keeps `-O2`, so CI and `ops/install.sh` build the full optimised image with `./mvnw -Pnative verify`, and a worker's local check is `./mvnw -Pnative,quick-build verify`.
 `NoticeHeavyRunsAtOnce`, in every supervision round, reads the argument lists of each serving worker's pane and everything under it (`ProcessTable.argumentsInTree`), skipping a worker whose recorded pane id no longer belongs to its tmux server (`ProcessTable.isStillThePaneOf`); `HeavyRun.of` reads a Maven launch whose profiles name `native` as a native build and any other Maven launch through a testing phase as a test run, and keeps the heavier run of each worker (`HeavyRuns`).
 When two or more workers run one at once, every worker whose run started since the last round records `HeavyRunsAtOnce`, which wakes the primary with what runs beside it, and the sitrep's captain report heads itself with a `Builds:` line while they overlap (`CaptainReport.heavyRunsAtOnce`), which the turn report leaves out as state ([turn-report](turn-report.md)).
@@ -35,7 +38,7 @@ A warning costs nothing when builds do not overlap, which is nearly always, and 
 
 ## Consequences
 
-- Good: most workers skip minutes of native build, and a native check that must run is several times faster.
+- Good: a worker on a project whose CI runs never builds the image locally, most other workers skip minutes of native build, and a native check that must run is several times faster.
 - Good: the captain and the primary learn of a pile-up within one round, without any build being slowed by EDI.
 - Bad: a change that reaches the image through a path the list does not name, judged by the worker, is found only by CI or the next install.
 - Bad: only Maven launches in a worker's own pane are seen, so a run inside the validation pipeline or another build tool goes unnoticed.
@@ -49,3 +52,4 @@ When a native-only failure reaches `main` that the list would have missed, when 
 - 27/10/2026: native builds and test runs from several workers overlapped and slowed each other; the captain chose builds only when a change can reach the image, quick-build mode locally, every executable built, and a warning instead of a cap (EDI-99).
 - 27/10/2026: a project whose CI does not run leaves no native build to CI, so its merge request body no longer says it does ([pipeline-steps](pipeline-steps.md), EDI-104).
 - 28/10/2026: the `Builds:` line left the turn report and stays in the sitrep (EDI-133).
+- 10/11/2026: a ship on a project whose CI runs leaves the native build to CI, and the local quick build is the fallback where CI does not run or no merge request carries the change (EDI-251).

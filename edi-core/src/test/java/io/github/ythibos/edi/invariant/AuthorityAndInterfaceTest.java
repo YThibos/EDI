@@ -309,12 +309,12 @@ class AuthorityAndInterfaceTest {
             Worker worker = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
             FixtureRepository copy = committedIn(home, LAMP, "HRN-3", "lamp.txt");
             BranchName branch = home.dispatches().of(LAMP).orElseThrow().branch();
-            home.pipeline().runs(branch, new PipelineRun("01RUN", "running", "review", copy.head(), null));
+            home.pipeline().runs(branch, new PipelineRun("01RUN", "running", "review", copy.head(), null, false));
             home.observePipelines().observe();
             MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, worker);
             home.forge(kind).merges(draft.address(), landedOnMain(copy));
 
-            home.pipeline().runs(branch, new PipelineRun("01RUN", "completed", null, copy.head(), draft.address().url()));
+            home.pipeline().runs(branch, new PipelineRun("01RUN", "completed", null, copy.head(), draft.address().url(), false));
             home.observePipelines().observe();
 
             assertThat(home.eventTypesOf(LAMP)).containsSubsequence("PipelineRunSeen", "PipelineRunFinished", "DraftRecorded", "DraftMerged",

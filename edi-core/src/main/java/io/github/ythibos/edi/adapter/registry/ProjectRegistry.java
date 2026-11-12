@@ -14,7 +14,9 @@ import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.home.ClaudeLogins;
 import io.github.ythibos.edi.adapter.home.ConfigurationYaml;
+import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -34,12 +36,14 @@ public class ProjectRegistry {
 
     private final Path registry;
     private final Path ediHome;
+    private final MachineProfile machine;
     private final YAMLMapper yaml = new YAMLMapper();
     private final YAMLMapper writer = ConfigurationYaml.writer();
 
-    public ProjectRegistry(EdiHome home) {
+    public ProjectRegistry(EdiHome home, MachineProfile machine) {
         this.registry = home.projectRegistry();
         this.ediHome = home.root();
+        this.machine = machine;
     }
 
     public List<Project> projects() {
@@ -52,7 +56,8 @@ public class ProjectRegistry {
 
     public List<ProjectEntry> entries() {
         try {
-            return registeredProjects().projects().stream().map(project -> project.asEntry(ediHome)).toList();
+            ClaudeLogins logins = machine.claudeLogins();
+            return registeredProjects().projects().stream().map(project -> project.asEntry(ediHome, logins)).toList();
         } catch (JacksonException | IllegalArgumentException unreadable) {
             throw new UnreadableRegistry(registry, unreadable);
         }
@@ -61,7 +66,7 @@ public class ProjectRegistry {
     public ProjectEntry entryOf(ProjectName name) {
         RegisteredProject registered = registeredProject(name);
         try {
-            return registered.asEntry(ediHome);
+            return registered.asEntry(ediHome, machine.claudeLogins());
         } catch (IllegalArgumentException unreadable) {
             throw new UnreadableRegistry(registry, unreadable);
         }

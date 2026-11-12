@@ -64,6 +64,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `worker.own-process-signalled` | `StopWorker` | Only a worker's recorded process is signalled. |
 | `worker.launch-hooks-intact` | `LocalHooks` | A worker launches only where no local setting can switch off or redirect its hooks. |
 | `worker.pane-typing` | `TmuxClaudeRuntime` | The core types into a worker's pane only at its idle prompt, and stops at anything else. |
+| `worker.claude-login` | `ClaudeLoginReadiness`, `ClaudeLogins`, `ClaudeWorkspaceTrust`, `LaunchWorker` | A worker runs, and resumes, only on a Claude login the machine profile names and that is ready for it. |
 | `worker.edi-on-path` | `TmuxClaudeRuntime` | A worker's hooks reach the edi command by its absolute path. |
 | `inbox.message-waits` | `InboxMessage`, `WorkerInbox` | A worker acknowledges only a message that waits for it, and only once. |
 | `status.addressed-to-edi` | `StatusReport` | A worker reports to EDI and never addresses the captain. |
@@ -90,6 +91,8 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `board.round-shape` | `BoardRound` | A board round names its link and puts a question or a decision before the captain. |
 | `board.listening` | `Board` | A round is posted only to a board that still listens. |
 | `board.answer` | `SettleBoardAnswers` | A board's answer settles a decision only when it answers that decision's card. |
+| `spark.shape` | `CatchSpark`, `Spark` | A spark says its idea, about one task or one registered project at most. |
+| `spark.sorted-once` | `Spark`, `SparkSorting` | A spark is sorted once, and a dropped spark says why. |
 | `tracker.configured` | `JiraTracker`, `KeysFile`, `TrackedProject`, `TrackerSettings`, `Trackers` | A tracker is reached only with the settings and keys this machine names for it. |
 | `tracker.answered` | `JiraCalls`, `JiraTracker`, `NothingFound` | A tracker call that is refused or finds nothing is reported, never taken as done. |
 | `tracker.ticket-update` | `FollowTickets`, `TicketProposals` | A ticket update the tracker refuses is recorded, and the work goes on without it. |

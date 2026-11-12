@@ -17,6 +17,7 @@ import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.delivery.RecountedCosts;
 import io.github.ythibos.edi.application.delivery.RecountedCosts.Recount;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
+import io.github.ythibos.edi.application.dispatch.DispatchOutcome.UnresumedSession;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.tracker.KeyedTask;
 import io.github.ythibos.edi.application.worker.SteerDelivery;
@@ -43,6 +44,7 @@ import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -124,7 +126,7 @@ class ConfirmationTextTest {
     void confirmsAStopAndASteerWithWhatAFullContextNeeds() {
         Worker lamp = Worker.launched(WorkerId.first(LANTERN), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
         Instant stopped = PresenterFixtures.AT.plusSeconds(60);
 
         assertThat(text.text(new Confirmation.StopRequested(new StoppedWorker(lamp.stopRequested(stopped), List.of()))))
@@ -154,7 +156,7 @@ class ConfirmationTextTest {
                 + " (implementation, claude-opus-5-5 at high), resuming session " + resumed.session() + ", in /edi/worktrees/harness/lantern.\n");
         assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, null))))
                 .contains(", with a fresh session and a handover, in /edi/worktrees/harness/lantern.\n");
-        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, lost)))).contains(", with a fresh session and a handover"
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, UnresumedSession.withoutATranscript(lost))))).contains(", with a fresh session and a handover"
                 + " because session 4d532fb2-0000-4000-8000-000000000001 left no transcript to resume, in /edi/worktrees/harness/lantern.\n");
     }
 
@@ -186,6 +188,6 @@ class ConfirmationTextTest {
     private static Worker relaunchedAs(LaunchKind kind) {
         return Worker.launched(WorkerId.first(LANTERN).next(), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@2", 3L),
-                new WorkerLaunch(kind, PresenterFixtures.AT, new BootId("boot")));
+                new WorkerLaunch(kind, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
     }
 }

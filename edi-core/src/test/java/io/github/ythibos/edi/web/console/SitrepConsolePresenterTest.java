@@ -21,8 +21,8 @@ import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.RecentAnswer;
-import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.TaskLinks;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
@@ -51,6 +51,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -98,7 +99,7 @@ class SitrepConsolePresenterTest {
         Task bell = ship("bell", "Polish the bell");
         Task mast = ship("mast", "Paint the mast");
         Worker reporting = workerOn(horn).reported(new StatusReport(StatusState.WORKING, null, null, "Fitting the brass."), NOW);
-        PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", "abc123", null);
+        PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", "abc123", null, false);
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
                 new OngoingTask(horn, reporting, null, delivery(horn)),
@@ -172,7 +173,7 @@ class SitrepConsolePresenterTest {
     @Test
     void presentsARequestStillChangingWithWhyInsteadOfAsReady() {
         Task lamp = ship("fit-lamp", "Fit the lamp");
-        PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url());
+        PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url(), false);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
                 List.of(new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2))));
 
@@ -180,7 +181,7 @@ class SitrepConsolePresenterTest {
 
         assertThat(sitrep.reviews()).isEmpty();
         assertThat(sitrep.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(),
-                "pipeline running; steer 2 not acknowledged"));
+                "still a draft; pipeline running; steer 2 not acknowledged"));
     }
 
     @Test
@@ -273,7 +274,7 @@ class SitrepConsolePresenterTest {
     private static Worker workerOn(Task task) {
         return Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
     }
 
     private static Delivery delivery(Task task) {

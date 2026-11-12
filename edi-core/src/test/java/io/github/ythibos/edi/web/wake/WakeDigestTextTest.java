@@ -61,6 +61,15 @@ class WakeDigestTextTest {
     }
 
     @Test
+    void tellsThePrimaryWhichDirectoryAWorkerRanInInsteadOfItsLoginsAndThatItWasStopped() {
+        WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.ON_ANOTHER_LOGIN, LAMP, WorkerId.first(LAMP),
+                "/logins/hobby instead of the Claude login default's /home/keeper/.claude", null))), 0, 1, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp#1 ran on /logins/hobby instead of the Claude login default's /home/keeper/.claude, so I"
+                + " stopped it; edi worker relaunch fit-lamp launches it again on its recorded login.\n");
+    }
+
+    @Test
     void countsTheFleetInTheSingularWhenOneTaskIsInFlight() {
         WakeDelivery delivery = new WakeDelivery(List.of(queued(1, new Wake(WakeKind.HOLD_DUE, LAMP, null, "2026-11-03", null))), 2, 1, 0, PRESENT, true);
 

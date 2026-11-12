@@ -167,6 +167,44 @@ class CommandsTest {
     }
 
     @Test
+    void catchesASparkInOneStepListsTheOpenOnesAndSortsEach() {
+        core.answering(201, "Caught spark 1.\n");
+
+        assertThat(edi("", "spark", "A tide clock on the \"harbour\" wall")).isZero();
+        assertThat(core.received().target()).isEqualTo("/api/sparks");
+        assertThat(core.received().body()).isEqualTo("{\"text\":\"A tide clock on the \\\"harbour\\\" wall\"}");
+
+        edi("Log the lamp's hours.\n", "spark", "-", "--task", "fit-lamp");
+        assertThat(core.received().body()).isEqualTo("{\"text\":\"Log the lamp's hours.\\n\",\"task\":\"fit-lamp\"}");
+
+        edi("", "spark", "Paint it blue", "--project", "harness");
+        assertThat(core.received().body()).isEqualTo("{\"text\":\"Paint it blue\",\"project\":\"harness\"}");
+
+        edi("", "spark", "list", "--json");
+        assertThat(core.received()).extracting(StubCore.Request::method, StubCore.Request::target, StubCore.Request::accepted)
+                .containsExactly("GET", "/api/sparks", "application/json");
+
+        edi("", "spark", "backlog", "1", "EDI-190");
+        assertThat(core.received()).extracting(StubCore.Request::target, StubCore.Request::body)
+                .containsExactly("/api/sparks/1/backlog", "{\"key\":\"EDI-190\"}");
+
+        edi("", "spark", "fold", "2", "EDI-120");
+        assertThat(core.received()).extracting(StubCore.Request::target, StubCore.Request::body)
+                .containsExactly("/api/sparks/2/fold", "{\"key\":\"EDI-120\"}");
+
+        edi("", "spark", "drop", "3", "--reason", "One is enough.");
+        assertThat(core.received()).extracting(StubCore.Request::target, StubCore.Request::body)
+                .containsExactly("/api/sparks/3/drop", "{\"reason\":\"One is enough.\"}");
+    }
+
+    @Test
+    void asksForTheSparksIdeaOrASubcommand() {
+        assertThat(edi("", "spark")).isEqualTo(2);
+        assertThat(err.toString()).startsWith("Name the idea, or a subcommand; edi spark --help lists them.");
+        assertThat(core.received()).isNull();
+    }
+
+    @Test
     void listsDecisionsAndProjects() {
         core.answering(200, "Open decisions (0)\n");
 

@@ -22,12 +22,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.WindowCheck;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -46,6 +48,7 @@ class TmuxClaudeRuntimeTest {
             record="$EDI_HOME/claude-was-started"
             pwd -P > "$record.cwd"
             printf '%s\\n' "$EDI_ROLE $EDI_TASK_ID $EDI_WORKER $EDI_TOKEN_FILE ${CLAUDECODE:-no-parent-session}" > "$record.environment"
+            printf '%s\\n' "${CLAUDE_CONFIG_DIR-unset}" > "$EDI_HOME/$EDI_TASK_ID.config-directory"
             for word in "$@"; do printf '%s\\0' "$word"; done > "$record.arguments"
             exec sleep 30
             """;
@@ -76,15 +79,15 @@ class TmuxClaudeRuntimeTest {
 
     private EdiHome home;
     private Path worktree;
-    private Path claudeConfiguration;
+    private Path claudeCodesHome;
 
     @BeforeEach
     void prepareAWorktreeAndAClaudeThatRecordsHowItStarted() throws IOException {
         assumeTrue(PrivateTmuxServer.isInstalled(), "tmux is not installed");
         home = new EdiHome(directory.resolve("home"));
         worktree = Files.createDirectories(home.worktrees().resolve("harness/fit-lamp"));
-        claudeConfiguration = Files.createDirectories(directory.resolve("claude-config"));
-        Files.writeString(claudeConfiguration.resolve(".claude.json"), "{\"numStartups\": 3, \"projects\": {\"/elsewhere\": {\"allowedTools\": []}}}");
+        claudeCodesHome = Files.createDirectories(directory.resolve("claude-home"));
+        Files.writeString(claudeCodesHome.resolve(".claude.json"), "{\"numStartups\": 3, \"projects\": {\"/elsewhere\": {\"allowedTools\": []}}}");
         executable(directory.resolve("claude"), RECORDING_CLAUDE);
         executable(directory.resolve("mise"), RECORDING_MISE);
         Files.createDirectories(projectClone());
@@ -94,7 +97,7 @@ class TmuxClaudeRuntimeTest {
     @Test
     void launchesClaudeCodeInTheWorktreeWithItsSessionRouteSettingsAndEnvironment() throws IOException {
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
             UUID session = UUID.randomUUID();
 
             WorkerWindow window = runtime.launch(launch(session, List.of("WebSearch", "Bash(git push:*)")));
@@ -121,7 +124,7 @@ class TmuxClaudeRuntimeTest {
             assertThat(written.path("hooks").path("PreToolUse").get(0).path("hooks").get(0).path("command").asString())
                     .isEqualTo("'" + PrivateTmuxServer.STAND_IN_EDI + "' hook pre-tool-use");
             assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(settings))).isEqualTo("rw-------");
-            JsonNode claudeConfig = new JsonMapper().readTree(Files.readString(claudeConfiguration.resolve(".claude.json")));
+            JsonNode claudeConfig = new JsonMapper().readTree(Files.readString(claudeCodesHome.resolve(".claude.json")));
             assertThat(claudeConfig.path("projects").path(projectClone().toString()).path("hasTrustDialogAccepted").asBoolean()).isTrue();
             assertThat(claudeConfig.path("numStartups").asInt()).isEqualTo(3);
             assertThat(claudeConfig.path("projects").has("/elsewhere")).isTrue();
@@ -132,10 +135,57 @@ class TmuxClaudeRuntimeTest {
     }
 
     @Test
+    void startsAWorkerOfTheDefaultLoginInClaudeCodesOwnDirectoryWhateverDirectoryItsTmuxServerCarries() throws IOException {
+        try (PrivateTmuxServer server = PrivateTmuxServer.startedWith(processes, Map.of("CLAUDE_CONFIG_DIR", "/the/servers/login"))) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+
+            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("fit-lamp.config-directory"), "\n").strip()).isEqualTo("unset");
+        }
+    }
+
+    @Test
+    void launchesTheWorkersOfTwoProjectsOnTwoLoginsEachWithItsOwnConfigurationDirectoryAndTrustEntry() throws IOException {
+        Path secondLogin = Files.createDirectories(directory.resolve("logins/second"));
+        Files.writeString(secondLogin.resolve(".claude.json"), "{\"hasCompletedOnboarding\": true}");
+        Path gardenClone = Files.createDirectories(home.root().resolve("projects/garden"));
+        Path gardenCopy = Files.createDirectories(home.worktrees().resolve("garden/paint-buoy"));
+        try (PrivateTmuxServer server = PrivateTmuxServer.startedWith(processes, Map.of("CLAUDE_CONFIG_DIR", "/the/servers/login"))) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
+
+            runtime.launch(launch(UUID.randomUUID(), List.of()));
+            runtime.launch(launchOn(new Login(new LoginName("second"), secondLogin), WorkerId.first(new TaskId("paint-buoy")), gardenCopy, gardenClone));
+
+            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("fit-lamp.config-directory"), "\n").strip()).isEqualTo("unset");
+            assertThat(PrivateTmuxServer.awaitContent(home.root().resolve("paint-buoy.config-directory"), "\n").strip()).isEqualTo(secondLogin.toString());
+            JsonNode defaultTrust = new JsonMapper().readTree(Files.readString(claudeCodesHome.resolve(".claude.json"))).path("projects");
+            JsonNode secondTrust = new JsonMapper().readTree(Files.readString(secondLogin.resolve(".claude.json"))).path("projects");
+            assertThat(defaultTrust.path(projectClone().toString()).path("hasTrustDialogAccepted").asBoolean()).isTrue();
+            assertThat(defaultTrust.has(gardenClone.toString())).isFalse();
+            assertThat(secondTrust.path(gardenClone.toString()).path("hasTrustDialogAccepted").asBoolean()).isTrue();
+            assertThat(secondTrust.has(projectClone().toString())).isFalse();
+        }
+    }
+
+    @Test
+    void refusesALaunchOnALoginWithoutAGlobalConfigurationToRecordItsTrustIn() throws IOException {
+        Path emptyLogin = Files.createDirectories(directory.resolve("logins/empty"));
+        try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
+
+            assertThatThrownBy(() -> runtime.launch(launchOn(new Login(new LoginName("empty"), emptyLogin), WorkerId.first(new TaskId("fit-lamp")), worktree,
+                    projectClone())))
+                    .isInstanceOf(Refusal.class).hasMessage("The Claude login empty has no global configuration " + emptyLogin.resolve(".claude.json")
+                            + " to record its trust in " + projectClone() + ".");
+        }
+    }
+
+    @Test
     void startsClaudeCodeOnTheToolchainTheCopyPinsWhenMiseTrustsTheProjectsCloneAndInstallsNoMissingTool() throws IOException {
         Files.writeString(directory.resolve("mise-trust"), "trusted");
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
 
             runtime.launch(launch(UUID.randomUUID(), List.of()));
 
@@ -148,7 +198,7 @@ class TmuxClaudeRuntimeTest {
     @Test
     void startsClaudeCodeWithoutMiseWhenMiseDoesNotTrustTheProjectsClone() throws IOException {
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
 
             runtime.launch(launch(UUID.randomUUID(), List.of()));
 
@@ -164,7 +214,7 @@ class TmuxClaudeRuntimeTest {
         TmuxClaudeRuntime runtime;
         UUID session = UUID.randomUUID();
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+            runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
             window = runtime.launch(launch(session, List.of(), LaunchKind.RESUME));
             List<String> arguments = List.of(Files.readString(awaitFile(home.root().resolve("claude-was-started.arguments"))).split("\0"));
             WorkerWindow onAnotherServer = new WorkerWindow(window.socket(), window.serverPid() + 1, window.serverStartedAt(), window.windowId(), window.panePid());
@@ -183,7 +233,7 @@ class TmuxClaudeRuntimeTest {
         Files.createDirectories(worktree.resolve(".claude"));
         Files.writeString(worktree.resolve(".claude/settings.local.json"), "{\"hooks\": {\"Stop\": [{\"hooks\": []}]}}");
         try (PrivateTmuxServer server = PrivateTmuxServer.started(processes)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("claude").toString(), mise());
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("claude").toString(), mise());
 
             assertThatThrownBy(() -> runtime.launch(launch(UUID.randomUUID(), List.of())))
                     .isInstanceOf(Refusal.class).hasMessageContaining("defines hooks, which Claude Code would run beside the hooks a worker gets at launch");
@@ -197,7 +247,7 @@ class TmuxClaudeRuntimeTest {
         Map<String, String> coreEnvironment = Map.of("GIT_CONFIG_COUNT", "1", "GIT_CONFIG_KEY_0", "core.hooksPath",
                 "GIT_CONFIG_VALUE_0", Files.createDirectories(directory.resolve("no-hooks")).toString());
         try (PrivateTmuxServer server = PrivateTmuxServer.startedWith(processes, coreEnvironment)) {
-            TmuxClaudeRuntime runtime = server.runtime(claudeConfiguration, directory.resolve("committing-claude").toString(), mise());
+            TmuxClaudeRuntime runtime = server.runtime(claudeCodesHome, directory.resolve("committing-claude").toString(), mise());
 
             runtime.launch(launch(UUID.randomUUID(), List.of()));
 
@@ -229,10 +279,18 @@ class TmuxClaudeRuntimeTest {
     }
 
     private Launch launch(UUID session, List<String> disallowedTools, LaunchKind kind) {
-        WorkerId worker = WorkerId.first(new TaskId("fit-lamp"));
-        return new Launch(worker, kind, session, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), worktree, projectClone(), home.taskDirectory(worker.task()),
-                home.workerState(worker), Map.of("EDI_HOME", home.root().toString(), "EDI_ROLE", "worker", "EDI_TASK_ID", "fit-lamp",
-                        "EDI_WORKER", worker.toString(), "EDI_TOKEN_FILE", "/tokens/fit-lamp-1"),
+        return launch(session, disallowedTools, kind, new Login(LoginName.DEFAULT, null), WorkerId.first(new TaskId("fit-lamp")), worktree, projectClone());
+    }
+
+    private Launch launchOn(Login login, WorkerId worker, Path copy, Path clone) {
+        return launch(UUID.randomUUID(), List.of(), LaunchKind.DISPATCH, login, worker, copy, clone);
+    }
+
+    private Launch launch(UUID session, List<String> disallowedTools, LaunchKind kind, Login login, WorkerId worker, Path copy, Path clone) {
+        String task = worker.task().value();
+        return new Launch(worker, kind, session, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), login, copy, clone, home.taskDirectory(worker.task()),
+                home.workerState(worker), Map.of("EDI_HOME", home.root().toString(), "EDI_ROLE", "worker", "EDI_TASK_ID", task,
+                        "EDI_WORKER", worker.toString(), "EDI_TOKEN_FILE", "/tokens/" + task + "-1"),
                 disallowedTools, PermissionMode.BYPASS, "\u2063EDI_OP: brief waiting: read the brief and follow it");
     }
 

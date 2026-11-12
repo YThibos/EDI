@@ -19,6 +19,7 @@ public enum RuleArea {
     CLEANUP,
     MECHANICAL,
     BOARD,
+    SPARK,
     TRACKER,
     WAKE,
     MEMORY,

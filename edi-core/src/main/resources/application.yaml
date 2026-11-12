@@ -5,8 +5,7 @@ edi:
     boot-id: /proc/sys/kernel/random/boot_id
   workers:
     socket: edi
-    claude-config: ${CLAUDE_CONFIG_DIR:${user.home}}
-    claude-sessions: ${CLAUDE_CONFIG_DIR:${user.home}/.claude}/projects
+    claude-home: ${user.home}
 
 server:
   address: 127.0.0.1

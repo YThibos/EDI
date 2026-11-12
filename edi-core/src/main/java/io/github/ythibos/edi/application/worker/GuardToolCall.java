@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.home.ClaudeLogins;
 import io.github.ythibos.edi.adapter.home.InvalidConfiguration;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.TrackerSettings.Credentials;
@@ -153,7 +154,7 @@ public class GuardToolCall {
     }
 
     private Secrets secretsKeptFromAWorkersShell(ToolCall call) {
-        return new Secrets(List.of(homeTokenEnding()), false, pathsFrom(call));
+        return new Secrets(Stream.concat(Stream.of(homeTokenEnding()), loginCredentialsEndings().stream()).toList(), false, pathsFrom(call));
     }
 
     private Secrets secretsKeptFromThePrimary() {
@@ -165,11 +166,11 @@ public class GuardToolCall {
     }
 
     private List<Path> secretFiles() {
-        return Stream.concat(Stream.of(home.coreTokenFile()), keysFile().stream()).toList();
+        return Stream.of(Stream.of(home.coreTokenFile()), keysFile().stream(), loginCredentials().stream()).flatMap(files -> files).toList();
     }
 
     private List<String> secretFileEndings() {
-        return Stream.concat(Stream.of(homeTokenEnding()), keysFileEnding().stream()).toList();
+        return Stream.of(Stream.of(homeTokenEnding()), keysFileEnding().stream(), loginCredentialsEndings().stream()).flatMap(endings -> endings).toList();
     }
 
     private Optional<String> keysFileEnding() {
@@ -181,6 +182,22 @@ public class GuardToolCall {
             return Optional.ofNullable(machine.tracker().credentials()).map(Credentials::keysFile);
         } catch (InvalidConfiguration unreadable) {
             return Optional.empty();
+        }
+    }
+
+    private List<String> loginCredentialsEndings() {
+        return loginCredentials().stream().map(file -> "/" + file.getFileName()).distinct().toList();
+    }
+
+    private List<Path> loginCredentials() {
+        return claudeLogins().every().stream().map(runtime::credentialsOf).toList();
+    }
+
+    private ClaudeLogins claudeLogins() {
+        try {
+            return machine.claudeLogins();
+        } catch (InvalidConfiguration unreadable) {
+            return ClaudeLogins.ONLY_THE_DEFAULT;
         }
     }
 

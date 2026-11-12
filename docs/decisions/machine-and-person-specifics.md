@@ -14,10 +14,11 @@ Tracked files hold generic code, defaults and documented examples with invented 
 Everything about a person, an employer or a machine lives in the EDI home (`$EDI_HOME`, default `~/.edi`): the machine profile `config/machine.yaml`, the project registry, the dispatch rules, the personal configuration, the publish deny-list, memory, the store and state; or in the checkout's gitignored `personal/` directory, which holds personal skills and addenda to the anchor and briefs.
 The EDI home is private, never a git repository and never shared between machines.
 It is open to its owner alone: `ops/install.sh` makes it mode 0700, `edi up` and the systemd unit start the core under umask 077, and at every start, before the store opens, `PrivateHome` creates a missing home with mode 0700, takes every group and other permission off the home itself and off everything under `config`, `data`, `memory` and `state`, and logs one line naming how many it closed, only when it closed any.
-Forge, tracker, ticket keys, worklog emission, secrets and paths are chosen from the machine profile and the registry at the moment of use, through hand-written selection such as `Forges` and `Trackers`.
+Forge, tracker, ticket keys, worklog emission, secrets, paths and Claude logins are chosen from the machine profile and the registry at the moment of use, through hand-written selection such as `Forges`, `Trackers` and `ClaudeLogins`.
+A Claude login's configuration directory is a machine fact, named under `claude.logins` in the machine profile, and a registry entry names only the login its project runs on ([claude-logins](claude-logins.md)).
 `MachineProfile` reads `config/machine.yaml` at every call and parses it again only when its content differs from the content it parsed last, so an edit applies at the next call and a malformed profile is refused at every call.
 No class or bean method uses `@Profile` or `@ConditionalOnProperty`, which `ArchitectureRulesTest` enforces.
-The core module's Surefire runs the whole suite twice in `./mvnw verify`, under a `laptop` fixture profile with JIRA, the fleet ledger and the worked line, and under a `desktop` one with none of them (`edi.test.machine`, `MachineFixture`); AT-37 checks the profiles differ only there.
+The core module's Surefire runs the whole suite twice in `./mvnw verify`, under a `laptop` fixture profile with JIRA, the fleet ledger, the worked line and a second Claude login, and under a `desktop` one with none of them (`edi.test.machine`, `MachineFixture`); AT-37 checks the profiles differ only there.
 The publish guard keeps personal material from ever leaving the machine ([publish-guard](publish-guard.md)).
 
 ## Why
@@ -52,3 +53,4 @@ When native images can evaluate conditions at runtime, or a third machine profil
 - 17/10/2026: slice S6 ran the suite under both fixture profiles.
 - 23/10/2026: a test that followed the log for every finished ship spent part of its time parsing the unchanged machine profile, so `MachineProfile` parses again only when the content changed (EDI-45).
 - 30/10/2026: the store and the state files were created readable by every user, so the home is kept for its owner alone, repaired at each start (EDI-129).
+- 10/11/2026: a project can run on a second Claude login, whose directory is a machine fact in the machine profile, and the laptop fixture profile carries one (EDI-253).

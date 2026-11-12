@@ -25,6 +25,7 @@ import io.github.ythibos.edi.domain.dispatch.ModelRoster.AllowedModel;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.domain.tracker.Workflow;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.SupervisionRules;
 import tools.jackson.core.JacksonException;
@@ -37,10 +38,10 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 @RegisterReflectionForBinding({MachineProfile.ProfileDocument.class, MachineProfile.WorkersSection.class, MachineProfile.ModelEntry.class,
     MachineProfile.SupervisionSection.class, MachineProfile.TrackerSection.class, MachineProfile.CredentialsSection.class,
     MachineProfile.TimeSection.class, MachineProfile.MemorySection.class, MachineProfile.NotifySection.class,
-    MachineProfile.PresenceSection.class, MachineProfile.ConsoleSection.class})
+    MachineProfile.PresenceSection.class, MachineProfile.ConsoleSection.class, MachineProfile.ClaudeSection.class, MachineProfile.LoginEntry.class})
 public class MachineProfile {
 
-    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null, null, null, null, null);
+    private static final ProfileDocument EMPTY = new ProfileDocument(null, null, null, null, null, null, null, null, null, null);
     private static final String OUTLOOK = "outlook";
     private static final int STARTUP_MEMORY_BUDGET_TOKENS = 18_000;
     private static final String UNNAMED = "this machine";
@@ -63,6 +64,15 @@ public class MachineProfile {
         WorkersSection workers = Objects.requireNonNullElse(document().workers(), WorkersSection.NONE);
         try {
             return new WorkerSettings(roster(workers), disallowedTools(workers), permissionMode(workers));
+        } catch (IllegalArgumentException invalid) {
+            throw new InvalidConfiguration(file, invalid.getMessage());
+        }
+    }
+
+    public ClaudeLogins claudeLogins() {
+        ClaudeSection claude = Objects.requireNonNullElse(document().claude(), ClaudeSection.NONE);
+        try {
+            return new ClaudeLogins(configDirectoriesOf(claude));
         } catch (IllegalArgumentException invalid) {
             throw new InvalidConfiguration(file, invalid.getMessage());
         }
@@ -171,6 +181,24 @@ public class MachineProfile {
         return workers.permissionMode() == null ? PermissionMode.BYPASS : PermissionMode.named(workers.permissionMode());
     }
 
+    private static Map<LoginName, Path> configDirectoriesOf(ClaudeSection claude) {
+        return Objects.requireNonNullElse(claude.logins(), Map.<String, LoginEntry>of()).entrySet().stream()
+                .collect(Collectors.toMap(login -> new LoginName(login.getKey()), login -> configDirectoryOf(login.getKey(), login.getValue())));
+    }
+
+    private static Path configDirectoryOf(String login, LoginEntry entry) {
+        String written = entry == null ? null : entry.configDirectory();
+        if (written == null || written.isBlank()) {
+            throw new IllegalArgumentException("claude.logins." + login + " names no configDirectory, the Claude Code configuration directory of that login.");
+        }
+        Path directory = HomeRelativePath.expanded(written.strip());
+        if (!directory.isAbsolute()) {
+            throw new IllegalArgumentException("claude.logins." + login + ".configDirectory is \"" + written
+                    + "\", which is neither an absolute path nor one under ~/.");
+        }
+        return directory.normalize();
+    }
+
     private static Duration durationOf(String written, Duration absent) {
         return written == null ? absent : Duration.parse(written);
     }
@@ -226,13 +254,24 @@ public class MachineProfile {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ProfileDocument(String machine, WorkersSection workers, SupervisionSection supervision, TrackerSection tracker, TimeSection time,
-            MemorySection memory, @JsonProperty("notify") NotifySection notifications, PresenceSection presence, ConsoleSection console) {
+            MemorySection memory, @JsonProperty("notify") NotifySection notifications, PresenceSection presence, ConsoleSection console,
+            ClaudeSection claude) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record WorkersSection(List<ModelEntry> models, List<String> disallowedTools, String permissionMode) {
 
         static final WorkersSection NONE = new WorkersSection(null, null, null);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ClaudeSection(Map<String, LoginEntry> logins) {
+
+        static final ClaudeSection NONE = new ClaudeSection(null);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record LoginEntry(String configDirectory) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -26,6 +26,7 @@ import io.github.ythibos.edi.application.dispatch.DispatchRequest;
 import io.github.ythibos.edi.application.dispatch.DispatchTask;
 import io.github.ythibos.edi.application.dispatch.LaunchWorker;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.AnsweredQuestion;
 import io.github.ythibos.edi.domain.authority.CallingSession;
@@ -44,6 +45,7 @@ import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.testing.ExampleHome;
@@ -94,7 +96,8 @@ class DispatchAndEffortTest {
                     "it names no pipeline entry, so the validation pipeline's agent would run at the harness default");
             assertThatThrownBy(() -> EffortLevel.withinTheCeiling("xhigh")).hasMessageContaining("high is the ceiling");
             assertThatThrownBy(() -> EffortLevel.named("ultra")).hasMessageContaining("lifts that task to xhigh or max");
-            assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), LaunchKind.DISPATCH, UUID.randomUUID(), null, directory, directory, directory, directory,
+            assertThatThrownBy(() -> new Launch(WorkerId.first(new TaskId("fit-lamp")), LaunchKind.DISPATCH, UUID.randomUUID(), null,
+                    new Login(LoginName.DEFAULT, null), directory, directory, directory, directory,
                     Map.of(), List.of(), PermissionMode.BYPASS, "brief")).hasMessageContaining("explicit model and effort");
             assertThatThrownBy(() -> new Route(null, EffortLevel.HIGH)).hasMessageContaining("explicit model");
             assertThat(home.writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))

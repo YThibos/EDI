@@ -62,7 +62,11 @@ class NativeSmokeIT {
                 - id: claude-sonnet-5-5
                 - id: claude-haiku-5-5
                   ignoresEffort: true
+            claude:
+              logins:
+                default: { configDirectory: %s }
             """;
+    private static final String FIRST_RUN_FINISHED = "{\"hasCompletedOnboarding\": true}";
     private static final String STUB_SPEC = """
             stub-run: edi status working -- the stub worker started
             stub-run: printf 'stub\\n' > stub.txt && git add stub.txt && git -c user.name=Stub -c user.email=stub@example.org commit -q -m 'HRN-7 Add the stub file'
@@ -84,7 +88,8 @@ class NativeSmokeIT {
     static void startTheNativeCore() throws Exception {
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/projects.yaml"), REGISTRY.formatted(home.resolve("checkouts/harness")));
-        Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
+        Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE.formatted(claudeLogin()));
+        Files.writeString(claudeLogin().resolve(".claude.json"), FIRST_RUN_FINISHED);
         Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
                 home.resolve("config/dispatch-rules.json"));
         cloneAProjectInto(home.resolve("projects/harness"));
@@ -98,10 +103,10 @@ class NativeSmokeIT {
                 "--edi.console.windows-directory=" + home)
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
-        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_")
+                || variable.startsWith("CLAUDE"));
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
-        launch.environment().put("CLAUDE_CONFIG_DIR", Files.createDirectories(home.resolve("claude-config")).toString());
         launch.environment().put("SERVER_PORT", "0");
         core = processes.register(launch.start());
         port = awaitRecordedAddress(home.resolve("state/core.port")).port();
@@ -312,6 +317,23 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandCatchesTheCaptainsSparkAndSortsIt() throws Exception {
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString());
+        String session = "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"";
+        ediIn(Path.of(""), primary, session + "}", "hook", "session-start");
+
+        CommandRun heard = ediIn(Path.of(""), primary, session + ",\"prompt\":\"Spark: a native tide clock\"}", "hook", "user-prompt-submit");
+        CommandRun listed = edi("", "spark", "list", "--json");
+        CommandRun dropped = edi("", "spark", "drop", "1", "--reason", "Natively enough.");
+
+        assertThat(heard.output()).contains("you caught it as spark 1");
+        assertThat(listed.output()).contains("\"text\":\"a native tide clock\"", "\"author\":\"captain\"",
+                "\"session\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"");
+        assertThat(dropped.output()).isEqualTo("Dropped spark 1: Natively enough.\n");
+        assertThat(edi("", "spark", "list").output()).isEqualTo("Open sparks (0)\n");
+    }
+
+    @Test
     void theCommandRendersTheCaptainReportInAnyLocale() throws Exception {
         edi("", "task", "add", "--kind", "captain", "--id", "native-report-call", "--title", "Choose for the report");
         String number = edi("{\"title\":\"Which lantern?\",\"options\":[{\"key\":\"A\",\"text\":\"Brass\"}],\"recommend\":{\"key\":\"A\",\"why\":\"it shines\"}}",
@@ -446,6 +468,10 @@ class NativeSmokeIT {
 
         assertThat(backlog.keptToTheLimit()).as(backlog.summary()).isFalse();
         assertThat(backlog.metTheBudget()).as(backlog.summary()).isTrue();
+    }
+
+    private static Path claudeLogin() throws IOException {
+        return Files.createDirectories(home.resolve("claude-config"));
     }
 
     private static Path pipelineHome() throws IOException {

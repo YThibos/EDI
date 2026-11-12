@@ -17,6 +17,7 @@ import io.github.ythibos.edi.adapter.tracker.TrackerUnavailable;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.spark.UnknownSpark;
 import io.github.ythibos.edi.domain.task.UnknownTask;
 import io.github.ythibos.edi.web.access.CallerFirings;
 import io.github.ythibos.edi.web.access.NotPermitted;
@@ -46,7 +47,7 @@ class ApiRefusals {
         return sentence(HttpStatus.FORBIDDEN, notPermitted.getMessage());
     }
 
-    @ExceptionHandler({UnknownTask.class, UnknownDecision.class})
+    @ExceptionHandler({UnknownTask.class, UnknownDecision.class, UnknownSpark.class})
     ResponseEntity<String> unknown(RuntimeException unknown) {
         return sentence(HttpStatus.NOT_FOUND, unknown.getMessage());
     }

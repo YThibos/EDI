@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.project.ShipBriefRule;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 
 public record ProjectEntry(
         Project project,
@@ -34,7 +35,8 @@ public record ProjectEntry(
         String nativeBuild,
         boolean largeBuilds,
         boolean ciRuns,
-        List<ShipBriefRule> shipBriefRules) {
+        List<ShipBriefRule> shipBriefRules,
+        LoginName login) {
 
     public ProjectEntry {
         Objects.requireNonNull(project, "A registry entry is for a project.");
@@ -42,6 +44,7 @@ public record ProjectEntry(
         Objects.requireNonNull(projectClone, () -> project.name() + " has a clone.");
         branchKinds = Set.copyOf(branchKinds);
         shipBriefRules = List.copyOf(shipBriefRules);
+        Objects.requireNonNull(login, () -> project.name() + " runs on a named Claude login.");
         if (capacity != null && capacity < 1) {
             throw new IllegalArgumentException(project.name() + " runs at least one worker at a time when it names a capacity: " + capacity);
         }

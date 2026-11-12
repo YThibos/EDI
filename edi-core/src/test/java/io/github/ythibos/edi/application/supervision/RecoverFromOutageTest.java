@@ -74,7 +74,7 @@ class RecoverFromOutageTest {
         Launch resumed = home.runtime().lastLaunch();
         assertThat(resumed.kind()).isEqualTo(LaunchKind.RESUME);
         assertThat(resumed.session()).isEqualTo(horn.session());
-        assertThat(relaunched.unresumableSession()).isNull();
+        assertThat(relaunched.unresumed()).isNull();
     }
 
     @Test
@@ -88,7 +88,7 @@ class RecoverFromOutageTest {
         assertThat(fresh.session()).isNotEqualTo(horn.session());
         assertThat(fresh.firstPrompt()).contains("fresh start after its tmux server changed and session " + horn.session()
                 + " left no transcript to resume: read the handover ");
-        assertThat(relaunched.unresumableSession()).isEqualTo(horn.session());
+        assertThat(relaunched.unresumed().session()).isEqualTo(horn.session());
         assertThat(home.outages().open()).extracting(entry -> entry.task().value()).containsExactly("fit-lamp");
     }
 

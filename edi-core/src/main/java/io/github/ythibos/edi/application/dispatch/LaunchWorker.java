@@ -33,10 +33,12 @@ import io.github.ythibos.edi.application.brief.BriefFacts;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
+import io.github.ythibos.edi.application.dispatch.DispatchOutcome.UnresumedSession;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.application.worker.WorkerTokens.IssuedToken;
 import io.github.ythibos.edi.domain.OperationalText;
@@ -51,12 +53,14 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Adoption;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -146,6 +150,10 @@ public class LaunchWorker {
         briefs.requireWithinItsLength(dispatchedBriefFactsOf(dispatch));
     }
 
+    public void requireAReadyLoginFor(ProjectName project) {
+        runtime.requireReady(loginOf(registry.entryOf(project)));
+    }
+
     private void requireAnEmptyCopy(TaskId task) {
         Path worktree = home.worktreeOf(transaction.execute(_ -> tasks.get(task)).intake().projects().getFirst(), task);
         List<Long> holders = processes.workingIn(worktree);
@@ -159,12 +167,17 @@ public class LaunchWorker {
         return transaction.execute(_ -> incarnationFor(dispatch, LaunchKind.DISPATCH, null)).brief();
     }
 
+    private Login loginOf(ProjectEntry project) {
+        return machine.claudeLogins().named(project.login());
+    }
+
     private Launched launched(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         return meters.workerLaunch(() -> launchedNow(dispatch, kind, answered, because, actor));
     }
 
     private Launched launchedNow(Dispatch dispatch, LaunchKind kind, OutageEntry answered, String because, Actor actor) {
         Incarnation incarnation = transaction.execute(_ -> incarnationFor(dispatch, kind, answered));
+        runtime.requireReady(incarnation.login());
         Path worktree = copies.prepare(incarnation.project(), dispatch.task(), dispatch.branch(), incarnation.brief().base());
         copies.requireIsolated(worktree, incarnation.project());
         Path taskDirectory = createdDirectory(home.taskDirectory(dispatch.task()));
@@ -197,33 +210,42 @@ public class LaunchWorker {
         places.requireNoLiveWorker(task.id());
         Worker earlier = workers.latestOf(task.id()).orElse(null);
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
-        SessionStart start = sessionStartFor(kind, task, earlier);
-        return new Incarnation(task, project, dispatch, start.kind(), start.launchedAs(), worker, start.session(), start.unresumable(), earlier, route,
-                rules.pipelineAgent().route(), settings, briefFacts.factsFor(task, project, dispatch, worker), answered);
+        SessionStart start = sessionStartFor(kind, task, earlier, project, answered);
+        return new Incarnation(task, project, start.login(), dispatch, start.kind(), start.launchedAs(), worker, start.session(), start.unresumed(), earlier,
+                route, rules.pipelineAgent().route(), settings, briefFacts.factsFor(task, project, dispatch, worker), answered);
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
         return answered != null && task.isHeld() && answered.holds(task.hold()) ? task.released() : task;
     }
 
-    private SessionStart sessionStartFor(LaunchKind kind, Task task, Worker earlier) {
+    private SessionStart sessionStartFor(LaunchKind kind, Task task, Worker earlier, ProjectEntry project, OutageEntry answered) {
         Optional<UUID> adoptedSession = adoptedSessionToResume(task, earlier);
-        LaunchKind launchedAs = adoptedSession.isPresent() ? LaunchKind.RESUME : kind;
-        UUID session = adoptedSession.orElseGet(() -> sessionFor(kind, task, earlier));
-        if (launchedAs == LaunchKind.RESUME && !runtime.hasATranscriptOf(session)) {
-            return SessionStart.insteadOfResuming(session, kind);
+        if (adoptedSession.isPresent()) {
+            return resumed(kind, adoptedSession.get(), loginOfAnAdoptedSession(), project);
         }
-        return new SessionStart(kind, launchedAs, session, null);
+        if (kind != LaunchKind.RESUME) {
+            return new SessionStart(kind, kind, UUID.randomUUID(), loginOf(project), null);
+        }
+        return resumed(kind, sessionToResume(task, earlier), recordedLoginOf(earlier, answered), project);
     }
 
     private Optional<UUID> adoptedSessionToResume(Task task, Worker earlier) {
         return earlier == null ? adoptions.of(task.id()).filter(Adoption::resumesASession).map(Adoption::session) : Optional.empty();
     }
 
-    private static UUID sessionFor(LaunchKind kind, Task task, Worker earlier) {
-        if (kind != LaunchKind.RESUME) {
-            return UUID.randomUUID();
+    private SessionStart resumed(LaunchKind kind, UUID session, Login login, ProjectEntry project) {
+        if (runtime.hasATranscriptOf(session, login)) {
+            return new SessionStart(kind, LaunchKind.RESUME, session, login, null);
         }
+        return SessionStart.insteadOfResuming(UnresumedSession.withoutATranscript(session), kind, loginOf(project));
+    }
+
+    private Login loginOfAnAdoptedSession() {
+        return machine.claudeLogins().named(LoginName.DEFAULT);
+    }
+
+    private static UUID sessionToResume(Task task, Worker earlier) {
         if (earlier == null) {
             throw new Refusal(Rule.TASK_DISPATCHED, task.id() + " never had a worker, so there is no session to resume.");
         }
@@ -234,9 +256,23 @@ public class LaunchWorker {
         return earlier.session();
     }
 
+    private Login recordedLoginOf(Worker earlier, OutageEntry answered) {
+        LoginName recorded = earlier.launch().login();
+        if (!machine.claudeLogins().names(recorded)) {
+            throw new Refusal(Rule.CLAUDE_LOGIN, earlier.id() + "'s session ran on the Claude login " + recorded + ", which the machine profile no longer names, and a"
+                    + " session resumes only on its own login; restore " + recorded + " under claude.logins to resume it, or start it fresh with "
+                    + freshStartOf(earlier, answered) + ".");
+        }
+        return machine.claudeLogins().named(recorded);
+    }
+
+    private static String freshStartOf(Worker earlier, OutageEntry answered) {
+        return answered == null ? "edi worker relaunch " + earlier.id().task() + " --fresh" : "edi recover " + answered.number() + " fresh";
+    }
+
     private static String reasonFor(Incarnation incarnation, String because) {
-        UUID unresumable = incarnation.unresumable();
-        return unresumable == null ? because : because + " and session " + unresumable + " left no transcript to resume";
+        UnresumedSession unresumed = incarnation.unresumed();
+        return unresumed == null ? because : because + " and " + unresumed.sentence();
     }
 
     private String firstPromptFor(Incarnation incarnation, Path worktree, String because) {
@@ -274,7 +310,7 @@ public class LaunchWorker {
                 "EDI_TASK_ID", incarnation.task().id().value(),
                 "EDI_WORKER", incarnation.worker().toString(),
                 "EDI_TOKEN_FILE", token.file().toString());
-        return new Launch(incarnation.worker(), incarnation.launchedAs(), incarnation.session(), incarnation.route(), worktree,
+        return new Launch(incarnation.worker(), incarnation.launchedAs(), incarnation.session(), incarnation.route(), incarnation.login(), worktree,
                 incarnation.project().projectClone(), taskDirectory, stateDirectory, environment,
                 incarnation.settings().disallowedTools(), incarnation.settings().permissionMode(), firstPrompt);
     }
@@ -282,14 +318,14 @@ public class LaunchWorker {
     private Launched recorded(Incarnation incarnation, WorkerWindow window, IssuedToken token, Path worktree, String because, Actor actor) {
         Instant now = clock.now();
         Worker worker = Worker.launched(incarnation.worker(), incarnation.session(), incarnation.dispatch().category(),
-                incarnation.route(), window, new WorkerLaunch(incarnation.launchedAs(), now, boot.current()));
+                incarnation.route(), window, new WorkerLaunch(incarnation.launchedAs(), now, boot.current(), incarnation.login().name()));
         retireTheEarlierWorker(incarnation, now, actor);
         workers.insert(worker, token.digest());
         settleTheOutageEntry(incarnation, now, actor);
         tasks.update(tasks.get(incarnation.task().id()).dispatched());
         dispatches.save(incarnation.dispatch().undeferred());
         events.record(launchEventOf(incarnation, worker, because), actor, now);
-        return new Launched(worker, incarnation.dispatch().branch(), worktree, incarnation.unresumable());
+        return new Launched(worker, incarnation.dispatch().branch(), worktree, incarnation.unresumed());
     }
 
     private void retireTheEarlierWorker(Incarnation incarnation, Instant now, Actor actor) {
@@ -348,12 +384,13 @@ public class LaunchWorker {
     private record Incarnation(
             Task task,
             ProjectEntry project,
+            Login login,
             Dispatch dispatch,
             LaunchKind kind,
             LaunchKind launchedAs,
             WorkerId worker,
             UUID session,
-            UUID unresumable,
+            UnresumedSession unresumed,
             Worker earlier,
             Route route,
             Route pipelineRoute,
@@ -362,11 +399,11 @@ public class LaunchWorker {
             OutageEntry answered) {
     }
 
-    private record SessionStart(LaunchKind kind, LaunchKind launchedAs, UUID session, UUID unresumable) {
+    private record SessionStart(LaunchKind kind, LaunchKind launchedAs, UUID session, Login login, UnresumedSession unresumed) {
 
-        static SessionStart insteadOfResuming(UUID unresumable, LaunchKind kind) {
+        static SessionStart insteadOfResuming(UnresumedSession unresumed, LaunchKind kind, Login projectsLogin) {
             LaunchKind instead = freshInsteadOf(kind);
-            return new SessionStart(instead, instead, UUID.randomUUID(), unresumable);
+            return new SessionStart(instead, instead, UUID.randomUUID(), projectsLogin, unresumed);
         }
 
         private static LaunchKind freshInsteadOf(LaunchKind kind) {

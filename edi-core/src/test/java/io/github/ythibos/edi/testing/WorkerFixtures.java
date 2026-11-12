@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -69,6 +70,19 @@ public final class WorkerFixtures {
         return home.registering(REGISTRY)
                 .writing("config/dispatch-rules.json", ExampleHome.file("config/dispatch-rules.json"))
                 .writing("memory/craft-rules.md", CRAFT_RULES);
+    }
+
+    public static TestHome homeWithHarnessOnTheLogin(Path directory, String login, Path configDirectory) throws IOException {
+        return harnessMovedToTheLogin(homeWithProjects(directory).withTheClaudeLogin(login, configDirectory), login);
+    }
+
+    public static TestHome projectsOnTheLogins(TestHome home, String harnessLogin, String ediLogin) throws IOException {
+        return home.registering(REGISTRY.replace("    verify: \"true\"\n", "    verify: \"true\"\n    login: " + harnessLogin + "\n")
+                .replace("projectKey: EDI }\n", "projectKey: EDI }\n    login: " + ediLogin + "\n"));
+    }
+
+    public static TestHome harnessMovedToTheLogin(TestHome home, String login) throws IOException {
+        return home.registering(REGISTRY.replace("    verify: \"true\"\n", "    verify: \"true\"\n    login: " + login + "\n"));
     }
 
     public static TestHome homeWithProjectsOn(Path directory, ForgeKind kind) throws IOException {
@@ -119,7 +133,7 @@ public final class WorkerFixtures {
                 expected, null, TestHome.START));
         Worker worker = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), category,
                 new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), window,
-                new WorkerLaunch(LaunchKind.DISPATCH, TestHome.START, home.machineBoot().current()));
+                new WorkerLaunch(LaunchKind.DISPATCH, TestHome.START, home.machineBoot().current(), LoginName.DEFAULT));
         home.workers().insert(worker, "digest-of-" + task.id());
         return worker;
     }

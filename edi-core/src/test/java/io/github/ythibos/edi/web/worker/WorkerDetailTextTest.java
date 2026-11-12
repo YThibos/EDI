@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -40,7 +41,7 @@ class WorkerDetailTextTest {
         Worker working = launched().promptSubmitted(AT.plusSeconds(60))
                 .reported(new StatusReport(StatusState.WORKING, null, null, "Fitting the lamp.\nThe bracket comes next."), AT.plusSeconds(120));
 
-        assertThat(text.text(new WorkerDetail(working, List.of(), new PipelineRun("run-7", "running", "review", "abc1234", null)))).isEqualTo("""
+        assertThat(text.text(new WorkerDetail(working, List.of(), new PipelineRun("run-7", "running", "review", "abc1234", null, false)))).isEqualTo("""
                 fit-lamp#1, implementation, on claude-opus-5-5 at high
                 State: busy since 2026-10-15 09:31 UTC.
                 Last status, 2026-10-15 09:32 UTC: working
@@ -82,7 +83,7 @@ class WorkerDetailTextTest {
                 .reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), AT.plusSeconds(120))
                 .turnEnded(AT.plusSeconds(150));
 
-        assertThat(text.text(new WorkerDetail(finished, List.of(), new PipelineRun("run-8", "passed", null, "abc1234", null)))).isEqualTo("""
+        assertThat(text.text(new WorkerDetail(finished, List.of(), new PipelineRun("run-8", "passed", null, "abc1234", null, false)))).isEqualTo("""
                 fit-lamp#1, implementation, on claude-opus-5-5 at high
                 State: idle since 2026-10-15 09:32 UTC.
                 Done check: accepted.
@@ -96,6 +97,6 @@ class WorkerDetailTextTest {
     private static Worker launched() {
         return Worker.launched(WorkerId.first(LAMP), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, AT, "@1", 2L),
-                new WorkerLaunch(LaunchKind.DISPATCH, AT, new BootId("boot")));
+                new WorkerLaunch(LaunchKind.DISPATCH, AT, new BootId("boot"), LoginName.DEFAULT));
     }
 }

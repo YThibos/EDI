@@ -78,6 +78,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
                     + " shows the pane.";
             case LIMIT_RESUME_HELD_BACK -> who + ": its usage limit reset, but its pane shows " + wake.detail() + ", so you typed nothing.";
             case WORKER_DIED -> who + " died: " + wake.detail() + "; edi worker relaunch " + wake.task() + " resumes its session.";
+            case ON_ANOTHER_LOGIN -> who + " ran on " + wake.detail() + ", so I stopped it; edi worker relaunch " + wake.task()
+                    + " launches it again on its recorded login.";
             case LOST_IN_OUTAGE -> who + " is on the outage hold list as number " + wake.detail() + "; edi recover shows the list.";
             case WORKER_STALE -> who + " has been idle without a declared wait since " + moments.minute(wake.moment()) + "; look once, then steer or mark it.";
             case BUSY_TOO_LONG -> who + " has been busy since " + moments.minute(wake.moment()) + ", past the three-hour ceiling.";

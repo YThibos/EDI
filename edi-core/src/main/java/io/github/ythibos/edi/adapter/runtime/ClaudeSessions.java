@@ -8,10 +8,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.AsciiCharacters;
+import io.github.ythibos.edi.domain.worker.LoginName;
 
 @Component
 public class ClaudeSessions {
@@ -19,13 +21,16 @@ public class ClaudeSessions {
     private static final String TRANSCRIPT_SUFFIX = ".jsonl";
     private static final char FOLDER_SEPARATOR = '-';
 
-    private final Path sessions;
+    private final ClaudeLoginFiles logins;
+    private final MachineProfile machine;
 
-    public ClaudeSessions(@Value("${edi.workers.claude-sessions}") Path sessions) {
-        this.sessions = sessions;
+    public ClaudeSessions(ClaudeLoginFiles logins, MachineProfile machine) {
+        this.logins = logins;
+        this.machine = machine;
     }
 
-    public Optional<Path> transcriptOf(UUID session) {
+    public Optional<Path> transcriptOf(UUID session, Login login) {
+        Path sessions = logins.sessionsOf(login);
         if (!Files.isDirectory(sessions)) {
             return Optional.empty();
         }
@@ -36,8 +41,12 @@ public class ClaudeSessions {
         }
     }
 
+    public Optional<Path> transcriptOnTheDefaultLoginOf(UUID session) {
+        return transcriptOf(session, theDefaultLogin());
+    }
+
     public void carryInto(Path transcript, Path workingDirectory) {
-        Path carried = sessions.resolve(folderOf(workingDirectory)).resolve(transcript.getFileName());
+        Path carried = logins.sessionsOf(theDefaultLogin()).resolve(folderOf(workingDirectory)).resolve(transcript.getFileName());
         if (Files.exists(carried)) {
             return;
         }
@@ -47,6 +56,10 @@ public class ClaudeSessions {
         } catch (IOException uncopied) {
             throw new UncheckedIOException(uncopied);
         }
+    }
+
+    private Login theDefaultLogin() {
+        return machine.claudeLogins().named(LoginName.DEFAULT);
     }
 
     static String folderOf(Path workingDirectory) {

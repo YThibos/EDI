@@ -21,7 +21,8 @@ mise install
 `./mvnw verify` runs the whole invariant catalogue; an acceptance test a later slice owns would be reported as skipped ([invariant-catalogue](decisions/invariant-catalogue.md)).
 The suite runs under both machine profiles ([machine-and-person-specifics](decisions/machine-and-person-specifics.md)), Claude Code is replaced by a stand-in in the tests ([native-smoke-test](decisions/native-smoke-test.md)), and tests stop every process they start ([test-isolation](decisions/test-isolation.md)).
 The native smoke test runs the built executables end to end ([native-smoke-test](decisions/native-smoke-test.md)).
-A local native check runs in quick-build mode, and only when the change can reach the native image; CI and the install build the optimised image ([local-native-builds](decisions/local-native-builds.md)).
+CI runs the full build, `./mvnw verify` and the optimised native build, on every pull request, and its run on the last commit is the full-build evidence; locally a change runs the tests it touches, the fast profile and its own end-to-end checks, and a wider build only to diagnose a CI failure ([worker-brief](decisions/worker-brief.md)).
+Where CI cannot run, `./mvnw verify` is the fallback evidence, with a local native check in quick-build mode only when the change can reach the native image; the install builds the optimised image ([local-native-builds](decisions/local-native-builds.md)).
 
 ## Continuous integration
 

@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.application.worker;
 
+import java.util.function.Function;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -36,11 +38,19 @@ public class RelaunchWorker {
     }
 
     public Launched relaunch(TaskReference reference, Actor actor) {
+        return relaunched(reference, RelaunchWorker::launchKindFor, actor);
+    }
+
+    public Launched relaunchFresh(TaskReference reference, Actor actor) {
+        return relaunched(reference, _ -> LaunchKind.FRESH, actor);
+    }
+
+    private Launched relaunched(TaskReference reference, Function<Worker, LaunchKind> launchKind, Actor actor) {
         Task task = transaction.execute(_ -> tasks.get(reference));
         Worker latest = transaction.execute(_ -> WorkerLookup.servingTask(workers, task.id()));
         String because = lossOf(health.judged(latest).health(), latest);
         requireNoHold(task);
-        return launcher.relaunch(task.id(), launchKindFor(latest), null, null, because, actor);
+        return launcher.relaunch(task.id(), launchKind.apply(latest), null, null, because, actor);
     }
 
     private static String lossOf(WorkerHealth health, Worker worker) {

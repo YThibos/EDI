@@ -127,15 +127,15 @@ public class FleetSnapshotQuery {
         return deliveries.of(task.id())
                 .filter(Delivery::isOpen)
                 .filter(_ -> hadADoneAccepted(task, doneStands))
-                .map(delivery -> new HandedOverRequest(task, delivery, doneStands, runningPipelineOf(task), unacknowledgedSteersOf(task)));
+                .map(delivery -> new HandedOverRequest(task, delivery, doneStands, pipelineStillChanging(task), unacknowledgedSteersOf(task)));
     }
 
     private boolean hadADoneAccepted(Task task, boolean doneStands) {
         return doneStands || events.hadADoneAccepted(task.id());
     }
 
-    private PipelineRun runningPipelineOf(Task task) {
-        return pipelineRuns.latestOf(task.id()).filter(PipelineRun::isRunning).orElse(null);
+    private PipelineRun pipelineStillChanging(Task task) {
+        return pipelineRuns.latestOf(task.id()).filter(PipelineRun::stillChangesTheRequest).orElse(null);
     }
 
     private List<Integer> unacknowledgedSteersOf(Task task) {
@@ -207,10 +207,10 @@ public class FleetSnapshotQuery {
         return heldTask.hold().awaitsADecision() && unresolvedBlockers.isEmpty();
     }
 
-    private record HandedOverRequest(Task task, Delivery delivery, boolean doneStands, PipelineRun runningPipeline, List<Integer> unacknowledgedSteers) {
+    private record HandedOverRequest(Task task, Delivery delivery, boolean doneStands, PipelineRun changingPipeline, List<Integer> unacknowledgedSteers) {
 
         boolean isSettled() {
-            return doneStands && runningPipeline == null && unacknowledgedSteers.isEmpty();
+            return doneStands && !delivery.draft() && changingPipeline == null && unacknowledgedSteers.isEmpty();
         }
 
         ReadyForReview readyForReview() {
@@ -218,7 +218,7 @@ public class FleetSnapshotQuery {
         }
 
         ChangingRequest stillChanging() {
-            return new ChangingRequest(task, delivery, !doneStands, runningPipeline, unacknowledgedSteers);
+            return new ChangingRequest(task, delivery, !doneStands, changingPipeline, unacknowledgedSteers);
         }
     }
 }

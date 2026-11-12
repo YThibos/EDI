@@ -49,7 +49,11 @@ class NativeRecoveryIT {
                 - id: claude-sonnet-5-5
                 - id: claude-haiku-5-5
                   ignoresEffort: true
+            claude:
+              logins:
+                default: { configDirectory: %s }
             """;
+    private static final String FIRST_RUN_FINISHED = "{\"hasCompletedOnboarding\": true}";
     private static final String WORKER_SOCKET = "edi-recovery-" + UUID.randomUUID();
     private static final Pattern FIRST_SESSION = Pattern.compile("--session-id (\\S+)");
 
@@ -69,7 +73,8 @@ class NativeRecoveryIT {
         home = Files.createTempDirectory(homes, "home-");
         Files.createDirectories(home.resolve("config"));
         Files.writeString(home.resolve("config/projects.yaml"), REGISTRY);
-        Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE);
+        Files.writeString(home.resolve("config/machine.yaml"), MACHINE_PROFILE.formatted(claudeLogin()));
+        Files.writeString(claudeLogin().resolve(".claude.json"), FIRST_RUN_FINISHED);
         Files.copy(Path.of(System.getProperty("edi.repository.root"), "examples/edi-home/config/dispatch-rules.json"),
                 home.resolve("config/dispatch-rules.json"));
         Files.writeString(bootIdFile(), UUID.randomUUID().toString());
@@ -207,10 +212,10 @@ class NativeRecoveryIT {
         ProcessBuilder launch = new ProcessBuilder(commandLine)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(home.resolve("core.log").toFile()));
-        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_"));
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_")
+                || variable.startsWith("CLAUDE"));
         launch.environment().put("PATH", binary("edi.cli.binary").getParent() + ":" + launch.environment().get("PATH"));
         launch.environment().put("EDI_HOME", home.toString());
-        launch.environment().put("CLAUDE_CONFIG_DIR", Files.createDirectories(home.resolve("claude-config")).toString());
         launch.environment().put("SERVER_PORT", "0");
         Process started = processes.register(launch.start());
         long startUp = System.nanoTime();
@@ -227,7 +232,7 @@ class NativeRecoveryIT {
     }
 
     private static void deleteTheTranscriptOf(String session) throws IOException {
-        try (Stream<Path> files = Files.walk(home.resolve("claude-config/projects"))) {
+        try (Stream<Path> files = Files.walk(claudeLogin().resolve("projects"))) {
             List<Path> transcripts = files.filter(file -> file.getFileName().toString().equals(session + ".jsonl")).toList();
             assertThat(transcripts).as("the transcript of session %s", session).isNotEmpty();
             for (Path transcript : transcripts) {
@@ -296,6 +301,10 @@ class NativeRecoveryIT {
         try (InputStream script = NativeRecoveryIT.class.getResourceAsStream("/edi-test-mise")) {
             return StandInScripts.installed(home.resolve("edi-test-mise"), new String(script.readAllBytes(), StandardCharsets.UTF_8)).toString();
         }
+    }
+
+    private static Path claudeLogin() throws IOException {
+        return Files.createDirectories(home.resolve("claude-config"));
     }
 
     private static Path bootIdFile() {

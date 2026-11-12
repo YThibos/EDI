@@ -129,7 +129,7 @@ public class AdoptForkTask {
         if (session == null) {
             return Optional.empty();
         }
-        return Optional.of(sessions.transcriptOf(session).orElseThrow(() -> new Refusal(Rule.ADOPTABLE, "No Claude Code transcript of session " + session
+        return Optional.of(sessions.transcriptOnTheDefaultLoginOf(session).orElseThrow(() -> new Refusal(Rule.ADOPTABLE, "No Claude Code transcript of session " + session
                 + " exists on this machine, so I could not resume it; adopt without --session to start the next worker afresh.")));
     }
 

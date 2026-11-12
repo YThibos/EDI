@@ -24,6 +24,11 @@ class StoreConfiguration {
     }
 
     @Bean
+    OneTransactionAtATime transactionManager(DataSource store) {
+        return new OneTransactionAtATime(store);
+    }
+
+    @Bean
     TransactionTemplate transactionTemplate(PlatformTransactionManager transactions, CoreMeters meters) {
         return new MeasuredTransactions(transactions, meters);
     }

@@ -61,7 +61,8 @@ public final class PublishGuard {
         Git git = new Git(programs);
         ForgeCalls calls = new ForgeCalls(programs, "", "");
         Forges forges = new Forges(List.of(new GitHubForge(calls, json), new GitLabForge(calls, json)));
-        PublicationTargets targets = new PublicationTargets(home, git, new ProjectRegistry(home), new MachineProfile(home), forges);
+        MachineProfile machine = new MachineProfile(home);
+        PublicationTargets targets = new PublicationTargets(home, git, new ProjectRegistry(home, machine), machine, forges);
         return new PublishCheck(home, git, new Gitleaks(programs, json), targets);
     }
 

@@ -48,6 +48,7 @@ import picocli.CommandLine.Spec;
             CleanupCommand.class,
             BoardCommand.class,
             CaptainCommand.class,
+            SparkCommand.class,
             WorktreeCommand.class,
             MemoryCommand.class,
             PresenceCommand.class,

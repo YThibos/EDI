@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
+import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
@@ -25,6 +26,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.testing.ExampleHome;
@@ -165,6 +167,41 @@ class DispatchTaskTest {
         assertThatThrownBy(() -> dispatch("no-key", null)).isInstanceOf(Refusal.class).hasMessageContaining("names its category");
         assertThatThrownBy(() -> dispatch("no-key", "flying")).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("No dispatch category");
         assertThat(home.runtime().launches()).isEmpty();
+    }
+
+    @Test
+    void launchesTheWorkerOfAProjectOnTheClaudeLoginItsRegistryEntryNamesOnceThatLoginIsReady() throws IOException {
+        Path secondLogin = directory.resolve("logins/second");
+        home = WorkerFixtures.homeWithHarnessOnTheLogin(directory.resolve("on-a-login"), "second", secondLogin);
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("fit-mast", "EDI", "EDI-4")));
+
+        dispatch("fit-lamp", "implementation");
+        Launch onTheSecond = home.runtime().lastLaunch();
+        dispatch("fit-mast", "implementation");
+        Launch onTheDefault = home.runtime().lastLaunch();
+
+        Login second = new Login(new LoginName("second"), secondLogin);
+        assertThat(onTheSecond.login()).isEqualTo(second);
+        assertThat(onTheDefault.login()).isEqualTo(new Login(LoginName.DEFAULT, null));
+        assertThat(home.runtime().readinessChecks()).contains(second, new Login(LoginName.DEFAULT, null));
+    }
+
+    @Test
+    void refusesADispatchOntoALoginThatIsNotReadyBeforeACopyABranchOrAWindowExists() throws IOException {
+        home = WorkerFixtures.homeWithHarnessOnTheLogin(directory.resolve("on-a-login"), "second", directory.resolve("logins/second"));
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        String notReady = "The Claude login second is not ready for a worker: claude auth status says it is not logged in;"
+                + " run CLAUDE_CONFIG_DIR=/logins/second claude auth login, then try again.";
+        home.runtime().loginIsNotReady(new LoginName("second"), notReady);
+
+        assertThatThrownBy(() -> dispatch("fit-lamp", "implementation")).isInstanceOf(Refusal.class).hasMessage(notReady);
+
+        Path clone = home.home().root().resolve("projects/harness");
+        assertThat(home.runtime().launches()).isEmpty();
+        assertThat(home.home().root().resolve("worktrees/harness/fit-lamp")).doesNotExist();
+        assertThat(home.dispatches().of(new TaskId("fit-lamp"))).isEmpty();
+        assertThat(FixtureRepository.at(clone).run("branch", "--list", "feature/HRN-3")).isBlank();
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).state()).isEqualTo(TaskState.QUEUED);
     }
 
     private DispatchOutcome dispatch(String task, String category) {
