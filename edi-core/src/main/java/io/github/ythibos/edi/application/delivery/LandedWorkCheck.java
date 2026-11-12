@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.landing.CaptainsCopy;
 import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
@@ -27,6 +28,22 @@ public class LandedWorkCheck {
     public LandedWork of(Workplace workplace) {
         git.fetchOrigin(workplace.project().projectClone());
         return Files.isDirectory(workplace.worktree()) ? ofTheCopy(workplace) : ofTheBranchAlone(workplace);
+    }
+
+    public Optional<String> headOf(Workplace workplace) {
+        return Files.isDirectory(workplace.worktree())
+                ? Optional.of(git.head(workplace.worktree()))
+                : git.commitAt(workplace.project().projectClone(), BRANCHES + workplace.dispatch().branch());
+    }
+
+    public List<BranchCommit> commitsAfter(Workplace workplace, String mergedHead) {
+        git.fetchOrigin(workplace.project().projectClone());
+        Path repository = Files.isDirectory(workplace.worktree()) ? workplace.worktree() : workplace.project().projectClone();
+        Optional<String> head = headOf(workplace);
+        if (head.isEmpty() || git.commitAt(repository, mergedHead).isEmpty()) {
+            return List.of();
+        }
+        return git.commitsBeyond(repository, mergedHead, head.get()).stream().filter(commit -> !commit.sameChangeInTheBase()).toList();
     }
 
     private LandedWork ofTheCopy(Workplace workplace) {

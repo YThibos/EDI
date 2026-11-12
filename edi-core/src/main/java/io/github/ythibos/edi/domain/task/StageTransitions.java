@@ -11,9 +11,12 @@ import static io.github.ythibos.edi.domain.task.TaskStage.RETIRED;
 import static io.github.ythibos.edi.domain.task.TaskStage.WORKING;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
@@ -29,8 +32,10 @@ import io.github.ythibos.edi.domain.task.StageTrigger.RequestMerged;
 
 public record StageTransitions(TaskId task, TaskKind kind) {
 
-    private static final Set<TaskStage> MERGEABLE = EnumSet.of(WORKING, DELIVERED, CHANGING, READY);
-    private static final Set<TaskStage> DROPPABLE = EnumSet.complementOf(EnumSet.of(RETIRED, DROPPED));
+    private static final Set<TaskStage> ONGOING = stagesThat(TaskStage::isOngoing);
+    private static final Set<TaskStage> HANDED_OVER = stagesThat(TaskStage::isHandedOver);
+    private static final Set<TaskStage> MERGEABLE = stagesThat(TaskStage::isMergeable);
+    private static final Set<TaskStage> DROPPABLE = stagesThat(stage -> !stage.isClosed());
     private static final String REPORT_NOT_FILED = "its report.md is not filed";
 
     public StageChange move(TaskStage stage, StageTrigger trigger) {
@@ -45,6 +50,10 @@ public record StageTransitions(TaskId task, TaskKind kind) {
             case CaptainItemAnswered answered -> closedByItsAnswer(stage, answered);
             case Drop drop -> dropped(stage, drop);
         };
+    }
+
+    private static Set<TaskStage> stagesThat(Predicate<TaskStage> belongs) {
+        return Arrays.stream(TaskStage.values()).filter(belongs).collect(Collectors.toCollection(() -> EnumSet.noneOf(TaskStage.class)));
     }
 
     private StageChange dispatched(TaskStage stage, Dispatch dispatch) {
@@ -96,7 +105,7 @@ public record StageTransitions(TaskId task, TaskKind kind) {
     }
 
     private StageChange delivered(TaskStage stage, DoneReported done) {
-        requireFrom(stage, EnumSet.of(WORKING, CHANGING), DELIVERED);
+        requireFrom(stage, ONGOING, DELIVERED);
         refuseAnyOf(stage, deliveryGapsOf(done));
         return change(stage, DELIVERED, "its worker reported done");
     }
@@ -152,7 +161,7 @@ public record StageTransitions(TaskId task, TaskKind kind) {
     }
 
     private StageChange changing(TaskStage stage, Change change) {
-        requireFrom(stage, EnumSet.of(DELIVERED, READY), CHANGING);
+        requireFrom(stage, HANDED_OVER, CHANGING);
         return change(stage, CHANGING, change.cause().sentence());
     }
 

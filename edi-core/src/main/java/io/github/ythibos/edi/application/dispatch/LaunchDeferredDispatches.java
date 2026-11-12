@@ -2,7 +2,6 @@ package io.github.ythibos.edi.application.dispatch;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -58,9 +57,7 @@ public class LaunchDeferredDispatches {
     private boolean hasRoom(Dispatch dispatch) {
         return transaction.execute(_ -> {
             ProjectEntry project = registry.entryOf(tasks.get(dispatch.task()).intake().projects().getFirst());
-            OptionalInt capacity = project.workerCapacity();
-            boolean projectHasRoom = capacity.isEmpty() || places.occupiedOn(project.project().name()) < capacity.getAsInt();
-            return projectHasRoom && awayLimit.hasRoomForAnotherWorker();
+            return places.roomOn(project).hasRoom() && awayLimit.hasRoomForAnotherWorker();
         });
     }
 

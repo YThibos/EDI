@@ -11,6 +11,13 @@ const TONES: Record<string, Tone> = {
   'with me': 'info',
   busy: 'online',
   idle: 'neutral',
+  delivered: 'warn',
+  ready: 'warn',
+  changing: 'info',
+  merged: 'online',
+  landed: 'online',
+  retired: 'online',
+  dropped: 'neutral',
 };
 
 export function toneOf(state: string): Tone {

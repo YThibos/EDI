@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -59,6 +60,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
@@ -106,16 +108,22 @@ import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.StageChange;
+import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeRule;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 @Component
 public class EventLog {
+
+    private static final String STAGE_DERIVED = "StageDerived";
 
     private final JdbcClient store;
     private final JsonMapper json;
@@ -200,6 +208,14 @@ public class EventLog {
                 .list();
     }
 
+    public List<StageReached> stagesOf(TaskId task) {
+        return store.sql("select at, type, payload from event where task_id = :task and type in (:types) order by sequence")
+                .param("task", task.value())
+                .param("types", List.of(STAGE_DERIVED, StageChanged.class.getSimpleName()))
+                .query((row, _) -> stageReached(row))
+                .list();
+    }
+
     public boolean hadADoneAccepted(TaskId task) {
         return store.sql("""
                 select exists (
@@ -228,6 +244,7 @@ public class EventLog {
             case DecisionRoundClosed closed -> payload.put("number", closed.number().toString()).put("title", closed.title())
                     .put("opened", Columns.text(closed.opened()));
             case TaskReleased _, TaskDone _ -> payload;
+            case StageChanged changed -> withChange(payload, changed.change());
             case DispatchDeferred deferred -> payload.put("project", deferred.project().value())
                     .put("category", deferred.category().value())
                     .put("running", deferred.running())
@@ -354,6 +371,12 @@ public class EventLog {
                 json.readTree(row.getString("payload")));
     }
 
+    private StageReached stageReached(ResultSet row) throws SQLException {
+        JsonNode payload = json.readTree(row.getString("payload"));
+        String stage = payload.path(row.getString("type").equals(STAGE_DERIVED) ? "stage" : "to").asString();
+        return new StageReached(Columns.instant(row.getString("at")), TaskStage.named(stage), payload.path("reason").asString());
+    }
+
     private static ObjectNode withEach(ObjectNode payload, String field, List<String> values) {
         ArrayNode array = payload.putArray(field);
         values.forEach(array::add);
@@ -370,6 +393,17 @@ public class EventLog {
         withCost(payload.putObject("before"), recounted.before());
         withCost(payload.putObject("after"), recounted.after());
         return payload;
+    }
+
+    private static ObjectNode withChange(ObjectNode payload, StageChange change) {
+        payload.put("from", change.from().word()).put("to", change.to().word()).put("reason", change.reason());
+        ArrayNode notLanded = payload.putArray("notLanded");
+        change.notLanded().forEach(commit -> withCommit(notLanded.addObject(), commit));
+        return payload;
+    }
+
+    private static ObjectNode withCommit(ObjectNode payload, BranchCommit commit) {
+        return payload.put("id", commit.id()).put("subject", commit.subject());
     }
 
     private static ObjectNode withRun(ObjectNode payload, PipelineRun run) {

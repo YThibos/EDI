@@ -55,3 +55,4 @@ When EDI needs concurrent writers from more than one process, long-running reade
 - 16/10/2026 to 19/10/2026: slices S3 to S10 added workers and inboxes, supervision state, deliveries, tracker and follower state, console sessions and boards, presence and memory, and migration and adoption, one migration each.
 - 21/10/2026: `V9__waiting_on_the_captain.sql` added board links and dropped dependencies on closed tasks.
 - 10/11/2026: transactions take their turn in `OneTransactionAtATime` before they reach SQLite, after waiters pinned in the busy handler starved the transaction holding the write lock and refused web requests with a server error.
+- 12/11/2026: `V26__the_stage_is_stored.sql` rebuilt `task` with `stage` in place of `state` and derived each task's stage once from the stored facts ([task-lifecycle](task-lifecycle.md), EDI-85).

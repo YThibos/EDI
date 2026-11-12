@@ -52,6 +52,7 @@ public class TaskDetailQuery {
                     pipelineRuns.latestOf(task.id()).orElse(null),
                     costs.of(task.id()).orElse(null),
                     workedTimes.of(task.id(), measuredUntil(task)).orElse(null),
+                    events.stagesOf(task.id()),
                     events.timelineOf(task.id()));
         });
     }

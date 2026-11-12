@@ -36,7 +36,7 @@ class DeliveryModeMigrationTest {
 
         Flyway.configure().dataSource(store).load().migrate();
         jdbc.sql("""
-                        insert into task (id, kind, title, state, notes, created_at, delivery)
+                        insert into task (id, kind, title, stage, notes, created_at, delivery)
                         values ('move-shelf', 'ship', 'Move the shelf', 'queued', '', :at, 'report')""")
                 .param("at", CREATED).update();
         TaskStore tasks = new TaskStore(jdbc);

@@ -18,6 +18,7 @@ import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
@@ -30,6 +31,7 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.task.StageTrigger.RequestMerged;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -49,11 +51,14 @@ public class FollowMerges {
     private final DeliveryRecords records;
     private final CloneRefreshes refreshes;
     private final CleanUpTask cleanUp;
+    private final LandedWorkCheck landedWork;
+    private final TaskStages stages;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public FollowMerges(TaskStore tasks, DeliveryStore deliveries, EventLog events, ProjectRegistry registry, WorkerContext context, Forges forges,
-            DeliveryRecords records, CloneRefreshes refreshes, CleanUpTask cleanUp, Clock clock, TransactionTemplate transaction) {
+            DeliveryRecords records, CloneRefreshes refreshes, CleanUpTask cleanUp, LandedWorkCheck landedWork, TaskStages stages, Clock clock,
+            TransactionTemplate transaction) {
         this.tasks = tasks;
         this.deliveries = deliveries;
         this.events = events;
@@ -63,6 +68,8 @@ public class FollowMerges {
         this.records = records;
         this.refreshes = refreshes;
         this.cleanUp = cleanUp;
+        this.landedWork = landedWork;
+        this.stages = stages;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -165,19 +172,23 @@ public class FollowMerges {
     }
 
     private MergedWork followed(Delivery delivery, MergeRequestView view, Actor actor) {
-        return cleanedUpOnceMerged(recordedAsMerged(delivery, view, actor), actor);
+        RequestMerged merge = followedMergeOf(delivery.task(), view);
+        return cleanedUpOnceMerged(transaction.execute(_ -> recordedAsMerged(delivery, view, merge, actor)), actor);
     }
 
-    private Delivery recordedAsMerged(Delivery delivery, MergeRequestView view, Actor actor) {
-        return transaction.execute(_ -> {
-            Instant now = clock.now();
-            Task task = tasks.get(delivery.task());
-            Delivery merged = delivery.observed(view, now);
-            deliveries.save(merged);
-            events.record(new DraftMerged(task.id(), view.address(), view.landedCommit()), actor, now);
-            refreshes.awaitTheMergeOf(task, view, now);
-            return merged;
-        });
+    private RequestMerged followedMergeOf(TaskId task, MergeRequestView view) {
+        Workplace workplace = transaction.execute(_ -> context.of(task));
+        return new RequestMerged(view.headCommit(), landedWork.commitsAfter(workplace, view.headCommit()));
+    }
+
+    private Delivery recordedAsMerged(Delivery delivery, MergeRequestView view, RequestMerged merge, Actor actor) {
+        Instant now = clock.now();
+        Delivery merged = delivery.observed(view, now);
+        deliveries.save(merged);
+        events.record(new DraftMerged(delivery.task(), view.address(), view.landedCommit()), actor, now);
+        Task task = stages.moved(tasks.get(delivery.task()), merge, actor, now);
+        refreshes.awaitTheMergeOf(task, view, now);
+        return merged;
     }
 
     private MergedWork cleanedUpOnceMerged(Delivery merged, Actor actor) {
@@ -233,7 +244,8 @@ public class FollowMerges {
     }
 
     private MergedWork recordedAndFollowed(TaskId task, MergeRequestView request, Actor actor) {
-        Delivery merged = transaction.execute(_ -> recordedAsMerged(records.recorded(task, request, actor), request, actor));
+        RequestMerged merge = followedMergeOf(task, request);
+        Delivery merged = transaction.execute(_ -> recordedAsMerged(records.recorded(task, request, actor), request, merge, actor));
         return cleanedUpOnceMerged(merged, actor);
     }
 

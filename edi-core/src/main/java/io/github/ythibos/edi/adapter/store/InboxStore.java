@@ -76,7 +76,7 @@ public class InboxStore {
 
     public List<InboxMessage> awaitingReceipt() {
         return messages(store.sql(SELECT_MESSAGES + """
-                where received_at is null and task_id in (select id from task where state = 'in-flight')
+                where received_at is null and task_id in (select id from task where stage not in ('queued', 'retired', 'dropped'))
                 order by created_at, task_id, number"""));
     }
 

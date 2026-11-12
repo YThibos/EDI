@@ -2,7 +2,6 @@ package io.github.ythibos.edi.application.dispatch;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -99,7 +98,8 @@ public class DispatchTask {
     }
 
     private Dispatching dispatching(TaskReference reference, DispatchRequest request) {
-        Task task = tasks.get(reference).dispatched();
+        Task task = tasks.get(reference);
+        task.requireFreeToWork();
         requireUnblocked(task);
         ProjectEntry project = registry.entryOf(onlyProjectOf(task));
         WorkerSettings settings = machine.workers();
@@ -112,8 +112,7 @@ public class DispatchTask {
                 .map(redone -> redispatch(redone, project, category, request, captainsOverride))
                 .orElseGet(() -> firstDispatch(task, project, category, request, captainsOverride));
         places.requireNoLiveWorker(task.id());
-        return new Dispatching(dispatch, project.project().name(), places.occupiedOn(project.project().name()), project.workerCapacity(),
-                researchFirstFor(task, earlier.isPresent(), rules, category, request));
+        return new Dispatching(dispatch, places.roomOn(project), researchFirstFor(task, earlier.isPresent(), rules, category, request));
     }
 
     private void requireUnblocked(Task task) {
@@ -218,15 +217,15 @@ public class DispatchTask {
 
     private DispatchOutcome carriedOut(Dispatching dispatching, Actor actor) {
         launcher.requireABriefWithinItsLength(dispatching.dispatch());
-        launcher.requireAReadyLoginFor(dispatching.project());
-        refreshes.requireFresh(dispatching.project());
+        launcher.requireAReadyLoginFor(dispatching.room().project());
+        refreshes.requireFresh(dispatching.room().project());
         if (dispatching.researchFirst().queuesResearch()) {
             return researchFirst(dispatching.dispatch(), actor);
         }
         if (dispatching.researchFirst().countsInThePilot()) {
             research.countWithoutResearch(dispatching.dispatch());
         }
-        if (dispatching.isBeyondCapacity()) {
+        if (!dispatching.room().hasRoom()) {
             return transaction.execute(_ -> deferred(dispatching, actor));
         }
         transaction.executeWithoutResult(_ -> awayLimit.requireRoomForAnotherWorker());
@@ -251,20 +250,17 @@ public class DispatchTask {
     private DispatchOutcome deferred(Dispatching dispatching, Actor actor) {
         Dispatch deferred = dispatching.dispatch().deferred(clock.now());
         dispatches.save(deferred);
-        int capacity = dispatching.capacity().orElseThrow();
-        events.record(new DispatchDeferred(deferred.task(), dispatching.project(), deferred.category(), dispatching.occupied(), capacity),
+        ProjectRoom room = dispatching.room();
+        int capacity = room.capacity().orElseThrow();
+        events.record(new DispatchDeferred(deferred.task(), room.project(), deferred.category(), room.occupied(), capacity),
                 actor, deferred.deferredAt());
-        return DispatchOutcome.of(new DispatchOutcome.Deferred(deferred.task(), dispatching.project(), dispatching.occupied(), capacity));
+        return DispatchOutcome.of(new DispatchOutcome.Deferred(deferred.task(), room.project(), room.occupied(), capacity));
     }
 
     private void reserveTheBranchOf(Dispatch dispatch) {
         transaction.executeWithoutResult(_ -> dispatches.save(dispatch));
     }
 
-    private record Dispatching(Dispatch dispatch, ProjectName project, int occupied, OptionalInt capacity, ResearchFirst researchFirst) {
-
-        boolean isBeyondCapacity() {
-            return capacity.isPresent() && occupied >= capacity.getAsInt();
-        }
+    private record Dispatching(Dispatch dispatch, ProjectRoom room, ResearchFirst researchFirst) {
     }
 }

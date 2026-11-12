@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -65,7 +66,9 @@ class MechanicalChangeTest {
         home.checkMechanicalChange().check(worker.id());
 
         assertThat(home.workers().get(worker.id()).orElseThrow().doneCheck()).isEqualTo(DoneCheck.ACCEPTED);
-        assertThat(home.eventTypesOf(TASK)).endsWith("StatusReported", "DraftRecorded", "MechanicalChangeAccepted").containsOnlyOnce("DraftRecorded");
+        assertThat(home.eventTypesOf(TASK)).endsWith("StatusReported", "DraftRecorded", "MechanicalChangeAccepted", "StageChanged")
+                .containsOnlyOnce("DraftRecorded");
+        assertThat(home.tasks().get(TASK).stage()).isEqualTo(TaskStage.DELIVERED);
         assertThat(home.runtime().launches()).hasSize(1);
     }
 

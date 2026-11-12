@@ -37,7 +37,7 @@ public class UnplannedShipStore {
     }
 
     public List<UnplannedShip> finished() {
-        return store.sql(SELECT_UNPLANNED_SHIPS + "where ship_id in (select id from task where state = 'done') order by dispatched_at, rowid")
+        return store.sql(SELECT_UNPLANNED_SHIPS + "where ship_id in (select id from task where stage = 'retired') order by dispatched_at, rowid")
                 .query((row, _) -> unplannedShipOf(row))
                 .list();
     }

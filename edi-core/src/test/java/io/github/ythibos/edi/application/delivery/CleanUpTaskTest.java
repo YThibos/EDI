@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.delivery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,8 +22,10 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -103,6 +106,7 @@ class CleanUpTaskTest {
         upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
         upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
         upstream.commit("Fit the lamp, squashed");
+        String head = copy.head();
 
         cleanUp("fit-lamp");
 
@@ -115,7 +119,12 @@ class CleanUpTaskTest {
             assertThat(cost.workers()).isEqualTo(new TokenUsage(10, 200, 30, 4));
             assertThat(cost.pipelineIfKnown()).contains(new TokenUsage(1, 2, 3, 4));
         });
-        assertThat(home.eventTypesOf(LAMP)).endsWith("WorkerRetired", "TaskCostRecorded", "ReviewCounted", "TaskCleanedUp");
+        assertThat(home.eventTypesOf(LAMP)).endsWith("WorkerRetired", "StageChanged", "StageChanged", "StageChanged", "TaskCostRecorded", "ReviewCounted",
+                "TaskCleanedUp");
+        assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage, StageReached::reason).endsWith(
+                tuple(TaskStage.MERGED, "merged at " + head),
+                tuple(TaskStage.LANDED, "every commit up to the merged head is in the base"),
+                tuple(TaskStage.RETIRED, "cleaned up"));
     }
 
     @Test
@@ -162,7 +171,24 @@ class CleanUpTaskTest {
 
         assertThat(dispatched.launched().worktree()).doesNotExist();
         assertThat(home.tasks().get(new TaskId("map-caves")).state()).isEqualTo(TaskState.DONE);
+        assertThat(home.events().stagesOf(new TaskId("map-caves"))).extracting(StageReached::stage)
+                .containsExactly(TaskStage.WORKING, TaskStage.DELIVERED, TaskStage.RETIRED);
         assertThat(home.taskCosts().of(new TaskId("map-caves"))).map(TaskCost::workers).contains(TokenUsage.NONE);
+    }
+
+    @Test
+    void refusesToCleanUpAScoutWhoseWorkerWorksAgainAfterItsDone() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queued("map-caves", TaskKind.SCOUT, "harness", "HRN-5"));
+        Worker scout = dispatched.launched().worker();
+        Files.writeString(home.home().taskDirectory(new TaskId("map-caves")).resolve("report.md"), "The caves run north.\n");
+        home.recordStatus().report(scout.id(), StatusState.DONE, null, null, "The caves are mapped.");
+        home.recordStatus().report(scout.id(), StatusState.WORKING, null, null, "Mapping the east cave too.");
+        home.runtime().close(scout.window());
+
+        assertThatThrownBy(() -> cleanUp("map-caves")).isInstanceOf(Refusal.class)
+                .hasMessageContaining("a scout is cleaned up only after its done was accepted and its report");
+        assertThat(home.tasks().get(new TaskId("map-caves")).stage()).isEqualTo(TaskStage.CHANGING);
+        assertThat(dispatched.launched().worktree()).isDirectory();
     }
 
     @Test

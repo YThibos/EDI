@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -93,6 +94,23 @@ class ObservePipelinesTest {
         assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::status).contains("completed");
         assertThat(finished.changing()).isEmpty();
         assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+    }
+
+    @Test
+    void recordsARunStartedAfterTheDone() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", draft.address().url(), true));
+        home.observePipelines().observe();
+        home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
+
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "review", "2222", draft.address().url(), false));
+        home.observePipelines().observe();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.DELIVERED);
+        assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::id).contains("02RUN");
+        assertThat(home.eventTypesOf(LAMP).stream().filter("PipelineRunSeen"::equals)).hasSize(2);
     }
 
     @Test

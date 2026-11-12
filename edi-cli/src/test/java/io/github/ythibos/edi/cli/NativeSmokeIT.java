@@ -211,7 +211,7 @@ class NativeSmokeIT {
 
         assertThat(added.output()).isEqualTo("Queued native-lantern on HRN-3.\n");
         assertThat(backlog.output()).contains("native-lantern", "Native lantern");
-        assertThat(shown.output()).contains("\"workKey\":\"HRN-3\"", "\"state\":\"queued\"");
+        assertThat(shown.output()).contains("\"workKey\":\"HRN-3\"", "\"stage\":\"queued\"");
     }
 
     @Test

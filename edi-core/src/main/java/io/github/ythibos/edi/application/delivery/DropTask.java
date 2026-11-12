@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.task.DependantTasks;
+import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
@@ -24,6 +25,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
 import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
+import io.github.ythibos.edi.domain.task.StageTrigger.Drop;
 import io.github.ythibos.edi.domain.task.Task;
 
 @Service
@@ -40,12 +42,13 @@ public class DropTask {
     private final CaptainsWordEvidence captainsWord;
     private final DependantTasks dependants;
     private final TicketProposals ticketProposals;
+    private final TaskStages stages;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public DropTask(TaskStore tasks, DispatchStore dispatches, EventLog events, WorkerContext context, LandedWorkCheck landedWork,
-            CopyRetirement retirement, CaptainsWordEvidence captainsWord, DependantTasks dependants, TicketProposals ticketProposals, Clock clock,
-            TransactionTemplate transaction) {
+            CopyRetirement retirement, CaptainsWordEvidence captainsWord, DependantTasks dependants, TicketProposals ticketProposals,
+            TaskStages stages, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.dispatches = dispatches;
         this.events = events;
@@ -55,6 +58,7 @@ public class DropTask {
         this.captainsWord = captainsWord;
         this.dependants = dependants;
         this.ticketProposals = ticketProposals;
+        this.stages = stages;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -64,7 +68,7 @@ public class DropTask {
         CaptainsWord word = captainsWord.requireOnTask(calling, task.id(), discardingWork ? CaptainWordAct.DISCARD_WORK : CaptainWordAct.DROP);
         requireNoDecisionButItsTicketWaiting(task);
         List<String> discarded = wasDispatched(task) ? retiredCopy(transaction.execute(_ -> context.of(task.id())), discardingWork) : List.of();
-        DroppedTask dropped = dropped(task, word, discarded, actor);
+        DroppedTask dropped = dropped(task, new Drop(word, discarded, discardingWork), actor);
         retirement.stopListeningFor(dropped.task().id());
         return dropped;
     }
@@ -98,17 +102,16 @@ public class DropTask {
         return landed.findings();
     }
 
-    private DroppedTask dropped(Task task, CaptainsWord word, List<String> discarded, Actor actor) {
+    private DroppedTask dropped(Task task, Drop drop, Actor actor) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
-            Task closed = tasks.get(task.id()).dropped(word, now);
-            DecisionNumber closedDecision = ticketProposals.closeForTheDrop(closed.id(), word, actor, now).orElse(null);
-            retirement.retireWorkers(closed.id(), "its task was dropped", now, actor);
-            retirement.retireBoards(closed.id(), now, actor);
-            tasks.update(closed);
+            DecisionNumber closedDecision = ticketProposals.closeForTheDrop(task.id(), drop.word(), actor, now).orElse(null);
+            retirement.retireWorkers(task.id(), "its task was dropped", now, actor);
+            retirement.retireBoards(task.id(), now, actor);
+            Task closed = stages.moved(tasks.get(task.id()), drop, actor, now);
             dependants.stopWaitingFor(closed);
-            events.record(new TaskDropped(closed.id(), word.verbatim(), discarded), actor, now);
-            return new DroppedTask(closed, discarded, closedDecision);
+            events.record(new TaskDropped(closed.id(), drop.word().verbatim(), drop.unlandedWork()), actor, now);
+            return new DroppedTask(closed, drop.unlandedWork(), closedDecision);
         });
     }
 }

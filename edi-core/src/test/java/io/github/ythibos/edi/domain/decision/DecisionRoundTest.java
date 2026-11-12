@@ -9,7 +9,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.StageTrigger;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -21,8 +23,8 @@ class DecisionRoundTest {
 
     @Test
     void aDecisionOfARunningShipWaitsForItsRoundUnlessItIsUrgent() {
-        assertThat(DecisionRound.waitsForItsRound(raised(58, OPENED, false), SHIP.dispatched())).isTrue();
-        assertThat(DecisionRound.waitsForItsRound(raised(58, OPENED, true), SHIP.dispatched())).isFalse();
+        assertThat(DecisionRound.waitsForItsRound(raised(58, OPENED, false), working(SHIP))).isTrue();
+        assertThat(DecisionRound.waitsForItsRound(raised(58, OPENED, true), working(SHIP))).isFalse();
     }
 
     @Test
@@ -48,6 +50,10 @@ class DecisionRoundTest {
         assertThat(round.closes()).isEqualTo(Instant.parse("2026-11-09T09:05:00Z"));
         assertThat(round.isDue(round.closes().minusSeconds(1))).isFalse();
         assertThat(round.isDue(round.closes())).isTrue();
+    }
+
+    private static Task working(Task queued) {
+        return queued.movedBy(queued.transitions().move(queued.stage(), new StageTrigger.Dispatch(Holds.none(), List.of(), true)), OPENED);
     }
 
     private static Task task(TaskKind kind) {
