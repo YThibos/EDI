@@ -7,11 +7,16 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParentCommand;
 
 @Command(name = "publish-check", description = "Checks the outgoing commits of this repository for secrets, personal material and -SNAPSHOT versions before a push.")
 final class PublishCheckCommand implements Callable<Integer> {
 
     private static final String UPSTREAM_TO_HEAD = "@{upstream}..HEAD";
+    private static final String PUBLISH_CHECK_REACHABLE = "publish.check-reachable";
+
+    @ParentCommand
+    private Edi edi;
 
     @Mixin
     private CoreExchange core;
@@ -32,6 +37,11 @@ final class PublishCheckCommand implements Callable<Integer> {
                 .with("repository", Path.of("").toAbsolutePath().toString())
                 .with("range", range)
                 .with("excluding", excluding)
-                .with("remoteUrl", remoteUrl));
+                .with("remoteUrl", remoteUrl), this::refusedUnchecked);
+    }
+
+    private void refusedUnchecked(String unreachable) {
+        RuleFirings.intoTheSpool(edi).fired(PUBLISH_CHECK_REACHABLE, RuleFirings.REFUSED,
+                "The publish check could not run, so nothing it checks goes out: " + unreachable);
     }
 }

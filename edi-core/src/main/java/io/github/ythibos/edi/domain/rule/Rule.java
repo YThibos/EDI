@@ -78,6 +78,7 @@ public enum Rule {
     CHECKABLE_TARGET(RuleArea.PUBLISH, "The publish check runs only in a registered clone or the caller's own isolated copy."),
     REGISTERED_FORGE(RuleArea.PUBLISH, "Work is published only to the repository its project registers."),
     WORKFLOW_SCOPE(RuleArea.PUBLISH, "A push that changes workflows goes only with the workflow scope the captain granted."),
+    PUBLISH_CHECK_REACHABLE(RuleArea.PUBLISH, "A push goes out only once the publish check could run."),
     LANDED_BEFORE_DISCARD(RuleArea.CLEANUP, "Unlanded work is never discarded without the captain's word."),
     SCOUT_REPORT(RuleArea.CLEANUP, "A scout is cleaned up only once its done was accepted and its report exists."),
     NO_WORKER_AT_WORK(RuleArea.CLEANUP, "A copy is retired only once no worker works in it."),

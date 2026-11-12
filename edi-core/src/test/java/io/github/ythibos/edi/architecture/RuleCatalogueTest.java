@@ -24,7 +24,7 @@ import io.github.ythibos.edi.testing.RuleCatalogue.Entry;
 @AnalyzeClasses(packages = "io.github.ythibos.edi", importOptions = {ImportOption.DoNotIncludeTests.class, HandWrittenClasses.class})
 class RuleCatalogueTest {
 
-    private static final Set<String> PLACES_OUTSIDE_THE_CORE = Set.of("Edi", "HookCommand", "WaitCommand", "commit-msg");
+    private static final Set<String> PLACES_OUTSIDE_THE_CORE = Set.of("Edi", "HookCommand", "WaitCommand", "PublishCheckCommand", "commit-msg");
 
     @ArchTest
     static void listsEveryRuleOfTheCodeOnceInItsOrderAndNoOther(JavaClasses core) {

@@ -9,7 +9,7 @@ public record RuleReason(String text) {
 
     private static final String ELLIPSIS = "...";
     private static final List<Redaction> REDACTIONS = List.of(
-            new Redaction(Pattern.compile("\"[^\"]*\"|“[^”]*”"), "\"(quoted)\""),
+            new Redaction(Pattern.compile("[\"“].*[\"”]|[\"“].*"), "\"(quoted)\""),
             new Redaction(Pattern.compile("[^\\s,;]*[/\\\\][^\\s,;]*?(?=[.,;:)]*(?:\\s|$))"), "(path)"),
             new Redaction(Pattern.compile("[\\w.+-]+@[\\w-]+\\.[\\w.-]*\\w"), "(address)"),
             new Redaction(Pattern.compile("(?<![\\w.])\\d{1,3}(?:\\.\\d{1,3}){3}(?![\\w.])"), "(address)"),

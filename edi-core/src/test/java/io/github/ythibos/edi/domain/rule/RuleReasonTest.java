@@ -31,6 +31,14 @@ class RuleReasonTest {
     }
 
     @Test
+    void leavesOutCitedWordsThatHoldAQuoteOfTheirOwnOrNeverCloseTheirs() {
+        assertThat(RuleReason.of("The captain did not type \"merge \"fix-lamp\" in this session; give the words the captain typed.").text())
+                .isEqualTo("The captain did not type \"(quoted)\" in this session; give the words the captain typed.");
+        assertThat(RuleReason.of("The captain did not type “ship ”it to Ada” here.").text()).isEqualTo("The captain did not type \"(quoted)\" here.");
+        assertThat(RuleReason.of("the captain said \"ship it to Ada").text()).isEqualTo("the captain said \"(quoted)\"");
+    }
+
+    @Test
     void shortensALongReasonToTheFirstTwoHundredCharacters() {
         RuleReason reason = RuleReason.of("word ".repeat(100));
 

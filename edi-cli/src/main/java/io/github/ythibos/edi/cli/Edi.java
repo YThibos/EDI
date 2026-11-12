@@ -94,7 +94,7 @@ public final class Edi implements Runnable {
         IParameterExceptionHandler readingFailed = commandLine.getParameterExceptionHandler();
         return commandLine.setParameterExceptionHandler((unreadable, arguments) -> {
             int refused = readingFailed.handleParseException(unreadable, arguments);
-            RuleFirings.throughTheCore(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadable.getMessage());
+            RuleFirings.throughTheCore(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadableArgumentsOf(unreadable));
             return refused;
         });
     }
@@ -162,6 +162,10 @@ public final class Edi implements Runnable {
 
     OptionalInt paneWidth() {
         return TmuxPane.ofEnvironment(environment).map(TmuxPane::width).orElseGet(OptionalInt::empty);
+    }
+
+    private static String unreadableArgumentsOf(ParameterException unreadable) {
+        return unreadable.getCommandLine().getCommandSpec().qualifiedName() + " was given options or parameters it cannot read.";
     }
 
     private void recordTheTokenFileRefusal(String refusal) {

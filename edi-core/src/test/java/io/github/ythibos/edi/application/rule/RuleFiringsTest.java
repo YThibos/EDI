@@ -128,6 +128,19 @@ class RuleFiringsTest {
     }
 
     @Test
+    void takesInThePushTheCommandRefusedWhileThePublishCheckCouldNotReachTheCore() throws IOException {
+        Path spool = home.home().spooledRuleFirings();
+        Files.createDirectories(spool.getParent());
+        Files.writeString(spool, """
+                {"rule":"publish.check-reachable","outcome":"refused","reason":"The publish check could not run, so nothing it checks goes out: EDI core is not running.","at":"2026-11-09T08:00:00Z","actor":"worker:fit-lamp#1","task":"fit-lamp"}
+                """);
+
+        home.takeInSpooledFirings().takeIn();
+
+        assertThat(firings()).containsExactly(tuple("publish.check-reachable", "refused", "worker:fit-lamp#1", "fit-lamp", null));
+    }
+
+    @Test
     void takesInTheBatchAnEarlierRoundLeftBeforeTheNewSpoolAndLeavesOutALineThatIsNotUtf8() throws IOException {
         Path spool = home.home().spooledRuleFirings();
         Files.createDirectories(spool.getParent());

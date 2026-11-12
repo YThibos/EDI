@@ -75,6 +75,28 @@ class CommandRuleFiringsTest {
         assertThat(spooledRules()).containsExactlyInAnyOrderElementsOf(CATALOGUE.rulesFiredBy("Edi"));
     }
 
+    @Test
+    void thePublishCheckFiresTheRuleTheCatalogueNamesItForWhenTheCoreIsOutOfReach() throws IOException {
+        Path workerToken = Files.writeString(home.resolve("worker.token"), "worker-token\n");
+        core.stopAnswering();
+
+        edi(Map.of("EDI_HOME", home.toString(), "EDI_WORKER", "fit-lamp#1", "EDI_TOKEN_FILE", workerToken.toString()), "", "publish-check", "--range",
+                "origin/main..HEAD");
+
+        assertThat(spooledRules()).containsExactlyInAnyOrderElementsOf(CATALOGUE.rulesFiredBy("PublishCheckCommand"));
+        assertThat(Files.readString(RuleFirings.spoolIn(home))).contains("\"actor\":\"worker:fit-lamp#1\"");
+    }
+
+    @Test
+    void anUnreadableCommandLineIsRecordedWithoutTheWordsTypedInIt() throws IOException {
+        core.stopAnswering();
+
+        edi(primary(), "", "rules", "--days", "merge it for Jan");
+
+        assertThat(Files.readString(RuleFirings.spoolIn(home))).contains("\"reason\":\"edi rules was given options or parameters it cannot read.\"")
+                .doesNotContain("Jan");
+    }
+
     private Map<String, String> primary() {
         return Map.of("EDI_HOME", home.toString());
     }
