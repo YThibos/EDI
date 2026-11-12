@@ -44,7 +44,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `task.intake` | `AddTask`, `ProjectRegistry` | A new task names a registered project and an id never used before. |
 | `task.work-key` | `AdoptForkTask`, `DispatchTask`, `GitHubIssuesTracker`, `NoTracker`, `Task`, `TaskKeys`, `TicketProposals`, `TrackedProject` | A task books its work on one key of its project's tracker. |
 | `task.dispatched` | `LaunchWorker`, `WorkerContext`, `WorkerDetailQuery`, `WorkerLookup`, `WrittenBriefQuery` | A task's worker, brief and copy exist only once it is dispatched. |
-| `decision.answered-once` | `ArmBoard`, `AskForARecheck`, `Decision` | A decision is answered once, and a new question is a new decision. |
+| `decision.answered-once` | `ArmBoard`, `Decision` | A decision is answered once, and a new question is a new decision. |
 | `decision.captain-voice` | `CaptainVoice` | What reaches the captain speaks in outcomes, not in internal labels (I-22). |
 | `decision.ticket-choice` | `TicketProposal`, `TicketProposals` | The captain's ticket choice is one of the options offered. |
 | `dispatch.blockers-done` | `DispatchTask` | A task is dispatched only once the tasks it waits for are done. |

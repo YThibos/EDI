@@ -354,7 +354,7 @@ class ResearchBoardsTest {
         assertThat(home.decisions().get(newer).isOpen()).isTrue();
         assertThat(home.decisions().get(older).answer().option()).isEqualTo(new OptionKey('A'));
         assertThat(home.boards().answersOf(armed.id())).singleElement()
-                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(older + " is already answered: A: close now"));
+                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(older + " is already answered: \"A: close now\""));
     }
 
     @Test
@@ -368,8 +368,10 @@ class ResearchBoardsTest {
 
         assertThat(home.decisions().get(raised).answer().channel()).isEqualTo(AnswerChannel.CONSOLE);
         assertThat(home.boards().answersOf(armed.id())).singleElement()
-                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(raised + " is already answered: B: keep it"));
+                .satisfies(answer -> assertThat(answer.refusedBecause()).isEqualTo(raised + " is already answered: \"B: keep it\""));
         assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).contains(WakeKind.BOARD_ANSWER_REFUSED);
+        assertThat(home.jdbc().sql("select reason from rule_fired where rule = 'board.answer'").query(String.class).list())
+                .containsExactly(raised + " is already answered: \"(quoted)\"");
     }
 
     @Test
@@ -422,7 +424,7 @@ class ResearchBoardsTest {
 
         assertThat(message(1).body()).doesNotContain("records").endsWith("These go to their decisions as the captain's answers: %s option B."
                 .formatted(decision));
-        assertThat(message(2).body()).isEqualTo("The captain's board answer to %s (\"%s B\") was refused: %s is already answered: %s A"
+        assertThat(message(2).body()).isEqualTo("The captain's board answer to %s (\"%s B\") was refused: %s is already answered: \"%s A\""
                 .formatted(decision, decision, decision, decision));
         assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('A'));
     }

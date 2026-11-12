@@ -24,17 +24,20 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     public Decision reraised(DecisionCard newCard, Instant at) {
         if (!isOpen()) {
-            throw new Refusal(Rule.ANSWERED_ONCE, number + " is already answered: " + answer.verbatim() + "; a new card on " + task
-                    + " is a new decision with its own number.");
+            throw new Refusal(Rule.ANSWERED_ONCE, alreadyAnswered() + "; a new card on " + task + " is a new decision with its own number.");
         }
         return raised(number, task, newCard, at);
     }
 
     public Decision answered(CaptainAnswer captainsAnswer) {
-        if (!isOpen()) {
-            throw new Refusal(Rule.ANSWERED_ONCE, number + " is already answered: " + answer.verbatim());
-        }
+        requireOpen();
         return new Decision(number, task, card, raisedAt, captainsAnswer);
+    }
+
+    public void requireOpen() {
+        if (!isOpen()) {
+            throw new Refusal(Rule.ANSWERED_ONCE, alreadyAnswered());
+        }
     }
 
     public boolean authorises(CaptainWordAct act) {
@@ -47,5 +50,9 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     public CaptainHold holdOnItsTask() {
         return new CaptainHold(HoldKind.DECISION, number + " " + card.title(), HoldUntil.captainsWord(), raisedAt);
+    }
+
+    private String alreadyAnswered() {
+        return number + " is already answered: \"" + answer.verbatim() + "\"";
     }
 }

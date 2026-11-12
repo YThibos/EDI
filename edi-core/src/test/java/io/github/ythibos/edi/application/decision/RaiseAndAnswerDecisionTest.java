@@ -69,7 +69,7 @@ class RaiseAndAnswerDecisionTest {
 
         assertThatThrownBy(() -> home.answerDecision().answer(new TaskReference.ByDecision(earlier), again, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class)
-                .hasMessage(earlier + " is already answered: A");
+                .hasMessage(earlier + " is already answered: \"A\"");
         assertThat(home.decisions().get(later).isOpen()).isTrue();
     }
 

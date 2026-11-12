@@ -60,7 +60,7 @@ class AskForARecheckTest {
 
         assertThatThrownBy(() -> home.askForARecheck().ask(new TaskReference.ByDecision(decision), "", Actor.CAPTAIN))
                 .isInstanceOf(Refusal.class)
-                .hasMessage(decision + " is already answered: " + decision + " A");
+                .hasMessage(decision + " is already answered: \"" + decision + " A\"");
     }
 
     @Test
@@ -74,7 +74,7 @@ class AskForARecheckTest {
 
         assertThatThrownBy(() -> home.askForARecheck().ask(new TaskReference.ByDecision(earlier), "", Actor.CAPTAIN))
                 .isInstanceOf(Refusal.class)
-                .hasMessage(earlier + " is already answered: " + earlier + " A");
+                .hasMessage(earlier + " is already answered: \"" + earlier + " A\"");
         assertThat(home.askForARecheck().ask(new TaskReference.ByDecision(later), "", Actor.CAPTAIN).number()).isEqualTo(later);
     }
 }
