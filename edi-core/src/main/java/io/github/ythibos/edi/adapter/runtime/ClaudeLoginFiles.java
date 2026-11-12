@@ -18,6 +18,7 @@ public class ClaudeLoginFiles {
     private static final String GLOBAL_CONFIGURATION = ".claude.json";
     private static final String CLAUDE_CODES_OWN_DIRECTORY = ".claude";
     private static final String SESSIONS = "projects";
+    private static final String CREDENTIALS = ".credentials.json";
     private static final int TRANSCRIPT_DEPTH_IN_ITS_DIRECTORY = 3;
 
     private final Path claudeCodesHome;
@@ -32,6 +33,10 @@ public class ClaudeLoginFiles {
 
     Path sessionsOf(Login login) {
         return configDirectoryOf(login).resolve(SESSIONS);
+    }
+
+    Path credentialsOf(Login login) {
+        return configDirectoryOf(login).resolve(CREDENTIALS);
     }
 
     Optional<LoginMismatch> mismatchOf(Path transcript, Login login) {
