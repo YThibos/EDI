@@ -168,13 +168,16 @@ import io.github.ythibos.edi.application.supervision.RecoverFromOutage;
 import io.github.ythibos.edi.application.supervision.ResumeAfterUsageLimits;
 import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.BacklogQuery;
+import io.github.ythibos.edi.application.task.DecisionReleases;
 import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.task.HoldTask;
 import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.PromoteScout;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
+import io.github.ythibos.edi.application.task.TaskHolds;
 import io.github.ythibos.edi.application.task.TaskListQuery;
+import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.task.WeekOfWork;
 import io.github.ythibos.edi.application.task.WorkedTimes;
 import io.github.ythibos.edi.application.tracker.FollowTickets;
@@ -189,6 +192,7 @@ import io.github.ythibos.edi.application.worker.RemindOfUnansweredQuestions;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.CountRecoveryCost;
 import io.github.ythibos.edi.application.worker.GuardToolCall;
+import io.github.ythibos.edi.application.worker.HandoverStages;
 import io.github.ythibos.edi.application.worker.InboxNotice;
 import io.github.ythibos.edi.application.worker.NoticeFullContexts;
 import io.github.ythibos.edi.application.worker.NoticeHeavyRunsAtOnce;
@@ -207,7 +211,7 @@ import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -366,16 +370,18 @@ public final class TestHome {
     }
 
     public void putInFlight(TaskId id) {
-        transaction.executeWithoutResult(_ -> {
-            Task task = tasks.get(id);
-            tasks.update(new Task(task.id(), task.intake(), TaskState.IN_FLIGHT, task.notes(), task.hold(), task.created(), null));
-        });
+        putAt(id, TaskStage.WORKING);
     }
 
     public void markDone(TaskId id) {
+        putAt(id, TaskStage.RETIRED);
+    }
+
+    public void putAt(TaskId id, TaskStage stage) {
         transaction.executeWithoutResult(_ -> {
             Task task = tasks.get(id);
-            tasks.update(new Task(task.id(), task.intake(), TaskState.DONE, task.notes(), null, task.created(), clock.now()));
+            tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), stage.isClosed() ? null : task.hold(), task.created(),
+                    stage.isClosed() ? clock.now() : null));
         });
     }
 
@@ -454,7 +460,7 @@ public final class TestHome {
     }
 
     public KeyTask keyTask() {
-        return new KeyTask(tasks, events, taskKeys(), ticketProposals(), captainsWord(), clock, transaction);
+        return new KeyTask(tasks, events, taskKeys(), ticketProposals(), captainsWord(), decisionReleases(), clock, transaction);
     }
 
     public FakeJira jira() {
@@ -503,7 +509,19 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), clock, transaction);
+    }
+
+    public DecisionReleases decisionReleases() {
+        return new DecisionReleases(tasks, taskHolds(), taskStages());
+    }
+
+    public TaskHolds taskHolds() {
+        return new TaskHolds(decisions);
+    }
+
+    public TaskStages taskStages() {
+        return new TaskStages(tasks, events);
     }
 
     public BacklogQuery backlog() {
@@ -700,7 +718,7 @@ public final class TestHome {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), new WorkerPlaces(workers, tasks, workerRuntime), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), meters, clock, transaction);
+                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), meters, clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {
@@ -734,8 +752,12 @@ public final class TestHome {
     }
 
     public RecordStatus recordStatus() {
-        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), followMerges(), clock,
-                transaction);
+        return new RecordStatus(workers, events, new PersonalConfiguration(home), doneClaims(), deliverAcceptedWork(), followMerges(),
+                handoverStages(), clock, transaction);
+    }
+
+    public HandoverStages handoverStages() {
+        return new HandoverStages(tasks, taskStages());
     }
 
     public Forges forges() {
@@ -772,8 +794,9 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(tasks, workers, deliveries, taskCosts, reviews, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), clock, transaction);
+        return new CleanUpTask(tasks, deliveries, taskCosts, reviews, events, workerContext(), landedWork(),
+                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), taskStages(), clock,
+                transaction);
     }
 
     public RecountTaskCosts recountTaskCosts() {
@@ -786,7 +809,7 @@ public final class TestHome {
 
     public DropTask dropTask() {
         return new DropTask(tasks, dispatches, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), dependantTasks(),
-                ticketProposals(), clock, transaction);
+                ticketProposals(), taskStages(), clock, transaction);
     }
 
     public DependantTasks dependantTasks() {
@@ -819,7 +842,7 @@ public final class TestHome {
 
     public FollowMerges followMerges() {
         return new FollowMerges(tasks, deliveries, events, registry, workerContext(), forges(), deliveryRecords(), cloneRefreshes(), cleanUpTask(),
-                clock, transaction);
+                landedWork(), taskStages(), clock, transaction);
     }
 
     public ObservePipelines observePipelines() {
@@ -1034,7 +1057,7 @@ public final class TestHome {
 
     public CheckMechanicalChange checkMechanicalChange() {
         return new CheckMechanicalChange(workers, workerContext(), git, new ProjectBuild(programs), runtime, launchWorker(), deliverAcceptedWork(),
-                events, ruleFirings, clock, transaction);
+                events, handoverStages(), ruleFirings, clock, transaction);
     }
 
     public BoardStore boards() {

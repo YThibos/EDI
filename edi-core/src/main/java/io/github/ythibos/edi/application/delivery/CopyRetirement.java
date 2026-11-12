@@ -6,7 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
@@ -26,6 +28,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.task.Leftover;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 
@@ -87,6 +90,23 @@ public class CopyRetirement {
 
     public void stopListeningFor(TaskId task) {
         boardListeners.forget(task);
+    }
+
+    public Set<Leftover> leftoversOf(Workplace workplace) {
+        Set<Leftover> leftovers = EnumSet.noneOf(Leftover.class);
+        if (Files.isDirectory(workplace.worktree())) {
+            leftovers.add(Leftover.COPY);
+        }
+        if (git.commitAt(workplace.project().projectClone(), BRANCHES + workplace.dispatch().branch()).isPresent()) {
+            leftovers.add(Leftover.BRANCH);
+        }
+        if (workers.allOf(workplace.task().id()).stream().anyMatch(worker -> !worker.isRetired())) {
+            leftovers.add(Leftover.WORKER);
+        }
+        if (!boards.listeningOf(workplace.task().id()).isEmpty()) {
+            leftovers.add(Leftover.BOARD);
+        }
+        return leftovers;
     }
 
     private void retire(Workplace workplace, boolean discardingWork) {

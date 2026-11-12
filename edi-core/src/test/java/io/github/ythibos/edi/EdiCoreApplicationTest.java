@@ -68,7 +68,7 @@ class EdiCoreApplicationTest {
     void keepsItsStoreInTheHomeWithMigrationsApplied() {
         assertThat(home.resolve("data/edi.db")).isRegularFile();
         assertThat(store.sql("select version from flyway_schema_history where success = 1").query(String.class).list()).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17",
-                "18", "19", "20", "21", "22", "23", "24", "25", "26");
+                "18", "19", "20", "21", "22", "23", "24", "25", "26", "27");
         assertThat(store.sql("select name from sqlite_master where type = 'table' and name not like 'flyway%' and name not like 'sqlite%' order by name")
                 .query(String.class).list())
                 .containsExactly("adoption", "board", "board_answer", "board_decision", "captain_hold", "captain_message", "captain_word", "clone_refresh", "console_session",

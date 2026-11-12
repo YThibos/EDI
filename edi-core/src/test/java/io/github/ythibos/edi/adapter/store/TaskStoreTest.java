@@ -33,6 +33,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
 import io.github.ythibos.edi.testing.Cards;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
 
 @Tag("adapter")
@@ -73,7 +74,7 @@ class TaskStoreTest {
 
         tasks.update(captainItem.heldForDecision(decisionHold));
         Task held = tasks.get(captainItem.id());
-        tasks.update(held.decisionAnswered(AT.plusSeconds(60)));
+        tasks.update(Stages.answered(held, AT.plusSeconds(60)));
 
         assertThat(held.hold()).isEqualTo(decisionHold);
         assertThat(tasks.get(captainItem.id()).state()).isEqualTo(TaskState.DONE);
@@ -87,7 +88,7 @@ class TaskStoreTest {
                 .held(new CaptainHold(HoldKind.DEFERRAL, "after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
         tasks.insert(held);
 
-        tasks.update(held.dropped(new CaptainsWord("Drop the lantern."), AT.plusSeconds(60)));
+        tasks.update(Stages.dropped(held, new CaptainsWord("Drop the lantern."), AT.plusSeconds(60)));
 
         assertThat(tasks.inState(TaskState.DROPPED)).singleElement().satisfies(dropped -> {
             assertThat(dropped.closed()).isEqualTo(AT.plusSeconds(60));

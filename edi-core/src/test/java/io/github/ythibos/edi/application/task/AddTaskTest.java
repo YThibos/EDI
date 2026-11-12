@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
 import io.github.ythibos.edi.testing.Intakes;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
 
 @Tag("adapter")
@@ -99,7 +100,7 @@ class AddTaskTest {
     @Test
     void neverWaitsForAClosedTask() {
         TaskId lantern = home.addTask().add(ship("lantern", "Light the lantern"), Actor.PRIMARY).id();
-        home.tasks().update(home.tasks().get(lantern).dispatched().cleanedUp(TestHome.START));
+        home.tasks().update(Stages.retired(home.tasks().get(lantern), TestHome.START));
 
         assertThatThrownBy(() -> home.addTask().add(shipBlockedBy("fog-horn", "Tune the horn", "lantern"), Actor.PRIMARY))
                 .isInstanceOf(Refusal.class)

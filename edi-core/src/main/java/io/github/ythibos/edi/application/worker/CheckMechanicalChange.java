@@ -41,12 +41,14 @@ public class CheckMechanicalChange {
     private final LaunchWorker launcher;
     private final DeliverAcceptedWork acceptedWork;
     private final EventLog events;
+    private final HandoverStages handovers;
     private final RuleFirings firings;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public CheckMechanicalChange(WorkerStore workers, WorkerContext context, Git git, ProjectBuild build, WorkerRuntime runtime,
-            LaunchWorker launcher, DeliverAcceptedWork acceptedWork, EventLog events, RuleFirings firings, Clock clock, TransactionTemplate transaction) {
+            LaunchWorker launcher, DeliverAcceptedWork acceptedWork, EventLog events, HandoverStages handovers, RuleFirings firings, Clock clock,
+            TransactionTemplate transaction) {
         this.workers = workers;
         this.context = context;
         this.git = git;
@@ -55,6 +57,7 @@ public class CheckMechanicalChange {
         this.launcher = launcher;
         this.acceptedWork = acceptedWork;
         this.events = events;
+        this.handovers = handovers;
         this.firings = firings;
         this.clock = clock;
         this.transaction = transaction;
@@ -103,8 +106,10 @@ public class CheckMechanicalChange {
 
     private void accept(WorkerId id) {
         transaction.executeWithoutResult(_ -> {
+            Instant now = clock.now();
             workers.update(WorkerLookup.serving(workers, id).doneChecked(true));
-            events.record(new MechanicalChangeAccepted(id.task(), id), Actor.CORE, clock.now());
+            events.record(new MechanicalChangeAccepted(id.task(), id), Actor.CORE, now);
+            handovers.delivered(id, Actor.CORE, now);
         });
     }
 

@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -48,7 +49,12 @@ public class WorkerPlaces {
                 .toList();
     }
 
-    public int occupiedOn(ProjectName project) {
+    public ProjectRoom roomOn(ProjectEntry project) {
+        ProjectName name = project.project().name();
+        return new ProjectRoom(name, occupiedOn(name), project.workerCapacity());
+    }
+
+    private int occupiedOn(ProjectName project) {
         return (int) workers.serving().stream()
                 .filter(Worker::countsAgainstCapacity)
                 .filter(worker -> tasks.get(worker.id().task()).intake().projects().contains(project))

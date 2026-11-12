@@ -32,17 +32,19 @@ public class RecordStatus {
     private final DoneClaims claims;
     private final DeliverAcceptedWork acceptedWork;
     private final FollowMerges merges;
+    private final HandoverStages handovers;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public RecordStatus(WorkerStore workers, EventLog events, PersonalConfiguration personal, DoneClaims claims, DeliverAcceptedWork acceptedWork,
-            FollowMerges merges, Clock clock, TransactionTemplate transaction) {
+            FollowMerges merges, HandoverStages handovers, Clock clock, TransactionTemplate transaction) {
         this.workers = workers;
         this.events = events;
         this.personal = personal;
         this.claims = claims;
         this.acceptedWork = acceptedWork;
         this.merges = merges;
+        this.handovers = handovers;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -65,7 +67,16 @@ public class RecordStatus {
         Worker reported = WorkerLookup.serving(workers, id).reported(report, now);
         workers.update(reported);
         events.record(new StatusReported(id.task(), id, report), Actor.worker(id), now);
+        moveTheStage(reported, report, now);
         return reported;
+    }
+
+    private void moveTheStage(Worker reported, StatusReport report, Instant now) {
+        if (reported.hadItsDoneAccepted()) {
+            handovers.delivered(reported.id(), Actor.worker(reported.id()), now);
+        } else if (report.state() == StatusState.WORKING) {
+            handovers.backAtWork(reported.id(), Actor.worker(reported.id()), now);
+        }
     }
 
     private void followTheWork(Worker reported, Optional<MergeRequestView> claimedRequest) {

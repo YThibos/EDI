@@ -65,7 +65,7 @@ class DispatchTaskTest {
         assertThat(launch.firstPrompt()).startsWith("\u2063EDI_OP: brief waiting: read ").endsWith("data/tasks/fit-lamp/brief.md and follow it");
         assertThat(Files.readString(home.home().root().resolve("data/tasks/fit-lamp/brief.md"))).contains("# Brief: fit-lamp", "feature/HRN-3");
         assertThat(home.tasks().get(new TaskId("fit-lamp")).state()).isEqualTo(TaskState.IN_FLIGHT);
-        assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).containsExactly("TaskDispatched");
+        assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).containsExactly("TaskDispatched", "StageChanged");
     }
 
     @Test

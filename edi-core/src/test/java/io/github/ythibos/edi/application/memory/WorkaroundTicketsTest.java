@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.memory.StowFinding;
 import io.github.ythibos.edi.domain.memory.StowList;
 import io.github.ythibos.edi.domain.memory.WorkaroundCount;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TrackerFixtures;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -78,6 +79,17 @@ class WorkaroundTicketsTest {
     void theDigestCountsAJiraKeyAsExpiredWhenATaskCarryingItHasLanded() {
         home.markDone(new TaskId("light-lamps"));
 
+        assertThat(home.memory().workarounds()).isEqualTo(new WorkaroundCount(2, 1));
+    }
+
+    @Test
+    void countsAWorkaroundAsExpiredOnceItsTaskLandsAndNotWhileItIsOnlyMerged() {
+        home.putAt(new TaskId("peek-workers"), TaskStage.MERGED);
+        WorkaroundCount merged = home.memory().workarounds();
+
+        home.putAt(new TaskId("peek-workers"), TaskStage.LANDED);
+
+        assertThat(merged).isEqualTo(new WorkaroundCount(1, 1));
         assertThat(home.memory().workarounds()).isEqualTo(new WorkaroundCount(2, 1));
     }
 }

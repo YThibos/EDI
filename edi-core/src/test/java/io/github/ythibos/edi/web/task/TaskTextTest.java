@@ -23,8 +23,10 @@ import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.Blocker;
+import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -70,7 +72,7 @@ class TaskTextTest {
                 new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null, null), AT);
         TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), null, draft, new PipelineRun("01RUN", "running", "ci", "1111", null, false),
                 new TaskCost(PresenterFixtures.lantern().id(), new TokenUsage(1, 20, 3, 4), null, AT),
-                new WorkedTime(Duration.ofMinutes(139), Duration.ofMinutes(191)), List.of());
+                new WorkedTime(Duration.ofMinutes(139), Duration.ofMinutes(191)), List.of(), List.of());
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).contains("""
                 Worked: active 2h19m of 3h11m
@@ -86,7 +88,7 @@ class TaskTextTest {
         Task item = PresenterFixtures.captainItem()
                 .noted("Ask before the season.")
                 .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask());
-        TaskDetail detail = new TaskDetail(item, List.of(), PresenterFixtures.openDecision(), null, null, null, null,
+        TaskDetail detail = new TaskDetail(item, List.of(), PresenterFixtures.openDecision(), null, null, null, null, List.of(),
                 List.of(new RecordedEvent(1, AT, Actor.PRIMARY, "TaskAdded", item.id()), new RecordedEvent(2, AT, Actor.PRIMARY, "DecisionRaised", item.id())));
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).isEqualTo("""
@@ -108,6 +110,29 @@ class TaskTextTest {
                 Timeline
                   2026-10-15 09:30 UTC  primary  task added
                   2026-10-15 09:30 UTC  primary  decision raised
+                """);
+    }
+
+    @Test
+    void showsTheStageATaskIsAtAndEveryStageItReached() {
+        Task merged = new Task(new TaskId("lantern"), PresenterFixtures.lantern().intake(), TaskStage.MERGED, "", null, AT, null);
+        TaskDetail detail = new TaskDetail(merged, List.of(), null, null, null, null, null, List.of(
+                new StageReached(AT, TaskStage.WORKING, "dispatched"),
+                new StageReached(AT.plus(Duration.ofMinutes(90)), TaskStage.DELIVERED, "its worker reported done"),
+                new StageReached(AT.plus(Duration.ofMinutes(95)), TaskStage.CHANGING, "its worker reported working"),
+                new StageReached(AT.plus(Duration.ofMinutes(100)), TaskStage.MERGED, "merged at 7e23dd8; 1 commit not landed: b30e15a")),
+                List.of(new RecordedEvent(1, AT, Actor.PRIMARY, "TaskAdded", merged.id())));
+
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).startsWith("""
+                lantern  ship  merged
+                """).contains("""
+                Stages
+                  2026-10-15 09:30 UTC  working    dispatched
+                  2026-10-15 11:00 UTC  delivered  its worker reported done
+                  2026-10-15 11:05 UTC  changing   its worker reported working
+                  2026-10-15 11:10 UTC  merged     merged at 7e23dd8; 1 commit not landed: b30e15a
+
+                Timeline
                 """);
     }
 }

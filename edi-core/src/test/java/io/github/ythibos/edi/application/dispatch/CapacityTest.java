@@ -56,7 +56,7 @@ class CapacityTest {
         assertThat(launched).extracting(started -> started.worker().id().task()).containsExactly(new TaskId("fit-horn"));
         assertThat(home.tasks().get(new TaskId("fit-horn")).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.dispatches().deferred()).isEmpty();
-        assertThat(home.eventTypesOf(new TaskId("fit-horn"))).containsExactly("DispatchDeferred", "TaskDispatched");
+        assertThat(home.eventTypesOf(new TaskId("fit-horn"))).containsExactly("DispatchDeferred", "TaskDispatched", "StageChanged");
     }
 
     @Test

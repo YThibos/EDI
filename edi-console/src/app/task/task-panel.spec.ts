@@ -15,7 +15,7 @@ const LAMP: TaskDetail = {
   task: {
     id: 'fit-lamp',
     intake: { kind: 'ship', title: 'Fit the lamp', projects: ['harness'], workKey: 'EDI-31', base: 'main', blockedBy: [], delivery: null },
-    state: 'working',
+    stage: 'working',
     notes: '',
     hold: null,
     created: '2026-10-15T06:00:00Z',
@@ -84,7 +84,7 @@ describe('TaskPanel', () => {
     expect(panel.querySelector('.sr-task__title')?.textContent).toBe('Fit the lamp');
     expect(facts(panel)).toEqual({
       Kind: 'ship',
-      State: 'working',
+      Stage: 'working',
       Projects: 'harness',
       'Work key': 'EDI-31',
       Base: 'main',

@@ -10,6 +10,7 @@ import io.github.ythibos.edi.application.task.TaskDetail;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -60,6 +61,10 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
             lines.add("Notes");
             lines.add(Words.indented(detail.task().notes(), INDENT));
         }
+        if (!detail.stages().isEmpty()) {
+            lines.add("");
+            lines.add(stagesOf(detail.stages()));
+        }
         lines.add("");
         lines.add(timelineOf(detail.timeline()));
         return lines.stream().collect(Collectors.joining("\n", "", "\n"));
@@ -68,7 +73,7 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
     private List<String> summaryOf(Task task) {
         Intake intake = task.intake();
         List<String> lines = new ArrayList<>();
-        lines.add(task.id() + "  " + intake.kind().word() + "  " + task.state().word());
+        lines.add(task.id() + "  " + intake.kind().word() + "  " + task.stage().word());
         lines.add(intake.title());
         lines.add("Projects: " + TaskCells.projectsOf(task));
         if (intake.workKey() != null) {
@@ -82,7 +87,7 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         }
         lines.add("Since: " + moments.day(task.created()));
         if (task.isClosed()) {
-            lines.add(capitalised(task.state().word()) + ": " + moments.day(task.closed()));
+            lines.add(capitalised(task.stage().word()) + ": " + moments.day(task.closed()));
         }
         return lines;
     }
@@ -120,6 +125,12 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
 
     private static String capitalised(String text) {
         return Character.toUpperCase(text.charAt(0)) + text.substring(1);
+    }
+
+    private String stagesOf(List<StageReached> stages) {
+        Table table = new Table(INDENT).line("Stages");
+        stages.forEach(reached -> table.row(moments.minute(reached.at()), reached.stage().word(), reached.reason()));
+        return table.text().stripTrailing();
     }
 
     private String timelineOf(List<RecordedEvent> timeline) {

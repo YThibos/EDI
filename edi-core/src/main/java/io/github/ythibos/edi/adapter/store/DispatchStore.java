@@ -79,7 +79,7 @@ public class DispatchStore {
     public Set<String> branchesOfOpenTasks() {
         return Set.copyOf(store.sql("""
                         select dispatch.branch from dispatch join task on task.id = dispatch.task_id
-                        where task.state in ('queued', 'in-flight')""")
+                        where task.stage not in ('retired', 'dropped')""")
                 .query(String.class)
                 .list());
     }
