@@ -136,6 +136,11 @@ public class TmuxClaudeRuntime implements WorkerRuntime {
     }
 
     @Override
+    public Path credentialsOf(Login login) {
+        return logins.credentialsOf(login);
+    }
+
+    @Override
     public Optional<LimitStop> usageLimitStopIn(String transcript, Instant since) {
         return transcript == null ? Optional.empty() : transcripts.usageLimitStop(Path.of(transcript), since);
     }

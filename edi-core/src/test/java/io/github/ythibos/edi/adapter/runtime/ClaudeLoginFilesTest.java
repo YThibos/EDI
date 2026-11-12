@@ -50,6 +50,15 @@ class ClaudeLoginFilesTest {
         assertThat(logins.mismatchOf(transcriptUnder(linked), new Login(new LoginName("second"), second))).isEmpty();
     }
 
+    @Test
+    void findsEachLoginsCredentialsInItsConfigurationDirectory() {
+        ClaudeLoginFiles logins = new ClaudeLoginFiles(directory.resolve("home"));
+        Path second = directory.resolve("logins/second");
+
+        assertThat(logins.credentialsOf(new Login(LoginName.DEFAULT, null))).isEqualTo(directory.resolve("home/.claude/.credentials.json"));
+        assertThat(logins.credentialsOf(new Login(new LoginName("second"), second))).isEqualTo(second.resolve(".credentials.json"));
+    }
+
     private static Path transcriptUnder(Path configDirectory) {
         return configDirectory.resolve("projects/-pool-1-lamp").resolve(UUID.randomUUID() + ".jsonl");
     }

@@ -18,6 +18,7 @@ A registry entry's `login` names the login its project's workers run on, `defaul
 A dispatch, a relaunch and a deferred launch first require the login to be ready (`WorkerRuntime.requireReady`, `ClaudeLoginReadiness`), before a copy, a branch or a window exists: its global configuration exists, records the first run as finished (`hasCompletedOnboarding`), and `claude auth status` on its directory exits 0.
 `claude auth status` runs without the inherited `CLAUDE*` variables the worker's command withholds (`ClaudeCommandLine.withheldFromClaudeCode`), so it judges the environment the worker starts in.
 Nothing but that exit code is read from Claude Code, and no credentials file is opened; the refusal names the login, what it lacks and the command that fixes it.
+The guard keeps every login's `.credentials.json` from workers and from the primary ([pre-tool-guard](pre-tool-guard.md)).
 EDI creates nothing else in a login's directory: the captain finishes its first run once and links their own skills, one by one, and `settings.json` into it, as the configuration guide describes.
 Every launch records its login on the worker by name, never its directory, and a resume runs on the recorded login, whose sessions folder `ClaudeSessions` searches for its transcript, while a dispatch and a fresh start take the login the project's registry entry names at that moment ([recovery](recovery.md)).
 A worker's first hook proves its login: a transcript path outside the recorded login's directory stops the worker, and the event names both directories.
@@ -52,3 +53,4 @@ When Claude Code offers a login per session without a configuration directory, o
 
 - 10/11/2026: two research runs measured two configuration directories side by side, and the captain chose the profile's named logins, a login per registry entry, `default` as Claude Code's own directory and a readiness check at every dispatch (EDI-249, EDI-253).
 - 10/11/2026: a worker records the login it was launched on, so a relaunch resumes its session on that login, and its first hook proves it (EDI-254).
+- 12/11/2026: the guard keeps every login's credentials from workers and from the primary (EDI-255).

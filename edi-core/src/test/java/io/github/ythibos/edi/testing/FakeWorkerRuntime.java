@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.testing;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +27,8 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public static final String SOCKET = "edi";
 
+    private static final String CREDENTIALS = ".credentials.json";
+
     private final List<Launch> launches = new ArrayList<>();
     private final Set<String> openWindows = new HashSet<>();
     private final List<String> typedLines = new ArrayList<>();
@@ -34,6 +37,7 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     private final List<Login> readinessChecks = new ArrayList<>();
     private final List<Login> transcriptLookups = new ArrayList<>();
     private LoginMismatch loginMismatch;
+    private Path claudeCodesOwnDirectory = Path.of("/nonexistent/claude-home/.claude");
     private PaneState pane = PaneState.IDLE_PROMPT;
     private List<String> mirrored = List.of("\u001b[1m❯\u001b[0m");
     private int mirrors;
@@ -150,6 +154,11 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
     }
 
     @Override
+    public synchronized Path credentialsOf(Login login) {
+        return (login.keepsClaudeCodesOwnDirectory() ? claudeCodesOwnDirectory : login.configDirectory()).resolve(CREDENTIALS);
+    }
+
+    @Override
     public synchronized Optional<LimitStop> usageLimitStopIn(String transcript, Instant since) {
         return Optional.ofNullable(limitStopInTheTranscript).filter(stop -> !stop.endedAt().isBefore(since));
     }
@@ -196,6 +205,10 @@ public final class FakeWorkerRuntime implements WorkerRuntime {
 
     public synchronized void runsEverySessionIn(LoginMismatch mismatch) {
         loginMismatch = mismatch;
+    }
+
+    public synchronized void keepsClaudeCodesOwnDirectoryIn(Path directory) {
+        claudeCodesOwnDirectory = directory;
     }
 
     public synchronized void leaveNoTranscriptOf(UUID session) {

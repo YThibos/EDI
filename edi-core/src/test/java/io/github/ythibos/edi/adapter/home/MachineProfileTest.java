@@ -175,6 +175,9 @@ class MachineProfileTest {
                 .claudeLogins();
         assertThat(named.named(LoginName.DEFAULT).configDirectory()).isEqualTo(Path.of("/logins/main"));
         assertThat(named.names(new LoginName("hobby"))).isTrue();
+        assertThat(named.every()).containsExactlyInAnyOrder(new Login(LoginName.DEFAULT, Path.of("/logins/main")),
+                new Login(new LoginName("hobby"), Path.of(System.getProperty("user.home"), ".claude-hobby")));
+        assertThat(none.every()).containsExactly(new Login(LoginName.DEFAULT, null));
     }
 
     @Test

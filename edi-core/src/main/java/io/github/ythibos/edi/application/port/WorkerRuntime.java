@@ -47,6 +47,8 @@ public interface WorkerRuntime {
 
     Optional<LoginMismatch> loginMismatchOf(String transcript, Login login);
 
+    Path credentialsOf(Login login);
+
     Optional<LimitStop> usageLimitStopIn(String transcript, Instant since);
 
     Optional<Instant> contextLimitStopIn(String transcript, Instant since);
