@@ -22,6 +22,10 @@ public record HookAnswer(Verdict verdict, String reason) {
         return new HookAnswer(Verdict.DENY_THE_TOOL, reason);
     }
 
+    public boolean blocksTheStop() {
+        return verdict == Verdict.BLOCK_THE_STOP;
+    }
+
     public enum Verdict {
         PROCEED,
         BLOCK_THE_STOP,

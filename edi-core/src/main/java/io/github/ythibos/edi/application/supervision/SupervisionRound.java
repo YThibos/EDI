@@ -10,10 +10,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
+import io.github.ythibos.edi.application.rule.TakeInSpooledFirings;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.CheckMechanicalChange;
 import io.github.ythibos.edi.application.worker.NoticeFullContexts;
@@ -44,6 +46,8 @@ public class SupervisionRound implements AutoCloseable {
     private final NoticeHeavyRunsAtOnce heavyRuns;
     private final RemindOfUnansweredQuestions unansweredQuestions;
     private final CloseDecisionRounds decisionRounds;
+    private final TakeInSpooledFirings spooledFirings;
+    private final CoreMeters meters;
     private final ExecutorService checks = Executors.newVirtualThreadPerTaskExecutor();
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
@@ -51,7 +55,8 @@ public class SupervisionRound implements AutoCloseable {
             LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, NoticeFullContexts fullContexts,
             NoticeMissedStops missedStops, JudgeWorkers judgeWorkers, ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals,
             FollowThePresence presence, NoticeTheUnreadableCalendar unreadableCalendar, NoticeHeavyRunsAtOnce heavyRuns,
-            RemindOfUnansweredQuestions unansweredQuestions, CloseDecisionRounds decisionRounds) {
+            RemindOfUnansweredQuestions unansweredQuestions, CloseDecisionRounds decisionRounds, TakeInSpooledFirings spooledFirings,
+            CoreMeters meters) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
@@ -67,10 +72,21 @@ public class SupervisionRound implements AutoCloseable {
         this.heavyRuns = heavyRuns;
         this.unansweredQuestions = unansweredQuestions;
         this.decisionRounds = decisionRounds;
+        this.spooledFirings = spooledFirings;
+        this.meters = meters;
     }
 
     @Scheduled(fixedDelayString = "${edi.supervision.round:PT30S}", initialDelayString = "${edi.supervision.round:PT30S}")
     public void run() {
+        meters.supervisionRound(this::everyPart);
+    }
+
+    @Override
+    public void close() {
+        checks.shutdownNow();
+    }
+
+    private void everyPart() {
         attempt("notice overdue steers", overdueSteers::notice);
         attempt("notice missed launches", missedLaunches::notice);
         attempt("notice workers whose context is full", fullContexts::notice);
@@ -86,11 +102,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("follow the captain's presence", presence::follow);
         attempt("tell the captain the calendar cannot be read", unreadableCalendar::notice);
         attempt("notice heavy runs at once", heavyRuns::notice);
-    }
-
-    @Override
-    public void close() {
-        checks.shutdownNow();
+        attempt("take in the rule firings spooled while the core was out of reach", spooledFirings::takeIn);
     }
 
     private static void attempt(String part, Runnable work) {

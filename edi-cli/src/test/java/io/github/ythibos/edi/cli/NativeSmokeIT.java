@@ -37,6 +37,7 @@ import org.junit.jupiter.api.parallel.Isolated;
 import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
+import jdk.jfr.consumer.RecordingFile;
 
 @Isolated
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
@@ -130,6 +131,28 @@ class NativeSmokeIT {
 
         assertThat(health.statusCode()).isEqualTo(200);
         assertThat(health.body()).contains("\"status\":\"UP\"");
+    }
+
+    @Test
+    void theCoreMeasuresItsOwnHealthAndWritesOutItsFlightRecording() throws Exception {
+        edi("", "backlog");
+
+        HttpResponse<String> meters = send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/metrics/edi.store.transaction"))
+                .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")).strip()));
+        CommandRun health = edi("", "health", "--metrics", "--dump-recording");
+
+        assertThat(meters.statusCode()).isEqualTo(200);
+        assertThat(meters.body()).contains("\"name\":\"edi.store.transaction\"", "\"statistic\":\"COUNT\"");
+        assertThat(health.exitCode()).as(health.output()).isZero();
+        assertThat(health.output()).contains("The core's health since ", "\n  store transaction ", "\nMemory in use: ", "\nFlight recording: running, ",
+                "\nThe flight recording is written to " + home.resolve("data/recordings/core-"));
+        try (Stream<Path> recordings = Files.list(home.resolve("data/recordings"))) {
+            assertThat(recordings.toList()).singleElement().satisfies(recording -> assertThat(RecordingFile.readAllEvents(recording))
+                    .isNotEmpty()
+                    .extracting(event -> event.getEventType().getName())
+                    .isSubsetOf("jdk.ExecutionSample", "jdk.GarbageCollection", "jdk.GCHeapSummary", "jdk.CPULoad", "jdk.ThreadCPULoad",
+                            "jdk.JavaMonitorEnter", "jdk.ThreadPark", "jdk.VirtualThreadPinned", "jdk.ObjectAllocationSample"));
+        }
     }
 
     @Test
@@ -404,6 +427,8 @@ class NativeSmokeIT {
         CommandRun cleanup = edi("", "cleanup", "native-worker");
         assertThat(cleanup.exitCode()).isOne();
         assertThat(cleanup.output()).contains("native-worker is not cleaned up, because its work is not landed", "\"HRN-7 Add the stub file\" is not in origin/main");
+        assertThat(edi("", "rules").output()).containsPattern("\n  guard\\.signal-by-pattern +1 +1 refused +last ")
+                .containsPattern("\n  cleanup\\.landed-before-discard +1 +1 refused +last ");
         assertThat(worktree).isDirectory();
         stopTheWorkerServer();
     }

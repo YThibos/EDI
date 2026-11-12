@@ -34,6 +34,10 @@ public final class EdiHome {
         return root.resolve("state").resolve("core.token");
     }
 
+    public Path spooledRuleFirings() {
+        return root.resolve("state").resolve("rules-fired.jsonl");
+    }
+
     public Path corePidFile() {
         return root.resolve("state").resolve("core.pid");
     }

@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public final class CaptainVoice {
 
@@ -51,7 +52,7 @@ public final class CaptainVoice {
 
     public static void requireOutcomes(String what, String captainFacing) {
         internalLabelsIn(captainFacing).stream().findFirst().ifPresent(label -> {
-            throw new Refusal(what + " speaks to the captain in outcomes: say \"" + label.plainWords() + "\" instead of \"" + label.label()
+            throw new Refusal(Rule.CAPTAIN_VOICE, what + " speaks to the captain in outcomes: say \"" + label.plainWords() + "\" instead of \"" + label.label()
                     + "\", or quote a name in double quotes when it is one (I-22).");
         });
     }

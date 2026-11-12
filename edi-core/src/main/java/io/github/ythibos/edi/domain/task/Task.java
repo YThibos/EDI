@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record Task(TaskId id, Intake intake, TaskStage stage, String notes, CaptainHold hold, Instant created, Instant closed) {
 
@@ -39,8 +40,8 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
             throw new IllegalArgumentException("A change of " + change.task() + " does not move " + id + ".");
         }
         if (change.from() != stage) {
-            throw new Refusal(id + " is " + stage.word() + " now, no longer " + change.from().word() + ", so it does not become " + change.to().word()
-                    + ".");
+            throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + " now, no longer " + change.from().word() + ", so it does not become "
+                    + change.to().word() + ".");
         }
         return change.to().isClosed()
                 ? new Task(id, intake, change.to(), notes, null, created, at)
@@ -58,10 +59,10 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
     public Task held(CaptainHold newHold) {
         refuseWhenClosed();
         if (newHold.awaitsADecision()) {
-            throw new Refusal("A decision holds " + id + " when it is raised with its card.");
+            throw new Refusal(Rule.TASK_HOLD, "A decision holds " + id + " when it is raised with its card.");
         }
         if (isHeld()) {
-            throw new Refusal(id + " is already held: " + hold.reason() + ". Release it first.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is already held: " + hold.reason() + ". Release it first.");
         }
         return withHold(newHold);
     }
@@ -73,17 +74,17 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
 
     public Task released() {
         if (!isHeld()) {
-            throw new Refusal(id + " is not held.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is not held.");
         }
         if (hold.awaitsADecision()) {
-            throw new Refusal(id + " waits on its decision; answering the decision releases it.");
+            throw new Refusal(Rule.TASK_HOLD, id + " waits on its decision; answering the decision releases it.");
         }
         return withHold(null);
     }
 
     public Task decisionAnswered() {
         if (!isHeld() || !hold.awaitsADecision()) {
-            throw new Refusal(id + " is not held for a decision.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is not held for a decision.");
         }
         return withHold(null);
     }
@@ -95,7 +96,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
     public Task keyedOn(WorkKey key) {
         refuseWhenClosed();
         if (intake.workKey() != null) {
-            throw new Refusal(id + " already books its work on " + intake.workKey() + ".");
+            throw new Refusal(Rule.WORK_KEY, id + " already books its work on " + intake.workKey() + ".");
         }
         return new Task(id, intake.keyedOn(key), stage, notes, hold, created, closed);
     }
@@ -103,7 +104,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
     public Task waitingFor(TaskId blocker) {
         refuseWhenClosed();
         if (stage != TaskStage.QUEUED) {
-            throw new Refusal(id + " is " + stage.word() + ", so it no longer waits for another task.");
+            throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + ", so it no longer waits for another task.");
         }
         return new Task(id, intake.blockedAlsoBy(blocker), stage, notes, hold, created, closed);
     }
@@ -119,19 +120,19 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
     public void requireFreeToWork() {
         refuseWhenClosed();
         if (intake.kind() == TaskKind.CAPTAIN) {
-            throw new Refusal(id + " is a captain item; only ships and scouts get a worker.");
+            throw new Refusal(Rule.TASK_STAGE, id + " is a captain item; only ships and scouts get a worker.");
         }
         if (isHeld()) {
-            throw new Refusal(id + " is held: " + hold.reason() + ". Release it before dispatching it.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is held: " + hold.reason() + ". Release it before dispatching it.");
         }
     }
 
     public void requireReadyForCleanUp() {
         if (state() != TaskState.IN_FLIGHT) {
-            throw new Refusal(id + " is " + stage.word() + ", and only work in flight is cleaned up.");
+            throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + ", and only work in flight is cleaned up.");
         }
         if (isHeld()) {
-            throw new Refusal(id + " is held: " + hold.reason() + ". Release it before cleaning it up.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is held: " + hold.reason() + ". Release it before cleaning it up.");
         }
     }
 
@@ -153,7 +154,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
 
     private void refuseWhenClosed() {
         if (isClosed()) {
-            throw new Refusal(id + " is " + stage.word() + ", so it waits for nobody.");
+            throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + ", so it waits for nobody.");
         }
     }
 

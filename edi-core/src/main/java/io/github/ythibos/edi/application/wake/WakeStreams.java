@@ -11,6 +11,7 @@ import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.adapter.store.WakeStreamStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.wake.WakeStream;
 
 @Service
@@ -61,14 +62,14 @@ public class WakeStreams {
 
     private void refuseAnEndedStream(StreamPoll poll) {
         if (streams.hasEnded(poll.stream())) {
-            throw new Refusal("This edi wait has ended and takes no more wakes. " + THE_ONE_WAY);
+            throw new Refusal(Rule.ONE_WAKE_STREAM, "This edi wait has ended and takes no more wakes. " + THE_ONE_WAY);
         }
     }
 
     private WakeStream newStream(StreamPoll poll, UUID session) {
         return processes.identify(poll.pid())
                 .map(process -> new WakeStream(poll.stream(), session, process, poll.follows(), clock.now()))
-                .orElseThrow(() -> new Refusal("edi wait names process " + poll.pid() + ", which is not running."));
+                .orElseThrow(() -> new Refusal(Rule.ONE_WAKE_STREAM, "edi wait names process " + poll.pid() + ", which is not running."));
     }
 
     private void makeWayFor(WakeStream asking) {
@@ -80,7 +81,8 @@ public class WakeStreams {
     }
 
     private static Refusal refusalNaming(WakeStream live) {
-        return new Refusal("edi wait is refused: the primary's wake stream is already live as " + live.command() + " in process " + live.process().pid()
+        return new Refusal(Rule.ONE_WAKE_STREAM, "edi wait is refused: the primary's wake stream is already live as " + live.command()
+                + " in process " + live.process().pid()
                 + ", and it keeps the wakes. " + THE_ONE_WAY + " Leave the live one running.");
     }
 }

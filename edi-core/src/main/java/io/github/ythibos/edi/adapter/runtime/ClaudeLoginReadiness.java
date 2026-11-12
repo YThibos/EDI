@@ -14,6 +14,7 @@ import io.github.ythibos.edi.adapter.process.Program;
 import io.github.ythibos.edi.adapter.process.ProgramCall;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -51,7 +52,7 @@ final class ClaudeLoginReadiness {
     }
 
     private static Refusal notReady(Login login, String lack, String fix) {
-        return new Refusal("The Claude login " + login.name() + " is not ready for a worker: " + lack + "; run " + fix + ", then try again.");
+        return new Refusal(Rule.CLAUDE_LOGIN, "The Claude login " + login.name() + " is not ready for a worker: " + lack + "; run " + fix + ", then try again.");
     }
 
     private static String firstRunOf(Login login) {

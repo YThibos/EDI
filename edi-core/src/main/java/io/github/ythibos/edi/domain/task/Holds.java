@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Hold.OpenDecision;
 
 public record Holds(List<Hold> held) {
@@ -29,7 +30,7 @@ public record Holds(List<Hold> held) {
 
     public Holds released(Hold hold) {
         if (hold instanceof OpenDecision decision) {
-            throw new Refusal(decision.number() + " holds the task until it is answered; answering it releases it.");
+            throw new Refusal(Rule.TASK_HOLD, decision.number() + " holds the task until it is answered; answering it releases it.");
         }
         return without(hold);
     }
@@ -49,13 +50,13 @@ public record Holds(List<Hold> held) {
     private void refuseARepeatOf(Hold hold) {
         Optional<Hold> repeated = held.stream().filter(hold::repeats).findFirst();
         if (repeated.isPresent()) {
-            throw new Refusal("The task already waits: " + repeated.get().reason() + ".");
+            throw new Refusal(Rule.TASK_HOLD, "The task already waits: " + repeated.get().reason() + ".");
         }
     }
 
     private Holds without(Hold hold) {
         if (!held.contains(hold)) {
-            throw new Refusal("The task does not wait: " + hold.reason() + ".");
+            throw new Refusal(Rule.TASK_HOLD, "The task does not wait: " + hold.reason() + ".");
         }
         return new Holds(held.stream().filter(other -> !other.equals(hold)).toList());
     }

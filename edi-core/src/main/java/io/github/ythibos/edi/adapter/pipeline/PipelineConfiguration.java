@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import io.github.ythibos.edi.adapter.home.ConfigurationYaml;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -34,9 +35,11 @@ final class PipelineConfiguration {
         try {
             changeEntryIn(globalConfiguration, key, change);
         } catch (IOException unwritable) {
-            throw new Refusal("The pipeline configuration " + globalConfiguration + " cannot be read or replaced: " + unwritable.getClass().getSimpleName() + ".");
+            throw new Refusal(Rule.CONFIGURATION_VALID, "The pipeline configuration " + globalConfiguration + " cannot be read or replaced: "
+                    + unwritable.getClass().getSimpleName() + ".");
         } catch (JacksonException malformed) {
-            throw new Refusal("The pipeline configuration " + globalConfiguration + " is not readable YAML: " + malformed.getOriginalMessage());
+            throw new Refusal(Rule.CONFIGURATION_VALID, "The pipeline configuration " + globalConfiguration + " is not readable YAML: "
+                    + malformed.getOriginalMessage());
         }
     }
 

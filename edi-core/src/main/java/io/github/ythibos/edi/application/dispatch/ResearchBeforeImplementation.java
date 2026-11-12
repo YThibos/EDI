@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.dispatch.UnplannedShip;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskAdded;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -117,7 +118,7 @@ public class ResearchBeforeImplementation {
             return "Follow the plan that research task `" + research + "` settled; its report follows verbatim.\n\n"
                     + Files.readString(report, StandardCharsets.UTF_8).strip();
         } catch (NoSuchFileException absent) {
-            throw new Refusal("The plan of " + research + " is not written yet: " + report + " is missing.");
+            throw new Refusal(Rule.RESEARCH_FIRST, "The plan of " + research + " is not written yet: " + report + " is missing.");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

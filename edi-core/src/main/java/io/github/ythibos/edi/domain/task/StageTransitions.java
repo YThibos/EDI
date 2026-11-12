@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.StageTrigger.CaptainItemAnswered;
 import io.github.ythibos.edi.domain.task.StageTrigger.Change;
 import io.github.ythibos.edi.domain.task.StageTrigger.CleanUp;
@@ -64,7 +65,7 @@ public record StageTransitions(TaskId task, TaskKind kind) {
 
     private void requireFrom(TaskStage stage, Set<TaskStage> from, TaskStage to) {
         if (!from.contains(stage)) {
-            throw new Refusal(task + " is " + stage.word() + ", and a task becomes " + to.word() + " only from " + wordsOf(from) + ".");
+            throw new Refusal(Rule.TASK_STAGE, task + " is " + stage.word() + ", and a task becomes " + to.word() + " only from " + wordsOf(from) + ".");
         }
     }
 
@@ -81,7 +82,7 @@ public record StageTransitions(TaskId task, TaskKind kind) {
 
     private void refuseAnyOf(TaskStage stage, List<String> gaps) {
         if (!gaps.isEmpty()) {
-            throw new Refusal(task + " stays " + stage.word() + ": " + String.join("; ", gaps) + ".");
+            throw new Refusal(Rule.TASK_STAGE, task + " stays " + stage.word() + ": " + String.join("; ", gaps) + ".");
         }
     }
 

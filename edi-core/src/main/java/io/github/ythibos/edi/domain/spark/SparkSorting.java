@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record SparkSorting(SparkOutcome outcome, WorkKey item, String reason, Instant sortedAt) {
 
@@ -30,7 +31,7 @@ public record SparkSorting(SparkOutcome outcome, WorkKey item, String reason, In
     public static SparkSorting dropped(String reason, Instant at) {
         String why = Objects.requireNonNullElse(reason, "").strip();
         if (why.isEmpty()) {
-            throw new Refusal("A dropped spark says why it was dropped: give the reason.");
+            throw new Refusal(Rule.SPARK_SORTED_ONCE, "A dropped spark says why it was dropped: give the reason.");
         }
         return new SparkSorting(SparkOutcome.DROPPED, null, why, at);
     }

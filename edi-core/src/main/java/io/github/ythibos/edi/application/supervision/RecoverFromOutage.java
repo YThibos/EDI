@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
@@ -68,7 +69,8 @@ public class RecoverFromOutage {
             return launcher.relaunch(entry.task(), launchKindOf(action), choice.captainsOverride(), entry, entry.cause().sentence(), actor);
         } catch (RuntimeException failed) {
             transaction.executeWithoutResult(_ -> events.record(new RecoveryFailed(entry.task(), number, failed.getMessage()), Actor.CORE, clock.now()));
-            throw new Refusal("Number " + number + " on the outage hold list could not be relaunched, so it stays on the list: " + failed.getMessage());
+            throw new Refusal(Rule.OUTAGE_LIST, "Number " + number + " on the outage hold list could not be relaunched, so it stays on the list: "
+                    + failed.getMessage());
         }
     }
 
@@ -80,16 +82,16 @@ public class RecoverFromOutage {
                 .findFirst()
                 .or(() -> primarySessions.holder().map(PrimarySession::limit).filter(limit -> limit.holdsAt(now)));
         inForce.ifPresent(limit -> {
-            throw new Refusal("The " + limit.name() + " still holds" + (limit.resetsAt() == null ? "" : " until " + limit.resetsAt())
+            throw new Refusal(Rule.OUTAGE_LIST, "The " + limit.name() + " still holds" + (limit.resetsAt() == null ? "" : " until " + limit.resetsAt())
                     + ", so a relaunch now would stop on it again; answer the list once it has reset.");
         });
     }
 
     private Choice chosen(int number, RecoveryAction action, RouteChange change, Actor actor) {
-        OutageEntry entry = outages.numbered(number).orElseThrow(() -> new Refusal("The outage hold list has no number " + number + "."));
+        OutageEntry entry = outages.numbered(number).orElseThrow(() -> new Refusal(Rule.OUTAGE_LIST, "The outage hold list has no number " + number + "."));
         Task task = tasks.get(entry.task());
         if (task.isHeld() && !entry.holds(task.hold())) {
-            throw new Refusal(task.id() + " is also held: " + task.hold().reason() + ". Settle that first.");
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " is also held: " + task.hold().reason() + ". Settle that first.");
         }
         events.record(new RecoveryChosen(task.id(), number, action), actor, clock.now());
         return new Choice(entry, captainsOverrideOf(task, number, change));

@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record BoardRound(String link, int questions, List<BoardBinding> bindings, BoardCard card) {
 
@@ -16,14 +17,14 @@ public record BoardRound(String link, int questions, List<BoardBinding> bindings
         link = link == null ? "" : link.strip();
         bindings = List.copyOf(bindings);
         if (WEB_SCHEMES.stream().noneMatch(link.toLowerCase(Locale.ROOT)::startsWith) || link.contains(" ")) {
-            throw new Refusal("A board round names the web link the captain opens the board at, such as http://127.0.0.1:4387/session/1a2b; "
+            throw new Refusal(Rule.ROUND_SHAPE, "A board round names the web link the captain opens the board at, such as http://127.0.0.1:4387/session/1a2b; "
                     + "\"" + link + "\" is not one.");
         }
         if (questions < 0) {
-            throw new Refusal("A board round counts its questions from 0, not " + questions + ".");
+            throw new Refusal(Rule.ROUND_SHAPE, "A board round counts its questions from 0, not " + questions + ".");
         }
         if (questions == 0 && bindings.isEmpty() && card == null) {
-            throw new Refusal("A board round puts a question or a decision before the captain; this one counts no question, binds no decision and "
+            throw new Refusal(Rule.ROUND_SHAPE, "A board round puts a question or a decision before the captain; this one counts no question, binds no decision and "
                     + "carries no card.");
         }
     }

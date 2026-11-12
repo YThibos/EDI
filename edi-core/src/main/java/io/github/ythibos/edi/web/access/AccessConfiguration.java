@@ -26,16 +26,16 @@ class AccessConfiguration {
     }
 
     @Bean
-    FilterRegistrationBean<LoopbackHostFilter> loopbackHostFilter() {
-        FilterRegistrationBean<LoopbackHostFilter> registration = new FilterRegistrationBean<>(new LoopbackHostFilter());
+    FilterRegistrationBean<LoopbackHostFilter> loopbackHostFilter(CallerFirings firings) {
+        FilterRegistrationBean<LoopbackHostFilter> registration = new FilterRegistrationBean<>(new LoopbackHostFilter(firings));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registration;
     }
 
     @Bean
     FilterRegistrationBean<ApiTokenFilter> apiTokenFilter(ApiToken token, WorkerTokens workerTokens, PrimarySessions primarySessions,
-            ConsoleAccess consoleAccess) {
-        return new FilterRegistrationBean<>(new ApiTokenFilter(token, workerTokens, primarySessions, consoleAccess));
+            ConsoleAccess consoleAccess, CallerFirings firings) {
+        return new FilterRegistrationBean<>(new ApiTokenFilter(token, workerTokens, primarySessions, consoleAccess, firings));
     }
 
     @Bean

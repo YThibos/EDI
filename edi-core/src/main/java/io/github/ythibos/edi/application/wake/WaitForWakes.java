@@ -20,6 +20,7 @@ import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.wake.WakeStream;
 
@@ -53,7 +54,7 @@ public class WaitForWakes {
 
     public void requireThePrimary(UUID session) {
         if (session == null || sessions.standingOf(session) != Standing.PRIMARY) {
-            throw new Refusal("edi wait serves the primary session, the one the captain typed in last; this session is not it.");
+            throw new Refusal(Rule.ONE_WAKE_STREAM, "edi wait serves the primary session, the one the captain typed in last; this session is not it.");
         }
     }
 

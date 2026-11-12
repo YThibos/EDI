@@ -14,6 +14,7 @@ import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
@@ -35,7 +36,7 @@ public class WrittenBriefQuery {
         try {
             return Files.readString(brief, StandardCharsets.UTF_8);
         } catch (NoSuchFileException absent) {
-            throw new Refusal(task + " has no brief yet; name a category to see the brief a dispatch would write.");
+            throw new Refusal(Rule.TASK_DISPATCHED, task + " has no brief yet; name a category to see the brief a dispatch would write.");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

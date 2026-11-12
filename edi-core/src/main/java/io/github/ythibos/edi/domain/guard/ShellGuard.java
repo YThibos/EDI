@@ -5,6 +5,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String> unlandedBranches, Secrets secrets, boolean forAWorker,
         SocketPaths socketPaths) {
 
@@ -29,7 +31,7 @@ public record ShellGuard(String ediSocket, Set<String> baseBranches, Set<String>
         try {
             commands = ShellScript.commandsIn(script);
         } catch (UnreadableCommand unreadable) {
-            return Optional.of(new GuardRefusal(GuardRule.UNREADABLE_COMMAND,
+            return Optional.of(new GuardRefusal(Rule.UNREADABLE_COMMAND,
                     unreadable.getMessage() + " The guard refuses what it cannot read; run it as plainer commands."));
         }
         return ProcessSignals.refusalFor(commands).or(() -> LoneWaits.refusalFor(script, commands, tool)).or(() -> firstRefusalAmong(commands));

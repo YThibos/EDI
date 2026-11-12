@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.worker.LoginName;
 
 public record ClaudeLogins(Map<LoginName, Path> configDirectories) {
@@ -23,7 +24,7 @@ public record ClaudeLogins(Map<LoginName, Path> configDirectories) {
 
     public Login named(LoginName login) {
         if (!names(login)) {
-            throw new Refusal("The machine profile names no Claude login " + login + " under claude.logins; add it with its configDirectory.");
+            throw new Refusal(Rule.CLAUDE_LOGIN, "The machine profile names no Claude login " + login + " under claude.logins; add it with its configDirectory.");
         }
         return new Login(login, configDirectories.get(login));
     }

@@ -16,22 +16,34 @@ import io.github.ythibos.edi.adapter.registry.UnreadableRegistry;
 import io.github.ythibos.edi.adapter.tracker.TrackerUnavailable;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.spark.UnknownSpark;
 import io.github.ythibos.edi.domain.task.UnknownTask;
+import io.github.ythibos.edi.web.access.CallerFirings;
 import io.github.ythibos.edi.web.access.NotPermitted;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 class ApiRefusals {
 
     private static final MediaType PLAIN_TEXT = new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8);
 
+    private final CallerFirings firings;
+
+    ApiRefusals(CallerFirings firings) {
+        this.firings = firings;
+    }
+
     @ExceptionHandler(Refusal.class)
-    ResponseEntity<String> refused(Refusal refusal) {
+    ResponseEntity<String> refused(Refusal refusal, HttpServletRequest request) {
+        firings.refused(refusal.rule(), request, refusal.getMessage());
         return sentence(HttpStatus.CONFLICT, refusal.getMessage());
     }
 
     @ExceptionHandler(NotPermitted.class)
-    ResponseEntity<String> notPermitted(NotPermitted notPermitted) {
+    ResponseEntity<String> notPermitted(NotPermitted notPermitted, HttpServletRequest request) {
+        firings.refused(notPermitted.rule(), request, notPermitted.getMessage());
         return sentence(HttpStatus.FORBIDDEN, notPermitted.getMessage());
     }
 
@@ -41,23 +53,23 @@ class ApiRefusals {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<String> invalid(IllegalArgumentException invalid) {
-        return sentence(HttpStatus.BAD_REQUEST, invalid.getMessage());
+    ResponseEntity<String> invalid(IllegalArgumentException invalid, HttpServletRequest request) {
+        return malformed(request, invalid.getMessage());
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    ResponseEntity<String> incomplete(MissingServletRequestParameterException incomplete) {
-        return sentence(HttpStatus.BAD_REQUEST, "The call needs its " + incomplete.getParameterName() + " parameter.");
+    ResponseEntity<String> incomplete(MissingServletRequestParameterException incomplete, HttpServletRequest request) {
+        return malformed(request, "The call needs its " + incomplete.getParameterName() + " parameter.");
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    ResponseEntity<String> mistyped(MethodArgumentTypeMismatchException mistyped) {
-        return sentence(HttpStatus.BAD_REQUEST, "The call's " + mistyped.getName() + " parameter cannot be " + mistyped.getValue() + ".");
+    ResponseEntity<String> mistyped(MethodArgumentTypeMismatchException mistyped, HttpServletRequest request) {
+        return malformed(request, "The call's " + mistyped.getName() + " parameter cannot be " + mistyped.getValue() + ".");
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    ResponseEntity<String> unreadable() {
-        return sentence(HttpStatus.BAD_REQUEST, "The request body is not the JSON this call expects.");
+    ResponseEntity<String> unreadable(HttpServletRequest request) {
+        return malformed(request, "The request body is not the JSON this call expects.");
     }
 
     @ExceptionHandler(TrackerUnavailable.class)
@@ -68,6 +80,11 @@ class ApiRefusals {
     @ExceptionHandler({UnreadableRegistry.class, ProgramFailure.class})
     ResponseEntity<String> unable(RuntimeException unable) {
         return sentence(HttpStatus.INTERNAL_SERVER_ERROR, unable.getMessage());
+    }
+
+    private ResponseEntity<String> malformed(HttpServletRequest request, String reason) {
+        firings.refused(Rule.REQUEST_VALID, request, reason);
+        return sentence(HttpStatus.BAD_REQUEST, reason);
     }
 
     private static ResponseEntity<String> sentence(HttpStatus status, String sentence) {

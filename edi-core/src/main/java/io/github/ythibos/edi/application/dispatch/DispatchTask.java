@@ -36,6 +36,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DispatchDeferred;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Adoption;
 import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
@@ -118,7 +119,7 @@ public class DispatchTask {
     private void requireUnblocked(Task task) {
         List<Blocker> unfinished = tasks.blockersOf(task).stream().filter(blocker -> !blocker.isResolved()).toList();
         if (!unfinished.isEmpty()) {
-            throw new Refusal(task.id() + " waits for " + unfinished.stream().map(blocker -> blocker.id().value()).toList()
+            throw new Refusal(Rule.BLOCKERS_DONE, task.id() + " waits for " + unfinished.stream().map(blocker -> blocker.id().value()).toList()
                     + "; it is dispatched once they are done.");
         }
     }
@@ -126,7 +127,8 @@ public class DispatchTask {
     private static ProjectName onlyProjectOf(Task task) {
         List<ProjectName> projects = task.intake().projects();
         if (projects.size() != 1) {
-            throw new Refusal(task.id() + " works on " + projects.size() + " projects, and a worker works in the isolated copy of exactly one.");
+            throw new Refusal(Rule.ONE_PROJECT, task.id() + " works on " + projects.size()
+                    + " projects, and a worker works in the isolated copy of exactly one.");
         }
         return projects.getFirst();
     }
@@ -134,12 +136,13 @@ public class DispatchTask {
     private static CategoryId categoryOf(DispatchRequest request, Optional<Dispatch> earlier) {
         return Optional.ofNullable(request.category())
                 .or(() -> earlier.map(Dispatch::category))
-                .orElseThrow(() -> new Refusal("A first dispatch names its category; the primary picks one from the dispatch rules."));
+                .orElseThrow(() -> new Refusal(Rule.CATEGORY, "A first dispatch names its category; the primary picks one from the dispatch rules."));
     }
 
     private static void requireACauseOnlyForABugfix(DispatchRequest request, DispatchCategory category) {
         if (request.causeUnknown() && !category.id().equals(CategoryId.BUGFIX)) {
-            throw new Refusal("Only a " + CategoryId.BUGFIX + " dispatch says its cause is unknown; " + category.id() + " work is planned or not.");
+            throw new Refusal(Rule.CATEGORY, "Only a " + CategoryId.BUGFIX + " dispatch says its cause is unknown; " + category.id()
+                    + " work is planned or not.");
         }
     }
 
@@ -183,7 +186,8 @@ public class DispatchTask {
             return null;
         }
         if (project.verify() == null) {
-            throw new Refusal(project.project().name() + " names no verify command in the project registry, which a mechanical task is checked against.");
+            throw new Refusal(Rule.MECHANICAL_SHAPE, project.project().name()
+                    + " names no verify command in the project registry, which a mechanical task is checked against.");
         }
         return new ExpectedChange(spec, files);
     }
@@ -197,7 +201,7 @@ public class DispatchTask {
     private static BranchKind branchKindFor(Task task, ProjectEntry project, DispatchCategory category) {
         BranchKind kind = task.intake().kind() == TaskKind.SCOUT ? BranchKind.RESEARCH : category.branch();
         if (!project.branchKinds().contains(kind)) {
-            throw new Refusal(project.project().name() + " takes no " + kind.word() + " branches; its registry entry allows "
+            throw new Refusal(Rule.BRANCH_KIND, project.project().name() + " takes no " + kind.word() + " branches; its registry entry allows "
                     + project.branchKinds().stream().map(BranchKind::word).sorted().toList() + ".");
         }
         return kind;
@@ -206,7 +210,7 @@ public class DispatchTask {
     private static WorkKey requireWorkKey(Task task) {
         WorkKey key = task.intake().workKey();
         if (key == null) {
-            throw new Refusal(task.id() + " has no work key, and a branch carries one; give the task its key first.");
+            throw new Refusal(Rule.WORK_KEY, task.id() + " has no work key, and a branch carries one; give the task its key first.");
         }
         return key;
     }

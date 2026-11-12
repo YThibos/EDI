@@ -16,10 +16,10 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
-import io.github.ythibos.edi.domain.guard.GuardRule;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.CaptainHold;
@@ -105,7 +105,7 @@ public sealed interface DomainEvent {
     record SteerNotReceived(TaskId task, int number) implements DomainEvent {
     }
 
-    record ToolCallRefused(TaskId task, WorkerId worker, GuardRule rule) implements DomainEvent {
+    record ToolCallRefused(TaskId task, WorkerId worker, Rule rule) implements DomainEvent {
     }
 
     record MechanicalChangeAccepted(TaskId task, WorkerId worker) implements DomainEvent {

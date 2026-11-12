@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
+import io.github.ythibos.edi.adapter.store.RuleFirings;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
 import io.github.ythibos.edi.adapter.tracker.TrackerUnavailable;
@@ -32,6 +33,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TicketChoiceRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketCreated;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.ProposedTicket;
@@ -53,18 +56,20 @@ public class TicketProposals {
     private final DecisionStore decisions;
     private final RaiseDecision raiseDecision;
     private final EventLog events;
+    private final RuleFirings firings;
     private final ProjectRegistry registry;
     private final Trackers trackers;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public TicketProposals(TicketProposalStore proposals, TaskStore tasks, DecisionStore decisions, RaiseDecision raiseDecision, EventLog events,
-            ProjectRegistry registry, Trackers trackers, Clock clock, TransactionTemplate transaction) {
+            RuleFirings firings, ProjectRegistry registry, Trackers trackers, Clock clock, TransactionTemplate transaction) {
         this.proposals = proposals;
         this.tasks = tasks;
         this.decisions = decisions;
         this.raiseDecision = raiseDecision;
         this.events = events;
+        this.firings = firings;
         this.registry = registry;
         this.trackers = trackers;
         this.clock = clock;
@@ -164,8 +169,7 @@ public class TicketProposals {
             Instant now = clock.now();
             ProposedTicket filled = withTicket.isFilled() || fieldsRefused.isPresent() ? withTicket : withTicket.filled(now);
             proposals.update(filled.settledOn(withTicket.createdKey(), now));
-            fieldsRefused.ifPresent(because -> events.record(new TicketUpdateRefused(proposed.task(), withTicket.createdKey(), THE_FIELDS, because),
-                    actor, now));
+            fieldsRefused.ifPresent(because -> recordTheRefusedFields(proposed.task(), withTicket.createdKey(), because, actor, now));
         });
         return fieldsRefused.<TicketSettlement>map(because -> new TicketSettlement.CreatedWithoutItsFields(withTicket.createdKey(), because))
                 .orElseGet(() -> new TicketSettlement.Keyed(withTicket.createdKey(), true));
@@ -210,10 +214,17 @@ public class TicketProposals {
         }
     }
 
+    private void recordTheRefusedFields(TaskId task, WorkKey key, String because, Actor actor, Instant now) {
+        events.record(new TicketUpdateRefused(task, key, THE_FIELDS, because), actor, now);
+        firings.record(RuleFired.warned(Rule.TICKET_UPDATE, actor, task, because), now);
+    }
+
     private void askedAgain(ProposedTicket proposed, String because) {
         transaction.executeWithoutResult(_ -> {
+            Instant now = clock.now();
             proposals.update(proposals.of(proposed.task()).orElseThrow().refusedBecause(because));
-            events.record(new TicketChoiceRefused(proposed.task(), because), Actor.CORE, clock.now());
+            events.record(new TicketChoiceRefused(proposed.task(), because), Actor.CORE, now);
+            firings.record(RuleFired.refused(Rule.TICKET_CHOICE, Actor.CAPTAIN, proposed.task(), because), now);
             raiseDecision.raise(new TaskReference.ById(proposed.task()), proposed.proposal().cardAfterRefusal(because), Actor.CORE);
         });
     }
@@ -235,7 +246,8 @@ public class TicketProposals {
 
     private static CaptainAnswer answerOfTheKey(Decision open, WorkKey key, String captainsWords, Instant at) {
         if (captainsWords == null) {
-            throw new Refusal(open.number() + " asks which ticket " + open.task() + " books on, so its key answers that decision: cite the captain's words"
+            throw new Refusal(Rule.WORK_KEY, open.number() + " asks which ticket " + open.task()
+                    + " books on, so its key answers that decision: cite the captain's words"
                     + " that give " + key + " with --message <n> or --text.");
         }
         return new CaptainAnswer(captainsWords, null, "Book it on " + key + ".", at, AnswerChannel.CHAT);

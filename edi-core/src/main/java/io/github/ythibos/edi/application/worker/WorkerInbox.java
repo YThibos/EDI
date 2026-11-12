@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -50,7 +51,7 @@ public class WorkerInbox {
         return transaction.execute(_ -> {
             Instant now = clock.now();
             InboxMessage acknowledged = inbox.get(worker.task(), number)
-                    .orElseThrow(() -> new Refusal("No message " + number + " waits for " + worker.task() + "."))
+                    .orElseThrow(() -> new Refusal(Rule.MESSAGE_WAITS, "No message " + number + " waits for " + worker.task() + "."))
                     .acknowledged(now);
             inbox.save(acknowledged);
             settleTheQuestionItResolves(worker, acknowledged, now);

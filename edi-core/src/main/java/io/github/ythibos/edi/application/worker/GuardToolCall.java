@@ -26,17 +26,21 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.application.authority.CaptainsWordEvidence;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
+import io.github.ythibos.edi.application.rule.FiredRules;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.ToolCallRefused;
 import io.github.ythibos.edi.domain.guard.GuardRefusal;
-import io.github.ythibos.edi.domain.guard.GuardRule;
 import io.github.ythibos.edi.domain.guard.SecretReads;
 import io.github.ythibos.edi.domain.guard.Secrets;
 import io.github.ythibos.edi.domain.guard.SettingsWrites;
 import io.github.ythibos.edi.domain.guard.ShellGuard;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
+import io.github.ythibos.edi.domain.rule.RuleOutcome;
+import io.github.ythibos.edi.domain.rule.RuleReason;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -45,10 +49,10 @@ public class GuardToolCall {
 
     private static final Set<String> USUAL_BASES = Set.of("main", "master");
     private static final String CLAUDE_DIRECTORY = ".claude";
-    private static final Map<GuardRule, CaptainWordAct> ALLOWED_ON_THE_CAPTAINS_WORD = Map.of(
-            GuardRule.SECRET, CaptainWordAct.TOUCH_A_SECRET,
-            GuardRule.UNLANDED_BRANCH_DELETION, CaptainWordAct.DELETE_UNLANDED_BRANCH);
-    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(GuardRule.DIALOG_ANSWERED_AHEAD,
+    private static final Map<Rule, CaptainWordAct> ALLOWED_ON_THE_CAPTAINS_WORD = Map.of(
+            Rule.SECRET, CaptainWordAct.TOUCH_A_SECRET,
+            Rule.UNLANDED_BRANCH_DELETION, CaptainWordAct.DELETE_UNLANDED_BRANCH);
+    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(Rule.DIALOG_ANSWERED_AHEAD,
             "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
 
     private final EdiHome home;
@@ -59,11 +63,13 @@ public class GuardToolCall {
     private final CaptainsWordEvidence captainsWord;
     private final WorkerRuntime runtime;
     private final EventLog events;
+    private final FiredRules firedRules;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public GuardToolCall(EdiHome home, WorkerContext context, ProjectRegistry registry, DispatchStore dispatches, MachineProfile machine,
-            CaptainsWordEvidence captainsWord, WorkerRuntime runtime, EventLog events, Clock clock, TransactionTemplate transaction) {
+            CaptainsWordEvidence captainsWord, WorkerRuntime runtime, EventLog events, FiredRules firedRules, Clock clock,
+            TransactionTemplate transaction) {
         this.home = home;
         this.context = context;
         this.registry = registry;
@@ -72,22 +78,19 @@ public class GuardToolCall {
         this.captainsWord = captainsWord;
         this.runtime = runtime;
         this.events = events;
+        this.firedRules = firedRules;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public HookAnswer checkForWorker(WorkerId worker, ToolCall call) {
         Optional<GuardRefusal> refusal = refusalForWorker(worker, call);
-        refusal.ifPresent(refused -> transaction.executeWithoutResult(_ ->
-                events.record(new ToolCallRefused(worker.task(), worker, refused.rule()), Actor.worker(worker), clock.now())));
+        refusal.ifPresent(refused -> recordTheRefusalOf(worker, refused));
         return refusal.map(GuardToolCall::denial).orElse(HookAnswer.PROCEED);
     }
 
     public HookAnswer checkForPrimary(ToolCall call, CallingSession calling) {
-        return refusalForPrimary(call)
-                .filter(refused -> !allowedOnTheCaptainsWord(refused, calling))
-                .map(GuardToolCall::denialToThePrimary)
-                .orElse(HookAnswer.PROCEED);
+        return refusalForPrimary(call).map(refusal -> answerToThePrimary(refusal, calling)).orElse(HookAnswer.PROCEED);
     }
 
     private Optional<GuardRefusal> refusalForWorker(WorkerId worker, ToolCall call) {
@@ -105,6 +108,12 @@ public class GuardToolCall {
                         .or(() -> settingsWrittenByTheShell(call, workplace));
     }
 
+    private void recordTheRefusalOf(WorkerId worker, GuardRefusal refused) {
+        transaction.executeWithoutResult(_ ->
+                events.record(new ToolCallRefused(worker.task(), worker, refused.rule()), Actor.worker(worker), clock.now()));
+        firedRules.record(RuleFired.refused(refused.rule(), Actor.worker(worker), worker.task(), refused.reason()));
+    }
+
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
         if (call.asksTheCaptainWithItsAnswersGiven()) {
             return Optional.of(DIALOG_ANSWERED_AHEAD);
@@ -112,6 +121,12 @@ public class GuardToolCall {
         return call.readsAFile()
                 ? secretRead(call.file(), secretsKeptFromThePrimary())
                 : shellRefusal(call, everyRegisteredBase(), secretsKeptFromThePrimary(), false);
+    }
+
+    private HookAnswer answerToThePrimary(GuardRefusal refusal, CallingSession calling) {
+        boolean allowed = allowedOnTheCaptainsWord(refusal, calling);
+        firedRules.record(firingForThePrimary(refusal, allowed, calling));
+        return allowed ? HookAnswer.PROCEED : denialToThePrimary(refusal);
     }
 
     private static Optional<GuardRefusal> secretRead(Path file, Secrets secrets) {
@@ -197,6 +212,11 @@ public class GuardToolCall {
                 .isPresent();
     }
 
+    private static RuleFired firingForThePrimary(GuardRefusal refusal, boolean allowed, CallingSession calling) {
+        RuleOutcome outcome = allowed ? RuleOutcome.ALLOWED_AFTER_A_CHECK : RuleOutcome.REFUSED;
+        return new RuleFired(refusal.rule(), outcome, Actor.PRIMARY, null, calling.id(), RuleReason.of(refusal.reason()));
+    }
+
     private static Set<String> basesOf(Workplace workplace) {
         Set<String> bases = new HashSet<>(USUAL_BASES);
         bases.add(workplace.base().name());
@@ -213,7 +233,7 @@ public class GuardToolCall {
     private static Optional<GuardRefusal> outsideTheWorkplace(Path file, Workplace workplace) {
         Path written = RealPaths.of(file);
         boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(RealPaths::of).anyMatch(written::startsWith);
-        return inside ? Optional.empty() : Optional.of(new GuardRefusal(GuardRule.OUTSIDE_ISOLATED_COPY,
+        return inside ? Optional.empty() : Optional.of(new GuardRefusal(Rule.OUTSIDE_ISOLATED_COPY,
                 "a worker writes only inside its isolated copy " + workplace.worktree() + " and its task directory "
                         + workplace.taskDirectory() + ", and " + file + " is outside both (I-07)."));
     }

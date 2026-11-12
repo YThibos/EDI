@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 public final class SettingsWrites {
 
     private static final Set<String> FILE_WRITERS = Set.of("tee", "touch", "truncate");
@@ -183,7 +185,7 @@ public final class SettingsWrites {
     }
 
     private static Optional<GuardRefusal> refused() {
-        return Optional.of(new GuardRefusal(GuardRule.CLAUDE_SETTINGS, "a worker never writes under its copy's .claude directory, where a Claude Code"
+        return Optional.of(new GuardRefusal(Rule.CLAUDE_SETTINGS, "a worker never writes under its copy's .claude directory, where a Claude Code"
                 + " settings file could switch off the hooks that guard it; the captain changes those files (I-07)."));
     }
 }

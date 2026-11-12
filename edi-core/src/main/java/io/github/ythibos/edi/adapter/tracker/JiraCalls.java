@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.home.TrackerSettings;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -78,7 +79,7 @@ public class JiraCalls implements AutoCloseable {
             return bodyOf(response);
         }
         if (status == 401 || status == 403) {
-            throw new Refusal("JIRA refused the access token for " + what + " (HTTP " + status + "); renew the token in the "
+            throw new Refusal(Rule.TRACKER_ANSWERED, "JIRA refused the access token for " + what + " (HTTP " + status + "); renew the token in the "
                     + settings.credentials().section() + " section of the keys file.");
         }
         if (status == 404) {
@@ -86,7 +87,7 @@ public class JiraCalls implements AutoCloseable {
         }
         String reasons = hidden(reasonsIn(response), token);
         if (status < 500) {
-            throw new Refusal("JIRA refused " + what + " (HTTP " + status + ")" + reasons + ".");
+            throw new Refusal(Rule.TRACKER_ANSWERED, "JIRA refused " + what + " (HTTP " + status + ")" + reasons + ".");
         }
         throw new TrackerUnavailable("JIRA could not answer for " + what + " (HTTP " + status + ")" + reasons + ".");
     }

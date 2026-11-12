@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -34,7 +35,7 @@ public class ClaudeWorkspaceTrust {
     public synchronized void trust(Path directory, Login login) {
         Path configFile = logins.globalConfigurationOf(login);
         if (!Files.isRegularFile(configFile)) {
-            throw new Refusal("The Claude login " + login.name() + " has no global configuration " + configFile + " to record its trust in " + directory + ".");
+            throw new Refusal(Rule.CLAUDE_LOGIN, "The Claude login " + login.name() + " has no global configuration " + configFile + " to record its trust in " + directory + ".");
         }
         ObjectNode config = (ObjectNode) json.readTree(contentOf(configFile));
         String key = directory.toAbsolutePath().normalize().toString();

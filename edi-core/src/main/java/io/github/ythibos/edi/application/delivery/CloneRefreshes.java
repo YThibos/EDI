@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -84,7 +85,7 @@ public class CloneRefreshes {
         }
         git.fetchOrigin(registry.entryOf(project).projectClone());
         pending.stream().filter(refresh -> !verified(refresh)).findFirst().ifPresent(waiting -> {
-            throw new Refusal("Follow-up work on " + project + " waits until its clone holds commit " + waiting.expectedCommit() + " on "
+            throw new Refusal(Rule.CLONE_CURRENT, "Follow-up work on " + project + " waits until its clone holds commit " + waiting.expectedCommit() + " on "
                     + waiting.baseRef() + ", which the merge of " + waiting.task() + " landed; the next dispatch fetches again.");
         });
     }

@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
@@ -59,10 +60,10 @@ public class PromoteScout {
 
     private static void requireAnOpenScout(Task task) {
         if (task.intake().kind() != TaskKind.SCOUT) {
-            throw new Refusal(task.id() + " is a " + task.intake().kind().word() + "; only a scout is promoted to a ship.");
+            throw new Refusal(Rule.TASK_STAGE, task.id() + " is a " + task.intake().kind().word() + "; only a scout is promoted to a ship.");
         }
         if (task.state() == TaskState.DROPPED) {
-            throw new Refusal(task.id() + " was dropped, so it is not promoted.");
+            throw new Refusal(Rule.TASK_STAGE, task.id() + " was dropped, so it is not promoted.");
         }
     }
 

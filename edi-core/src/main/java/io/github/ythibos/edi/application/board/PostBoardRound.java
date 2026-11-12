@@ -15,6 +15,7 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardRound;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRoundPosted;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 @Service
 public class PostBoardRound {
@@ -44,14 +45,14 @@ public class PostBoardRound {
 
     private Board listeningAt(Path file) {
         return boards.listeningAt(realPathOf(file).toString())
-                .orElseThrow(() -> new Refusal("No research board listens at " + file + "; its scout arms it with edi board arm."));
+                .orElseThrow(() -> new Refusal(Rule.BOARD_FILE, "No research board listens at " + file + "; its scout arms it with edi board arm."));
     }
 
     private static Path realPathOf(Path file) {
         try {
             return file.toRealPath();
         } catch (IOException unreadable) {
-            throw new Refusal("No research board listens at " + file + ": " + unreadable.getMessage());
+            throw new Refusal(Rule.BOARD_FILE, "No research board listens at " + file + ": " + unreadable.getMessage());
         }
     }
 }

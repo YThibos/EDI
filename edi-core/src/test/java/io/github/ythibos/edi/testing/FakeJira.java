@@ -10,6 +10,7 @@ import java.util.Optional;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
@@ -166,7 +167,7 @@ public final class FakeJira implements Tracker {
     private FakeTicket ticket(WorkKey key) {
         FakeTicket ticket = tickets.get(key);
         if (ticket == null) {
-            throw new Refusal("JIRA found nothing for the ticket " + key + " (HTTP 404).");
+            throw new Refusal(Rule.TRACKER_ANSWERED, "JIRA found nothing for the ticket " + key + " (HTTP 404).");
         }
         return ticket;
     }

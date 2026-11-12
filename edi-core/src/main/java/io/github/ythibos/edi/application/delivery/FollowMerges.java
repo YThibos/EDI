@@ -31,6 +31,7 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.StageTrigger.RequestMerged;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -149,7 +150,7 @@ public class FollowMerges {
         ProjectEntry project = transaction.execute(_ -> registry.entryOf(tasks.get(delivery.task()).intake().projects().getFirst()));
         RegisteredForge forge = project.requireForge();
         if (!forge.repository().equals(delivery.address().repository())) {
-            throw new Refusal(delivery.address() + " is not in " + forge.repository() + ", the repository " + project.project().name()
+            throw new Refusal(Rule.REQUEST_FOLLOWED, delivery.address() + " is not in " + forge.repository() + ", the repository " + project.project().name()
                     + " registers now, so it is no longer watched.");
         }
         return forge;
@@ -167,7 +168,7 @@ public class FollowMerges {
     }
 
     private static Refusal notMerged(MergeRequestView view) {
-        return new Refusal("The forge shows " + view.address() + " " + view.state().word() + ", not merged, so "
+        return new Refusal(Rule.REQUEST_FOLLOWED, "The forge shows " + view.address() + " " + view.state().word() + ", not merged, so "
                 + (view.state() == MergeRequestState.OPEN ? "it is still watched." : "the work is kept for the captain."));
     }
 
@@ -204,7 +205,7 @@ public class FollowMerges {
     }
 
     private MergedWork requestFollowedAt(String url, Actor actor) {
-        FoundRequest found = requestAt(url).orElseThrow(() -> new Refusal("Nothing was delivered at " + url + "."));
+        FoundRequest found = requestAt(url).orElseThrow(() -> new Refusal(Rule.DELIVERY_RECORDED, "Nothing was delivered at " + url + "."));
         return requestFollowedOnTheCaptainsWord(found.task(), found.request(), actor);
     }
 

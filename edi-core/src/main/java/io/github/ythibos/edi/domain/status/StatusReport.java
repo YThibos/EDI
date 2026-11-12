@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record StatusReport(StatusState state, StatusKey key, Instant until, String text) {
 
@@ -44,20 +45,21 @@ public record StatusReport(StatusState state, StatusKey key, Instant until, Stri
 
     private void requireAddressedToEdi(CaptainAddress address) {
         if (address.opens(text)) {
-            throw new Refusal("A worker reports to EDI and never addresses the captain, so a status never opens with \""
+            throw new Refusal(Rule.ADDRESSED_TO_EDI, "A worker reports to EDI and never addresses the captain, so a status never opens with \""
                     + address.vocative() + "\" or \"Captain,\"; say what happened instead.");
         }
     }
 
     private void requireTheKeyOfAQuestion() {
         if (isForThePrimary() && key == null) {
-            throw new Refusal("A " + state.word() + " status names what it waits on with --key, so the message that answers it can settle it.");
+            throw new Refusal(Rule.QUESTION_KEY, "A " + state.word()
+                    + " status names what it waits on with --key, so the message that answers it can settle it.");
         }
     }
 
     private void requireTheEndOfAPause() {
         if (isAPause() && until == null) {
-            throw new Refusal("A paused status says when the pause ends with --until, such as --until 2026-10-16T14:30:00Z, "
+            throw new Refusal(Rule.PAUSE_END, "A paused status says when the pause ends with --until, such as --until 2026-10-16T14:30:00Z, "
                     + "so a pause that overruns is noticed.");
         }
     }

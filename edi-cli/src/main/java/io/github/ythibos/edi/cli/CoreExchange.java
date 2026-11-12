@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import picocli.CommandLine.Model.CommandSpec;
@@ -22,6 +23,8 @@ final class CoreExchange {
     private static final String TEXT = "text/plain";
     private static final String JSON = "application/json";
     private static final Duration LONG_WORK_PATIENCE = Duration.ofMinutes(30);
+    private static final BiConsumer<RuleFirings, String> NOTHING_MORE = (firings, reason) -> {
+    };
 
     @Option(names = "--json", description = "Print the core's JSON answer instead of text.")
     private boolean json;
@@ -45,6 +48,10 @@ final class CoreExchange {
         return printed(core -> new CoreClient().post(core, path, json, accepted()));
     }
 
+    int post(String path, JsonBody body, BiConsumer<RuleFirings, String> whenTheCoreCouldNotAnswer) {
+        return printed(core -> new CoreClient().post(core, path, body.text(), accepted()), whenTheCoreCouldNotAnswer);
+    }
+
     int postAwaitingLongWork(String path, JsonBody body) {
         return printed(core -> new CoreClient().post(core, path, body.text(), accepted(), LONG_WORK_PATIENCE));
     }
@@ -60,12 +67,21 @@ final class CoreExchange {
     }
 
     private int printed(Function<CoreConnection, CoreReply> call) {
+        return printed(call, NOTHING_MORE);
+    }
+
+    private int printed(Function<CoreConnection, CoreReply> call, BiConsumer<RuleFirings, String> whenTheCoreCouldNotAnswer) {
         try {
             CoreReply reply = call.apply(edi().core());
             print(reply.succeeded() ? out() : err(), reply.body());
+            if (reply.failedInTheCore()) {
+                whenTheCoreCouldNotAnswer.accept(RuleFirings.throughTheCore(edi()), reply.body().strip());
+            }
             return reply.succeeded() ? ANSWERED : REFUSED;
         } catch (CoreUnavailable unavailable) {
             err().println(unavailable.getMessage());
+            err().flush();
+            whenTheCoreCouldNotAnswer.accept(RuleFirings.intoTheSpool(edi()), unavailable.getMessage());
             return REFUSED;
         }
     }

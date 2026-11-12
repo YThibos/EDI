@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.Prompt;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.spark.Focus;
 import io.github.ythibos.edi.domain.spark.Spark;
 import io.github.ythibos.edi.domain.spark.SparkAuthor;
@@ -63,7 +64,7 @@ public class CatchSpark {
 
     private Focus focusOf(SparkRequest request) {
         if (request.task() != null && request.project() != null) {
-            throw new Refusal("A spark is about a task or a project: name one of them, or neither to take the task in focus.");
+            throw new Refusal(Rule.SPARK_SHAPE, "A spark is about a task or a project: name one of them, or neither to take the task in focus.");
         }
         if (request.task() != null) {
             return Focus.onTask(tasks.get(request.task()).id());
@@ -76,7 +77,7 @@ public class CatchSpark {
 
     private ProjectName registered(ProjectName project) {
         if (registry.projects().stream().map(Project::name).noneMatch(project::equals)) {
-            throw new Refusal(project + " is not a registered project; name one from edi project list.");
+            throw new Refusal(Rule.SPARK_SHAPE, project + " is not a registered project; name one from edi project list.");
         }
         return project;
     }

@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class ProcessSignals {
 
     private static final Set<String> PATTERN_KILLERS = Set.of("pkill", "killall", "skill", "slay");
@@ -94,6 +96,6 @@ final class ProcessSignals {
     }
 
     private static Optional<GuardRefusal> refused(String what) {
-        return Optional.of(new GuardRefusal(GuardRule.SIGNAL_BY_PATTERN, what + CAPTURED_PIDS_ONLY));
+        return Optional.of(new GuardRefusal(Rule.SIGNAL_BY_PATTERN, what + CAPTURED_PIDS_ONLY));
     }
 }

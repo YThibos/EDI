@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -35,7 +36,7 @@ public class WorkerContext {
     public Workplace of(TaskId id) {
         Task task = tasks.get(id);
         ProjectEntry project = registry.entryOf(task.intake().projects().getFirst());
-        Dispatch dispatch = dispatches.of(id).orElseThrow(() -> new Refusal(id + " was never dispatched."));
+        Dispatch dispatch = dispatches.of(id).orElseThrow(() -> new Refusal(Rule.TASK_DISPATCHED, id + " was never dispatched."));
         BaseBranch base = task.intake().base() == null ? project.requireBase() : task.intake().base();
         return new Workplace(task, project, dispatch, base, home.worktreeOf(project.project().name(), id), home.taskDirectory(id));
     }

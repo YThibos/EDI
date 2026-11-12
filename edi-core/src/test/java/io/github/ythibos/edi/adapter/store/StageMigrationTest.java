@@ -18,10 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.json.JsonMapper;
 
 class StageMigrationTest {
@@ -114,7 +116,7 @@ class StageMigrationTest {
     }
 
     private List<StageReached> stagesOf(String task) {
-        return new EventLog(jdbc, new JsonMapper(), new WakeStore(jdbc), _ -> { }).stagesOf(new TaskId(task));
+        return new EventLog(jdbc, new JsonMapper(), new WakeStore(jdbc, new CoreMeters(new SimpleMeterRegistry())), _ -> { }).stagesOf(new TaskId(task));
     }
 
     private void task(String id, String kind, String state, String closedAt) {

@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.authority.Exchange;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -77,7 +78,7 @@ public class CaptainsWordEvidence {
     public void requireTypedWithItsCommand(CallingSession calling, String command, String verbatim) {
         CaptainMessages sent = messagesOf(exchangeOf(calling));
         if (!sent.typed(command + " " + verbatim.strip()) && !sent.typed(verbatim)) {
-            throw new Refusal("The captain did not type \"" + verbatim.strip() + "\" in this session; give the words the captain typed after "
+            throw new Refusal(Rule.TYPED_WORDS, "The captain did not type \"" + verbatim.strip() + "\" in this session; give the words the captain typed after "
                     + command + ", exactly.");
         }
     }
@@ -89,7 +90,7 @@ public class CaptainsWordEvidence {
     public CaptainsWord requireOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
         return transaction.execute(_ -> CaptainsAuthority.onTask(task, act, exchange, heardIn(exchange), decisions.everyOneOfTask(task)))
-                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
+                .orElseThrow(() -> new Refusal(Rule.CAPTAINS_WORD, "To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session: record it with edi captain said --task " + task
                         + " --message <n>, have the captain choose a dialog option that opens with " + act.word() + " and names " + task
                         + " and no other task, or have the captain choose, here, in the console or on a research board, the option of a decision on it"
@@ -99,13 +100,13 @@ public class CaptainsWordEvidence {
     public CaptainsWord requireSaidForActOnTask(CallingSession calling, TaskId task, CaptainWordAct act) {
         Exchange exchange = exchangeOf(calling);
         return transaction.execute(_ -> CaptainsAuthority.saidForActOnTask(task, act, exchange, heardIn(exchange)))
-                .orElseThrow(() -> new Refusal("To " + act.sentence() + ", you need the captain's word on " + task
+                .orElseThrow(() -> new Refusal(Rule.CAPTAINS_WORD, "To " + act.sentence() + ", you need the captain's word on " + task
                         + " in this session recorded for it: record it with edi captain said --task " + task + " --for " + act.word()
                         + " --message <n>, or have the captain choose a dialog option that opens with " + act.word() + " and names " + task + " and no other task."));
     }
 
     public CaptainsWord requireOnTheHome(CallingSession calling, CaptainWordAct act) {
-        return onTheHome(exchangeOf(calling), act).orElseThrow(() -> new Refusal("To " + act.sentence()
+        return onTheHome(exchangeOf(calling), act).orElseThrow(() -> new Refusal(Rule.CAPTAINS_WORD, "To " + act.sentence()
                 + ", you need the captain's word in this session: record it with edi captain said --message <n>,"
                 + " or have the captain choose a dialog option that opens with " + act.word() + "."));
     }
@@ -115,7 +116,7 @@ public class CaptainsWordEvidence {
     }
 
     private Exchange exchangeOf(CallingSession calling) {
-        return currentExchange(calling).orElseThrow(() -> new Refusal(calling.namesItself()
+        return currentExchange(calling).orElseThrow(() -> new Refusal(Rule.TYPED_WORDS, calling.namesItself()
                 ? "Session " + calling.id() + " is not a known primary session, so the captain's word cannot be heard there."
                 : "No session holds the primary role, so the captain's word cannot be heard; the captain gives it in the primary session or the console."));
     }
@@ -128,7 +129,7 @@ public class CaptainsWordEvidence {
     private CitedWords typedIn(Exchange exchange, Citation citation) {
         CitedWords cited = messagesOf(exchange).cite(citation);
         if (cited.comeFromADialog()) {
-            throw new Refusal("A dialog answer is the captain's word by itself, for the act its chosen option opens with and the task it names,"
+            throw new Refusal(Rule.TYPED_WORDS, "A dialog answer is the captain's word by itself, for the act its chosen option opens with and the task it names,"
                     + " so it is not recorded again; cite a message the captain typed.");
         }
         return cited;

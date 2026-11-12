@@ -2,7 +2,9 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.Objects;
 
-public record GuardRefusal(GuardRule rule, String reason) {
+import io.github.ythibos.edi.domain.rule.Rule;
+
+public record GuardRefusal(Rule rule, String reason) {
 
     public GuardRefusal {
         Objects.requireNonNull(rule, "A refusal names the rule it applies.");

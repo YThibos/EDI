@@ -7,7 +7,6 @@ import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
-import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
@@ -43,9 +42,7 @@ public class AskForARecheck {
 
     private Decision openDecisionOf(TaskReference reference, Task task) {
         Decision decision = decisions.namedBy(reference).orElseThrow(() -> new UnknownDecision(task.id()));
-        if (!decision.isOpen()) {
-            throw new Refusal(decision.number() + " is already answered: " + decision.answer().verbatim());
-        }
+        decision.requireOpen();
         return decision;
     }
 }

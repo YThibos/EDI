@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class WorkerIdentity {
 
     private static final Set<String> VARIABLES = Set.of("EDI_TOKEN_FILE", "EDI_ROLE", "EDI_WORKER", "EDI_TASK_ID");
@@ -59,7 +61,7 @@ final class WorkerIdentity {
     }
 
     private static Optional<GuardRefusal> refused(Set<String> touched) {
-        return Optional.of(new GuardRefusal(GuardRule.WORKER_IDENTITY, "this command unsets or reassigns " + String.join(", ", touched)
+        return Optional.of(new GuardRefusal(Rule.WORKER_IDENTITY, "this command unsets or reassigns " + String.join(", ", touched)
                 + ", which tells the edi command and the core which worker is calling; a worker calls the core only as itself, with its own token file,"
                 + " and never with the primary's home token."));
     }

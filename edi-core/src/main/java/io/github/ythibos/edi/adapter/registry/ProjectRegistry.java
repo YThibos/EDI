@@ -20,6 +20,7 @@ import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.Project;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.rule.Rule;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
@@ -85,7 +86,7 @@ public class ProjectRegistry {
             return registeredProjects().projects().stream()
                     .filter(project -> name.value().equals(project.name()))
                     .findFirst()
-                    .orElseThrow(() -> new Refusal(name + " is not a registered project; add it to the project registry first."));
+                    .orElseThrow(() -> new Refusal(Rule.TASK_INTAKE, name + " is not a registered project; add it to the project registry first."));
         } catch (JacksonException unreadable) {
             throw new UnreadableRegistry(registry, unreadable);
         }

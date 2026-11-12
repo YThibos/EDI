@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import io.github.ythibos.edi.domain.OperationalText;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -48,7 +49,7 @@ public record InboxMessage(
 
     public InboxMessage acknowledged(Instant at) {
         if (isAcknowledged()) {
-            throw new Refusal("Message " + number + " on " + task + " is already acknowledged.");
+            throw new Refusal(Rule.MESSAGE_WAITS, "Message " + number + " on " + task + " is already acknowledged.");
         }
         return new InboxMessage(task, number, body, resolves, createdAt, Objects.requireNonNullElse(receivedAt, at), at, reportedUnreceivedAt);
     }

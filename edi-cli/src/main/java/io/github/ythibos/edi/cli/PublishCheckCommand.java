@@ -12,6 +12,7 @@ import picocli.CommandLine.Option;
 final class PublishCheckCommand implements Callable<Integer> {
 
     private static final String UPSTREAM_TO_HEAD = "@{upstream}..HEAD";
+    private static final String PUBLISH_CHECK_REACHABLE = "publish.check-reachable";
 
     @Mixin
     private CoreExchange core;
@@ -32,6 +33,10 @@ final class PublishCheckCommand implements Callable<Integer> {
                 .with("repository", Path.of("").toAbsolutePath().toString())
                 .with("range", range)
                 .with("excluding", excluding)
-                .with("remoteUrl", remoteUrl));
+                .with("remoteUrl", remoteUrl), this::refusedUnchecked);
+    }
+
+    private void refusedUnchecked(RuleFirings firings, String reason) {
+        firings.fired(PUBLISH_CHECK_REACHABLE, RuleFirings.REFUSED, "The publish check could not run, so nothing it checks goes out: " + reason);
     }
 }

@@ -24,6 +24,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
@@ -97,10 +98,10 @@ public class StopWorker {
     private void requireItsOwnProcess(Worker worker) {
         WorkerWindow window = worker.window();
         if (!runtime.isRunning(window)) {
-            throw new Refusal(worker.id() + " is not running, so there is nothing to stop.");
+            throw new Refusal(Rule.OWN_PROCESS_SIGNALLED, worker.id() + " is not running, so there is nothing to stop.");
         }
         if (!processes.isStillThePaneOf(window)) {
-            throw new Refusal("Process " + window.panePid() + " no longer belongs to " + worker.id()
+            throw new Refusal(Rule.OWN_PROCESS_SIGNALLED, "Process " + window.panePid() + " no longer belongs to " + worker.id()
                     + "'s tmux server, and only recorded processes are signalled.");
         }
     }

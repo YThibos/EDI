@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketDetails;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
@@ -86,7 +87,7 @@ class TicketProposalsTest {
 
     @Test
     void raisesTheDecisionAgainWhenTheTrackerRefusesTheAnswer() {
-        home.jira().failsNextWith(new Refusal("JIRA found nothing for the ticket SVC-40 (HTTP 404)."));
+        home.jira().failsNextWith(new Refusal(Rule.TRACKER_ANSWERED, "JIRA found nothing for the ticket SVC-40 (HTTP 404)."));
 
         AnsweredDecision answered = answered("A", "D58 A");
 
@@ -130,7 +131,7 @@ class TicketProposalsTest {
 
     @Test
     void keepsTheCreatedTicketWhenTheTrackerRefusesItsFields() {
-        home.jira().refusesTheFieldsWith(new Refusal("the epic link is not allowed"));
+        home.jira().refusesTheFieldsWith(new Refusal(Rule.TRACKER_ANSWERED, "the epic link is not allowed"));
 
         AnsweredDecision answered = answered("B", "D58 B");
 

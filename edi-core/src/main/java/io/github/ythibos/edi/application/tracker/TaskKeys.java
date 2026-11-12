@@ -7,6 +7,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -50,7 +51,7 @@ public class TaskKeys {
 
     private static void requireNoDetails(TicketDetails details) {
         if (!details.isEmpty()) {
-            throw new Refusal("Ticket details describe a new ticket of an external tracker, so they come only with a task that has no key yet"
+            throw new Refusal(Rule.WORK_KEY, "Ticket details describe a new ticket of an external tracker, so they come only with a task that has no key yet"
                     + " on a project whose tracker asks before it creates one.");
         }
     }
@@ -62,7 +63,7 @@ public class TaskKeys {
             return new WorkKeying.Unkeyed();
         }
         if (tracked.tracker().keysByIssueNumber()) {
-            throw new Refusal(project.project().name() + " keys its work by its GitHub issue numbers, so a " + intake.kind().word()
+            throw new Refusal(Rule.WORK_KEY, project.project().name() + " keys its work by its GitHub issue numbers, so a " + intake.kind().word()
                     + " on it is added with --key " + tracked.key() + "-<the issue's number>, once its issue is open.");
         }
         TicketDraft draft = details.draftFor(tracked.key(), trackers.usualIssueType(project), intake.title(), notes);

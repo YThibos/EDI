@@ -8,6 +8,7 @@ import java.util.OptionalInt;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.IParameterExceptionHandler;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.ScopeType;
@@ -55,12 +56,15 @@ import picocli.CommandLine.Spec;
             HookCommand.class,
             StatusLineCommand.class,
             PublishCheckCommand.class,
+            RulesCommand.class,
             MigrateCommand.class})
 public final class Edi implements Runnable {
 
     private static final String TOKEN_FILE = "EDI_TOKEN_FILE";
     private static final String WORKER = "EDI_WORKER";
     private static final String WORKER_ROLE = "worker";
+    private static final String WORKER_TOKEN_FILE = "access.worker-token-file";
+    private static final String COMMAND_ARGUMENTS = "command.arguments";
 
     private final Map<String, String> environment;
     private final InputStream input;
@@ -68,6 +72,8 @@ public final class Edi implements Runnable {
 
     @Spec
     private CommandSpec spec;
+
+    private boolean tokenFileRefusalRecorded;
 
     public Edi(Map<String, String> environment, InputStream input) {
         this(environment, input, StandardOutput.OF_THIS_PROCESS);
@@ -80,7 +86,17 @@ public final class Edi implements Runnable {
     }
 
     public static void main(String[] arguments) {
-        System.exit(new CommandLine(new Edi(System.getenv(), System.in)).execute(arguments));
+        System.exit(commandLine(new Edi(System.getenv(), System.in)).execute(arguments));
+    }
+
+    static CommandLine commandLine(Edi edi) {
+        CommandLine commandLine = new CommandLine(edi);
+        IParameterExceptionHandler readingFailed = commandLine.getParameterExceptionHandler();
+        return commandLine.setParameterExceptionHandler((unreadable, arguments) -> {
+            int refused = readingFailed.handleParseException(unreadable, arguments);
+            RuleFirings.throughTheCore(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadableArgumentsOf(unreadable));
+            return refused;
+        });
     }
 
     @Override
@@ -128,8 +144,10 @@ public final class Edi implements Runnable {
             return Path.of(environment.get(TOKEN_FILE));
         }
         if (runsInAWorkersWindow()) {
-            throw new CoreUnavailable("This shell is " + whoseWindow() + ", yet " + TOKEN_FILE + " names no token file, so edi does not fall back"
-                    + " to the home token: a worker calls the core only as itself.");
+            String refusal = "This shell is " + whoseWindow() + ", yet " + TOKEN_FILE + " names no token file, so edi does not fall back"
+                    + " to the home token: a worker calls the core only as itself.";
+            recordTheTokenFileRefusal(refusal);
+            throw new CoreUnavailable(refusal);
         }
         return home().resolve("state").resolve("core.token");
     }
@@ -144,6 +162,17 @@ public final class Edi implements Runnable {
 
     OptionalInt paneWidth() {
         return TmuxPane.ofEnvironment(environment).map(TmuxPane::width).orElseGet(OptionalInt::empty);
+    }
+
+    private static String unreadableArgumentsOf(ParameterException unreadable) {
+        return unreadable.getCommandLine().getCommandSpec().qualifiedName() + " was given options or parameters it cannot read.";
+    }
+
+    private void recordTheTokenFileRefusal(String refusal) {
+        if (!tokenFileRefusalRecorded) {
+            tokenFileRefusalRecorded = true;
+            RuleFirings.intoTheSpool(this).fired(WORKER_TOKEN_FILE, RuleFirings.REFUSED, refusal);
+        }
     }
 
     private boolean isSet(String variable) {

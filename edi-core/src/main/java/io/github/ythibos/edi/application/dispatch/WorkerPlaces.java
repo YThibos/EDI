@@ -11,6 +11,7 @@ import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
 
@@ -29,7 +30,7 @@ public class WorkerPlaces {
 
     public void requireNoLiveWorker(TaskId task) {
         liveWorkerOf(task).ifPresent(live -> {
-            throw new Refusal(task + " already has a live worker, " + live.id() + "; one worker serves a task at a time.");
+            throw new Refusal(Rule.ONE_WORKER_PER_TASK, task + " already has a live worker, " + live.id() + "; one worker serves a task at a time.");
         });
     }
 

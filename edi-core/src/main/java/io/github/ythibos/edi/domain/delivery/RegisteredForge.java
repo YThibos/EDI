@@ -6,6 +6,7 @@ import java.util.Objects;
 import io.github.ythibos.edi.domain.AsciiCharacters;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 public record RegisteredForge(ForgeRepository repository, String account) {
 
@@ -50,7 +51,8 @@ public record RegisteredForge(ForgeRepository repository, String account) {
     }
 
     private Refusal unregistered(String target) {
-        return new Refusal("This work is published only to " + repository + ", the repository its project registers, and the push goes to "
+        return new Refusal(Rule.REGISTERED_FORGE, "This work is published only to " + repository
+                + ", the repository its project registers, and the push goes to "
                 + target + ".");
     }
 }

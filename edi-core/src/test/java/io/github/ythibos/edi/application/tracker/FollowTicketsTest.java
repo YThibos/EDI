@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.tracker.TrackerUnavailable;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.testing.TestHome;
@@ -91,7 +92,7 @@ class FollowTicketsTest {
 
     @Test
     void wakesThePrimaryWhenTheTrackerRefusesAnUpdate() {
-        home.jira().failsNextWith(new Refusal("several SVC sprints are active (Sprint 7, Hotfixes), so SVC-40 joins none of them"));
+        home.jira().failsNextWith(new Refusal(Rule.TRACKER_ANSWERED, "several SVC sprints are active (Sprint 7, Hotfixes), so SVC-40 joins none of them"));
         WorkEvents.of(home, "fix-lamps").dispatchedTo(1, "feature/SVC-40");
 
         home.eventFollowers().followTheLog();

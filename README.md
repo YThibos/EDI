@@ -67,6 +67,8 @@ edi up                     # start the core unless it runs, then open the primar
 edi up --core-only         # start only the core
 edi console                # open the EDI console in the browser, signed in
 edi health                 # check that the core answers and the primary's wake stream is live
+edi health --metrics       # add the core's own latencies and memory over the last week
+edi rules                  # how often each rule fired over the last week, and which never did
 edi down                   # stop the core when no worker runs
 edi update                 # pull the repository, build, test and install it, restart the core, re-read the anchor
 ```

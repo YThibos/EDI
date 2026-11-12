@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 class LoneWaitsTest {
 
     private static final ShellGuard GUARD = new ShellGuard("edi", Set.of("main"));
@@ -35,7 +37,7 @@ class LoneWaitsTest {
     })
     void refusesAnEdiWaitThatIsNotAlone(String command) {
         assertThat(GUARD.check(command, MONITOR)).as(command).hasValueSatisfying(refusal -> {
-            assertThat(refusal.rule()).isEqualTo(GuardRule.EDI_WAIT_NOT_ALONE);
+            assertThat(refusal.rule()).isEqualTo(Rule.EDI_WAIT_NOT_ALONE);
             assertThat(refusal.reason()).contains("the Monitor tool running edi wait --follow and nothing else");
         });
     }
@@ -43,7 +45,7 @@ class LoneWaitsTest {
     @Test
     void refusesTheWakeStreamOutsideTheMonitorTool() {
         assertThat(GUARD.check("edi wait --follow", BASH)).hasValueSatisfying(refusal -> {
-            assertThat(refusal.rule()).isEqualTo(GuardRule.WAKE_STREAM_OUTSIDE_MONITOR);
+            assertThat(refusal.rule()).isEqualTo(Rule.WAKE_STREAM_OUTSIDE_MONITOR);
             assertThat(refusal.reason()).contains("the Monitor tool running edi wait --follow and nothing else");
         });
     }

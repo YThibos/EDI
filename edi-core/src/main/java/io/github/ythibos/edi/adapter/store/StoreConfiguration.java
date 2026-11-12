@@ -7,9 +7,12 @@ import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.CoreInstanceLock;
 import io.github.ythibos.edi.EdiHome;
+import io.github.ythibos.edi.adapter.health.CoreMeters;
 
 @Configuration(proxyBeanMethods = false)
 class StoreConfiguration {
@@ -23,5 +26,10 @@ class StoreConfiguration {
     @Bean
     OneTransactionAtATime transactionManager(DataSource store) {
         return new OneTransactionAtATime(store);
+    }
+
+    @Bean
+    TransactionTemplate transactionTemplate(PlatformTransactionManager transactions, CoreMeters meters) {
+        return new MeasuredTransactions(transactions, meters);
     }
 }

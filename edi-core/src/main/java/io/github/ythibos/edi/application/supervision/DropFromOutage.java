@@ -11,6 +11,7 @@ import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 @Service
 public class DropFromOutage {
@@ -27,7 +28,7 @@ public class DropFromOutage {
 
     public DroppedTask drop(int number, boolean discardingWork, CallingSession calling, Actor actor) {
         OutageEntry entry = transaction.execute(_ -> outages.numbered(number))
-                .orElseThrow(() -> new Refusal("The outage hold list has no number " + number + "."));
+                .orElseThrow(() -> new Refusal(Rule.OUTAGE_LIST, "The outage hold list has no number " + number + "."));
         DroppedTask dropped = dropTask.drop(new TaskReference.ById(entry.task()), discardingWork, calling, actor);
         transaction.executeWithoutResult(_ -> outages.close(entry));
         return dropped;

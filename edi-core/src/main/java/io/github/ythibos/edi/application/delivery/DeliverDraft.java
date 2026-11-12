@@ -31,6 +31,7 @@ import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 import io.github.ythibos.edi.domain.publish.TextVerdict;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
@@ -72,7 +73,7 @@ public class DeliverDraft {
 
     private static RegisteredForge requireADraftReviewShip(Workplace workplace) {
         if (!workplace.isAShip() || workplace.delivery() != DeliveryMode.DRAFT_REVIEW) {
-            throw new Refusal(workplace.task().id() + " is delivered " + workplace.delivery().word()
+            throw new Refusal(Rule.DRAFT_REVIEW_ONLY, workplace.task().id() + " is delivered " + workplace.delivery().word()
                     + "; edi deliver opens drafts for ships delivered draft-review only.");
         }
         return workplace.project().requireForge();
@@ -80,7 +81,7 @@ public class DeliverDraft {
 
     private String requireTheCopy(Workplace workplace) {
         if (!Files.isDirectory(workplace.worktree())) {
-            throw new Refusal("The isolated copy " + workplace.worktree() + " is gone, so there is no head to deliver.");
+            throw new Refusal(Rule.DELIVERED_FROM_THE_COPY, "The isolated copy " + workplace.worktree() + " is gone, so there is no head to deliver.");
         }
         return git.head(workplace.worktree());
     }
@@ -89,14 +90,14 @@ public class DeliverDraft {
         RevisionRange outgoing = new RevisionRange(workplace.baseRef() + "..HEAD");
         PublishVerdict verdict = publishCheck.checkPush(workplace.worktree(), outgoing, git.pushUrlOf(workplace.worktree(), ORIGIN));
         if (!verdict.allowsPush()) {
-            throw new Refusal("The publish check refuses " + workplace.dispatch().branch() + ": "
+            throw new Refusal(Rule.OUTGOING_CLEAN, "The publish check refuses " + workplace.dispatch().branch() + ": "
                     + String.join("; ", verdict.findings().stream().map(Object::toString).toList()) + ".");
         }
     }
 
     private static void requireNoMergeYet(Workplace workplace, Optional<MergeRequestView> found) {
         found.filter(MergeRequestView::isMerged).ifPresent(merged -> {
-            throw new Refusal(merged.address() + " is merged already; edi merged " + workplace.task().id() + " follows its merge.");
+            throw new Refusal(Rule.NOT_MERGED_YET, merged.address() + " is merged already; edi merged " + workplace.task().id() + " follows its merge.");
         });
     }
 
@@ -110,7 +111,7 @@ public class DeliverDraft {
     private void requireACleanText(Workplace workplace, RequestText text) {
         TextVerdict verdict = publishCheck.checkText(workplace.worktree(), text);
         if (!verdict.allowsPosting()) {
-            throw new Refusal(verdict.refusal());
+            throw new Refusal(Rule.REQUEST_TEXT_CLEAN, verdict.refusal());
         }
     }
 
@@ -127,7 +128,7 @@ public class DeliverDraft {
     private static void requireTheDeliveryOf(Workplace workplace, MergeRequestView draft, String head) {
         List<String> gaps = draft.gapsAsTheDeliveryOf(workplace.dispatch().branch(), workplace.base(), head);
         if (!gaps.isEmpty()) {
-            throw new Refusal("No delivery of " + workplace.task().id() + " is recorded: " + String.join("; ", gaps) + ".");
+            throw new Refusal(Rule.DELIVERY_RECORDED, "No delivery of " + workplace.task().id() + " is recorded: " + String.join("; ", gaps) + ".");
         }
     }
 

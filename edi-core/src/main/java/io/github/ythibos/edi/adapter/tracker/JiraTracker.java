@@ -15,6 +15,7 @@ import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.AvailableTransition;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -148,7 +149,7 @@ public class JiraTracker implements Tracker {
     private TrackerSettings settings() {
         TrackerSettings settings = machine.tracker();
         if (!settings.isJira()) {
-            throw new Refusal("This machine's profile names no JIRA tracker to reach.");
+            throw new Refusal(Rule.TRACKER_CONFIGURED, "This machine's profile names no JIRA tracker to reach.");
         }
         return settings;
     }
@@ -177,7 +178,7 @@ public class JiraTracker implements Tracker {
 
     private static void requireAStepLeftInTheWorkflow(Workflow workflow, WorkKey key, String target, List<String> through) {
         if (through.size() >= workflow.forward().size()) {
-            throw new Refusal(key + " took more steps toward " + target + " than its workflow has statuses.");
+            throw new Refusal(Rule.TRACKER_ANSWERED, key + " took more steps toward " + target + " than its workflow has statuses.");
         }
     }
 
@@ -194,7 +195,7 @@ public class JiraTracker implements Tracker {
             case WorkflowStep.AlreadyBeyond beyond -> through.isEmpty()
                     ? new TicketMove.AlreadyBeyond(beyond.status())
                     : new TicketMove.Moved(from, through);
-            case WorkflowStep.Stuck stuck -> throw new Refusal(key + " cannot move to " + target + ": " + stuck.because());
+            case WorkflowStep.Stuck stuck -> throw new Refusal(Rule.TRACKER_ANSWERED, key + " cannot move to " + target + ": " + stuck.because());
             case WorkflowStep.Take take -> throw new IllegalStateException("A step to " + take.transition().to() + " is taken, not reported.");
         };
     }
@@ -220,7 +221,8 @@ public class JiraTracker implements Tracker {
 
     private static JsonNode theOnlyOne(List<JsonNode> active, WorkKey key) {
         if (active.size() > 1) {
-            throw new Refusal("several " + key.project() + " sprints are active (" + active.stream().map(JiraTracker::nameOf).collect(Collectors.joining(", "))
+            throw new Refusal(Rule.TRACKER_ANSWERED, "several " + key.project() + " sprints are active ("
+                    + active.stream().map(JiraTracker::nameOf).collect(Collectors.joining(", "))
                     + "), so " + key + " joins none of them");
         }
         return active.getFirst();

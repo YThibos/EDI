@@ -9,6 +9,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -113,7 +114,7 @@ public record Worker(
 
     public Worker doneChecked(boolean accepted) {
         if (doneCheck != DoneCheck.CHECKING) {
-            throw new Refusal(id + " has no done waiting for its check.");
+            throw new Refusal(Rule.WORKER_LIVE, id + " has no done waiting for its check.");
         }
         return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
                 transcript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, accepted ? DoneCheck.ACCEPTED : DoneCheck.REFUSED, limitPark,
@@ -206,7 +207,7 @@ public record Worker(
 
     private void refuseWhenRetired() {
         if (isRetired()) {
-            throw new Refusal(id + " was retired; its task has another worker now.");
+            throw new Refusal(Rule.WORKER_LIVE, id + " was retired; its task has another worker now.");
         }
     }
 

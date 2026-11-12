@@ -24,6 +24,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDropped;
 import io.github.ythibos.edi.domain.landing.LandedWork;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.StageTrigger.Drop;
 import io.github.ythibos.edi.domain.task.Task;
@@ -75,7 +76,7 @@ public class DropTask {
 
     private void requireNoDecisionButItsTicketWaiting(Task task) {
         if (task.isHeld() && task.hold().awaitsADecision() && !awaitsItsTicket(task)) {
-            throw new Refusal(task.id() + " waits on " + task.hold().reason() + "; it is dropped once that decision is answered.");
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " waits on " + task.hold().reason() + "; it is dropped once that decision is answered.");
         }
     }
 
@@ -95,7 +96,8 @@ public class DropTask {
             return List.of();
         }
         if (!discardingWork) {
-            throw new Refusal(workplace.task().id() + " is not dropped, because its work is not landed: " + String.join("; ", landed.findings())
+            throw new Refusal(Rule.LANDED_BEFORE_DISCARD, workplace.task().id() + " is not dropped, because its work is not landed: "
+                    + String.join("; ", landed.findings())
                     + ". Drop it with --discard-work only on the captain's word to discard that work.");
         }
         retirement.retireDiscarding(workplace);

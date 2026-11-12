@@ -8,6 +8,7 @@ import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.rule.Rule;
 
 @Component
 public class AwayLimit {
@@ -22,7 +23,7 @@ public class AwayLimit {
 
     public void requireRoomForAnotherWorker() {
         mandateAtItsCap().ifPresent(mandate -> {
-            throw new Refusal("The captain is away, and meanwhile you run at most " + mandate.workerCap()
+            throw new Refusal(Rule.AWAY_WORKER_CAP, "The captain is away, and meanwhile you run at most " + mandate.workerCap()
                     + " workers, as many as ran when the captain left; this dispatch waits for the captain's return or for a running worker to finish.");
         });
     }

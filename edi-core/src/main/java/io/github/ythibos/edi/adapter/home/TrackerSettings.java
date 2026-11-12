@@ -10,6 +10,7 @@ import java.util.Set;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.domain.tracker.Workflow;
 
@@ -63,7 +64,7 @@ public record TrackerSettings(
 
     public String requireEpicLinkField() {
         if (epicLinkField == null || epicLinkField.isBlank()) {
-            throw new Refusal("The machine profile names no tracker.epicLinkField, so a ticket's epic cannot be set.");
+            throw new Refusal(Rule.TRACKER_CONFIGURED, "The machine profile names no tracker.epicLinkField, so a ticket's epic cannot be set.");
         }
         return epicLinkField.strip();
     }

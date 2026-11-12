@@ -6,6 +6,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.rule.Rule;
+
 final class MergingCommands {
 
     private static final Set<String> FORGE_OPTIONS_WITH_VALUES = Set.of("-R", "--repo", "-H", "--hostname");
@@ -28,7 +30,7 @@ final class MergingCommands {
     }
 
     static GuardRefusal refusal() {
-        return new GuardRefusal(GuardRule.MERGE, "Only the captain merges a change or arms a merge (I-03).");
+        return new GuardRefusal(Rule.MERGE, "Only the captain merges a change or arms a merge (I-03).");
     }
 
     private static boolean isAForgeMergeCall(List<String> arguments, Set<String> merges) {

@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.tracker;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.LoggedEvent;
+import io.github.ythibos.edi.adapter.store.RuleFirings;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.Tracker;
@@ -26,6 +28,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.TicketLinked;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketTransitioned;
 import io.github.ythibos.edi.domain.event.DomainEvent.TicketUpdateRefused;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
@@ -43,14 +47,16 @@ public class FollowTickets {
     private final ProjectRegistry registry;
     private final Trackers trackers;
     private final EventLog events;
+    private final RuleFirings firings;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public FollowTickets(TaskStore tasks, ProjectRegistry registry, Trackers trackers, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public FollowTickets(TaskStore tasks, ProjectRegistry registry, Trackers trackers, EventLog events, RuleFirings firings, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.registry = registry;
         this.trackers = trackers;
         this.events = events;
+        this.firings = firings;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -97,7 +103,7 @@ public class FollowTickets {
                 case TRANSITION -> transitioned(tracker, ticket);
             }
         } catch (Refusal refused) {
-            recorded(new TicketUpdateRefused(ticket.task().id(), ticket.key(), update.sentence(), refused.getMessage()));
+            recordTheRefused(new TicketUpdateRefused(ticket.task().id(), ticket.key(), update.sentence(), refused.getMessage()));
         }
     }
 
@@ -120,6 +126,14 @@ public class FollowTickets {
 
     private void recorded(DomainEvent event) {
         transaction.executeWithoutResult(_ -> events.record(event, Actor.CORE, clock.now()));
+    }
+
+    private void recordTheRefused(TicketUpdateRefused refused) {
+        transaction.executeWithoutResult(_ -> {
+            Instant now = clock.now();
+            events.record(refused, Actor.CORE, now);
+            firings.record(RuleFired.warned(Rule.TICKET_UPDATE, Actor.CORE, refused.task(), refused.because()), now);
+        });
     }
 
     private enum TicketUpdate {

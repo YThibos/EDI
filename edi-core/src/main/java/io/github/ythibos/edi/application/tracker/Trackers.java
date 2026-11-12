@@ -10,6 +10,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TrackedProject;
 
@@ -61,7 +62,8 @@ public class Trackers {
 
     private void requireReachable(ProjectEntry project) {
         if (project.tracker().isExternal() && machine.tracker().kind() != project.tracker()) {
-            throw new Refusal(project.project().name() + " books its work on " + project.tracker().word() + ", but this machine's profile names no "
+            throw new Refusal(Rule.TRACKER_CONFIGURED, project.project().name() + " books its work on " + project.tracker().word()
+                    + ", but this machine's profile names no "
                     + project.tracker().word() + " tracker; register the project with EDI-native keys on this machine.");
         }
     }
