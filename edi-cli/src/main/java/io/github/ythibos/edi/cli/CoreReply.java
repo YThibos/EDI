@@ -19,6 +19,10 @@ record CoreReply(int status, String body, HttpHeaders headers) {
         return status >= FIRST_REFUSAL && status < FIRST_SERVER_FAILURE && status != NOT_FOUND;
     }
 
+    boolean failedInTheCore() {
+        return status >= FIRST_SERVER_FAILURE;
+    }
+
     Optional<String> header(String name) {
         return headers.firstValue(name);
     }

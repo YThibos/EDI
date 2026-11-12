@@ -101,6 +101,21 @@ class CommandRuleFiringsTest {
     }
 
     @Test
+    void thePublishCheckFiresItsRuleThroughTheCoreWhenTheCheckFailsInsideItButNotWhenTheCoreRefusesThePush() {
+        core.thenAnswering(500, "gitleaks exited with 2.\n").thenAnswering(200, "").thenAnswering(409, "The outgoing commits name a secret.\n");
+
+        int failed = edi(primary(), "", "publish-check", "--range", "origin/main..HEAD");
+        int refused = edi(primary(), "", "publish-check", "--range", "origin/main..HEAD");
+
+        assertThat(failed).isEqualTo(1);
+        assertThat(refused).isEqualTo(1);
+        assertThat(core.requests()).extracting(StubCore.Request::target)
+                .containsExactly("/api/publish-checks", "/api/rules/fired", "/api/publish-checks");
+        assertThat(core.requests().get(1).body()).contains("\"rule\":\"publish.check-reachable\"", "\"outcome\":\"refused\"");
+        assertThat(RuleFirings.spoolIn(home)).doesNotExist();
+    }
+
+    @Test
     void anUnreadableCommandLineIsRecordedWithoutTheWordsTypedInIt() throws IOException {
         core.stopAnswering();
 
