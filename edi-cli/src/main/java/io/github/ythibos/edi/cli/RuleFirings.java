@@ -19,19 +19,23 @@ final class RuleFirings {
     private static final String PRIMARY = "primary";
 
     private final Edi edi;
-    private final boolean coreMayAnswer;
+    private final Recording recording;
 
-    private RuleFirings(Edi edi, boolean coreMayAnswer) {
+    private RuleFirings(Edi edi, Recording recording) {
         this.edi = edi;
-        this.coreMayAnswer = coreMayAnswer;
+        this.recording = recording;
     }
 
     static RuleFirings throughTheCore(Edi edi) {
-        return new RuleFirings(edi, true);
+        return new RuleFirings(edi, Recording.THROUGH_THE_CORE);
     }
 
     static RuleFirings intoTheSpool(Edi edi) {
-        return new RuleFirings(edi, false);
+        return new RuleFirings(edi, Recording.INTO_THE_SPOOL);
+    }
+
+    static RuleFirings recordedByTheCore(Edi edi) {
+        return new RuleFirings(edi, Recording.BY_THE_CORE_ALREADY);
     }
 
     static Path spoolIn(Path home) {
@@ -40,7 +44,16 @@ final class RuleFirings {
 
     void fired(String rule, String outcome, String reason) {
         JsonBody firing = new JsonBody().with("rule", rule).with("outcome", outcome).with("reason", reason);
-        if (!coreMayAnswer || !toldTheCore(firing)) {
+        switch (recording) {
+            case THROUGH_THE_CORE -> toldTheCoreOrSpooled(firing);
+            case INTO_THE_SPOOL -> spool(firing);
+            case BY_THE_CORE_ALREADY -> {
+            }
+        }
+    }
+
+    private void toldTheCoreOrSpooled(JsonBody firing) {
+        if (!toldTheCore(firing)) {
             spool(firing);
         }
     }
@@ -71,5 +84,11 @@ final class RuleFirings {
     private static String actorOf(Map<String, String> environment) {
         String worker = environment.get("EDI_WORKER");
         return worker == null || worker.isBlank() ? PRIMARY : "worker:" + worker;
+    }
+
+    private enum Recording {
+        THROUGH_THE_CORE,
+        INTO_THE_SPOOL,
+        BY_THE_CORE_ALREADY
     }
 }

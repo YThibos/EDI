@@ -55,6 +55,19 @@ class CommandRuleFiringsTest {
     }
 
     @Test
+    void theHookCommandLeavesARefusalTheCoreRecordedUnderItsOwnRuleToTheCore() {
+        core.answering(409, "fit-lamp's project names no base branch in the registry.\n");
+
+        int guarded = edi(primary(), "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git status\"}}", "hook", "pre-tool-use");
+        int stopped = edi(primary(), "{}", "hook", "stop");
+
+        assertThat(guarded).isEqualTo(2);
+        assertThat(stopped).isEqualTo(1);
+        assertThat(core.requests()).extracting(StubCore.Request::target).containsExactly("/api/hooks/pre-tool-use", "/api/hooks/stop");
+        assertThat(RuleFirings.spoolIn(home)).doesNotExist();
+    }
+
+    @Test
     void theWaitCommandFiresTheRuleTheCatalogueNamesItFor() throws IOException {
         core.stopAnswering();
 
@@ -101,12 +114,12 @@ class CommandRuleFiringsTest {
         return Map.of("EDI_HOME", home.toString());
     }
 
-    private static void edi(Map<String, String> environment, String input, String... arguments) {
-        execute(new Edi(environment, new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8))), arguments);
+    private static int edi(Map<String, String> environment, String input, String... arguments) {
+        return execute(new Edi(environment, new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8))), arguments);
     }
 
-    private static void execute(Edi edi, String... arguments) {
-        Edi.commandLine(edi).setOut(new PrintWriter(new StringWriter())).setErr(new PrintWriter(new StringWriter())).execute(arguments);
+    private static int execute(Edi edi, String... arguments) {
+        return Edi.commandLine(edi).setOut(new PrintWriter(new StringWriter())).setErr(new PrintWriter(new StringWriter())).execute(arguments);
     }
 
     private List<String> spooledRules() throws IOException {

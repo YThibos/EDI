@@ -40,7 +40,7 @@ final class HookCommand implements Callable<Integer> {
         }
         try {
             CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload, "application/json");
-            return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip(), RuleFirings.throughTheCore(edi));
+            return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip(), firingsAfter(reply));
         } catch (CoreUnavailable unavailable) {
             return withoutTheCore(payload, unavailable.getMessage());
         }
@@ -48,6 +48,10 @@ final class HookCommand implements Callable<Integer> {
 
     private String payload() throws IOException {
         return new String(edi.input().readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private RuleFirings firingsAfter(CoreReply reply) {
+        return reply.refusedUnderARule() ? RuleFirings.recordedByTheCore(edi) : RuleFirings.throughTheCore(edi);
     }
 
     private int unanswered(String reason, RuleFirings firings) {
