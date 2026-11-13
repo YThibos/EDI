@@ -149,7 +149,7 @@ class FleetSnapshotQueryTest {
         assertThat(asking.decisions()).isEmpty();
         assertThat(asking.boards()).singleElement().satisfies(waiting -> assertThat(waiting.decisions()).extracting(open -> open.decision().number())
                 .containsExactly(lamp));
-        assertThat(asking.count()).isEqualTo(2);
+        assertThat(asking.count()).isEqualTo(1);
         assertThat(answeredAllButTheDecision.decisions()).isEmpty();
         assertThat(answeredAllButTheDecision.boards()).singleElement().satisfies(waiting -> {
             assertThat(waiting.board().openQuestions()).isZero();

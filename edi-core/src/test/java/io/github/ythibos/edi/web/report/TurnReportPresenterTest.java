@@ -9,9 +9,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -114,6 +117,30 @@ class TurnReportPresenterTest {
                 ────
                   Fleet             • Choose the paint
                 """);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2})
+    void countsAWaitingBoardAsOneWithEveryDecisionItBinds(int bound) {
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(PresenterFixtures.boardBinding("lamp", 59, bound)), List.of(), List.of());
+
+        String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
+
+        assertThat(report).startsWith("╔══ NEEDS YOUR DECISION ══ 1 open ══");
+    }
+
+    @Test
+    void countsTwoBoardsWithOneBoundDecisionEachAsTwoAndADecisionBoundToNoBoardAsItsOwn() {
+        Task lamp = captainItem("lamp-choice", "harness");
+        List<WaitingBoard> boards = List.of(PresenterFixtures.boardBinding("bulb", 59, 1), PresenterFixtures.boardBinding("horn", 60, 1));
+
+        String boardsOnly = presenter.text(new TurnReport(new WaitingOnTheCaptain(List.of(), boards, List.of(), List.of()), Turn.NONE, WIDTH, null,
+                PREVIOUS_REPORT, null));
+        String besideADecision = presenter.text(new TurnReport(new WaitingOnTheCaptain(List.of(new OpenDecision(raised(58, lamp, "Which lamp?", NOW), lamp)),
+                boards, List.of(), List.of()), Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
+
+        assertThat(boardsOnly).startsWith("╔══ NEEDS YOUR DECISION ══ 2 open ══").contains("║        D59   Which bulb?\n", "║        D60   Which horn?\n");
+        assertThat(besideADecision).startsWith("╔══ NEEDS YOUR DECISION ══ 3 open ══").contains("║  D58   Which lamp?\n");
     }
 
     @Test
