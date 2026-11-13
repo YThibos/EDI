@@ -66,3 +66,4 @@ When Claude Code changes a hook, a flag or its trust check, or unattended headle
 - 03/11/2026: the primary read workers' panes 47 times in a week to see a question `edi worker list` cut to one line, so `edi worker show` prints it whole from the store (EDI-162).
 - 06/11/2026: the runtime captures a worker's pane with its colours for the console's read-only Live tab (EDI-60).
 - 10/11/2026: a worker took its configuration directory from the tmux server's environment, so every launch states the directory of its project's Claude login and writes the trust entry there (EDI-253).
+- 13/11/2026: `edi` forwards `CLAUDE_PROJECT_DIR` as the `EDI-Claude-Project-Dir` header, so the primary's session-start check judges the anchor by the directory Claude Code started the session in rather than by the hook's `cwd` (EDI-268).
