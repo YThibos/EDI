@@ -44,7 +44,7 @@ final class LocalCore {
         } catch (IOException unwritable) {
             throw new UncheckedIOException(unwritable);
         }
-        LocalPrograms.startDetached(List.of("setsid", "-f", "sh", "-c", FOR_ITS_OWNER_ALONE, executable), home, log, Map.of("EDI_HOME", home.toString()));
+        LocalPrograms.startDetached(List.of("setsid", "-f", "sh", "-c", FOR_ITS_OWNER_ALONE, executable), log, Map.of("EDI_HOME", home.toString()));
         if (!comesTrue(this::answers, STARTING_PATIENCE)) {
             throw new CommandFailure("EDI core did not answer within " + STARTING_PATIENCE.toSeconds() + " seconds; " + log + " says why.");
         }

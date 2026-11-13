@@ -45,11 +45,9 @@ final class LocalPrograms {
     }
 
     @SuppressWarnings("java:S4036") // setsid comes with every Linux the harness runs on, from the captain's own PATH
-    static void startDetached(List<String> command, Path directory, Path log, Map<String, String> environment) {
+    static void startDetached(List<String> command, Path log, Map<String, String> environment) {
         try {
-            ProcessBuilder launch = new ProcessBuilder(command).directory(directory.toFile())
-                    .redirectOutput(Redirect.appendTo(log.toFile()))
-                    .redirectErrorStream(true);
+            ProcessBuilder launch = new ProcessBuilder(command).redirectOutput(Redirect.appendTo(log.toFile())).redirectErrorStream(true);
             launch.environment().putAll(environment);
             launch.start().getOutputStream().close();
         } catch (IOException unstartable) {
