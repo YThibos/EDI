@@ -2,7 +2,8 @@ package io.github.ythibos.edi.domain.primary;
 
 import java.time.Instant;
 
-public record TurnCircumstances(boolean stateChanged, Instant lastItemRecordedAt, boolean chatKeptQuiet, boolean workInFlight, boolean waitIsLive) {
+public record TurnCircumstances(boolean stateChanged, Instant lastItemRecordedAt, boolean chatKeptQuiet, boolean workInFlight, boolean waitIsLive,
+        boolean answerUndelivered) {
 
     boolean needsTheReport(PrimaryTurn turn) {
         return !chatKeptQuiet && (unreportedStateChange(turn) || itemRecordedSinceTheReport(turn));

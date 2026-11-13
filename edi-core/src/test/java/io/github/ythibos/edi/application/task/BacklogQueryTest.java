@@ -16,7 +16,9 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 
@@ -38,7 +40,7 @@ class BacklogQueryTest {
         Backlog ready = home.backlog().backlog(true);
 
         assertThat(backlog.entries()).extracting(entry -> entry.task().id().value()).containsExactly("lantern", "fog-horn", "flag-pole");
-        assertThat(backlog.entries().get(1).blockers()).extracting(blocker -> blocker.state()).containsExactly(TaskState.QUEUED);
+        assertThat(backlog.entries().get(1).waits()).extracting(Wait::stage).containsExactly(TaskStage.QUEUED);
         assertThat(ready.readyOnly()).isTrue();
         assertThat(ready.entries()).extracting(entry -> entry.task().id().value()).containsExactly("lantern");
     }

@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.decision;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -12,6 +13,8 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.task.DecisionReleases;
 import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
+import io.github.ythibos.edi.application.worker.SteerWorker;
+import io.github.ythibos.edi.application.worker.SteerWorker.StoredSteer;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
@@ -30,35 +33,40 @@ public class AnswerDecision {
     private final TicketProposals proposals;
     private final DependantTasks dependants;
     private final DecisionReleases releases;
+    private final SteerWorker steering;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, TicketProposals proposals, DependantTasks dependants,
-            DecisionReleases releases, Clock clock, TransactionTemplate transaction) {
+            DecisionReleases releases, SteerWorker steering, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.decisions = decisions;
         this.events = events;
         this.proposals = proposals;
         this.dependants = dependants;
         this.releases = releases;
+        this.steering = steering;
         this.clock = clock;
         this.transaction = transaction;
     }
 
     public AnsweredDecision answer(TaskReference reference, GivenAnswer given, Actor actor) {
-        AnsweredDecision answered = transaction.execute(_ -> {
-            Instant now = clock.now();
-            Task task = tasks.get(reference);
-            proposals.requireAChoiceIn(task.id(), given.option());
-            Decision decided = decisionOf(reference, task).answered(given.recordedAt(now));
-            decisions.save(decided);
-            events.record(new DecisionAnswered(task.id(), decided.number(), decided.answer()), actor, now);
-            Task released = releases.released(task, actor, now);
-            releaseTheDependantsOfADoneTask(released);
-            recordTheDone(released, actor, now);
-            return new AnsweredDecision(decided, released, TicketSettlement.none());
-        });
-        return answered.withTicket(proposals.settle(answered.task().id(), actor));
+        RecordedAnswer recorded = transaction.execute(_ -> recorded(reference, given, actor));
+        TicketSettlement ticket = proposals.settle(recorded.task().id(), actor);
+        return new AnsweredDecision(recorded.decision(), recorded.task(), ticket, recorded.carried().map(steering::announced));
+    }
+
+    private RecordedAnswer recorded(TaskReference reference, GivenAnswer given, Actor actor) {
+        Instant now = clock.now();
+        Task task = tasks.get(reference);
+        proposals.requireAChoiceIn(task.id(), given.option());
+        Decision decided = decisionOf(reference, task).answered(given.recordedAt(now));
+        decisions.save(decided);
+        events.record(new DecisionAnswered(task.id(), decided.number(), decided.answer()), actor, now);
+        Task released = releases.released(task, actor, now);
+        releaseTheDependantsOfADoneTask(released);
+        recordTheDone(released, actor, now);
+        return new RecordedAnswer(decided, released, steering.carryTheAnswerOf(decided, actor));
     }
 
     private Decision decisionOf(TaskReference reference, Task task) {
@@ -75,5 +83,8 @@ public class AnswerDecision {
         if (released.isDone()) {
             events.record(new TaskDone(released.id()), actor, now);
         }
+    }
+
+    private record RecordedAnswer(Decision decision, Task task, Optional<StoredSteer> carried) {
     }
 }

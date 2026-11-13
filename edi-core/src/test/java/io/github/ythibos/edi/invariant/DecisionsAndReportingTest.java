@@ -269,17 +269,37 @@ class DecisionsAndReportingTest {
             ConsoleSitrep console = consoleSitrep(home);
 
             assertThat(report).contains(
-                    "NEEDS YOUR DECISION ══ 3 open",
+                    "NEEDS YOUR DECISION ══ 2 open",
                     "║  " + paint + "   Which paint?\n║        Both work; one is simpler.\n",
                     "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
             assertThat(report.substring(report.indexOf("Board for"), report.indexOf("╚"))).doesNotContain("Both work", "(A)", "Recommended");
             assertThat(console.decisions()).extracting(ConsoleSitrep.Card::number).containsExactly(paint.toString());
             assertThat(console.boards()).singleElement().extracting(ConsoleSitrep.Board::decisions).asInstanceOf(InstanceOfAssertFactories.LIST)
                     .containsExactly(new ConsoleSitrep.BoardDecision(lamp.toString(), "Which lamp?"));
-            assertThat(returnBrief(home)).contains("Needs your decision (3)\n  " + paint + "  Which paint?\n  Board for Work on survey-lamps: 2 questions "
+            assertThat(returnBrief(home)).contains("Needs your decision (2)\n  " + paint + "  Which paint?\n  Board for Work on survey-lamps: 2 questions "
                     + "waiting at " + BoardRounds.LINK + "\n    " + lamp + "  Which lamp?\n");
             assertThat(PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()))).contains("  " + paint
                     + "  paint-choice  Which paint?\n  board  survey-lamps  2 questions at " + BoardRounds.LINK + "\n    " + lamp + "  survey-lamps  Which lamp?\n");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-19 a board and every decision it binds wait on the captain as one, so two boards binding one decision each count two on every"
+                + " surface")
+        void aBoardAndTheDecisionsItBindsCountAsOne() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY).continuingDecisionsFrom(MIGRATED_DECISION_SEQUENCE);
+            armABoardWithItsCard(home, "survey-lamps", "Which lamp?");
+            armABoardWithItsCard(home, "survey-horns", "Which horn?");
+
+            ConsoleSitrep console = consoleSitrep(home);
+
+            assertThat(captainReport(home, Turn.NONE)).contains("NEEDS YOUR DECISION ══ 2 open");
+            assertThat(turnReport(home, UUID.randomUUID())).contains("NEEDS YOUR DECISION ══ 2 open");
+            assertThat(returnBrief(home)).contains("Needs your decision (2)\n");
+            assertThat(digestOf(home)).contains("Waiting on the captain (2)\n");
+            assertThat(console.decisions()).isEmpty();
+            assertThat(console.boards()).flatExtracting(ConsoleSitrep.Board::decisions).extracting(ConsoleSitrep.BoardDecision::title)
+                    .containsExactly("Which lamp?", "Which horn?");
         }
 
         @Test
@@ -307,7 +327,7 @@ class DecisionsAndReportingTest {
             assertThat(boundOnlyBrief).contains("  Board for Work on survey-lamps: waiting at " + BoardRounds.LINK + "\n    " + lamp + "  Which lamp?\n");
             assertThat(boundOnlyDigest).contains("Waiting on the captain (1)\n  board  survey-lamps  " + BoardRounds.LINK + "\n    " + lamp
                     + "  survey-lamps  Which lamp?\n");
-            assertThat(posted).contains("NEEDS YOUR DECISION ══ 2 open",
+            assertThat(posted).contains("NEEDS YOUR DECISION ══ 1 open",
                     "║  Board for Work on survey-lamps: 2 questions waiting at " + BoardRounds.LINK + "\n║        " + lamp + "   Which lamp?\n║\n");
         }
 
@@ -604,6 +624,13 @@ class DecisionsAndReportingTest {
     private static String returnBrief(TestHome home) {
         Presence left = Presence.presentSince(TestHome.START).quiet(TestHome.START);
         return PresenterFixtures.returnBriefText().text(home.returnBriefs().since(left));
+    }
+
+    private static void armABoardWithItsCard(TestHome home, String task, String title) throws IOException {
+        Worker scout = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued(task, TaskKind.SCOUT, "harness", "HRN-4"), CategoryId.RESEARCH);
+        Path board = Files.writeString(Files.createDirectories(home.home().taskDirectory(scout.id().task())).resolve("board.html"), "<!doctype html>\n");
+        home.boardHost().holdsTheNextPollOpen();
+        home.armBoard().arm(scout.id(), TaskReference.parse(task), board, new BoardRound(BoardRounds.LINK, 1, List.of(), new BoardCard("pick", card(title))));
     }
 
     private static DecisionNumber raise(TestHome home, String task, String title) {

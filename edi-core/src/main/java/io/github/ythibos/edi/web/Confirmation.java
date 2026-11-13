@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.web;
 
 import java.util.List;
+import java.util.Optional;
 
 import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.DiscardedWork;
@@ -19,6 +20,7 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
@@ -41,7 +43,7 @@ public sealed interface Confirmation {
     record Raised(DecisionNumber number) implements Confirmation {
     }
 
-    record Answered(Decision decision, Task task, TicketSettlement ticket) implements Confirmation {
+    record Answered(Decision decision, Task task, TicketSettlement ticket, Optional<SteerWorker.Steered> carried) implements Confirmation {
     }
 
     record Dispatched(DispatchOutcome.Launched launched) implements Confirmation {
@@ -90,6 +92,9 @@ public sealed interface Confirmation {
     }
 
     record Promoted(PromotedScout promoted) implements Confirmation {
+    }
+
+    record Planned(Plan plan) implements Confirmation {
     }
 
     record Dropped(DroppedTask dropped) implements Confirmation {

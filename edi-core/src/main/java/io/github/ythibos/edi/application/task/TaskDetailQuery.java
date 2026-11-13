@@ -46,7 +46,7 @@ public class TaskDetailQuery {
             Task task = tasks.get(reference);
             return new TaskDetail(
                     task,
-                    tasks.blockersOf(task),
+                    tasks.waitsOf(task),
                     decisions.ofTask(task.id()).orElse(null),
                     deliveries.of(task.id()).orElse(null),
                     pipelineRuns.latestOf(task.id()).orElse(null),

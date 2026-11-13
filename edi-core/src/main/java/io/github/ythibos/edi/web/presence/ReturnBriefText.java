@@ -40,38 +40,42 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     @Override
     public String text(ReturnBrief brief) {
         List<String> lines = new ArrayList<>(List.of(INSTRUCTION, "While you were away (" + presenceWords.of(brief.left()) + "):"));
-        lines.addAll(section("Needs your decision", waitingLines(brief.waiting()), Function.identity()));
-        lines.addAll(section("Landed", brief.landed(), landed -> landed.task().intake().title()));
-        lines.addAll(section("Failed", brief.setbacks(), ReturnBriefText::setbackLine));
-        lines.addAll(section("Running", brief.running(), ReturnBriefText::runningLine));
+        lines.addAll(section("Needs your decision", waitingItems(brief.waiting()), Function.identity()));
+        lines.addAll(section("Landed", brief.landed(), oneLine(landed -> landed.task().intake().title())));
+        lines.addAll(section("Failed", brief.setbacks(), oneLine(ReturnBriefText::setbackLine)));
+        lines.addAll(section("Running", brief.running(), oneLine(ReturnBriefText::runningLine)));
         return String.join("\n", lines) + "\n";
     }
 
-    private static <T> List<String> section(String heading, List<T> items, Function<T, String> line) {
+    private static <T> List<String> section(String heading, List<T> items, Function<T, List<String>> linesOfItem) {
         List<String> lines = new ArrayList<>(List.of(Words.counted(heading, items.size())));
-        items.stream().limit(MOST_SHOWN).map(line).forEach(item -> lines.add("  " + item));
+        items.stream().limit(MOST_SHOWN).flatMap(item -> linesOfItem.apply(item).stream()).forEach(line -> lines.add("  " + line));
         if (items.size() > MOST_SHOWN) {
             lines.add("  (+" + (items.size() - MOST_SHOWN) + " more; edi sitrep shows them)");
         }
         return lines;
     }
 
-    private static List<String> waitingLines(WaitingOnTheCaptain waiting) {
+    private static List<List<String>> waitingItems(WaitingOnTheCaptain waiting) {
         return Stream.of(
-                        waiting.decisions().stream().map(ReturnBriefText::decisionLine),
-                        waiting.boards().stream().flatMap(ReturnBriefText::boardLines),
-                        waiting.reviews().stream().map(ReturnBriefText::reviewLine),
-                        waiting.changing().stream().map(ReturnBriefText::changingLine))
+                        waiting.decisions().stream().map(open -> List.of(decisionLine(open))),
+                        waiting.boards().stream().map(ReturnBriefText::boardWithItsDecisions),
+                        waiting.reviews().stream().map(ready -> List.of(reviewLine(ready))),
+                        waiting.changing().stream().map(changing -> List.of(changingLine(changing))))
                 .flatMap(Function.identity())
                 .toList();
+    }
+
+    private static <T> Function<T, List<String>> oneLine(Function<T, String> line) {
+        return line.andThen(List::of);
     }
 
     private static String decisionLine(OpenDecision open) {
         return open.decision().number() + "  " + open.decision().card().title();
     }
 
-    private static Stream<String> boardLines(WaitingBoard waiting) {
-        return Stream.concat(Stream.of(boardLine(waiting)), waiting.decisions().stream().map(open -> "  " + decisionLine(open)));
+    private static List<String> boardWithItsDecisions(WaitingBoard waiting) {
+        return Stream.concat(Stream.of(boardLine(waiting)), waiting.decisions().stream().map(open -> "  " + decisionLine(open))).toList();
     }
 
     private static String boardLine(WaitingBoard waiting) {

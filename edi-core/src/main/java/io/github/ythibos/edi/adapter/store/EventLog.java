@@ -60,6 +60,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.event.DomainEvent.SlicePlanned;
 import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
@@ -347,6 +348,7 @@ public class EventLog {
                     .put("because", refused.because());
             case CaptainSaid said -> payload.put("verbatim", said.verbatim());
             case ScoutPromoted promoted -> payload.put("ship", promoted.ship().value());
+            case SlicePlanned planned -> payload.put("plan", planned.plan().toString()).put("number", planned.number()).put("wait", planned.awaits().words());
             case TaskDropped dropped -> withEach(payload.put("captainsWord", dropped.captainsWord()), "discarded", dropped.discarded());
             case WorkDiscarded discarded -> withEach(payload.put("captainsWord", discarded.captainsWord()), "discarded", discarded.discarded());
             case TaskImported imported -> payload.put("oldHome", imported.oldHome());
