@@ -84,7 +84,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     private static String olderAnchorOf(SessionAnchor anchor) {
         return "This session holds an older anchor than the core's: the " + PrimaryOutputStyle.NAME + " output style at " + anchor.outputStyle()
-                + " predates the core's build, and a compaction or a new start loads that older anchor again until edi up or edi update refreshes it. "
+                + " predates the core's build, and a compaction or a new start loads that older anchor again until edi up refreshes it. "
                 + currentAnchorToRead(anchor);
     }
 

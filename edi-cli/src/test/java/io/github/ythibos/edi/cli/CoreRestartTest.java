@@ -74,9 +74,6 @@ class CoreRestartTest {
         assertThat(updated).as(err.toString()).isZero();
         assertThat(out.toString()).startsWith("Updated to ");
         assertThat(Files.readString(home.resolve("state/logs/core.log"))).doesNotContain("Another EDI core runs on this home");
-        assertThat(home.resolve(".claude/output-styles/edi-primary.md")).exists();
-        assertThat(out.toString()).endsWith("\nThe primary's output style now carries the new anchor, and the running primary loads it at its next compaction"
-                + " or start; until then, re-read " + directory.resolve("EDI/claude/primary/CLAUDE.md") + ", for the primary's rules may have changed.\n");
         assertThat(new LocalCore(home, coreExecutable.toString()).health()).isEqualTo(CoreHealth.UP);
         assertThat(CorePidFile.in(home).recordedProcess()).isNotEqualTo(Long.toString(oldCore));
     }

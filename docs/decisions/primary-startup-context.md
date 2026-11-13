@@ -19,8 +19,8 @@ The style keeps Claude Code's own coding instructions (`keep-coding-instructions
 `SessionStartDigestQuery` reads, from the store, the home and tmux, the session's standing, the address word, the personality ([personality](personality.md)), the previous primary's usage-limit stop, the fleet snapshot, every serving worker's health, the open outage list, the unacknowledged wakes, the presence, the memory check, the count of expired and unticketed workarounds, the files missing from the EDI home (`HomeSetup`), the sitrep page's opening ([console](console.md)) and whether the weekly upkeep is due, which it is on Mondays (`WeeklyUpkeep`).
 `CheckTheSessionAnchor` finds one of three anchors (`HeldAnchor`): the current one when the directory Claude Code started the session in is the EDI home and the home's output style carries the whole anchor the core bundles, an older one when that style carries the anchor's heading but not the core's anchor, and none otherwise; `edi hook` forwards that directory from `CLAUDE_PROJECT_DIR` as the `EDI-Claude-Project-Dir` header, and the hook's `cwd`, where the session may since have moved, stands in only when the header is absent.
 When the session holds no anchor, the digest's first line after its title says the anchor is missing, why, and which file to read now.
-When it holds an older anchor, that line says so, that a compaction or a new start loads the older anchor again until `edi up` or `edi update` refreshes the style, and to read the checkout's `claude/primary/CLAUDE.md` now, or, when the checkout holds none, to tell the captain and ask for `edi up`.
-`edi update` asks the new core for the primary's launch, so the style carries the new anchor as soon as the core restarts ([core-lifecycle](core-lifecycle.md)).
+When it holds an older anchor, that line says so, that a compaction or a new start loads the older anchor again until `edi up` refreshes the style, and to read the checkout's `claude/primary/CLAUDE.md` now, or, when the checkout holds none, to tell the captain and ask for `edi up`.
+`PrepareThePrimary`, run by `edi up`, is the one writer of the style.
 Every primary's digest, standby included, then asks the session to confirm that its system prompt holds the anchor's heading and, if it does not, to read the output style at once and tell the captain it runs without its anchor.
 `SessionStartDigestText` writes it as plain lines, the primary's `SessionStart` hook answers it as `additionalContext`, and it ends by asking for the one wake stream, `edi wait --follow` alone under the Monitor tool, while work is in flight, except in a standby session ([wakes-and-turn-end](wakes-and-turn-end.md)).
 `MemoryFiles` reads `memory/profile.md`, `machine.md` and `learnings.md`; `StartupMemory` estimates tokens as characters divided by four against `memory.startupBudgetTokens` (18,000 when absent) and fails above the budget or on a heading repeated across the files.
@@ -55,6 +55,7 @@ A measured budget and a list of what to curate keep memory a map rather than a j
 - Good: AT-23 compares the whole digest before a crash and after the restart, and AT-33 holds.
 - Bad: memory curated during a session loads only in the next one, and a digest above 10,000 characters arrives as a preview.
 - Bad: the anchor check reads the conditions under which Claude Code loads the style, not the system prompt itself, which no hook sees, so the model's own confirmation against its system prompt is the last check.
+- Bad: a second `edi up` rewrites the style under an older primary session that still runs, so that session, resumed later, finds a current style while its system prompt still holds the older anchor until its next compaction.
 
 ## When to revisit
 
@@ -67,4 +68,4 @@ When Claude Code raises the limit on hook context or offers a reloadable system 
 - 23/10/2026: the digest gained the personality, address and bad-news lines (EDI-31).
 - 28/10/2026: a workaround names the ticket that removes it, `edi memory stow-list` flags it once that ticket lands or when no ticket exists, and the digest counts both from the store, as the captain chose (EDI-81).
 - 02/11/2026: the digest asks for the wake stream rather than a background `edi wait`, and counts the wakes not yet handled (EDI-158).
-- 13/11/2026: a primary relaunched in Claude Code's background service lost its anchor twice, so the composed prompt became the `edi-primary` output style its settings name, `edi up` dropped the anchor option, and the digest says first when a session lacks the anchor or holds an older one, which `edi update` now refreshes (EDI-268).
+- 13/11/2026: a primary relaunched in Claude Code's background service lost its anchor twice, so the composed prompt became the `edi-primary` output style its settings name, `edi up` dropped the anchor option, and the digest says first when a session lacks the anchor or holds an older one (EDI-268).

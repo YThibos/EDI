@@ -68,7 +68,7 @@ class SessionStartDigestTextTest {
 
         assertThat(digest.lines().skip(1).limit(2)).containsExactly("This session holds an older anchor than the core's: the edi-primary output style at "
                 + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " predates the core's build, and a compaction or a new start loads"
-                + " that older anchor again until edi up or edi update refreshes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
+                + " that older anchor again until edi up refreshes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
                 + " now and hold to every line of it, for its rules replace the older ones.", confirmationOfTheAnchorIn(home));
     }
 
