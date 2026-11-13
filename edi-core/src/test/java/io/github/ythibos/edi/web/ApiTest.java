@@ -43,8 +43,10 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
@@ -148,6 +150,8 @@ class ApiTest {
         String beforeTheMerge = get("/api/plans/HRN-40", TEXT).body();
         putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.MERGED);
         String afterTheMerge = get("/api/plans/HRN-40", TEXT).body();
+        waitForAScout(new TaskId("paint-the-harbour-lamp"), new TaskId("plan-work-on-paint-the-harbour-lamp"));
+        String behindItsScout = get("/api/plans/HRN-40", TEXT).body();
         putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.RETIRED);
 
         assertThat(added.statusCode()).isEqualTo(201);
@@ -169,6 +173,8 @@ class ApiTest {
                 "  1  fit-the-harbour-lamp    HRN-41  merged  none\n",
                 "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  eligible\n",
                 "  3  oil-the-harbour-gate    HRN-43  queued  none            eligible\n");
+        assertThat(behindItsScout).contains(
+                "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  waits for plan-work-on-paint-the-harbour-lamp to land (queued)\n");
         assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"");
         assertThat(get("/api/tasks/fit-the-harbour-lamp", TEXT).body()).contains("Use the brass fittings.", "slice planned");
     }
@@ -876,6 +882,13 @@ class ApiTest {
         assertRefusal(withoutAReason, 400, "An override of the dispatch rules records the captain's reason for it.");
         assertRefusal(beyondTheHarness, 400, "Effort is low, medium or high, and high is the ceiling, so not ultra;"
                 + " only the captain's word for one task lifts that task to xhigh or max.");
+    }
+
+    private void waitForAScout(TaskId ship, TaskId scout) {
+        Task waiting = tasks.get(ship);
+        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null), "",
+                waiting.created()));
+        tasks.update(waiting.waitingFor(scout));
     }
 
     private void putAt(TaskId id, TaskStage stage) {

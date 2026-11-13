@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
@@ -50,6 +51,18 @@ class SliceStandingTest {
         assertThat(standing(working).isEligible()).isFalse();
         assertThat(standing(held).isEligible()).isFalse();
         assertThat(standing(paintLamp(), afterFitLampMerged(TaskStage.DROPPED)).isEligible()).isTrue();
+    }
+
+    @Test
+    void namesTheUnmetWaitsOfItsTaskBesideThePlansOwnWait() {
+        Plan plan = new Plan(new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"), "docs/research/HRN-40-plan.md",
+                "D44", 2, null), List.of(new Slice(1, FIT_LAMP, CategoryId.IMPLEMENTATION, new SliceWait.None()), PAINT));
+        Wait onItsScout = Wait.afterLanded(PLAN_THE_PAINT, TaskStage.QUEUED);
+        Wait onALandedTask = Wait.afterLanded(new TaskId("oil-gate"), TaskStage.RETIRED);
+
+        assertThat(standing(paintLamp(), afterFitLampMerged(TaskStage.WORKING), onItsScout, onALandedTask).unmetWaitsOutside(plan))
+                .containsExactly(onItsScout);
+        assertThat(standing(paintLamp(), afterFitLampMerged(TaskStage.WORKING)).unmetWaitsOutside(plan)).isEmpty();
     }
 
     private static Task paintLamp() {

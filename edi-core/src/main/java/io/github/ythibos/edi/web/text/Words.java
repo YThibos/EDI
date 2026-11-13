@@ -1,9 +1,11 @@
 package io.github.ythibos.edi.web.text;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
+import io.github.ythibos.edi.domain.task.Wait;
 
 public final class Words {
 
@@ -29,5 +31,13 @@ public final class Words {
 
     public static String indented(String text, String indent) {
         return text.lines().map(line -> line.isBlank() ? "" : indent + line).collect(Collectors.joining("\n"));
+    }
+
+    public static String waits(List<Wait> waits) {
+        return "waits for " + waits.stream().map(Words::waitFor).collect(Collectors.joining(", "));
+    }
+
+    private static String waitFor(Wait wait) {
+        return wait.words() + " (" + wait.stage().word() + ")";
     }
 }

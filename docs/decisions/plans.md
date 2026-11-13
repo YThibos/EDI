@@ -24,6 +24,7 @@ A `Slice` is a task with its number in the plan, its dispatch category and one `
 `edi plan add --from -` takes the plan as JSON on standard input (I-36), with per slice its number, title, category, key, body and wait; `AddPlan` queues each slice as a ship through `AddTask`, so every intake rule of a task holds for a slice, and stores the plan and a `SlicePlanned` event on each slice in one transaction.
 `AddPlan` refuses a second plan on the same umbrella key and a capacity above the project's own (`task.plan-intake`); a slice's category is checked against the dispatch rules when the slice is dispatched.
 `edi plan show <key>` prints the heading and each slice with its task, key, stage and wait, and marks the eligible slices.
+A slice that is not eligible names each unmet wait of its task outside the plan, such as the scout a research-first dispatch queued for it, worded as the backlog words a wait.
 `V29__plans_and_their_waits.sql` adds the `plan` and `plan_slice` tables; a slice's wait refers to an earlier slice of the same plan by a foreign key and a check.
 Entering a plan dispatches nothing: the plan dispatching its eligible slices within its capacity is EDI-89, and one effort word honoured for every slice is EDI-90.
 

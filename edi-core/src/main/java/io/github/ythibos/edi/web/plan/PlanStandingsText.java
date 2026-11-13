@@ -1,10 +1,14 @@
 package io.github.ythibos.edi.web.plan;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.plan.PlanStandings;
+import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.SliceStanding;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.web.text.Table;
 import io.github.ythibos.edi.web.text.TextPresenter;
 import io.github.ythibos.edi.web.text.Words;
@@ -24,7 +28,7 @@ class PlanStandingsText implements TextPresenter<PlanStandings> {
         Table table = new Table(INDENT);
         headingOf(standings.plan().heading(), table);
         table.line("Slices");
-        standings.slices().forEach(slice -> table.row(cellsOf(slice)));
+        standings.slices().forEach(slice -> table.row(cellsOf(slice, standings.plan())));
         return table.text();
     }
 
@@ -39,17 +43,21 @@ class PlanStandingsText implements TextPresenter<PlanStandings> {
         }
     }
 
-    private static String[] cellsOf(SliceStanding standing) {
+    private static String[] cellsOf(SliceStanding standing, Plan plan) {
         return new String[] {
             String.valueOf(standing.slice().number()),
             standing.task().id().value(),
             standing.task().intake().workKey().toString(),
             standing.task().stage().word(),
             standing.slice().awaits().words(),
-            eligibilityOf(standing)};
+            readinessOf(standing, plan)};
     }
 
-    private static String eligibilityOf(SliceStanding standing) {
-        return standing.isEligible() ? "eligible" : "";
+    private static String readinessOf(SliceStanding standing, Plan plan) {
+        if (standing.isEligible()) {
+            return "eligible";
+        }
+        List<Wait> outsideThePlan = standing.unmetWaitsOutside(plan);
+        return outsideThePlan.isEmpty() ? "" : Words.waits(outsideThePlan);
     }
 }

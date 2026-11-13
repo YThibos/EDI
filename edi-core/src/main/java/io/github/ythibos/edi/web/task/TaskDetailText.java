@@ -46,7 +46,7 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
             lines.add(workedLineOf(detail.worked()));
         }
         if (!detail.waits().isEmpty()) {
-            lines.add(capitalised(BacklogText.waitsOf(detail.waits())));
+            lines.add(capitalised(Words.waits(detail.waits())));
         }
         if (detail.task().isHeld()) {
             lines.add(capitalised(BacklogText.holdOf(detail.task().hold())) + " (since " + moments.minute(detail.task().hold().setAt()) + ")");
