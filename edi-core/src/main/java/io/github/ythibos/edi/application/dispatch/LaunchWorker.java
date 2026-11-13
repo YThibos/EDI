@@ -26,7 +26,6 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
-import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.brief.BriefFacts;
@@ -39,6 +38,7 @@ import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
+import io.github.ythibos.edi.application.supervision.LeaveTheOutageList;
 import io.github.ythibos.edi.application.task.TaskHolds;
 import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
@@ -52,7 +52,6 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDispatched;
-import io.github.ythibos.edi.domain.event.DomainEvent.TaskReleased;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRelaunched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -82,7 +81,7 @@ public class LaunchWorker {
     private final DispatchStore dispatches;
     private final WorkerStore workers;
     private final AdoptionStore adoptions;
-    private final OutageStore outages;
+    private final LeaveTheOutageList outageList;
     private final EventLog events;
     private final ProjectRegistry registry;
     private final MachineProfile machine;
@@ -105,7 +104,7 @@ public class LaunchWorker {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, OutageStore outages,
+    public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, LeaveTheOutageList outageList,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
             WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
             Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, TaskHolds holds,
@@ -115,7 +114,7 @@ public class LaunchWorker {
         this.dispatches = dispatches;
         this.workers = workers;
         this.adoptions = adoptions;
-        this.outages = outages;
+        this.outageList = outageList;
         this.events = events;
         this.registry = registry;
         this.machine = machine;
@@ -364,16 +363,9 @@ public class LaunchWorker {
 
     private void settleTheOutageEntry(Incarnation incarnation, Instant now, Actor actor) {
         OutageEntry answered = incarnation.answered();
-        if (answered == null) {
-            return;
+        if (answered != null) {
+            outageList.leave(answered, actor, now);
         }
-        Task task = tasks.get(answered.task());
-        Task released = answered.withoutItsHold(task);
-        if (task.isHeld() && !released.isHeld()) {
-            tasks.update(released);
-            events.record(new TaskReleased(released.id()), actor, now);
-        }
-        outages.close(answered);
     }
 
     private static String retirementOf(LaunchKind kind) {

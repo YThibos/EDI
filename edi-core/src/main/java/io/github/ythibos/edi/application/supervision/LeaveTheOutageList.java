@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.supervision;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -34,6 +35,14 @@ public class LeaveTheOutageList {
 
     public void everyTaskWithNothingLeftToResume(Instant at) {
         outages.open().forEach(entry -> onceNothingIsLeftToResume(tasks.get(entry.task()), Actor.CORE, at));
+    }
+
+    public Optional<OutageEntry> stillListed(int number, Instant at) {
+        return outages.numbered(number).filter(entry -> onceNothingIsLeftToResume(tasks.get(entry.task()), Actor.CORE, at).hasWorkToResume());
+    }
+
+    public void leave(OutageEntry entry, Actor actor, Instant at) {
+        leftBy(entry, tasks.get(entry.task()), actor, at);
     }
 
     private Task leftBy(OutageEntry entry, Task task, Actor actor, Instant at) {
