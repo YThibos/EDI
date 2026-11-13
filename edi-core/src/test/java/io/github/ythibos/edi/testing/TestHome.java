@@ -974,7 +974,7 @@ public final class TestHome {
     }
 
     public RecordTurnItems recordTurnItems() {
-        return new RecordTurnItems(primarySessions, turnItems, transaction);
+        return new RecordTurnItems(primarySessions, turnItems, clock, transaction);
     }
 
     public TurnItemsQuery turnItems() {

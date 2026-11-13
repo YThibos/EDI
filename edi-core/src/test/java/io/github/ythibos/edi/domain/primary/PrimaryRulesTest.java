@@ -60,19 +60,21 @@ class PrimaryRulesTest {
     @Test
     void handsOverTheReportWhenStateChangedOrItemsWereRecordedAndAsksForAWaitWhileWorkIsInFlight() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
+        Instant recorded = START.plusSeconds(1);
 
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, false, false, false, false))).isEqualTo(TurnEnd.ENDS);
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, false, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, true, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-        assertThat(TurnEnd.of(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, true, false, false, false))).isEqualTo(TurnEnd.ENDS);
-        assertThat(TurnEnd.of(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false, false)))
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, null, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, null, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, recorded, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn.reported(START.plusSeconds(2)), new TurnCircumstances(true, recorded, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn.reported(START), new TurnCircumstances(true, recorded, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, null, false, false, false)))
                 .isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, true, true, false, false))).isEqualTo(TurnEnd.ENDS);
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, false, true, true, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, false, false, true, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
-        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, false, false, true, true))).isEqualTo(TurnEnd.ENDS);
-        assertThat(TurnEnd.of(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, false, true, false))).isEqualTo(TurnEnd.ENDS);
-        assertThat(TurnEnd.of(null, new TurnCircumstances(true, false, false, true, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, recorded, true, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, null, true, true, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, null, false, true, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, null, false, true, true))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, null, false, true, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(null, new TurnCircumstances(true, null, false, true, false))).isEqualTo(TurnEnd.ENDS);
     }
 
     @Test

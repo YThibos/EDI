@@ -2,11 +2,13 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -31,21 +33,30 @@ public class TurnItemStore {
     }
 
     public Turn recordedIn(UUID session) {
-        List<StoredItem> rows = store.sql("select part, task_id, text, state, projects from turn_item where session_id = :session order by position")
+        return store.sql("select part, task_id, text, state, projects from turn_item where session_id = :session order by position")
                 .param("session", session.toString())
                 .query((row, _) -> storedItem(row))
-                .list();
-        return new Turn(itemsOf(rows, DONE), itemsOf(rows, NEXT), wordingsOf(rows));
+                .list().stream()
+                .map(StoredItem::asTurn)
+                .reduce(Turn.NONE, Turn::followedBy);
     }
 
-    public void replace(UUID session, Turn items) {
-        clear(session);
+    public Optional<Instant> lastRecordedIn(UUID session) {
+        return store.sql("select recorded_at from turn_item where session_id = :session")
+                .param("session", session.toString())
+                .query((row, _) -> Columns.instant(row.getString("recorded_at")))
+                .list().stream()
+                .max(Comparator.naturalOrder());
+    }
+
+    public void add(UUID session, Turn items, Instant recordedAt) {
         List<StoredItem> rows = new ArrayList<>();
         items.done().forEach(item -> rows.add(StoredItem.of(DONE, item)));
         items.next().forEach(item -> rows.add(StoredItem.of(NEXT, item)));
         items.tasks().forEach((task, wording) -> rows.add(StoredItem.of(task, wording)));
-        for (int position = 0; position < rows.size(); position++) {
-            insert(session, position, rows.get(position));
+        int first = nextPositionIn(session);
+        for (int offset = 0; offset < rows.size(); offset++) {
+            insert(session, first + offset, rows.get(offset), recordedAt);
         }
     }
 
@@ -58,21 +69,17 @@ public class TurnItemStore {
                 projectsIn(row.getString("projects")));
     }
 
-    private static List<TurnItem> itemsOf(List<StoredItem> rows, String part) {
-        return rows.stream().filter(row -> row.part().equals(part)).map(row -> new TurnItem(row.projects(), row.text())).toList();
+    private int nextPositionIn(UUID session) {
+        return store.sql("select coalesce(max(position) + 1, 0) from turn_item where session_id = :session")
+                .param("session", session.toString())
+                .query(Integer.class)
+                .single();
     }
 
-    private static Map<String, TaskWording> wordingsOf(List<StoredItem> rows) {
-        Map<String, TaskWording> wordings = new LinkedHashMap<>();
-        rows.stream().filter(row -> row.part().equals(TASK_WORDING))
-                .forEach(row -> wordings.put(row.task(), new TaskWording(row.text(), row.state(), row.projects())));
-        return wordings;
-    }
-
-    private void insert(UUID session, int position, StoredItem item) {
+    private void insert(UUID session, int position, StoredItem item, Instant recordedAt) {
         store.sql("""
-                        insert into turn_item (session_id, position, part, task_id, text, state, projects)
-                        values (:session, :position, :part, :task, :text, :state, :projects)""")
+                        insert into turn_item (session_id, position, part, task_id, text, state, projects, recorded_at)
+                        values (:session, :position, :part, :task, :text, :state, :projects, :recordedAt)""")
                 .param("session", session.toString())
                 .param("position", position)
                 .param("part", item.part())
@@ -80,6 +87,7 @@ public class TurnItemStore {
                 .param("text", item.text())
                 .param("state", item.state())
                 .param("projects", projectsColumn(item.projects()))
+                .param("recordedAt", Columns.text(recordedAt))
                 .update();
     }
 
@@ -102,6 +110,14 @@ public class TurnItemStore {
 
         static StoredItem of(String task, TaskWording wording) {
             return new StoredItem(TASK_WORDING, task, wording.text(), wording.state(), wording.projects());
+        }
+
+        Turn asTurn() {
+            return switch (part) {
+                case DONE -> new Turn(List.of(new TurnItem(projects, text)), List.of(), Map.of());
+                case NEXT -> new Turn(List.of(), List.of(new TurnItem(projects, text)), Map.of());
+                default -> new Turn(List.of(), List.of(), Map.of(task, new TaskWording(text, state, projects)));
+            };
         }
     }
 }

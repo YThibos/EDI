@@ -6,6 +6,7 @@ create table turn_item (
     text       text,
     state      text,
     projects   text,
+    recorded_at text   not null,
     primary key (session_id, position),
     check ((part = 'task-wording') = (task_id is not null)),
     check (part = 'task-wording' or (text is not null and projects is not null and state is null))

@@ -247,6 +247,32 @@ class PrimaryHooksTest {
     }
 
     @Test
+    void handsOverTheReportAgainForAnItemRecordedAfterAReportShownMidTurn() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "Show me the sitrep, then dispatch what is ready.");
+        home.clock().advance(Duration.ofMinutes(1));
+        home.primaryHooks().reportRendered(primary);
+        home.clock().advance(Duration.ofMinutes(1));
+        home.recordTurnItems().record(primary, new Turn(List.of(new TurnItem(List.of("harness"), "Dispatched the lamp")), List.of(), Map.of()));
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+    }
+
+    @Test
+    void endsWithoutTheReportATurnWhoseItemsAllCameBeforeTheReportShownInIt() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "Read the lamp's review, then show me the sitrep.");
+        home.clock().advance(Duration.ofMinutes(1));
+        home.recordTurnItems().record(primary, new Turn(List.of(new TurnItem(List.of("harness"), "Read the lamp's review")), List.of(), Map.of()));
+        home.clock().advance(Duration.ofMinutes(1));
+        home.primaryHooks().reportRendered(primary);
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
     void refusesToRecordItemsBeforeTheSessionHasATurn() {
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);

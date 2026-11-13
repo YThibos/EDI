@@ -7,6 +7,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TurnItemStore;
+import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.report.Turn;
 
@@ -15,20 +16,21 @@ public class RecordTurnItems {
 
     private final PrimarySessionStore sessions;
     private final TurnItemStore turnItems;
+    private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public RecordTurnItems(PrimarySessionStore sessions, TurnItemStore turnItems, TransactionTemplate transaction) {
+    public RecordTurnItems(PrimarySessionStore sessions, TurnItemStore turnItems, Clock clock, TransactionTemplate transaction) {
         this.sessions = sessions;
         this.turnItems = turnItems;
+        this.clock = clock;
         this.transaction = transaction;
     }
 
     public Turn record(UUID session, Turn items) {
         return transaction.execute(_ -> {
             requireAnOpenTurn(session);
-            Turn recorded = turnItems.recordedIn(session).followedBy(items);
-            turnItems.replace(session, recorded);
-            return recorded;
+            turnItems.add(session, items, clock.now());
+            return turnItems.recordedIn(session);
         });
     }
 

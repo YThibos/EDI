@@ -11,7 +11,7 @@ The overview of the fleet already has two homes that the captain opens on purpos
 
 ## Decision
 
-The primary records the turn's items as they happen: `edi turn done` and `edi turn next` post one item with its projects and text, and `edi turn record -` posts several in the turn document, to `POST /api/turn`, which `RecordTurnItems` adds to the items its session's turn holds in the `turn_item` table; the session's next prompt starts a turn with none.
+The primary records the turn's items as they happen: `edi turn done` and `edi turn next` post one item with its projects and text, and `edi turn record -` posts several in the turn document, to `POST /api/turn`, which `RecordTurnItems` adds, each with the moment it was recorded, to the items its session's turn holds in the `turn_item` table; the session's next prompt starts a turn with none.
 `TurnReports` renders a `TurnReport` with `TurnReportPresenter` from the session's recorded items and the store, for the Stop hook and for `POST /api/report`, which `edi report` sends; `GET /api/report` stays the sitrep and renders the boxed `CaptainReport` with the same items ([captain-report](captain-report.md)).
 The turn report holds only what needs the captain: the calendar line while the calendar cannot be read, the decision zone when something waits on him, and this turn's done and next items when there are any.
 The decision zone keeps everything that waits on him, built by `WaitingEntries` for both reports: every open decision, every research board with questions or bound decisions, every request ready for his review with its full address, and every request still changing.
@@ -25,7 +25,8 @@ Ongoing work, parked work, the backlog, the presence and the heavy-runs `Builds:
 A failure or blocker that needs the captain always reaches the turn report, as a decision or as a done item, and is never left to the sitrep.
 A turn report with nothing in it is the one line `Nothing needs you; /sitrep shows the rest.`
 At the stop of a turn that changed state or recorded items while the captain is present, the Stop hook renders the turn report itself and hands it over in its reason, which tells the primary to paste it verbatim in one fenced block; the hook passes its pane's width, so the report fits the pane as `edi report` does ([wakes-and-turn-end](wakes-and-turn-end.md)).
-A turn report or a sitrep already rendered in the turn, as `/sitrep` renders one, means the hook hands over nothing, and a turn that recorded nothing and changed no state, or that the captain keeps quiet or away, ends without a report.
+A turn report or a sitrep shown mid-turn, as `/sitrep` shows one, covers only what the turn recorded before it: the hook hands over a report again only for an item recorded after it, since each item keeps the moment it was recorded.
+A turn that recorded nothing and changed no state, or that the captain keeps quiet or away, ends without a report.
 
 ## Why
 

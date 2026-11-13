@@ -21,10 +21,6 @@ public record Turn(List<TurnItem> done, List<TurnItem> next, Map<String, TaskWor
         return new Turn(joined(done, later.done), joined(next, later.next), rewordedBy(later.tasks));
     }
 
-    public boolean recordsNothing() {
-        return done.isEmpty() && next.isEmpty() && tasks.isEmpty();
-    }
-
     public String wording() {
         Stream<String> doneAndNext = Stream.concat(done.stream(), next.stream()).map(TurnItem::text);
         Stream<String> taskWordings = tasks.values().stream().flatMap(task -> Stream.of(task.text(), task.state()));

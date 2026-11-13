@@ -17,7 +17,7 @@ public enum TurnEnd {
         if (turn == null || turn.stopsBlocked() >= MOST_BLOCKED_STOPS) {
             return ENDS;
         }
-        if (circumstances.needsTheReport() && !turn.renderedTheReport()) {
+        if (circumstances.needsTheReport(turn)) {
             return HANDS_OVER_THE_REPORT;
         }
         if (circumstances.needsAWait()) {

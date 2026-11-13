@@ -26,11 +26,4 @@ class TurnTest {
         assertThat(recorded.tasks()).containsOnly(Map.entry("fit-lamp", new TaskWording(null, "fitted", null)),
                 Map.entry("ring-bell", new TaskWording("Ring the bell", null, null)));
     }
-
-    @Test
-    void recordsNothingOnlyWithoutAnyItemOrWording() {
-        assertThat(Turn.NONE.recordsNothing()).isTrue();
-        assertThat(new Turn(List.of(), List.of(TEST), Map.of()).recordsNothing()).isFalse();
-        assertThat(new Turn(List.of(), List.of(), Map.of("fit-lamp", new TaskWording(null, "fitted", null))).recordsNothing()).isFalse();
-    }
 }
