@@ -3,6 +3,8 @@ package io.github.ythibos.edi.web.report;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.ythibos.edi.domain.report.TurnItem;
+
 final class ReportLines {
 
     private static final String SECTION_RULE = "─";

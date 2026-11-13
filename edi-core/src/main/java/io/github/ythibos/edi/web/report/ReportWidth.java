@@ -16,6 +16,10 @@ public record ReportWidth(int columns) {
         return new ReportWidth(STANDARD_COLUMNS);
     }
 
+    public static ReportWidth forPaneIfKnown(Integer paneWidth) {
+        return paneWidth == null ? standard() : forPane(paneWidth);
+    }
+
     public static ReportWidth forPane(int paneWidth) {
         return new ReportWidth(Math.clamp((long) paneWidth - CLAUDE_CODE_INDENT, FEWEST_COLUMNS, STANDARD_COLUMNS));
     }

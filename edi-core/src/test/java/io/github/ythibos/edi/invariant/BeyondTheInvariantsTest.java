@@ -54,7 +54,6 @@ import io.github.ythibos.edi.application.migration.MigrationReport;
 import io.github.ythibos.edi.application.migration.SetAsideSection;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.wake.StreamPoll;
-import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.branch.BranchName;
@@ -70,6 +69,7 @@ import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.presence.PresenceCause;
 import io.github.ythibos.edi.domain.presence.PresenceMode;
 import io.github.ythibos.edi.domain.primary.SessionSource;
+import io.github.ythibos.edi.domain.primary.TurnEnd;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -337,7 +337,7 @@ class BeyondTheInvariantsTest {
         home.primaryHooks().promptSubmitted(session, "<task-notification><status>completed</status></task-notification>");
         home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Which lamp?"), Actor.PRIMARY);
         home.waitForWakes().heard(session, new StreamPoll(UUID.randomUUID(), home.processes().ownId(), true, List.of(), false));
-        HookAnswer quietStop = home.primaryHooks().stopping(session);
+        TurnEnd quietStop = home.primaryHooks().stopping(session);
         home.eventFollowers().followTheLog();
         home.eventFollowers().followTheLog();
         Presence afterAMonth = followedAfter(home, Duration.ofDays(30));
@@ -346,7 +346,7 @@ class BeyondTheInvariantsTest {
         assertThat(beforeTheThreshold.mode()).isEqualTo(PresenceMode.PRESENT);
         assertThat(afterTheThreshold).extracting(Presence::mode, Presence::cause, Presence::since)
                 .containsExactly(PresenceMode.QUIET, PresenceCause.SILENCE, TestHome.START.plus(Duration.ofMinutes(15)));
-        assertThat(quietStop).isEqualTo(HookAnswer.PROCEED);
+        assertThat(quietStop).isEqualTo(TurnEnd.ENDS);
         assertThat(home.windowsSide().toasts()).containsExactly("Decision D1 waits on you | Which lamp?");
         assertThat(afterAMonth.mode()).isEqualTo(PresenceMode.QUIET);
         assertThat(returnBrief).contains("While you were away (quiet since 2026-10-15 09:15 UTC, after a stretch without a typed message):",

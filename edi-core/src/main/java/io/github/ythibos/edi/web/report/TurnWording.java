@@ -3,6 +3,8 @@ package io.github.ythibos.edi.web.report;
 import java.util.List;
 import java.util.Map;
 
+import io.github.ythibos.edi.domain.report.TaskWording;
+import io.github.ythibos.edi.domain.report.Turn;
 import io.github.ythibos.edi.domain.task.Task;
 
 final class TurnWording {

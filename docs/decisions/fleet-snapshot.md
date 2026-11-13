@@ -34,7 +34,7 @@ A worker status of `needs-decision` or `blocked` is addressed to the primary (`S
 The sitrep page reads one document, `edi-sitrep.v1`, from `SitrepConsolePresenter`: the cards, the recent answers, at most ten landed and twenty charted tasks with their totals, the machine, the address word, the zone and the presence, so a 2 MB backlog gives a document of a few kilobytes.
 Each ongoing task (`ConsoleSitrep.Ongoing`) carries its work key from its intake as its own `key` field, null for an unkeyed task, and a title with a leading copy of that key taken off, together with the separator after it (spaces, a colon, a bar or a dash); the key counts as leading only when it ends where the title's word ends, so `EDI-31` never takes the start off a title beginning with `EDI-310`, and the match ignores case.
 The console's `OngoingList` shows the key first in the mono face and the ion colour, then the title, and an unkeyed task shows its title alone, with no placeholder.
-The primary passes what its turn did as a small JSON document on standard input to `edi report`, which merges it with the snapshot ([captain-report](captain-report.md)).
+The primary records what its turn did with `edi turn`, one item at a time or as a small JSON document on standard input, and the turn report and the sitrep merge the recorded items with the snapshot ([turn-report](turn-report.md)).
 
 ## Why
 
@@ -77,4 +77,5 @@ When a presenter needs data the snapshot cannot carry cheaply, the work board ne
 - 03/11/2026: a worker's question to the primary showed only as an ongoing task's `with EDI`, so it went unseen for an hour; the open questions joined the decision zone as waiting on EDI (EDI-154).
 - 09/11/2026: every finished request read as changing for up to an hour while its pipeline only watched its green CI for the merge, so the captain either waited or merged past the sitrep; a CI watch on passed checks no longer counts as changing the request, a handed-off or interrupted run counts as ended, a run that ended without passed checks is read again until it no longer changes the request, and a request reads as ready only out of draft on passed checks (EDI-238).
 - 12/11/2026: a run started after a done went unrecorded, so EDI observes a served task's pipeline whatever its worker reported (EDI-85).
+- 13/11/2026: the primary records its turn's items with `edi turn` as they happen, and the reports merge them with the snapshot in place of the turn document given to `edi report` (EDI-269).
 - 13/11/2026: two open decisions, each bound to its own board, were counted as four and the sitrep page showed a bound decision again as a card of its own, so a board and the decisions it binds count as one and the page deals no card for a decision a board binds (EDI-274).

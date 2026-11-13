@@ -11,6 +11,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import io.github.ythibos.edi.domain.report.TaskWording;
+import io.github.ythibos.edi.domain.report.Turn;
+import io.github.ythibos.edi.domain.report.TurnItem;
 import tools.jackson.databind.json.JsonMapper;
 
 class TurnDocumentTest {

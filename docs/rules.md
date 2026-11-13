@@ -1,7 +1,7 @@
 # Rule catalogue
 
 Every rule EDI enforces has one stable id, and every refusal, warning or check that lets something through after it fires records that id ([rule-firings](decisions/rule-firings.md)).
-`edi rules` counts the firings of a period, names the last one of each rule and lists the rules that never fired, so the weekly gardening reads what fires from recorded data.
+`edi rules` counts the firings of a period, names the last one of each rule and lists the rules that never fired, and the weekly gardening reads the same recorded firings for its week ([weekly-gardening](decisions/weekly-gardening.md)).
 This table is the catalogue: each rule's id, the classes or scripts that fire it, and what it protects.
 `RuleCatalogueTest` keeps it true: a rule in the code that is missing here, a row for a rule the code no longer has, a place that no longer fires the rule, or a sentence that differs from the code's fails the build.
 `CommandRuleFiringsTest` and `CommitMsgHookFiringsTest` do the same for the command and the `commit-msg` hook, by running them and comparing what fires with the rules this table names for them.
