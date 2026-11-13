@@ -164,6 +164,7 @@ import io.github.ythibos.edi.application.spark.SortSpark;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
+import io.github.ythibos.edi.application.supervision.LeaveTheOutageList;
 import io.github.ythibos.edi.application.supervision.NoticeDueHolds;
 import io.github.ythibos.edi.application.supervision.OutageHoldList;
 import io.github.ythibos.edi.application.supervision.OutageListQuery;
@@ -526,7 +527,11 @@ public final class TestHome {
     }
 
     public TaskStages taskStages() {
-        return new TaskStages(tasks, events);
+        return new TaskStages(tasks, events, leaveTheOutageList());
+    }
+
+    public LeaveTheOutageList leaveTheOutageList() {
+        return new LeaveTheOutageList(outages, tasks, events);
     }
 
     public BacklogQuery backlog() {
@@ -1011,7 +1016,7 @@ public final class TestHome {
     }
 
     public OutageHoldList outageHoldList() {
-        return new OutageHoldList(outages, tasks, notices, events, workerList(), clock, transaction);
+        return new OutageHoldList(outages, tasks, notices, events, workerList(), leaveTheOutageList(), clock, transaction);
     }
 
     public OutageListQuery outageList() {

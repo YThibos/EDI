@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.NoticeKind;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerNotice;
@@ -29,16 +30,18 @@ public class OutageHoldList {
     private final NoticeStore notices;
     private final EventLog events;
     private final WorkerListQuery workers;
+    private final LeaveTheOutageList leaving;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public OutageHoldList(OutageStore outages, TaskStore tasks, NoticeStore notices, EventLog events, WorkerListQuery workers, Clock clock,
-            TransactionTemplate transaction) {
+    public OutageHoldList(OutageStore outages, TaskStore tasks, NoticeStore notices, EventLog events, WorkerListQuery workers, LeaveTheOutageList leaving,
+            Clock clock, TransactionTemplate transaction) {
         this.outages = outages;
         this.tasks = tasks;
         this.notices = notices;
         this.events = events;
         this.workers = workers;
+        this.leaving = leaving;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -50,9 +53,15 @@ public class OutageHoldList {
     List<OutageEntry> hold(List<DeadWorker> dead) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
-            dead.stream().filter(lost -> outages.holding(lost.worker().id().task()).isEmpty()).forEach(lost -> list(lost, now));
+            leaving.everyTaskWithNothingLeftToResume(now);
+            dead.stream().filter(this::isWorthListing).forEach(lost -> list(lost, now));
             return outages.open();
         });
+    }
+
+    private boolean isWorthListing(DeadWorker lost) {
+        TaskId task = lost.worker().id().task();
+        return outages.holding(task).isEmpty() && tasks.get(task).hasWorkToResume();
     }
 
     private void list(DeadWorker lost, Instant now) {
@@ -73,7 +82,7 @@ public class OutageHoldList {
 
     private void holdTheTask(OutageEntry entry, Instant now) {
         Task task = tasks.get(entry.task());
-        if (!task.isHeld() && !task.isClosed()) {
+        if (!task.isHeld()) {
             Task held = task.held(entry.hold());
             tasks.update(held);
             events.record(new TaskHeld(held.id(), held.hold()), Actor.CORE, now);

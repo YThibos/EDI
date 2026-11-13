@@ -241,7 +241,7 @@ public class LaunchWorker {
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
-        return answered != null && task.isHeld() && answered.holds(task.hold()) ? task.released() : task;
+        return answered == null ? task : answered.withoutItsHold(task);
     }
 
     private SessionStart sessionStartFor(LaunchKind kind, Task task, Worker earlier, ProjectEntry project, OutageEntry answered) {
@@ -368,7 +368,7 @@ public class LaunchWorker {
             return;
         }
         Task task = tasks.get(answered.task());
-        Task released = withoutTheOutageHold(task, answered);
+        Task released = answered.withoutItsHold(task);
         if (task.isHeld() && !released.isHeld()) {
             tasks.update(released);
             events.record(new TaskReleased(released.id()), actor, now);

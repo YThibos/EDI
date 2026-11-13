@@ -32,6 +32,7 @@ import io.github.ythibos.edi.application.worker.SteerDelivery;
 import io.github.ythibos.edi.application.worker.WorkerList;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -39,6 +40,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -231,8 +233,63 @@ class SupervisionAndRecoveryTest {
             assertThat(afterTheRestart.eventTypesOf(new TaskId("fit-lamp"))).doesNotContain("LostInOutage", "TaskHeld", "WorkerDied");
         }
 
+        @Test
+        @DisplayName("A held task whose request the captain then records merged leaves the list, and the others keep their numbers")
+        @Tag("adapter")
+        void mergedWorkLeavesTheList() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            Worker lamp = WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            WorkerFixtures.dispatchedShip(home, "tune-horn", "HRN-4");
+            WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5");
+            FixtureRepository copy = FixtureRepository.at(home.home().worktreeOf(new ProjectName("harness"), lamp.id().task()));
+            copy.write("lamp.txt", "brass\n").commit("HRN-3 Fit the lamp");
+            MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, lamp);
+            home.runtime().restartTheServer();
+            home.judgeWorkers().judge();
+
+            home.forge().merges(draft.address(), landedOnMain(copy));
+            home.followMerges().mergedSaysTheCaptain(draft.address().url(), Actor.PRIMARY);
+
+            assertThat(numbersAndTasks(home.outageList().list())).containsExactly("2 tune-horn", "3 ring-bell");
+            assertThat(home.outageHoldList().holdTheDead()).extracting(OutageEntry::number).containsExactly(2, 3);
+            assertThat(home.tasks().get(lamp.id().task()).state()).isEqualTo(TaskState.DONE);
+        }
+
+        @Test
+        @DisplayName("A held task the captain drops by its number leaves the list, and the others keep their numbers")
+        @Tag("adapter")
+        void droppedWorkLeavesTheList() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            WorkerFixtures.dispatchedShip(home, "fit-lamp", "HRN-3");
+            WorkerFixtures.dispatchedShip(home, "tune-horn", "HRN-4");
+            WorkerFixtures.dispatchedShip(home, "ring-bell", "HRN-5");
+            home.runtime().restartTheServer();
+            home.judgeWorkers().judge();
+
+            home.dropFromOutage().drop(2, false, captainSays(home, "Drop number 2.", "tune-horn"), Actor.PRIMARY);
+
+            assertThat(numbersAndTasks(home.outageList().list())).containsExactly("1 fit-lamp", "3 ring-bell");
+            assertThat(home.tasks().get(new TaskId("tune-horn")).state()).isEqualTo(TaskState.DROPPED);
+        }
+
         private static List<String> numbersAndTasks(OutageList list) {
             return list.entries().stream().map(entry -> entry.entry().number() + " " + entry.task().id()).toList();
+        }
+
+        private static CallingSession captainSays(TestHome home, String words, String task) {
+            UUID session = UUID.randomUUID();
+            home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
+            home.primaryHooks().promptSubmitted(session, words);
+            CallingSession calling = new CallingSession(session);
+            home.captainsWord().record(calling, new Citation.Verbatim(words), TaskReference.parse(task), null, Actor.PRIMARY);
+            return calling;
+        }
+
+        private String landedOnMain(FixtureRepository copy) throws IOException {
+            FixtureRepository upstream = FixtureRepository.at(directory.resolve("upstream/harness"));
+            upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+            upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+            return upstream.commit("Land " + copy.root().getFileName()).head();
         }
     }
 
