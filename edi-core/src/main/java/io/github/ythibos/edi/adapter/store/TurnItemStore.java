@@ -72,7 +72,7 @@ public class TurnItemStore {
     private int nextPositionIn(UUID session) {
         return store.sql("select coalesce(max(position) + 1, 0) from turn_item where session_id = :session")
                 .param("session", session.toString())
-                .query(Integer.class)
+                .query((row, _) -> row.getInt(1))
                 .single();
     }
 
