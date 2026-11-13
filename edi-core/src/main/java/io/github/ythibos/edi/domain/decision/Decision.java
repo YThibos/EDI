@@ -1,6 +1,8 @@
 package io.github.ythibos.edi.domain.decision;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
@@ -46,6 +48,22 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     public boolean isOpen() {
         return answer == null;
+    }
+
+    public boolean wasAnsweredSince(Instant at) {
+        return !isOpen() && !answer.answeredAt().isBefore(at);
+    }
+
+    public String answerForItsWorker() {
+        List<String> lines = new ArrayList<>(List.of("Answer to " + number + " " + card.title()));
+        if (answer.choosesAnOption()) {
+            lines.add("Chosen: option " + answer.option() + ", " + card.optionOf(answer.option()).text());
+        }
+        lines.add("The captain's words: \"" + answer.verbatim() + "\"");
+        if (!answer.interpretation().isEmpty()) {
+            lines.add("Understood as: " + answer.interpretation());
+        }
+        return String.join("\n", lines);
     }
 
     public CaptainHold holdOnItsTask() {

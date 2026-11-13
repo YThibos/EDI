@@ -9,6 +9,10 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.UndeliveredAnswer;
+import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeStream;
 
 class PrimaryRulesTest {
@@ -61,17 +65,32 @@ class PrimaryRulesTest {
     void endsATurnOnlyAfterTheReportWhenStateChangedAndWithAWaitWhileWorkIsInFlight() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
 
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, false, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, false, false))).contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, false, false, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false)))
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, false, false, List.of()))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, false, false, List.of()))).contains(TurnEnd.RENDER_THE_REPORT);
+        assertThat(TurnEnd.blockingReason(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, false, false, false, List.of()))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false, List.of())))
                 .contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, false, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, true, false))).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, false))).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, true))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, true, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(null, new TurnCircumstances(true, false, true, false))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, false, false, List.of()))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, true, false, List.of()))).contains(TurnEnd.START_THE_WAIT);
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, false, List.of()))).contains(TurnEnd.START_THE_WAIT);
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, true, List.of()))).isEmpty();
+        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, true, false, List.of())))
+                .isEmpty();
+        assertThat(TurnEnd.blockingReason(null, new TurnCircumstances(true, false, true, false, List.of()))).isEmpty();
+    }
+
+    @Test
+    void holdsATurnFirstForAnAnsweredDecisionWhoseWorkerStillWaitsOnItsQuestion() {
+        PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
+        List<UndeliveredAnswer> undelivered = List.of(new UndeliveredAnswer(new DecisionNumber(7), new TaskId("fit-lamp"), new StatusKey("lamp-choice")),
+                new UndeliveredAnswer(new DecisionNumber(9), new TaskId("hang-bell"), new StatusKey("nm-4-review")));
+
+        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, true, false, undelivered))).contains(
+                "D7 is answered and the worker of fit-lamp still waits on its question lamp-choice: carry the answer with edi steer fit-lamp --resolves lamp-choice."
+                        + " D9 is answered and the worker of hang-bell still waits on its question nm-4-review: carry the answer with edi steer hang-bell"
+                        + " --resolves nm-4-review. Then stop.");
+        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(false, false, false, false, undelivered)))
+                .isEmpty();
     }
 
     @Test

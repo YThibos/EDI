@@ -97,7 +97,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case DECISION_ROUND -> wake.task() + ": " + wake.detail() + " is in the round of decisions due now.";
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";
             case TICKET_REFUSED -> wake.task() + ": the tracker refused " + wake.detail();
-            case DECISION_ANSWERED -> wake.task() + ": the captain answered " + wake.detail() + "; carry the answer to its work.";
+            case DECISION_ANSWERED -> wake.task() + ": the captain answered " + wake.detail()
+                    + "; a worker waiting on its question already has the answer as a steer, so carry it only where that steer does not reach.";
             case RECHECK_ASKED -> wake.task() + ": the captain asks to re-check " + wake.detail()
                     + "; verify the latest state against reality, then close it with evidence or keep it open with a note.";
             case BOARD_ANSWERED -> wake.task() + ": the captain answered on " + wake.detail() + "; its worker has them in its inbox.";

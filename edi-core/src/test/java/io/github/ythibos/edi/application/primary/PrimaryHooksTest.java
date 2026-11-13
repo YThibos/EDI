@@ -16,19 +16,31 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.wake.StreamPoll;
 import io.github.ythibos.edi.application.worker.HookAnswer;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
+import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
 class PrimaryHooksTest {
+
+    private static final StatusKey LAMP_CHOICE = new StatusKey("lamp-choice");
 
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
@@ -111,6 +123,28 @@ class PrimaryHooksTest {
     }
 
     @Test
+    void holdsTheTurnWhileAnAnsweredDecisionLeavesItsWorkersQuestionUnresolved() {
+        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+        streamIn(primary, home.processes().ownId(), true);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
+        recordAnAnswerThatNeverReachedTheWorker(home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Brass or oil?"), Actor.PRIMARY));
+        home.primaryHooks().reportRendered(primary);
+
+        HookAnswer held = home.primaryHooks().stopping(primary);
+        home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Use the oil lamp.", LAMP_CHOICE, Actor.PRIMARY);
+        home.primaryHooks().reportRendered(primary);
+        HookAnswer carried = home.primaryHooks().stopping(primary);
+
+        assertThat(held.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
+        assertThat(held.reason()).isEqualTo("D1 is answered and the worker of fit-lamp still waits on its question lamp-choice:"
+                + " carry the answer with edi steer fit-lamp --resolves lamp-choice. Then stop.");
+        assertThat(carried).isEqualTo(HookAnswer.PROCEED);
+    }
+
+    @Test
     void seesTheWakeStreamLiveUntilItsProcessIsGone() throws IOException {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();
@@ -180,6 +214,11 @@ class PrimaryHooksTest {
 
         assertThat(home.sessionStartDigest().digestFor(next).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
+    }
+
+    private void recordAnAnswerThatNeverReachedTheWorker(DecisionNumber number) {
+        CaptainAnswer answer = new CaptainAnswer("B", new OptionKey('B'), "", home.clock().now(), AnswerChannel.CONSOLE);
+        home.decisions().save(home.decisions().get(number).answered(answer));
     }
 
     private void streamIn(UUID session, long pid, boolean follows) {

@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.worker;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -43,20 +44,29 @@ public class SteerWorker {
     }
 
     public Steered steer(TaskReference reference, String body, StatusKey resolves, Actor actor) {
-        Sent sent = transaction.execute(_ -> sent(tasks.get(reference).id(), body, resolves, actor));
-        return new Steered(sent.message(), sent.worker(), notice.deliver(sent.worker(), sent.message()));
+        StoredSteer stored = transaction.execute(_ -> stored(WorkerLookup.servingTask(workers, tasks.get(reference).id()), body, resolves, actor));
+        return announced(stored);
     }
 
-    private Sent sent(TaskId task, String body, StatusKey resolves, Actor actor) {
+    public Optional<StoredSteer> answerTheOpenQuestionOf(TaskId task, String answer, Actor actor) {
+        return transaction.execute(_ -> workers.latestOf(task)
+                .flatMap(worker -> worker.openQuestion().map(question -> stored(worker, answer, question.key(), actor))));
+    }
+
+    public Steered announced(StoredSteer stored) {
+        return new Steered(stored.message(), stored.worker(), notice.deliver(stored.worker(), stored.message()));
+    }
+
+    private StoredSteer stored(Worker worker, String body, StatusKey resolves, Actor actor) {
         Instant now = clock.now();
-        Worker worker = WorkerLookup.servingTask(workers, task);
+        TaskId task = worker.id().task();
         InboxMessage message = InboxMessage.sent(task, inbox.nextNumber(task), body, resolves, now);
         inbox.save(message);
         events.record(new SteerSent(task, message.number(), resolves), actor, now);
         if (resolves != null) {
             recordResolved(worker, message, actor, now);
         }
-        return new Sent(message, worker);
+        return new StoredSteer(message, worker);
     }
 
     private void recordResolved(Worker worker, InboxMessage message, Actor actor, Instant now) {
@@ -67,6 +77,6 @@ public class SteerWorker {
     public record Steered(InboxMessage message, Worker worker, SteerDelivery delivery) {
     }
 
-    private record Sent(InboxMessage message, Worker worker) {
+    public record StoredSteer(InboxMessage message, Worker worker) {
     }
 }

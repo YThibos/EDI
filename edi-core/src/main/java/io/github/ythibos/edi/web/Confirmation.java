@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.web;
 
 import java.util.List;
+import java.util.Optional;
 
 import io.github.ythibos.edi.application.delivery.DeliverDraft.DeliveredDraft;
 import io.github.ythibos.edi.application.delivery.DiscardedWork;
@@ -41,7 +42,7 @@ public sealed interface Confirmation {
     record Raised(DecisionNumber number) implements Confirmation {
     }
 
-    record Answered(Decision decision, Task task, TicketSettlement ticket) implements Confirmation {
+    record Answered(Decision decision, Task task, TicketSettlement ticket, Optional<SteerWorker.Steered> carried) implements Confirmation {
     }
 
     record Dispatched(DispatchOutcome.Launched launched) implements Confirmation {

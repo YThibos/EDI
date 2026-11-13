@@ -60,7 +60,7 @@ class DecisionController {
         AnswerChannel channel = caller.answeringChannel("edi decision answer");
         String verbatim = channel == AnswerChannel.CHAT ? captainsWord.requireCited(caller.callingSession(), request.citation()) : request.verbatim();
         AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel, verbatim), caller.actor());
-        return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket());
+        return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket(), answered.carriedToItsWorker());
     }
 
     @PostMapping("/api/decisions/{reference}/recheck")

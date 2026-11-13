@@ -38,9 +38,10 @@ description: >-
 - Such a decision waits in the console for its round of decisions, and the core wakes you when the round is due: never put it to the captain on its own before then.
 - Only a decision that blocks the captain's current work gets `"urgent": true` on its card, which puts it before them at once.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
-- Carry the captain's answer back with `edi steer <task> --resolves <key>`.
+- An answer to a decision reaches the task's worker by itself when the worker waits on a question: `edi decision answer` sends it as a steer that resolves the question's key, in the same call.
 - A steer that changes a task's scope is first recorded with `edi task note <task>`, which rewrites the brief and the pipeline intent, so the pipeline's review counts it as asked for.
-- Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as yours until the worker acknowledges the steer that resolves it.
+- Settle a worker question that needs no decision card with one `edi steer <task> --resolves <key>`: the sitrep page shows a worker's question as yours until the worker acknowledges the steer that resolves it.
+- Your turn cannot end while an answered decision leaves its worker's question unresolved; the stop hook names the steer that carries it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.
 
 ## Done, delivery and landing

@@ -1,6 +1,10 @@
 package io.github.ythibos.edi.domain.primary;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import io.github.ythibos.edi.domain.decision.UndeliveredAnswer;
 
 public final class TurnEnd {
 
@@ -15,6 +19,9 @@ public final class TurnEnd {
         if (turn == null || turn.stopsBlocked() >= MOST_BLOCKED_STOPS) {
             return Optional.empty();
         }
+        if (circumstances.leavesAnAnswerUndelivered()) {
+            return Optional.of(carryTheAnswers(circumstances.undeliveredAnswers()));
+        }
         if (circumstances.needsTheReport() && !turn.renderedTheReport()) {
             return Optional.of(RENDER_THE_REPORT);
         }
@@ -22,5 +29,14 @@ public final class TurnEnd {
             return Optional.of(START_THE_WAIT);
         }
         return Optional.empty();
+    }
+
+    private static String carryTheAnswers(List<UndeliveredAnswer> undelivered) {
+        return undelivered.stream().map(TurnEnd::carryTheAnswer).collect(Collectors.joining(" ")) + " Then stop.";
+    }
+
+    private static String carryTheAnswer(UndeliveredAnswer answer) {
+        return answer.decision() + " is answered and the worker of " + answer.task() + " still waits on its question " + answer.question()
+                + ": carry the answer with edi steer " + answer.task() + " --resolves " + answer.question() + ".";
     }
 }

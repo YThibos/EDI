@@ -213,7 +213,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String answerRecorded(Answered answered) {
         String option = answered.decision().answer().choosesAnOption() ? " (option " + answered.decision().answer().option() + ")" : "";
         String outcome = answered.task().isDone() ? " is done." : " is " + answered.task().state().word() + " again.";
-        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered);
+        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered)
+                + carriedOf(answered);
     }
 
     private static String ticketOf(Answered answered) {
@@ -226,5 +227,12 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case TicketSettlement.AskedAgain asked -> " You could not carry out the answer, so you raised the decision again: " + asked.because();
             case TicketSettlement.DropChosen _ -> " It books on no ticket; the answer authorises edi task drop " + answered.task().id() + ".";
         };
+    }
+
+    private static String carriedOf(Answered answered) {
+        return answered.carried()
+                .map(steered -> " The answer resolves " + steered.message().resolves() + ", the question its worker waits on. "
+                        + WorkerSentences.steered(steered))
+                .orElse("");
     }
 }

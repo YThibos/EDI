@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -73,8 +75,20 @@ class ConfirmationTextTest {
         Task closed = Stages.answered(PresenterFixtures.captainItem()
                 .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
 
-        assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), closed, TicketSettlement.none())))
+        assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), closed, TicketSettlement.none(), Optional.empty())))
                 .isEqualTo("Recorded the answer to D58 (option A); lamp-choice is done.\n");
+    }
+
+    @Test
+    void confirmsAnAnswerCarriedToTheWorkerWaitingOnItsQuestion() {
+        Task released = PresenterFixtures.lantern();
+        Worker waiting = relaunchedAs(LaunchKind.DISPATCH);
+        InboxMessage carried = InboxMessage.sent(LANTERN, 2, "Answer to D58", new StatusKey("lamp-choice"), PresenterFixtures.AT);
+        Optional<SteerWorker.Steered> steered = Optional.of(new SteerWorker.Steered(carried, waiting, SteerDelivery.AT_THE_NEXT_STOP));
+
+        assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, TicketSettlement.none(), steered)))
+                .isEqualTo("Recorded the answer to D58 (option A); lantern is queued again. The answer resolves lamp-choice, the question its worker waits on."
+                        + " Message 2 waits for lantern#2; it is busy, so its next stop delivers the message.\n");
     }
 
     @Test
@@ -181,7 +195,7 @@ class ConfirmationTextTest {
     private String answerWith(TicketSettlement ticket) {
         Task released = Stages.answered(PresenterFixtures.captainItem()
                 .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
-        return text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, ticket));
+        return text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, ticket, Optional.empty()));
     }
 
     private static Worker relaunchedAs(LaunchKind kind) {
