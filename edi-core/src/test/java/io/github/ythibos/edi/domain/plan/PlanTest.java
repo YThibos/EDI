@@ -4,11 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.tuple;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,21 +13,11 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
-import io.github.ythibos.edi.domain.task.HoldUntil;
-import io.github.ythibos.edi.domain.task.Intake;
-import io.github.ythibos.edi.domain.task.Task;
-import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.task.TaskKind;
-import io.github.ythibos.edi.domain.task.TaskStage;
 
 class PlanTest {
 
-    private static final Instant AT = Instant.parse("2026-11-13T09:00:00Z");
     private static final PlanHeading HEADING = new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"),
             "docs/research/HRN-40-plan.md", "D44", 2, EffortLevel.XHIGH);
-    private static final List<TaskId> TASKS = List.of(new TaskId("fit-lamp"), new TaskId("paint-lamp"), new TaskId("oil-gate"));
 
     @Test
     void readsAWaitFromItsWords() {
@@ -49,36 +35,6 @@ class PlanTest {
 
         assertThat(draft.slices()).extracting(SliceDraft::number, slice -> slice.awaits().words())
                 .containsExactly(tuple(1, "none"), tuple(2, "after 1 landed"), tuple(3, "after 2 merged"));
-    }
-
-    @Test
-    void showsSlicesOneAndThreeEligibleThenTwoOnceOneIsMerged() {
-        Plan plan = threeSlices();
-
-        assertThat(eligible(plan, queued())).containsExactly(1, 3);
-        assertThat(eligible(plan, with(queued(), "fit-lamp", TaskStage.WORKING))).containsExactly(3);
-        assertThat(eligible(plan, with(queued(), "fit-lamp", TaskStage.MERGED))).containsExactly(2, 3);
-    }
-
-    @Test
-    void namesTheWaitOfEachSliceWithTheStageOfTheTaskItWaitsFor() {
-        List<SliceStanding> standings = threeSlices().standings(with(queued(), "fit-lamp", TaskStage.READY));
-
-        assertThat(standings.get(1).awaits()).hasValueSatisfying(wait -> {
-            assertThat(wait.task()).isEqualTo(new TaskId("fit-lamp"));
-            assertThat(wait.awaited()).isEqualTo(AwaitedStage.MERGED);
-            assertThat(wait.stage()).isEqualTo(TaskStage.READY);
-        });
-        assertThat(standings.get(2).awaits()).isEmpty();
-    }
-
-    @Test
-    void aHeldSliceIsNotEligibleAndADroppedSliceHoldsNobodyBack() {
-        Map<TaskId, Task> tasks = with(queued(), "fit-lamp", TaskStage.DROPPED);
-        Task oilGate = tasks.get(new TaskId("oil-gate"));
-        tasks.put(oilGate.id(), oilGate.held(new CaptainHold(HoldKind.APPROVAL, "needs a yes", HoldUntil.captainsWord(), AT)));
-
-        assertThat(eligible(threeSlices(), tasks)).containsExactly(2);
     }
 
     @Test
@@ -105,25 +61,5 @@ class PlanTest {
 
     private static SliceDraft slice(int number, String key, String wait) {
         return new SliceDraft(number, "Slice " + number, CategoryId.IMPLEMENTATION, WorkKey.parse(key), "", wait == null ? null : SliceWait.parse(wait));
-    }
-
-    private static Plan threeSlices() {
-        return new PlanDraft(HEADING, List.of(slice(1, "HRN-41", null), slice(2, "HRN-42", null), slice(3, "HRN-43", "none"))).planned(TASKS);
-    }
-
-    private static Map<TaskId, Task> queued() {
-        return TASKS.stream()
-                .map(id -> Task.queued(id, new Intake(TaskKind.SHIP, id.value(), List.of(HEADING.project()), null, null, List.of(), null), "", AT))
-                .collect(Collectors.toMap(Task::id, Function.identity()));
-    }
-
-    private static Map<TaskId, Task> with(Map<TaskId, Task> tasks, String id, TaskStage stage) {
-        Task task = tasks.get(new TaskId(id));
-        tasks.put(task.id(), new Task(task.id(), task.intake(), stage, task.notes(), null, task.created(), stage.isClosed() ? AT : null));
-        return tasks;
-    }
-
-    private static List<Integer> eligible(Plan plan, Map<TaskId, Task> tasks) {
-        return plan.standings(tasks).stream().filter(SliceStanding::isEligible).map(standing -> standing.slice().number()).toList();
     }
 }

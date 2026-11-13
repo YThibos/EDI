@@ -21,3 +21,5 @@ create table plan_slice (
     check ((waits_after is null) = (waits_until is null)),
     check (waits_after < number)
 ) strict;
+
+update rule_fired set rule = 'dispatch.waits-met' where rule = 'dispatch.blockers-done';

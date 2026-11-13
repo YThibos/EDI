@@ -1,8 +1,6 @@
 package io.github.ythibos.edi.application.plan;
 
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -10,9 +8,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.store.PlanStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.domain.plan.Plan;
+import io.github.ythibos.edi.domain.plan.Slice;
+import io.github.ythibos.edi.domain.plan.SliceStanding;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Task;
-import io.github.ythibos.edi.domain.task.TaskId;
 
 @Service
 public class PlanQuery {
@@ -30,11 +29,16 @@ public class PlanQuery {
     public PlanStandings standings(WorkKey key) {
         return transaction.execute(_ -> {
             Plan plan = plans.get(key);
-            return new PlanStandings(plan, plan.standings(tasksOf(plan)));
+            return new PlanStandings(plan, standingsOf(plan));
         });
     }
 
-    private Map<TaskId, Task> tasksOf(Plan plan) {
-        return plan.tasks().stream().map(tasks::get).collect(Collectors.toMap(Task::id, Function.identity()));
+    private List<SliceStanding> standingsOf(Plan plan) {
+        return plan.slices().stream().map(this::standingOf).toList();
+    }
+
+    private SliceStanding standingOf(Slice slice) {
+        Task task = tasks.get(slice.task());
+        return new SliceStanding(slice, task, tasks.waitsOf(task));
     }
 }

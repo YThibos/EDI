@@ -119,7 +119,7 @@ public class DispatchTask {
     private void requireUnblocked(Task task) {
         List<String> unmet = tasks.waitsOf(task).stream().filter(wait -> !wait.isMet()).map(Wait::words).toList();
         if (!unmet.isEmpty()) {
-            throw new Refusal(Rule.BLOCKERS_DONE, task.id() + " waits for " + String.join(" and ", unmet) + "; it is dispatched once each wait is met.");
+            throw new Refusal(Rule.WAITS_MET, task.id() + " waits for " + String.join(" and ", unmet) + "; it is dispatched once each wait is met.");
         }
     }
 

@@ -18,10 +18,12 @@ import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.plan.PlanDraft;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.SliceDraft;
+import io.github.ythibos.edi.domain.plan.SliceStanding;
 import io.github.ythibos.edi.domain.plan.SliceWait;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
+import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -41,6 +43,7 @@ class AddPlanTest {
     private static final TaskId FIT_LAMP = new TaskId("fit-the-lamp");
     private static final TaskId PAINT_LAMP = new TaskId("paint-the-lamp");
     private static final TaskId OIL_GATE = new TaskId("oil-the-gate");
+    private static final TaskId PLAN_THE_LAMP = new TaskId("plan-work-on-fit-the-lamp");
 
     @TempDir
     private Path directory;
@@ -76,6 +79,18 @@ class AddPlanTest {
     }
 
     @Test
+    void showsASliceEligibleOnlyOnceEveryWaitOfItsTaskIsMet() throws IOException {
+        TestHome home = TestHome.in(directory).registering(REGISTRY);
+        home.addPlan().add(threeSlices(2), Actor.PRIMARY);
+
+        home.tasks().insert(Task.queued(PLAN_THE_LAMP, new Intake(TaskKind.SCOUT, "Plan the lamp", List.of(new ProjectName("harness")), null, null,
+                List.of(), null), "", TestHome.START));
+        home.tasks().update(home.tasks().get(FIT_LAMP).waitingFor(PLAN_THE_LAMP));
+
+        assertThat(eligibleIn(home)).containsExactly(OIL_GATE);
+    }
+
+    @Test
     void refusesMoreSlicesAtOnceThanItsProjectRunsAndASecondPlanOnTheSameKey() throws IOException {
         TestHome home = TestHome.in(directory).registering(REGISTRY);
 
@@ -98,5 +113,12 @@ class AddPlanTest {
 
     private static List<TaskId> readyIn(TestHome home) {
         return home.backlog().backlog(true).entries().stream().map(entry -> entry.task().id()).toList();
+    }
+
+    private static List<TaskId> eligibleIn(TestHome home) {
+        return home.planQuery().standings(WorkKey.parse("HRN-40")).slices().stream()
+                .filter(SliceStanding::isEligible)
+                .map(standing -> standing.task().id())
+                .toList();
     }
 }
