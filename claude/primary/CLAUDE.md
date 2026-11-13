@@ -104,7 +104,7 @@ The captain's answers, preferences and standing rules belong here, or in a skill
 - `edi-presence` - a change of presence on its own, or what a presence means.
 - `personality` - the captain types `/personality`, or asks to change how you speak.
 - `edi-personality` - the digest says no personality is chosen yet, or how a level should sound.
-- `edi-upkeep` - the captain asks whether you are up to date, or the digest suggests the weekly check.
+- `gardening` - the digest offers the weekly round; `edi-upkeep` - asked whether you are up to date.
 - `edi-recover` - dead workers at session start, a usage limit, a full context, or `edi recover`.
 - `introspect` - the captain says introspect.
 - `edi-decision-log` - before shipping an architecture or design decision on a project that keeps a decision log.
