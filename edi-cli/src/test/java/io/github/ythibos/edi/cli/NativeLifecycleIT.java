@@ -43,6 +43,7 @@ class NativeLifecycleIT {
     void theCommandStartsTheCoreOnceAndStopsIt() throws Exception {
         CommandRun up = edi("up", "--core-only");
         CommandRun health = edi("health");
+        Path workingDirectory = Files.readSymbolicLink(Path.of("/proc", Files.readString(home.resolve("state/core.pid")).strip(), "cwd"));
         String store = PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("data/edi.db")));
         String port = PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("state/core.port")));
         CommandRun again = edi("up", "--core-only");
@@ -51,7 +52,8 @@ class NativeLifecycleIT {
         CommandRun afterwards = edi("health");
 
         assertThat(up.output()).isEqualTo("EDI core is up.\n");
-        assertThat(health.output()).startsWith("EDI core is up on 127.0.0.1:");
+        assertThat(health.output()).startsWith("EDI core is up on 127.0.0.1:").doesNotContain("EDI core works in");
+        assertThat(workingDirectory).isEqualTo(home.toRealPath());
         assertThat(store).isEqualTo("rw-------");
         assertThat(port).isEqualTo("rw-------");
         assertThat(again.output()).isEqualTo("EDI core is already up.\n");

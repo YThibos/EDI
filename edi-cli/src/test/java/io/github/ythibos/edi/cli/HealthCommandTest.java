@@ -19,17 +19,26 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sun.net.httpserver.HttpServer;
+
+import io.github.ythibos.edi.testing.TestProcesses;
 
 import picocli.CommandLine;
 
 @Tag("adapter")
 class HealthCommandTest {
 
+    @RegisterExtension
+    private final TestProcesses processes = new TestProcesses();
+
     @TempDir
     private Path home;
+
+    @TempDir
+    private Path elsewhere;
 
     private static final String LIVE_WAIT = "The wake stream is live: edi wait --follow has run since 2026-10-26 20:31 CET.\n";
     private static final String NO_QUESTION = "No worker waits on an answer.\n";
@@ -39,6 +48,7 @@ class HealthCommandTest {
     private static final String DUMPED = "The flight recording is written to /tmp/edi/data/recordings/core-20261109-180000.jfr.\n";
 
     private HttpServer core;
+    private Process coreProcess;
     private final List<String> asked = new ArrayList<>();
     private String primaryWait = LIVE_WAIT;
     private String openQuestions = NO_QUESTION;
@@ -49,6 +59,10 @@ class HealthCommandTest {
     void stopTheStubCore() {
         if (core != null) {
             core.stop(0);
+        }
+        if (coreProcess != null) {
+            coreProcess.destroy();
+            TestProcesses.awaitExit(coreProcess.toHandle());
         }
     }
 
@@ -61,6 +75,30 @@ class HealthCommandTest {
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT + NO_QUESTION);
         assertThat(err.toString()).isEmpty();
+    }
+
+    @Test
+    void namesTheWorkingDirectoryOfACoreThatStandsOutsideItsHome() throws IOException {
+        Path checkout = Files.createDirectories(elsewhere.resolve("checkouts/lamp")).toRealPath();
+        int port = startStubCoreAnswering(200);
+        recordCoreProcessStartedIn(checkout);
+
+        int exitCode = edi("health");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + "EDI core works in " + checkout + ", not in its home " + home
+                + "; it moves into its home when it restarts.\n" + LIVE_WAIT + NO_QUESTION);
+    }
+
+    @Test
+    void saysNothingOfTheWorkingDirectoryOfACoreThatStandsInItsHome() throws IOException {
+        int port = startStubCoreAnswering(200);
+        recordCoreProcessStartedIn(home);
+
+        int exitCode = edi("health");
+
+        assertThat(exitCode).isZero();
+        assertThat(out).hasToString("EDI core is up on 127.0.0.1:" + port + ".\n" + LIVE_WAIT + NO_QUESTION);
     }
 
     @Test
@@ -201,6 +239,11 @@ class HealthCommandTest {
         recordCorePort(core.getAddress().getPort());
         Files.writeString(home.resolve("state/core.token"), "home-token");
         return core.getAddress().getPort();
+    }
+
+    private void recordCoreProcessStartedIn(Path directory) throws IOException {
+        coreProcess = processes.register(new ProcessBuilder("cat").directory(directory.toFile()).start());
+        Files.writeString(home.resolve("state/core.pid"), coreProcess.pid() + "\n");
     }
 
     private void recordCorePort(int port) throws IOException {
