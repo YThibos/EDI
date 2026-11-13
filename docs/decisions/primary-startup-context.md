@@ -17,7 +17,9 @@ Claude Code loads an output style named by the session's `outputStyle` setting i
 The style keeps Claude Code's own coding instructions (`keep-coding-instructions: true`), as the appended prompt did.
 `PrimaryPrompt` composes the prompt from the anchor bundled in the core, the checkout's `personal/anchor.local.md`, and each non-empty memory file loaded at session start, and refuses an anchor and addendum above 10,000 bytes.
 `SessionStartDigestQuery` reads, from the store, the home and tmux, the session's standing, the address word, the personality ([personality](personality.md)), the previous primary's usage-limit stop, the fleet snapshot, every serving worker's health, the open outage list, the unacknowledged wakes, the presence, the memory check, the count of expired and unticketed workarounds, the files missing from the EDI home (`HomeSetup`), the sitrep page's opening ([console](console.md)) and whether the weekly upkeep is due, which it is on Mondays (`WeeklyUpkeep`).
-`CheckTheSessionAnchor` holds the anchor present when the hook's `cwd` is the EDI home and the home's output style carries the anchor the core bundles; when it does not, the digest's first line after its title says the anchor is missing, why, and which file to read now.
+`CheckTheSessionAnchor` holds the anchor present when the directory Claude Code started the session in is the EDI home and the home's output style carries the anchor the core bundles; `edi hook` forwards that directory from `CLAUDE_PROJECT_DIR` as the `EDI-Claude-Project-Dir` header, and the hook's `cwd`, where the session may since have moved, stands in only when the header is absent.
+When the check fails, the digest's first line after its title says the anchor is missing, why, and which file to read now.
+Every primary's digest, standby included, then asks the session to confirm that its system prompt holds the anchor's heading and, if it does not, to read the output style at once and tell the captain it runs without its anchor.
 `SessionStartDigestText` writes it as plain lines, the primary's `SessionStart` hook answers it as `additionalContext`, and it ends by asking for the one wake stream, `edi wait --follow` alone under the Monitor tool, while work is in flight, except in a standby session ([wakes-and-turn-end](wakes-and-turn-end.md)).
 `MemoryFiles` reads `memory/profile.md`, `machine.md` and `learnings.md`; `StartupMemory` estimates tokens as characters divided by four against `memory.startupBudgetTokens` (18,000 when absent) and fails above the budget or on a heading repeated across the files.
 `edi memory check` answers that check, `edi memory stow-list` lists repeated headings, undated entries and learnings unconfirmed for 90 days for `/stow`, and `DailyMemoryCheck` raises one notification when the memory first grows past its budget.
@@ -50,7 +52,7 @@ A measured budget and a list of what to curate keep memory a map rather than a j
 
 - Good: AT-23 compares the whole digest before a crash and after the restart, and AT-33 holds.
 - Bad: memory curated during a session loads only in the next one, and a digest above 10,000 characters arrives as a preview.
-- Bad: the anchor check reads the conditions under which Claude Code loads the style, not the system prompt itself, which no hook sees; a Claude Code that ignored `outputStyle` would go unnoticed.
+- Bad: the anchor check reads the conditions under which Claude Code loads the style, not the system prompt itself, which no hook sees, so the model's own confirmation against its system prompt is the last check.
 
 ## When to revisit
 

@@ -59,8 +59,8 @@ public class SessionStartDigestQuery {
         this.transaction = transaction;
     }
 
-    public SessionStartDigest digestFor(UUID session, Path workingDirectory) {
-        return new SessionStartDigest(anchor.forSessionStartedIn(workingDirectory), roles.standingOf(session), personality.current(),
+    public SessionStartDigest digestFor(UUID session, Path projectDirectory) {
+        return new SessionStartDigest(anchor.forSessionStartedIn(projectDirectory), roles.standingOf(session), personality.current(),
                 transaction.execute(_ -> limitStopToTell(session)), fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()),
                 transaction.execute(_ -> wakes.unacknowledged().size()), presence.current(), memory.check(), memory.workarounds(),
                 WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), clock.zone())), home.missing(), null);

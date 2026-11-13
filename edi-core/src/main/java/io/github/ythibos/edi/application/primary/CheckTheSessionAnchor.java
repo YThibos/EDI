@@ -19,21 +19,26 @@ public class CheckTheSessionAnchor {
         this.home = home;
     }
 
-    public SessionAnchor forSessionStartedIn(Path workingDirectory) {
-        return new SessionAnchor(runsInTheHome(workingDirectory) && theOutputStyleHoldsTheAnchor(), home.root(), home.primaryOutputStyle());
+    public SessionAnchor forSessionStartedIn(Path projectDirectory) {
+        String anchor = PrimaryLayer.read(PrimaryLayer.ANCHOR);
+        return new SessionAnchor(runsInTheHome(projectDirectory) && theOutputStyleHolds(anchor), headingOf(anchor), home.root(), home.primaryOutputStyle());
     }
 
-    private boolean runsInTheHome(Path workingDirectory) {
+    private boolean runsInTheHome(Path projectDirectory) {
         try {
-            return workingDirectory != null && Files.isSameFile(workingDirectory, home.root());
+            return projectDirectory != null && Files.isSameFile(projectDirectory, home.root());
         } catch (IOException noSuchDirectory) {
             return false;
         }
     }
 
-    private boolean theOutputStyleHoldsTheAnchor() {
+    private boolean theOutputStyleHolds(String anchor) {
         Path style = home.primaryOutputStyle();
-        return Files.isRegularFile(style) && PrimaryOutputStyle.holdsTheAnchor(read(style), PrimaryLayer.read(PrimaryLayer.ANCHOR));
+        return Files.isRegularFile(style) && PrimaryOutputStyle.holdsTheAnchor(read(style), anchor);
+    }
+
+    private static String headingOf(String anchor) {
+        return anchor.lines().findFirst().orElseThrow();
     }
 
     private static String read(Path style) {

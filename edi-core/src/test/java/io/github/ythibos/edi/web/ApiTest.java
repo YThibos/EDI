@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -727,10 +728,26 @@ class ApiTest {
         primaryHook(inTheHome, "session-end", "{\"reason\":\"prompt_input_exit\"}");
         primaryHook(outside, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
-        assertThat(digestIn(anchored)).doesNotContain("The anchor is not in this session");
+        assertThat(digestIn(anchored)).startsWith("EDI session-start digest\n" + confirmationOfTheAnchor() + "\n")
+                .doesNotContain("The anchor is not in this session");
         assertThat(digestIn(unanchored)).startsWith("EDI session-start digest\nThe anchor is not in this session: Claude Code loads it, as the"
                 + " edi-primary output style the primary's settings name, only for a session started in " + home + ". Read "
-                + home.resolve(".claude/output-styles/edi-primary.md") + " now");
+                + home.resolve(".claude/output-styles/edi-primary.md") + " now")
+                .contains(" until edi up starts the primary again.\n" + confirmationOfTheAnchor() + "\n");
+    }
+
+    @Test
+    void judgesTheAnchorByTheDirectoryClaudeCodeStartedThePrimaryInRatherThanWhereItHasSinceMoved(@TempDir Path workerDirectory) throws Exception {
+        UUID primary = UUID.randomUUID();
+
+        post("/api/primary/launch", "{}", TEXT);
+        HttpResponse<String> compacted = send(inSession(primary, "/api/hooks/session-start", JSON).header("Content-Type", JSON)
+                .header("EDI-Claude-Project-Dir", URLEncoder.encode(home.toString(), StandardCharsets.UTF_8))
+                .POST(BodyPublishers.ofString("{\"session_id\":\"" + primary + "\",\"source\":\"compact\",\"cwd\":\"" + workerDirectory + "\"}")));
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(digestIn(compacted)).startsWith("EDI session-start digest\n" + confirmationOfTheAnchor() + "\n")
+                .doesNotContain("The anchor is not in this session");
     }
 
     @Test
@@ -816,6 +833,12 @@ class ApiTest {
 
     private static String digestIn(HttpResponse<String> sessionStart) {
         return new JsonMapper().readTree(sessionStart.body()).path("hookSpecificOutput").path("additionalContext").asString();
+    }
+
+    private static String confirmationOfTheAnchor() {
+        return "Confirm that this session's system prompt holds the heading \"# EDI: the primary's anchor\"; if it does not, read "
+                + home.resolve(".claude/output-styles/edi-primary.md")
+                + " at once and tell the captain this session runs without its anchor, for a primary never works unaware.";
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {

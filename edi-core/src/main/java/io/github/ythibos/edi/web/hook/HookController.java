@@ -1,6 +1,8 @@
 package io.github.ythibos.edi.web.hook;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -72,11 +74,12 @@ class HookController {
 
     @PostMapping(value = "/api/hooks/{event}", produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<String> hook(@PathVariable String event, @RequestBody JsonNode payload, Caller caller,
-            @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid, HttpServletRequest request) {
+            @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid,
+            @RequestHeader(value = "EDI-Claude-Project-Dir", required = false) String projectDirectory, HttpServletRequest request) {
         HookEvent hook = HookEvent.named(event);
         return switch (caller) {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
-            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, claudePid, ConsoleAddress.servedTo(request));
+            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, claudePid, projectDirectory, ConsoleAddress.servedTo(request));
             case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
@@ -94,9 +97,9 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid, URI console) {
+    private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid, String projectDirectory, URI console) {
         return switch (hook) {
-            case SESSION_START -> sessionStarted(sessionIn(payload), workingDirectoryIn(payload), claudePid, sourceOf(payload), console);
+            case SESSION_START -> sessionStarted(sessionIn(payload), projectDirectoryOf(projectDirectory, payload), claudePid, sourceOf(payload), console);
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
@@ -107,9 +110,9 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> sessionStarted(UUID session, Path workingDirectory, Long claudePid, SessionSource source, URI console) {
+    private ResponseEntity<String> sessionStarted(UUID session, Path projectDirectory, Long claudePid, SessionSource source, URI console) {
         SessionStart start = primaryHooks.sessionStarted(session, claudePid, source);
-        SessionStartDigest digest = digests.digestFor(session, workingDirectory);
+        SessionStartDigest digest = digests.digestFor(session, projectDirectory);
         SessionStartDigest told = sitrep.openFor(session, start, console).map(digest::withSitrep).orElse(digest);
         return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
     }
@@ -128,6 +131,10 @@ class HookController {
         return ASKS_THE_CAPTAIN.equals(payload.path("tool_name").asString(""))
                 ? primaryHooks.dialogAnswered(session, DialogAnswers.in(payload))
                 : HookAnswer.PROCEED;
+    }
+
+    private static Path projectDirectoryOf(String forwarded, JsonNode payload) {
+        return forwarded == null ? workingDirectoryIn(payload) : Path.of(URLDecoder.decode(forwarded, StandardCharsets.UTF_8));
     }
 
     private static Path workingDirectoryIn(JsonNode payload) {

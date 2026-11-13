@@ -49,7 +49,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("Queued (0)\n");
-        assertThat(core.received()).isEqualTo(new StubCore.Request("GET", "/api/backlog?ready=true", "Bearer stub-token", "text/plain", null, null, ""));
+        assertThat(core.received()).isEqualTo(new StubCore.Request("GET", "/api/backlog?ready=true", "Bearer stub-token", "text/plain", null, null, null, ""));
     }
 
     @Test
@@ -302,7 +302,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open\n");
-        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, turn));
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, null, turn));
     }
 
     @Test
@@ -324,8 +324,8 @@ class CommandsTest {
         edi("", "sitrep", "--json");
         StubCore.Request sitrep = core.received();
 
-        assertThat(report).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, "{}"));
-        assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, ""));
+        assertThat(report).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, null, "{}"));
+        assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, null, ""));
     }
 
     @Test
@@ -336,7 +336,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
-        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/console/open", "Bearer stub-token", "text/plain", null, null, "{}"));
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/console/open", "Bearer stub-token", "text/plain", null, null, null, "{}"));
     }
 
     @Test
@@ -361,7 +361,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("╔══ NEEDS YOUR DECISION ══ nothing open ═══\n");
-        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report/sitrep", "Bearer stub-token", "text/plain", null, null, turn));
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/report/sitrep", "Bearer stub-token", "text/plain", null, null, null, turn));
     }
 
     @Test

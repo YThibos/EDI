@@ -75,12 +75,18 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static List<String> anchorOf(SessionAnchor anchor) {
-        if (anchor.loaded()) {
-            return List.of();
-        }
-        return List.of("The anchor is not in this session: Claude Code loads it, as the " + PrimaryOutputStyle.NAME
+        return anchor.loaded() ? List.of(confirmationOf(anchor)) : List.of(warningOf(anchor), confirmationOf(anchor));
+    }
+
+    private static String warningOf(SessionAnchor anchor) {
+        return "The anchor is not in this session: Claude Code loads it, as the " + PrimaryOutputStyle.NAME
                 + " output style the primary's settings name, only for a session started in " + anchor.home() + ". Read " + anchor.outputStyle()
-                + " now and hold to every line of it, and tell the captain this session runs without its anchor until edi up starts the primary again.");
+                + " now and hold to every line of it, and tell the captain this session runs without its anchor until edi up starts the primary again.";
+    }
+
+    private static String confirmationOf(SessionAnchor anchor) {
+        return "Confirm that this session's system prompt holds the heading \"" + anchor.heading() + "\"; if it does not, read " + anchor.outputStyle()
+                + " at once and tell the captain this session runs without its anchor, for a primary never works unaware.";
     }
 
     private static String standingOf(Standing standing) {

@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -51,19 +52,40 @@ class SessionStartDigestTextTest {
 
         String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), elsewhere));
 
-        assertThat(digest.lines().skip(1).findFirst().orElseThrow()).isEqualTo("The anchor is not in this session: Claude Code loads it, as the"
+        assertThat(digest.lines().skip(1).limit(2)).containsExactly("The anchor is not in this session: Claude Code loads it, as the"
                 + " edi-primary output style the primary's settings name, only for a session started in " + home.home().root() + ". Read "
                 + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " now and hold to every line of it, and tell the captain"
-                + " this session runs without its anchor until edi up starts the primary again.");
+                + " this session runs without its anchor until edi up starts the primary again.", confirmationOfTheAnchorIn(home));
     }
 
     @Test
-    void saysNothingOfTheAnchorWhenTheSessionHoldsIt() throws IOException {
+    void asksOnlyForTheSessionsOwnConfirmationOfTheAnchorWhenTheSessionHoldsIt() throws IOException {
         TestHome home = preparedHome();
 
         String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
 
-        assertThat(digest).startsWith("EDI session-start digest\nNo session holds the primary role").doesNotContain("anchor");
+        assertThat(digest).startsWith("EDI session-start digest\n" + confirmationOfTheAnchorIn(home) + "\nNo session holds the primary role")
+                .doesNotContain("The anchor is not in this session");
+    }
+
+    @Test
+    void asksAStandbySessionForTheSameConfirmation() throws IOException {
+        TestHome home = preparedHome();
+        UUID primary = UUID.randomUUID();
+        UUID standby = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "Status?");
+        home.primaryHooks().sessionStarted(standby, null, SessionSource.LAUNCH);
+
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(standby, home.home().root()));
+
+        assertThat(digest).startsWith("EDI session-start digest\n" + confirmationOfTheAnchorIn(home) + "\nThis session is standby");
+    }
+
+    private static String confirmationOfTheAnchorIn(TestHome home) {
+        return "Confirm that this session's system prompt holds the heading \"# EDI: the primary's anchor\"; if it does not, read "
+                + home.home().root().resolve(".claude/output-styles/edi-primary.md")
+                + " at once and tell the captain this session runs without its anchor, for a primary never works unaware.";
     }
 
     private TestHome preparedHome() throws IOException {

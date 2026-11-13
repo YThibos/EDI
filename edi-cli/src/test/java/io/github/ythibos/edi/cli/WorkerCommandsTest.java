@@ -197,6 +197,16 @@ class WorkerCommandsTest {
     }
 
     @Test
+    void forwardsTheDirectoryClaudeCodeStartedTheSessionInWithEveryHook() {
+        environment.put("CLAUDE_PROJECT_DIR", "/home/keeper/.edi lighthouse/灯台");
+        core.answering(204, "");
+
+        edi("{\"hook_event_name\":\"SessionStart\",\"cwd\":\"/home/keeper/.edi lighthouse/worktrees/fit-lamp\"}", "hook", "session-start");
+
+        assertThat(core.received().projectDirectory()).isEqualTo("/home/keeper/.edi lighthouse/灯台");
+    }
+
+    @Test
     void buildsTheOutageHoldListAndActsOnTheNumberTheCaptainNamed() {
         core.answering(200, "ok\n");
 

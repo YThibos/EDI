@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -107,6 +108,7 @@ final class StubCore implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("Accept"),
                 exchange.getRequestHeaders().getFirst("EDI-Session"),
                 exchange.getRequestHeaders().getFirst("EDI-Claude-Pid"),
+                projectDirectoryIn(exchange),
                 new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         Reply answer = answerTo(request);
         if (answer == null) {
@@ -122,6 +124,11 @@ final class StubCore implements AutoCloseable {
         exchange.close();
     }
 
+    private static String projectDirectoryIn(HttpExchange exchange) {
+        String forwarded = exchange.getRequestHeaders().getFirst("EDI-Claude-Project-Dir");
+        return forwarded == null ? null : URLDecoder.decode(forwarded, StandardCharsets.UTF_8);
+    }
+
     private synchronized Reply answerTo(Request request) {
         requests.add(request);
         notifyAll();
@@ -131,7 +138,8 @@ final class StubCore implements AutoCloseable {
         return queued.isEmpty() ? new Reply(status, reply, null) : queued.poll();
     }
 
-    record Request(String method, String target, String authorization, String accepted, String session, String claudePid, String body) {
+    record Request(String method, String target, String authorization, String accepted, String session, String claudePid, String projectDirectory,
+            String body) {
     }
 
     private record Reply(int status, String body, String wakes) {
