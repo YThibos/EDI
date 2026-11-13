@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.decision.UndeliveredAnswersQuery;
 import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
@@ -27,12 +29,14 @@ import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
+import io.github.ythibos.edi.domain.primary.TurnEnd;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.web.access.Caller;
 import io.github.ythibos.edi.web.access.NotPermitted;
 import io.github.ythibos.edi.web.console.ConsoleAddress;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
+import io.github.ythibos.edi.web.report.TurnReports;
 import io.github.ythibos.edi.web.spark.SparkSentences;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -55,10 +59,13 @@ class HookController {
     private final SessionStartDigestQuery digests;
     private final SessionStartDigestText digestText;
     private final ReturnBriefText returnBriefText;
+    private final TurnReports turnReports;
+    private final UndeliveredAnswersQuery undeliveredAnswers;
     private final JsonMapper json;
 
     HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, CatchSpark catchSpark, OpenTheSitrepAtSessionStart sitrep,
-            SessionStartDigestQuery digests, SessionStartDigestText digestText, ReturnBriefText returnBriefText, JsonMapper json) {
+            SessionStartDigestQuery digests, SessionStartDigestText digestText, ReturnBriefText returnBriefText, TurnReports turnReports,
+            UndeliveredAnswersQuery undeliveredAnswers, JsonMapper json) {
         this.workerHooks = workerHooks;
         this.primaryHooks = primaryHooks;
         this.guard = guard;
@@ -67,16 +74,19 @@ class HookController {
         this.digests = digests;
         this.digestText = digestText;
         this.returnBriefText = returnBriefText;
+        this.turnReports = turnReports;
+        this.undeliveredAnswers = undeliveredAnswers;
         this.json = json;
     }
 
     @PostMapping(value = "/api/hooks/{event}", produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<String> hook(@PathVariable String event, @RequestBody JsonNode payload, Caller caller,
-            @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid, HttpServletRequest request) {
+            @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid, @RequestParam(required = false) Integer paneWidth,
+            HttpServletRequest request) {
         HookEvent hook = HookEvent.named(event);
         return switch (caller) {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
-            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, claudePid, ConsoleAddress.servedTo(request));
+            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, new PrimaryCall(claudePid, paneWidth, ConsoleAddress.servedTo(request)));
             case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
@@ -94,13 +104,13 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid, URI console) {
+    private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, PrimaryCall call) {
         return switch (hook) {
-            case SESSION_START -> sessionStarted(sessionIn(payload), claudePid, sourceOf(payload), console);
+            case SESSION_START -> sessionStarted(sessionIn(payload), call.claudePid(), sourceOf(payload), call.console());
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
-            case STOP -> rendered(primaryHooks.stopping(sessionIn(payload)));
+            case STOP -> turnEnded(sessionIn(payload), call.paneWidth());
             case STOP_FAILURE -> rendered(primaryHooks.stopFailed(sessionIn(payload), textIn(payload, "transcript_path")));
             case NOTIFICATION -> rendered(primaryHooks.notified(sessionIn(payload), textIn(payload, "notification_type")));
             case SESSION_END -> rendered(primaryHooks.sessionEnded(sessionIn(payload)));
@@ -118,6 +128,16 @@ class HookController {
         Optional<String> returnBrief = primaryHooks.promptSubmitted(session, prompt).map(returnBriefText::text);
         Optional<String> spark = catchSpark.fromTheCaptainsMessage(session, prompt).map(SparkSentences::caughtFromTheCaptainsMessage);
         return contextIfAny(HookEvent.USER_PROMPT_SUBMIT, Stream.of(returnBrief, spark).flatMap(Optional::stream).toList());
+    }
+
+    private ResponseEntity<String> turnEnded(UUID session, Integer paneWidth) {
+        TurnEnd end = primaryHooks.stopping(session);
+        return switch (end) {
+            case ENDS -> rendered(HookAnswer.PROCEED);
+            case CARRIES_THE_ANSWERS -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n" + UndeliveredAnswerText.lines(undeliveredAnswers.waiting())));
+            case STARTS_THE_WAIT -> rendered(HookAnswer.blockTheStop(end.instruction()));
+            case HANDS_OVER_THE_REPORT -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n\n" + turnReports.handedOverIn(session, paneWidth)));
+        };
     }
 
     private ResponseEntity<String> contextIfAny(HookEvent hook, List<String> context) {
@@ -194,5 +214,8 @@ class HookController {
 
     private ResponseEntity<String> asJson(ObjectNode output) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json.writeValueAsString(output));
+    }
+
+    private record PrimaryCall(Long claudePid, Integer paneWidth, URI console) {
     }
 }

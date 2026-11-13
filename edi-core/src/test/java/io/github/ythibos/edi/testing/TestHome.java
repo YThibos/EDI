@@ -61,6 +61,7 @@ import io.github.ythibos.edi.adapter.store.SparkStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
+import io.github.ythibos.edi.adapter.store.TurnItemStore;
 import io.github.ythibos.edi.adapter.store.UnplannedShipStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.adapter.store.WakeStreamStore;
@@ -151,7 +152,9 @@ import io.github.ythibos.edi.application.primary.PrepareThePrimary;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.primary.PrimaryWaitQuery;
+import io.github.ythibos.edi.application.primary.RecordTurnItems;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
+import io.github.ythibos.edi.application.primary.TurnItemsQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.application.rule.FiredRules;
@@ -244,6 +247,7 @@ public final class TestHome {
     private final ProcessTable processes = new ProcessTable();
     private final WakeStore wakes;
     private final PrimarySessionStore primarySessions;
+    private final TurnItemStore turnItems;
     private final NoticeStore notices;
     private final OutageStore outages;
     private final RecoveryCostStore recoveryCosts;
@@ -294,6 +298,7 @@ public final class TestHome {
         this.workers = new WorkerStore(jdbc);
         this.inbox = new InboxStore(jdbc);
         this.primarySessions = new PrimarySessionStore(jdbc);
+        this.turnItems = new TurnItemStore(jdbc);
         this.notices = new NoticeStore(jdbc);
         this.outages = new OutageStore(jdbc);
         this.recoveryCosts = new RecoveryCostStore(jdbc);
@@ -965,12 +970,20 @@ public final class TestHome {
     }
 
     public PrimaryHooks primaryHooks() {
-        return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
-                processes, wakeStreams(), wakes, runtime, firedRules(), undeliveredAnswers(), clock, transaction);
+        return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, turnItems,
+                events, processes, wakeStreams(), wakes, runtime, firedRules(), undeliveredAnswers(), clock, transaction);
     }
 
     public UndeliveredAnswersQuery undeliveredAnswers() {
         return new UndeliveredAnswersQuery(workers, decisions, inbox, transaction);
+    }
+
+    public RecordTurnItems recordTurnItems() {
+        return new RecordTurnItems(primarySessions, turnItems, clock, transaction);
+    }
+
+    public TurnItemsQuery turnItems() {
+        return new TurnItemsQuery(turnItems, transaction);
     }
 
     public WorkerListQuery workerList() {

@@ -53,7 +53,8 @@ Every command the captain types in the primary, such as `/sitrep` or `/quiet`, i
 | [afk](../claude/skills/afk/SKILL.md) | `/afk` and the mandate its words give |
 | [demo](../claude/skills/demo/SKILL.md) | `/demo` and `/demo off` |
 | [edi-presence](../claude/skills/edi-presence/SKILL.md) | what present, quiet and away mean, the away mandate, the demo hold and the return brief |
-| [edi-upkeep](../claude/skills/edi-upkeep/SKILL.md) | keeping EDI and the tools it drives current, Renovate's pull requests included, and sorting the open sparks in the weekly round |
+| [edi-upkeep](../claude/skills/edi-upkeep/SKILL.md) | keeping EDI and the tools it drives current, Renovate's pull requests included |
+| [gardening](../claude/skills/gardening/SKILL.md) | the weekly gardening round: the week's outcomes against the previous, the slips with a hard rule drafted for the worst three, rules to retire or prove, hygiene and the spark inbox on one board, with a script gathering it all and the upkeep check first |
 | [edi-recover](../claude/skills/edi-recover/SKILL.md) | recovery after workers die or stop on a usage limit |
 | [introspect](../claude/skills/introspect/SKILL.md) | introspection: from the store's evidence of a failure of the primary's own to hard rules on the upstream backlog of the EDI project, with a script gathering the evidence |
 | [edi-decision-log](../claude/skills/edi-decision-log/SKILL.md) | decision records on projects that keep a decision log |

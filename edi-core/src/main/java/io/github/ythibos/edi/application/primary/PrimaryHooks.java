@@ -13,6 +13,7 @@ import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.adapter.store.TurnItemStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.application.decision.UndeliveredAnswersQuery;
 import io.github.ythibos.edi.application.port.Clock;
@@ -53,6 +54,7 @@ public class PrimaryHooks {
     private final PresenceQuery presenceNow;
     private final ReturnBriefQuery returnBriefs;
     private final TaskStore tasks;
+    private final TurnItemStore turnItems;
     private final EventLog events;
     private final ProcessTable processes;
     private final WakeStreams streams;
@@ -64,8 +66,8 @@ public class PrimaryHooks {
     private final TransactionTemplate transaction;
 
     public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainMessageStore captainMessages, ChangePresence presence,
-            PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, EventLog events, ProcessTable processes, WakeStreams streams,
-            WakeStore wakes, WorkerRuntime runtime, FiredRules firedRules, UndeliveredAnswersQuery undeliveredAnswers, Clock clock,
+            PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, TurnItemStore turnItems, EventLog events, ProcessTable processes,
+            WakeStreams streams, WakeStore wakes, WorkerRuntime runtime, FiredRules firedRules, UndeliveredAnswersQuery undeliveredAnswers, Clock clock,
             TransactionTemplate transaction) {
         this.sessions = sessions;
         this.roles = roles;
@@ -74,6 +76,7 @@ public class PrimaryHooks {
         this.presenceNow = presenceNow;
         this.returnBriefs = returnBriefs;
         this.tasks = tasks;
+        this.turnItems = turnItems;
         this.events = events;
         this.processes = processes;
         this.streams = streams;
@@ -105,6 +108,7 @@ public class PrimaryHooks {
             Prompt prompt = new Prompt(text);
             PrimarySession session = registered(id, now).promptSubmitted(prompt, events.latestSequence(), now);
             sessions.save(session);
+            turnItems.clear(id);
             if (!prompt.isTypedByTheCaptain()) {
                 return Optional.<Presence>empty();
             }
@@ -124,13 +128,13 @@ public class PrimaryHooks {
         return HookAnswer.PROCEED;
     }
 
-    public HookAnswer stopping(UUID id) {
-        HookAnswer answer = transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(HookAnswer.PROCEED));
-        if (answer.blocksTheStop()) {
+    public TurnEnd stopping(UUID id) {
+        TurnEnd end = transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(TurnEnd.ENDS));
+        if (end.leavesWorkPending()) {
             firedRules.record(new RuleFired(Rule.TURN_END_WITH_WORK_PENDING, RuleOutcome.REFUSED, Actor.PRIMARY, null, id,
-                    RuleReason.of(answer.reason())));
+                    RuleReason.of(end.instruction())));
         }
-        return answer;
+        return end;
     }
 
     public HookAnswer stopFailed(UUID id, String transcript) {
@@ -167,29 +171,27 @@ public class PrimaryHooks {
         return sessions.get(id).orElseGet(() -> PrimarySession.started(id, null, now));
     }
 
-    private HookAnswer answeredStop(PrimarySession session) {
+    private TurnEnd answeredStop(PrimarySession session) {
         boolean supervises = roles.role().standingOf(session.id()) == Standing.PRIMARY;
-        boolean waitIsLive = streams.liveOf(session.id()).isPresent();
-        Optional<String> blocked = supervises ? blockingReason(session.turn(), waitIsLive) : Optional.empty();
-        if (blocked.isPresent()) {
-            sessions.save(session.stopBlocked());
-            return HookAnswer.blockTheStop(blocked.get());
-        }
-        sessions.save(session.turnEnded());
-        return HookAnswer.PROCEED;
+        TurnEnd end = supervises ? endOf(session) : TurnEnd.ENDS;
+        sessions.save(end.holdsTheStop() ? session.stopBlocked() : session.turnEnded());
+        return end;
     }
 
-    private Optional<String> blockingReason(PrimaryTurn turn, boolean waitIsLive) {
+    private TurnEnd endOf(PrimarySession session) {
+        PrimaryTurn turn = session.turn();
         if (turn == null) {
-            return Optional.empty();
+            return TurnEnd.ENDS;
         }
-        return TurnEnd.blockingReason(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), presenceNow.current().keepsTheChatQuiet(),
-                !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), waitIsLive, undeliveredAnswers.waiting()));
+        return TurnEnd.of(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), turnItems.lastRecordedIn(session.id()).orElse(null),
+                presenceNow.current().keepsTheChatQuiet(), !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), streams.liveOf(session.id()).isPresent(),
+                !undeliveredAnswers.waiting().isEmpty()));
     }
 
     private void ended(PrimarySession session) {
         Instant now = clock.now();
         sessions.save(session.ended(now));
+        turnItems.clear(session.id());
         wakes.acknowledgeDeliveredTo(session.id(), now);
     }
 }

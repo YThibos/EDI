@@ -27,6 +27,7 @@ import picocli.CommandLine.Spec;
             HealthCommand.class,
             UpdateCommand.class,
             ReportCommand.class,
+            TurnCommand.class,
             SitrepCommand.class,
             ConsoleCommand.class,
             TaskCommand.class,

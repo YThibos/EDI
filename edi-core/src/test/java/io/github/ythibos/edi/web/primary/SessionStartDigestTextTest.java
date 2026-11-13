@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,8 +45,22 @@ class SessionStartDigestTextTest {
         assertThat(memoryLineOf(home)).endsWith(" now.").doesNotContain("Workarounds");
     }
 
+    @Test
+    void offersTheWeeklyGardeningRoundOnMondayFromTheWeeklyUsageResetOn() throws IOException {
+        TestHome home = TestHome.in(directory);
+        home.clock().advance(Duration.between(TestHome.START, Instant.parse("2026-10-19T08:59:00Z")));
+
+        assertThat(digestOf(home)).doesNotContain("gardening");
+        home.clock().advance(Duration.ofMinutes(1));
+        assertThat(digestOf(home)).contains("\nIt is Monday after the weekly usage reset: offer the captain the weekly gardening round,"
+                + " the upkeep check included (gardening).\n");
+    }
+
     private static String memoryLineOf(TestHome home) {
-        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
-        return digest.lines().filter(line -> line.startsWith("Startup memory")).findFirst().orElseThrow();
+        return digestOf(home).lines().filter(line -> line.startsWith("Startup memory")).findFirst().orElseThrow();
+    }
+
+    private static String digestOf(TestHome home) {
+        return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
     }
 }

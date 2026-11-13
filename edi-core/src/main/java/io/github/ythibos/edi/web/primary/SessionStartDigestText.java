@@ -65,7 +65,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.add("Queued: " + digest.fleet().queued().size() + ".");
         lines.addAll(outage(digest));
         lines.add("Wakes not yet handled: " + digest.wakesWaiting() + "; the wake stream prints those this session has not seen.");
-        lines.addAll(upkeepOf(digest));
+        lines.addAll(gardeningOf(digest));
         lines.addAll(waitAdvice(digest));
         return String.join("\n", lines) + "\n";
     }
@@ -176,9 +176,9 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         return List.of(Words.counted("Outage hold list", digest.outage().size()) + ": edi recover shows it; relaunch only the numbers the captain names.");
     }
 
-    private static List<String> upkeepOf(SessionStartDigest digest) {
-        return digest.upkeepSuggested() && digest.standing() != Standing.STANDBY
-                ? List.of("It is the start of the week: offer the captain the weekly upkeep check, whether you and your tools are up to date (edi-upkeep).")
+    private static List<String> gardeningOf(SessionStartDigest digest) {
+        return digest.gardeningDue() && digest.standing() != Standing.STANDBY
+                ? List.of("It is Monday after the weekly usage reset: offer the captain the weekly gardening round, the upkeep check included (gardening).")
                 : List.of();
     }
 

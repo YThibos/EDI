@@ -1,25 +1,23 @@
 package io.github.ythibos.edi.domain.primary;
 
-import java.util.List;
+import java.time.Instant;
 
-import io.github.ythibos.edi.domain.decision.UndeliveredAnswer;
+public record TurnCircumstances(boolean stateChanged, Instant lastItemRecordedAt, boolean chatKeptQuiet, boolean workInFlight, boolean waitIsLive,
+        boolean answerUndelivered) {
 
-public record TurnCircumstances(boolean stateChanged, boolean chatKeptQuiet, boolean workInFlight, boolean waitIsLive,
-        List<UndeliveredAnswer> undeliveredAnswers) {
-
-    public TurnCircumstances {
-        undeliveredAnswers = List.copyOf(undeliveredAnswers);
-    }
-
-    boolean needsTheReport() {
-        return stateChanged && !chatKeptQuiet;
+    boolean needsTheReport(PrimaryTurn turn) {
+        return !chatKeptQuiet && (unreportedStateChange(turn) || itemRecordedSinceTheReport(turn));
     }
 
     boolean needsAWait() {
         return workInFlight && !waitIsLive;
     }
 
-    boolean leavesAnAnswerUndelivered() {
-        return !undeliveredAnswers.isEmpty();
+    private boolean unreportedStateChange(PrimaryTurn turn) {
+        return stateChanged && !turn.renderedTheReport();
+    }
+
+    private boolean itemRecordedSinceTheReport(PrimaryTurn turn) {
+        return lastItemRecordedAt != null && !turn.reportedSince(lastItemRecordedAt);
     }
 }

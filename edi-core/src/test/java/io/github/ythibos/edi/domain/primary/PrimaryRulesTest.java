@@ -9,10 +9,6 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.ythibos.edi.domain.decision.DecisionNumber;
-import io.github.ythibos.edi.domain.decision.UndeliveredAnswer;
-import io.github.ythibos.edi.domain.status.StatusKey;
-import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.WakeStream;
 
 class PrimaryRulesTest {
@@ -62,35 +58,42 @@ class PrimaryRulesTest {
     }
 
     @Test
-    void endsATurnOnlyAfterTheReportWhenStateChangedAndWithAWaitWhileWorkIsInFlight() {
+    void handsOverTheReportWhenStateChangedOrItemsWereRecordedAndAsksForAWaitWhileWorkIsInFlight() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
+        Instant recorded = START.plusSeconds(1);
 
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, false, false, List.of()))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, false, false, List.of()))).contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, false, false, false, List.of()))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false, List.of())))
-                .contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, false, false, List.of()))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, true, false, List.of()))).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, false, List.of()))).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, true, List.of()))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, true, false, List.of())))
-                .isEmpty();
-        assertThat(TurnEnd.blockingReason(null, new TurnCircumstances(true, false, true, false, List.of()))).isEmpty();
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, null, false, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, null, false, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, recorded, false, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn.reported(START.plusSeconds(2)), new TurnCircumstances(true, recorded, false, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn.reported(START), new TurnCircumstances(true, recorded, false, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, null, false, false, false, false)))
+                .isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, recorded, true, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, null, true, true, false, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, null, false, true, false, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, null, false, true, true, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, null, false, true, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(null, new TurnCircumstances(true, null, false, true, false, false))).isEqualTo(TurnEnd.ENDS);
     }
 
     @Test
     void holdsATurnFirstForAnAnsweredDecisionWhoseWorkerStillWaitsOnItsQuestion() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
-        List<UndeliveredAnswer> undelivered = List.of(new UndeliveredAnswer(new DecisionNumber(7), new TaskId("fit-lamp"), new StatusKey("lamp-choice")),
-                new UndeliveredAnswer(new DecisionNumber(9), new TaskId("hang-bell"), new StatusKey("nm-4-review")));
 
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, true, false, undelivered))).contains(
-                "D7 is answered and the worker of fit-lamp still waits on its question lamp-choice: carry the answer with edi steer fit-lamp --resolves lamp-choice."
-                        + " D9 is answered and the worker of hang-bell still waits on its question nm-4-review: carry the answer with edi steer hang-bell"
-                        + " --resolves nm-4-review. Then stop.");
-        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(false, false, false, false, undelivered)))
-                .isEmpty();
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, null, false, true, false, true))).isEqualTo(TurnEnd.CARRIES_THE_ANSWERS);
+        assertThat(TurnEnd.of(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(false, null, false, false, false, true)))
+                .isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.CARRIES_THE_ANSWERS.leavesWorkPending()).isTrue();
+        assertThat(TurnEnd.HANDS_OVER_THE_REPORT.leavesWorkPending()).isFalse();
+    }
+
+    @Test
+    void holdsTheStopOnlyToCarryAnAnswerHandOverTheReportOrAskForAWait() {
+        assertThat(TurnEnd.ENDS.holdsTheStop()).isFalse();
+        assertThat(TurnEnd.CARRIES_THE_ANSWERS.holdsTheStop()).isTrue();
+        assertThat(TurnEnd.HANDS_OVER_THE_REPORT.holdsTheStop()).isTrue();
+        assertThat(TurnEnd.STARTS_THE_WAIT.holdsTheStop()).isTrue();
     }
 
     @Test
