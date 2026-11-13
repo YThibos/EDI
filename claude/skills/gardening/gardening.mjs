@@ -14,7 +14,7 @@ import { catalogueIn, ruleTelemetry } from './rules.mjs';
 import { slipsIn } from './slips.mjs';
 
 const USAGE = 'Usage: gardening.mjs gather --out DIRECTORY [--week YYYY-MM-DD] [--home DIRECTORY] [--store PATH] [--transcripts DIRECTORY]'
-    + ' [--repository DIRECTORY] [--offline]\n'
+    + ' [--repository DIRECTORY]\n'
     + '       gardening.mjs choose DIRECTORY SLIP...\n'
     + '       gardening.mjs board DIRECTORY';
 const OPTIONS = { '--out': 'out', '--week': 'week', '--home': 'home', '--store': 'store', '--transcripts': 'transcripts', '--repository': 'repository' };
@@ -50,12 +50,10 @@ function gardening(args) {
 }
 
 function runFrom(args) {
-    const run = { offline: false };
+    const run = {};
     for (let position = 0; position < args.length; position++) {
         const arg = args[position];
-        if (arg === '--offline') {
-            run.offline = true;
-        } else if (OPTIONS[arg] && position + 1 < args.length) {
+        if (OPTIONS[arg] && position + 1 < args.length) {
             run[OPTIONS[arg]] = args[++position];
         } else {
             throw new Refusal(USAGE);
@@ -150,6 +148,9 @@ function numbered(slip, position, facts, conversation) {
 }
 
 function evidenceOf(slip, facts, conversation) {
+    if (slip.evidence) {
+        return slip.evidence.slice(-EVIDENCE_LINES);
+    }
     if (slip.task === null) {
         return [['the captain', conversation.captain], ['the primary', conversation.primary]]
             .map(([who, said]) => ({ who, said: said.filter(words => words.at < slip.at).at(-1) }))
@@ -189,9 +190,6 @@ function firstOfEachKind(slips) {
 }
 
 function upstreamOf(run) {
-    if (run.offline) {
-        return { issues: [], unreachable: 'the round ran with --offline' };
-    }
     try {
         return { issues: GitHub.ofTheCheckout(undefined, run.repository).all('issues?state=all'), unreachable: null };
     } catch (failure) {

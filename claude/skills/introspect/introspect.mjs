@@ -146,7 +146,7 @@ function overlappingWaits(facts) {
 function reportsWhileAWorkerWaited(facts) {
     const questions = questionsOf(facts);
     return facts.reports.flatMap(report => questions
-        .filter(question => question.at <= report.at && (question.answeredAt ?? facts.now) > report.at)
+        .filter(question => question.at <= report.at && (question.endedAt ?? facts.now) > report.at)
         .map(question => ({
             kind: 'report-while-a-worker-waited', at: report.at, task: question.task,
             text: `a turn report was rendered in session ${short(report.session)} while the question ${question.key} of ${question.worker} waited on the primary`,

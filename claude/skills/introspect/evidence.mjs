@@ -12,6 +12,7 @@ const RELATIVE = /^(\d+)([mhd])$/;
 const UNIT_MINUTES = { m: 1, h: 60, d: 1440 };
 const SECRET = /(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[abpr]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9-]{20,}|[Bb]earer\s+\S+|\b[A-Fa-f0-9]{40,}\b|\b[A-Za-z0-9+/_-]{48,}={0,2})/g;
 const QUESTION_STATES = ['needs-decision', 'blocked'];
+const WHAT_ENDS_A_QUESTION = ['StatusReported', 'WorkerRelaunched', 'WorkerRetired', 'TaskCleanedUp', 'TaskDropped'];
 const TEXT_WIDTH = 160;
 
 export class Refusal extends Error {}
@@ -116,28 +117,50 @@ function eventLine(event) {
 export function questionsLeftOpen(facts, minutes, word) {
     const belongs = word === 'gate' ? question => GATE_KEY.test(question.key) : question => !GATE_KEY.test(question.key);
     return questionsOf(facts).filter(belongs)
-        .map(question => ({ ...question, open: (question.answeredAt ?? facts.now) - question.at }))
+        .map(question => ({ ...question, open: (question.endedAt ?? facts.now) - question.at }))
         .filter(question => question.open > minutes * MINUTE)
         .map(question => ({
             kind: word === 'gate' ? 'gate-parked' : 'question-left-open', at: question.at, task: question.task,
-            text: `the ${word} ${question.key} of ${question.worker} waited ${Math.floor(question.open / MINUTE)} minutes`
-                + (question.answeredAt ? ' for its resolving steer' : ' and still has no resolving steer')
+            text: `the ${word} ${question.key} of ${question.worker} waited ${Math.floor(question.open / MINUTE)} minutes${howItEnded(question)}`
                 + `, past the ${minutes}-minute threshold`,
         }));
 }
 
+function howItEnded(question) {
+    if (question.endedAt === null) {
+        return ' and still has no resolving steer';
+    }
+    return question.endedAt === question.answeredAt ? ' for its resolving steer' : ' until its worker moved on without an answer';
+}
+
 export function questionsOf(facts) {
-    const reported = facts.events.filter(event => event.type === 'StatusReported');
-    return reported
-        .filter(event => QUESTION_STATES.includes(event.payload.state) && event.payload.key)
-        .map(event => {
-            const resolving = facts.events.find(steer => steer.type === 'SteerSent' && steer.task_id === event.task_id && steer.payload.resolves === event.payload.key
-                && steer.at >= event.at);
-            const superseded = reported.find(later => later.task_id === event.task_id && later.payload.worker === event.payload.worker && later.at > event.at
-                && later.sequence > event.sequence);
-            const ends = [resolving?.at, superseded?.at].filter(moment => moment !== undefined);
-            return { task: event.task_id, worker: event.payload.worker, key: event.payload.key, at: event.at, answeredAt: ends.length ? Math.min(...ends) : null };
-        });
+    return facts.events
+        .filter(event => event.type === 'StatusReported' && QUESTION_STATES.includes(event.payload.state) && event.payload.key)
+        .map(question => ({
+            task: question.task_id, worker: question.payload.worker, key: question.payload.key, at: question.at,
+            answeredAt: facts.events.find(later => answers(later, question))?.at ?? null,
+            endedAt: facts.events.find(later => answers(later, question) || endsTheWorkersWait(later, question))?.at ?? null,
+        }));
+}
+
+function answers(later, question) {
+    return later.task_id === question.task_id && (resolves(later, question) || isLaterStatusOfTheSameWorker(later, question));
+}
+
+function resolves(later, question) {
+    return later.type === 'SteerSent' && later.payload.resolves === question.payload.key && later.at >= question.at;
+}
+
+function isLaterStatusOfTheSameWorker(later, question) {
+    return later.type === 'StatusReported' && later.payload.worker === question.payload.worker && comesAfter(later, question);
+}
+
+function endsTheWorkersWait(later, question) {
+    return later.task_id === question.task_id && WHAT_ENDS_A_QUESTION.includes(later.type) && comesAfter(later, question);
+}
+
+function comesAfter(later, question) {
+    return later.at > question.at && later.sequence > question.sequence;
 }
 
 export function safe(text, run) {

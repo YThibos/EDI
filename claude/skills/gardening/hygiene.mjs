@@ -20,6 +20,7 @@ const DONE_STATUS = /^(done|closed|resolved)$/i;
 const CODE_NAME = /`([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+)`/g;
 const SECTIONS_NAMING_THE_PAST = /^## (Alternatives rejected|How we got here)$/;
 const CODE_FILES = ['*.java', '*.ts', '*.mjs', '*.js', '*.sql', '*.sh', '*.kt', '*.py'];
+const CONFIGURATION_FILES = ['*.json', '*.yml', '*.yaml'];
 
 export function hygieneOf(home, store, facts, upstream) {
     const tasks = tasksIn(store);
@@ -161,17 +162,32 @@ function closedTickets(upstream, facts) {
 
 function decisionRecordsNamingRemovedCode(clones) {
     return clones.filter(clone => existsSync(join(clone, 'docs', 'decisions'))).flatMap(clone => {
-        const names = namesInTheCode(clone);
-        return readdirSync(join(clone, 'docs', 'decisions')).filter(file => file.endsWith('.md') && file !== 'README.md')
-            .map(file => ({ file, removed: [...new Set(namesInForce(readFileSync(join(clone, 'docs', 'decisions', file), 'utf8')))].filter(name => !names.has(name)) }))
+        const records = decisionRecordsOf(clone);
+        const removed = namesRemovedFromTheCode(clone, [...new Set(records.flatMap(record => record.names))]);
+        return records.map(record => ({ file: record.file, removed: record.names.filter(name => removed.has(name)) }))
             .filter(record => record.removed.length > 0)
             .map(record => finding('decision-names-removed-code', `${projectOf(clone)} docs/decisions/${record.file}`, false,
-                `docs/decisions/${record.file} of ${projectOf(clone)} names ${record.removed.join(', ')}, which no code carries`));
+                `docs/decisions/${record.file} of ${projectOf(clone)} names ${record.removed.join(', ')}, which the code once carried and no longer does`));
     });
 }
 
+function decisionRecordsOf(clone) {
+    return readdirSync(join(clone, 'docs', 'decisions')).filter(file => file.endsWith('.md') && file !== 'README.md')
+        .map(file => ({ file, names: [...new Set(namesInForce(readFileSync(join(clone, 'docs', 'decisions', file), 'utf8')))] }));
+}
+
+function namesRemovedFromTheCode(clone, names) {
+    const carried = namesInTheCode(clone);
+    const absent = names.filter(name => !carried.has(name));
+    if (absent.length === 0) {
+        return new Set();
+    }
+    const history = git(clone, ['log', '--format=', '-p', '-U0', '-G', `(${absent.join('|')})`, '--', ...CODE_FILES]);
+    return new Set(absent.filter(name => new RegExp(`\\b${name}\\b`).test(history)));
+}
+
 function namesInTheCode(clone) {
-    return new Set(git(clone, ['grep', '-h', '-o', '-I', '-E', '\\b[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+\\b', '--', ...CODE_FILES]).split('\n'));
+    return new Set(git(clone, ['grep', '-h', '-o', '-I', '-E', '\\b[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+\\b', '--', ...CODE_FILES, ...CONFIGURATION_FILES]).split('\n'));
 }
 
 function namesInForce(record) {

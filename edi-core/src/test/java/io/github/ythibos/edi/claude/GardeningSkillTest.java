@@ -116,12 +116,14 @@ class GardeningSkillTest {
                 "steer-unacknowledged: steer 2 to tune-horn was never acknowledged",
                 "review-rounds: tune-horn took 5 review rounds before its merge, at or past the threshold of 5",
                 "captain-questions: the captain wrote: \"(?) \"I parked the hull\" - why?\"",
+                "question-left-open: the question lens of light-beacon#2 waited 18 minutes until its worker moved on without an answer, past the 10-minute threshold",
                 "decision-overridden: decision D3 was answered with a note that none of its options carries: \"Neither: light it by hand.\"",
                 "captains-word-refused: authority.captains-word refused 1 time",
                 "safety-check-refused: guard.forced-push refused 10 times");
         assertThat(gather().at("/top").toString()).isEqualTo("[1,2,3]");
         assertThat(slips.get(1).get("evidence").toString()).contains("2026-10-14 10:00 tune-horn#1 reports working: Tuning it again.");
         assertThat(slips.get(4).get("evidence").toString()).contains("2026-10-14 12:00 the captain had written: Why is the horn still out of tune?");
+        assertThat(slips.get(13).get("evidence").toString()).isEqualTo("[\"2026-10-17 10:00 worker was refused: a reason\"]");
     }
 
     @Test
@@ -161,7 +163,7 @@ class GardeningSkillTest {
                         "word untouched-backlog-item: EDI-5 An old idea has not changed since 2026-09-01: https://github.com/example/edi/issues/5",
                         "word story-file-disagrees: docs/jira/HRN-3.md of edi says HRN-3 is \"To Do\" where the tracker last moved it to \"Test in DEV\"",
                         "word todo-on-a-closed-ticket: src/Lamp.java:2 of edi carries a TODO or FIXME for EDI-7, which is closed",
-                        "word decision-names-removed-code: " + LAMPS_RECORD + " of edi names RemovedKeeper, which no code carries",
+                        "word decision-names-removed-code: " + LAMPS_RECORD + " of edi names RemovedKeeper, which the code once carried and no longer does",
                         "standing memory-budget: the startup memory holds 17000 of its 18000 tokens, past 90% of its budget: /stow curates it");
     }
 
@@ -182,12 +184,13 @@ class GardeningSkillTest {
         assertThat(Files.readString(round.resolve("drafts/gardening-006-question-left-open.md")))
                 .startsWith("---\ntitle: An unanswered worker question comes back until it is answered\nkind: ship\n")
                 .contains("source: The gardening round of the week of 2026-10-12, after question-left-open on fit-lamp\n", "TODO: the hard rule");
-        assertThat(script("choose", round.toString(), "99").all()).contains("Choose up to 3 slips by their numbers, 1 to 14; 99 cannot be chosen.");
+        assertThat(script("choose", round.toString(), "99").all()).contains("Choose up to 3 slips by their numbers, 1 to 15; 99 cannot be chosen.");
     }
 
     private void inventTheWeek() throws IOException {
         inventThePreviousWeek();
         aQuestionLeftOpenAndAGateParked();
+        aQuestionAskedAgainAfterARelaunchAndLeftWhenRetired();
         aRequestMergedWhileChangingAfterFiveRounds();
         aRequestMergedCleanlyAndThenFixed();
         twoDecisionsAnsweredOneAgainstItsOptions();
@@ -211,6 +214,13 @@ class GardeningSkillTest {
         reports("2026-10-13T11:00:00Z", "tune-horn", "needs-decision", "nm-01RUN-review", "Fix the finding or skip it?");
         event("2026-10-13T11:45:00Z", "primary", "SteerSent", "tune-horn", "{\"number\":1,\"resolves\":\"nm-01RUN-review\"}");
         event("2026-10-13T11:46:00Z", "worker:tune-horn#1", "SteerAcknowledged", "tune-horn", "{\"number\":1}");
+    }
+
+    private void aQuestionAskedAgainAfterARelaunchAndLeftWhenRetired() {
+        reports("2026-10-18T10:00:00Z", "light-beacon", "needs-decision", "lens", "Which lens?");
+        event("2026-10-18T10:01:00Z", "core", "WorkerRelaunched", "light-beacon", "{\"worker\":\"light-beacon#2\",\"because\":\"the machine restarted\"}");
+        reportsAs("2026-10-18T10:02:00Z", "light-beacon#2", "light-beacon", "needs-decision", "lens", "Which lens?");
+        event("2026-10-18T10:20:00Z", "primary", "WorkerRetired", "light-beacon", "{\"worker\":\"light-beacon#2\",\"because\":\"its task was cleaned up\"}");
     }
 
     private void aRequestMergedWhileChangingAfterFiveRounds() {
@@ -282,8 +292,12 @@ class GardeningSkillTest {
     private void theEdiClone() throws IOException {
         FixtureRepository.initialise(Files.createDirectories(home.home().root().resolve("projects/edi")))
                 .write("docs/rules.md", CATALOGUE)
-                .write(LAMPS_RECORD, "# Lamps\n\n## Decision\n\n`HarbourLamp` lights itself, and `RemovedKeeper` checks it.\n\n"
-                        + "## Alternatives rejected\n\n- `OldBeacon` - too dim.\n")
+                .write("src/Keeper.java", "class RemovedKeeper {\n}\n")
+                .commit("Keep the lamps")
+                .remove("src/Keeper.java")
+                .write(LAMPS_RECORD, "# Lamps\n\n## Decision\n\n`HarbourLamp` lights itself, `RemovedKeeper` checks it, a `ThreadPoolTaskScheduler` times it"
+                        + " and `UserPromptSubmit` wakes it.\n\n## Alternatives rejected\n\n- `OldBeacon` - too dim.\n")
+                .write("claude/settings.json", "{\"hooks\": {\"UserPromptSubmit\": []}}\n")
                 .write("docs/jira/HRN-3.md", "---\nkey: HRN-3\n---\n\n# HRN-3 Fit the lamp\n\n**Type:** Story **Status:** To Do\n")
                 .write("src/Lamp.java", "class HarbourLamp {\n    // TODO EDI-7 light it at dusk\n    // TODO EDI-5 dim it at dawn\n}\n")
                 .commit("Start the harbour")
@@ -294,8 +308,12 @@ class GardeningSkillTest {
     }
 
     private void reports(String at, String task, String state, String key, String text) {
-        event(at, "worker:" + task + "#1", "StatusReported", task, JSON.writeValueAsString(
-                key == null ? Map.of("worker", task + "#1", "state", state, "text", text) : Map.of("worker", task + "#1", "state", state, "key", key, "text", text)));
+        reportsAs(at, task + "#1", task, state, key, text);
+    }
+
+    private void reportsAs(String at, String worker, String task, String state, String key, String text) {
+        event(at, "worker:" + worker, "StatusReported", task, JSON.writeValueAsString(
+                key == null ? Map.of("worker", worker, "state", state, "text", text) : Map.of("worker", worker, "state", state, "key", key, "text", text)));
     }
 
     private void event(String at, String actor, String type, String task, String payload) {

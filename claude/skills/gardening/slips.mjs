@@ -1,4 +1,4 @@
-import { MINUTE, questionsLeftOpen } from '../introspect/evidence.mjs';
+import { MINUTE, clock, questionsLeftOpen, safe } from '../introspect/evidence.mjs';
 
 const THRESHOLDS = { questionMinutes: 10, gateMinutes: 30, changingMinutes: 60, reviewRounds: 5 };
 
@@ -133,28 +133,35 @@ function requestsChangingTooLong(facts) {
 }
 
 function refusals(facts, store) {
-    const fired = firingsIn(store, facts);
     const counted = new Map();
-    for (const firing of fired.filter(firing => firing.rule === CAPTAINS_WORD_RULE || SAFETY_CHECK.test(firing.rule))) {
-        const kind = firing.rule === CAPTAINS_WORD_RULE ? 'captains-word-refused' : 'safety-check-refused';
-        const found = counted.get(firing.rule) ?? { kind, rule: firing.rule, count: 0, at: firing.at };
-        counted.set(firing.rule, { ...found, count: found.count + 1 });
+    for (const firing of firingsIn(store, facts).filter(firing => firing.rule === CAPTAINS_WORD_RULE || SAFETY_CHECK.test(firing.rule))) {
+        const found = counted.get(firing.rule) ?? { kind: refusalKindOf(firing.rule), rule: firing.rule, at: firing.at, firings: [] };
+        counted.set(firing.rule, { ...found, firings: [...found.firings, firing] });
     }
     return [...counted.values()].map(found => ({
         kind: found.kind, at: found.at, task: null,
-        text: `${found.rule} refused ${found.count} time${found.count === 1 ? '' : 's'}`,
+        text: `${found.rule} refused ${found.firings.length} time${found.firings.length === 1 ? '' : 's'}`,
+        evidence: found.firings.map(firingLine),
     }));
 }
 
 function firingsIn(store, facts) {
-    const recorded = store.prepare("select at, rule, outcome, task_id from rule_fired where outcome = 'refused' order by number").all()
+    const recorded = store.prepare("select at, rule, outcome, actor, task_id, reason from rule_fired where outcome = 'refused' order by number").all()
         .map(row => ({ ...row, at: Date.parse(row.at) }))
         .filter(firing => facts.inTheWindow(firing.at));
     if (recorded.length > 0) {
         return recorded;
     }
     return facts.events.filter(event => event.type === 'ToolCallRefused' && facts.inTheWindow(event.at))
-        .map(event => ({ at: event.at, rule: `guard.${event.payload.rule}`, outcome: 'refused', task_id: event.task_id }));
+        .map(event => ({ at: event.at, rule: `guard.${event.payload.rule}`, outcome: 'refused', actor: event.actor, task_id: event.task_id, reason: event.payload.rule }));
+}
+
+function refusalKindOf(rule) {
+    return rule === CAPTAINS_WORD_RULE ? 'captains-word-refused' : 'safety-check-refused';
+}
+
+function firingLine(firing) {
+    return `${clock(firing.at)} ${firing.actor}${firing.task_id ? ' on ' + firing.task_id : ''} was refused: ${safe(firing.reason, { full: false })}`;
 }
 
 function steersNeverAcknowledged(facts) {
