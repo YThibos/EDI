@@ -49,17 +49,20 @@ A running ship's decision waits in the console and reaches the captain in a roun
 ## Reports
 
 One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi sitrep` prints it as the boxed captain report ([captain-report](decisions/captain-report.md)).
-`edi report` prints the turn report that ends a turn: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision that is not urgent always on one line ([turn-report](decisions/turn-report.md)).
+The turn report ends a state-changing turn, and the primary's stop hook renders it and hands it over to paste: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision that is not urgent always on one line ([turn-report](decisions/turn-report.md)).
 What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions or bound decisions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
 A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 
 ```sh
-edi report --turn - < turn.json                     # the turn report: only what needs the captain
-edi sitrep                                          # the boxed overview, read-only and without a turn
-edi sitrep --turn - < turn.json                     # the boxed overview with a state-changing turn's items
+edi turn done --project harness Fitted the lamp      # records one of the turn's items for its report
+edi turn next Test the lamp                         # records what comes next
+edi turn record - < turn.json                       # records several of the turn's items at once
+edi report                                          # the turn report: only what needs the captain
+edi sitrep                                          # the boxed overview, read-only, with the turn's recorded items
 ```
 
 A turn is `{"done": [{"projects", "text"}], "next": [{"projects", "text"}], "tasks": {"<task>": {"text", "state", "projects"}}}`, every part optional.
+The items a turn records are forgotten when the next turn starts.
 Inside tmux the report fits the pane it runs in ([captain-report](decisions/captain-report.md)).
 Every captain-facing card and report is linted for internal labels ([captain-facing-voice](decisions/captain-facing-voice.md)).
 Every time a report, a decision list or a presence line shows is in the machine's own time zone, such as "Answered 2026-10-22 11:14 CEST", while the store, the event log and every API keep UTC instants ([time-zones](decisions/time-zones.md)).

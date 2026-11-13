@@ -1,4 +1,4 @@
-package io.github.ythibos.edi.web.report;
+package io.github.ythibos.edi.domain.report;
 
 import java.util.List;
 

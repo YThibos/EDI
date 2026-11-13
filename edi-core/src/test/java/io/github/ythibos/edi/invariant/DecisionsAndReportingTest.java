@@ -24,7 +24,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import io.github.ythibos.edi.application.decision.GivenAnswer;
-import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.Citation;
@@ -49,6 +48,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.SessionSource;
+import io.github.ythibos.edi.domain.primary.TurnEnd;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
@@ -68,9 +68,9 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.console.ConsoleSitrep;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.ReportWidth;
-import io.github.ythibos.edi.web.report.TaskWording;
-import io.github.ythibos.edi.web.report.Turn;
-import io.github.ythibos.edi.web.report.TurnItem;
+import io.github.ythibos.edi.domain.report.TaskWording;
+import io.github.ythibos.edi.domain.report.Turn;
+import io.github.ythibos.edi.domain.report.TurnItem;
 import io.github.ythibos.edi.web.report.TurnReport;
 
 @DisplayName("4.4 Decisions and reporting")
@@ -506,24 +506,24 @@ class DecisionsAndReportingTest {
     class StateChangingTurnsEndWithTheReport {
 
         @Test
-        @DisplayName("AT-21 the primary's Stop hook blocks a state-changing turn until edi report ran in that turn")
-        void theStopHookWaitsForTheReport() throws IOException {
+        @DisplayName("AT-21 the primary's Stop hook hands over the turn report in a state-changing turn until a report was shown in that turn")
+        void theStopHookHandsOverTheReport() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             UUID primary = UUID.randomUUID();
             home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
             home.primaryHooks().promptSubmitted(primary, "What is waiting on me?");
-            HookAnswer quietTurn = home.primaryHooks().stopping(primary);
+            TurnEnd quietTurn = home.primaryHooks().stopping(primary);
 
             home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
             home.addTask().add(ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
-            HookAnswer unreported = home.primaryHooks().stopping(primary);
+            TurnEnd unreported = home.primaryHooks().stopping(primary);
             home.primaryHooks().reportRendered(primary);
-            HookAnswer reported = home.primaryHooks().stopping(primary);
+            TurnEnd reported = home.primaryHooks().stopping(primary);
 
-            assertThat(quietTurn).isEqualTo(HookAnswer.PROCEED);
-            assertThat(unreported.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
-            assertThat(unreported.reason()).isEqualTo("This turn changed state: render the turn report with edi report --turn - and paste it verbatim, then stop.");
-            assertThat(reported).isEqualTo(HookAnswer.PROCEED);
+            assertThat(quietTurn).isEqualTo(TurnEnd.ENDS);
+            assertThat(unreported).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+            assertThat(unreported.instruction()).isEqualTo("This turn's report follows: paste it verbatim in one fenced block, then stop.");
+            assertThat(reported).isEqualTo(TurnEnd.ENDS);
         }
     }
 

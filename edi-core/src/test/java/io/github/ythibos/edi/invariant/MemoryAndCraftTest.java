@@ -35,7 +35,7 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.console.ConsoleSitrep;
 import io.github.ythibos.edi.web.memory.MemoryCheckText;
 import io.github.ythibos.edi.web.report.ReportWidth;
-import io.github.ythibos.edi.web.report.Turn;
+import io.github.ythibos.edi.domain.report.Turn;
 import tools.jackson.databind.json.JsonMapper;
 
 @DisplayName("4.7 Memory and craft")

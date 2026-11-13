@@ -26,7 +26,7 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.ReportWidth;
-import io.github.ythibos.edi.web.report.Turn;
+import io.github.ythibos.edi.domain.report.Turn;
 import io.github.ythibos.edi.web.text.Moments;
 
 class PresenceTextsTest {

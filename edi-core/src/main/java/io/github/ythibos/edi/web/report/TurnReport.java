@@ -7,6 +7,7 @@ import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionRound;
 import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
+import io.github.ythibos.edi.domain.report.Turn;
 
 public record TurnReport(WaitingOnTheCaptain waiting, Turn turn, ReportWidth width, UnreadableCalendar unreadableCalendar, Instant previousReportAt,
         DecisionRound gatheringRound) {

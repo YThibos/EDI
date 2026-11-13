@@ -12,14 +12,14 @@ Only a process in the captain's pane knows that pane, while the core runs in the
 ## Decision
 
 `edi sitrep` prints the boxed captain report, rendered by the core from the fleet snapshot ([fleet-snapshot](fleet-snapshot.md)); `/sitrep` is the only overview command and is read-only, and `/sitrep board` also opens the console's sitrep page ([console](console.md)).
-`edi report` prints the turn report instead, which keeps only what needs the captain and draws its decision zone with the same `DecisionZone` ([turn-report](turn-report.md)).
+The turn report, which the primary's stop hook hands over and `edi report` prints, is the chat's instead, which keeps only what needs the captain and draws its decision zone with the same `DecisionZone` ([turn-report](turn-report.md)).
 `CaptainReportPresenter` ports the old rules one for one: the decision zone (`DecisionZone`), sections with counts, an 18-column project column with Fleet first (`ProjectColumn`), word wrapping with hanging indents that never breaks a word (`WordWrap`), BACKLOG with the five newest-filed queued tasks, and no trailing spaces.
 The golden files in `edi-core/src/test/resources/captain-report/` were produced by running the old renderer on every case of its suite, and `ReportGoldenCases` builds the same state through EDI's use cases.
 Three old inputs have no counterpart in EDI and are adapted openly: a hold that is not for the captain becomes a deferral until the captain's word, drawn as the old `- on hold`; a decision deferred to a date becomes a task deferred without a card on both sides; and the old `--` call, held without a card, is not ported, because EDI holds a task for a decision only with its card.
 Text keeps every character the old renderer accepted, and replaces any other with `?` (`Glyphs`), so stored data can never stop a report.
 The zone draws a decision bound to a listening research board as one line under that board, its number and title only, because the captain answers it on the board; every other decision keeps its full card, and the zone's count counts each decision, review, changing request and board with questions of its own once ([fleet-snapshot](fleet-snapshot.md)).
-The turn's own wording arrives as `edi report --turn -` for the turn report, which `TurnDocument` reads strictly, with only `done`, `next` and `tasks`; it can reword a task but never add or remove a decision.
-`edi sitrep --turn -` carries a state-changing turn's items into the sitrep, through `POST /api/report/sitrep`, which draws them in its done and next sections.
+The turn's own wording is recorded as it happens with `edi turn`, through `POST /api/turn`, which `TurnDocument` reads strictly, with only `done`, `next` and `tasks`; it can reword a task but never add or remove a decision ([turn-report](turn-report.md)).
+`edi sitrep` draws the items its session's turn recorded in its done and next sections.
 The command measures its own pane: `TmuxPane` asks tmux, naming the socket from `TMUX` with `-S` and waiting at most two seconds, and sends `paneWidth`; `ReportWidth.forPane` applies the rule, and without a width the report is 120 columns.
 The report heads itself with the presence when it is not plainly present, with an unreadable calendar's line while one lasts ([presence](presence.md)), and with a `Builds:` line while several workers run native builds or test runs at once ([local-native-builds](local-native-builds.md)).
 
@@ -52,3 +52,4 @@ When the captain asks for a change to the report's layout, or the report is read
 - 27/10/2026: the report began heading itself with the heavy runs that several workers run at once (EDI-99).
 - 28/10/2026: `edi report` became the turn report, the captain's attention list, and this layout stayed the sitrep's, which `edi sitrep --turn -` gives a state-changing turn's items (EDI-133).
 - 03/11/2026: an open worker question joined the zone as "Waiting on EDI", counted as nothing open, and `Nothing waiting on you` stopped printing while one waits (EDI-154).
+- 13/11/2026: the primary records the turn's items with `edi turn` as they happen, and the sitrep draws the recorded items in place of `edi sitrep --turn -` (EDI-269).
