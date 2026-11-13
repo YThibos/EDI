@@ -15,6 +15,7 @@ A task names the tasks it waits for, and a task closes when it is dropped, clean
 The id is the one given with `--id`, refused when taken, or a slug of the title (`TaskId.sluggedFrom`), numbered `-2`, `-3` onwards when taken.
 A ship or a scout must name at least one registered project, a captain item may name none, every blocker must exist and be open, and the work key is settled at intake, or given once afterwards with `edi task key` to a task that has none ([trackers-and-time-booking](trackers-and-time-booking.md)).
 `ProjectRegistry` reads `projects.yaml` with Jackson's YAML module on every use, maps only the fields its callers need, and refuses an unreadable file or an unusable name as `UnreadableRegistry`, naming the file; the store keeps no project table.
+A task waits for its blockers until their work has landed (`Wait.afterLanded`), read against their stages ([plans](plans.md)).
 Closing a task takes it out of every other task's blocked-by in the same transaction: `DropTask`, `CleanUpTask` and `AnswerDecision` call `DependantTasks.stopWaitingFor`.
 
 ## Why
@@ -44,3 +45,4 @@ When the primary needs to change a task's projects or blockers after intake, or 
 - 15/10/2026: slice S1 built intake and read the registry as configuration.
 - 21/10/2026: a shadow run showed a task "blocked by" one the captain had dropped, so closing a task now releases its dependants, and `V9__waiting_on_the_captain.sql` removed the stale dependencies.
 - 04/11/2026: an unkeyed task can be given its work key after intake with `edi task key`, which closes its open ticket decision (EDI-179).
+- 13/11/2026: a blocker is waited for until its work has landed rather than until it is cleaned up, read against its stage (EDI-88).

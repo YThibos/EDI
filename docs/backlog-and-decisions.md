@@ -12,6 +12,15 @@ edi backlog --ready                                 # the queue, or only what no
 edi task show fit-the-lamp                          # a task id, or the D number of its decision
 edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-11-01
 edi release fit-the-lamp
+edi task add --kind ship --project EDI --title "Paint the lamp" --key EDI-15 --blocked-by fit-the-lamp   # waits until that work lands
+```
+
+A plan is a titled set of slices, each a task with its own key, its number in the plan and one wait: "after N merged", the default on the slice before, "after N landed", or "none" ([plans](decisions/plans.md)).
+The primary enters it as JSON on standard input, and EDI shows each slice's stage, its wait and whether it is eligible to start.
+
+```sh
+edi plan add --from - < plan.json   # {key, title, project, report, decision, capacity, effort, slices: [{number, title, category, key, body, wait}]}
+edi plan show EDI-52                # the plan's slices, their stages and waits, and which are eligible
 ```
 
 EDI's own queued and held work is also one GitHub issue per item on its repository, each carrying its full spec, with a pickup script and protocol for a session that has only the repository ([docs/pickup.md](pickup.md), [backlog-in-the-repository](decisions/backlog-in-the-repository.md)).

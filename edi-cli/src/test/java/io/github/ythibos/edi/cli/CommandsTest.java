@@ -325,6 +325,20 @@ class CommandsTest {
     }
 
     @Test
+    void entersAPlanFromStandardInputAndShowsItByItsKey() {
+        core.answering(201, "Planned HRN-40.\n");
+        String plan = "{\"key\":\"HRN-40\",\"slices\":[{\"number\":1,\"title\":\"Fit the lamp\",\"wait\":\"none\"}]}";
+
+        int exitCode = edi(plan, "plan", "add", "--from", "-");
+        StubCore.Request added = core.received();
+        edi("", "plan", "show", "HRN-40");
+
+        assertThat(exitCode).isZero();
+        assertThat(added).isEqualTo(new StubCore.Request("POST", "/api/plans", "Bearer stub-token", "text/plain", null, null, plan));
+        assertThat(core.received().target()).isEqualTo("/api/plans/HRN-40");
+    }
+
+    @Test
     void asksForTheTurnReportAndReadsTheSitrep() {
         core.answering(200, "report\n");
 

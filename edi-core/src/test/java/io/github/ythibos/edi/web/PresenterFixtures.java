@@ -3,7 +3,13 @@ package io.github.ythibos.edi.web;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.IntStream;
 
+import io.github.ythibos.edi.application.fleet.OpenDecision;
+import io.github.ythibos.edi.application.fleet.WaitingBoard;
+import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardBinding;
+import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -18,6 +24,7 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.ManualClock;
 import io.github.ythibos.edi.web.console.SitrepConsolePresenter;
@@ -102,5 +109,16 @@ public final class PresenterFixtures {
 
     public static Decision answeredDecision() {
         return openDecision().answered(new CaptainAnswer("D58, A\nand keep the old one", new OptionKey('A'), "The simple lamp.", AT.plusSeconds(600), AnswerChannel.CHAT));
+    }
+
+    public static WaitingBoard boardBinding(String subject, int firstNumber, int bound) {
+        Task research = Task.queued(new TaskId(subject + "-research"),
+                new Intake(TaskKind.SCOUT, "Research the " + subject, List.of(new ProjectName("harness")), null, null, List.of(), null), "", AT);
+        List<OpenDecision> decisions = IntStream.range(firstNumber, firstNumber + bound)
+                .mapToObj(number -> new OpenDecision(Decision.raised(new DecisionNumber(number), research.id(), Cards.card("Which " + subject + "?"), AT), research))
+                .toList();
+        List<BoardBinding> bindings = decisions.stream().map(open -> BoardBinding.byNumber(open.decision().number())).toList();
+        return new WaitingBoard(new Board(new BoardId(firstNumber), research.id(), "board.html", BoardRounds.LINK, bindings, 0, 1, AT, null, null), research,
+                decisions);
     }
 }
