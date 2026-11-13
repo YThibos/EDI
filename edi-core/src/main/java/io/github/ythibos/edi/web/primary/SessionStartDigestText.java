@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.web.primary;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -90,10 +92,17 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String currentAnchorToRead(SessionAnchor anchor) {
-        return anchor.currentAnchor()
+        return anchorFileToRead(anchor)
                 .map(current -> "Read " + current + " now and hold to every line of it.")
                 .orElse("The core finds no checkout of its anchor to read, so tell the captain and ask for edi up, which writes the current one into the"
                         + " output style.");
+    }
+
+    private static Optional<Path> anchorFileToRead(SessionAnchor anchor) {
+        return switch (anchor.held()) {
+            case CURRENT, OUTSIDE_THE_HOME -> Optional.of(anchor.outputStyle());
+            case OLDER, UNWRITTEN -> anchor.currentAnchor();
+        };
     }
 
     private static String unwrittenAnchorOf(SessionAnchor anchor) {
@@ -108,8 +117,9 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String confirmationOf(SessionAnchor anchor) {
-        return "Confirm that this session's system prompt holds the heading \"" + anchor.heading() + "\"; if it does not, read " + anchor.outputStyle()
-                + " at once and tell the captain this session runs without its anchor, for a primary never works unaware.";
+        return "Confirm that this session's system prompt holds the heading \"" + anchor.heading() + "\"; if it does not, "
+                + anchorFileToRead(anchor).map(file -> "read " + file + " at once and tell the captain").orElse("tell the captain at once")
+                + " this session runs without its anchor, for a primary never works unaware.";
     }
 
     private static String standingOf(Standing standing) {

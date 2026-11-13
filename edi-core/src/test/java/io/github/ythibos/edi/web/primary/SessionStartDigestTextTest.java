@@ -69,7 +69,7 @@ class SessionStartDigestTextTest {
         assertThat(digest.lines().skip(1).limit(2)).containsExactly("This session holds an older anchor than the core's: the edi-primary output style at "
                 + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " predates the core's build, and a compaction or a new start loads"
                 + " that older anchor again until edi up refreshes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
-                + " now and hold to every line of it.", confirmationOfTheAnchorIn(home));
+                + " now and hold to every line of it.", confirmationReading(home.home().root().resolve("checkout/claude/primary/CLAUDE.md")));
     }
 
     @Test
@@ -82,6 +82,9 @@ class SessionStartDigestTextTest {
         assertThat(digest.lines().skip(1).findFirst().orElseThrow()).startsWith("This session holds an older anchor than the core's: ")
                 .endsWith(" The core finds no checkout of its anchor to read, so tell the captain and ask for edi up, which writes the current one into"
                         + " the output style.");
+        assertThat(digest.lines().skip(2).findFirst().orElseThrow()).isEqualTo("Confirm that this session's system prompt holds the heading"
+                + " \"# EDI: the primary's anchor\"; if it does not, tell the captain at once this session runs without its anchor, for a primary never"
+                + " works unaware.");
     }
 
     @Test
@@ -93,8 +96,8 @@ class SessionStartDigestTextTest {
         assertThat(digest.lines().skip(1).limit(2)).containsExactly("The edi-primary output style at "
                 + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " does not carry the anchor yet, so Claude Code has none to load for"
                 + " this session until edi up writes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
-                + " now and hold to every line of it.", confirmationOfTheAnchorIn(home));
-        assertThat(digest).doesNotContain("only for a session started in");
+                + " now and hold to every line of it.", confirmationReading(home.home().root().resolve("checkout/claude/primary/CLAUDE.md")));
+        assertThat(digest).doesNotContain("only for a session started in", "if it does not, read " + home.home().root().resolve(".claude"));
     }
 
     @Test
@@ -122,8 +125,11 @@ class SessionStartDigestTextTest {
     }
 
     private static String confirmationOfTheAnchorIn(TestHome home) {
-        return "Confirm that this session's system prompt holds the heading \"# EDI: the primary's anchor\"; if it does not, read "
-                + home.home().root().resolve(".claude/output-styles/edi-primary.md")
+        return confirmationReading(home.home().root().resolve(".claude/output-styles/edi-primary.md"));
+    }
+
+    private static String confirmationReading(Path anchorFile) {
+        return "Confirm that this session's system prompt holds the heading \"# EDI: the primary's anchor\"; if it does not, read " + anchorFile
                 + " at once and tell the captain this session runs without its anchor, for a primary never works unaware.";
     }
 
