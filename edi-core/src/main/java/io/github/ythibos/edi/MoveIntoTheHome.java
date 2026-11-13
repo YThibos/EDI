@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
+import org.springframework.context.aot.AbstractAotProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
@@ -17,10 +18,17 @@ final class MoveIntoTheHome implements ApplicationListener<ApplicationEnvironmen
 
     @Override
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent prepared) {
+        if (buildsTheNativeImage(prepared.getEnvironment())) {
+            return;
+        }
         Path home = homeIn(prepared.getEnvironment());
         keepTheHomeAsItStoodAtStart(prepared.getEnvironment(), home);
         PrivateHome.createdForItsOwnerAlone(home);
         OwnWorkingDirectory.moveInto(home);
+    }
+
+    private static boolean buildsTheNativeImage(ConfigurableEnvironment environment) {
+        return environment.getProperty(AbstractAotProcessor.AOT_PROCESSING, Boolean.class, false);
     }
 
     private static Path homeIn(ConfigurableEnvironment environment) {

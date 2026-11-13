@@ -13,8 +13,8 @@ A process inherits the working directory of whatever started it, so a core resta
 ## Decision
 
 The core works in its home from the moment it starts, wherever it was started from: `EdiCoreApplication.main` registers `MoveIntoTheHome`, which, once the environment is prepared and before any bean, reads `edi.home`, makes it absolute and keeps that value for the rest of the start, creates the home for its owner alone when it is missing, and moves the process into it through a `chdir` downcall of the Foreign Function and Memory API (JEP 454, `OwnWorkingDirectory`); a core that cannot move refuses to start.
-Only `main` moves, so a test's Spring context never moves the JVM that runs the tests.
-The native image of the core is built with `-H:+ForeignAPISupport`, unlocked as the experimental Native Image option it still is, `--enable-native-access=ALL-UNNAMED`, and the `chdir` downcall registered in its `reachability-metadata.json`.
+Only `main` moves, and not while Spring's ahead-of-time processing runs it to build the native image, so neither a test's Spring context nor the build moves its JVM or creates a home.
+The native image of the core is built with `-H:+ForeignAPISupport`, unlocked as the experimental Native Image option it still is, `--enable-native-access=ALL-UNNAMED`, and the `chdir` downcall registered in a `reachability-metadata.json` of its own, beside the one Spring's ahead-of-time processing writes for the core and would otherwise replace.
 Every child the core starts is given its working directory explicitly.
 `edi health` reads the core's working directory from `/proc/<pid>/cwd`, for the process `state/core.pid` records, and names it when it is not the home, so a core started before it moved itself is seen; the core stays healthy, and it moves home when it restarts.
 `CoreInstanceLock` takes an exclusive lock on `state/core.pid` and writes the core's process id before the store or the token is touched, so a second core on the same home fails to start, naming the file.
