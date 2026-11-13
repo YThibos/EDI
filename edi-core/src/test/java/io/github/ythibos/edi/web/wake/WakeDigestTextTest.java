@@ -129,7 +129,7 @@ class WakeDigestTextTest {
                 queued(1, new Wake(WakeKind.DECISION_ANSWERED, LAMP, null, "D58 in the console: A: LED, keep one oil lamp", null))), 0, 1, 0, PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("1. fit-lamp: the captain answered D58 in the console: A: LED, keep one oil lamp;"
-                + " read edi worker show fit-lamp, which lists its steers, and carry the answer to its work unless a steer quoting it is already there.\n");
+                + " if the task has a worker, edi worker show fit-lamp lists its steers, so carry the answer to its work unless a steer quoting it is already there.\n");
     }
 
     @Test
