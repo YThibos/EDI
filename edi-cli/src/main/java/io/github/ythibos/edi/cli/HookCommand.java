@@ -18,6 +18,7 @@ final class HookCommand implements Callable<Integer> {
     private static final int NOT_ANSWERED = 1;
     private static final int BLOCKED = 2;
     private static final String GUARD = "pre-tool-use";
+    private static final String STOP = "stop";
     private static final String CORE_UNREACHABLE = "guard.core-unreachable";
     private static final String HOOK_NOT_TAKEN = "hook.not-taken";
 
@@ -39,7 +40,7 @@ final class HookCommand implements Callable<Integer> {
             return unanswered(unreadable.getMessage(), RuleFirings.throughTheCore(edi));
         }
         try {
-            CoreReply reply = new CoreClient().post(edi.core(), "/api/hooks/" + CoreExchange.encoded(event), payload, "application/json");
+            CoreReply reply = new CoreClient().post(edi.core(), hookPath(), payload, "application/json");
             return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip(), firingsAfter(reply));
         } catch (CoreUnavailable unavailable) {
             return withoutTheCore(payload, unavailable.getMessage());
@@ -48,6 +49,11 @@ final class HookCommand implements Callable<Integer> {
 
     private String payload() throws IOException {
         return new String(edi.input().readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private String hookPath() {
+        String hook = "/api/hooks/" + CoreExchange.encoded(event);
+        return event.equals(STOP) ? ReportCommand.sizedForThePane(hook, edi.paneWidth()) : hook;
     }
 
     private RuleFirings firingsAfter(CoreReply reply) {

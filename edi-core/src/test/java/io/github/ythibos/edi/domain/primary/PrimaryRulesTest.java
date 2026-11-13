@@ -58,20 +58,28 @@ class PrimaryRulesTest {
     }
 
     @Test
-    void endsATurnOnlyAfterTheReportWhenStateChangedAndWithAWaitWhileWorkIsInFlight() {
+    void handsOverTheReportWhenStateChangedOrItemsWereRecordedAndAsksForAWaitWhileWorkIsInFlight() {
         PrimaryTurn turn = PrimaryTurn.startedAt(START, 12);
 
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, false, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, false, false, false))).contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, false, false, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false)))
-                .contains(TurnEnd.RENDER_THE_REPORT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, false, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(true, true, true, false))).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, false))).contains(TurnEnd.START_THE_WAIT);
-        assertThat(TurnEnd.blockingReason(turn, new TurnCircumstances(false, false, true, true))).isEmpty();
-        assertThat(TurnEnd.blockingReason(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, true, false))).isEmpty();
-        assertThat(TurnEnd.blockingReason(null, new TurnCircumstances(true, false, true, false))).isEmpty();
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, false, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, false, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, true, false, false, false))).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn.reported(START.plusSeconds(1)), new TurnCircumstances(true, true, false, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn.reported(START.minusSeconds(1)), new TurnCircumstances(true, false, false, false, false)))
+                .isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, true, true, false, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(true, false, true, true, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, false, false, true, false))).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(TurnEnd.of(turn, new TurnCircumstances(false, false, false, true, true))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(true, false, false, true, false))).isEqualTo(TurnEnd.ENDS);
+        assertThat(TurnEnd.of(null, new TurnCircumstances(true, false, false, true, false))).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void holdsTheStopOnlyToHandOverTheReportOrToAskForAWait() {
+        assertThat(TurnEnd.ENDS.holdsTheStop()).isFalse();
+        assertThat(TurnEnd.HANDS_OVER_THE_REPORT.holdsTheStop()).isTrue();
+        assertThat(TurnEnd.STARTS_THE_WAIT.holdsTheStop()).isTrue();
     }
 
     @Test

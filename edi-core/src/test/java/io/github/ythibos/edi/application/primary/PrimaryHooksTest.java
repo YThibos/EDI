@@ -1,12 +1,14 @@
 package io.github.ythibos.edi.application.primary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -15,15 +17,20 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.wake.StreamPoll;
-import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryWait;
 import io.github.ythibos.edi.domain.primary.SessionProcess;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.primary.TurnEnd;
+import io.github.ythibos.edi.domain.report.TaskWording;
+import io.github.ythibos.edi.domain.report.Turn;
+import io.github.ythibos.edi.domain.report.TurnItem;
 import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
+import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TestProcesses;
 import io.github.ythibos.edi.testing.WorkerFixtures;
@@ -101,13 +108,13 @@ class PrimaryHooksTest {
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
-        HookAnswer blind = home.primaryHooks().stopping(primary);
+        TurnEnd blind = home.primaryHooks().stopping(primary);
         streamIn(primary, home.processes().ownId(), true);
-        HookAnswer streaming = home.primaryHooks().stopping(primary);
+        TurnEnd streaming = home.primaryHooks().stopping(primary);
 
-        assertThat(blind.verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
-        assertThat(blind.reason()).isEqualTo("Work is in flight and no wake stream is live: start edi wait --follow alone with the Monitor tool, then stop.");
-        assertThat(streaming).isEqualTo(HookAnswer.PROCEED);
+        assertThat(blind).isEqualTo(TurnEnd.STARTS_THE_WAIT);
+        assertThat(blind.instruction()).isEqualTo("Work is in flight and no wake stream is live: start edi wait --follow alone with the Monitor tool, then stop.");
+        assertThat(streaming).isEqualTo(TurnEnd.ENDS);
     }
 
     @Test
@@ -131,7 +138,7 @@ class PrimaryHooksTest {
         assertThat(following).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.FOLLOWING, started, 1));
         assertThat(afterItDied).isEqualTo(new PrimaryWait(PrimaryWait.Sighting.MISSING, null, 1));
         assertThat(afterItDied.needsAWait()).isTrue();
-        assertThat(home.primaryHooks().stopping(primary).verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.STARTS_THE_WAIT);
     }
 
     @Test
@@ -155,11 +162,11 @@ class PrimaryHooksTest {
         home.primaryHooks().promptSubmitted(standby, "<task-notification>done</task-notification>");
         home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
 
-        assertThat(home.primaryHooks().stopping(standby)).isEqualTo(HookAnswer.PROCEED);
+        assertThat(home.primaryHooks().stopping(standby)).isEqualTo(TurnEnd.ENDS);
         for (int block = 0; block < 3; block++) {
-            assertThat(home.primaryHooks().stopping(primary).verdict()).isEqualTo(HookAnswer.Verdict.BLOCK_THE_STOP);
+            assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.STARTS_THE_WAIT);
         }
-        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(HookAnswer.PROCEED);
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
     }
 
     @Test
@@ -180,6 +187,73 @@ class PrimaryHooksTest {
 
         assertThat(home.sessionStartDigest().digestFor(next).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
         assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
+    }
+
+    @Test
+    void handsOverTheReportAtTheStopOfATurnThatChangedState() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
+        home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+
+        TurnEnd handedOver = home.primaryHooks().stopping(primary);
+        home.primaryHooks().reportRendered(primary);
+        TurnEnd afterThePaste = home.primaryHooks().stopping(primary);
+
+        assertThat(handedOver).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(afterThePaste).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void endsAPlainTurnThatRecordedNothingAndChangedNoStateWithoutHoldingTheStop() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "How does the lamp work?");
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void endsAStateChangingTurnWithoutTheReportWhileTheCaptainKeepsTheChatQuiet() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.changePresence().quiet();
+        home.primaryHooks().promptSubmitted(primary, "<task-notification>done</task-notification>");
+        home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+        home.recordTurnItems().record(primary, new Turn(List.of(new TurnItem(List.of("harness"), "Queued the brass lamp")), List.of(), Map.of()));
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void handsOverTheReportOfATurnWhoseItemsWereRecordedOneByOneAndForgetsThemWhenTheNextTurnStarts() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "What did the lamp review say?");
+        TurnItem read = new TurnItem(List.of("harness"), "Read the lamp's review");
+        TurnItem fix = new TurnItem(List.of("harness"), "Fix the lamp's wiring");
+        TurnItem test = new TurnItem(List.of(), "Test the wiring by hand");
+
+        home.recordTurnItems().record(primary, new Turn(List.of(read), List.of(), Map.of()));
+        home.recordTurnItems().record(primary, new Turn(List.of(), List.of(fix), Map.of()));
+        Turn recorded = home.recordTurnItems().record(primary, new Turn(List.of(), List.of(test), Map.of("fit-lamp", new TaskWording(null, "wired", null))));
+        TurnEnd handedOver = home.primaryHooks().stopping(primary);
+        home.primaryHooks().promptSubmitted(primary, "Thanks.");
+
+        assertThat(recorded).isEqualTo(new Turn(List.of(read), List.of(fix, test), Map.of("fit-lamp", new TaskWording(null, "wired", null))));
+        assertThat(home.turnItems().recordedIn(primary)).isEqualTo(Turn.NONE);
+        assertThat(handedOver).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void refusesToRecordItemsBeforeTheSessionHasATurn() {
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        Turn items = new Turn(List.of(new TurnItem(List.of(), "Read the review")), List.of(), Map.of());
+
+        assertThatThrownBy(() -> home.recordTurnItems().record(primary, items)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("This Claude Code session has no turn open yet; its items are recorded once a message or a wake starts one.");
     }
 
     private void streamIn(UUID session, long pid, boolean follows) {
