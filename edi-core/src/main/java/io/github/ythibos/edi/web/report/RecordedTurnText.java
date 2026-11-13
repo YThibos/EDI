@@ -16,8 +16,16 @@ class RecordedTurnText implements TextPresenter<RecordedTurn> {
 
     @Override
     public String text(RecordedTurn recorded) {
-        Turn turn = recorded.recorded();
-        return "Recorded. This turn's report holds " + Words.quantity(turn.done().size(), "done item") + " and "
-                + Words.quantity(turn.next().size(), "next item") + "; the stop hands it to you to paste.\n";
+        return "Recorded. This turn's report holds " + contents(recorded.recorded()) + "; the stop hands it to you to paste.\n";
+    }
+
+    private static String contents(Turn turn) {
+        String doneItems = Words.quantity(turn.done().size(), "done item");
+        String nextItems = Words.quantity(turn.next().size(), "next item");
+        return turn.tasks().isEmpty() ? doneItems + " and " + nextItems : doneItems + ", " + nextItems + " and " + rewordedTasks(turn);
+    }
+
+    private static String rewordedTasks(Turn turn) {
+        return Words.quantity(turn.tasks().size(), "reworded task");
     }
 }

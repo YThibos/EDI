@@ -53,7 +53,11 @@ final class HookCommand implements Callable<Integer> {
 
     private String hookPath() {
         String hook = "/api/hooks/" + CoreExchange.encoded(event);
-        return event.equals(STOP) ? ReportCommand.sizedForThePane(hook, edi.paneWidth()) : hook;
+        return handsOverTheTurnReport() ? ReportCommand.sizedForThePane(hook, edi.paneWidth()) : hook;
+    }
+
+    private boolean handsOverTheTurnReport() {
+        return event.equals(STOP) && !edi.runsForAWorker();
     }
 
     private RuleFirings firingsAfter(CoreReply reply) {

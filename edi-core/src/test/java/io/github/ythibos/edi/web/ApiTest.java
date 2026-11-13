@@ -251,6 +251,19 @@ class ApiTest {
     }
 
     @Test
+    void countsATurnsRewordedTasksInItsAcknowledgement() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Reword the anchor.\"}");
+        HttpResponse<String> recorded = turnItemsInSession(primary, """
+                {"tasks":{"api-anchor":{"text":"Weigh the anchor"}}}""");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(recorded.body())
+                .isEqualTo("Recorded. This turn's report holds 0 done items, 0 next items and 1 reworded task; the stop hands it to you to paste.\n");
+    }
+
+    @Test
     void drawsADecisionCardInFullInTheTurnItIsRaisedAndOnOneLineInTheTurnsAfter() throws Exception {
         UUID primary = UUID.randomUUID();
         primaryHook(primary, "session-start", "{}");
