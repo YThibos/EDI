@@ -52,7 +52,7 @@ EDI stands alone, so its launcher ships and installs with it, and the installed 
 ## Consequences
 
 - Good: one command takes EDI from a merged change to a running core, and a core that does not stop is named with the way back.
-- Good: no mount or checkout is pinned by the core, and no relative path the core or a child resolves lands where a command happened to be typed.
+- Good: the core never pins a mount or a checkout as its working directory, and no child it starts inherits one.
 - Bad: the native image needs an experimental Native Image option for one downcall, and Java's own `user.dir` can still name where the core was started, which is why the home is made absolute before the move.
 - Bad: a core started without systemd is not restarted after a crash, a restart takes as long as the old core's shutdown, and the native build takes minutes.
 
