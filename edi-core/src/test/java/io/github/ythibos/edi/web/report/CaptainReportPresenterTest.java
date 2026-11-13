@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
@@ -136,6 +138,30 @@ class CaptainReportPresenterTest {
                 .doesNotContain("Nothing waiting on you");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2})
+    void countsAWaitingBoardAsOneWithEveryDecisionItBinds(int bound) {
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(PresenterFixtures.boardBinding("lamp", 59, bound)), List.of(), List.of());
+
+        String report = rendered(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
+
+        assertThat(report).contains("╔══ NEEDS YOUR DECISION ══ 1 open ══");
+    }
+
+    @Test
+    void countsTwoBoardsWithOneBoundDecisionEachAsTwoAndADecisionBoundToNoBoardAsItsOwn() {
+        WaitingOnTheCaptain boardsOnly = new WaitingOnTheCaptain(List.of(),
+                List.of(PresenterFixtures.boardBinding("lamp", 59, 1), PresenterFixtures.boardBinding("horn", 60, 1)), List.of(), List.of());
+        WaitingOnTheCaptain besideADecision = new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem())),
+                boardsOnly.boards(), List.of(), List.of());
+
+        String boards = rendered(new FleetSnapshot(boardsOnly, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
+        String beside = rendered(new FleetSnapshot(besideADecision, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
+
+        assertThat(boards).contains("╔══ NEEDS YOUR DECISION ══ 2 open ══", "║        D59   Which lamp?\n", "║        D60   Which horn?\n");
+        assertThat(beside).contains("╔══ NEEDS YOUR DECISION ══ 3 open ══", "║  D58   Which lamp?\n");
+    }
+
     @Test
     void saysNothingWaitsOnlyWhenNeitherADecisionNorAWorkerQuestionWaits() {
         Task lamp = filed("fit-lamp", 0);
@@ -171,7 +197,7 @@ class CaptainReportPresenterTest {
                 ReportWidth.forPane(64), Presence.presentSince(TestHome.START), null, null));
 
         assertThat(report).startsWith("""
-                ╔══ NEEDS YOUR DECISION ══ 2 open ════════════════════════════
+                ╔══ NEEDS YOUR DECISION ══ 1 open ════════════════════════════
                 ║
                 ╟── harness ─────────────────────────────────
                 ║

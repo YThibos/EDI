@@ -30,6 +30,20 @@ describe('DecisionDeck', () => {
     expect(deck.querySelector('.sr-call')?.classList).toContain('sr-call--last');
   });
 
+  it('offers no next card when the deck holds one, so paging never shows that card again', async () => {
+    await dealt(sitrepFixture({ decisions: [] }));
+    const deck: HTMLElement = fixture.nativeElement;
+    const next = deck.querySelector<HTMLButtonElement>('[aria-label="Next card"]')!;
+
+    next.click();
+    await fixture.whenStable();
+
+    expect(deck.querySelector('.sr-stacknav__count')?.textContent).toBe('card 1 of 1 · 1 answered');
+    expect(next.disabled).toBe(true);
+    expect(deck.querySelector<HTMLButtonElement>('[aria-label="Previous card"]')!.disabled).toBe(true);
+    expect(deck.querySelectorAll('.sr-decision')).toHaveLength(1);
+  });
+
   it('shows the all-clear when nothing waits and nothing was answered today', async () => {
     await dealt(sitrepFixture({ decisions: [], answered: [] }));
     const deck: HTMLElement = fixture.nativeElement;
