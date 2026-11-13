@@ -27,7 +27,7 @@ class PrimaryOutputStyleTest {
 
         assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Anchor\n\nHold the line.\n")).isEqualTo(HeldAnchor.CURRENT);
         assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Anchor\n\nHold the new line.\n")).isEqualTo(HeldAnchor.OLDER);
-        assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Renamed anchor\n\nHold the line.\n")).isEqualTo(HeldAnchor.NONE);
+        assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Renamed anchor\n\nHold the line.\n")).isEqualTo(HeldAnchor.UNWRITTEN);
     }
 
     @Test

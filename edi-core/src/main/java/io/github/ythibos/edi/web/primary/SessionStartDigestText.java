@@ -78,7 +78,8 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         return switch (anchor.held()) {
             case CURRENT -> List.of(confirmationOf(anchor));
             case OLDER -> List.of(olderAnchorOf(anchor), confirmationOf(anchor));
-            case NONE -> List.of(warningOf(anchor), confirmationOf(anchor));
+            case UNWRITTEN -> List.of(unwrittenAnchorOf(anchor), confirmationOf(anchor));
+            case OUTSIDE_THE_HOME -> List.of(warningOf(anchor), confirmationOf(anchor));
         };
     }
 
@@ -90,9 +91,14 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     private static String currentAnchorToRead(SessionAnchor anchor) {
         return anchor.currentAnchor()
-                .map(current -> "Read " + current + " now and hold to every line of it, for its rules replace the older ones.")
-                .orElse("The core finds no checkout of its anchor to read, so tell the captain this session runs on an older anchor and ask for edi up,"
-                        + " which writes the current one into the output style.");
+                .map(current -> "Read " + current + " now and hold to every line of it.")
+                .orElse("The core finds no checkout of its anchor to read, so tell the captain and ask for edi up, which writes the current one into the"
+                        + " output style.");
+    }
+
+    private static String unwrittenAnchorOf(SessionAnchor anchor) {
+        return "The " + PrimaryOutputStyle.NAME + " output style at " + anchor.outputStyle() + " does not carry the anchor yet, so Claude Code has none"
+                + " to load for this session until edi up writes it. " + currentAnchorToRead(anchor);
     }
 
     private static String warningOf(SessionAnchor anchor) {

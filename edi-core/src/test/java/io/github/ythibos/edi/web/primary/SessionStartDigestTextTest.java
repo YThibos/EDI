@@ -69,7 +69,7 @@ class SessionStartDigestTextTest {
         assertThat(digest.lines().skip(1).limit(2)).containsExactly("This session holds an older anchor than the core's: the edi-primary output style at "
                 + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " predates the core's build, and a compaction or a new start loads"
                 + " that older anchor again until edi up refreshes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
-                + " now and hold to every line of it, for its rules replace the older ones.", confirmationOfTheAnchorIn(home));
+                + " now and hold to every line of it.", confirmationOfTheAnchorIn(home));
     }
 
     @Test
@@ -80,8 +80,21 @@ class SessionStartDigestTextTest {
         String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
 
         assertThat(digest.lines().skip(1).findFirst().orElseThrow()).startsWith("This session holds an older anchor than the core's: ")
-                .endsWith(" The core finds no checkout of its anchor to read, so tell the captain this session runs on an older anchor and ask for edi up,"
-                        + " which writes the current one into the output style.");
+                .endsWith(" The core finds no checkout of its anchor to read, so tell the captain and ask for edi up, which writes the current one into"
+                        + " the output style.");
+    }
+
+    @Test
+    void saysFirstThatEdiUpHasNotWrittenTheAnchorAndPointsAtTheCheckoutsWhenASessionInTheHomeFindsNoOutputStyle() throws IOException {
+        TestHome home = TestHome.in(directory.resolve("home")).writing("checkout/claude/primary/CLAUDE.md", "# EDI: the primary's anchor\n\nYou are E.D.I.\n");
+
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
+
+        assertThat(digest.lines().skip(1).limit(2)).containsExactly("The edi-primary output style at "
+                + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " does not carry the anchor yet, so Claude Code has none to load for"
+                + " this session until edi up writes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
+                + " now and hold to every line of it.", confirmationOfTheAnchorIn(home));
+        assertThat(digest).doesNotContain("only for a session started in");
     }
 
     @Test

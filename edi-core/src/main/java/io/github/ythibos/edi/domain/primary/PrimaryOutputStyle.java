@@ -23,7 +23,7 @@ public final class PrimaryOutputStyle {
         if (style.contains(anchor.strip())) {
             return HeldAnchor.CURRENT;
         }
-        return style.lines().anyMatch(headingOf(anchor)::equals) ? HeldAnchor.OLDER : HeldAnchor.NONE;
+        return style.lines().anyMatch(headingOf(anchor)::equals) ? HeldAnchor.OLDER : HeldAnchor.UNWRITTEN;
     }
 
     public static String headingOf(String anchor) {

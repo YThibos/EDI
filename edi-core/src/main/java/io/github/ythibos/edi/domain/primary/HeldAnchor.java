@@ -3,5 +3,6 @@ package io.github.ythibos.edi.domain.primary;
 public enum HeldAnchor {
     CURRENT,
     OLDER,
-    NONE
+    UNWRITTEN,
+    OUTSIDE_THE_HOME
 }

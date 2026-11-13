@@ -31,8 +31,11 @@ public class CheckTheSessionAnchor {
     }
 
     private HeldAnchor anchorHeldBy(Path projectDirectory, String anchor) {
+        if (!runsInTheHome(projectDirectory)) {
+            return HeldAnchor.OUTSIDE_THE_HOME;
+        }
         Path style = home.primaryOutputStyle();
-        return runsInTheHome(projectDirectory) && Files.isRegularFile(style) ? PrimaryOutputStyle.anchorHeldIn(read(style), anchor) : HeldAnchor.NONE;
+        return Files.isRegularFile(style) ? PrimaryOutputStyle.anchorHeldIn(read(style), anchor) : HeldAnchor.UNWRITTEN;
     }
 
     private boolean runsInTheHome(Path projectDirectory) {

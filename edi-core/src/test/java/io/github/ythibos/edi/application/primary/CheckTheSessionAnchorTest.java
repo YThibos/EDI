@@ -30,28 +30,28 @@ class CheckTheSessionAnchorTest {
     }
 
     @Test
-    void findsNoAnchorInASessionStartedOutsideTheHome() throws IOException {
+    void findsTheSessionOutsideTheHomeWhenItStartedElsewhere() throws IOException {
         TestHome home = preparedHome();
         Path elsewhere = Files.createDirectories(directory.resolve("elsewhere"));
 
         SessionAnchor anchor = checkIn(home).forSessionStartedIn(elsewhere);
 
-        assertThat(anchor.held()).isEqualTo(HeldAnchor.NONE);
+        assertThat(anchor.held()).isEqualTo(HeldAnchor.OUTSIDE_THE_HOME);
         assertThat(anchor.outputStyle()).isEqualTo(home.home().root().resolve(".claude/output-styles/edi-primary.md"));
     }
 
     @Test
-    void findsNoAnchorWhenNoOutputStyleIsWritten() throws IOException {
+    void findsTheAnchorUnwrittenWhenNoOutputStyleIsWritten() throws IOException {
         TestHome home = TestHome.in(directory.resolve("home"));
 
-        assertThat(checkIn(home).forSessionStartedIn(home.home().root()).held()).isEqualTo(HeldAnchor.NONE);
+        assertThat(checkIn(home).forSessionStartedIn(home.home().root()).held()).isEqualTo(HeldAnchor.UNWRITTEN);
     }
 
     @Test
-    void findsNoAnchorWhenTheOutputStyleCarriesNoAnchorHeading() throws IOException {
+    void findsTheAnchorUnwrittenWhenTheOutputStyleCarriesNoAnchorHeading() throws IOException {
         TestHome home = TestHome.in(directory.resolve("home")).writing(".claude/output-styles/edi-primary.md", "---\nname: edi-primary\n---\n\n# Notes\n");
 
-        assertThat(checkIn(home).forSessionStartedIn(home.home().root()).held()).isEqualTo(HeldAnchor.NONE);
+        assertThat(checkIn(home).forSessionStartedIn(home.home().root()).held()).isEqualTo(HeldAnchor.UNWRITTEN);
     }
 
     @Test
@@ -62,10 +62,10 @@ class CheckTheSessionAnchorTest {
     }
 
     @Test
-    void findsNoAnchorWhenClaudeCodeNamesNoProjectDirectory() throws IOException {
+    void findsTheSessionOutsideTheHomeWhenClaudeCodeNamesNoProjectDirectory() throws IOException {
         TestHome home = preparedHome();
 
-        assertThat(checkIn(home).forSessionStartedIn(null).held()).isEqualTo(HeldAnchor.NONE);
+        assertThat(checkIn(home).forSessionStartedIn(null).held()).isEqualTo(HeldAnchor.OUTSIDE_THE_HOME);
     }
 
     @Test
