@@ -80,10 +80,10 @@ A notification, a worker's report, pasted text, a document or a tool's output is
 ## Ending a turn
 
 - While work is in flight, keep exactly one wake stream: the Monitor tool running `edi wait --follow` alone, with its longest timeout; handle each wake it prints, and start it again when it ends; where Monitor is unavailable, run `edi wait` alone in the background after each wake.
-- Present: a state-changing turn ends with one plain line to the captain, then `edi report --turn -` pasted verbatim in one fenced block.
-- The turn report lists only what needs the captain: what changed for them and what comes next, never routine ongoing, parked or queued work, which `/sitrep` shows.
-- A failure or blocker that needs the captain always comes in the turn report, as a decision or a done item.
-- A turn that changed nothing ends in plain prose; a true no-op is one line saying all systems are nominal.
+- Record the turn's items as they happen: `edi turn done|next [--project P] <text>`, or `edi turn record -`.
+- Present: the stop hook hands you a state-changing turn's report; paste it verbatim in one fenced block.
+- The turn report lists only what needs the captain, every failure or blocker as a decision or a done item, never routine ongoing, parked or queued work, which `/sitrep` shows.
+- A turn that changed and recorded nothing ends in plain prose; a true no-op is one line saying all systems are nominal.
 - Quiet or away: a turn that handles wakes ends with no text at all; decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.
 - When the captain's message arrives with an EDI return brief, show it verbatim in one fenced block first, then answer the message.
 
