@@ -38,10 +38,10 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Adoption;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.Wait;
 
 @Service
 public class DispatchTask {
@@ -117,10 +117,9 @@ public class DispatchTask {
     }
 
     private void requireUnblocked(Task task) {
-        List<Blocker> unfinished = tasks.blockersOf(task).stream().filter(blocker -> !blocker.isResolved()).toList();
-        if (!unfinished.isEmpty()) {
-            throw new Refusal(Rule.BLOCKERS_DONE, task.id() + " waits for " + unfinished.stream().map(blocker -> blocker.id().value()).toList()
-                    + "; it is dispatched once they are done.");
+        List<String> unmet = tasks.waitsOf(task).stream().filter(wait -> !wait.isMet()).map(Wait::words).toList();
+        if (!unmet.isEmpty()) {
+            throw new Refusal(Rule.BLOCKERS_DONE, task.id() + " waits for " + String.join(" and ", unmet) + "; it is dispatched once each wait is met.");
         }
     }
 

@@ -20,8 +20,8 @@
       @if (detail.task.intake.base; as base) {
         <div><dt>Base</dt><dd>{{ base }}</dd></div>
       }
-      @if (detail.blockers.length) {
-        <div><dt>Blocked by</dt><dd>{{ blockersOf(detail) }}</dd></div>
+      @if (detail.waits.length) {
+        <div><dt>Waits for</dt><dd>{{ waitsOf(detail) }}</dd></div>
       }
       @if (detail.task.hold; as hold) {
         <div><dt>Held</dt><dd>{{ hold.reason }}, until {{ hold.until ?? 'released' }}</dd></div>

@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.task.Backlog;
 import io.github.ythibos.edi.application.task.BacklogEntry;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.Table;
 import io.github.ythibos.edi.web.text.TextPresenter;
@@ -35,8 +35,8 @@ class BacklogText implements TextPresenter<Backlog> {
         return "held (" + hold.kind().word() + ", " + Moments.until(hold.until()) + "): " + hold.reason();
     }
 
-    static String blockersOf(List<Blocker> blockers) {
-        return "blocked by " + blockers.stream().map(BacklogText::blocker).collect(Collectors.joining(", "));
+    static String waitsOf(List<Wait> waits) {
+        return "waits for " + waits.stream().map(BacklogText::waitFor).collect(Collectors.joining(", "));
     }
 
     private static void describe(BacklogEntry entry, Table table) {
@@ -44,12 +44,12 @@ class BacklogText implements TextPresenter<Backlog> {
         if (entry.task().isHeld()) {
             table.line(DETAIL_INDENT + holdOf(entry.task().hold()));
         }
-        if (!entry.blockers().isEmpty()) {
-            table.line(DETAIL_INDENT + blockersOf(entry.blockers()));
+        if (!entry.waits().isEmpty()) {
+            table.line(DETAIL_INDENT + waitsOf(entry.waits()));
         }
     }
 
-    private static String blocker(Blocker blocker) {
-        return blocker.id() + " (" + blocker.state().word() + ")";
+    private static String waitFor(Wait wait) {
+        return wait.words() + " (" + wait.stage().word() + ")";
     }
 }

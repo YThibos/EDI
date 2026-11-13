@@ -20,7 +20,7 @@ const LAMP: TaskDetail = {
     hold: null,
     created: '2026-10-15T06:00:00Z',
   },
-  blockers: [{ id: 'build-tower', state: 'done' }],
+  waits: [{ task: 'build-tower', awaited: 'landed', stage: 'retired' }],
   decision: {
     number: 'D58',
     card: {
@@ -88,7 +88,7 @@ describe('TaskPanel', () => {
       Projects: 'harness',
       'Work key': 'EDI-31',
       Base: 'main',
-      'Blocked by': 'build-tower (done)',
+      'Waits for': 'build-tower to land (retired)',
       Request: '#12 · open · draft',
       Worked: 'active 1h05m of 3h00m',
       Added: '2026-10-15 08:00 CEST',

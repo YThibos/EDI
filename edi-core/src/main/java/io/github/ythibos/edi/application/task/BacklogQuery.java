@@ -19,7 +19,7 @@ public class BacklogQuery {
 
     public Backlog backlog(boolean readyOnly) {
         return transaction.execute(_ -> new Backlog(readyOnly, tasks.inState(TaskState.QUEUED).stream()
-                .map(task -> new BacklogEntry(task, tasks.blockersOf(task)))
+                .map(task -> new BacklogEntry(task, tasks.waitsOf(task)))
                 .filter(entry -> !readyOnly || entry.isReady())
                 .toList()));
     }

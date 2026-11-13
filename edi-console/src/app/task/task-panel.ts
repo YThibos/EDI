@@ -67,8 +67,8 @@ export class TaskPanel {
     this.tab.set(tab);
   }
 
-  protected blockersOf(detail: TaskDetail): string {
-    return detail.blockers.map((blocker) => `${blocker.id} (${blocker.state})`).join(', ');
+  protected waitsOf(detail: TaskDetail): string {
+    return detail.waits.map((wait) => `${wait.task} ${wait.awaited === 'merged' ? 'to be merged' : 'to land'} (${wait.stage})`).join(', ');
   }
 
   protected wordsOf(type: string): string {

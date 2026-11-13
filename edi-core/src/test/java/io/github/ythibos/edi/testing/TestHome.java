@@ -53,6 +53,7 @@ import io.github.ythibos.edi.adapter.store.OneTransactionAtATime;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
+import io.github.ythibos.edi.adapter.store.PlanStore;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
@@ -136,6 +137,8 @@ import io.github.ythibos.edi.application.migration.HomeWriter;
 import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
+import io.github.ythibos.edi.application.plan.AddPlan;
+import io.github.ythibos.edi.application.plan.PlanQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
@@ -445,6 +448,18 @@ public final class TestHome {
 
     public AddTask addTask() {
         return new AddTask(tasks, events, registry, taskKeys(), ticketProposals(), clock, transaction);
+    }
+
+    public PlanStore plans() {
+        return new PlanStore(jdbc);
+    }
+
+    public AddPlan addPlan() {
+        return new AddPlan(addTask(), plans(), events, registry, clock, transaction);
+    }
+
+    public PlanQuery planQuery() {
+        return new PlanQuery(plans(), tasks, transaction);
     }
 
     public TaskLinksQuery taskLinks() {
