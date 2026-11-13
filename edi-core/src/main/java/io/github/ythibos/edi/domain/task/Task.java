@@ -152,6 +152,10 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
         return stage.hasLanded();
     }
 
+    public boolean hasWorkToResume() {
+        return stage.isMergeable();
+    }
+
     private void refuseWhenClosed() {
         if (isClosed()) {
             throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + ", so it waits for nobody.");

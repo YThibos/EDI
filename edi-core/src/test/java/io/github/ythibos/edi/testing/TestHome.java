@@ -168,6 +168,7 @@ import io.github.ythibos.edi.application.spark.SortSpark;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
+import io.github.ythibos.edi.application.supervision.LeaveTheOutageList;
 import io.github.ythibos.edi.application.supervision.NoticeDueHolds;
 import io.github.ythibos.edi.application.supervision.OutageHoldList;
 import io.github.ythibos.edi.application.supervision.OutageListQuery;
@@ -542,7 +543,11 @@ public final class TestHome {
     }
 
     public TaskStages taskStages() {
-        return new TaskStages(tasks, events);
+        return new TaskStages(tasks, events, leaveTheOutageList());
+    }
+
+    public LeaveTheOutageList leaveTheOutageList() {
+        return new LeaveTheOutageList(outages, tasks, events);
     }
 
     public BacklogQuery backlog() {
@@ -736,7 +741,7 @@ public final class TestHome {
     }
 
     public LaunchWorker launchWorkerOn(WorkerRuntime workerRuntime) {
-        return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
+        return new LaunchWorker(home, tasks, dispatches, workers, adoptions, leaveTheOutageList(), events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), new WorkerPlaces(workers, tasks, workerRuntime), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
                 workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), meters, clock, transaction);
@@ -842,7 +847,7 @@ public final class TestHome {
     }
 
     public DropFromOutage dropFromOutage() {
-        return new DropFromOutage(outages, dropTask(), transaction);
+        return new DropFromOutage(leaveTheOutageList(), dropTask(), clock, transaction);
     }
 
     public PromoteScout promoteScout() {
@@ -1031,7 +1036,7 @@ public final class TestHome {
     }
 
     public OutageHoldList outageHoldList() {
-        return new OutageHoldList(outages, tasks, notices, events, workerList(), clock, transaction);
+        return new OutageHoldList(outages, tasks, notices, events, workerList(), leaveTheOutageList(), clock, transaction);
     }
 
     public OutageListQuery outageList() {
@@ -1068,7 +1073,7 @@ public final class TestHome {
     }
 
     public RecoverFromOutage recoverFromOutage() {
-        return new RecoverFromOutage(outages, tasks, dispatches, primarySessions(), workerList(),
+        return new RecoverFromOutage(leaveTheOutageList(), tasks, dispatches, primarySessions(), workerList(),
                 new CurrentRoutes(dispatchRulesFile(), machineProfile()), launchWorker(), events, clock, transaction);
     }
 
