@@ -124,6 +124,15 @@ class WakeDigestTextTest {
     }
 
     @Test
+    void tellsThePrimaryToCarryAnAnsweredDecisionUnlessASteerAlreadyQuotesIt() {
+        WakeDelivery delivery = new WakeDelivery(List.of(
+                queued(1, new Wake(WakeKind.DECISION_ANSWERED, LAMP, null, "D58 in the console: A: LED, keep one oil lamp", null))), 0, 1, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp: the captain answered D58 in the console: A: LED, keep one oil lamp;"
+                + " read edi worker show fit-lamp, which lists its steers, and carry the answer to its work unless a steer quoting it is already there.\n");
+    }
+
+    @Test
     void namesEveryKindOfWake() {
         for (WakeKind kind : WakeKind.values()) {
             String text = digest.text(new WakeDelivery(List.of(queued(1, new Wake(kind, LAMP, null, "detail", RAISED))), 0, 0, 0, PRESENT, true));
