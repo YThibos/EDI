@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -70,20 +71,31 @@ class AnswersReachTheirWorkerTest {
     }
 
     @Test
-    void carriesTheAnswerAsAPlainSteerWhenTheTasksWorkerWaitsOnNoQuestion() {
+    void sendsNothingWhenTheTasksWorkerWaitsOnNoQuestion() {
         home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Fitting the bracket.");
         home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
 
         AnsweredDecision answered = home.answerDecision().answer(FIT_LAMP, new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
-        InboxMessage carried = home.inbox().get(LAMP, 1).orElseThrow();
 
-        assertThat(answered.carriedToItsWorker()).map(Steered::message).contains(carried);
-        assertThat(carried.resolves()).isNull();
-        assertThat(carried.body()).startsWith("Answer to D1 Brass or oil?");
+        assertThat(answered.carriedToItsWorker()).isEmpty();
+        assertThat(home.inbox().allOf(LAMP)).isEmpty();
     }
 
     @Test
-    void leavesAQuestionAskedAfterTheDecisionWasRaisedOpenWhileTheAnswerStillReachesTheWorker() {
+    void sendsNothingToAWorkerWhoseDoneWasAccepted() {
+        home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), home.clock().now()));
+        home.raiseDecision().raise(FIT_LAMP, card("Merge as is or rework?"), Actor.PRIMARY);
+
+        AnsweredDecision answered = home.answerDecision().answer(FIT_LAMP,
+                new GivenAnswer("A, merge as is", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+
+        assertThat(home.workers().get(worker.id()).orElseThrow().hadItsDoneAccepted()).isTrue();
+        assertThat(answered.carriedToItsWorker()).isEmpty();
+        assertThat(home.inbox().unacknowledgedOf(LAMP)).isEmpty();
+    }
+
+    @Test
+    void leavesAQuestionAskedAfterTheDecisionWasRaisedOpenWhileTheAnswerStillReachesTheWorkerWaitingOnIt() {
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
         home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
         home.clock().advance(Duration.ofMinutes(5));

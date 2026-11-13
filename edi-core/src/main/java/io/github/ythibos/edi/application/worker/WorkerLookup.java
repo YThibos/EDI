@@ -1,7 +1,5 @@
 package io.github.ythibos.edi.application.worker;
 
-import java.util.Optional;
-
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.rule.Rule;
@@ -23,10 +21,8 @@ final class WorkerLookup {
     }
 
     static Worker servingTask(WorkerStore workers, TaskId task) {
-        return servingWorkerOf(workers, task).orElseThrow(() -> new Refusal(Rule.TASK_DISPATCHED, task + " has no worker; dispatch it first."));
-    }
-
-    static Optional<Worker> servingWorkerOf(WorkerStore workers, TaskId task) {
-        return workers.latestOf(task).filter(worker -> !worker.isRetired());
+        return workers.latestOf(task)
+                .filter(worker -> !worker.isRetired())
+                .orElseThrow(() -> new Refusal(Rule.TASK_DISPATCHED, task + " has no worker; dispatch it first."));
     }
 }

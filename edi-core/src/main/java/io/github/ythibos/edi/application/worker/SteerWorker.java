@@ -51,8 +51,9 @@ public class SteerWorker {
     }
 
     public Optional<StoredSteer> carryTheAnswerOf(Decision answered, Actor actor) {
-        return transaction.execute(_ -> WorkerLookup.servingWorkerOf(workers, answered.task())
-                .map(worker -> stored(worker, answered.answerForItsWorker(), questionAnsweredBy(answered, worker), actor)));
+        return transaction.execute(_ -> workers.latestOf(answered.task())
+                .flatMap(worker -> worker.openQuestion()
+                        .map(question -> stored(worker, answered.answerForItsWorker(), keySettledBy(answered, question), actor))));
     }
 
     public Steered announced(StoredSteer stored) {
@@ -76,8 +77,8 @@ public class SteerWorker {
         events.record(new StatusReported(message.task(), worker.id(), resolved), actor, now);
     }
 
-    private static StatusKey questionAnsweredBy(Decision answered, Worker worker) {
-        return worker.openQuestion().filter(answered::answers).map(WorkerQuestion::key).orElse(null);
+    private static StatusKey keySettledBy(Decision answered, WorkerQuestion question) {
+        return answered.answers(question) ? question.key() : null;
     }
 
     public record Steered(InboxMessage message, Worker worker, SteerDelivery delivery) {

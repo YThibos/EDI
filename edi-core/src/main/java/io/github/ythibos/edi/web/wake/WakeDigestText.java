@@ -98,8 +98,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";
             case TICKET_REFUSED -> wake.task() + ": the tracker refused " + wake.detail();
             case DECISION_ANSWERED -> wake.task() + ": the captain answered " + wake.detail()
-                    + "; a serving worker already has the answer as a steer, so record a scope change with edi task note, settle any question"
-                    + " the steer leaves open, and carry the answer yourself where no worker serves.";
+                    + "; a worker waiting on a question already has the answer as a steer, so record a scope change with edi task note, settle any"
+                    + " question the steer leaves open, and carry the answer yourself where no steer reached a worker.";
             case RECHECK_ASKED -> wake.task() + ": the captain asks to re-check " + wake.detail()
                     + "; verify the latest state against reality, then close it with evidence or keep it open with a note.";
             case BOARD_ANSWERED -> wake.task() + ": the captain answered on " + wake.detail() + "; its worker has them in its inbox.";

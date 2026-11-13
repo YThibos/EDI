@@ -238,7 +238,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String settlementOf(SteerWorker.Steered steered) {
         StatusKey resolved = steered.message().resolves();
         return resolved == null
-                ? " The answer goes to its worker without resolving a question; any question it waits on stays open. "
+                ? " The answer goes to its worker without resolving the question it asked after the decision was raised; that question stays open. "
                 : " The answer resolves " + resolved + ", the question its worker waits on. ";
     }
 }
