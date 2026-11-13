@@ -12,10 +12,12 @@ import io.github.ythibos.edi.application.delivery.RecountedCosts.Recount;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.tracker.KeyedTask;
+import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -230,9 +232,13 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     }
 
     private static String carriedOf(Answered answered) {
-        return answered.carried()
-                .map(steered -> " The answer resolves " + steered.message().resolves() + ", the question its worker waits on. "
-                        + WorkerSentences.steered(steered))
-                .orElse("");
+        return answered.carried().map(steered -> settlementOf(steered) + WorkerSentences.steered(steered)).orElse("");
+    }
+
+    private static String settlementOf(SteerWorker.Steered steered) {
+        StatusKey resolved = steered.message().resolves();
+        return resolved == null
+                ? " The answer goes to its worker without resolving a question; any question it waits on stays open. "
+                : " The answer resolves " + resolved + ", the question its worker waits on. ";
     }
 }

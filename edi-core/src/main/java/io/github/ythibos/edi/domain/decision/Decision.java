@@ -11,6 +11,7 @@ import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
 public record Decision(DecisionNumber number, TaskId task, DecisionCard card, Instant raisedAt, CaptainAnswer answer) {
 
@@ -50,8 +51,8 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
         return answer == null;
     }
 
-    public boolean wasAnsweredSince(Instant at) {
-        return !isOpen() && !answer.answeredAt().isBefore(at);
+    public boolean answers(WorkerQuestion question) {
+        return !isOpen() && !question.askedAt().isAfter(raisedAt);
     }
 
     public String answerForItsWorker() {

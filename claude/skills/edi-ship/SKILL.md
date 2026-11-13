@@ -38,8 +38,10 @@ description: >-
 - Such a decision waits in the console for its round of decisions, and the core wakes you when the round is due: never put it to the captain on its own before then.
 - Only a decision that blocks the captain's current work gets `"urgent": true` on its card, which puts it before them at once.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
-- An answer to a decision reaches the task's worker by itself when the worker waits on a question: `edi decision answer` sends it as a steer that resolves the question's key, in the same call.
+- An answer to a decision reaches the task's serving worker by itself in the same call: `edi decision answer` sends it as a steer that resolves the worker's question when the worker asked it no later than the decision was raised, and as a plain steer otherwise, which leaves any later question open.
+- When the answer went as a plain steer, settle the question it leaves open with your own steer; when the task had no serving worker, the answer reached no one, so carry it into the dispatch or the task's notes.
 - A steer that changes a task's scope is first recorded with `edi task note <task>`, which rewrites the brief and the pipeline intent, so the pipeline's review counts it as asked for.
+- An answer that changes a task's scope has already reached its worker, so record it with `edi task note <task>` as soon as the decision-answered wake or the answer's confirmation shows it.
 - Settle a worker question that needs no decision card with one `edi steer <task> --resolves <key>`: the sitrep page shows a worker's question as yours until the worker acknowledges the steer that resolves it.
 - Your turn cannot end while an answered decision leaves its worker's question unresolved; the stop hook names the steer that carries it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.

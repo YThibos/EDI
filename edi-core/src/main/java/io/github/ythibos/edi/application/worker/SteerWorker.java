@@ -11,6 +11,7 @@ import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
@@ -20,6 +21,7 @@ import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
 @Service
 public class SteerWorker {
@@ -48,9 +50,9 @@ public class SteerWorker {
         return announced(stored);
     }
 
-    public Optional<StoredSteer> answerTheOpenQuestionOf(TaskId task, String answer, Actor actor) {
-        return transaction.execute(_ -> workers.latestOf(task)
-                .flatMap(worker -> worker.openQuestion().map(question -> stored(worker, answer, question.key(), actor))));
+    public Optional<StoredSteer> carryTheAnswerOf(Decision answered, Actor actor) {
+        return transaction.execute(_ -> WorkerLookup.servingWorkerOf(workers, answered.task())
+                .map(worker -> stored(worker, answered.answerForItsWorker(), questionAnsweredBy(answered, worker), actor)));
     }
 
     public Steered announced(StoredSteer stored) {
@@ -72,6 +74,10 @@ public class SteerWorker {
     private void recordResolved(Worker worker, InboxMessage message, Actor actor, Instant now) {
         StatusReport resolved = StatusReport.resolvedBy(message.resolves(), message.number());
         events.record(new StatusReported(message.task(), worker.id(), resolved), actor, now);
+    }
+
+    private static StatusKey questionAnsweredBy(Decision answered, Worker worker) {
+        return worker.openQuestion().filter(answered::answers).map(WorkerQuestion::key).orElse(null);
     }
 
     public record Steered(InboxMessage message, Worker worker, SteerDelivery delivery) {

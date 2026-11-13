@@ -17,8 +17,9 @@ A decision named by its number resolves to exactly that decision (`DecisionStore
 Either way the decision holds its task until answered.
 A card may be urgent; a running ship's decision whose card is not reaches the captain in a round of decisions rather than on its own ([decision-rounds](decision-rounds.md)).
 `AnswerDecision` records the words exactly as given, the option only when the card offers it, the interpretation, the time and the channel; the answer releases the task, and a captain item, whose only purpose was the decision, is done.
-When the task's worker waits on a question, its last status a `needs-decision` or `blocked` with a key, the same transaction stores the answer as a steer that resolves that key (`SteerWorker.answerTheOpenQuestionOf`), and the worker is told of it once the answer is committed; the steer carries the decision's title, the chosen option, the captain's words and the interpretation.
-A turn of the primary cannot end while a decision answered since a worker asked its question leaves that question without a steer that resolves its key ([wakes-and-turn-end](wakes-and-turn-end.md)).
+When the task has a serving worker, the same transaction stores the answer as a steer to it (`SteerWorker.carryTheAnswerOf`), and the worker is told of it once the answer is committed; the steer carries the decision's title, the chosen option, the captain's words and the interpretation.
+The steer resolves the worker's open question, its last status a `needs-decision` or `blocked` with a key, only when the worker asked it no later than the decision was raised (`Decision.answers`); a question asked afterwards is not the one the decision was raised for, so the answer reaches the worker as a plain steer and the question stays open.
+A turn of the primary cannot end while an answered decision leaves the question it was raised for without a steer that resolves its key ([wakes-and-turn-end](wakes-and-turn-end.md)).
 `edi hold` takes `deferral` and `approval` only, because a decision hold without its card would be a decision without a number, and `edi release` never releases a decision.
 The open decisions are the decisions without an answer, and every report surface draws its decision zone from those rows ([fleet-snapshot](fleet-snapshot.md)).
 Every channel answers through `AnswerDecision`: the primary as `CHAT`, the captain's console session as `CONSOLE` and a bound board as `board`, both as `Actor.CAPTAIN` (`Caller.answeringChannel`); an answer from anyone but the primary wakes the primary with the verbatim text.
@@ -31,7 +32,7 @@ An answer from the chat must have been typed by the captain in the current excha
 One primitive cannot drift into two states: no held task waits on a decision that does not exist, and no decision is open on a free task.
 A refused raise rolls back its transaction, so a number is consumed only by a decision that exists ([store](store.md)).
 One use case for every channel keeps the verbatim record, the option check, the ticket choice and the release identical however the captain answers.
-An answer that reaches the waiting worker in the answer's own call cannot be forgotten, as one was on 4 November 2026, when a worker sat idle for over an hour and a half on an answer recorded but never sent.
+An answer that reaches the task's worker in the answer's own call cannot be forgotten, as one was on 4 November 2026, when a worker sat idle for over an hour and a half on an answer recorded but never sent.
 
 ## Alternatives rejected
 
@@ -40,7 +41,8 @@ An answer that reaches the waiting worker in the answer's own call cannot be for
 - Rewriting the task's decision under its number after an answer, as raising did until 22/10/2026 - the captain's answer vanished and one number stood for two questions.
 - Refusing to raise on a task whose decision is answered - no follow-up question could be asked, and a refused ticket choice could not be asked again.
 - Answering with an option key only - loses the captain's words.
-- Linking each decision to the key of the worker question it was raised for - it needs a store migration, while the worker's open question at the moment of the answer is the question the decision on its task settles.
+- Linking each decision to the key of the worker question it was raised for - it needs a store migration, while a question the worker asked no later than the decision was raised is the one the decision settles.
+- Resolving whichever question the worker has open when the answer comes - an unrelated question asked after the decision was raised, such as a pipeline gate, would be closed by an answer that does not answer it.
 - A console-only answer use case, or Reconcile as a special answer - two places enforcing I-20, or a re-check that closes the decision.
 
 ## Consequences
@@ -48,7 +50,7 @@ An answer that reaches the waiting worker in the answer's own call cannot be for
 - Good: AT-18 to AT-20 test the whole rule in milliseconds against a real store.
 - Good: an answered decision is never reopened or rewritten, and a follow-up question shows under its own number.
 - Good: the primary no longer carries each answer by hand with a separate steer naming the gate's key.
-- Bad: a decision answered on a task whose worker asked an unrelated question since it was raised also resolves that question, so the steer quotes the decision in full.
+- Bad: a question the worker asked after the decision was raised stays open even when the answer settles it, so the primary resolves it with its own steer.
 - Bad: a refused ticket choice comes back under a new number, so the captain sees two numbers for one ticket question.
 
 ## When to revisit
@@ -61,4 +63,4 @@ When a task genuinely needs two open decisions at once.
 - 17/10/2026: slice S7 answered through the same use case from the console and boards, and added Reconcile.
 - 22/10/2026: raising on a task whose decision was answered had silently replaced the answered card and reopened its number, so a task keeps every decision, a card raised after an answer gets a new number, and a decision named by number resolves to exactly that one (EDI-40).
 - 09/11/2026: a card gained its urgent flag, and a running ship's decision without it waits for its round (EDI-96).
-- 13/11/2026: an answer whose worker waits on a question started to reach it as a steer resolving the question's key in the answer's own call, after the primary carried about fifteen answers by hand on 9 November 2026 (EDI-241).
+- 13/11/2026: an answer started to reach the task's serving worker as a steer in the answer's own call, resolving the worker's question only when it was asked no later than the decision was raised, after the primary carried about fifteen answers by hand on 9 November 2026 (EDI-241).

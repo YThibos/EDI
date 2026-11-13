@@ -145,6 +145,24 @@ class PrimaryHooksTest {
     }
 
     @Test
+    void doesNotHoldTheTurnForAQuestionAskedAfterTheAnsweredDecisionWasRaised() {
+        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(primary, "How is the lamp?");
+        streamIn(primary, home.processes().ownId(), true);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
+        DecisionNumber raised = home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Brass or oil?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("nm-4-review"), null, "The review asks about the wiring.");
+        home.clock().advance(Duration.ofMinutes(5));
+        recordAnAnswerThatNeverReachedTheWorker(raised);
+        home.primaryHooks().reportRendered(primary);
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(HookAnswer.PROCEED);
+    }
+
+    @Test
     void seesTheWakeStreamLiveUntilItsProcessIsGone() throws IOException {
         WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
         UUID primary = UUID.randomUUID();

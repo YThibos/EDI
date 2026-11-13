@@ -92,6 +92,18 @@ class ConfirmationTextTest {
     }
 
     @Test
+    void confirmsAnAnswerCarriedToItsWorkerWithoutResolvingAQuestion() {
+        Task released = PresenterFixtures.lantern();
+        Worker working = relaunchedAs(LaunchKind.DISPATCH);
+        InboxMessage carried = InboxMessage.sent(LANTERN, 2, "Answer to D58", null, PresenterFixtures.AT);
+        Optional<SteerWorker.Steered> steered = Optional.of(new SteerWorker.Steered(carried, working, SteerDelivery.AT_THE_NEXT_STOP));
+
+        assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, TicketSettlement.none(), steered)))
+                .isEqualTo("Recorded the answer to D58 (option A); lantern is queued again. The answer goes to its worker without resolving a question;"
+                        + " any question it waits on stays open. Message 2 waits for lantern#2; it is busy, so its next stop delivers the message.\n");
+    }
+
+    @Test
     void confirmsTheTicketATaskBooksItsWorkOn() {
         WorkKey lamps = WorkKey.parse("SVC-40");
 

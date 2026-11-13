@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,7 @@ class AnswersReachTheirWorkerTest {
     private static final TaskId LAMP = new TaskId("fit-lamp");
     private static final TaskReference FIT_LAMP = new TaskReference.ById(LAMP);
     private static final StatusKey LAMP_CHOICE = new StatusKey("lamp-choice");
+    private static final StatusKey REVIEW_GATE = new StatusKey("nm-4-review");
 
     @TempDir
     private Path directory;
@@ -67,14 +70,49 @@ class AnswersReachTheirWorkerTest {
     }
 
     @Test
-    void sendsNothingWhenTheTasksWorkerWaitsOnNoQuestion() {
+    void carriesTheAnswerAsAPlainSteerWhenTheTasksWorkerWaitsOnNoQuestion() {
         home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Fitting the bracket.");
         home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
 
         AnsweredDecision answered = home.answerDecision().answer(FIT_LAMP, new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+        InboxMessage carried = home.inbox().get(LAMP, 1).orElseThrow();
+
+        assertThat(answered.carriedToItsWorker()).map(Steered::message).contains(carried);
+        assertThat(carried.resolves()).isNull();
+        assertThat(carried.body()).startsWith("Answer to D1 Brass or oil?");
+    }
+
+    @Test
+    void leavesAQuestionAskedAfterTheDecisionWasRaisedOpenWhileTheAnswerStillReachesTheWorker() {
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
+        home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, REVIEW_GATE, null, "The review asks about the wiring.");
+        home.clock().advance(Duration.ofMinutes(5));
+
+        AnsweredDecision answered = home.answerDecision().answer(FIT_LAMP,
+                new GivenAnswer("B, oil it is", new OptionKey('B'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+        InboxMessage carried = home.inbox().get(LAMP, 1).orElseThrow();
+        home.workerInbox().acknowledge(worker.id(), 1);
+        Worker acknowledged = home.workers().get(worker.id()).orElseThrow();
+
+        assertThat(answered.carriedToItsWorker()).map(Steered::message).contains(carried);
+        assertThat(carried.resolves()).isNull();
+        assertThat(carried.body()).startsWith("Answer to D1 Brass or oil?");
+        assertThat(acknowledged.waitsOnThePrimary()).isTrue();
+        assertThat(acknowledged.lastStatus().report().key()).isEqualTo(REVIEW_GATE);
+        assertThat(home.undeliveredAnswers().waiting()).isEmpty();
+    }
+
+    @Test
+    void sendsNothingWhenTheTaskHasNoServingWorker() {
+        home.storing(List.of(WorkerFixtures.queuedShip("hang-bell", "harness", "HRN-4")));
+        TaskReference unshipped = TaskReference.parse("hang-bell");
+        home.raiseDecision().raise(unshipped, card("Bronze or iron?"), Actor.PRIMARY);
+
+        AnsweredDecision answered = home.answerDecision().answer(unshipped, new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
 
         assertThat(answered.carriedToItsWorker()).isEmpty();
-        assertThat(home.inbox().allOf(LAMP)).isEmpty();
     }
 
     @Test

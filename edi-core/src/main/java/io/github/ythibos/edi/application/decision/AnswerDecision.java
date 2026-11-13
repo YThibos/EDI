@@ -66,7 +66,7 @@ public class AnswerDecision {
         Task released = releases.released(task, actor, now);
         releaseTheDependantsOfADoneTask(released);
         recordTheDone(released, actor, now);
-        return new RecordedAnswer(decided, released, carryTheAnswerToAWaitingWorker(decided, actor));
+        return new RecordedAnswer(decided, released, steering.carryTheAnswerOf(decided, actor));
     }
 
     private Decision decisionOf(TaskReference reference, Task task) {
@@ -83,10 +83,6 @@ public class AnswerDecision {
         if (released.isDone()) {
             events.record(new TaskDone(released.id()), actor, now);
         }
-    }
-
-    private Optional<StoredSteer> carryTheAnswerToAWaitingWorker(Decision decided, Actor actor) {
-        return steering.answerTheOpenQuestionOf(decided.task(), decided.answerForItsWorker(), actor);
     }
 
     private record RecordedAnswer(Decision decision, Task task, Optional<StoredSteer> carried) {
