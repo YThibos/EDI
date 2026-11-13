@@ -12,6 +12,7 @@ import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.web.decision.DecisionLines;
@@ -45,11 +46,12 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         if (detail.worked() != null) {
             lines.add(workedLineOf(detail.worked()));
         }
-        if (!detail.waits().isEmpty()) {
-            lines.add(capitalised(Words.waits(detail.waits())));
+        List<Wait> unmet = Wait.unmet(detail.waits());
+        if (!unmet.isEmpty()) {
+            lines.add(capitalised(Words.waits(unmet)));
         }
         if (detail.task().isHeld()) {
-            lines.add(capitalised(BacklogText.holdOf(detail.task().hold())) + " (since " + moments.minute(detail.task().hold().setAt()) + ")");
+            lines.add(capitalised(Words.hold(detail.task().hold())) + " (since " + moments.minute(detail.task().hold().setAt()) + ")");
         }
         lines.addAll(deliveryLinesOf(detail));
         if (detail.decision() != null) {

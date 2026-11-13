@@ -15,7 +15,7 @@ export interface TaskDetail {
     hold: { kind: string; reason: string; until: string | null; setAt: string } | null;
     created: string;
   };
-  waits: { task: string; awaited: 'merged' | 'landed'; stage: string }[];
+  waits: { task: string; awaited: 'merged' | 'landed'; stage: string; met: boolean }[];
   decision: TaskDecision | null;
   delivery: { address: { number: number }; draft: boolean; state: string } | null;
   worked: { active: string; wallClock: string } | null;

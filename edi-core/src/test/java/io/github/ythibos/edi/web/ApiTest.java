@@ -43,6 +43,9 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -150,8 +153,11 @@ class ApiTest {
         String beforeTheMerge = get("/api/plans/HRN-40", TEXT).body();
         putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.MERGED);
         String afterTheMerge = get("/api/plans/HRN-40", TEXT).body();
+        String paintAfterTheMerge = get("/api/tasks/paint-the-harbour-lamp", TEXT).body();
         waitForAScout(new TaskId("paint-the-harbour-lamp"), new TaskId("plan-work-on-paint-the-harbour-lamp"));
         String behindItsScout = get("/api/plans/HRN-40", TEXT).body();
+        holdBack(new TaskId("oil-the-harbour-gate"), "after the storm");
+        String heldBack = get("/api/plans/HRN-40", TEXT).body();
         putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.RETIRED);
 
         assertThat(added.statusCode()).isEqualTo(201);
@@ -173,8 +179,10 @@ class ApiTest {
                 "  1  fit-the-harbour-lamp    HRN-41  merged  none\n",
                 "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  eligible\n",
                 "  3  oil-the-harbour-gate    HRN-43  queued  none            eligible\n");
+        assertThat(paintAfterTheMerge).doesNotContain("Waits for");
         assertThat(behindItsScout).contains(
                 "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  waits for plan-work-on-paint-the-harbour-lamp to land (queued)\n");
+        assertThat(heldBack).contains("  3  oil-the-harbour-gate    HRN-43  queued  none            held (deferral, until your word): after the storm\n");
         assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"");
         assertThat(get("/api/tasks/fit-the-harbour-lamp", TEXT).body()).contains("Use the brass fittings.", "slice planned");
     }
@@ -889,6 +897,11 @@ class ApiTest {
         tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null), "",
                 waiting.created()));
         tasks.update(waiting.waitingFor(scout));
+    }
+
+    private void holdBack(TaskId id, String reason) {
+        Task task = tasks.get(id);
+        tasks.update(task.held(new CaptainHold(HoldKind.DEFERRAL, reason, HoldUntil.captainsWord(), task.created())));
     }
 
     private void putAt(TaskId id, TaskStage stage) {

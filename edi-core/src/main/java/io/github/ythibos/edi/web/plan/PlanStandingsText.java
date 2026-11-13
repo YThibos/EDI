@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.web.plan;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -54,10 +55,18 @@ class PlanStandingsText implements TextPresenter<PlanStandings> {
     }
 
     private static String readinessOf(SliceStanding standing, Plan plan) {
-        if (standing.isEligible()) {
-            return "eligible";
+        return standing.isEligible() ? "eligible" : whatHoldsItBack(standing, plan);
+    }
+
+    private static String whatHoldsItBack(SliceStanding standing, Plan plan) {
+        List<String> reasons = new ArrayList<>();
+        if (standing.task().isHeld()) {
+            reasons.add(Words.hold(standing.task().hold()));
         }
         List<Wait> outsideThePlan = standing.unmetWaitsOutside(plan);
-        return outsideThePlan.isEmpty() ? "" : Words.waits(outsideThePlan);
+        if (!outsideThePlan.isEmpty()) {
+            reasons.add(Words.waits(outsideThePlan));
+        }
+        return String.join("; ", reasons);
     }
 }

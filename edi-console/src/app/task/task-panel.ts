@@ -68,7 +68,7 @@ export class TaskPanel {
   }
 
   protected waitsOf(detail: TaskDetail): string {
-    return detail.waits.map((wait) => `${wait.task} ${wait.awaited === 'merged' ? 'to be merged' : 'to land'} (${wait.stage})`).join(', ');
+    return detail.waits.filter((wait) => !wait.met).map((wait) => `${wait.task} ${wait.awaited === 'merged' ? 'to be merged' : 'to land'} (${wait.stage})`).join(', ');
   }
 
   protected wordsOf(type: string): string {

@@ -20,7 +20,7 @@ public record SliceStanding(Slice slice, Task task, List<Wait> waits) {
 
     public List<Wait> unmetWaitsOutside(Plan plan) {
         Optional<TaskId> awaitedInThePlan = plan.taskAwaitedBy(slice);
-        return waits.stream().filter(wait -> !wait.isMet() && !isOn(awaitedInThePlan, wait)).toList();
+        return Wait.unmet(waits).stream().filter(wait -> !isOn(awaitedInThePlan, wait)).toList();
     }
 
     private static boolean isOn(Optional<TaskId> task, Wait wait) {

@@ -20,7 +20,7 @@ const LAMP: TaskDetail = {
     hold: null,
     created: '2026-10-15T06:00:00Z',
   },
-  waits: [{ task: 'build-tower', awaited: 'landed', stage: 'retired' }],
+  waits: [{ task: 'build-tower', awaited: 'landed', stage: 'merged', met: false }, { task: 'pave-quay', awaited: 'merged', stage: 'retired', met: true }],
   decision: {
     number: 'D58',
     card: {
@@ -88,7 +88,7 @@ describe('TaskPanel', () => {
       Projects: 'harness',
       'Work key': 'EDI-31',
       Base: 'main',
-      'Waits for': 'build-tower to land (retired)',
+      'Waits for': 'build-tower to land (merged)',
       Request: '#12 · open · draft',
       Worked: 'active 1h05m of 3h00m',
       Added: '2026-10-15 08:00 CEST',
@@ -96,6 +96,13 @@ describe('TaskPanel', () => {
     expect(panel.parentElement?.classList).toContain('sr-cols');
     expect(page.querySelector('.sr-sign--amber')?.textContent).toContain('Needs your decision');
     expect(document.title).toBe('(1) SITREP · EDI');
+  });
+
+  it('says nothing waits once every wait of the task is met', async () => {
+    const page = await opened('/task/fit-lamp', { ...LAMP, waits: [{ task: 'build-tower', awaited: 'merged', stage: 'merged', met: true }] });
+
+    const panel = page.querySelector('app-task-panel') as HTMLElement;
+    expect(Object.keys(facts(panel))).not.toContain('Waits for');
   });
 
   it('shows the timeline first and the decision with its answer on its tab', async () => {
@@ -196,12 +203,12 @@ describe('TaskPanel', () => {
 
   let harness: RouterTestingHarness;
 
-  async function opened(address: string): Promise<HTMLElement> {
+  async function opened(address: string, detail: TaskDetail = LAMP): Promise<HTMLElement> {
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(address);
     http.expectOne('/api/sitrep').flush(sitrepFixture());
     await harness.fixture.whenStable();
-    http.expectOne('/api/tasks/fit-lamp').flush(LAMP);
+    http.expectOne('/api/tasks/fit-lamp').flush(detail);
     await settled();
     return harness.fixture.nativeElement as HTMLElement;
   }

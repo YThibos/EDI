@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
+import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -53,7 +54,8 @@ class TaskTextTest {
         Task horn = PresenterFixtures.heldHorn();
         Backlog backlog = new Backlog(false, List.of(
                 new BacklogEntry(PresenterFixtures.lantern(), List.of()),
-                new BacklogEntry(horn, List.of(Wait.afterLanded(new TaskId("lantern"), TaskStage.QUEUED)))));
+                new BacklogEntry(horn, List.of(Wait.afterLanded(new TaskId("lantern"), TaskStage.QUEUED),
+                        new Wait(new TaskId("mast"), AwaitedStage.MERGED, TaskStage.MERGED)))));
 
         assertThat(new BacklogText().text(backlog)).isEqualTo("""
                 Queued (2)
@@ -63,6 +65,18 @@ class TaskTextTest {
                       waits for lantern to land (queued)
                 """);
         assertThat(new BacklogText().text(new Backlog(true, List.of()))).isEqualTo("Ready (0)\n");
+    }
+
+    @Test
+    void namesOnlyTheWaitsOfATaskThatAreNotMetYet() {
+        TaskDetail waiting = new TaskDetail(PresenterFixtures.lantern(), List.of(new Wait(new TaskId("mast"), AwaitedStage.MERGED, TaskStage.RETIRED),
+                Wait.afterLanded(new TaskId("quay"), TaskStage.MERGED)), null, null, null, null, null, List.of(), List.of());
+        TaskDetail metOnly = new TaskDetail(PresenterFixtures.lantern(), List.of(Wait.afterLanded(new TaskId("quay"), TaskStage.LANDED)), null, null,
+                null, null, null, List.of(), List.of());
+
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(waiting))
+                .contains("Waits for quay to land (merged)\n").doesNotContain("mast");
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(metOnly)).doesNotContain("Waits for");
     }
 
     @Test
