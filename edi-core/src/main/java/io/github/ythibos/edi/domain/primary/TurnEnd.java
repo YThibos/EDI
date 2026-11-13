@@ -2,7 +2,7 @@ package io.github.ythibos.edi.domain.primary;
 
 public enum TurnEnd {
     ENDS(""),
-    HANDS_OVER_THE_REPORT("This turn changed state, so its turn report follows: paste it verbatim in one fenced block, then stop."),
+    HANDS_OVER_THE_REPORT("This turn's report follows: paste it verbatim in one fenced block, then stop."),
     STARTS_THE_WAIT("Work is in flight and no wake stream is live: start edi wait --follow alone with the Monitor tool, then stop.");
 
     static final int MOST_BLOCKED_STOPS = 3;

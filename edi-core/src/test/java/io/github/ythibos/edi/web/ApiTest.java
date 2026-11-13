@@ -574,7 +574,7 @@ class ApiTest {
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
         assertThat(queued.statusCode()).isEqualTo(201);
-        assertThat(unreported.body()).startsWith("{\"decision\":\"block\",\"reason\":\"This turn changed state, so its turn report follows: "
+        assertThat(unreported.body()).startsWith("{\"decision\":\"block\",\"reason\":\"This turn's report follows: "
                 + "paste it verbatim in one fenced block, then stop.\\n\\n");
         assertThat(reported.statusCode()).isEqualTo(204);
     }
@@ -595,7 +595,7 @@ class ApiTest {
         JsonNode answer = new JsonMapper().readTree(handedOver.body());
         assertThat(answer.path("decision").asString()).isEqualTo("block");
         assertThat(answer.path("reason").asString())
-                .startsWith("This turn changed state, so its turn report follows: paste it verbatim in one fenced block, then stop.\n\n")
+                .startsWith("This turn's report follows: paste it verbatim in one fenced block, then stop.\n\n")
                 .contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Read the anchor survey\n",
                         "\nNEXT\n────\n  harness           • Weigh the anchor at dawn\n");
         assertThat(afterThePaste.statusCode()).isEqualTo(204);

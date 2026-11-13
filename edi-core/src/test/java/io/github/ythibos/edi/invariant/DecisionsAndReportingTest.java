@@ -522,7 +522,7 @@ class DecisionsAndReportingTest {
 
             assertThat(quietTurn).isEqualTo(TurnEnd.ENDS);
             assertThat(unreported).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-            assertThat(unreported.instruction()).isEqualTo("This turn changed state, so its turn report follows: paste it verbatim in one fenced block, then stop.");
+            assertThat(unreported.instruction()).isEqualTo("This turn's report follows: paste it verbatim in one fenced block, then stop.");
             assertThat(reported).isEqualTo(TurnEnd.ENDS);
         }
     }
