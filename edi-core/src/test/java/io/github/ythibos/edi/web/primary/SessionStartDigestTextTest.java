@@ -59,6 +59,32 @@ class SessionStartDigestTextTest {
     }
 
     @Test
+    void saysFirstThatTheSessionHoldsAnOlderAnchorAndPointsAtTheCheckoutsCurrentOne() throws IOException {
+        TestHome home = TestHome.in(directory.resolve("home"))
+                .writing(".claude/output-styles/edi-primary.md", "---\nname: edi-primary\n---\n\n# EDI: the primary's anchor\n\nYou are an older E.D.I.\n")
+                .writing("checkout/claude/primary/CLAUDE.md", "# EDI: the primary's anchor\n\nYou are E.D.I.\n");
+
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
+
+        assertThat(digest.lines().skip(1).limit(2)).containsExactly("This session holds an older anchor than the core's: the edi-primary output style at "
+                + home.home().root().resolve(".claude/output-styles/edi-primary.md") + " predates the core's build, and a compaction or a new start loads"
+                + " that older anchor again until edi up or edi update refreshes it. Read " + home.home().root().resolve("checkout/claude/primary/CLAUDE.md")
+                + " now and hold to every line of it, for its rules replace the older ones.", confirmationOfTheAnchorIn(home));
+    }
+
+    @Test
+    void asksForEdiUpWhenTheSessionHoldsAnOlderAnchorAndNoCheckoutHoldsTheCurrentOne() throws IOException {
+        TestHome home = TestHome.in(directory.resolve("home"))
+                .writing(".claude/output-styles/edi-primary.md", "---\nname: edi-primary\n---\n\n# EDI: the primary's anchor\n\nYou are an older E.D.I.\n");
+
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
+
+        assertThat(digest.lines().skip(1).findFirst().orElseThrow()).startsWith("This session holds an older anchor than the core's: ")
+                .endsWith(" The core finds no checkout of its anchor to read, so tell the captain this session runs on an older anchor and ask for edi up,"
+                        + " which writes the current one into the output style.");
+    }
+
+    @Test
     void asksOnlyForTheSessionsOwnConfirmationOfTheAnchorWhenTheSessionHoldsIt() throws IOException {
         TestHome home = preparedHome();
 

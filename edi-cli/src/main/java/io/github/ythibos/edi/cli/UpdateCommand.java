@@ -8,8 +8,8 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
-@Command(name = "update", description = "Pulls the EDI repository, builds and tests it natively, installs it, restarts the core and names the anchor to"
-        + " re-read; running workers keep running.")
+@Command(name = "update", description = "Pulls the EDI repository, builds and tests it natively, installs it, restarts the core, refreshes the"
+        + " primary's anchor and names it to re-read; running workers keep running.")
 final class UpdateCommand implements Callable<Integer> {
 
     private static final int REFUSED = 1;
@@ -29,6 +29,7 @@ final class UpdateCommand implements Callable<Integer> {
             checkout.pullTheLatest();
             checkout.buildTestAndInstall(edi.home());
             restartTheCore();
+            refreshThePrimarysAnchor();
             report(checkout);
             return 0;
         } catch (CommandFailure | CoreUnavailable failed) {
@@ -57,10 +58,18 @@ final class UpdateCommand implements Callable<Integer> {
         }
     }
 
+    private void refreshThePrimarysAnchor() {
+        CoreReply refreshed = new CoreClient().post(edi.core(), "/api/primary/launch", "{}", "text/plain");
+        if (!refreshed.succeeded()) {
+            throw new CommandFailure(refreshed.body().strip());
+        }
+    }
+
     private void report(EdiCheckout checkout) {
         PrintWriter out = spec.commandLine().getOut();
         out.println("Updated to " + checkout.head() + "; the core runs the new build.");
-        out.println("Re-read " + checkout.primaryAnchor() + ": the primary's rules may have changed, and a new session loads them.");
+        out.println("The primary's output style now carries the new anchor, and the running primary loads it at its next compaction or start;"
+                + " until then, re-read " + checkout.primaryAnchor() + ", for the primary's rules may have changed.");
         out.flush();
     }
 }

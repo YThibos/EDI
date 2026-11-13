@@ -19,7 +19,14 @@ public final class PrimaryOutputStyle {
                 %s""".formatted(NAME, prompt);
     }
 
-    public static boolean holdsTheAnchor(String style, String anchor) {
-        return style.contains(anchor.strip());
+    public static HeldAnchor anchorHeldIn(String style, String anchor) {
+        if (style.contains(anchor.strip())) {
+            return HeldAnchor.CURRENT;
+        }
+        return style.lines().anyMatch(headingOf(anchor)::equals) ? HeldAnchor.OLDER : HeldAnchor.NONE;
+    }
+
+    public static String headingOf(String anchor) {
+        return anchor.lines().findFirst().orElseThrow();
     }
 }

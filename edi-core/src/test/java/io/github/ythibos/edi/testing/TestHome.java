@@ -974,7 +974,7 @@ public final class TestHome {
     }
 
     public SessionStartDigestQuery sessionStartDigest() {
-        return new SessionStartDigestQuery(new CheckTheSessionAnchor(home), primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages,
+        return new SessionStartDigestQuery(new CheckTheSessionAnchor(home, home.root().resolve("checkout")), primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages,
                 wakes, presenceQuery(), memory(), new HomeSetup(home), personalityQuery(), clock, transaction);
     }
 

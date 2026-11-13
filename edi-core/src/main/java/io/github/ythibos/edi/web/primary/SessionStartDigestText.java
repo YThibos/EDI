@@ -75,7 +75,24 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static List<String> anchorOf(SessionAnchor anchor) {
-        return anchor.loaded() ? List.of(confirmationOf(anchor)) : List.of(warningOf(anchor), confirmationOf(anchor));
+        return switch (anchor.held()) {
+            case CURRENT -> List.of(confirmationOf(anchor));
+            case OLDER -> List.of(olderAnchorOf(anchor), confirmationOf(anchor));
+            case NONE -> List.of(warningOf(anchor), confirmationOf(anchor));
+        };
+    }
+
+    private static String olderAnchorOf(SessionAnchor anchor) {
+        return "This session holds an older anchor than the core's: the " + PrimaryOutputStyle.NAME + " output style at " + anchor.outputStyle()
+                + " predates the core's build, and a compaction or a new start loads that older anchor again until edi up or edi update refreshes it. "
+                + currentAnchorToRead(anchor);
+    }
+
+    private static String currentAnchorToRead(SessionAnchor anchor) {
+        return anchor.currentAnchor()
+                .map(current -> "Read " + current + " now and hold to every line of it, for its rules replace the older ones.")
+                .orElse("The core finds no checkout of its anchor to read, so tell the captain this session runs on an older anchor and ask for edi up,"
+                        + " which writes the current one into the output style.");
     }
 
     private static String warningOf(SessionAnchor anchor) {

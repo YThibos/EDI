@@ -22,10 +22,16 @@ class PrimaryOutputStyleTest {
     }
 
     @Test
-    void holdsTheAnchorOnlyWhenItCarriesTheWholeOfIt() {
+    void holdsTheCurrentAnchorOnlyWhenItCarriesTheWholeOfIt() {
         String style = PrimaryOutputStyle.carrying("# Anchor\n\nHold the line.\n\n# The captain's memory\n");
 
-        assertThat(PrimaryOutputStyle.holdsTheAnchor(style, "# Anchor\n\nHold the line.\n")).isTrue();
-        assertThat(PrimaryOutputStyle.holdsTheAnchor(style, "# Anchor\n\nHold the new line.\n")).isFalse();
+        assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Anchor\n\nHold the line.\n")).isEqualTo(HeldAnchor.CURRENT);
+        assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Anchor\n\nHold the new line.\n")).isEqualTo(HeldAnchor.OLDER);
+        assertThat(PrimaryOutputStyle.anchorHeldIn(style, "# Renamed anchor\n\nHold the line.\n")).isEqualTo(HeldAnchor.NONE);
+    }
+
+    @Test
+    void takesTheAnchorsFirstLineAsItsHeading() {
+        assertThat(PrimaryOutputStyle.headingOf("# Anchor\n\nHold the line.\n")).isEqualTo("# Anchor");
     }
 }

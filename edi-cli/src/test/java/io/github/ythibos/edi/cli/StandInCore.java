@@ -32,6 +32,12 @@ final class StandInCore {
         holdTheHome(state.resolve("core.pid"));
         HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/api/health", exchange -> answer(exchange, ""));
+        server.createContext("/api/primary/launch", exchange -> {
+            Path style = Path.of(System.getenv("EDI_HOME"), ".claude", "output-styles", "edi-primary.md");
+            Files.createDirectories(style.getParent());
+            Files.writeString(style, "# EDI: the primary's anchor\n");
+            answer(exchange, "session: edi-261113-0924\n");
+        });
         server.createContext("/api/core/stop", exchange -> {
             answer(exchange, "EDI core stops.\n");
             stopAfter(server, stopping);

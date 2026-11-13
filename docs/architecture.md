@@ -34,7 +34,7 @@ Only one core runs per home: it locks `$EDI_HOME/state/core.pid`, and `edi up` s
 `edi down` stops the core only when no worker runs; `--force-stop-workers` stops them too, on the captain's word.
 A core counts as stopped once it has let go of `state/core.pid`, so `edi down` and `edi update` return or start the new core only then ([core-lifecycle](decisions/core-lifecycle.md)).
 `edi up` and `edi update` find the EDI repository in `EDI_CHECKOUT`, default `~/EDI`, and the core executable next to `edi` or in `EDI_CORE`.
-`edi update` pulls the repository, builds, tests and installs it, restarts the core while workers keep running, and has the primary re-read its anchor ([core-lifecycle](decisions/core-lifecycle.md)).
+`edi update` pulls the repository, builds, tests and installs it, restarts the core while workers keep running, refreshes the primary's anchor and has the primary re-read it ([core-lifecycle](decisions/core-lifecycle.md)).
 `ops/edi-core.service` is an optional systemd user unit for a core that restarts on failure.
 
 ## Where EDI stands
