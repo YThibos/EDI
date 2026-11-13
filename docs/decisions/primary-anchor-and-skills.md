@@ -17,7 +17,7 @@ Every command the anchor or a skill's trigger tells the captain to type is a use
 The procedures nobody types are skills with the `edi-` prefix: `edi-ship`, `edi-backlog-item`, `edi-scout`, `edi-board`, `edi-presence`, `edi-upkeep`, `edi-recover`, `edi-decision-log`, `edi-personality` and `edi-voice`; each names only commands that exist.
 `introspect` is the one procedure named for the word the captain says rather than a command, so it carries no prefix; its script `introspect.mjs` prints, from the store, opened read-only, one compact timeline and the usual soft failures, and writes backlog draft skeletons for `edi-backlog-item`, so the skill holds only the judgement.
 `ClaudeLayerTest` holds every command the anchor or a trigger names to a skill of that name, and every skill to a directory `ops/install.sh` links.
-`claude/primary/settings.json` holds the seven hooks ([worker-sessions](worker-sessions.md)) and the status line, and no permission rule.
+`claude/primary/settings.json` holds the seven hooks ([worker-sessions](worker-sessions.md)), the status line and the `outputStyle` that loads the anchor ([primary-startup-context](primary-startup-context.md)), and no permission rule.
 `edi statusline` posts the statusLine JSON to `/api/statusline` and prints the core's line, or why the core is not answering, always exiting 0; `StatusLineText` writes model and effort, context, session tokens, the two usage limits with their resets, the current directory's branch from one `git status --porcelain=v2 --branch`, and the cache hit ratio, refreshed every 60 seconds, with "Wait: none" after them while work is in flight and no `edi wait` is live ([wakes-and-turn-end](wakes-and-turn-end.md)).
 
 ## Why
@@ -52,3 +52,4 @@ When the anchor nears its budget, Claude Code gives skills command aliases or ch
 - 29/10/2026: the `edi-backlog-item` skill joined the `edi-` skills, the first with a script beside it, to put EDI's own work on the upstream backlog in one step (EDI-142).
 - 03/11/2026: the captain asked for introspection after an unseen worker question to be a scripted routine, so the `introspect` skill joined, and two anchor lines lost a few words to keep the anchor within its budget (EDI-155).
 - 03/11/2026: a request that takes more than one merge request goes through a scout's board first, and the `edi-ship` and `edi-scout` skills say so, since board-first features reached a sliced plan in a working day (EDI-75).
+- 13/11/2026: the anchor reaches the session as the output style the primary's settings name instead of a command-line option, which Claude Code dropped when it relaunched the primary in the background; the anchor itself is unchanged (EDI-268).

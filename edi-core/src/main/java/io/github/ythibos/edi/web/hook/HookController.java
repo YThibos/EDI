@@ -96,7 +96,7 @@ class HookController {
 
     private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, Long claudePid, URI console) {
         return switch (hook) {
-            case SESSION_START -> sessionStarted(sessionIn(payload), claudePid, sourceOf(payload), console);
+            case SESSION_START -> sessionStarted(sessionIn(payload), workingDirectoryIn(payload), claudePid, sourceOf(payload), console);
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
@@ -107,9 +107,9 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, SessionSource source, URI console) {
+    private ResponseEntity<String> sessionStarted(UUID session, Path workingDirectory, Long claudePid, SessionSource source, URI console) {
         SessionStart start = primaryHooks.sessionStarted(session, claudePid, source);
-        SessionStartDigest digest = digests.digestFor(session);
+        SessionStartDigest digest = digests.digestFor(session, workingDirectory);
         SessionStartDigest told = sitrep.openFor(session, start, console).map(digest::withSitrep).orElse(digest);
         return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
     }
@@ -128,6 +128,11 @@ class HookController {
         return ASKS_THE_CAPTAIN.equals(payload.path("tool_name").asString(""))
                 ? primaryHooks.dialogAnswered(session, DialogAnswers.in(payload))
                 : HookAnswer.PROCEED;
+    }
+
+    private static Path workingDirectoryIn(JsonNode payload) {
+        String cwd = textIn(payload, "cwd");
+        return cwd == null ? null : Path.of(cwd);
     }
 
     private static SessionSource sourceOf(JsonNode payload) {
@@ -154,10 +159,9 @@ class HookController {
     private static ToolCall toolCallIn(JsonNode payload) {
         JsonNode input = payload.path("tool_input");
         String file = input.path("file_path").asString(input.path("notebook_path").asString(null));
-        String cwd = payload.path("cwd").asString(null);
         String searched = input.path("path").asString(null);
         return new ToolCall(payload.path("tool_name").asString(""), input.path("command").asString(null), file == null ? searched : file,
-                cwd == null ? null : Path.of(cwd), input.path("pattern").asString(null), DialogAnswers.areFilledIn(input));
+                workingDirectoryIn(payload), input.path("pattern").asString(null), DialogAnswers.areFilledIn(input));
     }
 
     private ResponseEntity<String> rendered(HookAnswer answer) {

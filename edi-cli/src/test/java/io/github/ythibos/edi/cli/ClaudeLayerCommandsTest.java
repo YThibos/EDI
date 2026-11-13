@@ -182,17 +182,15 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
-    void launchesThePrimaryWaitingForTheCaptainToType() {
+    void launchesThePrimaryWithItsSettingsAloneSoTheAnchorRidesOnThem() {
         PrimaryLaunch launch = PrimaryLaunch.read("""
                 session: edi-261017-0930
                 directory: /home/example/.edi
                 settings: /home/example/.edi/state/primary/settings.json
-                system prompt: /home/example/.edi/state/primary/system-prompt.md
                 """);
 
         assertThat(launch.session()).isEqualTo("edi-261017-0930");
-        assertThat(launch.claude()).containsExactly("claude", "--settings", "/home/example/.edi/state/primary/settings.json",
-                "--append-system-prompt-file", "/home/example/.edi/state/primary/system-prompt.md");
+        assertThat(launch.claude()).containsExactly("claude", "--settings", "/home/example/.edi/state/primary/settings.json");
     }
 
     @Test

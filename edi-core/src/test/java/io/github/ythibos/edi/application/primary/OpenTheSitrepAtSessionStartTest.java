@@ -154,6 +154,6 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     private String digestTelling(UUID session, ConsoleOpening sitrep) {
-        return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session).withSitrep(sitrep));
+        return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session, home.home().root()).withSitrep(sitrep));
     }
 }

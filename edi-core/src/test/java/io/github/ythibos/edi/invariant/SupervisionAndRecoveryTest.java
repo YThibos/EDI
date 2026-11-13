@@ -139,7 +139,7 @@ class SupervisionAndRecoveryTest {
         }
 
         private static String digestOf(TestHome home, UUID session) {
-            return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session));
+            return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session, home.home().root()));
         }
     }
 

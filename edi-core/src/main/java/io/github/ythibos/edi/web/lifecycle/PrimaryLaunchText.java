@@ -17,7 +17,6 @@ class PrimaryLaunchText implements TextPresenter<PrimaryLaunch> {
     public String text(PrimaryLaunch launch) {
         return "session: " + launch.sessionName() + "\n"
                 + "directory: " + launch.directory() + "\n"
-                + "settings: " + launch.settings() + "\n"
-                + "system prompt: " + launch.systemPrompt() + "\n";
+                + "settings: " + launch.settings() + "\n";
     }
 }

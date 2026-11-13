@@ -249,3 +249,13 @@ Claude Code ran through `env -i` or with `CLAUDE_CONFIG_DIR` named on the comman
 - So a worker's directory is whatever its tmux window's environment holds, which is the tmux server's unless the launch names it, and EDI states it at every launch.
 - So a resume runs on the login that holds the session's transcript, and the transcript path of a worker's first hook shows which directory it really runs on.
 - A worker on a directory whose first run is unfinished stops on the theme picker and is seen only as a missed launch, so EDI checks the global configuration before it asks `claude auth status`, which would otherwise write that file itself.
+
+## The anchor across a background relaunch, on 2.1.322
+
+Read on Claude Code 2.1.322 on WSL2, 13/11/2026, for the anchor's channel ([primary-startup-context](../decisions/primary-startup-context.md)).
+
+- On 12 and 13 November 2026 Claude Code's background service (`claude daemon run`) took over a primary that `edi up` started with `--settings` and `--append-system-prompt-file`, and relaunched it as background sessions whose process chains held the settings file, `--inherit-permission-mode` or `--bg`, and no anchor option; their hooks ran and their models worked without the anchor.
+- A headless run (`claude -p`, `claude-haiku-5-5`) in a throwaway directory with `--settings '{"outputStyle":"Explanatory"}'` quoted the output style "Explanatory" from its system prompt, so an `outputStyle` stated in the settings file reaches the model.
+- `claude --help` says the system prompt, an appended one included, is recorded on the conversation's first request and reused on every later request and resume until a compaction (`--system-prompt-snapshot`, on by default).
+
+Not verified here: a custom output style read from `.claude/output-styles/` in the session's working directory, and a background relaunch of a session started with it, since a worker's guard refuses writing under any `.claude` directory; the captain's live check after `edi up` covers both, and the digest's first line says when the anchor cannot be in the session.

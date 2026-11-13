@@ -15,8 +15,10 @@ import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
+import io.github.ythibos.edi.application.primary.SessionAnchor;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.domain.memory.WorkaroundCount;
+import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.web.personality.PersonalityText;
@@ -52,7 +54,9 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     @Override
     public String text(SessionStartDigest digest) {
-        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing())));
+        List<String> lines = new ArrayList<>(List.of("EDI session-start digest"));
+        lines.addAll(anchorOf(digest.anchor()));
+        lines.add(standingOf(digest.standing()));
         lines.addAll(personalityText.lines(digest.personality()));
         lines.add("Presence: " + presenceWords.of(digest.presence()) + ".");
         lines.addAll(sitrepOf(digest.sitrep()));
@@ -68,6 +72,15 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.addAll(upkeepOf(digest));
         lines.addAll(waitAdvice(digest));
         return String.join("\n", lines) + "\n";
+    }
+
+    private static List<String> anchorOf(SessionAnchor anchor) {
+        if (anchor.loaded()) {
+            return List.of();
+        }
+        return List.of("The anchor is not in this session: Claude Code loads it, as the " + PrimaryOutputStyle.NAME
+                + " output style the primary's settings name, only for a session started in " + anchor.home() + ". Read " + anchor.outputStyle()
+                + " now and hold to every line of it, and tell the captain this session runs without its anchor until edi up starts the primary again.");
     }
 
     private static String standingOf(Standing standing) {

@@ -13,6 +13,7 @@ import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.home.MemoryFiles;
 import io.github.ythibos.edi.adapter.home.PersonalLayer;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.domain.primary.PrimaryPrompt;
 
 @Service
@@ -35,9 +36,9 @@ public class PrepareThePrimary {
 
     public PrimaryLaunch prepare() {
         String prompt = PrimaryPrompt.composed(PrimaryLayer.read(PrimaryLayer.ANCHOR), personal.anchorAddendum(), memory.loadedAtSessionStart());
+        written(home.primaryOutputStyle(), PrimaryOutputStyle.carrying(prompt));
         Path settings = written(home.primaryState().resolve("settings.json"), PrimaryLayer.read(PrimaryLayer.SETTINGS));
-        Path systemPrompt = written(home.primaryState().resolve("system-prompt.md"), prompt);
-        return new PrimaryLaunch(home.root(), settings, systemPrompt, "edi-" + SESSION_STAMP.format(clock.now().atZone(clock.zone())));
+        return new PrimaryLaunch(home.root(), settings, "edi-" + SESSION_STAMP.format(clock.now().atZone(clock.zone())));
     }
 
     private static Path written(Path file, String content) {
