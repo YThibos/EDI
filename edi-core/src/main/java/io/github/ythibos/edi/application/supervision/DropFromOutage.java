@@ -29,7 +29,7 @@ public class DropFromOutage {
     }
 
     public DroppedTask drop(int number, boolean discardingWork, CallingSession calling, Actor actor) {
-        OutageEntry entry = transaction.execute(_ -> outageList.stillListed(number, clock.now()))
+        OutageEntry entry = transaction.execute(_ -> outageList.numberedOnceStaleEntriesLeave(number, clock.now()))
                 .orElseThrow(() -> new Refusal(Rule.OUTAGE_LIST, "The outage hold list has no number " + number + "."));
         return dropTask.drop(new TaskReference.ById(entry.task()), discardingWork, calling, actor);
     }

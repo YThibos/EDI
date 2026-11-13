@@ -37,8 +37,9 @@ public class LeaveTheOutageList {
         outages.open().forEach(entry -> onceNothingIsLeftToResume(tasks.get(entry.task()), Actor.CORE, at));
     }
 
-    public Optional<OutageEntry> stillListed(int number, Instant at) {
-        return outages.numbered(number).filter(entry -> onceNothingIsLeftToResume(tasks.get(entry.task()), Actor.CORE, at).hasWorkToResume());
+    public Optional<OutageEntry> numberedOnceStaleEntriesLeave(int number, Instant at) {
+        everyTaskWithNothingLeftToResume(at);
+        return outages.numbered(number);
     }
 
     public void leave(OutageEntry entry, Actor actor, Instant at) {

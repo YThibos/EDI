@@ -87,7 +87,7 @@ public class RecoverFromOutage {
     }
 
     private OutageEntry listed(int number) {
-        return transaction.execute(_ -> outageList.stillListed(number, clock.now()))
+        return transaction.execute(_ -> outageList.numberedOnceStaleEntriesLeave(number, clock.now()))
                 .orElseThrow(() -> new Refusal(Rule.OUTAGE_LIST, "The outage hold list has no number " + number + "."));
     }
 
