@@ -32,6 +32,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import io.github.ythibos.edi.adapter.store.DispatchStore;
+import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.branch.BranchKind;
@@ -42,7 +43,14 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -80,6 +88,9 @@ class ApiTest {
 
     @Autowired
     private WorkerTokens workerTokens;
+
+    @Autowired
+    private TaskStore tasks;
 
     @BeforeAll
     static void prepareTheHome() throws IOException {
@@ -129,6 +140,66 @@ class ApiTest {
         assertThat(get("/api/tasks/api-lantern", TEXT).body()).startsWith("api-lantern  ship  queued\nRework the lantern\nProjects: harness\nWork key: HRN-3\nBase: develop\n");
         assertThat(get("/api/tasks/api-lantern", JSON).body()).contains(
                 "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"stage\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"");
+    }
+
+    @Test
+    void entersAPlanWhoseSlicesBecomeEligibleAsTheirWaitsAreMet() throws Exception {
+        HttpResponse<String> added = post("/api/plans", """
+                {"key":"HRN-40","title":"Light the harbour","project":"harness","report":"docs/research/HRN-40-plan.md","decision":"D44",
+                 "capacity":2,"effort":"xhigh","slices":[
+                  {"number":1,"title":"Fit the harbour lamp","category":"implementation","key":"HRN-41","body":"Use the brass fittings."},
+                  {"number":2,"title":"Paint the harbour lamp","category":"implementation","key":"HRN-42"},
+                  {"number":3,"title":"Oil the harbour gate","category":"implementation","key":"HRN-43","wait":"none"}]}""", TEXT);
+        String beforeTheMerge = get("/api/plans/HRN-40", TEXT).body();
+        putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.MERGED);
+        String afterTheMerge = get("/api/plans/HRN-40", TEXT).body();
+        String paintAfterTheMerge = get("/api/tasks/paint-the-harbour-lamp", TEXT).body();
+        waitForAScout(new TaskId("paint-the-harbour-lamp"), new TaskId("plan-work-on-paint-the-harbour-lamp"));
+        String behindItsScout = get("/api/plans/HRN-40", TEXT).body();
+        holdBack(new TaskId("oil-the-harbour-gate"), "after the storm");
+        String heldBack = get("/api/plans/HRN-40", TEXT).body();
+        putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.RETIRED);
+
+        assertThat(added.statusCode()).isEqualTo(201);
+        assertThat(added.body()).isEqualTo("Planned HRN-40: queued 3 slices, fit-the-harbour-lamp, paint-the-harbour-lamp, oil-the-harbour-gate;"
+                + " edi plan show HRN-40 prints their stages and waits.\n");
+        assertThat(beforeTheMerge).isEqualTo("""
+                HRN-40 plan: Light the harbour
+                Project: harness
+                Report: docs/research/HRN-40-plan.md
+                Go: D44
+                Capacity: 2 slices at once
+                Effort: xhigh
+                Slices
+                  1  fit-the-harbour-lamp    HRN-41  queued  none            eligible
+                  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged
+                  3  oil-the-harbour-gate    HRN-43  queued  none            eligible
+                """);
+        assertThat(afterTheMerge).contains(
+                "  1  fit-the-harbour-lamp    HRN-41  merged  none\n",
+                "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  eligible\n",
+                "  3  oil-the-harbour-gate    HRN-43  queued  none            eligible\n");
+        assertThat(paintAfterTheMerge).doesNotContain("Waits for");
+        assertThat(behindItsScout).contains(
+                "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  waits for plan-work-on-paint-the-harbour-lamp to land (queued)\n");
+        assertThat(heldBack).contains("  3  oil-the-harbour-gate    HRN-43  queued  none            held (deferral, until your word): after the storm\n");
+        assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"");
+        assertThat(get("/api/tasks/fit-the-harbour-lamp", TEXT).body()).contains("Use the brass fittings.", "slice planned");
+    }
+
+    @Test
+    void refusesASecondPlanOnTheSameKeyAndAWaitOnALaterSlice() throws Exception {
+        String plan = """
+                {"key":"HRN-50","title":"Mend the pier","project":"harness","report":"docs/research/HRN-50-plan.md","decision":"D45","capacity":1,
+                 "slices":[{"number":1,"title":"Mend the pier planks","category":"implementation","key":"HRN-51"%s}]}""";
+
+        HttpResponse<String> onALaterSlice = post("/api/plans", plan.formatted(",\"wait\":\"after 2 landed\""), TEXT);
+        post("/api/plans", plan.formatted(""), TEXT);
+        HttpResponse<String> again = post("/api/plans", plan.formatted(""), TEXT);
+
+        assertRefusal(onALaterSlice, 400, "Slice 1 waits after 2 landed, and a slice waits only for an earlier slice of its plan.");
+        assertRefusal(again, 409, "A plan is already known by HRN-50; edi plan show HRN-50 prints it.");
+        assertRefusal(get("/api/plans/HRN-404", TEXT), 404, "No plan is known by HRN-404; edi plan add enters one.");
     }
 
     @Test
@@ -841,6 +912,23 @@ class ApiTest {
         assertRefusal(withoutAReason, 400, "An override of the dispatch rules records the captain's reason for it.");
         assertRefusal(beyondTheHarness, 400, "Effort is low, medium or high, and high is the ceiling, so not ultra;"
                 + " only the captain's word for one task lifts that task to xhigh or max.");
+    }
+
+    private void waitForAScout(TaskId ship, TaskId scout) {
+        Task waiting = tasks.get(ship);
+        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null), "",
+                waiting.created()));
+        tasks.update(waiting.waitingFor(scout));
+    }
+
+    private void holdBack(TaskId id, String reason) {
+        Task task = tasks.get(id);
+        tasks.update(task.held(new CaptainHold(HoldKind.DEFERRAL, reason, HoldUntil.captainsWord(), task.created())));
+    }
+
+    private void putAt(TaskId id, TaskStage stage) {
+        Task task = tasks.get(id);
+        tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), task.hold(), task.created(), stage.isClosed() ? task.created() : null));
     }
 
     private static HttpResponse<String> captainSaidInSession(UUID session, String said) throws Exception {

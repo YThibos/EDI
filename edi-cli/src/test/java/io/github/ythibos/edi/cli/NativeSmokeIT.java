@@ -238,6 +238,21 @@ class NativeSmokeIT {
     }
 
     @Test
+    void theCommandEntersAPlanAndShowsItsSlicesWithTheirWaits() throws Exception {
+        CommandRun added = edi("""
+                {"key":"HRN-60","title":"Native harbour","project":"harness","report":"report.md","decision":"D1","capacity":1,"slices":[
+                  {"number":1,"title":"Native quay","category":"implementation","key":"HRN-61"},
+                  {"number":2,"title":"Native crane","category":"implementation","key":"HRN-62"}]}""", "plan", "add", "--from", "-");
+        CommandRun shown = edi("", "plan", "show", "HRN-60");
+        CommandRun asJson = edi("", "plan", "show", "HRN-60", "--json");
+
+        assertThat(added.output()).startsWith("Planned HRN-60: queued 2 slices, native-quay, native-crane;");
+        assertThat(shown.output()).contains("  1  native-quay   HRN-61  queued  none            eligible\n",
+                "  2  native-crane  HRN-62  queued  after 1 merged\n");
+        assertThat(asJson.output()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"stage\":\"queued\"");
+    }
+
+    @Test
     void theCommandAnswersAChangeInJson() throws Exception {
         CommandRun added = edi("", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Native beacon", "--key", "HRN-4", "--json");
         Matcher addedTask = ADDED_TASK_ID.matcher(added.output());

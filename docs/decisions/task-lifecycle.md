@@ -16,7 +16,7 @@ A task can wait on the captain, be parked for the night and have a dead worker a
 
 | From | To | Trigger | Guard |
 |---|---|---|---|
-| QUEUED | WORKING | `edi dispatch`, or a plan dispatching its next slice (`Dispatch`) | not a captain item, no hold, every wait met, the project's and the plan's capacity free |
+| QUEUED | WORKING | `edi dispatch`, or a plan dispatching its next slice (`Dispatch`) | not a captain item, no hold, every wait met ([plans](plans.md)), the project's and the plan's capacity free |
 | WORKING, CHANGING | DELIVERED | the worker's `edi status done` (`DoneReported`) | the copy is clean, no SNAPSHOT is added, no message waits unacknowledged, no pipeline run is running; a ship's request is open at the copy's head; a scout's `report.md` exists |
 | DELIVERED | READY | the core, observing the forge (`ForgeObserved`) | a ship's request, out of draft, its latest run passed, and its head is the delivered head |
 | DELIVERED, READY | CHANGING | the core: a steer is sent, a pipeline run starts, the worker reports working, the request's head or the base moves, or the request is closed (`Change`, `ChangeCause`) | none |
@@ -27,7 +27,7 @@ A task can wait on the captain, be parked for the night and have a dead worker a
 | QUEUED (a captain item) | RETIRED | the answer to its decision (`CaptainItemAnswered`) | nothing else holds it |
 | any but RETIRED and DROPPED | DROPPED | `edi task drop` (`Drop`) | the captain's word, and the work landed unless discarding it is part of that word |
 
-Dependants and plan slices wait on a named stage of another task: MERGED or LANDED.
+Dependants and plan slices wait on a named stage of another task, MERGED or LANDED (`Wait`, `AwaitedStage`): a blocker named with `--blocked-by` until it has landed, and a slice as its plan names ([plans](plans.md)).
 `domain/task/Holds` is the set of reasons a task waits, beside its stage and never changing it: each open decision (`Hold.OpenDecision`), a deferral, an approval, an outage entry and, once parking for the night exists, a night's park.
 A hold added never replaces another, a hold of each kind is held once (a decision once per number), an answer removes only its own decision, and a decision is released only by its answer.
 `WorkerHealth` stays the worker's own condition, derived from the worker row as today; a stage transition may read it, but it is never a stage.
@@ -68,3 +68,4 @@ When a delivery mode appears whose work is neither merged nor reported, or when 
 - 27/10/2026: `TaskStage`, `StageTransitions` and `Holds` entered the domain with the transition table and the four defects as tests, and a captain item's answer became its own transition to RETIRED, since a captain item never gets a worker (EDI-84).
 - 27/10/2026: the captain widened Q6 A so a merge while the task was still working also asks: any merge with commits after the merged head raises the follow-up decision, whatever the stage before it (EDI-84).
 - 12/11/2026: `task.stage` replaced `task.state`, derived once for every task; every service moved it through `StageTransitions` with a `StageChanged` event, and `ObservePipelines` and `FollowMerges` kept observing a delivered task's runs, head and draft flag (EDI-85).
+- 13/11/2026: waits read the stages: a blocker is waited for until it has landed and a plan's slice as its plan names, and the QUEUED to WORKING guard cites the `plans` record (EDI-88).

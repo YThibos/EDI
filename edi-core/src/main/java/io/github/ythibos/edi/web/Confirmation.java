@@ -20,6 +20,7 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
+import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
@@ -91,6 +92,9 @@ public sealed interface Confirmation {
     }
 
     record Promoted(PromotedScout promoted) implements Confirmation {
+    }
+
+    record Planned(Plan plan) implements Confirmation {
     }
 
     record Dropped(DroppedTask dropped) implements Confirmation {

@@ -6,8 +6,10 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
@@ -19,8 +21,8 @@ import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.BaseBranch;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.Intake;
@@ -30,6 +32,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
+import io.github.ythibos.edi.domain.task.Wait;
 
 @Component
 public class TaskStore {
@@ -125,18 +128,33 @@ public class TaskStore {
                 .param("blocker", blocker.value()));
     }
 
-    public List<Blocker> blockersOf(Task task) {
+    public List<Wait> waitsOf(Task task) {
+        return Stream.concat(waitsForBlockersOf(task).stream(), waitInItsPlan(task.id()).stream()).toList();
+    }
+
+    private List<Wait> waitsForBlockersOf(Task task) {
         List<TaskId> blockedBy = task.intake().blockedBy();
         if (blockedBy.isEmpty()) {
             return List.of();
         }
-        Map<String, TaskState> states = store.sql("select id, stage from task where id in (:ids)")
+        Map<String, TaskStage> stages = store.sql("select id, stage from task where id in (:ids)")
                 .param("ids", blockedBy.stream().map(TaskId::value).toList())
-                .query((row, _) -> Map.entry(row.getString("id"), TaskStage.named(row.getString("stage")).state()))
+                .query((row, _) -> Map.entry(row.getString("id"), TaskStage.named(row.getString("stage"))))
                 .list()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        return blockedBy.stream().map(blocker -> new Blocker(blocker, states.get(blocker.value()))).toList();
+        return blockedBy.stream().map(blocker -> Wait.afterLanded(blocker, stages.get(blocker.value()))).toList();
+    }
+
+    private Optional<Wait> waitInItsPlan(TaskId slice) {
+        return store.sql("select awaited.task_id, waiting.waits_until, task.stage from plan_slice waiting"
+                        + " join plan_slice awaited on awaited.plan_key = waiting.plan_key and awaited.number = waiting.waits_after"
+                        + " join task on task.id = awaited.task_id"
+                        + " where waiting.task_id = :slice")
+                .param("slice", slice.value())
+                .query((row, _) -> new Wait(new TaskId(row.getString("task_id")), AwaitedStage.named(row.getString("waits_until")),
+                        TaskStage.named(row.getString("stage"))))
+                .optional();
     }
 
     private void insertProjects(Task task) {

@@ -31,6 +31,7 @@ import picocli.CommandLine.Spec;
             SitrepCommand.class,
             ConsoleCommand.class,
             TaskCommand.class,
+            PlanCommand.class,
             BacklogCommand.class,
             HoldCommand.class,
             ReleaseCommand.class,

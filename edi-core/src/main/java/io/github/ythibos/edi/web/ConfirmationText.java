@@ -17,7 +17,9 @@ import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -38,6 +40,7 @@ import io.github.ythibos.edi.web.Confirmation.Held;
 import io.github.ythibos.edi.web.Confirmation.Keyed;
 import io.github.ythibos.edi.web.Confirmation.MergedWorkFollowedUp;
 import io.github.ythibos.edi.web.Confirmation.Noted;
+import io.github.ythibos.edi.web.Confirmation.Planned;
 import io.github.ythibos.edi.web.Confirmation.PlannedFirst;
 import io.github.ythibos.edi.web.Confirmation.Promoted;
 import io.github.ythibos.edi.web.Confirmation.Queued;
@@ -70,6 +73,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String sentence(Confirmation confirmation) {
         return switch (confirmation) {
             case Queued queued -> queued(queued.added());
+            case Planned planned -> planned(planned.plan());
             case Noted noted -> "Noted on " + noted.task() + ".";
             case Held held -> "Held " + held.task().id() + " (" + held.task().hold().kind().word() + ", "
                     + Moments.until(held.task().hold().until()) + "): " + held.task().hold().reason();
@@ -210,6 +214,12 @@ class ConfirmationText implements TextPresenter<Confirmation> {
         }
         String summary = added.ticket().isDescribed() ? ": " + added.ticket().summary() : "";
         return "Queued " + added.id() + " on " + added.ticket().key() + summary + ".";
+    }
+
+    private static String planned(Plan plan) {
+        return "Planned " + plan.key() + ": queued " + Words.quantity(plan.slices().size(), "slice") + ", "
+                + String.join(", ", plan.tasks().stream().map(TaskId::value).toList()) + "; edi plan show " + plan.key()
+                + " prints their stages and waits.";
     }
 
     private static String answerRecorded(Answered answered) {

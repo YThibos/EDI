@@ -17,7 +17,7 @@ description: >-
 3. Add it with `edi task add --kind ship --project <project> --title "<title>" --body -`, the captain's words verbatim in the body: the ask, its boundaries, the full acceptance criteria and whether offline verification is accepted.
 4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, the issue's number on a project keyed by its GitHub issues, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without the captain's answer.
    A key the captain gives after intake goes on with `edi task key <task> <KEY>`, citing the captain's words with `--message <n>` when it answers an open ticket decision.
-5. A task blocked by another waits in the queue (`--blocked-by`).
+5. A task blocked by another waits in the queue until that task's work lands (`--blocked-by`); a plan of slices goes in with `edi plan add --from -`, each slice waiting as the plan names (`edi plan show <key>`).
 6. An unregistered project cannot receive a ship: ask the captain to register it, and confirm delivery, tracker, base branch and AI scaffolding with the captain.
 
 ## Dispatch

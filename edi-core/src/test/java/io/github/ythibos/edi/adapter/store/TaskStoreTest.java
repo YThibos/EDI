@@ -21,7 +21,6 @@ import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.HoldKind;
@@ -30,8 +29,10 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
@@ -122,8 +123,8 @@ class TaskStoreTest {
         Task blocked = task("fog-horn", List.of(new TaskId("mast"), new TaskId("lantern")));
         tasks.insert(blocked);
 
-        assertThat(tasks.blockersOf(blocked)).containsExactly(
-                new Blocker(new TaskId("mast"), TaskState.QUEUED), new Blocker(new TaskId("lantern"), TaskState.QUEUED));
+        assertThat(tasks.waitsOf(blocked)).containsExactly(
+                Wait.afterLanded(new TaskId("mast"), TaskStage.QUEUED), Wait.afterLanded(new TaskId("lantern"), TaskStage.QUEUED));
         assertThat(tasks.contains(new TaskId("mast"))).isTrue();
         assertThat(tasks.contains(new TaskId("nowhere"))).isFalse();
     }
