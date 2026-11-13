@@ -11,7 +11,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class EdiCoreApplication {
 
     public static void main(String[] arguments) {
-        SpringApplication.run(EdiCoreApplication.class, arguments);
+        SpringApplication core = new SpringApplication(EdiCoreApplication.class);
+        core.addListeners(new MoveIntoTheHome());
+        core.run(arguments);
     }
 
     @Bean

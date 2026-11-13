@@ -101,6 +101,7 @@ class NativeSmokeIT {
                 "--edi.pipeline.home=" + pipelineHome(),
                 "--edi.console.browser=" + stubBrowser(),
                 "--edi.console.windows-directory=" + home)
+                .directory(home.resolve("checkouts/harness").toFile())
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_")
@@ -153,6 +154,13 @@ class NativeSmokeIT {
                     .isSubsetOf("jdk.ExecutionSample", "jdk.GarbageCollection", "jdk.GCHeapSummary", "jdk.CPULoad", "jdk.ThreadCPULoad",
                             "jdk.JavaMonitorEnter", "jdk.ThreadPark", "jdk.VirtualThreadPinned", "jdk.ObjectAllocationSample"));
         }
+    }
+
+    @Test
+    void theCoreStartedInAProjectsCheckoutWorksInItsHome() throws Exception {
+        Path workingDirectory = Files.readSymbolicLink(Path.of("/proc", Long.toString(core.pid()), "cwd"));
+
+        assertThat(workingDirectory).isEqualTo(home.toRealPath());
     }
 
     @Test

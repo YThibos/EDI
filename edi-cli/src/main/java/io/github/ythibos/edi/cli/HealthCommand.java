@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.cli;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -50,12 +52,26 @@ final class HealthCommand implements Callable<Integer> {
 
     private Integer healthy(String message) {
         spec.commandLine().getOut().println(message);
+        nameAWorkingDirectoryAwayFromTheHome();
         if (reported("/api/primary/wait", "whether the primary's edi wait is live")) {
             reported("/api/workers/questions", "which worker questions wait on an answer");
         }
         boolean measured = !metrics || reported("/api/telemetry", "the core's own health");
         boolean dumped = !dumpRecording || written("/api/telemetry/recordings", "for the core's flight recording");
         return measured && dumped ? HEALTHY : UNHEALTHY;
+    }
+
+    private void nameAWorkingDirectoryAwayFromTheHome() {
+        CorePidFile.in(edi.home()).workingDirectoryOfItsProcess().filter(this::isAwayFromTheHome).ifPresent(directory -> spec.commandLine().getOut()
+                .println("EDI core works in " + directory + ", not in its home " + edi.home() + "; it moves into its home when it restarts."));
+    }
+
+    private boolean isAwayFromTheHome(Path directory) {
+        try {
+            return !Files.isSameFile(directory, edi.home());
+        } catch (IOException unreadable) {
+            return true;
+        }
     }
 
     private Integer unhealthy(String message) {
