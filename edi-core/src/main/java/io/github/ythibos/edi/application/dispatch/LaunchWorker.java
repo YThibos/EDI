@@ -59,12 +59,12 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Adoption;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.StageChange;
 import io.github.ythibos.edi.domain.task.StageTrigger;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -210,7 +210,7 @@ public class LaunchWorker {
     }
 
     private StageTrigger.Dispatch dispatchOf(Task task, ProjectEntry project) {
-        List<TaskId> unmetWaits = tasks.blockersOf(task).stream().filter(blocker -> !blocker.isResolved()).map(Blocker::id).toList();
+        List<TaskId> unmetWaits = tasks.waitsOf(task).stream().filter(wait -> !wait.isMet()).map(Wait::task).toList();
         return new StageTrigger.Dispatch(holds.of(task), unmetWaits, places.roomOn(project).hasRoom());
     }
 
