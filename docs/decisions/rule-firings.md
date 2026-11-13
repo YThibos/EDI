@@ -47,7 +47,7 @@ The spool is the only way the guard's refusals while the core is down reach the 
 
 ## Consequences
 
-- Good: the gardening reads fire counts, last firings and silent rules with one command and no model tokens, and the catalogue says where each rule lives.
+- Good: fire counts, last firings and silent rules are read from recorded data with no model tokens, by `edi rules` or by the weekly gardening's script for a past week ([weekly-gardening](weekly-gardening.md)), and the catalogue says where each rule lives.
 - Good: a refusal while the core is down still counts, once the core runs again.
 - Bad: a firing recorded by the command while the core is down carries the command's clock, and one lost to an unwritable home is gone without a word, since a hook's error output reaches the model.
 - Bad: a burst of calls the access filters turn away counts as one firing a minute, so their count is how many minutes saw such calls, not how many calls there were.
@@ -63,3 +63,4 @@ When 400 days of firings grow too many to keep, or the gardening needs to tell f
 - 09/11/2026: the captain asked that every rule, guard and hook record when it fires, for a weekly gardening that measures them; `Rule` absorbed `GuardRule`, `Refusal` took a rule, and `rule_fired`, the spool and `edi rules` were built (EDI-164).
 - 12/11/2026: the review bounded the calls the access filters turn away to one firing a minute for each rule and caller, kept firings for 400 days, let the command spool straight away when the core already failed and post with five seconds' patience, took in a batch left moved aside before the next spool, checked the command's and the hook's firings by running them, and dropped `edi rules --since` for `--days` alone (EDI-164).
 - 12/11/2026: the review kept the words typed on an unreadable command line and inside cited quotes out of a firing's reason, and had `edi publish-check` spool `publish.check-reachable` when the core is out of reach; a decision's "already answered" refusal quotes the captain's answer, `edi hook` no longer records a second firing for a refusal the core recorded, and `edi publish-check` records `publish.check-reachable` when the check fails inside the core as well (EDI-164).
+- 13/11/2026: the weekly gardening reads a past week's firings from `rule_fired` itself, since `edi rules` counts back from now (EDI-165).
