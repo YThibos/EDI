@@ -91,6 +91,7 @@ import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.DecisionRoundQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
+import io.github.ythibos.edi.application.decision.UndeliveredAnswersQuery;
 import io.github.ythibos.edi.application.delivery.CaptainCheckouts;
 import io.github.ythibos.edi.application.delivery.CleanUpTask;
 import io.github.ythibos.edi.application.delivery.CloneRefreshes;
@@ -529,7 +530,7 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), steerWorker(), clock, transaction);
     }
 
     public DecisionReleases decisionReleases() {
@@ -985,7 +986,11 @@ public final class TestHome {
 
     public PrimaryHooks primaryHooks() {
         return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, turnItems,
-                events, processes, wakeStreams(), wakes, runtime, firedRules(), clock, transaction);
+                events, processes, wakeStreams(), wakes, runtime, firedRules(), undeliveredAnswers(), clock, transaction);
+    }
+
+    public UndeliveredAnswersQuery undeliveredAnswers() {
+        return new UndeliveredAnswersQuery(workers, decisions, inbox, transaction);
     }
 
     public RecordTurnItems recordTurnItems() {

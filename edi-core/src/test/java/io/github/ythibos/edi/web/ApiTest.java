@@ -228,6 +228,28 @@ class ApiTest {
     }
 
     @Test
+    void carriesTheAnswerToADecisionToTheWorkerWaitingOnItsQuestion() throws Exception {
+        String worker = workerTokenFor("api-carry");
+        send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"state\":\"needs-decision\",\"key\":\"lamp-colour\",\"text\":\"Brass or copper?\"}")));
+        String number = post("/api/tasks/api-carry/decision", """
+                {"title":"Which lamp colour?","context":"","options":[{"key":"A","text":"Brass"},{"key":"B","text":"Copper"}],"recommend":{"key":"A","why":"it matches"}}""",
+                TEXT).body().strip();
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"" + number + " B, copper\"}");
+
+        HttpResponse<String> answered = answerInSession(primary, number, "{\"option\":\"B\",\"message\":1}");
+        HttpResponse<String> inbox = send(as(worker, "/api/inbox", TEXT).GET());
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(answered.body()).endsWith(" The answer resolves lamp-colour, the question its worker waits on."
+                + " Message 1 waits for api-carry#1, whose window is closed; the message waits in its inbox.\n");
+        assertThat(inbox.body()).contains("Answer to " + number + " Which lamp colour?", "Chosen: option B, Copper",
+                "The captain's words: \"" + number + " B, copper\"", "lamp-colour");
+    }
+
+    @Test
     void recountsTheTaskCostsCountedSinceADay() throws Exception {
         HttpResponse<String> recounted = post("/api/tasks/recount-costs", "{\"since\":\"2026-11-02\"}", TEXT);
 

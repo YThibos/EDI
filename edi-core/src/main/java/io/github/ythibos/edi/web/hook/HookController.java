@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ythibos.edi.application.decision.UndeliveredAnswersQuery;
 import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
@@ -59,10 +60,12 @@ class HookController {
     private final SessionStartDigestText digestText;
     private final ReturnBriefText returnBriefText;
     private final TurnReports turnReports;
+    private final UndeliveredAnswersQuery undeliveredAnswers;
     private final JsonMapper json;
 
     HookController(WorkerHooks workerHooks, PrimaryHooks primaryHooks, GuardToolCall guard, CatchSpark catchSpark, OpenTheSitrepAtSessionStart sitrep,
-            SessionStartDigestQuery digests, SessionStartDigestText digestText, ReturnBriefText returnBriefText, TurnReports turnReports, JsonMapper json) {
+            SessionStartDigestQuery digests, SessionStartDigestText digestText, ReturnBriefText returnBriefText, TurnReports turnReports,
+            UndeliveredAnswersQuery undeliveredAnswers, JsonMapper json) {
         this.workerHooks = workerHooks;
         this.primaryHooks = primaryHooks;
         this.guard = guard;
@@ -72,6 +75,7 @@ class HookController {
         this.digestText = digestText;
         this.returnBriefText = returnBriefText;
         this.turnReports = turnReports;
+        this.undeliveredAnswers = undeliveredAnswers;
         this.json = json;
     }
 
@@ -130,6 +134,7 @@ class HookController {
         TurnEnd end = primaryHooks.stopping(session);
         return switch (end) {
             case ENDS -> rendered(HookAnswer.PROCEED);
+            case CARRIES_THE_ANSWERS -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n" + UndeliveredAnswerText.lines(undeliveredAnswers.waiting())));
             case STARTS_THE_WAIT -> rendered(HookAnswer.blockTheStop(end.instruction()));
             case HANDS_OVER_THE_REPORT -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n\n" + turnReports.handedOverIn(session, paneWidth)));
         };

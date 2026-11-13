@@ -12,11 +12,13 @@ import io.github.ythibos.edi.application.delivery.RecountedCosts.Recount;
 import io.github.ythibos.edi.application.migration.AdoptedTask;
 import io.github.ythibos.edi.application.task.AddedTask;
 import io.github.ythibos.edi.application.tracker.KeyedTask;
+import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.plan.Plan;
+import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -223,7 +225,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
     private static String answerRecorded(Answered answered) {
         String option = answered.decision().answer().choosesAnOption() ? " (option " + answered.decision().answer().option() + ")" : "";
         String outcome = answered.task().isDone() ? " is done." : " is " + answered.task().state().word() + " again.";
-        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered);
+        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered)
+                + carriedOf(answered);
     }
 
     private static String ticketOf(Answered answered) {
@@ -236,5 +239,16 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case TicketSettlement.AskedAgain asked -> " You could not carry out the answer, so you raised the decision again: " + asked.because();
             case TicketSettlement.DropChosen _ -> " It books on no ticket; the answer authorises edi task drop " + answered.task().id() + ".";
         };
+    }
+
+    private static String carriedOf(Answered answered) {
+        return answered.carried().map(steered -> settlementOf(steered) + WorkerSentences.steered(steered)).orElse("");
+    }
+
+    private static String settlementOf(SteerWorker.Steered steered) {
+        StatusKey resolved = steered.message().resolves();
+        return resolved == null
+                ? " The answer goes to its worker without resolving the question it asked after the decision was raised; that question stays open. "
+                : " The answer resolves " + resolved + ", the question its worker waits on. ";
     }
 }

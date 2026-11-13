@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.worker;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import io.github.ythibos.edi.domain.Refusal;
@@ -178,6 +179,13 @@ public record Worker(
 
     public boolean waitsOnThePrimary() {
         return lastStatus != null && lastStatus.report().isForThePrimary();
+    }
+
+    public Optional<WorkerQuestion> openQuestion() {
+        if (!waitsOnThePrimary() || isRetired()) {
+            return Optional.empty();
+        }
+        return Optional.of(new WorkerQuestion(id.task(), lastStatus.report().key(), lastStatus.at()));
     }
 
     public boolean lastReported(StatusState state) {

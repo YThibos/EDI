@@ -15,6 +15,7 @@ import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TurnItemStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
+import io.github.ythibos.edi.application.decision.UndeliveredAnswersQuery;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
@@ -60,12 +61,14 @@ public class PrimaryHooks {
     private final WakeStore wakes;
     private final WorkerRuntime runtime;
     private final FiredRules firedRules;
+    private final UndeliveredAnswersQuery undeliveredAnswers;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public PrimaryHooks(PrimarySessionStore sessions, PrimarySessions roles, CaptainMessageStore captainMessages, ChangePresence presence,
-            PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, TurnItemStore turnItems, EventLog events, ProcessTable processes, WakeStreams streams,
-            WakeStore wakes, WorkerRuntime runtime, FiredRules firedRules, Clock clock, TransactionTemplate transaction) {
+            PresenceQuery presenceNow, ReturnBriefQuery returnBriefs, TaskStore tasks, TurnItemStore turnItems, EventLog events, ProcessTable processes,
+            WakeStreams streams, WakeStore wakes, WorkerRuntime runtime, FiredRules firedRules, UndeliveredAnswersQuery undeliveredAnswers, Clock clock,
+            TransactionTemplate transaction) {
         this.sessions = sessions;
         this.roles = roles;
         this.captainMessages = captainMessages;
@@ -80,6 +83,7 @@ public class PrimaryHooks {
         this.wakes = wakes;
         this.runtime = runtime;
         this.firedRules = firedRules;
+        this.undeliveredAnswers = undeliveredAnswers;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -126,7 +130,7 @@ public class PrimaryHooks {
 
     public TurnEnd stopping(UUID id) {
         TurnEnd end = transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(TurnEnd.ENDS));
-        if (end == TurnEnd.STARTS_THE_WAIT) {
+        if (end.leavesWorkPending()) {
             firedRules.record(new RuleFired(Rule.TURN_END_WITH_WORK_PENDING, RuleOutcome.REFUSED, Actor.PRIMARY, null, id,
                     RuleReason.of(end.instruction())));
         }
@@ -180,7 +184,8 @@ public class PrimaryHooks {
             return TurnEnd.ENDS;
         }
         return TurnEnd.of(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), turnItems.lastRecordedIn(session.id()).orElse(null),
-                presenceNow.current().keepsTheChatQuiet(), !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), streams.liveOf(session.id()).isPresent()));
+                presenceNow.current().keepsTheChatQuiet(), !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), streams.liveOf(session.id()).isPresent(),
+                !undeliveredAnswers.waiting().isEmpty()));
     }
 
     private void ended(PrimarySession session) {

@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.worker;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -10,6 +11,7 @@ import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
@@ -19,6 +21,7 @@ import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
 @Service
 public class SteerWorker {
@@ -43,20 +46,30 @@ public class SteerWorker {
     }
 
     public Steered steer(TaskReference reference, String body, StatusKey resolves, Actor actor) {
-        Sent sent = transaction.execute(_ -> sent(tasks.get(reference).id(), body, resolves, actor));
-        return new Steered(sent.message(), sent.worker(), notice.deliver(sent.worker(), sent.message()));
+        StoredSteer stored = transaction.execute(_ -> stored(WorkerLookup.servingTask(workers, tasks.get(reference).id()), body, resolves, actor));
+        return announced(stored);
     }
 
-    private Sent sent(TaskId task, String body, StatusKey resolves, Actor actor) {
+    public Optional<StoredSteer> carryTheAnswerOf(Decision answered, Actor actor) {
+        return transaction.execute(_ -> workers.latestOf(answered.task())
+                .flatMap(worker -> worker.openQuestion()
+                        .map(question -> stored(worker, answered.answerForItsWorker(), keySettledBy(answered, question), actor))));
+    }
+
+    public Steered announced(StoredSteer stored) {
+        return new Steered(stored.message(), stored.worker(), notice.deliver(stored.worker(), stored.message()));
+    }
+
+    private StoredSteer stored(Worker worker, String body, StatusKey resolves, Actor actor) {
         Instant now = clock.now();
-        Worker worker = WorkerLookup.servingTask(workers, task);
+        TaskId task = worker.id().task();
         InboxMessage message = InboxMessage.sent(task, inbox.nextNumber(task), body, resolves, now);
         inbox.save(message);
         events.record(new SteerSent(task, message.number(), resolves), actor, now);
         if (resolves != null) {
             recordResolved(worker, message, actor, now);
         }
-        return new Sent(message, worker);
+        return new StoredSteer(message, worker);
     }
 
     private void recordResolved(Worker worker, InboxMessage message, Actor actor, Instant now) {
@@ -64,9 +77,13 @@ public class SteerWorker {
         events.record(new StatusReported(message.task(), worker.id(), resolved), actor, now);
     }
 
+    private static StatusKey keySettledBy(Decision answered, WorkerQuestion question) {
+        return answered.answers(question) ? question.key() : null;
+    }
+
     public record Steered(InboxMessage message, Worker worker, SteerDelivery delivery) {
     }
 
-    private record Sent(InboxMessage message, Worker worker) {
+    public record StoredSteer(InboxMessage message, Worker worker) {
     }
 }

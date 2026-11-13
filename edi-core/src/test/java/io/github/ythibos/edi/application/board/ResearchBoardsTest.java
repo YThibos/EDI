@@ -234,6 +234,16 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void leavesTheRoundTheOnlyMessageForAScoutThatWaitsOnNoQuestionWhenTheCaptainAnswersItsCardOnTheBoard() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+
+        assertThat(home.inbox().allOf(SCOUT)).singleElement()
+                .satisfies(round -> assertThat(round.body()).startsWith("The captain answered on your research board " + boardFile + ", round 1."));
+    }
+
+    @Test
     void refusesToRaiseTheCardAgainOnceTheCaptainAnsweredIt() {
         Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
         home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
