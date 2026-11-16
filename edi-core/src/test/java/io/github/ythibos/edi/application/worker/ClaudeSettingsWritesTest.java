@@ -83,6 +83,10 @@ class ClaudeSettingsWritesTest {
                 shell("cp off.json .claude/settings.local.json 2>/dev/null"),
                 shell("2>/dev/null cp off.json .claude/settings.local.json"),
                 shell("sed -ni 's/false/true/p' .claude/settings.json"),
+                shell("perl -0pi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -lpi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -0777pi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -dtpi -e 's/false/true/' .claude/settings.json"),
                 shellFrom(".claude/skills", "echo '" + SWITCHED_OFF + "' > ../settings.local.json"),
                 shellFrom(".claude", "cp /tmp/off.json settings.local.json"));
 
@@ -125,6 +129,8 @@ class ClaudeSettingsWritesTest {
                 shell("cat .claude/skills/lamp/SKILL.md >&2"),
                 shell("cat .claude/settings.json 2>&1 1>/tmp/settings-copy.json"),
                 shell("perl -MList::Util=min -ne 'print' .claude/settings.json"),
+                shell("perl -0777 -ne 'print' .claude/settings.json"),
+                shell("perl -lne 'print if /hooks/' .claude/settings.json"),
                 shell("sed -e 's/hooks/HOOKS/' .claude/settings.json"),
                 shell("sed -n '1,20p' .claude/skills/lamp/SKILL.md"),
                 shell(".claude/hooks/check.sh"))) {

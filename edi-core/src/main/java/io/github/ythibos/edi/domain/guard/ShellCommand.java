@@ -2,9 +2,10 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.List;
 
-public record ShellCommand(String program, List<ShellWord> arguments, boolean argumentsFromInput, List<String> assignedVariables) {
+public record ShellCommand(String programAsWritten, List<ShellWord> arguments, boolean argumentsFromInput, List<String> assignedVariables) {
 
     private static final String NO_PROGRAM = "";
+    private static final char PATH_SEPARATOR = '/';
 
     public ShellCommand {
         arguments = List.copyOf(arguments);
@@ -15,8 +16,12 @@ public record ShellCommand(String program, List<ShellWord> arguments, boolean ar
         return new ShellCommand(NO_PROGRAM, redirections, false, assignedVariables);
     }
 
+    public String program() {
+        return programAsWritten.substring(programAsWritten.lastIndexOf(PATH_SEPARATOR) + 1);
+    }
+
     public boolean runs(String name) {
-        return program.equals(name);
+        return program().equals(name);
     }
 
     public List<String> argumentTexts() {

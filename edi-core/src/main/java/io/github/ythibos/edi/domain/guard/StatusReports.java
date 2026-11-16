@@ -22,7 +22,7 @@ public final class StatusReports {
 
     private static boolean reportsAlone(ShellCommand command) {
         List<String> arguments = command.argumentTexts();
-        return command.runs(EDI) && !arguments.isEmpty() && arguments.getFirst().equals(STATUS) && takesNothingFromElsewhere(command);
+        return command.programAsWritten().equals(EDI) && !arguments.isEmpty() && arguments.getFirst().equals(STATUS) && takesNothingFromElsewhere(command);
     }
 
     private static boolean takesNothingFromElsewhere(ShellCommand command) {

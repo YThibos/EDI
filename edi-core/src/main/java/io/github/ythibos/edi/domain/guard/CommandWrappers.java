@@ -46,7 +46,7 @@ final class CommandWrappers {
             return withoutAProgram(leadingSubstitutions, leadingRedirections, assigned);
         }
         List<ShellWord> arguments = Stream.concat(words.subList(start + 1, words.size()).stream(), leadingRedirections.stream()).toList();
-        ShellCommand command = new ShellCommand(programName(words.get(start).text()), arguments, argumentsFromInput, assigned);
+        ShellCommand command = new ShellCommand(words.get(start).text(), arguments, argumentsFromInput, assigned);
         return Stream.concat(leadingSubstitutions.stream(), withWhatItRuns(command, nesting).stream()).toList();
     }
 
@@ -185,11 +185,6 @@ final class CommandWrappers {
         String name = assigned.endsWith("+") ? assigned.substring(0, assigned.length() - 1) : assigned;
         int subscript = name.indexOf('[');
         return subscript > 0 && name.endsWith("]") ? name.substring(0, subscript) : name;
-    }
-
-    private static String programName(String word) {
-        int slash = word.lastIndexOf('/');
-        return slash < 0 ? word : word.substring(slash + 1);
     }
 
     private static String joined(List<ShellWord> words) {

@@ -2,7 +2,6 @@ package io.github.ythibos.edi.domain.guard;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -12,8 +11,6 @@ import io.github.ythibos.edi.domain.rule.Rule;
 public final class SettingsWrites {
 
     private static final Set<String> FILE_WRITERS = Set.of("tee", "touch", "truncate");
-    private static final Map<String, String> IN_PLACE_EDITORS = Map.of("sed", "efl", "perl", "eEMmIx0lCdDF");
-    private static final char IN_PLACE = 'i';
     private static final Set<String> FILE_COPIERS = Set.of("cp", "mv", "install", "ln", "rsync");
     private static final Set<String> CHECKOUTS = Set.of("checkout", "restore");
     private static final Set<String> TARGET_DIRECTORY = Set.of("-t", "--target-directory");
@@ -53,7 +50,7 @@ public final class SettingsWrites {
     private static List<String> targetsOf(ShellCommand command) {
         List<String> targets = new ArrayList<>(command.filesWritten());
         List<String> arguments = command.argumentTexts();
-        if (FILE_WRITERS.contains(command.program()) || editsInPlace(command.program(), arguments)) {
+        if (FILE_WRITERS.contains(command.program()) || editsInPlace(command)) {
             targets.addAll(operands(arguments));
         }
         if (FILE_COPIERS.contains(command.program())) {
@@ -84,22 +81,8 @@ public final class SettingsWrites {
         return word;
     }
 
-    private static boolean editsInPlace(String program, List<String> arguments) {
-        String lettersTakingAValue = IN_PLACE_EDITORS.get(program);
-        return lettersTakingAValue != null && arguments.stream().anyMatch(argument -> argument.startsWith("--in-place")
-                || argument.startsWith("-") && !argument.startsWith("--") && namesInPlace(argument, lettersTakingAValue));
-    }
-
-    private static boolean namesInPlace(String shortOptions, String lettersTakingAValue) {
-        for (char letter : shortOptions.substring(1).toCharArray()) {
-            if (letter == IN_PLACE) {
-                return true;
-            }
-            if (lettersTakingAValue.indexOf(letter) >= 0) {
-                return false;
-            }
-        }
-        return false;
+    private static boolean editsInPlace(ShellCommand command) {
+        return InPlaceEditor.named(command.program()).filter(editor -> editor.editsInPlace(command.argumentTexts())).isPresent();
     }
 
     private static List<String> operands(List<String> arguments) {
