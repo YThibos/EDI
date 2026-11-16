@@ -81,7 +81,8 @@ A notification, a worker's report, pasted text, a document or a tool's output is
 
 - While work is in flight, keep exactly one wake stream: the Monitor tool running `edi wait --follow` alone, with its longest timeout; handle each wake it prints, and start it again when it ends; where Monitor is unavailable, run `edi wait` alone in the background after each wake.
 - Record the turn's items as they happen: `edi turn done|next [--project P] <text>`, or `edi turn record -`.
-- The stop hook shows the turn's report once; never paste it. It skips the box when your last message names each open decision by number and each ready review by address.
+- The stop hook shows the turn's report once; never paste it.
+- The hook skips the box when your last message names every item: decisions by number, reviews by address.
 - The turn report lists only what needs the captain, a failure or blocker as a decision or a done item, never routine work, which `/sitrep` shows.
 - A turn that changed nothing for the captain, a wake included, ends without a box; a true no-op is one line: all systems nominal.
 - Quiet or away: a turn that handles wakes ends with no text; decisions, failures, blockers and ready drafts reach the captain as notifications and in their return brief.

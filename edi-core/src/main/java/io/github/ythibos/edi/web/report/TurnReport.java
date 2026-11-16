@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionRound;
 import io.github.ythibos.edi.domain.presence.UnreadableCalendar;
@@ -32,7 +33,19 @@ public record TurnReport(WaitingOnTheCaptain waiting, Turn turn, ReportWidth wid
     }
 
     public boolean isNamedIn(Reply reply) {
-        return waiting.workerQuestions().isEmpty() && namesEveryWaitingEntry(reply) && saysEveryRecordedItem(reply);
+        return everyWorkerQuestionWaitsOnADecision() && namesEveryWaitingEntry(reply) && saysEveryRecordedItem(reply);
+    }
+
+    private boolean everyWorkerQuestionWaitsOnADecision() {
+        return waiting.workerQuestions().stream().allMatch(this::waitsOnAnOpenDecision);
+    }
+
+    private boolean waitsOnAnOpenDecision(WorkerQuestion question) {
+        return openDecisions().anyMatch(open -> open.task().id().equals(question.task().id()));
+    }
+
+    private Stream<OpenDecision> openDecisions() {
+        return Stream.concat(waiting.decisions().stream(), waiting.boards().stream().flatMap(board -> board.decisions().stream()));
     }
 
     private boolean namesEveryWaitingEntry(Reply reply) {
