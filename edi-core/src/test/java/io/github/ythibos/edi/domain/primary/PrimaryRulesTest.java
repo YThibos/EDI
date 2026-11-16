@@ -86,8 +86,6 @@ class PrimaryRulesTest {
         assertThat(TurnEnd.of(turn, new TurnCircumstances(true, null, false, true, false, true))).isEqualTo(TurnEnd.CARRIES_THE_ANSWERS);
         assertThat(TurnEnd.of(turn.stopBlocked().stopBlocked().stopBlocked(), new TurnCircumstances(false, null, false, false, false, true)))
                 .isEqualTo(TurnEnd.ENDS);
-        assertThat(TurnEnd.CARRIES_THE_ANSWERS.leavesWorkPending()).isTrue();
-        assertThat(TurnEnd.SHOWS_THE_REPORT.leavesWorkPending()).isFalse();
     }
 
     @Test

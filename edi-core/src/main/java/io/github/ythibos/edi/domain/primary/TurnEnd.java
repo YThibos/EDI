@@ -27,10 +27,6 @@ public enum TurnEnd {
         return this == CARRIES_THE_ANSWERS || this == STARTS_THE_WAIT;
     }
 
-    public boolean leavesWorkPending() {
-        return holdsTheStop();
-    }
-
     public String instruction() {
         return instruction;
     }

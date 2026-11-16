@@ -77,11 +77,12 @@ class TurnReportNamingTest {
     }
 
     @Test
-    void isNamedDespiteAWorkerQuestionOnlyWhenItsTaskHoldsAnOpenDecisionTheReplyNames() {
+    void isNamedDespiteAWorkerQuestionOnlyWhenADecisionTheReplyNamesWasRaisedOnItsTaskSinceItWasAsked() {
         Reply namingEveryItem = Reply.of("D41 is yours, and " + ADDRESS + " is ready for review.");
 
-        assertThat(report(Turn.NONE, List.of(questionOn(lamp))).isNamedIn(namingEveryItem)).isTrue();
-        assertThat(report(Turn.NONE, List.of(questionOn(fitting))).isNamedIn(namingEveryItem)).isFalse();
+        assertThat(report(Turn.NONE, List.of(questionOn(lamp, NOW))).isNamedIn(namingEveryItem)).isTrue();
+        assertThat(report(Turn.NONE, List.of(questionOn(fitting, NOW))).isNamedIn(namingEveryItem)).isFalse();
+        assertThat(report(Turn.NONE, List.of(questionOn(lamp, NOW.plusSeconds(60)))).isNamedIn(namingEveryItem)).isFalse();
     }
 
     @Test
@@ -104,11 +105,11 @@ class TurnReportNamingTest {
         return new TurnReport(waiting, turn, WIDTH, null, null, null);
     }
 
-    private static WorkerQuestion questionOn(Task task) {
+    private static WorkerQuestion questionOn(Task task, Instant askedAt) {
         Worker launched = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, NOW, "@1", 2L),
                 new WorkerLaunch(LaunchKind.DISPATCH, NOW, new BootId("boot"), LoginName.DEFAULT));
-        Worker asking = launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), NOW);
+        Worker asking = launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), askedAt);
         return new WorkerQuestion(task, asking, Duration.ofMinutes(5));
     }
 

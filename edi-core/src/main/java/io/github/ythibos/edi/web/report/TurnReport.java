@@ -33,19 +33,19 @@ public record TurnReport(WaitingOnTheCaptain waiting, Turn turn, ReportWidth wid
     }
 
     public boolean isNamedIn(Reply reply) {
-        return everyWorkerQuestionWaitsOnADecision() && namesEveryWaitingEntry(reply) && saysEveryRecordedItem(reply);
+        return everyWorkerQuestionIsEscalated() && namesEveryWaitingEntry(reply) && saysEveryRecordedItem(reply);
     }
 
-    private boolean everyWorkerQuestionWaitsOnADecision() {
-        return waiting.workerQuestions().stream().allMatch(this::waitsOnAnOpenDecision);
-    }
-
-    private boolean waitsOnAnOpenDecision(WorkerQuestion question) {
-        return openDecisions().anyMatch(open -> open.task().id().equals(question.task().id()));
+    private boolean everyWorkerQuestionIsEscalated() {
+        return waiting.workerQuestions().stream().allMatch(question -> openDecisions().anyMatch(open -> escalates(open.decision(), question)));
     }
 
     private Stream<OpenDecision> openDecisions() {
         return Stream.concat(waiting.decisions().stream(), waiting.boards().stream().flatMap(board -> board.decisions().stream()));
+    }
+
+    private static boolean escalates(Decision decision, WorkerQuestion question) {
+        return decision.task().equals(question.task().id()) && !question.askedAt().isAfter(decision.raisedAt());
     }
 
     private boolean namesEveryWaitingEntry(Reply reply) {

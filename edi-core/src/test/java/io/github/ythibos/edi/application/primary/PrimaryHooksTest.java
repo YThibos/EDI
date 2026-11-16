@@ -35,6 +35,7 @@ import io.github.ythibos.edi.domain.report.Turn;
 import io.github.ythibos.edi.domain.report.TurnItem;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.LimitStop;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -267,6 +268,18 @@ class PrimaryHooksTest {
         home.addTask().add(Intakes.ship("fit-bell", "Fit the bell"), Actor.PRIMARY);
 
         assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void showsTheReportOfATurnWhoseWakeWasAWorkersDone() {
+        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queued("fit-lamp", TaskKind.CAPTAIN, "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        streamIn(primary, home.processes().ownId(), true);
+        home.primaryHooks().promptSubmitted(primary, "<task-notification>fit-lamp#1 is done</task-notification>");
+        home.recordStatus().report(worker.id(), StatusState.DONE, null, null, "The lamp is fitted.");
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
     }
 
     @Test

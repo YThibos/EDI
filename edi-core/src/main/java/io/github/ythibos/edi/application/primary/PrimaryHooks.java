@@ -130,7 +130,7 @@ public class PrimaryHooks {
 
     public TurnEnd stopping(UUID id) {
         TurnEnd end = transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(TurnEnd.ENDS));
-        if (end.leavesWorkPending()) {
+        if (end.holdsTheStop()) {
             firedRules.record(new RuleFired(Rule.TURN_END_WITH_WORK_PENDING, RuleOutcome.REFUSED, Actor.PRIMARY, null, id,
                     RuleReason.of(end.instruction())));
         }
