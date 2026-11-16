@@ -69,6 +69,7 @@ On 16 November 2026 the captain worked a day through replies under topic headers
 ## When to revisit
 
 When the captain asks for something more in the turn report, or the report is read somewhere other than the chat.
+When the primary's stops are held often enough, for an undelivered answer or a missing wake stream, that boxes show under replies that already named every item, revisit the limit that a held stop leaves the reply written before it unseen.
 
 ## How we got here
 
