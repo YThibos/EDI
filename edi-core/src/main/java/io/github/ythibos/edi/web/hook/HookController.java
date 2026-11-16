@@ -36,6 +36,7 @@ import io.github.ythibos.edi.web.access.NotPermitted;
 import io.github.ythibos.edi.web.console.ConsoleAddress;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
+import io.github.ythibos.edi.web.report.Reply;
 import io.github.ythibos.edi.web.report.TurnReports;
 import io.github.ythibos.edi.web.spark.SparkSentences;
 import tools.jackson.databind.JsonNode;
@@ -110,7 +111,7 @@ class HookController {
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
-            case STOP -> turnEnded(sessionIn(payload), call.paneWidth());
+            case STOP -> turnEnded(sessionIn(payload), call.paneWidth(), Reply.of(textIn(payload, "last_assistant_message")));
             case STOP_FAILURE -> rendered(primaryHooks.stopFailed(sessionIn(payload), textIn(payload, "transcript_path")));
             case NOTIFICATION -> rendered(primaryHooks.notified(sessionIn(payload), textIn(payload, "notification_type")));
             case SESSION_END -> rendered(primaryHooks.sessionEnded(sessionIn(payload)));
@@ -130,14 +131,20 @@ class HookController {
         return contextIfAny(HookEvent.USER_PROMPT_SUBMIT, Stream.of(returnBrief, spark).flatMap(Optional::stream).toList());
     }
 
-    private ResponseEntity<String> turnEnded(UUID session, Integer paneWidth) {
+    private ResponseEntity<String> turnEnded(UUID session, Integer paneWidth, Reply reply) {
         TurnEnd end = primaryHooks.stopping(session);
         return switch (end) {
             case ENDS -> rendered(HookAnswer.PROCEED);
             case CARRIES_THE_ANSWERS -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n" + UndeliveredAnswerText.lines(undeliveredAnswers.waiting())));
             case STARTS_THE_WAIT -> rendered(HookAnswer.blockTheStop(end.instruction()));
-            case HANDS_OVER_THE_REPORT -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n\n" + turnReports.handedOverIn(session, paneWidth)));
+            case SHOWS_THE_REPORT -> turnReports.shownAtTheStopOf(session, paneWidth, reply)
+                    .map(this::shownToTheCaptain)
+                    .orElseGet(() -> rendered(HookAnswer.PROCEED));
         };
+    }
+
+    private ResponseEntity<String> shownToTheCaptain(String report) {
+        return asJson(json.createObjectNode().put("systemMessage", "\n" + report));
     }
 
     private ResponseEntity<String> contextIfAny(HookEvent hook, List<String> context) {

@@ -58,7 +58,7 @@ A running ship's decision waits in the console and reaches the captain in a roun
 ## Reports
 
 One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi sitrep` prints it as the boxed captain report ([captain-report](decisions/captain-report.md)).
-The turn report ends a state-changing turn, and the primary's stop hook renders it and hands it over to paste: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision that is not urgent always on one line ([turn-report](decisions/turn-report.md)).
+The turn report ends a turn that changed something for the captain, and the primary's stop hook renders and shows it once, leaving it out when the reply names every item: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision that is not urgent always on one line ([turn-report](decisions/turn-report.md)).
 What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions or bound decisions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
 A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 

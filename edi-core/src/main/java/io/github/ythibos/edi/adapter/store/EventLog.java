@@ -104,6 +104,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
+import io.github.ythibos.edi.domain.event.ReachesTheCaptain;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -190,9 +191,16 @@ public class EventLog {
         return store.sql("select coalesce(max(sequence), 0) from event").query((row, _) -> row.getLong(1)).single();
     }
 
-    public boolean anyAfter(long sequence) {
-        return store.sql("select exists (select 1 from event where sequence > :sequence)")
+    public boolean anyReachingTheCaptainAfter(long sequence) {
+        return store.sql("""
+                select exists (
+                    select 1 from event
+                    where sequence > :sequence
+                      and (type in (:types) or type = :reported and json_extract(payload, '$.state') = :done))""")
                 .param("sequence", sequence)
+                .param("types", List.copyOf(ReachesTheCaptain.typeNames()))
+                .param("reported", StatusReported.class.getSimpleName())
+                .param("done", StatusState.DONE.word())
                 .query((row, _) -> row.getBoolean(1))
                 .single();
     }

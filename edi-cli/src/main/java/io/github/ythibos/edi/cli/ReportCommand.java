@@ -8,7 +8,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.ParentCommand;
 
 @Command(name = "report", description = "Prints the turn report: only what needs the captain, every open decision and review,"
-        + " and the items this turn recorded with edi turn; the stop hook hands it over itself, and edi sitrep prints the overview.")
+        + " and the items this turn recorded with edi turn; the stop hook shows it itself once, and edi sitrep prints the overview.")
 final class ReportCommand implements Callable<Integer> {
 
     static final String REPORT = "/api/report";

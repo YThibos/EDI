@@ -5,7 +5,7 @@
 ## Context
 
 Wakes must survive a crash between printing and handling, and routine events never wake the primary.
-Every state-changing turn ends with the turn report (I-21), and a turn must not end while work is in flight and nothing would tell the primary what needs it.
+Every turn that changes something for the captain ends with the turn report (I-21), and a turn must not end while work is in flight and nothing would tell the primary what needs it.
 In quiet and away a routine wake turn ends with no chat text at all, and wakes are batched ([presence](presence.md)).
 Claude Code opens every turn with `UserPromptSubmit` and keeps calling the Stop hook while it blocks.
 Its Monitor tool runs a command in the background and turns each line the command prints into a notification for the session, until the command ends or the monitor's timeout kills it.
@@ -34,8 +34,9 @@ Whenever the stream ends, by a refusal, a minute without the core or the session
 While the captain keeps the chat quiet, `WaitForWakes` delivers at once the wakes the primary settles without the captain, a worker's `needs-decision`, `blocked` or `done`, pipeline gates included (`WakeKind.isSettledByThePrimary`), and holds every other wake until the oldest of them has waited `presence.quietBatch`, then delivers all that wait in one batch; `WakeDigestText` tells the primary to end each such turn without text.
 Each prompt starts a turn and records the event log's latest sequence as its mark, and a report, the turn report or the sitrep, rendered with the session's header records its time on the turn; the next turn keeps the latest such time as its previous report, which decides which decision cards the turn report draws in full ([turn-report](turn-report.md)).
 `TurnEnd.of` holds the primary's stop, first, while an answered decision leaves the question its task's worker asked no later than the decision was raised without a steer that resolves its key, and the hook names `edi steer <task> --resolves <key>` for each (`UndeliveredAnswersQuery`).
-It holds the stop when the captain is present and the turn changed state with no report rendered, or recorded an item after its last report, to hand over the turn report the hook renders itself ([turn-report](turn-report.md)), and when a task is in flight and the core knows no live wake stream of the session, naming the Monitor tool and `edi wait --follow`.
-A turn's stop is held at most three times, and a standby session's stop is never held.
+It holds the stop, next, when a task is in flight and the core knows no live wake stream of the session, naming the Monitor tool and `edi wait --follow`.
+It never holds the stop for the turn report: when the captain is present and an event that reaches him (`ReachesTheCaptain`) followed the turn's mark with no report rendered, or an item was recorded after the last report, the stop lets the turn end and the hook shows the turn report as its own message, unless the primary's last message names every item of it ([turn-report](turn-report.md)).
+A turn's stop is held at most three times, a standby session's stop is never held, and the report is shown whatever the count of held stops.
 `PrimaryWait` reads the role holder's live stream at the moment it is asked: following, waiting for one wake, missing, or missing because no session holds the role.
 `GET /api/primary/wait` answers it to any caller, `edi health` prints it below the core's own line without changing its exit code, and the status line adds "Wait: none" in dark red while a task is in flight and no stream is live.
 
@@ -89,3 +90,4 @@ When Claude Code's Monitor tool changes how it delivers lines or drops its timeo
 - 03/11/2026: in the first week 150 worker wakes waited 1,187 minutes between raise and delivery, 28 of them 20 to 31 minutes on the quiet batch, so in quiet and away the wakes the primary settles alone are delivered at once (EDI-55).
 - 13/11/2026: the Stop hook began handing over the turn report it renders itself instead of refusing the stop and naming `edi report --turn -` (EDI-269).
 - 13/11/2026: the stop began holding a turn while an answered decision leaves the question it was raised for unresolved, a question the worker asked no later than the decision was raised, the hard rule behind the answer that now reaches the worker by itself (EDI-241).
+- 16/11/2026: the stop stopped being held for the turn report, which the hook now shows as its own message once and leaves out when the reply names every item, and only an event that reaches the captain, not any event, makes a turn report-worthy (EDI-292).

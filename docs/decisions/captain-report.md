@@ -12,7 +12,7 @@ Only a process in the captain's pane knows that pane, while the core runs in the
 ## Decision
 
 `edi sitrep` prints the boxed captain report, rendered by the core from the fleet snapshot ([fleet-snapshot](fleet-snapshot.md)); `/sitrep` is the only overview command and is read-only, and `/sitrep board` also opens the console's sitrep page ([console](console.md)).
-The turn report, which the primary's stop hook hands over and `edi report` prints, is the chat's instead, which keeps only what needs the captain and draws its decision zone with the same `DecisionZone` ([turn-report](turn-report.md)).
+The turn report, which the primary's stop hook shows and `edi report` prints, is the chat's instead, which keeps only what needs the captain and draws its decision zone with the same `DecisionZone` ([turn-report](turn-report.md)).
 `CaptainReportPresenter` ports the old rules one for one: the decision zone (`DecisionZone`), sections with counts, an 18-column project column with Fleet first (`ProjectColumn`), word wrapping with hanging indents that never breaks a word (`WordWrap`), BACKLOG with the five newest-filed queued tasks, and no trailing spaces.
 The golden files in `edi-core/src/test/resources/captain-report/` were produced by running the old renderer on every case of its suite, and `ReportGoldenCases` builds the same state through EDI's use cases.
 Three old inputs have no counterpart in EDI and are adapted openly: a hold that is not for the captain becomes a deferral until the captain's word, drawn as the old `- on hold`; a decision deferred to a date becomes a task deferred without a card on both sides; and the old `--` call, held without a card, is not ported, because EDI holds a task for a decision only with its card.
