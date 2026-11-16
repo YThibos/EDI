@@ -52,7 +52,11 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
     }
 
     public boolean answers(WorkerQuestion question) {
-        return !isOpen() && !question.askedAt().isAfter(raisedAt);
+        return !isOpen() && isRaisedFor(question);
+    }
+
+    public boolean isRaisedFor(WorkerQuestion question) {
+        return task.equals(question.task()) && !question.askedAt().isAfter(raisedAt);
     }
 
     public String answerForItsWorker() {

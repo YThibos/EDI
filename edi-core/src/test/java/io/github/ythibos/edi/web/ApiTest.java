@@ -691,9 +691,11 @@ class ApiTest {
     }
 
     @Test
-    void endsAReplyThatNamesEveryOpenDecisionWithoutTheBoxAndListsEveryOpenDecisionByNumberWhenItShowsIt() throws Exception {
+    void endsAReplyThatNamesEveryOpenDecisionWithoutTheBoxAndDrawsItsCardInFullInTheNextBoxShown() throws Exception {
         String decision = """
-                {"title":"Which lamp?","context":"","options":[{"key":"A","text":"LED"},{"key":"B","text":"Oil"}],"recommend":{"key":"A","why":"it lasts"}}""";
+                {"title":"Which lamp?","context":"","options":[{"key":"A","text":"LED"},{"key":"B","text":"A tallow candle"}],"recommend":{"key":"A","why":"it lasts"}}""";
+        String bellDecision = """
+                {"title":"Which bell?","context":"","options":[{"key":"A","text":"Brass"},{"key":"B","text":"Iron"}],"recommend":{"key":"A","why":"it rings"}}""";
         post("/api/tasks", "{\"id\":\"api-named-lamp\",\"kind\":\"captain\",\"title\":\"Choose the lamp\"}", TEXT);
         post("/api/tasks", "{\"id\":\"api-named-bell\",\"kind\":\"captain\",\"title\":\"Choose the bell\"}", TEXT);
         UUID primary = UUID.randomUUID();
@@ -703,13 +705,13 @@ class ApiTest {
         String lamp = post("/api/tasks/api-named-lamp/decision", decision, TEXT).body().strip();
         HttpResponse<String> named = primaryHook(primary, "stop", "{\"last_assistant_message\":\"" + openDecisionNumbers() + " are yours.\"}");
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"And the bell?\"}");
-        String bell = post("/api/tasks/api-named-bell/decision", decision, TEXT).body().strip();
+        String bell = post("/api/tasks/api-named-bell/decision", bellDecision, TEXT).body().strip();
         HttpResponse<String> unnamed = primaryHook(primary, "stop", "{\"last_assistant_message\":\"The bell is yours.\"}");
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(named.statusCode()).isEqualTo(204);
         assertThat(unnamed.statusCode()).isEqualTo(200);
-        assertThat(new JsonMapper().readTree(unnamed.body()).path("systemMessage").asString()).contains("NEEDS YOUR DECISION", lamp, bell);
+        assertThat(new JsonMapper().readTree(unnamed.body()).path("systemMessage").asString()).contains("NEEDS YOUR DECISION", lamp, bell, "A tallow candle");
     }
 
     @Test

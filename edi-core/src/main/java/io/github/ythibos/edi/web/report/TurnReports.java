@@ -37,15 +37,24 @@ public class TurnReports {
     }
 
     public Optional<String> shownAtTheStopOf(UUID session, Integer paneWidth, Reply reply) {
-        TurnReport report = shownIn(Optional.of(session), paneWidth);
-        return report.hasNothingForTheCaptain() || report.isNamedIn(reply) ? Optional.empty() : Optional.of(presenter.text(report));
+        Optional<UUID> stopping = Optional.of(session);
+        TurnReport report = reportOf(stopping, paneWidth);
+        if (report.hasNothingForTheCaptain() || report.isNamedIn(reply)) {
+            return Optional.empty();
+        }
+        recordTheReportShownIn(stopping);
+        return Optional.of(presenter.text(report));
     }
 
     TurnReport shownIn(Optional<UUID> session, Integer paneWidth) {
-        TurnReport report = new TurnReport(fleet.snapshot().waiting(), itemsRecordedIn(session), ReportWidth.forPaneIfKnown(paneWidth),
-                calendar.unreadable().orElse(null), previousReportShownIn(session), decisionRounds.gathering().orElse(null));
+        TurnReport report = reportOf(session, paneWidth);
         recordTheReportShownIn(session);
         return report;
+    }
+
+    private TurnReport reportOf(Optional<UUID> session, Integer paneWidth) {
+        return new TurnReport(fleet.snapshot().waiting(), itemsRecordedIn(session), ReportWidth.forPaneIfKnown(paneWidth),
+                calendar.unreadable().orElse(null), previousReportShownIn(session), decisionRounds.gathering().orElse(null));
     }
 
     Turn itemsRecordedIn(Optional<UUID> session) {
