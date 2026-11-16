@@ -357,7 +357,7 @@ class NativeSmokeIT {
     }
 
     @Test
-    void theStopHookHandsOverTheTurnReportWithTheRecordedItemsInAnyLocale() throws Exception {
+    void theStopHookShowsTheTurnReportWithTheRecordedItemsInAnyLocale() throws Exception {
         Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString(), "LANG", "C", "LC_ALL", "C");
         String session = "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"";
         ediIn(Path.of(""), primary, session + "}", "hook", "session-start");
@@ -367,14 +367,15 @@ class NativeSmokeIT {
                 "decision", "raise", "native-report-call", "--card", "-").output().strip();
 
         CommandRun recorded = ediIn(Path.of(""), primary, "", "turn", "done", "--project", "harness", "Rendered natively");
-        CommandRun handedOver = ediIn(Path.of(""), primary, session + ",\"stop_hook_active\":false}", "hook", "stop");
+        CommandRun shown = ediIn(Path.of(""), primary, session + ",\"stop_hook_active\":false}", "hook", "stop");
         CommandRun report = ediIn(Path.of(""), primary, "", "report");
         CommandRun sitrep = ediInTheCLocale("", "sitrep");
         CommandRun asJson = edi("", "report", "--json");
         ediIn(Path.of(""), primary, session + ",\"reason\":\"prompt_input_exit\"}", "hook", "session-end");
 
         assertThat(recorded.output()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hook shows it, unless your reply names each item.\n");
-        assertThat(handedOver.output()).contains("\"decision\":\"block\"", "paste it verbatim in one fenced block", "Which lantern?", "Rendered natively");
+        assertThat(shown.output()).contains("\"systemMessage\":", "Which lantern?", "Rendered natively")
+                .doesNotContain("\"decision\":\"block\"", "paste it verbatim");
         assertThat(report.exitCode()).isZero();
         assertThat(report.output()).startsWith("╔══ NEEDS YOUR DECISION ══ ")
                 .contains("║  %-6sWhich lantern?".formatted(number), "  harness           • Rendered natively\n")

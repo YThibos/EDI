@@ -27,7 +27,7 @@ public final class Reply {
     }
 
     boolean namesTheAddress(String address) {
-        return text.contains(address);
+        return Pattern.compile(Pattern.quote(address) + "(?![A-Za-z0-9_-])").matcher(text).find();
     }
 
     boolean saysTheItem(String itemText) {

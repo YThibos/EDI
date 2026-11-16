@@ -54,6 +54,7 @@ class TurnReportNamingTest {
         assertThat(report.isNamedIn(Reply.of("The review at " + ADDRESS + " is ready."))).isFalse();
         assertThat(report.isNamedIn(Reply.of("D41 is yours; a review is ready."))).isFalse();
         assertThat(report.isNamedIn(Reply.of("D410 is yours, and " + ADDRESS + " is ready."))).isFalse();
+        assertThat(report.isNamedIn(Reply.of("D41 is yours, and " + ADDRESS + "2 is ready."))).isFalse();
         assertThat(report.isNamedIn(Reply.of(""))).isFalse();
         assertThat(report.isNamedIn(Reply.of(null))).isFalse();
     }
