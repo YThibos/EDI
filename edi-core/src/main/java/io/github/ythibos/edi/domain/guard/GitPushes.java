@@ -86,10 +86,10 @@ final class GitPushes {
 
         Optional<GuardRefusal> refusal(Set<String> baseBranches) {
             if (pushOptions.stream().anyMatch(option -> MERGING_PUSH_OPTIONS.stream().anyMatch(option.toLowerCase(Locale.ROOT)::contains))) {
-                return Optional.of(MergingCommands.refusal());
+                return Optional.of(MergingCommands.refusal("a push whose push options arm a merge"));
             }
             if (forced || refspecs.stream().anyMatch(refspec -> refspec.startsWith("+"))) {
-                return Optional.of(new GuardRefusal(Rule.FORCED_PUSH,
+                return Optional.of(new GuardRefusal(Rule.FORCED_PUSH, "a forced push",
                         "a forced push rewrites published history, so none is made; push new commits on top instead."));
             }
             if (everyBranch) {
@@ -118,7 +118,7 @@ final class GitPushes {
         }
 
         private static GuardRefusal baseBranchPush(String target) {
-            return new GuardRefusal(Rule.BASE_BRANCH_PUSH,
+            return new GuardRefusal(Rule.BASE_BRANCH_PUSH, "a push to " + target,
                     "a push to " + target + " lands work on a base branch, which only the captain does by merging a draft; push the task's own branch (I-03).");
         }
     }

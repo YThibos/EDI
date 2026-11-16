@@ -21,7 +21,8 @@ final class HookFeeds {
     }
 
     private static GuardRefusal refusal() {
-        return new GuardRefusal(Rule.HOOK_FROM_THE_SHELL, "only Claude Code feeds the hooks, with what really happened in the session;"
+        return new GuardRefusal(Rule.HOOK_FROM_THE_SHELL, "an edi hook command run from the shell",
+                "only Claude Code feeds the hooks, with what really happened in the session;"
                 + " a hook fed from the primary's shell would let made-up text pass as the captain's words.");
     }
 }

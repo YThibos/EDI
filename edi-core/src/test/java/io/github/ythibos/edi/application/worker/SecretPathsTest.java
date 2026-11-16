@@ -179,7 +179,7 @@ class SecretPathsTest {
                 new ToolCall("Glob", null, null, worktree, state + "/core.{token,port}"))) {
             HookAnswer answer = home.guardToolCall().checkForWorker(worker.id(), search);
             assertThat(answer.verdict()).as(search.toString()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
-            assertThat(answer.reason()).as(search.toString()).contains("this file search touches a secret");
+            assertThat(answer.reason()).as(search.toString()).contains("The guard refuses a file search that touches a secret");
         }
     }
 
@@ -191,7 +191,7 @@ class SecretPathsTest {
                 new ToolCall("Glob", null, null, worktree, upToTheHome + "/state/core.tok*"),
                 new ToolCall("Glob", null, null, worktree, state + "/core.to[^x]en"),
                 new ToolCall("Glob", null, null, worktree, state + "/core.{tok{en,x},port}"))) {
-            assertThat(home.guardToolCall().checkForWorker(worker.id(), search).reason()).as(search.toString()).contains("this file search touches a secret");
+            assertThat(home.guardToolCall().checkForWorker(worker.id(), search).reason()).as(search.toString()).contains("The guard refuses a file search that touches a secret");
         }
     }
 

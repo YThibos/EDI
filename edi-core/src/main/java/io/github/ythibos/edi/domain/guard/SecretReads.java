@@ -10,9 +10,9 @@ import io.github.ythibos.edi.domain.rule.Rule;
 public final class SecretReads {
 
     private static final Set<String> SHOW_TOKEN_OPTIONS = Set.of("-t", "--show-token");
-    private static final String A_COMMAND = "this command";
-    private static final String A_FILE_READ = "this read";
-    private static final String A_SEARCH = "this file search";
+    private static final String A_COMMAND = "a command";
+    private static final String A_FILE_READ = "a file read";
+    private static final String A_SEARCH = "a file search";
     private static final String NAMES_A_SECRET_FILE = "it names a file that holds a secret";
 
     private SecretReads() {
@@ -62,16 +62,16 @@ public final class SecretReads {
     }
 
     private static Optional<GuardRefusal> refused(String act, String why) {
-        return refusal(act + " touches a secret, because " + why);
+        return refusal(act + " that touches a secret", why);
     }
 
     private static Optional<GuardRefusal> untraced(String act, UntraceablePaths untraceable) {
-        return refusal(act + " may touch a secret, because the guard cannot tell which files it reaches: " + untraceable.getMessage()
+        return refusal(act + " that may touch a secret", "the guard cannot tell which files it reaches: " + untraceable.getMessage()
                 + "; name the files more narrowly");
     }
 
-    private static Optional<GuardRefusal> refusal(String what) {
-        return Optional.of(new GuardRefusal(Rule.SECRET, what
+    private static Optional<GuardRefusal> refusal(String act, String why) {
+        return Optional.of(new GuardRefusal(Rule.SECRET, act, why
                 + "; secrets are read only by the core's adapters, at the moment of the call (I-32), and anything else that touches one needs"
                 + " the captain's word in this session (I-06)."));
     }

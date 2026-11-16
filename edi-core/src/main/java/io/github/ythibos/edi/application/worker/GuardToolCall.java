@@ -37,6 +37,7 @@ import io.github.ythibos.edi.domain.guard.SecretReads;
 import io.github.ythibos.edi.domain.guard.Secrets;
 import io.github.ythibos.edi.domain.guard.SettingsWrites;
 import io.github.ythibos.edi.domain.guard.ShellGuard;
+import io.github.ythibos.edi.domain.guard.StatusReports;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.rule.RuleFired;
 import io.github.ythibos.edi.domain.rule.RuleOutcome;
@@ -52,7 +53,7 @@ public class GuardToolCall {
     private static final Map<Rule, CaptainWordAct> ALLOWED_ON_THE_CAPTAINS_WORD = Map.of(
             Rule.SECRET, CaptainWordAct.TOUCH_A_SECRET,
             Rule.UNLANDED_BRANCH_DELETION, CaptainWordAct.DELETE_UNLANDED_BRANCH);
-    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(Rule.DIALOG_ANSWERED_AHEAD,
+    private static final GuardRefusal DIALOG_ANSWERED_AHEAD = new GuardRefusal(Rule.DIALOG_ANSWERED_AHEAD, "a dialog to the captain answered ahead",
             "a dialog to the captain arrives with its answers already given, and only the captain answers it.");
 
     private final EdiHome home;
@@ -100,6 +101,9 @@ public class GuardToolCall {
         if (call.searchesForFiles()) {
             return searchReachingASecret(call);
         }
+        if (call.runsAShellCommand() && StatusReports.isAPlainReport(call.command())) {
+            return Optional.empty();
+        }
         Workplace workplace = transaction.execute(_ -> context.of(worker.task()));
         return call.writesAFile()
                 ? outsideTheWorkplace(call.file(), workplace)
@@ -111,7 +115,7 @@ public class GuardToolCall {
     private void recordTheRefusalOf(WorkerId worker, GuardRefusal refused) {
         transaction.executeWithoutResult(_ ->
                 events.record(new ToolCallRefused(worker.task(), worker, refused.rule()), Actor.worker(worker), clock.now()));
-        firedRules.record(RuleFired.refused(refused.rule(), Actor.worker(worker), worker.task(), refused.reason()));
+        firedRules.record(RuleFired.refused(refused.rule(), Actor.worker(worker), worker.task(), refused.judgement()));
     }
 
     private Optional<GuardRefusal> refusalForPrimary(ToolCall call) {
@@ -214,7 +218,7 @@ public class GuardToolCall {
 
     private static RuleFired firingForThePrimary(GuardRefusal refusal, boolean allowed, CallingSession calling) {
         RuleOutcome outcome = allowed ? RuleOutcome.ALLOWED_AFTER_A_CHECK : RuleOutcome.REFUSED;
-        return new RuleFired(refusal.rule(), outcome, Actor.PRIMARY, null, calling.id(), RuleReason.of(refusal.reason()));
+        return new RuleFired(refusal.rule(), outcome, Actor.PRIMARY, null, calling.id(), RuleReason.of(refusal.judgement()));
     }
 
     private static Set<String> basesOf(Workplace workplace) {
@@ -233,7 +237,7 @@ public class GuardToolCall {
     private static Optional<GuardRefusal> outsideTheWorkplace(Path file, Workplace workplace) {
         Path written = RealPaths.of(file);
         boolean inside = List.of(workplace.worktree(), workplace.taskDirectory()).stream().map(RealPaths::of).anyMatch(written::startsWith);
-        return inside ? Optional.empty() : Optional.of(new GuardRefusal(Rule.OUTSIDE_ISOLATED_COPY,
+        return inside ? Optional.empty() : Optional.of(new GuardRefusal(Rule.OUTSIDE_ISOLATED_COPY, "a file write outside the isolated copy",
                 "a worker writes only inside its isolated copy " + workplace.worktree() + " and its task directory "
                         + workplace.taskDirectory() + ", and " + file + " is outside both (I-07)."));
     }
@@ -270,12 +274,12 @@ public class GuardToolCall {
     }
 
     private static HookAnswer denial(GuardRefusal refusal) {
-        return HookAnswer.denyTheTool("The guard refuses this: " + refusal.reason());
+        return HookAnswer.denyTheTool(refusal.verdict());
     }
 
     private static HookAnswer denialToThePrimary(GuardRefusal refusal) {
         String remedy = Optional.ofNullable(ALLOWED_ON_THE_CAPTAINS_WORD.get(refusal.rule())).map(GuardToolCall::afterTheCaptainsWord).orElse("");
-        return HookAnswer.denyTheTool("The guard refuses this: " + refusal.reason() + remedy);
+        return HookAnswer.denyTheTool(refusal.verdict() + remedy);
     }
 
     private static String afterTheCaptainsWord(CaptainWordAct act) {

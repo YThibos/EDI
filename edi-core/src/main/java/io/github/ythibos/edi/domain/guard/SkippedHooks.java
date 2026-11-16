@@ -69,7 +69,7 @@ final class SkippedHooks {
     }
 
     private static GuardRefusal refusal(String bypass, String checks, String remedy) {
-        return new GuardRefusal(Rule.SKIPPED_HOOKS, bypass + " skips " + checks + "; " + remedy);
+        return new GuardRefusal(Rule.SKIPPED_HOOKS, bypass, bypass + " skips " + checks + "; " + remedy);
     }
 
     private static Optional<GuardRefusal> refusalForSubcommand(String subcommand, List<String> arguments) {

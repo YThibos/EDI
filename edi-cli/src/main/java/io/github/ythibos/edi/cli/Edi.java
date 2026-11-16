@@ -92,7 +92,7 @@ public final class Edi implements Runnable {
     }
 
     static CommandLine commandLine(Edi edi) {
-        CommandLine commandLine = new CommandLine(edi);
+        CommandLine commandLine = new CommandLine(edi).setExpandAtFiles(false);
         IParameterExceptionHandler readingFailed = commandLine.getParameterExceptionHandler();
         return commandLine.setParameterExceptionHandler((unreadable, arguments) -> {
             int refused = readingFailed.handleParseException(unreadable, arguments);

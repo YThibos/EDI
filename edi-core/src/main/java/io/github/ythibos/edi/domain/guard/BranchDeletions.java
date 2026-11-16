@@ -42,7 +42,7 @@ final class BranchDeletions {
     }
 
     private static GuardRefusal refusal(String branch) {
-        return new GuardRefusal(Rule.UNLANDED_BRANCH_DELETION, "it deletes " + branch
+        return new GuardRefusal(Rule.UNLANDED_BRANCH_DELETION, "the deletion of " + branch, "it deletes " + branch
                 + ", the branch of a task whose work has not landed, and deleting it needs the captain's word in this session (I-06).");
     }
 }

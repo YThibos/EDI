@@ -33,14 +33,14 @@ final class LoneWaits {
     }
 
     private static GuardRefusal streamOutsideTheMonitor() {
-        return new GuardRefusal(Rule.WAKE_STREAM_OUTSIDE_MONITOR,
+        return new GuardRefusal(Rule.WAKE_STREAM_OUTSIDE_MONITOR, "edi wait --follow outside the Monitor tool",
                 "edi wait --follow never ends, so only the Monitor tool, which turns each line it prints into a notification, can carry it;"
                         + " any other tool would take every wake into output nobody reads. Start the one wake stream with the Monitor tool running"
                         + " edi wait --follow and nothing else; where Monitor is unavailable, run edi wait alone as a background command.");
     }
 
     private static GuardRefusal waitNotAlone() {
-        return new GuardRefusal(Rule.EDI_WAIT_NOT_ALONE,
+        return new GuardRefusal(Rule.EDI_WAIT_NOT_ALONE, "edi wait run with something else",
                 "edi wait runs alone, never chained, piped, redirected, sent to the background with &, disowned or under nohup,"
                         + " so no wake is printed where nobody reads it. Start the one wake stream with the Monitor tool running edi wait --follow"
                         + " and nothing else; where Monitor is unavailable, run edi wait alone as a background command.");

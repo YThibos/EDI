@@ -75,9 +75,41 @@ class ClaudeSettingsWritesTest {
                 shell("perl -pi -e 's/false/true/' .claude/settings.json"),
                 shell("perl -i.bak -pe 's/false/true/' .claude/settings.local.json"),
                 shell("mv .claude /tmp/lamp-settings"),
-                shell("mv " + worktree.resolve(".claude") + " old-settings"));
+                shell("mv " + worktree.resolve(".claude") + " old-settings"),
+                shell("> .claude/settings.local.json"),
+                shell(">.claude/settings.json echo '" + SWITCHED_OFF + "'"),
+                shell("echo '" + SWITCHED_OFF + "' >& .claude/settings.json"),
+                shell("echo '" + SWITCHED_OFF + "' 1<> .claude/settings.json"),
+                shell("cp off.json .claude/settings.local.json 2>/dev/null"),
+                shell("2>/dev/null cp off.json .claude/settings.local.json"),
+                shell("sed -ni 's/false/true/p' .claude/settings.json"),
+                shell("perl -0pi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -lpi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -0777pi -e 's/false/true/' .claude/settings.json"),
+                shell("perl -dtpi -e 's/false/true/' .claude/settings.json"),
+                shellFrom(".claude/skills", "echo '" + SWITCHED_OFF + "' > ../settings.local.json"),
+                shellFrom(".claude", "cp /tmp/off.json settings.local.json"));
 
         assertThat(calls).filteredOn(call -> !refusesTheSettings(guarded(call))).isEmpty();
+    }
+
+    @Test
+    void namesTheRuleAndTheWriteItJudged() {
+        assertThat(guarded(shell("echo '" + SWITCHED_OFF + "' > .claude/settings.local.json")).reason())
+                .startsWith("The guard refuses a write under the copy's .claude directory under the rule guard.claude-settings: ");
+    }
+
+    @Test
+    void letsAWorkerReadItsClaudeDirectoryFromInsideIt() throws IOException {
+        Files.createDirectories(worktree.resolve(".claude/skills/lamp"));
+        for (ToolCall call : List.of(shellFrom(".claude/skills/lamp", "pwd"), shellFrom(".claude/skills/lamp", "cat SKILL.md"),
+                shellFrom(".claude/skills/lamp", "ls -la"), shellFrom(".claude/skills/lamp", "cd ../../.."),
+                shellFrom(".claude/skills/lamp", "grep -n lamp SKILL.md 2>&1 | head -20"),
+                shellFrom(".claude/skills/lamp", "cat SKILL.md 2>/dev/null"),
+                shellFrom(".claude/skills/lamp", "edi status blocked --key lamp -- the guard refused my shell"),
+                shellFrom(".claude", "git status --short"))) {
+            assertThat(guarded(call)).as(call.toString()).isEqualTo(HookAnswer.PROCEED);
+        }
     }
 
     @Test
@@ -88,7 +120,20 @@ class ClaudeSettingsWritesTest {
                 shell("tar -xf /tmp/lamp.tar -C build"), shell("tar -tf /tmp/lamp.tar"), shell("git checkout -- src/Lamp.java"),
                 shell("perl -pi -e 's/a/b/' src/Lamp.java"), shell("\"$JAVA_HOME/bin/java\" -version"),
                 shell("echo lamp > notes.txt"),
-                shell("sed -i 's/a/b/' src/Lamp.java"))) {
+                shell("sed -i 's/a/b/' src/Lamp.java"),
+                shell("cat < .claude/settings.json"),
+                shell("wc -l 0< .claude/settings.json"),
+                shell("grep -c hooks <<< .claude/settings.json"),
+                shell("grep -c hooks <<< \"$SETTINGS\""),
+                shell("head -40 .claude/skills/lamp/SKILL.md 2>&1"),
+                shell("cat .claude/skills/lamp/SKILL.md >&2"),
+                shell("cat .claude/settings.json 2>&1 1>/tmp/settings-copy.json"),
+                shell("perl -MList::Util=min -ne 'print' .claude/settings.json"),
+                shell("perl -0777 -ne 'print' .claude/settings.json"),
+                shell("perl -lne 'print if /hooks/' .claude/settings.json"),
+                shell("sed -e 's/hooks/HOOKS/' .claude/settings.json"),
+                shell("sed -n '1,20p' .claude/skills/lamp/SKILL.md"),
+                shell(".claude/hooks/check.sh"))) {
             assertThat(guarded(call)).as(call.toString()).isEqualTo(HookAnswer.PROCEED);
         }
     }
@@ -119,5 +164,9 @@ class ClaudeSettingsWritesTest {
 
     private ToolCall shell(String command) {
         return new ToolCall("Bash", command, null, worktree);
+    }
+
+    private ToolCall shellFrom(String directory, String command) {
+        return new ToolCall("Bash", command, null, worktree.resolve(directory));
     }
 }
