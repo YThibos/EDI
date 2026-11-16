@@ -26,7 +26,7 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 class LoginCredentialsTest {
 
     private static final String CREDENTIALS = ".credentials.json";
-    private static final String A_SECRET = "touches a secret, because it names a file that holds a secret";
+    private static final String A_SECRET = " that touches a secret under the rule guard.secret: it names a file that holds a secret";
 
     @TempDir
     private Path directory;
@@ -56,7 +56,7 @@ class LoginCredentialsTest {
         Path linked = Files.createSymbolicLink(worktree.resolve("notes.json"), secondLogin.resolve(CREDENTIALS));
 
         for (Path credentials : List.of(defaultLogin.resolve(CREDENTIALS), secondLogin.resolve(CREDENTIALS), unnamedLogin.resolve(CREDENTIALS), linked)) {
-            assertThat(workerRead(credentials).reason()).as(credentials.toString()).contains("this read " + A_SECRET);
+            assertThat(workerRead(credentials).reason()).as(credentials.toString()).contains("a file read" + A_SECRET);
         }
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).filteredOn("ToolCallRefused"::equals).hasSize(4);
     }
@@ -72,7 +72,7 @@ class LoginCredentialsTest {
                 "cat notes.json");
 
         for (String command : commands) {
-            assertThat(workerShell(command).reason()).as(command).contains("this command " + A_SECRET);
+            assertThat(workerShell(command).reason()).as(command).contains("a command" + A_SECRET);
         }
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).filteredOn("ToolCallRefused"::equals).hasSize(commands.size());
     }
@@ -83,7 +83,7 @@ class LoginCredentialsTest {
                 new ToolCall("Glob", null, secondLogin.toString(), worktree, "{.credentials,settings}.json"),
                 new ToolCall("Glob", null, machine.toString(), worktree, "**/" + CREDENTIALS),
                 new ToolCall("Glob", null, null, worktree, defaultLogin + "/.credentials.js?n"))) {
-            assertThat(home.guardToolCall().checkForWorker(worker.id(), search).reason()).as(search.toString()).contains("this file search " + A_SECRET);
+            assertThat(home.guardToolCall().checkForWorker(worker.id(), search).reason()).as(search.toString()).contains("a file search" + A_SECRET);
         }
     }
 

@@ -388,10 +388,10 @@ class ApiTest {
 
         assertThat(denied.statusCode()).isEqualTo(200);
         assertThat(denied.body()).startsWith("{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\","
-                + "\"permissionDecisionReason\":\"The guard refuses this: pkill signals every process");
+                + "\"permissionDecisionReason\":\"The guard refuses pkill under the rule guard.signal-by-pattern: pkill signals every process");
         assertThat(allowed.statusCode()).isEqualTo(204);
         assertThat(stopped.statusCode()).isEqualTo(204);
-        assertThat(searched.body()).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
+        assertThat(searched.body()).contains("\"permissionDecision\":\"deny\"", "a file search that touches a secret");
         assertRefusal(hook(worker, "teleport", "{}"), 400, "The hooks answered are session-start, user-prompt-submit, pre-tool-use, post-tool-use, stop, stop-failure,"
                 + " notification and session-end, not teleport.");
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
@@ -410,10 +410,10 @@ class ApiTest {
             String shell = "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"cat " + login.resolve(CREDENTIALS) + "\"},\"cwd\":\"/tmp\"}";
             String search = "{\"tool_name\":\"Glob\",\"tool_input\":{\"pattern\":\".cred*\",\"path\":\"" + login + "\"},\"cwd\":\"/tmp\"}";
 
-            assertThat(hook(worker, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
-            assertThat(hook(worker, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "this command touches a secret");
-            assertThat(hook(worker, "pre-tool-use", search).body()).as(search).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
-            assertThat(primaryHook(primary, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
+            assertThat(hook(worker, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "a file read that touches a secret");
+            assertThat(hook(worker, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "a command that touches a secret");
+            assertThat(hook(worker, "pre-tool-use", search).body()).as(search).contains("\"permissionDecision\":\"deny\"", "a file search that touches a secret");
+            assertThat(primaryHook(primary, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "a file read that touches a secret");
             assertThat(primaryHook(primary, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "edi captain said");
         }
     }

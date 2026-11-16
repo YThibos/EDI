@@ -25,7 +25,8 @@ class SecretReadsTest {
     void refusesAReadOfASecretFile(String file) {
         assertThat(SecretReads.refusalForReading(file, SECRETS)).hasValueSatisfying(refusal -> {
             assertThat(refusal.rule()).isEqualTo(Rule.SECRET);
-            assertThat(refusal.reason()).startsWith("this read touches a secret").contains("(I-32)", "(I-06)");
+            assertThat(refusal.act()).isEqualTo("a file read that touches a secret");
+            assertThat(refusal.reason()).startsWith("it names a file that holds a secret").contains("(I-32)", "(I-06)");
         });
     }
 

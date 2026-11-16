@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 final class ShellParser {
@@ -19,6 +20,7 @@ final class ShellParser {
     private static final String EMPTY_GROUP = "()";
     private static final String EXPLICIT_QUALIFIERS = "#q";
     private static final Pattern CODE_RUNNING_QUALIFIER = Pattern.compile("\\+[A-Za-z_]");
+    private static final Function<String, Redirection> NOT_REDIRECTED = _ -> Redirection.NONE;
 
     private final String text;
     private final int nesting;
@@ -62,7 +64,7 @@ final class ShellParser {
             } else if (COMMAND_SEPARATORS.indexOf(character) >= 0) {
                 readSeparator(character);
             } else {
-                readWord(false);
+                readWord(NOT_REDIRECTED);
             }
         }
         endCommand();
@@ -97,16 +99,13 @@ final class ShellParser {
             words.add(processSubstitution());
         } else if (text.startsWith("<<<", position)) {
             position += 3;
-            readRedirectionTarget();
+            readRedirectionTarget(_ -> Redirection.HERE_STRING);
         } else if (text.startsWith("<<", position)) {
             position += 2;
             readHeredocDelimiter();
         } else {
-            position++;
-            while (!atEnd() && REDIRECTION_CHARACTERS.indexOf(current()) >= 0) {
-                position++;
-            }
-            readRedirectionTarget();
+            String operator = redirectionOperator();
+            readRedirectionTarget(target -> Redirection.through(operator, target));
         }
     }
 
@@ -114,13 +113,13 @@ final class ShellParser {
         WrittenWord written = new WrittenWord();
         List<ShellCommand> substitutions = new ArrayList<>();
         readParenthesisedSubstitution(written, substitutions);
-        return written.word(substitutions, false);
+        return written.word(substitutions, Redirection.NONE);
     }
 
-    private void readRedirectionTarget() {
+    private void readRedirectionTarget(Function<String, Redirection> redirection) {
         skipBlanks();
         if (!atEnd() && WORD_BREAKS.indexOf(current()) < 0) {
-            readWord(true);
+            readWord(redirection);
         }
     }
 
@@ -141,6 +140,15 @@ final class ShellParser {
             position++;
         }
         heredocs.add(new Heredoc(delimiter.toString(), !quoted));
+    }
+
+    private String redirectionOperator() {
+        int start = position;
+        position++;
+        while (!atEnd() && REDIRECTION_CHARACTERS.indexOf(current()) >= 0) {
+            position++;
+        }
+        return text.substring(start, position);
     }
 
     private void readHeredocBodies() {
@@ -166,7 +174,7 @@ final class ShellParser {
         }
         position = Math.min(position + 1, text.length());
         if (!substitutions.isEmpty()) {
-            commands.add(List.of(new WrittenWord().word(substitutions, false)));
+            commands.add(List.of(new WrittenWord().word(substitutions, Redirection.NONE)));
         }
     }
 
@@ -174,13 +182,13 @@ final class ShellParser {
         position = lineEndFrom(position);
     }
 
-    private void readWord(boolean redirectionTarget) {
+    private void readWord(Function<String, Redirection> redirection) {
         WrittenWord written = new WrittenWord();
         List<ShellCommand> substitutions = new ArrayList<>();
         while (!atEnd() && (WORD_BREAKS.indexOf(current()) < 0 || startsAGlobGroup(written))) {
             readWordPart(written, substitutions);
         }
-        words.add(written.word(substitutions, redirectionTarget || namesAFileDescriptor(written.text())));
+        words.add(written.word(substitutions, namesAFileDescriptor(written.text()) ? Redirection.DESCRIPTOR : redirection.apply(written.text())));
     }
 
     private boolean startsAGlobGroup(WrittenWord written) {
@@ -427,8 +435,8 @@ final class ShellParser {
             return text.toString();
         }
 
-        ShellWord word(List<ShellCommand> substitutions, boolean redirectionTarget) {
-            return new ShellWord(text(), pattern.toString(), substitutions, redirectionTarget);
+        ShellWord word(List<ShellCommand> substitutions, Redirection redirection) {
+            return new ShellWord(text(), pattern.toString(), substitutions, redirection);
         }
     }
 }

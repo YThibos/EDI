@@ -37,19 +37,32 @@ final class CommandWrappers {
 
     private static List<ShellCommand> unwrap(List<ShellWord> words, boolean argumentsFromInput, int nesting) {
         int start = firstCommandWord(words);
-        List<ShellCommand> leadingSubstitutions = words.subList(0, Math.min(start + 1, words.size())).stream()
-                .flatMap(word -> word.substitutions().stream()).toList();
-        List<String> assigned = assignedIn(words.subList(0, start));
+        List<ShellWord> leading = words.subList(0, start);
+        List<ShellWord> leadingRedirections = leading.stream().filter(ShellWord::redirectionTarget).toList();
+        List<ShellCommand> leadingSubstitutions = substitutionsIn(Stream.concat(leading.stream().filter(word -> !word.redirectionTarget()),
+                words.stream().skip(start).limit(1)));
+        List<String> assigned = assignedIn(leading);
         if (start == words.size()) {
-            return assigned.isEmpty() ? leadingSubstitutions : Stream.concat(leadingSubstitutions.stream(), Stream.of(ShellCommand.assigningOnly(assigned)))
-                    .toList();
+            return withoutAProgram(leadingSubstitutions, leadingRedirections, assigned);
         }
-        ShellCommand command = new ShellCommand(programName(words.get(start).text()), words.subList(start + 1, words.size()), argumentsFromInput, assigned);
+        List<ShellWord> arguments = Stream.concat(words.subList(start + 1, words.size()).stream(), leadingRedirections.stream()).toList();
+        ShellCommand command = new ShellCommand(programName(words.get(start).text()), arguments, argumentsFromInput, assigned);
         return Stream.concat(leadingSubstitutions.stream(), withWhatItRuns(command, nesting).stream()).toList();
     }
 
+    private static List<ShellCommand> substitutionsIn(Stream<ShellWord> words) {
+        return words.flatMap(word -> word.substitutions().stream()).toList();
+    }
+
     private static List<String> assignedIn(List<ShellWord> leadingWords) {
-        return leadingWords.stream().map(word -> assignedVariable(word.text())).flatMap(Optional::stream).toList();
+        return leadingWords.stream().filter(word -> !word.redirectionTarget()).map(word -> assignedVariable(word.text())).flatMap(Optional::stream).toList();
+    }
+
+    private static List<ShellCommand> withoutAProgram(List<ShellCommand> leadingSubstitutions, List<ShellWord> redirections, List<String> assigned) {
+        if (redirections.isEmpty() && assigned.isEmpty()) {
+            return leadingSubstitutions;
+        }
+        return Stream.concat(leadingSubstitutions.stream(), Stream.of(ShellCommand.withoutAProgram(redirections, assigned))).toList();
     }
 
     private static List<ShellCommand> withWhatItRuns(ShellCommand command, int nesting) {
@@ -112,10 +125,14 @@ final class CommandWrappers {
 
     private static int firstCommandWord(List<ShellWord> words) {
         int index = 0;
-        while (index < words.size() && (KEYWORDS.contains(words.get(index).text()) || isAssignment(words.get(index).text()))) {
+        while (index < words.size() && precedesTheProgram(words.get(index))) {
             index++;
         }
         return index;
+    }
+
+    private static boolean precedesTheProgram(ShellWord word) {
+        return word.redirectionTarget() || KEYWORDS.contains(word.text()) || isAssignment(word.text());
     }
 
     private static List<ShellWord> afterOptions(List<ShellWord> arguments, Set<String> optionsWithValues) {

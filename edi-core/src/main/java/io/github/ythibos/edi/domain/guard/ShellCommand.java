@@ -11,8 +11,8 @@ public record ShellCommand(String program, List<ShellWord> arguments, boolean ar
         assignedVariables = List.copyOf(assignedVariables);
     }
 
-    static ShellCommand assigningOnly(List<String> assignedVariables) {
-        return new ShellCommand(NO_PROGRAM, List.of(), false, assignedVariables);
+    static ShellCommand withoutAProgram(List<ShellWord> redirections, List<String> assignedVariables) {
+        return new ShellCommand(NO_PROGRAM, redirections, false, assignedVariables);
     }
 
     public boolean runs(String name) {
@@ -20,6 +20,10 @@ public record ShellCommand(String program, List<ShellWord> arguments, boolean ar
     }
 
     public List<String> argumentTexts() {
-        return arguments.stream().map(ShellWord::text).toList();
+        return arguments.stream().filter(word -> !word.redirectionTarget()).map(ShellWord::text).toList();
+    }
+
+    public List<String> filesWritten() {
+        return arguments.stream().filter(ShellWord::writtenTo).map(ShellWord::text).toList();
     }
 }

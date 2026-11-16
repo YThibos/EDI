@@ -68,7 +68,7 @@ class ProcessSafetyTest {
 
     private void assertDenied(HookAnswer answer, String reason) {
         assertThat(answer.verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
-        assertThat(answer.reason()).startsWith("The guard refuses this: ").contains(reason);
+        assertThat(answer.reason()).startsWith("The guard refuses ").contains(reason);
     }
 
     @Nested
@@ -200,8 +200,8 @@ class ProcessSafetyTest {
             Path source = worktree.resolve("src/Lamp.java");
 
             for (Path secret : List.of(keysFile, linkedKeys, home.home().coreTokenFile())) {
-                assertDenied(readByTheWorker(secret, worktree), "this read touches a secret");
-                assertDenied(readByThePrimary(secret), "this read touches a secret");
+                assertDenied(readByTheWorker(secret, worktree), "a file read that touches a secret");
+                assertDenied(readByThePrimary(secret), "a file read that touches a secret");
             }
             assertThat(readByTheWorker(source, worktree)).isEqualTo(HookAnswer.PROCEED);
             assertThat(readByThePrimary(source)).isEqualTo(HookAnswer.PROCEED);
