@@ -7,6 +7,7 @@ public final class StatusReports {
     private static final String EDI = "edi";
     private static final String STATUS = "status";
     private static final String EXPANSION = "$";
+    private static final String FILE_OF_ARGUMENTS = "@";
 
     private StatusReports() {
     }
@@ -27,6 +28,10 @@ public final class StatusReports {
 
     private static boolean takesNothingFromElsewhere(ShellCommand command) {
         return !command.argumentsFromInput() && command.assignedVariables().isEmpty()
-                && command.arguments().stream().noneMatch(word -> word.redirectionTarget() || word.isSubstituted() || word.text().contains(EXPANSION));
+                && command.arguments().stream().noneMatch(StatusReports::takesFromElsewhere);
+    }
+
+    private static boolean takesFromElsewhere(ShellWord word) {
+        return word.redirectionTarget() || word.isSubstituted() || word.text().contains(EXPANSION) || word.text().startsWith(FILE_OF_ARGUMENTS);
     }
 }

@@ -13,14 +13,9 @@ record ForgeApiCall(String method, List<String> fields, List<String> endpoints) 
     private static final Set<String> READING_METHODS = Set.of("GET", "HEAD");
     private static final List<Pattern> MERGE_ENDPOINTS = List.of(
             Pattern.compile("(^|/)pulls/[^/]+/merge$"),
-            Pattern.compile("(^|/)repos/[^/]+/[^/]+/merges$"),
+            Pattern.compile("(^|/)(repos/[^/]+/[^/]+|repositories/[^/]+)/merges$"),
             Pattern.compile("(^|/)merge_requests/[^/]+/merge$"));
     private static final Pattern GRAPHQL_ENDPOINT = Pattern.compile("(^|/)graphql$");
-    private static final Pattern GRAPHQL_STRINGS = Pattern.compile("\"\"\"[\\s\\S]*?\"\"\"|\"(?:\\\\.|[^\"\\\\])*\"");
-    private static final Pattern MUTATION = Pattern.compile("(?<![\\w$])mutation(?!\\w)");
-    private static final Pattern MERGING_MUTATION = Pattern.compile(
-            "(?<![\\w$])(mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest|mergeBranch|mergeRequestAccept)(?!\\w)",
-            Pattern.CASE_INSENSITIVE);
     private static final Pattern MERGE_ARMING_SETTING = Pattern.compile("(^|[?&])(merge_when_pipeline_succeeds|auto_merge)(=|&|$)");
     private static final Pattern QUERY_OR_FRAGMENT = Pattern.compile("[?#].*$");
     private static final Pattern REPEATED_SLASHES = Pattern.compile("/{2,}");
@@ -45,20 +40,12 @@ record ForgeApiCall(String method, List<String> fields, List<String> endpoints) 
 
     private boolean isAMergingMutation() {
         return endpoints.stream().map(ForgeApiCall::pathOf).anyMatch(path -> GRAPHQL_ENDPOINT.matcher(path).find())
-                && fields.stream().map(ForgeApiCall::withoutStrings).anyMatch(ForgeApiCall::namesAMergingMutation);
+                && fields.stream().map(GraphQlDocument::new).anyMatch(GraphQlDocument::mergesOrArmsAMerge);
     }
 
     private static String pathOf(String endpoint) {
         String path = QUERY_OR_FRAGMENT.matcher(endpoint.toLowerCase(Locale.ROOT)).replaceFirst("");
         return TRAILING_SLASHES.matcher(REPEATED_SLASHES.matcher(path).replaceAll("/")).replaceFirst("");
-    }
-
-    private static String withoutStrings(String document) {
-        return GRAPHQL_STRINGS.matcher(document).replaceAll(" ");
-    }
-
-    private static boolean namesAMergingMutation(String document) {
-        return MUTATION.matcher(document).find() && MERGING_MUTATION.matcher(document).find();
     }
 
     private boolean writes() {
@@ -90,9 +77,11 @@ record ForgeApiCall(String method, List<String> fields, List<String> endpoints) 
         private static final String SHORT_OPTION = "-";
         private static final String JOINED_VALUE = "=";
         private static final Map<String, Option> LONG_OPTIONS = Map.of(
-                "--method", Option.METHOD, "--field", Option.FIELD, "--raw-field", Option.FIELD, "--input", Option.BODY_FILE);
+                "--method", Option.METHOD, "--field", Option.FIELD, "--raw-field", Option.FIELD, "--input", Option.BODY_FILE,
+                "--header", Option.VALUE_NOT_JUDGED, "--preview", Option.VALUE_NOT_JUDGED, "--jq", Option.VALUE_NOT_JUDGED, "--template", Option.VALUE_NOT_JUDGED,
+                "--hostname", Option.VALUE_NOT_JUDGED, "--cache", Option.VALUE_NOT_JUDGED);
         private static final Map<Character, Option> SHORT_OPTIONS = Map.of(
-                'X', Option.METHOD, 'f', Option.FIELD, 'F', Option.FIELD, 'H', Option.NOT_JUDGED, 'p', Option.NOT_JUDGED, 'q', Option.NOT_JUDGED, 't', Option.NOT_JUDGED);
+                'X', Option.METHOD, 'f', Option.FIELD, 'F', Option.FIELD, 'H', Option.VALUE_NOT_JUDGED, 'p', Option.VALUE_NOT_JUDGED, 'q', Option.VALUE_NOT_JUDGED, 't', Option.VALUE_NOT_JUDGED);
         private static final String READ_WITHOUT_A_BODY = "GET";
         private static final String WRITE_WITH_A_BODY = "POST";
 
@@ -155,9 +144,6 @@ record ForgeApiCall(String method, List<String> fields, List<String> endpoints) 
         }
 
         private int readShortValue(List<String> arguments, int index, Option option, String rest) {
-            if (option == Option.NOT_JUDGED) {
-                return index + 1;
-            }
             if (rest.isEmpty()) {
                 take(option, valueAt(arguments, index + 1));
                 return index + 2;
@@ -171,6 +157,8 @@ record ForgeApiCall(String method, List<String> fields, List<String> endpoints) 
                 case METHOD -> method = value;
                 case FIELD -> fields.add(value);
                 case BODY_FILE -> body = true;
+                case VALUE_NOT_JUDGED -> {
+                }
             }
         }
 
@@ -186,7 +174,7 @@ record ForgeApiCall(String method, List<String> fields, List<String> endpoints) 
             METHOD,
             FIELD,
             BODY_FILE,
-            NOT_JUDGED
+            VALUE_NOT_JUDGED
         }
     }
 }

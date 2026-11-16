@@ -66,7 +66,8 @@ class ShellGuardTest {
         "ls core.(pkill|lamp)",
         "2>/dev/null pkill java",
         ">/tmp/kills.log killall -q java",
-        "sudo 2>&1 pkill java"})
+        "sudo 2>&1 pkill java",
+        "{fd}>/dev/null pkill java"})
     void refusesSignalsByPattern(String command) {
         assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(Rule.SIGNAL_BY_PATTERN);
     }
@@ -272,9 +273,15 @@ class ShellGuardTest {
         "gh api -iX=PUT repos/owner/repo/pulls/12/merge",
         "gh api --method=PUT -- repos/owner/repo/pulls/12/merge",
         "gh api repos/owner/repo/merges -iF base=main -iF head=feature/EDI-5",
+        "gh api repositories/123456/merges -f base=main -f head=feature/EDI-5",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge -t -XGET",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge --jq -XGET",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge -iq -XGET",
         "glab api -iXPUT projects/4/merge_requests/7/merge",
         "gh api graphql -f $'query=mutation { #\\r mergePullRequest(input: {pullRequestId: \"PR_1\"}) { clientMutationId } }'",
         "gh api graphql -f 'query=mutation { #\r mergePullRequest(input: {pullRequestId: \"PR_1\"}) { clientMutationId } }'",
+        "gh api graphql -f id=PR_1 -f $'query=mutation($id: ID!) { # \"\\n mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } # \"\\n}'",
+        "gh api graphql -f id=PR_1 -f 'query=mutation($id: ID!) { # \"\n mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } # \"\n}'",
         "glab api -X PUT projects/4/merge_requests/7 -f merge_when_pipeline_succeeds=true",
         "glab api -X PUT 'projects/4/merge_requests/7?auto_merge=true'",
         "git push -o merge_request.merge_when_pipeline_succeeds origin feature/EDI-5",

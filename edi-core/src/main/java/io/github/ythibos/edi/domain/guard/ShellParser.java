@@ -20,6 +20,7 @@ final class ShellParser {
     private static final String EMPTY_GROUP = "()";
     private static final String EXPLICIT_QUALIFIERS = "#q";
     private static final Pattern CODE_RUNNING_QUALIFIER = Pattern.compile("\\+[A-Za-z_]");
+    private static final Pattern FILE_DESCRIPTOR = Pattern.compile("[0-9]+|\\{[A-Za-z_][A-Za-z0-9_]*\\}");
     private static final Function<String, Redirection> NOT_REDIRECTED = _ -> Redirection.NONE;
 
     private final String text;
@@ -208,7 +209,7 @@ final class ShellParser {
 
     private boolean namesAFileDescriptor(String written) {
         boolean redirectedNext = !atEnd() && (current() == '<' || current() == '>');
-        return redirectedNext && !written.isEmpty() && written.chars().allMatch(Character::isDigit);
+        return redirectedNext && FILE_DESCRIPTOR.matcher(written).matches();
     }
 
     private void readWordPart(WrittenWord written, List<ShellCommand> substitutions) {

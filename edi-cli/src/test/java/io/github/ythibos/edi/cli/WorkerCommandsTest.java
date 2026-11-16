@@ -129,6 +129,19 @@ class WorkerCommandsTest {
     }
 
     @Test
+    void reportsAWordThatStartsWithAnAtSignAsWrittenNotAsTheFileItNames() throws IOException {
+        Path secret = Files.writeString(home.resolve("secret.txt"), "the secret\n");
+        core.answering(200, "Recorded blocked for fit-lamp#1.\n");
+
+        Edi.commandLine(new Edi(Map.copyOf(environment), new ByteArrayInputStream(new byte[0])))
+                .setOut(new PrintWriter(out, true))
+                .setErr(new PrintWriter(err, true))
+                .execute("status", "blocked", "--", "@" + secret);
+
+        assertThat(core.received().body()).isEqualTo("{\"state\":\"blocked\",\"text\":\"@" + secret + "\"}");
+    }
+
+    @Test
     void readsALongStatusFromStandardInput() {
         core.answering(200, "Recorded done for fit-lamp#1.\n");
 

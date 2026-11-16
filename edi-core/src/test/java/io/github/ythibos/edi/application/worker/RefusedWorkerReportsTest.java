@@ -55,6 +55,8 @@ class RefusedWorkerReportsTest {
                 "edi status working -- done && pkill java",
                 "EDI_ROLE=primary edi status working -- done",
                 "edi status working -- done > .claude/settings.local.json",
+                "edi status blocked @" + token,
+                "edi status blocked --key token -- @" + token,
                 "./edi status blocked --key token -- " + token,
                 worktree.resolve("edi") + " status blocked --key token -- " + token)) {
             assertThat(shell(command).verdict()).as(command).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
