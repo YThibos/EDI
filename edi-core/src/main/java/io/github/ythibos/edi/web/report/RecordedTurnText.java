@@ -16,7 +16,7 @@ class RecordedTurnText implements TextPresenter<RecordedTurn> {
 
     @Override
     public String text(RecordedTurn recorded) {
-        return "Recorded. This turn's report holds " + contents(recorded.recorded()) + "; the stop hands it to you to paste.\n";
+        return "Recorded. This turn's report holds " + contents(recorded.recorded()) + "; the stop hook shows it, unless your reply names each item.\n";
     }
 
     private static String contents(Turn turn) {

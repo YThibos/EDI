@@ -4,7 +4,7 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "turn",
-        description = "Records this turn's items for its turn report as they happen; the stop hook renders the report from them and hands it over to paste.",
+        description = "Records this turn's items for its turn report as they happen; the stop hook renders the report from them and shows it, unless the reply names every item.",
         synopsisSubcommandLabel = "COMMAND",
         subcommands = {TurnDoneCommand.class, TurnNextCommand.class, TurnRecordCommand.class})
 final class TurnCommand extends CommandGroup {

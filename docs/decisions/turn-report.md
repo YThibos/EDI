@@ -4,7 +4,7 @@
 
 ## Context
 
-Every state-changing turn ends with a report pasted into the chat (I-21), and every open decision appears in every report until it is answered (I-19).
+Every turn that changes something for the captain ends with the turn report, shown once in the chat (I-21), and every open decision appears in every report that is shown until it is answered (I-19).
 That report was the full boxed captain report: the decision zone with every card in full, then done, ongoing, next, parked and the backlog, headed by the presence and the heavy runs.
 With several tasks running in parallel, the captain scrolled past the same cards and the same state in every turn, while the chat is where the primary and the captain talk about what needs him.
 The overview of the fleet already has two homes that the captain opens on purpose: `edi sitrep` and the console's sitrep page ([console](console.md)).
@@ -23,10 +23,15 @@ A decision in the gathering round is one line, `DecisionZone.InTheRound`, saying
 A report with no session, or a session that has seen no report yet, draws every card in full.
 Ongoing work, parked work, the backlog, the presence and the heavy-runs `Builds:` line are state, not calls for the captain, so the turn report leaves them out.
 A failure or blocker that needs the captain always reaches the turn report, as a decision or as a done item, and is never left to the sitrep.
-A turn report with nothing in it is the one line `Nothing needs you; /sitrep shows the rest.`
-At the stop of a turn that changed state or recorded items while the captain is present, the Stop hook renders the turn report itself and hands it over in its reason, which tells the primary to paste it verbatim in one fenced block; the hook passes its pane's width, so the report fits the pane as `edi report` does ([wakes-and-turn-end](wakes-and-turn-end.md)).
-A turn report or a sitrep shown mid-turn, as `/sitrep` shows one, covers only what the turn recorded before it: the hook hands over a report again only for an item recorded after it, since each item keeps the moment it was recorded.
-A turn that recorded nothing and changed no state, or that the captain keeps quiet or away, ends without a report.
+A turn report with nothing in it is the one line `Nothing needs you; /sitrep shows the rest.` for `edi report`, and the stop hook shows nothing at all.
+At the stop of a turn that raised something for the captain or recorded items while the captain is present, the Stop hook renders the turn report itself and shows it as its own `systemMessage`, never as the reason of a held stop, so the primary pastes nothing and the captain reads the report once; the hook passes its pane's width, so the report fits the pane as `edi report` does ([wakes-and-turn-end](wakes-and-turn-end.md)).
+A turn raised something for the captain when an event of `ReachesTheCaptain` followed the turn's mark: a decision raised or its round closed, a draft recorded or opened, a branch delivered, a change applied or not applied, a mechanical change accepted, a pipeline run finished, a board armed or its round posted, or a worker's done; a worker's other reports, the primary's steers and every other event leave a turn that handled a wake without a box.
+The hook reads the primary's last message from the Stop payload's `last_assistant_message`, and `TurnReport.isNamedIn` checks it in code against the report's items: each open decision, each board bound decision and each decision of a board by its number, each ready review, each changing request and each board by its address, and each recorded done or next item by its own words, compared without case, markup or spacing (`Reply`).
+When the reply names every item, and no worker question waits, the hook shows nothing; the calendar line, a standing state, never forces a box on its own.
+Whenever the hook shows the box, or finds it named, it records the report as rendered for the turn, so no later stop of the turn shows it again, and a stop the hook holds first, for an undelivered answer or a missing wake stream, shows the report at the stop after.
+A worker's question stops being listed as `Waiting on EDI` once a steer that resolves its key is sent, not only once the steer is acknowledged (`FleetSnapshotQuery`).
+A turn report or a sitrep shown mid-turn, as `/sitrep` shows one, covers only what the turn recorded before it: the hook shows a report again only for an item recorded after it, since each item keeps the moment it was recorded.
+A turn that recorded nothing and raised nothing for the captain, or that the captain keeps quiet or away, ends without a report.
 
 ## Why
 
@@ -35,7 +40,13 @@ The core renders the report from what the primary recorded as the turn went, so 
 A card he has already seen needs only enough to recognise and answer it, and its one line keeps I-19 without repeating the card.
 Measuring "already seen" from the last report of an earlier turn means a card raised between turns, or in a quiet turn without a report, still shows in full in the first report after it, and a report rendered twice in one turn shows the same cards twice.
 
+On 16 November 2026 the captain worked a day through replies under topic headers, each ending with what is open with him, and every turn then ended with the box twice, as the stop hook's message and as the primary's paste, listing worker questions the primary had already answered in the same turn.
+
 ## Alternatives rejected
+
+- Keeping the hand-over and telling the primary to leave the box out when the reply says everything - a rule left to the primary's judgement, which the captain asked to be made in code.
+- Reading the whole transcript for the turn's replies - the Stop payload already carries the last message, the reply the captain reads last, and a transcript read races its own flush.
+- Storing the waiting entries at the start of the turn to tell what changed - it needs a store migration, and the event log already says what reached the captain.
 
 - Trimming the sitrep itself - the captain asked for the overview to stay where it is, and the golden files pin its approved layout.
 - Drawing a card in full only when its raising falls inside the current turn - a decision raised while the primary waited between turns would never show in full.
@@ -48,8 +59,10 @@ Measuring "already seen" from the last report of an earlier turn means a card ra
 
 - Good: a turn report is as long as what needs the captain, and a quiet turn's report is one line.
 - Good: the sitrep, the console page and their golden files did not change.
-- Good: a state-changing turn ends with its report in the same reply and no extra call.
-- Bad: a Stop hook can give the primary text only by holding its stop, so the hand-over still holds it once, and counts toward the three held stops of a turn.
+- Good: a turn that raised something ends with its report once, in the same reply, with no held stop and no extra call.
+- Good: a reply that names each decision by number and each review by address ends without a box, and a wake that changed nothing for the captain never prints one.
+- Bad: a turn whose stop was held first is judged on its last message alone, so a reply written before the hold is not seen and the box shows.
+- Bad: the box sits under the reply as the hook's own message, which Claude Code prefixes with `Stop says:` as a notice, so the message starts with a line break to keep the box's first line aligned, and it is not a fenced block the primary wrote.
 - Bad: the turn report no longer shows what runs or waits in the backlog; the captain asks for `/sitrep` or opens the console page for that.
 - Bad: a card is drawn in full only once per session, so a captain who missed the report that showed it reads the card with `/sitrep` or on the console.
 
@@ -63,3 +76,4 @@ When the captain asks for something more in the turn report, or the report is re
 - 03/11/2026: a worker waited an hour on a question the primary never saw while every turn report said nothing was waiting, so each open worker question got a `Waiting on EDI` line in the zone (EDI-154).
 - 09/11/2026: 28 of 33 chat answer rounds carried a single decision, so a running ship's decision waits in the console for its round, shown as one line, and is never drawn in full in the turn report (EDI-96).
 - 13/11/2026: the primary records the turn's items with `edi turn` as they happen, and the Stop hook renders the turn report and hands it over to paste instead of refusing the stop until the primary rendered it (EDI-269).
+- 16/11/2026: the hook began showing the turn report once as its own message and leaving it out when the reply names every item, after the captain read it twice under every reply, and a turn that only handled a wake began ending without a box (EDI-292).

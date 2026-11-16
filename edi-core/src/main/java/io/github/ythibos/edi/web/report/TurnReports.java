@@ -36,8 +36,9 @@ public class TurnReports {
         this.presenter = presenter;
     }
 
-    public String handedOverIn(UUID session, Integer paneWidth) {
-        return presenter.text(shownIn(Optional.of(session), paneWidth));
+    public Optional<String> shownAtTheStopOf(UUID session, Integer paneWidth, Reply reply) {
+        TurnReport report = shownIn(Optional.of(session), paneWidth);
+        return report.hasNothingForTheCaptain() || report.isNamedIn(reply) ? Optional.empty() : Optional.of(presenter.text(report));
     }
 
     TurnReport shownIn(Optional<UUID> session, Integer paneWidth) {

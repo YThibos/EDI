@@ -183,7 +183,7 @@ public class PrimaryHooks {
         if (turn == null) {
             return TurnEnd.ENDS;
         }
-        return TurnEnd.of(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), turnItems.lastRecordedIn(session.id()).orElse(null),
+        return TurnEnd.of(turn, new TurnCircumstances(events.anyReachingTheCaptainAfter(turn.eventMark()), turnItems.lastRecordedIn(session.id()).orElse(null),
                 presenceNow.current().keepsTheChatQuiet(), !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), streams.liveOf(session.id()).isPresent(),
                 !undeliveredAnswers.waiting().isEmpty()));
     }

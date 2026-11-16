@@ -373,7 +373,7 @@ class NativeSmokeIT {
         CommandRun asJson = edi("", "report", "--json");
         ediIn(Path.of(""), primary, session + ",\"reason\":\"prompt_input_exit\"}", "hook", "session-end");
 
-        assertThat(recorded.output()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hands it to you to paste.\n");
+        assertThat(recorded.output()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hook shows it, unless your reply names each item.\n");
         assertThat(handedOver.output()).contains("\"decision\":\"block\"", "paste it verbatim in one fenced block", "Which lantern?", "Rendered natively");
         assertThat(report.exitCode()).isZero();
         assertThat(report.output()).startsWith("╔══ NEEDS YOUR DECISION ══ ")

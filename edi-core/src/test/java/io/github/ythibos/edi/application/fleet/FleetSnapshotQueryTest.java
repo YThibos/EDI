@@ -359,7 +359,7 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void putsAWorkerQuestionBeforeEdiWithHowLongItWaitedUntilASteerThatResolvesItIsAcknowledged() {
+    void putsAWorkerQuestionBeforeEdiWithHowLongItWaitedUntilASteerThatResolvesItIsSent() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
         ask(lamp, "Which socket does the lamp take?");
@@ -369,7 +369,7 @@ class FleetSnapshotQueryTest {
         home.steerWorker().steer(new TaskReference.ById(lamp.id()), "The bayonet socket.", SOCKET, Actor.PRIMARY);
         WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
         home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
-        WaitingOnTheCaptain settled = home.fleetSnapshot().snapshot().waiting();
+        WaitingOnTheCaptain acknowledged = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(asked.workerQuestions()).singleElement().satisfies(question -> {
             assertThat(question.task().id()).isEqualTo(lamp.id());
@@ -378,9 +378,9 @@ class FleetSnapshotQueryTest {
         });
         assertThat(asked.isEmpty()).isTrue();
         assertThat(asked.hasNothingWaiting()).isFalse();
-        assertThat(steered.workerQuestions()).hasSize(1);
-        assertThat(settled.workerQuestions()).isEmpty();
-        assertThat(settled.hasNothingWaiting()).isTrue();
+        assertThat(steered.workerQuestions()).isEmpty();
+        assertThat(steered.hasNothingWaiting()).isTrue();
+        assertThat(acknowledged.workerQuestions()).isEmpty();
     }
 
     @Test

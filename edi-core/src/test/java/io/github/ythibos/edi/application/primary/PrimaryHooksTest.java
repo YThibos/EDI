@@ -240,18 +240,46 @@ class PrimaryHooksTest {
     }
 
     @Test
-    void handsOverTheReportAtTheStopOfATurnThatChangedState() {
+    void showsTheReportAtTheStopOfATurnThatRaisedADecisionAndNoMoreOnceItWasRendered() {
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+        home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Which lamp?"), Actor.PRIMARY);
 
-        TurnEnd handedOver = home.primaryHooks().stopping(primary);
+        TurnEnd shown = home.primaryHooks().stopping(primary);
         home.primaryHooks().reportRendered(primary);
-        TurnEnd afterThePaste = home.primaryHooks().stopping(primary);
+        TurnEnd afterTheReport = home.primaryHooks().stopping(primary);
 
-        assertThat(handedOver).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-        assertThat(afterThePaste).isEqualTo(TurnEnd.ENDS);
+        assertThat(shown).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
+        assertThat(shown.holdsTheStop()).isFalse();
+        assertThat(afterTheReport).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void endsATurnWithoutTheReportWhenItOnlyHandledAWakeAndChangedNothingForTheCaptain() {
+        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        streamIn(primary, home.processes().ownId(), true);
+        home.primaryHooks().promptSubmitted(primary, "<task-notification>fit-lamp#1 is working</task-notification>");
+        home.recordStatus().report(worker.id(), StatusState.WORKING, new StatusKey("wiring"), null, "Wiring the lamp.");
+        home.addTask().add(Intakes.ship("fit-bell", "Fit the bell"), Actor.PRIMARY);
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
+    }
+
+    @Test
+    void showsTheReportOfATurnWhoseWakeWasAWorkersQuestionTheCaptainMustAnswer() {
+        Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        UUID primary = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
+        streamIn(primary, home.processes().ownId(), true);
+        home.primaryHooks().promptSubmitted(primary, "<task-notification>fit-lamp#1 asks</task-notification>");
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
+        home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Which lamp?"), Actor.PRIMARY);
+
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
     }
 
     @Test
@@ -270,13 +298,14 @@ class PrimaryHooksTest {
         home.changePresence().quiet();
         home.primaryHooks().promptSubmitted(primary, "<task-notification>done</task-notification>");
         home.addTask().add(Intakes.ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+        home.raiseDecision().raise(TaskReference.parse("fit-lamp"), Cards.card("Which lamp?"), Actor.PRIMARY);
         home.recordTurnItems().record(primary, new Turn(List.of(new TurnItem(List.of("harness"), "Queued the brass lamp")), List.of(), Map.of()));
 
         assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
     }
 
     @Test
-    void handsOverTheReportOfATurnWhoseItemsWereRecordedOneByOneAndForgetsThemWhenTheNextTurnStarts() {
+    void showsTheReportOfATurnWhoseItemsWereRecordedOneByOneAndForgetsThemWhenTheNextTurnStarts() {
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "What did the lamp review say?");
@@ -287,17 +316,17 @@ class PrimaryHooksTest {
         home.recordTurnItems().record(primary, new Turn(List.of(read), List.of(), Map.of()));
         home.recordTurnItems().record(primary, new Turn(List.of(), List.of(fix), Map.of()));
         Turn recorded = home.recordTurnItems().record(primary, new Turn(List.of(), List.of(test), Map.of("fit-lamp", new TaskWording(null, "wired", null))));
-        TurnEnd handedOver = home.primaryHooks().stopping(primary);
+        TurnEnd shown = home.primaryHooks().stopping(primary);
         home.primaryHooks().promptSubmitted(primary, "Thanks.");
 
         assertThat(recorded).isEqualTo(new Turn(List.of(read), List.of(fix, test), Map.of("fit-lamp", new TaskWording(null, "wired", null))));
         assertThat(home.turnItems().recordedIn(primary)).isEqualTo(Turn.NONE);
-        assertThat(handedOver).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(shown).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
         assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.ENDS);
     }
 
     @Test
-    void handsOverTheReportAgainForAnItemRecordedAfterAReportShownMidTurn() {
+    void showsTheReportAgainForAnItemRecordedAfterAReportShownMidTurn() {
         UUID primary = UUID.randomUUID();
         home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
         home.primaryHooks().promptSubmitted(primary, "Show me the sitrep, then dispatch what is ready.");
@@ -306,7 +335,7 @@ class PrimaryHooksTest {
         home.clock().advance(Duration.ofMinutes(1));
         home.recordTurnItems().record(primary, new Turn(List.of(new TurnItem(List.of("harness"), "Dispatched the lamp")), List.of(), Map.of()));
 
-        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
+        assertThat(home.primaryHooks().stopping(primary)).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
     }
 
     @Test

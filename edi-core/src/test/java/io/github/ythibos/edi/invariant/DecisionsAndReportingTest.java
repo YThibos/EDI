@@ -522,12 +522,12 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-21 Every state-changing turn ends with the turn report")
+    @DisplayName("I-21 A turn that changes something for the captain ends with the turn report, shown once")
     class StateChangingTurnsEndWithTheReport {
 
         @Test
-        @DisplayName("AT-21 the primary's Stop hook hands over the turn report in a state-changing turn until a report was shown in that turn")
-        void theStopHookHandsOverTheReport() throws IOException {
+        @DisplayName("AT-21 the primary's Stop hook shows the turn report in a turn that raised something for the captain until a report was shown in that turn")
+        void theStopHookShowsTheReport() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             UUID primary = UUID.randomUUID();
             home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
@@ -536,13 +536,13 @@ class DecisionsAndReportingTest {
 
             home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
             home.addTask().add(ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+            home.raiseDecision().raise(TaskReference.parse("fit-lamp"), card("Which lamp?"), Actor.PRIMARY);
             TurnEnd unreported = home.primaryHooks().stopping(primary);
             home.primaryHooks().reportRendered(primary);
             TurnEnd reported = home.primaryHooks().stopping(primary);
 
             assertThat(quietTurn).isEqualTo(TurnEnd.ENDS);
-            assertThat(unreported).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-            assertThat(unreported.instruction()).isEqualTo("This turn's report follows: paste it verbatim in one fenced block, then stop.");
+            assertThat(unreported).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
             assertThat(reported).isEqualTo(TurnEnd.ENDS);
         }
     }

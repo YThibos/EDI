@@ -10,12 +10,12 @@ user-invocable: true
 
 The situation report is read-only: it never dispatches, steers, answers, cleans up or edits the backlog.
 It is the overview: every open decision in full, what runs, what is parked and, when nothing runs, the backlog.
-The turn report, which the stop hook hands over, is the chat's attention list instead: what needs the captain now, and the done and next items this turn recorded with `edi turn`.
+The turn report, which the stop hook shows once, is the chat's attention list instead: what needs the captain now, and the done and next items this turn recorded with `edi turn`.
 
 ## Plain `/sitrep`
 
 1. Run `edi sitrep`; it draws the items this turn recorded with `edi turn` in its done and next.
-   It covers only what the turn recorded before it, so the stop hook hands over a turn report after it only when an item is recorded later.
+   It covers only what the turn recorded before it, so the stop hook shows a turn report after it only when an item is recorded later.
 2. Answer with one plain line to the captain, then the output verbatim in one fenced block.
 
 ## `/sitrep board`
