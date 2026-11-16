@@ -32,6 +32,10 @@ public record PrimaryTurn(Instant startedAt, long eventMark, Instant reportedAt,
         return reportedAt != null && !reportedAt.isBefore(startedAt);
     }
 
+    public boolean reportedSince(Instant at) {
+        return renderedTheReport() && !reportedAt.isBefore(at);
+    }
+
     private Instant latestReportAt() {
         return reportedAt == null ? previousReportAt : reportedAt;
     }

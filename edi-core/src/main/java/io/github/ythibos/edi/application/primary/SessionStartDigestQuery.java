@@ -2,7 +2,7 @@ package io.github.ythibos.edi.application.primary;
 
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -22,7 +22,7 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
-import io.github.ythibos.edi.domain.primary.WeeklyUpkeep;
+import io.github.ythibos.edi.domain.primary.WeeklyGardening;
 
 @Service
 public class SessionStartDigestQuery {
@@ -63,7 +63,7 @@ public class SessionStartDigestQuery {
         return new SessionStartDigest(anchor.forSessionStartedIn(projectDirectory), roles.standingOf(session), personality.current(),
                 transaction.execute(_ -> limitStopToTell(session)), fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()),
                 transaction.execute(_ -> wakes.unacknowledged().size()), presence.current(), memory.check(), memory.workarounds(),
-                WeeklyUpkeep.isSuggestedOn(LocalDate.ofInstant(clock.now(), clock.zone())), home.missing(), null);
+                WeeklyGardening.isDueAt(LocalDateTime.ofInstant(clock.now(), clock.zone())), home.missing(), null);
     }
 
     private PrimarySession limitStopToTell(UUID session) {

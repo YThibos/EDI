@@ -50,16 +50,23 @@ public class AddTask {
     }
 
     public AddedTask add(NewTask newTask, Actor actor) {
+        CheckedTask checked = checked(newTask);
+        return transaction.execute(_ -> queued(checked, actor));
+    }
+
+    public CheckedTask checked(NewTask newTask) {
         requireItsProject(newTask.intake());
         requireRegistered(newTask.intake().projects());
-        WorkKeying keying = keys.keyingFor(newTask.intake(), newTask.notes(), newTask.ticket());
-        return transaction.execute(_ -> {
-            requireOpen(newTask.intake().blockedBy());
-            Task task = queued(newTask, keyedIntake(newTask.intake(), keying));
-            tasks.insert(task);
-            events.record(new TaskAdded(task.id(), task.intake()), actor, task.created());
-            return new AddedTask(task.id(), ticketOf(keying, task), ticketDecisionFor(task, keying, actor));
-        });
+        return new CheckedTask(newTask, keys.keyingFor(newTask.intake(), newTask.notes(), newTask.ticket()));
+    }
+
+    public AddedTask queued(CheckedTask checked, Actor actor) {
+        NewTask newTask = checked.newTask();
+        requireOpen(newTask.intake().blockedBy());
+        Task task = taskOf(newTask, keyedIntake(newTask.intake(), checked.keying()));
+        tasks.insert(task);
+        events.record(new TaskAdded(task.id(), task.intake()), actor, task.created());
+        return new AddedTask(task.id(), ticketOf(checked.keying(), task), ticketDecisionFor(task, checked.keying(), actor));
     }
 
     private static void requireItsProject(Intake intake) {
@@ -88,7 +95,7 @@ public class AddTask {
                 });
     }
 
-    private Task queued(NewTask newTask, Intake intake) {
+    private Task taskOf(NewTask newTask, Intake intake) {
         return Task.queued(idFor(newTask), intake, newTask.notes(), clock.now());
     }
 

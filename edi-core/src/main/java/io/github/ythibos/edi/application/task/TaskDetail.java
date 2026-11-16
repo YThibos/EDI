@@ -7,14 +7,14 @@ import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 
 public record TaskDetail(
         Task task,
-        List<Blocker> blockers,
+        List<Wait> waits,
         Decision decision,
         Delivery delivery,
         PipelineRun pipelineRun,
@@ -24,7 +24,7 @@ public record TaskDetail(
         List<RecordedEvent> timeline) {
 
     public TaskDetail {
-        blockers = List.copyOf(blockers);
+        waits = List.copyOf(waits);
         stages = List.copyOf(stages);
         timeline = List.copyOf(timeline);
     }

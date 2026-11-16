@@ -33,6 +33,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import io.github.ythibos.edi.adapter.store.DispatchStore;
+import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.branch.BranchKind;
@@ -43,7 +44,14 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -55,6 +63,7 @@ import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.SyntheticSecrets;
 import jdk.jfr.consumer.RecordingFile;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Tag("adapter")
@@ -80,6 +89,9 @@ class ApiTest {
 
     @Autowired
     private WorkerTokens workerTokens;
+
+    @Autowired
+    private TaskStore tasks;
 
     @BeforeAll
     static void prepareTheHome() throws IOException {
@@ -132,6 +144,66 @@ class ApiTest {
     }
 
     @Test
+    void entersAPlanWhoseSlicesBecomeEligibleAsTheirWaitsAreMet() throws Exception {
+        HttpResponse<String> added = post("/api/plans", """
+                {"key":"HRN-40","title":"Light the harbour","project":"harness","report":"docs/research/HRN-40-plan.md","decision":"D44",
+                 "capacity":2,"effort":"xhigh","slices":[
+                  {"number":1,"title":"Fit the harbour lamp","category":"implementation","key":"HRN-41","body":"Use the brass fittings."},
+                  {"number":2,"title":"Paint the harbour lamp","category":"implementation","key":"HRN-42"},
+                  {"number":3,"title":"Oil the harbour gate","category":"implementation","key":"HRN-43","wait":"none"}]}""", TEXT);
+        String beforeTheMerge = get("/api/plans/HRN-40", TEXT).body();
+        putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.MERGED);
+        String afterTheMerge = get("/api/plans/HRN-40", TEXT).body();
+        String paintAfterTheMerge = get("/api/tasks/paint-the-harbour-lamp", TEXT).body();
+        waitForAScout(new TaskId("paint-the-harbour-lamp"), new TaskId("plan-work-on-paint-the-harbour-lamp"));
+        String behindItsScout = get("/api/plans/HRN-40", TEXT).body();
+        holdBack(new TaskId("oil-the-harbour-gate"), "after the storm");
+        String heldBack = get("/api/plans/HRN-40", TEXT).body();
+        putAt(new TaskId("fit-the-harbour-lamp"), TaskStage.RETIRED);
+
+        assertThat(added.statusCode()).isEqualTo(201);
+        assertThat(added.body()).isEqualTo("Planned HRN-40: queued 3 slices, fit-the-harbour-lamp, paint-the-harbour-lamp, oil-the-harbour-gate;"
+                + " edi plan show HRN-40 prints their stages and waits.\n");
+        assertThat(beforeTheMerge).isEqualTo("""
+                HRN-40 plan: Light the harbour
+                Project: harness
+                Report: docs/research/HRN-40-plan.md
+                Go: D44
+                Capacity: 2 slices at once
+                Effort: xhigh
+                Slices
+                  1  fit-the-harbour-lamp    HRN-41  queued  none            eligible
+                  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged
+                  3  oil-the-harbour-gate    HRN-43  queued  none            eligible
+                """);
+        assertThat(afterTheMerge).contains(
+                "  1  fit-the-harbour-lamp    HRN-41  merged  none\n",
+                "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  eligible\n",
+                "  3  oil-the-harbour-gate    HRN-43  queued  none            eligible\n");
+        assertThat(paintAfterTheMerge).doesNotContain("Waits for");
+        assertThat(behindItsScout).contains(
+                "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  waits for plan-work-on-paint-the-harbour-lamp to land (queued)\n");
+        assertThat(heldBack).contains("  3  oil-the-harbour-gate    HRN-43  queued  none            held (deferral, until your word): after the storm\n");
+        assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"");
+        assertThat(get("/api/tasks/fit-the-harbour-lamp", TEXT).body()).contains("Use the brass fittings.", "slice planned");
+    }
+
+    @Test
+    void refusesASecondPlanOnTheSameKeyAndAWaitOnALaterSlice() throws Exception {
+        String plan = """
+                {"key":"HRN-50","title":"Mend the pier","project":"harness","report":"docs/research/HRN-50-plan.md","decision":"D45","capacity":1,
+                 "slices":[{"number":1,"title":"Mend the pier planks","category":"implementation","key":"HRN-51"%s}]}""";
+
+        HttpResponse<String> onALaterSlice = post("/api/plans", plan.formatted(",\"wait\":\"after 2 landed\""), TEXT);
+        post("/api/plans", plan.formatted(""), TEXT);
+        HttpResponse<String> again = post("/api/plans", plan.formatted(""), TEXT);
+
+        assertRefusal(onALaterSlice, 400, "Slice 1 waits after 2 landed, and a slice waits only for an earlier slice of its plan.");
+        assertRefusal(again, 409, "A plan is already known by HRN-50; edi plan show HRN-50 prints it.");
+        assertRefusal(get("/api/plans/HRN-404", TEXT), 404, "No plan is known by HRN-404; edi plan add enters one.");
+    }
+
+    @Test
     void raisesAndAnswersADecisionThroughItsNumber() throws Exception {
         post("/api/tasks", "{\"id\":\"api-lamp\",\"kind\":\"captain\",\"title\":\"Choose the lamp\"}", TEXT);
 
@@ -154,6 +226,28 @@ class ApiTest {
         assertThat(answered.body()).isEqualTo("Recorded the answer to " + number + " (option A); api-lamp is done.\n");
         assertThat(get("/api/decisions?open=true", TEXT).body()).doesNotContain(number + "  api-lamp");
         assertThat(get("/api/decisions", JSON).body()).contains("\"verbatim\":\"" + number + " A\"", "\"channel\":\"chat\"");
+    }
+
+    @Test
+    void carriesTheAnswerToADecisionToTheWorkerWaitingOnItsQuestion() throws Exception {
+        String worker = workerTokenFor("api-carry");
+        send(as(worker, "/api/status", TEXT).header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"state\":\"needs-decision\",\"key\":\"lamp-colour\",\"text\":\"Brass or copper?\"}")));
+        String number = post("/api/tasks/api-carry/decision", """
+                {"title":"Which lamp colour?","context":"","options":[{"key":"A","text":"Brass"},{"key":"B","text":"Copper"}],"recommend":{"key":"A","why":"it matches"}}""",
+                TEXT).body().strip();
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"" + number + " B, copper\"}");
+
+        HttpResponse<String> answered = answerInSession(primary, number, "{\"option\":\"B\",\"message\":1}");
+        HttpResponse<String> inbox = send(as(worker, "/api/inbox", TEXT).GET());
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(answered.body()).endsWith(" The answer resolves lamp-colour, the question its worker waits on."
+                + " Message 1 waits for api-carry#1, whose window is closed; the message waits in its inbox.\n");
+        assertThat(inbox.body()).contains("Answer to " + number + " Which lamp colour?", "Chosen: option B, Copper",
+                "The captain's words: \"" + number + " B, copper\"", "lamp-colour");
     }
 
     @Test
@@ -201,14 +295,19 @@ class ApiTest {
 
     @Test
     void rendersTheSitrepForTheCallersPaneAndTheTurnReportWithOnlyWhatNeedsTheCaptain() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Paint the buoy.\"}");
         post("/api/tasks", "{\"id\":\"api-buoy\",\"kind\":\"captain\",\"title\":\"Choose the buoy\"}", TEXT);
         String number = post("/api/tasks/api-buoy/decision", """
                 {"title":"Which buoy colour?","context":"","options":[{"key":"A","text":"Red"}],"recommend":{"key":"A","why":"it shows"}}""", TEXT)
                 .body().strip();
         HttpResponse<String> sitrep = get("/api/report?paneWidth=90", TEXT);
-        HttpResponse<String> report = post("/api/report", """
-                {"done":[{"projects":["harness"],"text":"Painted the buoy"}],"next":[],"tasks":{}}""", TEXT);
+        turnItemsInSession(primary, """
+                {"done":[{"projects":["harness"],"text":"Painted the buoy"}],"next":[],"tasks":{}}""");
+        HttpResponse<String> report = turnReportInSession(primary);
         HttpResponse<String> asJson = get("/api/report", JSON);
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(sitrep.statusCode()).isEqualTo(200);
         assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(88);
@@ -228,14 +327,34 @@ class ApiTest {
     }
 
     @Test
-    void carriesTheTurnsItemsIntoTheSitrepWhenTheTurnIsPosted() throws Exception {
-        HttpResponse<String> sitrep = post("/api/report/sitrep", """
-                {"done":[{"projects":["harness"],"text":"Moored the buoy"}],"next":[],"tasks":{}}""", TEXT);
+    void carriesTheItemsRecordedInTheSessionsTurnIntoItsSitrep() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Moor the buoy.\"}");
+        HttpResponse<String> recorded = turnItemsInSession(primary, """
+                {"done":[{"projects":["harness"],"text":"Moored the buoy"}],"next":[],"tasks":{}}""");
+        HttpResponse<String> sitrep = send(inSession(primary, "/api/report", TEXT).GET());
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(recorded.body()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hands it to you to paste.\n");
 
         assertThat(sitrep.statusCode()).isEqualTo(200);
         assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(120);
         assertThat(sitrep.body()).contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Moored the buoy\n", "\nONGOING  (")
                 .doesNotContain("Nothing finished this turn");
+    }
+
+    @Test
+    void countsATurnsRewordedTasksInItsAcknowledgement() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Reword the anchor.\"}");
+        HttpResponse<String> recorded = turnItemsInSession(primary, """
+                {"tasks":{"api-anchor":{"text":"Weigh the anchor"}}}""");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(recorded.body())
+                .isEqualTo("Recorded. This turn's report holds 0 done items, 0 next items and 1 reworded task; the stop hands it to you to paste.\n");
     }
 
     @Test
@@ -260,8 +379,14 @@ class ApiTest {
 
     @Test
     void refusesAMalformedTurnOrParameterInOnePlainSentence() throws Exception {
-        assertRefusal(post("/api/report", "{\"done\":[{\"text\":\"x\"}],\"extra\":1}", TEXT), 400, "The turn takes only done, next and tasks, not extra.");
-        assertRefusal(post("/api/report", "[]", TEXT), 400, "The turn is one JSON object with done, next and tasks.");
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Moor the buoy.\"}");
+        assertRefusal(turnItemsInSession(primary, "{\"done\":[{\"text\":\"x\"}],\"extra\":1}"), 400, "The turn takes only done, next and tasks, not extra.");
+        assertRefusal(turnItemsInSession(primary, "[]"), 400, "The turn is one JSON object with done, next and tasks.");
+        assertRefusal(post("/api/turn", "{\"done\":[{\"text\":\"x\"}]}", TEXT), 403, "edi turn records the items of the primary's own turn, so it runs inside"
+                + " its Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID.");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
         assertRefusal(get("/api/report?paneWidth=wide", TEXT), 400, "The call's paneWidth parameter cannot be wide.");
         assertRefusal(get("/api/backlog?ready=maybe", TEXT), 400, "The call's ready parameter cannot be maybe.");
     }
@@ -544,9 +669,31 @@ class ApiTest {
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
         assertThat(queued.statusCode()).isEqualTo(201);
-        assertThat(unreported.body()).isEqualTo("{\"decision\":\"block\",\"reason\":\"This turn changed state: render the turn report with "
-                + "edi report --turn - and paste it verbatim, then stop.\"}");
+        assertThat(unreported.body()).startsWith("{\"decision\":\"block\",\"reason\":\"This turn's report follows: "
+                + "paste it verbatim in one fenced block, then stop.\\n\\n");
         assertThat(reported.statusCode()).isEqualTo(204);
+    }
+
+    @Test
+    void handsOverTheTurnReportWithTheItemsRecordedOneByOneAtTheStopOfTheTurn() throws Exception {
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"What did the anchor survey say?\"}");
+        turnItemsInSession(primary, "{\"done\":[{\"projects\":[\"harness\"],\"text\":\"Read the anchor survey\"}]}");
+        turnItemsInSession(primary, "{\"next\":[{\"projects\":[\"harness\"],\"text\":\"Weigh the anchor at dawn\"}]}");
+
+        HttpResponse<String> handedOver = primaryHook(primary, "stop", "{\"stop_hook_active\":false}");
+        HttpResponse<String> afterThePaste = primaryHook(primary, "stop", "{\"stop_hook_active\":true}");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(handedOver.statusCode()).isEqualTo(200);
+        JsonNode answer = new JsonMapper().readTree(handedOver.body());
+        assertThat(answer.path("decision").asString()).isEqualTo("block");
+        assertThat(answer.path("reason").asString())
+                .startsWith("This turn's report follows: paste it verbatim in one fenced block, then stop.\n\n")
+                .contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Read the anchor survey\n",
+                        "\nNEXT\n────\n  harness           • Weigh the anchor at dawn\n");
+        assertThat(afterThePaste.statusCode()).isEqualTo(204);
     }
 
     @Test
@@ -802,6 +949,23 @@ class ApiTest {
                 + " only the captain's word for one task lifts that task to xhigh or max.");
     }
 
+    private void waitForAScout(TaskId ship, TaskId scout) {
+        Task waiting = tasks.get(ship);
+        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null), "",
+                waiting.created()));
+        tasks.update(waiting.waitingFor(scout));
+    }
+
+    private void holdBack(TaskId id, String reason) {
+        Task task = tasks.get(id);
+        tasks.update(task.held(new CaptainHold(HoldKind.DEFERRAL, reason, HoldUntil.captainsWord(), task.created())));
+    }
+
+    private void putAt(TaskId id, TaskStage stage) {
+        Task task = tasks.get(id);
+        tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), task.hold(), task.created(), stage.isClosed() ? task.created() : null));
+    }
+
     private static HttpResponse<String> captainSaidInSession(UUID session, String said) throws Exception {
         return send(inSession(session, "/api/captain/said", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(said)));
     }
@@ -818,6 +982,10 @@ class ApiTest {
 
     private static HttpResponse<String> turnReportInSession(UUID session) throws Exception {
         return send(inSession(session, "/api/report", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}")));
+    }
+
+    private static HttpResponse<String> turnItemsInSession(UUID session, String items) throws Exception {
+        return send(inSession(session, "/api/turn", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(items)));
     }
 
     private static HttpRequest.Builder waitIn(UUID session) throws IOException {

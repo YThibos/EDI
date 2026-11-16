@@ -17,7 +17,7 @@ description: >-
 3. Add it with `edi task add --kind ship --project <project> --title "<title>" --body -`, the captain's words verbatim in the body: the ask, its boundaries, the full acceptance criteria and whether offline verification is accepted.
 4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, the issue's number on a project keyed by its GitHub issues, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without the captain's answer.
    A key the captain gives after intake goes on with `edi task key <task> <KEY>`, citing the captain's words with `--message <n>` when it answers an open ticket decision.
-5. A task blocked by another waits in the queue (`--blocked-by`).
+5. A task blocked by another waits in the queue until that task's work lands (`--blocked-by`); a plan of slices goes in with `edi plan add --from -`, each slice waiting as the plan names (`edi plan show <key>`).
 6. An unregistered project cannot receive a ship: ask the captain to register it, and confirm delivery, tracker, base branch and AI scaffolding with the captain.
 
 ## Dispatch
@@ -38,9 +38,12 @@ description: >-
 - Such a decision waits in the console for its round of decisions, and the core wakes you when the round is due: never put it to the captain on its own before then.
 - Only a decision that blocks the captain's current work gets `"urgent": true` on its card, which puts it before them at once.
 - On such a card, an option that would drop the task names `"authorises": "drop"` and one that would discard its work names `"authorises": "discard-work"`, so the captain's answer authorises exactly that act.
-- Carry the captain's answer back with `edi steer <task> --resolves <key>`.
+- An answer to a decision reaches the task's worker by itself in the same call when the worker waits on a question: `edi decision answer` sends it as a steer that resolves the question when the worker asked it no later than the decision was raised, and as a plain steer otherwise, which leaves that later question open.
+- When the answer went as a plain steer, settle the question it leaves open with your own steer; when the answer's confirmation names no steer, or `edi worker show <task>` lists none quoting an answer the decision-answered wake reports, it reached no worker, so carry it yourself with `edi steer <task>`, or into the dispatch or the task's notes when no worker serves the task.
 - A steer that changes a task's scope is first recorded with `edi task note <task>`, which rewrites the brief and the pipeline intent, so the pipeline's review counts it as asked for.
-- Settle every worker question with `--resolves <key>`: the sitrep page shows a worker's question as yours until the worker acknowledges the steer that resolves it.
+- An answer that changes a task's scope may already have reached its worker, so record it with `edi task note <task>` as soon as the decision-answered wake or the answer's confirmation shows it.
+- Settle a worker question that needs no decision card with one `edi steer <task> --resolves <key>`: the sitrep page shows a worker's question as yours until the worker acknowledges the steer that resolves it.
+- Your turn cannot end while an answered decision leaves its worker's question unresolved; the stop hook names the steer that carries it.
 - New requirements during validation become follow-up tasks unless they invalidate the work.
 
 ## Done, delivery and landing

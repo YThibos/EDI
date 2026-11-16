@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
+import io.github.ythibos.edi.application.supervision.LeaveTheOutageList;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.task.StageChange;
@@ -17,10 +18,12 @@ public class TaskStages {
 
     private final TaskStore tasks;
     private final EventLog events;
+    private final LeaveTheOutageList outageList;
 
-    public TaskStages(TaskStore tasks, EventLog events) {
+    public TaskStages(TaskStore tasks, EventLog events, LeaveTheOutageList outageList) {
         this.tasks = tasks;
         this.events = events;
+        this.outageList = outageList;
     }
 
     public Task moved(Task task, StageTrigger trigger, Actor actor, Instant at) {
@@ -31,6 +34,6 @@ public class TaskStages {
         Task moved = task.movedBy(change, at);
         tasks.update(moved);
         events.record(new StageChanged(change), actor, at);
-        return moved;
+        return outageList.onceNothingIsLeftToResume(moved, actor, at);
     }
 }

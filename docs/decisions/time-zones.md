@@ -14,7 +14,7 @@ Every time EDI shows a person is in the machine's local time zone, and every tim
 The `Clock` port names the machine's zone beside the moment (`Clock.zone`): `SystemClock` reads it from the system, `ManualClock` lets a test set it, and `ArchitectureRulesTest` refuses `ZoneId.systemDefault` and `TimeZone.getDefault` outside `adapter.clock`.
 `Moments` renders a moment as "2026-10-22 11:14 CEST" and a day as the machine's calendar day, with the zone's English short name so summer time shows, and every text presenter renders through it.
 `edi-sitrep.v1` carries `zone`, the machine's zone id, and the console renders every time on the sitrep page in that zone, not the browser's; on a screen 350 CSS pixels wide or narrower the header clock keeps only the time.
-Every rule that needs the machine's day, such as the calendar, the status line or the weekly upkeep, takes it from `Clock.zone`.
+Every rule that needs the machine's day, such as the calendar, the status line or the weekly gardening round, takes it from `Clock.zone`.
 
 ## Why
 

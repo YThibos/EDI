@@ -27,11 +27,11 @@ import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.domain.worker.Worker;
 
 @Service
@@ -197,9 +197,9 @@ public class FleetSnapshotQuery {
     }
 
     private List<Task> unresolvedBlockersOf(Task task) {
-        return tasks.blockersOf(task).stream()
-                .filter(not(Blocker::isResolved))
-                .map(blocker -> tasks.get(blocker.id()))
+        return tasks.waitsOf(task).stream()
+                .filter(not(Wait::isMet))
+                .map(wait -> tasks.get(wait.task()))
                 .toList();
     }
 

@@ -62,7 +62,7 @@ describe('SitrepPage', () => {
     expect(text(page, '.sr-foot .sr-meta-mono')).toBe('edi-sitrep.v1 · 2026-10-15 07:17 BST');
   });
 
-  it('counts every board, the decisions it answers, and every review that waits on the captain beside the decisions', async () => {
+  it('counts every board as one with the decisions it answers, and every review that waits on the captain beside the decisions', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush(
       sitrepFixture({
@@ -82,13 +82,13 @@ describe('SitrepPage', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    expect(texts(page, '.sr-stat__num')[0]).toBe('4');
-    expect(text(page, '.sr-section__head .sr-sub')).toBe('4 waiting on you, Commander');
+    expect(texts(page, '.sr-stat__num')[0]).toBe('3');
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('3 waiting on you, Commander');
     expect(text(page, '.sr-decision__title')).toBe('Which lamp?');
     expect(texts(page, '.sr-waiting__link')).toEqual(['http://127.0.0.1:4387/session/1a2b3c', 'https://github.com/example-owner/harness/pull/13']);
   });
 
-  it('counts only the decisions a board answers when it asks no question of its own', async () => {
+  it('counts a board that asks no question of its own as one with the decisions it answers', async () => {
     const fixture = TestBed.createComponent(SitrepPage);
     http.expectOne('/api/sitrep').flush(
       sitrepFixture({
@@ -99,7 +99,10 @@ describe('SitrepPage', () => {
             projects: ['harness'],
             questions: 0,
             link: 'http://127.0.0.1:4387/session/1a2b3c',
-            decisions: [{ number: 'D59', title: 'Which bulb?' }],
+            decisions: [
+              { number: 'D59', title: 'Which bulb?' },
+              { number: 'D60', title: 'Which shade?' },
+            ],
           },
         ],
       }),
@@ -108,6 +111,43 @@ describe('SitrepPage', () => {
     const page = fixture.nativeElement as HTMLElement;
 
     expect(text(page, '.sr-section__head .sr-sub')).toBe('2 waiting on you, Commander');
+  });
+
+  it('shows a decision a board answers on that board alone, never again on a card of its own, while paging through the cards', async () => {
+    const lamp = sitrepFixture().decisions[0];
+    const fixture = await rendered(
+      sitrepFixture({
+        decisions: [
+          lamp,
+          { ...lamp, number: 'D59', task: 'bulb-choice', title: 'Which bulb?' },
+          { ...lamp, number: 'D61', task: 'shade-choice', title: 'Which shade?' },
+        ],
+        boards: [
+          {
+            task: 'bulb-research',
+            title: 'Research the bulb',
+            projects: ['harness'],
+            questions: 1,
+            link: 'http://127.0.0.1:4387/session/1a2b3c',
+            decisions: [{ number: 'D59', title: 'Which bulb?' }],
+          },
+          {
+            task: 'shade-research',
+            title: 'Research the shade',
+            projects: ['harness'],
+            questions: 0,
+            link: 'http://127.0.0.1:4387/session/4d5e6f',
+            decisions: [{ number: 'D61', title: 'Which shade?' }],
+          },
+        ],
+      }),
+    );
+    const page = fixture.nativeElement as HTMLElement;
+
+    const shown = [...(await pagedThroughTheDeck(fixture)), ...texts(page, '.sr-waiting__decision .sr-row__key')];
+
+    expect(shown).toEqual(['D58', 'D57', 'D59', 'D61']);
+    expect(text(page, '.sr-section__head .sr-sub')).toBe('3 waiting on you, Commander');
   });
 
   it('never calls the captain all clear while a board or a review waits on him', async () => {
@@ -352,10 +392,26 @@ describe('SitrepPage', () => {
     await fixture.whenStable();
     return fixture;
   }
+
+  async function pagedThroughTheDeck(fixture: ComponentFixture<SitrepPage>): Promise<string[]> {
+    const page = fixture.nativeElement as HTMLElement;
+    const next = page.querySelector<HTMLButtonElement>('[aria-label="Next card"]');
+    const numbers = [cardNumber(page)];
+    while (next && !next.disabled) {
+      next.click();
+      await fixture.whenStable();
+      numbers.push(cardNumber(page));
+    }
+    return numbers;
+  }
 });
 
 function text(page: HTMLElement, selector: string): string {
   return page.querySelector(selector)?.textContent?.trim() ?? '';
+}
+
+function cardNumber(page: HTMLElement): string {
+  return text(page, 'app-decision-deck .sr-decision__repo').split(' · ')[0];
 }
 
 function texts(page: HTMLElement, selector: string): string[] {

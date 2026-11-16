@@ -11,6 +11,7 @@ import { OngoingList } from '../console/ongoing-list';
 import { PersonalityDesk } from '../console/personality-desk';
 import { SitrepReading } from '../console/sitrep-reading';
 import { shipMoment } from '../console/stardate';
+import { cardsOffTheBoards } from '../console/waiting';
 import { WaitingList } from '../console/waiting-list';
 
 @Component({
@@ -35,9 +36,13 @@ export class SitrepPage {
     }
     return sitrep.workerQuestions.length ? `${questionsOnMe(sitrep.workerQuestions.length)}, ${sitrep.address}` : `all clear, ${sitrep.address}`;
   });
+  protected readonly deckCards = computed(() => {
+    const sitrep = this.reading.sitrep();
+    return sitrep ? cardsOffTheBoards(sitrep) : [];
+  });
   protected readonly showsTheDeck = computed(() => {
     const sitrep = this.reading.sitrep();
-    return !!sitrep && (sitrep.decisions.length > 0 || sitrep.answered.length > 0 || (this.reading.waiting() === 0 && sitrep.workerQuestions.length === 0));
+    return !!sitrep && (this.deckCards().length > 0 || sitrep.answered.length > 0 || (this.reading.waiting() === 0 && sitrep.workerQuestions.length === 0));
   });
   protected readonly chartedShown = computed(() => {
     const sitrep = this.reading.sitrep();

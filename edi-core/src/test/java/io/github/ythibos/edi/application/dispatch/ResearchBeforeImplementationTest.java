@@ -74,7 +74,7 @@ class ResearchBeforeImplementationTest {
     void dispatchesThePlannedShipAsImplementationWithThePlanInItsBrief() throws IOException {
         dispatch("fit-lamp", "implementation-unplanned", "Use the brass fittings.", false);
         assertThatThrownBy(() -> dispatch("fit-lamp", null, "", false)).isInstanceOf(Refusal.class)
-                .hasMessage("fit-lamp waits for [plan-work-on-fit-lamp]; it is dispatched once they are done.");
+                .hasMessage("fit-lamp waits for plan-work-on-fit-lamp to land; it is dispatched once each wait is met.");
 
         home.markDone(PLAN);
         assertThatThrownBy(() -> dispatch("fit-lamp", null, "", false)).isInstanceOf(Refusal.class)

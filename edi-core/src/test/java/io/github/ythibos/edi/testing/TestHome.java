@@ -53,6 +53,7 @@ import io.github.ythibos.edi.adapter.store.OneTransactionAtATime;
 import io.github.ythibos.edi.adapter.store.OutageStore;
 import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
 import io.github.ythibos.edi.adapter.store.PipelineRunStore;
+import io.github.ythibos.edi.adapter.store.PlanStore;
 import io.github.ythibos.edi.adapter.store.PresenceStore;
 import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore;
@@ -61,6 +62,7 @@ import io.github.ythibos.edi.adapter.store.SparkStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.TicketProposalStore;
+import io.github.ythibos.edi.adapter.store.TurnItemStore;
 import io.github.ythibos.edi.adapter.store.UnplannedShipStore;
 import io.github.ythibos.edi.adapter.store.WakeStore;
 import io.github.ythibos.edi.adapter.store.WakeStreamStore;
@@ -89,6 +91,7 @@ import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.DecisionRoundQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
+import io.github.ythibos.edi.application.decision.UndeliveredAnswersQuery;
 import io.github.ythibos.edi.application.delivery.CaptainCheckouts;
 import io.github.ythibos.edi.application.delivery.CleanUpTask;
 import io.github.ythibos.edi.application.delivery.CloneRefreshes;
@@ -135,6 +138,8 @@ import io.github.ythibos.edi.application.migration.HomeWriter;
 import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
+import io.github.ythibos.edi.application.plan.AddPlan;
+import io.github.ythibos.edi.application.plan.PlanQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.presence.ChangePresence;
@@ -151,7 +156,9 @@ import io.github.ythibos.edi.application.primary.PrepareThePrimary;
 import io.github.ythibos.edi.application.primary.PrimaryHooks;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.application.primary.PrimaryWaitQuery;
+import io.github.ythibos.edi.application.primary.RecordTurnItems;
 import io.github.ythibos.edi.application.primary.SessionStartDigestQuery;
+import io.github.ythibos.edi.application.primary.TurnItemsQuery;
 import io.github.ythibos.edi.application.publish.PublicationTargets;
 import io.github.ythibos.edi.application.publish.PublishCheck;
 import io.github.ythibos.edi.application.rule.FiredRules;
@@ -162,6 +169,7 @@ import io.github.ythibos.edi.application.spark.SortSpark;
 import io.github.ythibos.edi.application.supervision.CurrentRoutes;
 import io.github.ythibos.edi.application.supervision.DropFromOutage;
 import io.github.ythibos.edi.application.supervision.JudgeWorkers;
+import io.github.ythibos.edi.application.supervision.LeaveTheOutageList;
 import io.github.ythibos.edi.application.supervision.NoticeDueHolds;
 import io.github.ythibos.edi.application.supervision.OutageHoldList;
 import io.github.ythibos.edi.application.supervision.OutageListQuery;
@@ -244,6 +252,7 @@ public final class TestHome {
     private final ProcessTable processes = new ProcessTable();
     private final WakeStore wakes;
     private final PrimarySessionStore primarySessions;
+    private final TurnItemStore turnItems;
     private final NoticeStore notices;
     private final OutageStore outages;
     private final RecoveryCostStore recoveryCosts;
@@ -294,6 +303,7 @@ public final class TestHome {
         this.workers = new WorkerStore(jdbc);
         this.inbox = new InboxStore(jdbc);
         this.primarySessions = new PrimarySessionStore(jdbc);
+        this.turnItems = new TurnItemStore(jdbc);
         this.notices = new NoticeStore(jdbc);
         this.outages = new OutageStore(jdbc);
         this.recoveryCosts = new RecoveryCostStore(jdbc);
@@ -443,6 +453,18 @@ public final class TestHome {
         return new AddTask(tasks, events, registry, taskKeys(), ticketProposals(), clock, transaction);
     }
 
+    public PlanStore plans() {
+        return new PlanStore(jdbc);
+    }
+
+    public AddPlan addPlan() {
+        return new AddPlan(addTask(), plans(), events, registry, clock, transaction);
+    }
+
+    public PlanQuery planQuery() {
+        return new PlanQuery(plans(), tasks, transaction);
+    }
+
     public TaskLinksQuery taskLinks() {
         return new TaskLinksQuery(home, registry, trackers(), dispatches, deliveries, pipelineRuns, boards, decisions, transaction);
     }
@@ -510,7 +532,7 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), steerWorker(), clock, transaction);
     }
 
     public DecisionReleases decisionReleases() {
@@ -522,7 +544,11 @@ public final class TestHome {
     }
 
     public TaskStages taskStages() {
-        return new TaskStages(tasks, events);
+        return new TaskStages(tasks, events, leaveTheOutageList());
+    }
+
+    public LeaveTheOutageList leaveTheOutageList() {
+        return new LeaveTheOutageList(outages, tasks, events);
     }
 
     public BacklogQuery backlog() {
@@ -716,7 +742,7 @@ public final class TestHome {
     }
 
     public LaunchWorker launchWorkerOn(WorkerRuntime workerRuntime) {
-        return new LaunchWorker(home, tasks, dispatches, workers, adoptions, outages, events, registry, machineProfile(), dispatchRulesFile(),
+        return new LaunchWorker(home, tasks, dispatches, workers, adoptions, leaveTheOutageList(), events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), new WorkerPlaces(workers, tasks, workerRuntime), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
                 workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), meters, clock, transaction);
@@ -822,7 +848,7 @@ public final class TestHome {
     }
 
     public DropFromOutage dropFromOutage() {
-        return new DropFromOutage(outages, dropTask(), transaction);
+        return new DropFromOutage(leaveTheOutageList(), dropTask(), clock, transaction);
     }
 
     public PromoteScout promoteScout() {
@@ -965,8 +991,20 @@ public final class TestHome {
     }
 
     public PrimaryHooks primaryHooks() {
-        return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, events,
-                processes, wakeStreams(), wakes, runtime, firedRules(), clock, transaction);
+        return new PrimaryHooks(primarySessions, primarySessions(), captainMessages, changePresence(), presenceQuery(), returnBriefs(), tasks, turnItems,
+                events, processes, wakeStreams(), wakes, runtime, firedRules(), undeliveredAnswers(), clock, transaction);
+    }
+
+    public UndeliveredAnswersQuery undeliveredAnswers() {
+        return new UndeliveredAnswersQuery(workers, decisions, inbox, transaction);
+    }
+
+    public RecordTurnItems recordTurnItems() {
+        return new RecordTurnItems(primarySessions, turnItems, clock, transaction);
+    }
+
+    public TurnItemsQuery turnItems() {
+        return new TurnItemsQuery(turnItems, transaction);
     }
 
     public WorkerListQuery workerList() {
@@ -999,7 +1037,7 @@ public final class TestHome {
     }
 
     public OutageHoldList outageHoldList() {
-        return new OutageHoldList(outages, tasks, notices, events, workerList(), clock, transaction);
+        return new OutageHoldList(outages, tasks, notices, events, workerList(), leaveTheOutageList(), clock, transaction);
     }
 
     public OutageListQuery outageList() {
@@ -1036,7 +1074,7 @@ public final class TestHome {
     }
 
     public RecoverFromOutage recoverFromOutage() {
-        return new RecoverFromOutage(outages, tasks, dispatches, primarySessions(), workerList(),
+        return new RecoverFromOutage(leaveTheOutageList(), tasks, dispatches, primarySessions(), workerList(),
                 new CurrentRoutes(dispatchRulesFile(), machineProfile()), launchWorker(), events, clock, transaction);
     }
 

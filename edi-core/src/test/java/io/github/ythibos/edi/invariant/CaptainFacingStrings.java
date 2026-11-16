@@ -53,7 +53,7 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.migration.MigrationReportText;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.ReportWidth;
-import io.github.ythibos.edi.web.report.Turn;
+import io.github.ythibos.edi.domain.report.Turn;
 import io.github.ythibos.edi.web.report.TurnReport;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;

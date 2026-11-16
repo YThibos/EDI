@@ -19,7 +19,7 @@ The primary's `UserPromptSubmit` hook catches a message the captain typed that o
 A notification, EDI's own operational text and a message with nothing after the opening are no spark.
 `edi spark list` lists the open sparks, oldest first, with number, time, author, focus and text, and `--json` gives the whole record for the gardening board to read.
 The gardening sorts each open spark once: `edi spark backlog <n> <key>` when it became a backlog item, `edi spark fold <n> <key>` when an existing item already covers it, and `edi spark drop <n> --reason <why>` when it goes no further (`SortSpark`); a sorted spark leaves the list and keeps its outcome.
-The `edi-upkeep` skill sorts the open sparks in the weekly round with the captain, and the `edi-backlog-item` skill sends a half-formed idea to `edi spark` instead of the backlog.
+The weekly `gardening` round puts the open sparks on its board, where the captain sorts each, and the primary carries out his answers ([weekly-gardening](weekly-gardening.md)); the `edi-backlog-item` skill sends a half-formed idea to `edi spark` instead of the backlog.
 
 ## Why
 
@@ -41,12 +41,13 @@ Sorting with an item key ties every spark that reached the backlog to its item, 
 - Good: an idea costs the captain one prefix and the primary one command, and the gardening sees every idea with its time, author, session and focus.
 - Good: the backlog receives only ideas the captain sorted in, each traceable to its spark.
 - Bad: the focus is a guess from the last act, so a spark about something else takes a wrong focus unless `--task` or `--project` names it; a message spark cannot name its focus.
-- Bad: until the gardening board of EDI-165 exists, the weekly round sorts the sparks in the chat, through `edi-upkeep`.
+- Bad: a spark waits up to a week for the gardening board before the captain sorts it.
 
 ## When to revisit
 
-When the gardening board lands and reads the sparks itself, when the console gains a way to sort them, or when the captain wants a message spark to name its own focus.
+When the console gains a way to sort sparks between gardening rounds, or when the captain wants a message spark to name its own focus.
 
 ## How we got here
 
 - 09/11/2026: sparks caught by `edi spark` and by the captain's `Spark:` message, listed and sorted by backlogging, folding into an existing item or dropping with a reason (EDI-166).
+- 13/11/2026: the gardening board took over sorting the sparks from the chat round of `edi-upkeep` (EDI-165).

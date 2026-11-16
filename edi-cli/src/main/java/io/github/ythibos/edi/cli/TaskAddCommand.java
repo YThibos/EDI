@@ -31,7 +31,7 @@ final class TaskAddCommand implements Callable<Integer> {
     @Option(names = "--base", paramLabel = "BRANCH", description = "The branch the work starts from, when not the project's own.")
     private String base;
 
-    @Option(names = "--blocked-by", split = ",", paramLabel = "TASK", description = "Tasks that must be done first.")
+    @Option(names = "--blocked-by", split = ",", paramLabel = "TASK", description = "Tasks whose work must land first.")
     private List<String> blockedBy;
 
     @Option(names = "--delivery", paramLabel = "MODE",

@@ -18,7 +18,7 @@ The texts the core writes speak as EDI: those the primary reads, such as the ses
 Identifiers, packages, commands, the `edi` binary, the worker briefs and the `--help` descriptions keep their names and the third person, since their readers are not EDI.
 Nothing a tool or another person reads carries the voice: commits, merge requests, briefs, code, comments and tracker items are plain and never address the captain, and workers never address the captain at all ([worker-brief](worker-brief.md)).
 `CaptainVoice` holds the internal labels with the plain words the captain hears instead, such as isolated copy for worktree or notification for wake, and `CaptainVoice.internalLabelsIn` finds one as a whole word outside quotes, code spans, links and paths.
-`edi decision raise` and `edi report --turn` refuse the primary's wording that carries a label, naming it and its plain words.
+`edi decision raise` and `edi turn` refuse the primary's wording that carries a label, naming it and its plain words.
 AT-22 lints every captain-facing string EDI's own code generates: the report's golden cases, the cards EDI raises, notifications, presence lines, the return brief and the console's document.
 Beside it, a persona test reads every message template in the core's and the command's code and every line of the console, and fails on EDI named in the third person as a subject, a possessive or an agent, outside quotes, code spans, links, paths, work keys and the names of EDI's parts such as the EDI home.
 
@@ -51,3 +51,4 @@ When the list grows a label that is also ordinary English.
 - 17/10/2026: slice S8 added the lint.
 - 23/10/2026: the rule to use the address word in every message gave way to the personality's formality (EDI-31).
 - 27/10/2026: the persona line and the register moved into the anchor, the core's templates were reworded to speak as EDI, and the persona test holds them (EDI-82).
+- 13/11/2026: `edi turn` took over the lint of the turn's wording from `edi report --turn` (EDI-269).

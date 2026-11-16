@@ -1,7 +1,7 @@
 # Rule catalogue
 
 Every rule EDI enforces has one stable id, and every refusal, warning or check that lets something through after it fires records that id ([rule-firings](decisions/rule-firings.md)).
-`edi rules` counts the firings of a period, names the last one of each rule and lists the rules that never fired, so the weekly gardening reads what fires from recorded data.
+`edi rules` counts the firings of a period, names the last one of each rule and lists the rules that never fired, and the weekly gardening reads the same recorded firings for its week ([weekly-gardening](decisions/weekly-gardening.md)).
 This table is the catalogue: each rule's id, the classes or scripts that fire it, and what it protects.
 `RuleCatalogueTest` keeps it true: a rule in the code that is missing here, a row for a rule the code no longer has, a place that no longer fires the rule, or a sentence that differs from the code's fails the build.
 `CommandRuleFiringsTest` and `CommitMsgHookFiringsTest` do the same for the command and the `commit-msg` hook, by running them and comparing what fires with the rules this table names for them.
@@ -42,12 +42,13 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `task.stage` | `AddTask`, `DiscardWork`, `PromoteScout`, `StageTransitions`, `Task` | A task moves only along the stages its kind allows. |
 | `task.hold` | `DropTask`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A held task stays held until its hold is released or its decision answered. |
 | `task.intake` | `AddTask`, `ProjectRegistry` | A new task names a registered project and an id never used before. |
+| `task.plan-intake` | `AddPlan` | A plan is known by an umbrella key no other plan has, and works on no more slices at once than its project. |
 | `task.work-key` | `AdoptForkTask`, `DispatchTask`, `GitHubIssuesTracker`, `NoTracker`, `Task`, `TaskKeys`, `TicketProposals`, `TrackedProject` | A task books its work on one key of its project's tracker. |
 | `task.dispatched` | `LaunchWorker`, `WorkerContext`, `WorkerDetailQuery`, `WorkerLookup`, `WrittenBriefQuery` | A task's worker, brief and copy exist only once it is dispatched. |
 | `decision.answered-once` | `ArmBoard`, `Decision` | A decision is answered once, and a new question is a new decision. |
 | `decision.captain-voice` | `CaptainVoice` | What reaches the captain speaks in outcomes, not in internal labels (I-22). |
 | `decision.ticket-choice` | `TicketProposal`, `TicketProposals` | The captain's ticket choice is one of the options offered. |
-| `dispatch.blockers-done` | `DispatchTask` | A task is dispatched only once the tasks it waits for are done. |
+| `dispatch.waits-met` | `DispatchTask` | A task is dispatched only once each task it waits for is merged or landed, as its wait names. |
 | `dispatch.one-project` | `AdoptForkTask`, `DispatchTask` | A worker works in the isolated copy of exactly one project. |
 | `dispatch.category` | `DispatchTask` | A dispatch names a category from the dispatch rules. |
 | `dispatch.mechanical-shape` | `Dispatch`, `DispatchTask`, `ExpectedChange` | A mechanical task states its exact change and its project names the verify command it is checked by. |

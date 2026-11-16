@@ -41,6 +41,7 @@ A decision the board asks is a card on `--card`, in the format `edi decision rai
 EDI raises the card on the scout's task and binds it to the board when it is armed, so the captain's choice there is his word for it, promote included ([research-boards](decisions/research-boards.md)).
 `--bind D58,D59` binds decisions the primary raised already, which the board names by number.
 The count leaves out the card and the decisions the board binds, which wait as one line each under the board while it listens.
+The board and every decision it binds wait on the captain as one item: they count once in the decision zone's header, and the sitrep page shows them on the board's row alone, never again as a decision card of their own.
 The board waits in the decision zone of the report, the sitrep page and the return brief until a round of the captain's answers arrives; arming it again posts a new round.
 When the scout cannot arm it again, the primary posts the round instead:
 

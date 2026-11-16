@@ -101,6 +101,7 @@ class NativeSmokeIT {
                 "--edi.pipeline.home=" + pipelineHome(),
                 "--edi.console.browser=" + stubBrowser(),
                 "--edi.console.windows-directory=" + home)
+                .directory(home.resolve("checkouts/harness").toFile())
                 .redirectErrorStream(true)
                 .redirectOutput(home.resolve("core.log").toFile());
         launch.environment().keySet().removeIf(variable -> variable.startsWith("GIT_CONFIG_") || variable.startsWith("TMUX") || variable.startsWith("EDI_")
@@ -153,6 +154,13 @@ class NativeSmokeIT {
                     .isSubsetOf("jdk.ExecutionSample", "jdk.GarbageCollection", "jdk.GCHeapSummary", "jdk.CPULoad", "jdk.ThreadCPULoad",
                             "jdk.JavaMonitorEnter", "jdk.ThreadPark", "jdk.VirtualThreadPinned", "jdk.ObjectAllocationSample"));
         }
+    }
+
+    @Test
+    void theCoreStartedInAProjectsCheckoutWorksInItsHome() throws Exception {
+        Path workingDirectory = Files.readSymbolicLink(Path.of("/proc", Long.toString(core.pid()), "cwd"));
+
+        assertThat(workingDirectory).isEqualTo(home.toRealPath());
     }
 
     @Test
@@ -235,6 +243,21 @@ class NativeSmokeIT {
         assertThat(added.output()).isEqualTo("Queued native-lantern on HRN-3.\n");
         assertThat(backlog.output()).contains("native-lantern", "Native lantern");
         assertThat(shown.output()).contains("\"workKey\":\"HRN-3\"", "\"stage\":\"queued\"");
+    }
+
+    @Test
+    void theCommandEntersAPlanAndShowsItsSlicesWithTheirWaits() throws Exception {
+        CommandRun added = edi("""
+                {"key":"HRN-60","title":"Native harbour","project":"harness","report":"report.md","decision":"D1","capacity":1,"slices":[
+                  {"number":1,"title":"Native quay","category":"implementation","key":"HRN-61"},
+                  {"number":2,"title":"Native crane","category":"implementation","key":"HRN-62"}]}""", "plan", "add", "--from", "-");
+        CommandRun shown = edi("", "plan", "show", "HRN-60");
+        CommandRun asJson = edi("", "plan", "show", "HRN-60", "--json");
+
+        assertThat(added.output()).startsWith("Planned HRN-60: queued 2 slices, native-quay, native-crane;");
+        assertThat(shown.output()).contains("  1  native-quay   HRN-61  queued  none            eligible\n",
+                "  2  native-crane  HRN-62  queued  after 1 merged\n");
+        assertThat(asJson.output()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"stage\":\"queued\"");
     }
 
     @Test
@@ -334,18 +357,27 @@ class NativeSmokeIT {
     }
 
     @Test
-    void theCommandRendersTheCaptainReportInAnyLocale() throws Exception {
+    void theStopHookHandsOverTheTurnReportWithTheRecordedItemsInAnyLocale() throws Exception {
+        Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", UUID.randomUUID().toString(), "LANG", "C", "LC_ALL", "C");
+        String session = "{\"session_id\":\"" + primary.get("CLAUDE_CODE_SESSION_ID") + "\"";
+        ediIn(Path.of(""), primary, session + "}", "hook", "session-start");
+        ediIn(Path.of(""), primary, session + ",\"prompt\":\"Ask me about the lantern.\"}", "hook", "user-prompt-submit");
         edi("", "task", "add", "--kind", "captain", "--id", "native-report-call", "--title", "Choose for the report");
         String number = edi("{\"title\":\"Which lantern?\",\"options\":[{\"key\":\"A\",\"text\":\"Brass\"}],\"recommend\":{\"key\":\"A\",\"why\":\"it shines\"}}",
                 "decision", "raise", "native-report-call", "--card", "-").output().strip();
 
-        CommandRun report = ediInTheCLocale("{\"done\":[{\"projects\":[\"harness\"],\"text\":\"Rendered natively\"}]}", "report", "--turn", "-");
+        CommandRun recorded = ediIn(Path.of(""), primary, "", "turn", "done", "--project", "harness", "Rendered natively");
+        CommandRun handedOver = ediIn(Path.of(""), primary, session + ",\"stop_hook_active\":false}", "hook", "stop");
+        CommandRun report = ediIn(Path.of(""), primary, "", "report");
         CommandRun sitrep = ediInTheCLocale("", "sitrep");
         CommandRun asJson = edi("", "report", "--json");
+        ediIn(Path.of(""), primary, session + ",\"reason\":\"prompt_input_exit\"}", "hook", "session-end");
 
+        assertThat(recorded.output()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hands it to you to paste.\n");
+        assertThat(handedOver.output()).contains("\"decision\":\"block\"", "paste it verbatim in one fenced block", "Which lantern?", "Rendered natively");
         assertThat(report.exitCode()).isZero();
         assertThat(report.output()).startsWith("╔══ NEEDS YOUR DECISION ══ ")
-                .contains("║  %-6sWhich lantern?\n".formatted(number), "║        » Recommended: A - it shines\n", "  harness           • Rendered natively\n")
+                .contains("║  %-6sWhich lantern?".formatted(number), "  harness           • Rendered natively\n")
                 .doesNotContain("ONGOING");
         assertThat(sitrep.output()).contains("║  %-6sWhich lantern?\n".formatted(number)).doesNotContain("Rendered natively");
         assertThat(asJson.output()).contains("\"waiting\":{", "\"width\":{\"columns\":120}");

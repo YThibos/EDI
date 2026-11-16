@@ -46,6 +46,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.event.DomainEvent.SlicePlanned;
 import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerAcknowledged;
@@ -145,7 +146,7 @@ public final class WakeRule {
                     WorkerStopRequested _, RecoveryCostRecorded _, DeliveryRefused _, DraftRecorded _, DraftOpened _, CloneRefreshed _,
                     ChangeAppliedToCaptain _, TaskCleanedUp _, TaskCostRecorded _, TaskCostRecounted _, PipelineRunSeen _, PipelineRunFinished _,
                     TicketCreated _, TicketChoiceRefused _, TicketAddedToSprint _, TicketLinked _, TicketTransitioned _, ResearchQueuedFirst _,
-                    ReviewCounted _, BoardArmed _, BoardRoundPosted _, BoardClosed _, BoardRetired _, CaptainSaid _, ScoutPromoted _, TaskDropped _,
+                    ReviewCounted _, BoardArmed _, BoardRoundPosted _, BoardClosed _, BoardRetired _, CaptainSaid _, ScoutPromoted _, SlicePlanned _, TaskDropped _,
                     WorkDiscarded _, TaskImported _, TaskAdopted _ -> Optional.empty();
         };
     }

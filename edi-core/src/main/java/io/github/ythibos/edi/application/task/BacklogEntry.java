@@ -2,16 +2,16 @@ package io.github.ythibos.edi.application.task;
 
 import java.util.List;
 
-import io.github.ythibos.edi.domain.task.Blocker;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.Wait;
 
-public record BacklogEntry(Task task, List<Blocker> blockers) {
+public record BacklogEntry(Task task, List<Wait> waits) {
 
     public BacklogEntry {
-        blockers = List.copyOf(blockers);
+        waits = List.copyOf(waits);
     }
 
     public boolean isReady() {
-        return !task.isHeld() && blockers.stream().allMatch(Blocker::isResolved);
+        return !task.isHeld() && waits.stream().allMatch(Wait::isMet);
     }
 }

@@ -33,7 +33,7 @@ import io.github.ythibos.edi.web.PresenterFixtures;
 import io.github.ythibos.edi.web.report.CaptainReport;
 import io.github.ythibos.edi.web.report.CaptainReportPresenter;
 import io.github.ythibos.edi.web.report.ReportWidth;
-import io.github.ythibos.edi.web.report.Turn;
+import io.github.ythibos.edi.domain.report.Turn;
 import io.github.ythibos.edi.web.report.TurnDocument;
 import tools.jackson.databind.json.JsonMapper;
 

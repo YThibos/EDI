@@ -16,7 +16,7 @@ The pickup protocol the issue is taken by is [docs/pickup.md](../../../docs/pick
 
 An idea that is not thought through yet is no backlog item: catch it as a spark with `edi spark "<idea>"`, adding `--task` or `--project` when the task you acted on last is not what it is about.
 The captain's message that opens with `Spark:` is caught by the hook already; acknowledge it in one line and carry on.
-Sparks reach the backlog only when the weekly round of `edi-upkeep` sorts them with the captain; an item drafted from a spark is followed by `edi spark backlog <n> <the item's key>`.
+Sparks reach the backlog only when the weekly `gardening` round sorts them on the captain's word; an item drafted from a spark is followed by `edi spark backlog <n> <the item's key>`.
 
 ## The draft
 

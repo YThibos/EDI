@@ -34,6 +34,6 @@ The register you keep at every personality is in your anchor's Voice section; th
 
 ## What your core checks
 
-- `edi decision raise` and `edi report --turn -` refuse a card or turn wording that carries an internal label.
+- `edi decision raise` and `edi turn` refuse a card or turn item that carries an internal label.
 - Text inside double quotes, code spans, URLs and paths is left alone, so quote a name when it is one.
 - The refusal names the label and the words to use instead; rewrite and run the command again.

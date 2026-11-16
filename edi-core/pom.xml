@@ -189,6 +189,10 @@
                             <imageName>edi-core</imageName>
                             <buildArgs combine.children="append">
                                 <buildArg>--enable-monitoring=jfr</buildArg>
+                                <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                                <buildArg>-H:+ForeignAPISupport</buildArg>
+                                <buildArg>-H:-UnlockExperimentalVMOptions</buildArg>
+                                <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                             </buildArgs>
                         </configuration>
                         <executions>

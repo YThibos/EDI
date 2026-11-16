@@ -7,6 +7,7 @@ import java.util.Objects;
 import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -34,5 +35,9 @@ public record OutageEntry(int number, TaskId task, WorkerId worker, DeathCause c
 
     public boolean holds(CaptainHold taskHold) {
         return hold().equals(taskHold);
+    }
+
+    public Task withoutItsHold(Task task) {
+        return task.isHeld() && holds(task.hold()) ? task.released() : task;
     }
 }

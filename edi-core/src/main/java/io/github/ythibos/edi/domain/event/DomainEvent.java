@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.plan.SliceWait;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
@@ -307,6 +308,9 @@ public sealed interface DomainEvent {
     }
 
     record ScoutPromoted(TaskId task, TaskId ship) implements DomainEvent {
+    }
+
+    record SlicePlanned(TaskId task, WorkKey plan, int number, SliceWait awaits) implements DomainEvent {
     }
 
     record TaskDropped(TaskId task, String captainsWord, List<String> discarded) implements DomainEvent {

@@ -26,7 +26,7 @@
           </div>
           <div class="sr-section__body sr-waiting-on-you">
             @if (showsTheDeck()) {
-              <app-decision-deck class="sr-section__body" [cards]="sitrep.decisions" [answered]="sitrep.answered" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" (settled)="reading.refresh()" />
+              <app-decision-deck class="sr-section__body" [cards]="deckCards()" [answered]="sitrep.answered" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" (settled)="reading.refresh()" />
             }
             @if (sitrep.boards.length || sitrep.reviews.length || sitrep.changing.length || sitrep.workerQuestions.length) {
               <app-waiting-list

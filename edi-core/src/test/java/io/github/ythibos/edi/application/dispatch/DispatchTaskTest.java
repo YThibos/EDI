@@ -23,8 +23,14 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.plan.PlanDraft;
+import io.github.ythibos.edi.domain.plan.PlanHeading;
+import io.github.ythibos.edi.domain.plan.SliceDraft;
+import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -154,6 +160,19 @@ class DispatchTaskTest {
         assertThat(second.id()).isEqualTo(new WorkerId(new TaskId("fit-lamp"), 2));
         assertThat(home.workers().get(new WorkerId(new TaskId("fit-lamp"), 1)).orElseThrow().isRetired()).isTrue();
         assertThat(home.runtime().lastLaunch().worktree()).isEqualTo(home.home().root().resolve("worktrees/harness/fit-lamp"));
+    }
+
+    @Test
+    void refusesASliceUntilTheSliceItWaitsForIsMergedAndThenLaunchesIt() throws IOException {
+        home.addPlan().add(new PlanDraft(new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"),
+                "docs/research/HRN-40-plan.md", "D44", 1, null), List.of(
+                        new SliceDraft(1, "Fit the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-41"), "", null),
+                        new SliceDraft(2, "Paint the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-42"), "", null))), Actor.PRIMARY);
+
+        assertThatThrownBy(() -> dispatch("paint-the-lamp", "implementation")).isInstanceOf(Refusal.class)
+                .hasMessage("paint-the-lamp waits for fit-the-lamp to be merged; it is dispatched once each wait is met.");
+        home.putAt(new TaskId("fit-the-lamp"), TaskStage.MERGED);
+        assertThat(dispatch("paint-the-lamp", "implementation").launched().branch()).hasToString("feature/HRN-42");
     }
 
     @Test

@@ -4,6 +4,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.github.ythibos.edi.domain.report.TaskWording;
+import io.github.ythibos.edi.domain.report.Turn;
+import io.github.ythibos.edi.domain.report.TurnItem;
 import tools.jackson.databind.JsonNode;
 
 public final class TurnDocument {

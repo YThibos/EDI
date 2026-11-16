@@ -8,9 +8,15 @@
 A worker keeps running in its own tmux window while the core is down, and a restart is a non-event (I-23).
 The native build needs the GraalVM the checkout pins, while a shell outside the checkout carries the machine's own Java.
 A stopping core stops answering at once but keeps its lock while in-flight requests and scheduled rounds finish, and the primary always holds an `edi wait` open for up to 25 seconds.
+A process inherits the working directory of whatever started it, so a core restarted from a shell inside a project's checkout on a mounted filesystem stood in that checkout for hours, where it pinned the mount and would have kept the checkout from being moved; Java itself has no way to change a process's working directory.
 
 ## Decision
 
+The core works in its home from the moment it starts, wherever it was started from: `EdiCoreApplication.main` registers `MoveIntoTheHome`, which, once the environment is prepared and before any bean, reads `edi.home`, makes it absolute and keeps that value for the rest of the start, creates the home for its owner alone when it is missing, and moves the process into it through a `chdir` downcall of the Foreign Function and Memory API (JEP 454, `OwnWorkingDirectory`); a core that cannot move refuses to start.
+Only `main` moves, and not while Spring's ahead-of-time processing runs it to build the native image, so neither a test's Spring context nor the build moves its JVM or creates a home.
+The native image of the core is built with `-H:+ForeignAPISupport`, unlocked as the experimental Native Image option it still is, `--enable-native-access=ALL-UNNAMED`, and the `chdir` downcall registered in a `reachability-metadata.json` of its own, beside the one Spring's ahead-of-time processing writes for the core and would otherwise replace.
+Every child the core starts is given its working directory explicitly.
+`edi health` reads the core's working directory from `/proc/<pid>/cwd`, for the process `state/core.pid` records, and names it when it is not the home, so a core started before it moved itself is seen; the core stays healthy, and it moves home when it restarts.
 `CoreInstanceLock` takes an exclusive lock on `state/core.pid` and writes the core's process id before the store or the token is touched, so a second core on the same home fails to start, naming the file.
 `edi up` starts `edi-core` detached with `setsid -f`, its output appended to `state/logs/core.log`, waits up to a minute for its health, asks for the primary's launch ([primary-startup-context](primary-startup-context.md)) and opens a tmux session of that name in the EDI home running `claude` with no prompt submitted, so it waits for the captain to type, and sets `set-titles` on and `set-titles-string` to `#S` for that session only, so the terminal's title is the session name (`PrimaryWindow`, [opening-turn](opening-turn.md)); `--core-only` stops after the core.
 `edi down` asks the core to stop: `StopTheCore` refuses while workers run, or with `--force-stop-workers` needs the captain's word on the home and stops each recorded worker ([captains-word](captains-word.md)); a stopping core takes no new work but lets a running round finish.
@@ -39,10 +45,15 @@ EDI stands alone, so its launcher ships and installs with it, and the installed 
 - Comparing the checkout's `HEAD` with `origin/main` - a pulled but uninstalled checkout reads as current while an older build runs.
 - Updating whenever the installed build is not exactly `origin/main` - a build from a branch ahead of it would be rebuilt at every start.
 - Updating the machine's tools in the launcher - they belong to the machine's own set-up, not to EDI.
+- Only the commands starting the core in its home - a core started by hand or by the systemd unit would still stand where it was started.
+- Re-executing the core in its home - a second start-up, and a new process id for the systemd unit and the commands that wait for it.
+- A JNI library for `chdir` - C code and a native library to build and ship for one call the Foreign Function and Memory API makes from Java.
 
 ## Consequences
 
 - Good: one command takes EDI from a merged change to a running core, and a core that does not stop is named with the way back.
+- Good: the core never pins a mount or a checkout as its working directory, and no child it starts inherits one.
+- Bad: the native image needs an experimental Native Image option for one downcall, and Java's own `user.dir` can still name where the core was started, which is why the home is made absolute before the move.
 - Bad: a core started without systemd is not restarted after a crash, a restart takes as long as the old core's shutdown, and the native build takes minutes.
 
 ## When to revisit
@@ -58,3 +69,4 @@ When releases are published as built executables, or something other than the co
 - 27/10/2026: at the captain's request the primary opens with no prompt submitted and waits for the captain to type (EDI-101).
 - 27/10/2026: EDI ships its own `helloedi`, which updates EDI when the installed build does not yet contain `origin/main` (EDI-102).
 - 28/10/2026: at the captain's request the primary's tmux session titles the terminal with its name, so the terminal can tell an EDI session from any other (EDI-108).
+- 13/11/2026: a core restarted from a shell inside a project's checkout kept standing there, so the core moves into its home at start and `edi health` names a core that works elsewhere (EDI-271).

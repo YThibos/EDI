@@ -7,8 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Optional;
 
 record CorePidFile(Path file) {
+
+    private static final Path PROCESSES = Path.of("/proc");
 
     static CorePidFile in(Path home) {
         return new CorePidFile(home.resolve("state").resolve("core.pid"));
@@ -31,6 +34,18 @@ record CorePidFile(Path file) {
             return "";
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
+        }
+    }
+
+    Optional<Path> workingDirectoryOfItsProcess() {
+        String process = recordedProcess();
+        if (process.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Files.readSymbolicLink(PROCESSES.resolve(process).resolve("cwd")));
+        } catch (IOException gone) {
+            return Optional.empty();
         }
     }
 

@@ -50,7 +50,7 @@ public class PrivateHome {
         return closed == 0 ? Optional.empty() : Optional.of(reportOf(root, closed));
     }
 
-    private static void createdForItsOwnerAlone(Path root) {
+    public static void createdForItsOwnerAlone(Path root) {
         if (Files.isDirectory(root)) {
             return;
         }

@@ -172,11 +172,6 @@ final class DecisionZone {
         BoardQuestions {
             decisions = List.copyOf(decisions);
         }
-
-        @Override
-        public int open() {
-            return (questions > 0 ? 1 : 0) + decisions.size();
-        }
     }
 
     record BoardDecision(DecisionNumber number, String title) {

@@ -22,12 +22,13 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
-import io.github.ythibos.edi.domain.task.Blocker;
+import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.web.PresenterFixtures;
@@ -53,16 +54,29 @@ class TaskTextTest {
         Task horn = PresenterFixtures.heldHorn();
         Backlog backlog = new Backlog(false, List.of(
                 new BacklogEntry(PresenterFixtures.lantern(), List.of()),
-                new BacklogEntry(horn, List.of(new Blocker(new TaskId("lantern"), TaskState.QUEUED)))));
+                new BacklogEntry(horn, List.of(Wait.afterLanded(new TaskId("lantern"), TaskStage.QUEUED),
+                        new Wait(new TaskId("mast"), AwaitedStage.MERGED, TaskStage.MERGED)))));
 
         assertThat(new BacklogText().text(backlog)).isEqualTo("""
                 Queued (2)
                   lantern   ship  harness + garden  HRN-3  Rework the lantern
                   fog-horn  ship  harness           -      Tune the horn
                       held (deferral, until 2026-11-01): after the storm
-                      blocked by lantern (queued)
+                      waits for lantern to land (queued)
                 """);
         assertThat(new BacklogText().text(new Backlog(true, List.of()))).isEqualTo("Ready (0)\n");
+    }
+
+    @Test
+    void namesOnlyTheWaitsOfATaskThatAreNotMetYet() {
+        TaskDetail waiting = new TaskDetail(PresenterFixtures.lantern(), List.of(new Wait(new TaskId("mast"), AwaitedStage.MERGED, TaskStage.RETIRED),
+                Wait.afterLanded(new TaskId("quay"), TaskStage.MERGED)), null, null, null, null, null, List.of(), List.of());
+        TaskDetail metOnly = new TaskDetail(PresenterFixtures.lantern(), List.of(Wait.afterLanded(new TaskId("quay"), TaskStage.LANDED)), null, null,
+                null, null, null, List.of(), List.of());
+
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(waiting))
+                .contains("Waits for quay to land (merged)\n").doesNotContain("mast");
+        assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(metOnly)).doesNotContain("Waits for");
     }
 
     @Test

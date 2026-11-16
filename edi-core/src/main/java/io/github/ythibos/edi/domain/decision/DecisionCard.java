@@ -34,7 +34,11 @@ public record DecisionCard(String title, String context, List<DecisionOption> op
     }
 
     public DecisionOption recommendedOption() {
-        return options.stream().filter(option -> option.key().equals(recommendation.key())).findFirst().orElseThrow();
+        return optionOf(recommendation.key());
+    }
+
+    public DecisionOption optionOf(OptionKey key) {
+        return options.stream().filter(option -> option.key().equals(key)).findFirst().orElseThrow();
     }
 
     public boolean asksTheSameAs(DecisionCard other) {
