@@ -36,13 +36,13 @@ class DeliveryClaimsTest {
     void findsNoGapInARequestOfTheBranchAtItsHeadWhetherADraftReadyForReviewOrMerged() {
         assertThat(view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD).gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
         assertThat(view(MergeRequestState.OPEN, false, "feature/HRN-3", "main", HEAD).gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
-        assertThat(new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, "3333", MERGED_AT)
+        assertThat(new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, false, "3333", MERGED_AT)
                 .gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
     }
 
     @Test
     void namesEveryGapBetweenAMergeRequestAndTheDeliveryItShouldBe() {
-        MergeRequestView wrong = new MergeRequestView(ADDRESS, MergeRequestState.CLOSED, false, "feature/HRN-4", "develop", "2222222222222", null, null);
+        MergeRequestView wrong = new MergeRequestView(ADDRESS, MergeRequestState.CLOSED, false, "feature/HRN-4", "develop", "2222222222222", false, null, null);
 
         assertThat(wrong.gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).containsExactly(
                 ADDRESS + " is closed without a merge",
@@ -54,10 +54,10 @@ class DeliveryClaimsTest {
     @Test
     void takesTheOpenRequestOfABranchAsItsDeliveryAndOtherwiseItsLatestMerge() {
         MergeRequestView closed = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 9), MergeRequestState.CLOSED, true, "feature/HRN-3",
-                "main", HEAD, null, null);
+                "main", HEAD, false, null, null);
         MergeRequestView open = view(MergeRequestState.OPEN, false, "feature/HRN-3", "main", HEAD);
         MergeRequestView merged = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, "3333", MERGED_AT);
+                "main", HEAD, false, "3333", MERGED_AT);
 
         assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged, open), request -> true)).contains(open);
         assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged), request -> true)).contains(merged);
@@ -67,11 +67,11 @@ class DeliveryClaimsTest {
     @Test
     void takesTheLatestOwnedMergeWhateverOrderTheForgeListsThemIn() {
         MergeRequestView earlier = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 4), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, "2222", MERGED_AT.minusSeconds(3600));
+                "main", HEAD, false, "2222", MERGED_AT.minusSeconds(3600));
         MergeRequestView own = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, "3333", MERGED_AT);
+                "main", HEAD, false, "3333", MERGED_AT);
         MergeRequestView later = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 9), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, "4444", MERGED_AT.plusSeconds(3600));
+                "main", HEAD, false, "4444", MERGED_AT.plusSeconds(3600));
 
         assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own), request -> request.mergedSince(MERGED_AT))).contains(own);
         assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own, later), request -> true)).contains(later);
@@ -88,12 +88,12 @@ class DeliveryClaimsTest {
     @Test
     void needsTheMomentOfAMerge() {
         assertThatIllegalArgumentException().isThrownBy(() -> new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main",
-                HEAD, "3333", null)).withMessageContaining("names when it was merged");
+                HEAD, false, "3333", null)).withMessageContaining("names when it was merged");
     }
 
     @Test
     void tellsAMergeSinceAMomentFromAnEarlierOne() {
-        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, "3333", MERGED_AT);
+        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, false, "3333", MERGED_AT);
 
         assertThat(merged.mergedSince(MERGED_AT.minusSeconds(60))).isTrue();
         assertThat(merged.mergedSince(MERGED_AT)).isTrue();
@@ -105,7 +105,7 @@ class DeliveryClaimsTest {
     void recordsADeliveryAndFollowsItsState() {
         Instant recorded = Instant.parse("2026-10-16T09:00:00Z");
         Delivery delivery = Delivery.of(new TaskId("fit-lamp"), view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD), recorded);
-        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, true, "feature/HRN-3", "main", HEAD, "3333", MERGED_AT);
+        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, true, "feature/HRN-3", "main", HEAD, false, "3333", MERGED_AT);
 
         Delivery observed = delivery.observed(merged, recorded.plusSeconds(600));
 
@@ -115,7 +115,7 @@ class DeliveryClaimsTest {
         assertThat(observed.landedCommit()).isEqualTo("3333");
         assertThat(observed.recordedAt()).isEqualTo(recorded);
         assertThatIllegalArgumentException().isThrownBy(() -> delivery.observed(new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8),
-                MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD, null, null), recorded));
+                MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD, false, null, null), recorded));
     }
 
     @Test
@@ -226,26 +226,36 @@ class DeliveryClaimsTest {
         for (String running : List.of("pending", "running", "fixing", "awaiting-review")) {
             assertThat(new PipelineRun("01RUN", running, "ci", HEAD, "", false).isRunning()).as(running).isTrue();
         }
-        assertThat(new PipelineRun("01RUN", "running", " ", HEAD, "", false).activeStep()).isNull();
+        assertThat(new PipelineRun("01RUN", "running", " ", HEAD, "", false).step()).isNull();
     }
 
     @Test
-    void stopsChangingTheRequestOnlyWhileItsOnlyStepWatchesChecksThatPassed() {
-        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", HEAD, "https://forge.example.org/team/harness/-/merge_requests/5", true);
+    void stopsChangingTheRequestWhileRunningOnlyWhenItsOnlyStepWatchesChecksThatPassed() {
+        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", HEAD, ADDRESS.url(), true);
 
-        assertThat(watching.stillChangesTheRequest()).isFalse();
-        assertThat(watching.withChecksPassed(false).stillChangesTheRequest()).as("a watch on pending, failing or fixed checks").isTrue();
-        assertThat(new PipelineRun("01RUN", "running", "review", HEAD, null, true).stillChangesTheRequest()).as("another step").isTrue();
-        assertThat(new PipelineRun("01RUN", "completed", null, HEAD, null, false).stillChangesTheRequest()).as("a completed run").isFalse();
+        assertThat(watching.stillChanges(request(false))).isFalse();
+        assertThat(watching.withChecksPassed(false).stillChanges(request(false))).as("a watch on pending, failing or fixed checks").isTrue();
+        assertThat(new PipelineRun("01RUN", "running", "review", HEAD, null, true).stillChanges(request(true))).as("another step").isTrue();
+        assertThat(new PipelineRun("01RUN", "completed", null, HEAD, null, false).stillChanges(request(false))).as("a completed run").isFalse();
     }
 
     @Test
-    void stopsChangingTheRequestAfterARunThatEndedShortOfCompletionOnlyWhenItsChecksHadPassed() {
+    void stopsChangingTheRequestOnceItEndsWhateverItsCiStepEndedIn() {
         for (String ended : List.of("checks_passed", "handed_off", "ci_monitor_interrupted", "failed", "cancelled")) {
-            PipelineRun passed = new PipelineRun("01RUN", ended, null, HEAD, "https://forge.example.org/team/harness/-/merge_requests/5", true);
+            assertThat(new PipelineRun("01RUN", ended, "ci", HEAD, ADDRESS.url(), false).stillChanges(request(false))).as(ended + " in its CI step")
+                    .isFalse();
+            assertThat(new PipelineRun("01RUN", ended, null, HEAD, ADDRESS.url(), false).stillChanges(request(false)))
+                    .as(ended + " with every step of its own passed").isFalse();
+        }
+    }
 
-            assertThat(passed.stillChangesTheRequest()).as(ended + " on passed checks").isFalse();
-            assertThat(passed.withChecksPassed(false).stillChangesTheRequest()).as(ended + " before its checks passed").isTrue();
+    @Test
+    void keepsChangingTheRequestAfterFailingInAStepOfItsOwnUntilTheForgeShowsItsChecksPassed() {
+        for (String ended : List.of("failed", "cancelled", "aborted")) {
+            PipelineRun failedItsTests = new PipelineRun("01RUN", ended, "test", HEAD, ADDRESS.url(), false);
+
+            assertThat(failedItsTests.stillChanges(request(false))).as(ended + " in its test step").isTrue();
+            assertThat(failedItsTests.stillChanges(request(true))).as(ended + " in its test step on green checks").isFalse();
         }
     }
 
@@ -276,8 +286,13 @@ class DeliveryClaimsTest {
         assertThat(refresh.verified(asked).cleanUpTried(asked).cleanUpTriedAt()).isEqualTo(asked);
     }
 
+    private static Delivery request(boolean checksPassed) {
+        return Delivery.of(new TaskId("fit-lamp"), new MergeRequestView(ADDRESS, MergeRequestState.OPEN, false, BRANCH.toString(), MAIN.name(), HEAD,
+                checksPassed, null, null), MERGED_AT);
+    }
+
     private static MergeRequestView view(MergeRequestState state, boolean draft, String source, String target, String head) {
-        return new MergeRequestView(ADDRESS, state, draft, source, target, head, null, null);
+        return new MergeRequestView(ADDRESS, state, draft, source, target, head, false, null, null);
     }
 
     private static OutgoingCommit commitAdding(String id, AddedLine... lines) {

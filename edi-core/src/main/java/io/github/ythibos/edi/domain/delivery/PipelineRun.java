@@ -3,7 +3,7 @@ package io.github.ythibos.edi.domain.delivery;
 import java.util.Objects;
 import java.util.Set;
 
-public record PipelineRun(String id, String status, String activeStep, String headCommit, String mergeRequestUrl, boolean checksPassed) {
+public record PipelineRun(String id, String status, String step, String headCommit, String mergeRequestUrl, boolean checksPassed) {
 
     private static final Set<String> FINISHED =
             Set.of("completed", "failed", "cancelled", "canceled", "aborted", "checks_passed", "handed_off", "ci_monitor_interrupted");
@@ -15,31 +15,31 @@ public record PipelineRun(String id, String status, String activeStep, String he
             throw new IllegalArgumentException("A pipeline run has the id the pipeline gave it.");
         }
         Objects.requireNonNull(status, () -> "Pipeline run " + id + " has a status.");
-        activeStep = activeStep == null || activeStep.isBlank() ? null : activeStep;
+        step = step == null || step.isBlank() ? null : step;
         mergeRequestUrl = mergeRequestUrl == null || mergeRequestUrl.isBlank() ? null : mergeRequestUrl;
     }
 
     public PipelineRun withChecksPassed(boolean passed) {
-        return new PipelineRun(id, status, activeStep, headCommit, mergeRequestUrl, passed);
+        return new PipelineRun(id, status, step, headCommit, mergeRequestUrl, passed);
     }
 
     public boolean isRunning() {
         return !FINISHED.contains(status);
     }
 
-    public boolean stillChangesTheRequest() {
-        return isRunning() ? !onlyWatchesPassedChecks() : endedWithoutPassedChecks();
+    public boolean stillChanges(Delivery request) {
+        return isRunning() ? !onlyWatchesPassedChecks() : failedInAStepOfItsOwn() && !request.checksPassed();
     }
 
     public String currentStep() {
-        return activeStep == null ? status : activeStep;
+        return step == null ? status : step;
     }
 
     private boolean onlyWatchesPassedChecks() {
-        return CI_WATCH.equals(activeStep) && checksPassed;
+        return CI_WATCH.equals(step) && checksPassed;
     }
 
-    private boolean endedWithoutPassedChecks() {
-        return !COMPLETED.equals(status) && !checksPassed;
+    private boolean failedInAStepOfItsOwn() {
+        return !COMPLETED.equals(status) && step != null && !CI_WATCH.equals(step);
     }
 }

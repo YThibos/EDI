@@ -20,13 +20,22 @@ class AxiStatusTest {
     }
 
     @Test
-    void readsAFinishedRunWithoutAnActiveStepOrAMergeRequest() throws IOException {
+    void readsAFailedRunWithTheStepItStoppedInAndWithoutAMergeRequest() throws IOException {
         PipelineRun failed = AxiStatus.currentRunIn(fixture("status-with-a-failed-run.toon"), "feature/HRN-3").orElseThrow();
 
         assertThat(failed.status()).isEqualTo("failed");
         assertThat(failed.isRunning()).isFalse();
-        assertThat(failed.activeStep()).isNull();
+        assertThat(failed.step()).isEqualTo("review");
         assertThat(failed.mergeRequestUrl()).isNull();
+    }
+
+    @Test
+    void readsARunThatSkippedItsCiStepAsPassedWithNoStepLeft() throws IOException {
+        PipelineRun passed = AxiStatus.currentRunIn(fixture("status-with-a-run-that-skipped-ci.toon"), "feature/HRN-3").orElseThrow();
+
+        assertThat(passed.status()).isEqualTo("completed");
+        assertThat(passed.isRunning()).isFalse();
+        assertThat(passed.step()).isNull();
     }
 
     @Test

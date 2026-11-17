@@ -105,7 +105,7 @@ public class Handovers {
     }
 
     private static String describedRun(PipelineRun run) {
-        String step = run.activeStep() == null ? "" : ", at its " + run.activeStep() + " step";
+        String step = run.step() == null ? "" : ", at its " + run.step() + " step";
         String mergeRequest = run.mergeRequestUrl() == null ? "" : ", for " + run.mergeRequestUrl();
         return "The latest pipeline run, " + run.id() + ", is " + run.status() + step + mergeRequest + ".";
     }

@@ -266,6 +266,6 @@ class TurnReportPresenterTest {
 
     private static ReadyForReview readyForReview(Task task) {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
-        return new ReadyForReview(task, new Delivery(task.id(), request, true, "abc123", MergeRequestState.OPEN, null, NOW, NOW));
+        return new ReadyForReview(task, new Delivery(task.id(), request, true, "abc123", false, MergeRequestState.OPEN, null, NOW, NOW));
     }
 }

@@ -278,7 +278,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static Delivery delivery(Task task) {
-        return new Delivery(task.id(), DRAFT, true, "abc123", MergeRequestState.OPEN, null, NOW, NOW);
+        return new Delivery(task.id(), DRAFT, true, "abc123", false, MergeRequestState.OPEN, null, NOW, NOW);
     }
 
     private static LandedTask landed(String id) {

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -248,15 +249,52 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void holdsAHandedOverRequestAsChangingOnceItsWatchWasInterruptedBeforeItsChecksPassed() {
+    void putsAHandedOverRequestBeforeTheCaptainWhateverItsCiStepEndedIn() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "ci_monitor_interrupted", null, "2222", REQUEST.url(), false), TestHome.START);
+        for (PipelineRun ended : List.of(endedInItsCiStep("cancelled"), endedInItsCiStep("failed"),
+                new PipelineRun("01RUN", "ci_monitor_interrupted", null, "2222", REQUEST.url(), false))) {
+            home.pipelineRuns().save(lamp.id(), ended, TestHome.START);
 
-        WaitingOnTheCaptain interrupted = home.fleetSnapshot().snapshot().waiting();
+            WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
 
-        assertThat(interrupted.reviews()).isEmpty();
-        assertThat(interrupted.changing()).singleElement()
-                .satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline ci_monitor_interrupted without passed checks"));
+            assertThat(waiting.changing()).as(ended.status()).isEmpty();
+            assertThat(waiting.reviews()).as(ended.status()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        }
+    }
+
+    @Test
+    void putsAHandedOverRequestOfAProjectWithoutCiBeforeTheCaptainOnceItsLocalStepsPassed() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "2222", REQUEST.url(), false), TestHome.START);
+
+        WaitingOnTheCaptain passed = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(passed.changing()).isEmpty();
+        assertThat(passed.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingOnceItsPipelineFailedInAStepOfItsOwn() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "test", "2222", REQUEST.url(), false), TestHome.START);
+
+        WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(failed.reviews()).isEmpty();
+        assertThat(failed.changing()).singleElement()
+                .satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline failed in its test step"));
+    }
+
+    @Test
+    void putsAHandedOverRequestBeforeTheCaptainOnChecksTheForgeShowsPassedAfterItsPipelineFailed() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", "2222", REQUEST.url(), false), TestHome.START);
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(onPassedChecks(), TestHome.START));
+
+        WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(green.changing()).isEmpty();
+        assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -436,7 +474,7 @@ class FleetSnapshotQueryTest {
         FleetSnapshot fleet = home.fleetSnapshot().snapshot();
 
         assertThat(fleet.ongoing()).singleElement().satisfies(horn -> {
-            assertThat(horn.pipelineRun().activeStep()).isEqualTo("review");
+            assertThat(horn.pipelineRun().step()).isEqualTo("review");
             assertThat(horn.worker()).isNull();
             assertThat(horn.delivery()).isNull();
         });
@@ -453,11 +491,19 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
-        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", false, merged ? "3333" : null, merged ? TestHome.START : null);
     }
 
     private static MergeRequestView stillADraft() {
-        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null, null);
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", false, null, null);
+    }
+
+    private static MergeRequestView onPassedChecks() {
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, false, "feature/HRN-3", "main", "2222", true, null, null);
+    }
+
+    private static PipelineRun endedInItsCiStep(String status) {
+        return new PipelineRun("01RUN", status, "ci", "2222", REQUEST.url(), false);
     }
 
     private static PipelineRun watchingTheChecks(boolean passed) {
@@ -495,7 +541,7 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView firstPassDraft() {
         MergeRequestAddress draft = new MergeRequestAddress(REQUEST.repository(), 6);
-        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", null, null);
+        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", false, null, null);
     }
 
     private void add(NewTask task) {

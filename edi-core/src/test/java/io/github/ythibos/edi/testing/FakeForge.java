@@ -109,9 +109,15 @@ public final class FakeForge implements Forge {
     public synchronized MergeRequestView marksReady(MergeRequestAddress address) {
         MergeRequestView request = mergeRequests.get(address.number());
         MergeRequestView ready = new MergeRequestView(address, request.state(), false, request.sourceBranch(), request.targetBranch(),
-                request.headCommit(), request.landedCommit(), request.mergedAt());
+                request.headCommit(), request.checksPassed(), request.landedCommit(), request.mergedAt());
         mergeRequests.put(address.number(), ready);
         return ready;
+    }
+
+    public synchronized void passesTheChecksOf(MergeRequestAddress address) {
+        MergeRequestView request = mergeRequests.get(address.number());
+        mergeRequests.put(address.number(), new MergeRequestView(address, request.state(), request.draft(), request.sourceBranch(),
+                request.targetBranch(), request.headCommit(), true, request.landedCommit(), request.mergedAt()));
     }
 
     public synchronized MergeRequestView merges(MergeRequestAddress address, String landedCommit) {
@@ -138,7 +144,7 @@ public final class FakeForge implements Forge {
         MergeRequestAddress address = MergeRequestView.openAmong(mergeRequestsFrom(forge, branch))
                 .map(MergeRequestView::address)
                 .orElseGet(() -> new MergeRequestAddress(forge.repository(), ++lastNumber));
-        MergeRequestView request = new MergeRequestView(address, MergeRequestState.OPEN, draft, branch.toString(), base.name(), head, null, null);
+        MergeRequestView request = new MergeRequestView(address, MergeRequestState.OPEN, draft, branch.toString(), base.name(), head, false, null, null);
         mergeRequests.put(address.number(), request);
         return request;
     }
@@ -146,7 +152,7 @@ public final class FakeForge implements Forge {
     private MergeRequestView changed(MergeRequestAddress address, MergeRequestState state, String landedCommit, Instant mergedAt) {
         MergeRequestView request = mergeRequests.get(address.number());
         MergeRequestView changed = new MergeRequestView(address, state, request.draft(), request.sourceBranch(), request.targetBranch(),
-                request.headCommit(), landedCommit, mergedAt);
+                request.headCommit(), request.checksPassed(), landedCommit, mergedAt);
         mergeRequests.put(address.number(), changed);
         return changed;
     }

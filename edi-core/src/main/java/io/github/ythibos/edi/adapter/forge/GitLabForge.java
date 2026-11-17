@@ -28,6 +28,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class GitLabForge implements Forge {
 
+    private static final String PASSED_PIPELINE = "success";
+
     private final ForgeCalls calls;
     private final JsonMapper json;
 
@@ -104,8 +106,13 @@ public class GitLabForge implements Forge {
                 request.path("source_branch").asString(null),
                 request.path("target_branch").asString(null),
                 request.path("sha").asString(null),
+                checksPassedOn(request),
                 state == MergeRequestState.MERGED ? landedCommitOf(request) : null,
                 state == MergeRequestState.MERGED ? mergedAtOf(address, request) : null);
+    }
+
+    private static boolean checksPassedOn(JsonNode request) {
+        return PASSED_PIPELINE.equals(request.path("head_pipeline").path("status").asString(""));
     }
 
     private static MergeRequestState stateOf(String word) {

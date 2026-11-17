@@ -5,6 +5,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Component;
@@ -25,9 +26,10 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class GitHubForge implements Forge {
 
-    private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt";
+    private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,statusCheckRollup,mergeCommit,mergedAt";
     private static final String TEXT_FIELDS = "title,body";
     private static final String WORKFLOW_SCOPE = "workflow";
+    private static final Set<String> PASSING_CHECK = Set.of("SUCCESS", "NEUTRAL", "SKIPPED");
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -117,8 +119,18 @@ public class GitHubForge implements Forge {
                 pull.path("headRefName").asString(null),
                 pull.path("baseRefName").asString(null),
                 pull.path("headRefOid").asString(null),
+                checksPassedOn(pull),
                 pull.path("mergeCommit").path("oid").asString(null),
                 state == MergeRequestState.MERGED ? mergedAtOf(address, pull) : null);
+    }
+
+    private static boolean checksPassedOn(JsonNode pull) {
+        List<JsonNode> checks = StreamSupport.stream(pull.path("statusCheckRollup").spliterator(), false).toList();
+        return !checks.isEmpty() && checks.stream().allMatch(GitHubForge::passed);
+    }
+
+    private static boolean passed(JsonNode check) {
+        return PASSING_CHECK.contains(check.path("conclusion").asString(check.path("state").asString("")));
     }
 
     private static MergeRequestState stateOf(String word) {

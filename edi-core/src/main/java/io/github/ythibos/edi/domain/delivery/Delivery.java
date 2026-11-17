@@ -10,6 +10,7 @@ public record Delivery(
         MergeRequestAddress address,
         boolean draft,
         String headCommit,
+        boolean checksPassed,
         MergeRequestState state,
         String landedCommit,
         Instant recordedAt,
@@ -24,14 +25,14 @@ public record Delivery(
     }
 
     public static Delivery of(TaskId task, MergeRequestView view, Instant at) {
-        return new Delivery(task, view.address(), view.draft(), view.headCommit(), view.state(), view.landedCommit(), at, at);
+        return new Delivery(task, view.address(), view.draft(), view.headCommit(), view.checksPassed(), view.state(), view.landedCommit(), at, at);
     }
 
     public Delivery observed(MergeRequestView view, Instant at) {
         if (!view.address().equals(address)) {
             throw new IllegalArgumentException("The delivery of " + task + " is " + address + ", not " + view.address() + ".");
         }
-        return new Delivery(task, address, view.draft(), view.headCommit(), view.state(), view.landedCommit(), recordedAt, at);
+        return new Delivery(task, address, view.draft(), view.headCommit(), view.checksPassed(), view.state(), view.landedCommit(), recordedAt, at);
     }
 
     public boolean isOpen() {

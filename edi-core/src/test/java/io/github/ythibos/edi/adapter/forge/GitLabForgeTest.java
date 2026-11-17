@@ -66,8 +66,23 @@ class GitLabForgeTest {
         standIns.answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]");
 
         assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 5), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "2222", null, null));
+                "feature/HRN-3", "main", "2222", false, null, null));
         assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 --all -F json");
+    }
+
+    @Test
+    void readsTheChecksAsPassedOnlyWhenTheHeadPipelineSucceeded() throws IOException {
+        MergeRequestAddress address = new MergeRequestAddress(FORGE.repository(), 5);
+        String open = REQUEST.formatted("opened", "null", "null", "null");
+
+        standIns.answering("mr-view", open.replace("\"sha\":\"2222\"", "\"sha\":\"2222\",\"head_pipeline\":{\"status\":\"success\"}"));
+        assertThat(forge.view(FORGE, address).checksPassed()).isTrue();
+
+        standIns.answering("mr-view", open.replace("\"sha\":\"2222\"", "\"sha\":\"2222\",\"head_pipeline\":{\"status\":\"failed\"}"));
+        assertThat(forge.view(FORGE, address).checksPassed()).as("a failed pipeline").isFalse();
+
+        standIns.answering("mr-view", open);
+        assertThat(forge.view(FORGE, address).checksPassed()).as("no pipeline on the head").isFalse();
     }
 
     @Test

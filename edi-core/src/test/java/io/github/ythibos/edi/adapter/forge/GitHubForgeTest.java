@@ -54,11 +54,11 @@ class GitHubForgeTest {
         standIns.answering("pr-list", "[" + OPEN_DRAFT + "]");
 
         assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", null, null));
+                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", false, null, null));
         assertThat(standIns.calls()).containsExactly(
                 "auth token --hostname github.com --user example-owner",
                 "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state all --json "
-                        + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt");
+                        + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,statusCheckRollup,mergeCommit,mergedAt");
         assertThat(standIns.tokens()).containsExactly("none", ForgeStandIns.TOKEN);
     }
 
@@ -87,6 +87,21 @@ class GitHubForgeTest {
             assertThat(request.landedCommit()).isEqualTo("3333");
             assertThat(request.mergedAt()).isEqualTo(Instant.parse("2026-10-21T12:37:04Z"));
         });
+    }
+
+    @Test
+    void readsTheChecksAsPassedOnlyWhenTheHeadHasChecksAndEveryOnePassed() throws IOException {
+        String success = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}";
+        String skipped = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SKIPPED\"}";
+        String inProgress = "{\"__typename\":\"CheckRun\",\"status\":\"IN_PROGRESS\",\"conclusion\":\"\"}";
+        String failedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"FAILURE\"}";
+        String passedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"SUCCESS\"}";
+
+        assertThat(checksPassedWith("[" + success + "," + skipped + "," + passedStatus + "]")).isTrue();
+        assertThat(checksPassedWith("[" + success + "," + inProgress + "]")).as("a check still running").isFalse();
+        assertThat(checksPassedWith("[" + success + "," + failedStatus + "]")).as("a failed status").isFalse();
+        assertThat(checksPassedWith("[]")).as("a head without checks").isFalse();
+        assertThat(checksPassedWith("null")).as("no checks field").isFalse();
     }
 
     @Test
@@ -160,5 +175,10 @@ class GitHubForgeTest {
         assertThat(forge.credentialHelperFor(FORGE)).hasValueSatisfying(helper -> assertThat(helper)
                 .startsWith("!f() { test \"$1\" = get || exit 0; GH_TOKEN=\"$('" + standIns.gh() + "' auth token --hostname 'github.com' --user 'example-owner')\"")
                 .endsWith("exec '" + standIns.gh() + "' auth git-credential get; }; f"));
+    }
+
+    private boolean checksPassedWith(String rollup) throws IOException {
+        standIns.answering("pr-view", OPEN_DRAFT.replace("\"mergedAt\":null", "\"mergedAt\":null,\"statusCheckRollup\":" + rollup));
+        return forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 7)).checksPassed();
     }
 }

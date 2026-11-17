@@ -32,7 +32,7 @@ public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAt
     }
 
     private static String whyThePipelineStillChangesIt(PipelineRun run) {
-        return run.isRunning() ? "pipeline " + run.currentStep() : "pipeline " + run.status() + " without passed checks";
+        return run.isRunning() ? "pipeline " + run.currentStep() : "pipeline " + run.status() + " in its " + run.step() + " step";
     }
 
     private Optional<String> steersStillWaiting() {

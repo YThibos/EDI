@@ -19,7 +19,8 @@ The daemon's process and its environment were inspected by variable name only, a
 | Status words seen | `running`, `completed`, `failed`; the database's default is `pending`. |
 | Quoting | Values that need it are double-quoted with backslash escapes, such as the `pr` URL and `last_activity`. |
 
-`AxiStatus` reads only the `run:` block, and its fixtures under `edi-core/src/test/resources/no-mistakes/` are these outputs with the repository renamed.
+On 1.106.1, 17/11/2026, a completed run started with `--skip rebase,ci` showed both steps as `skipped` in its `steps` table and the outcome `passed`, and a failed or cancelled run marks the step it stopped in `failed` and every later step `pending`.
+`AxiStatus` reads only the `run:` block, taking a running run's step from its `active_steps` table and a finished run's from the first row of its `steps` table that neither completed nor was skipped, and its fixtures under `edi-core/src/test/resources/no-mistakes/` are these outputs with the repository renamed.
 
 ## Spend
 
