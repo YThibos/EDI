@@ -3,7 +3,8 @@ package io.github.ythibos.edi.domain.delivery;
 import java.util.Objects;
 import java.util.Set;
 
-public record PipelineRun(String id, String status, String step, String headCommit, String mergeRequestUrl, boolean checksPassed) {
+public record PipelineRun(String id, String status, String step, boolean stoppedByThePipelineService, String headCommit, String mergeRequestUrl,
+        boolean checksPassed) {
 
     private static final Set<String> FINISHED =
             Set.of("completed", "failed", "cancelled", "canceled", "aborted", "checks_passed", "handed_off", "ci_monitor_interrupted");
@@ -20,7 +21,7 @@ public record PipelineRun(String id, String status, String step, String headComm
     }
 
     public PipelineRun withChecksPassed(boolean passed) {
-        return new PipelineRun(id, status, step, headCommit, mergeRequestUrl, passed);
+        return new PipelineRun(id, status, step, stoppedByThePipelineService, headCommit, mergeRequestUrl, passed);
     }
 
     public boolean isRunning() {
@@ -40,6 +41,6 @@ public record PipelineRun(String id, String status, String step, String headComm
     }
 
     private boolean failedInAStepOfItsOwn() {
-        return !COMPLETED.equals(status) && step != null && !CI_WATCH.equals(step);
+        return !COMPLETED.equals(status) && step != null && !CI_WATCH.equals(step) && !stoppedByThePipelineService;
     }
 }

@@ -15,18 +15,28 @@ class AxiStatusTest {
     @Test
     void readsTheRunningRunOfTheCurrentBranchWithItsActiveStep() throws IOException {
         assertThat(AxiStatus.currentRunIn(fixture("status-with-a-running-run.toon"), "feature/HRN-3")).contains(new PipelineRun(
-                "01M527P0FFESZMZCVXFT9VHVW5", "running", "ci", "aacda7bfd12398c1d7960f58d68177e003550ad7",
+                "01M527P0FFESZMZCVXFT9VHVW5", "running", "ci", false, "aacda7bfd12398c1d7960f58d68177e003550ad7",
                 "https://github.com/example-owner/harness/pull/6", false));
     }
 
     @Test
-    void readsAFailedRunWithTheStepItStoppedInAndWithoutAMergeRequest() throws IOException {
-        PipelineRun failed = AxiStatus.currentRunIn(fixture("status-with-a-failed-run.toon"), "feature/HRN-3").orElseThrow();
+    void readsARunThatFailedInAStepOfItsOwnWithThatStep() throws IOException {
+        PipelineRun failed = AxiStatus.currentRunIn(fixture("status-with-a-run-that-failed-its-tests.toon"), "feature/HRN-3").orElseThrow();
 
         assertThat(failed.status()).isEqualTo("failed");
         assertThat(failed.isRunning()).isFalse();
-        assertThat(failed.step()).isEqualTo("review");
-        assertThat(failed.mergeRequestUrl()).isNull();
+        assertThat(failed.step()).isEqualTo("test");
+        assertThat(failed.stoppedByThePipelineService()).isFalse();
+    }
+
+    @Test
+    void readsARunTheShutdownOfThePipelinesServiceStoppedWithTheStepItStoppedInAndWithoutAMergeRequest() throws IOException {
+        PipelineRun stopped = AxiStatus.currentRunIn(fixture("status-with-a-failed-run.toon"), "feature/HRN-3").orElseThrow();
+
+        assertThat(stopped.status()).isEqualTo("failed");
+        assertThat(stopped.step()).isEqualTo("review");
+        assertThat(stopped.stoppedByThePipelineService()).isTrue();
+        assertThat(stopped.mergeRequestUrl()).isNull();
     }
 
     @Test
@@ -36,6 +46,7 @@ class AxiStatusTest {
         assertThat(passed.status()).isEqualTo("completed");
         assertThat(passed.isRunning()).isFalse();
         assertThat(passed.step()).isNull();
+        assertThat(passed.stoppedByThePipelineService()).isFalse();
     }
 
     @Test

@@ -197,10 +197,10 @@ class FleetSnapshotQueryTest {
     @Test
     void holdsAHandedOverRequestAsChangingWhileItsPipelineRuns() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST.url(), false), TestHome.START);
 
         WaitingOnTheCaptain running = home.fleetSnapshot().snapshot().waiting();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST.url(), false), TestHome.START);
         WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(running.reviews()).isEmpty();
@@ -240,7 +240,7 @@ class FleetSnapshotQueryTest {
     @Test
     void putsAHandedOverRequestBeforeTheCaptainOnceItsPipelineEndedOnPassedChecks() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "handed_off", null, "2222", REQUEST.url(), true), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "handed_off", null, false, "2222", REQUEST.url(), true), TestHome.START);
 
         WaitingOnTheCaptain handedOff = home.fleetSnapshot().snapshot().waiting();
 
@@ -252,7 +252,7 @@ class FleetSnapshotQueryTest {
     void putsAHandedOverRequestBeforeTheCaptainWhateverItsCiStepEndedIn() {
         Task lamp = handedOverWithAnOpenRequest();
         for (PipelineRun ended : List.of(endedInItsCiStep("cancelled"), endedInItsCiStep("failed"),
-                new PipelineRun("01RUN", "ci_monitor_interrupted", null, "2222", REQUEST.url(), false))) {
+                new PipelineRun("01RUN", "ci_monitor_interrupted", null, false, "2222", REQUEST.url(), false))) {
             home.pipelineRuns().save(lamp.id(), ended, TestHome.START);
 
             WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
@@ -265,7 +265,7 @@ class FleetSnapshotQueryTest {
     @Test
     void putsAHandedOverRequestOfAProjectWithoutCiBeforeTheCaptainOnceItsLocalStepsPassed() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "2222", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, false, "2222", REQUEST.url(), false), TestHome.START);
 
         WaitingOnTheCaptain passed = home.fleetSnapshot().snapshot().waiting();
 
@@ -276,7 +276,7 @@ class FleetSnapshotQueryTest {
     @Test
     void holdsAHandedOverRequestAsChangingOnceItsPipelineFailedInAStepOfItsOwn() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "test", "2222", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "test", false, "2222", REQUEST.url(), false), TestHome.START);
 
         WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
 
@@ -286,9 +286,20 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
+    void putsAHandedOverRequestBeforeTheCaptainOnceAStopOfThePipelineServiceEndedItsRun() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "review", true, "2222", REQUEST.url(), false), TestHome.START);
+
+        WaitingOnTheCaptain stopped = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(stopped.changing()).isEmpty();
+        assertThat(stopped.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
     void putsAHandedOverRequestBeforeTheCaptainOnChecksTheForgeShowsPassedAfterItsPipelineFailed() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", "2222", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", false, "2222", REQUEST.url(), false), TestHome.START);
         home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(onPassedChecks(), TestHome.START));
 
         WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
@@ -463,7 +474,7 @@ class FleetSnapshotQueryTest {
         add(ship("anchor", "Raise the anchor"));
         add(captainItem("lamp-choice", "Choose the lamp"));
         home.putInFlight(new TaskId("horn"));
-        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", "abc123", null, false), TestHome.START);
+        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", false, "abc123", null, false), TestHome.START);
         home.markDone(new TaskId("anchor"));
         home.clock().advance(Duration.ofDays(8));
         home.markDone(new TaskId("lantern"));
@@ -503,11 +514,11 @@ class FleetSnapshotQueryTest {
     }
 
     private static PipelineRun endedInItsCiStep(String status) {
-        return new PipelineRun("01RUN", status, "ci", "2222", REQUEST.url(), false);
+        return new PipelineRun("01RUN", status, "ci", false, "2222", REQUEST.url(), false);
     }
 
     private static PipelineRun watchingTheChecks(boolean passed) {
-        return new PipelineRun("01RUN", "running", "ci", "2222", REQUEST.url(), passed);
+        return new PipelineRun("01RUN", "running", "ci", false, "2222", REQUEST.url(), passed);
     }
 
     private Task handedOverWithAnOpenRequest() {

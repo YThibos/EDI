@@ -221,30 +221,30 @@ class DeliveryClaimsTest {
     @Test
     void countsEveryRunStatusButAFinishedOneAsRunning() {
         for (String finished : List.of("completed", "failed", "cancelled", "aborted", "checks_passed", "handed_off", "ci_monitor_interrupted")) {
-            assertThat(new PipelineRun("01RUN", finished, null, HEAD, null, false).isRunning()).as(finished).isFalse();
+            assertThat(new PipelineRun("01RUN", finished, null, false, HEAD, null, false).isRunning()).as(finished).isFalse();
         }
         for (String running : List.of("pending", "running", "fixing", "awaiting-review")) {
-            assertThat(new PipelineRun("01RUN", running, "ci", HEAD, "", false).isRunning()).as(running).isTrue();
+            assertThat(new PipelineRun("01RUN", running, "ci", false, HEAD, "", false).isRunning()).as(running).isTrue();
         }
-        assertThat(new PipelineRun("01RUN", "running", " ", HEAD, "", false).step()).isNull();
+        assertThat(new PipelineRun("01RUN", "running", " ", false, HEAD, "", false).step()).isNull();
     }
 
     @Test
     void stopsChangingTheRequestWhileRunningOnlyWhenItsOnlyStepWatchesChecksThatPassed() {
-        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", HEAD, ADDRESS.url(), true);
+        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", false, HEAD, ADDRESS.url(), true);
 
         assertThat(watching.stillChanges(request(false))).isFalse();
         assertThat(watching.withChecksPassed(false).stillChanges(request(false))).as("a watch on pending, failing or fixed checks").isTrue();
-        assertThat(new PipelineRun("01RUN", "running", "review", HEAD, null, true).stillChanges(request(true))).as("another step").isTrue();
-        assertThat(new PipelineRun("01RUN", "completed", null, HEAD, null, false).stillChanges(request(false))).as("a completed run").isFalse();
+        assertThat(new PipelineRun("01RUN", "running", "review", false, HEAD, null, true).stillChanges(request(true))).as("another step").isTrue();
+        assertThat(new PipelineRun("01RUN", "completed", null, false, HEAD, null, false).stillChanges(request(false))).as("a completed run").isFalse();
     }
 
     @Test
     void stopsChangingTheRequestOnceItEndsWhateverItsCiStepEndedIn() {
         for (String ended : List.of("checks_passed", "handed_off", "ci_monitor_interrupted", "failed", "cancelled")) {
-            assertThat(new PipelineRun("01RUN", ended, "ci", HEAD, ADDRESS.url(), false).stillChanges(request(false))).as(ended + " in its CI step")
+            assertThat(new PipelineRun("01RUN", ended, "ci", false, HEAD, ADDRESS.url(), false).stillChanges(request(false))).as(ended + " in its CI step")
                     .isFalse();
-            assertThat(new PipelineRun("01RUN", ended, null, HEAD, ADDRESS.url(), false).stillChanges(request(false)))
+            assertThat(new PipelineRun("01RUN", ended, null, false, HEAD, ADDRESS.url(), false).stillChanges(request(false)))
                     .as(ended + " with every step of its own passed").isFalse();
         }
     }
@@ -252,11 +252,18 @@ class DeliveryClaimsTest {
     @Test
     void keepsChangingTheRequestAfterFailingInAStepOfItsOwnUntilTheForgeShowsItsChecksPassed() {
         for (String ended : List.of("failed", "cancelled", "aborted")) {
-            PipelineRun failedItsTests = new PipelineRun("01RUN", ended, "test", HEAD, ADDRESS.url(), false);
+            PipelineRun failedItsTests = new PipelineRun("01RUN", ended, "test", false, HEAD, ADDRESS.url(), false);
 
             assertThat(failedItsTests.stillChanges(request(false))).as(ended + " in its test step").isTrue();
             assertThat(failedItsTests.stillChanges(request(true))).as(ended + " in its test step on green checks").isFalse();
         }
+    }
+
+    @Test
+    void stopsChangingTheRequestWhenAStopOfThePipelineServiceEndedItsOwnStep() {
+        PipelineRun stopped = new PipelineRun("01RUN", "failed", "review", true, HEAD, ADDRESS.url(), false);
+
+        assertThat(stopped.stillChanges(request(false))).isFalse();
     }
 
     @Test

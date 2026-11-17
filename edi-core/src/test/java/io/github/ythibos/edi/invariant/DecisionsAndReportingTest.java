@@ -389,14 +389,14 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST, false), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST, false), TestHome.START);
             home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Amend the record too.", null, Actor.PRIMARY);
 
             String report = captainReport(home, Turn.NONE);
             String brief = returnBrief(home);
             ConsoleSitrep onTheConsole = consoleSitrep(home);
             String digest = digestOf(home);
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST, false), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST, false), TestHome.START);
             home.workerInbox().acknowledge(worker.id(), 1);
             String settled = captainReport(home, Turn.NONE);
 
@@ -422,7 +422,7 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", "abc123", REQUEST, true);
+            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", false, "abc123", REQUEST, true);
             home.pipelineRuns().save(worker.id().task(), watching, TestHome.START);
 
             String report = captainReport(home, Turn.NONE);

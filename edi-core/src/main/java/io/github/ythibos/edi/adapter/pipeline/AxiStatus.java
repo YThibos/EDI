@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -12,11 +13,13 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 final class AxiStatus {
 
     private static final String RUN_BLOCK = "run:";
+    private static final String ERROR = "error";
     private static final String FIELD_INDENT = "  ";
     private static final String ROW_INDENT = "    ";
     private static final String ACTIVE_STEPS = "active_steps[";
     private static final String STEPS = "steps[";
     private static final Set<String> PASSED_STEP = Set.of("completed", "skipped");
+    private static final Pattern SERVICE_STOP = Pattern.compile("daemon (shutting down|crashed|restart)");
     private static final String FIELD_SEPARATOR = ": ";
     private static final String CELL_SEPARATOR = ",";
     private static final char QUOTE = '"';
@@ -26,12 +29,14 @@ final class AxiStatus {
     }
 
     static Optional<PipelineRun> currentRunIn(String status, String branch) {
-        List<String> block = runBlockOf(status.lines().toList());
+        List<String> lines = status.lines().toList();
+        List<String> block = runBlockOf(lines);
         Map<String, String> fields = fieldsOf(block);
         if (!branch.equals(fields.get("branch")) || !fields.containsKey("id") || !fields.containsKey("status")) {
             return Optional.empty();
         }
-        return Optional.of(new PipelineRun(fields.get("id"), fields.get("status"), stepIn(block), fields.get("head_sha"), fields.get("pr"), false));
+        return Optional.of(new PipelineRun(fields.get("id"), fields.get("status"), stepIn(block), stoppedByThePipelineService(lines),
+                fields.get("head_sha"), fields.get("pr"), false));
     }
 
     private static List<String> runBlockOf(List<String> lines) {
@@ -68,6 +73,15 @@ final class AxiStatus {
                 .dropWhile(line -> !line.strip().startsWith(table))
                 .skip(1)
                 .takeWhile(line -> line.startsWith(ROW_INDENT));
+    }
+
+    private static boolean stoppedByThePipelineService(List<String> lines) {
+        return lines.stream()
+                .filter(line -> !line.startsWith(FIELD_INDENT))
+                .map(AxiStatus::fieldOf)
+                .flatMap(Optional::stream)
+                .filter(field -> ERROR.equals(field.getKey()))
+                .anyMatch(error -> SERVICE_STOP.matcher(error.getValue()).find());
     }
 
     private static Optional<Map.Entry<String, String>> fieldOf(String line) {

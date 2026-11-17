@@ -43,13 +43,13 @@ class ObservePipelinesTest {
     @Test
     void recordsARunWhenItIsFirstSeenAndWhenItEnds() {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", "1111", null, false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", false, "1111", null, false));
 
         home.observePipelines().observe();
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "test", "1111", null, false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "test", false, "1111", null, false));
         home.observePipelines().observe();
         home.observePipelines().observe();
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", "https://github.com/example-owner/harness/pull/1", false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, false, "1111", "https://github.com/example-owner/harness/pull/1", false));
         home.observePipelines().observe();
 
         assertThat(home.eventTypesOf(LAMP)).containsSubsequence("PipelineRunSeen", "PipelineRunFinished").containsOnlyOnce("PipelineRunSeen");
@@ -60,14 +60,14 @@ class ObservePipelinesTest {
     void recordsTheMergeRequestOnceARunChangesAfterItWasOpened() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", "1111", null, false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", false, "1111", null, false));
         home.observePipelines().observe();
         assertThat(home.deliveries().of(LAMP)).isEmpty();
 
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
 
         assertThat(home.deliveries().of(LAMP)).map(Delivery::address).contains(draft.address());
@@ -80,12 +80,12 @@ class ObservePipelinesTest {
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
         home.forge().marksReady(draft.address());
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         Worker handedOver = home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
         WaitingOnTheCaptain changing = home.fleetSnapshot().snapshot().waiting();
 
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
 
@@ -101,11 +101,11 @@ class ObservePipelinesTest {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, "1111", draft.address().url(), true));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, false, "1111", draft.address().url(), true));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
 
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "review", "2222", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "review", false, "2222", draft.address().url(), false));
         home.observePipelines().observe();
 
         assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.DELIVERED);
@@ -119,7 +119,7 @@ class ObservePipelinesTest {
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
         home.forge().marksReady(draft.address());
-        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", "1111", draft.address().url(), false);
+        PipelineRun watching = new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), false);
         home.pipeline().runs(dispatched.launched().branch(), watching);
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
@@ -150,12 +150,12 @@ class ObservePipelinesTest {
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
         home.forge().marksReady(draft.address());
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "test", "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "test", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
         WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
 
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "ci", "1111", draft.address().url(), true));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "ci", false, "1111", draft.address().url(), true));
         home.observePipelines().observe();
         WaitingOnTheCaptain reRun = home.fleetSnapshot().snapshot().waiting();
 
@@ -170,12 +170,12 @@ class ObservePipelinesTest {
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
         home.forge().marksReady(draft.address());
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
         WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
 
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "cancelled", "ci", "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "cancelled", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         WaitingOnTheCaptain cancelled = home.fleetSnapshot().snapshot().waiting();
 
@@ -190,7 +190,7 @@ class ObservePipelinesTest {
         DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
         MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
         home.forge().marksReady(draft.address());
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "review", "1111", draft.address().url(), false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "review", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
         WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
@@ -209,14 +209,14 @@ class ObservePipelinesTest {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         Worker worker = dispatched.launched().worker();
         home.workerHooks().sessionStarted(worker.id(), worker.session(), null);
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", "1111", null, false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", null, false));
         home.observePipelines().observe();
 
         home.clock().advance(Duration.ofMinutes(40));
         home.judgeWorkers().judge();
         assertThat(home.eventTypesOf(LAMP)).doesNotContain("WorkerStale");
 
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", null, "1111", null, false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", null, false, "1111", null, false));
         home.observePipelines().observe();
         home.judgeWorkers().judge();
         assertThat(home.eventTypesOf(LAMP)).contains("WorkerStale");
@@ -225,7 +225,7 @@ class ObservePipelinesTest {
     @Test
     void watchesNoPipelineOfWorkThatNeverRunsOne() {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3", DeliveryMode.LOCAL_BRANCH));
-        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", "1111", null, false));
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "review", false, "1111", null, false));
 
         home.observePipelines().observe();
 

@@ -62,7 +62,7 @@ class TaskLinksQueryTest {
         MergeRequestAddress request = new MergeRequestAddress(HARNESS, 13);
         home.deliveries().save(Delivery.of(lamp.id(), new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/SVC-7", "main", "2222", false, null,
                 null), TestHome.START));
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "2222", request.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", false, "2222", request.url(), false), TestHome.START);
 
         TaskLinks links = linksOf(lamp);
 
