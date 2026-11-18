@@ -29,7 +29,7 @@ final class UpCommand implements Callable<Integer> {
     public Integer call() {
         try {
             startTheCoreUnlessItRuns();
-            return coreOnly ? 0 : new PrimaryWindow(edi.environment()).open(launchOfThePrimary());
+            return coreOnly ? 0 : new PrimaryWindow(edi.environment(), edi.home()).open(launchOfThePrimary());
         } catch (CommandFailure | CoreUnavailable failed) {
             spec.commandLine().getErr().println(failed.getMessage());
             return REFUSED;

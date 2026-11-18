@@ -9,15 +9,16 @@ import org.junit.jupiter.api.Test;
 
 class PrimaryWindowTest {
 
+    private static final Path HOME = Path.of("/edi/home");
     private static final PrimaryLaunch LAUNCH = new PrimaryLaunch("edi-261028-0737", Path.of("/edi/home"), Path.of("/edi/home/settings.json"),
             Path.of("/edi/home/anchor.md"), "launch-key-of-the-primary");
 
     @Test
-    void opensTheSessionAttachedWithTheLaunchKeyInItsEnvironmentAndTitlesTheTerminalWithItsName() {
-        PrimaryWindow outsideTmux = new PrimaryWindow(Map.of());
+    void opensTheSessionAttachedWithItsHomeAndTheLaunchKeyInItsEnvironmentAndTitlesTheTerminalWithItsName() {
+        PrimaryWindow outsideTmux = new PrimaryWindow(Map.of(), HOME);
 
         assertThat(outsideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-s", "edi-261028-0737", "-c", "/edi/home",
-                "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
+                "-e", "EDI_HOME=/edi/home", "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
                 "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
@@ -25,10 +26,10 @@ class PrimaryWindowTest {
 
     @Test
     void opensTheSessionDetachedInsideTmuxAndStillTitlesTheTerminalWithItsName() {
-        PrimaryWindow insideTmux = new PrimaryWindow(Map.of("TMUX", "/tmp/tmux-1000/default,1,0"));
+        PrimaryWindow insideTmux = new PrimaryWindow(Map.of("TMUX", "/tmp/tmux-1000/default,1,0"), HOME);
 
         assertThat(insideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-d", "-s", "edi-261028-0737", "-c", "/edi/home",
-                "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
+                "-e", "EDI_HOME=/edi/home", "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
                 "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");

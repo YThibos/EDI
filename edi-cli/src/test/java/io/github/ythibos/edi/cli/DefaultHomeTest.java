@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -68,6 +69,18 @@ class DefaultHomeTest {
     }
 
     @Test
+    void refusesEveryToolCallItsGuardCannotCheckWhileTheDefaultHomeIsRefusedAndRecordsNothingThere() throws IOException {
+        Path copy = Files.createDirectories(userHome.resolve(".edi/worktrees/harness/fit-lamp"));
+
+        int guarded = ediReading("{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}", Map.of(), copy, "hook", "pre-tool-use");
+
+        assertThat(guarded).isEqualTo(2);
+        assertThat(err.toString()).startsWith("The guard could not check this tool call, so it is refused: edi refuses to fall back to the default EDI home");
+        assertThat(coreOfTheDefaultHome.requests()).isEmpty();
+        assertThat(RuleFirings.spoolIn(userHome.resolve(".edi"))).doesNotExist();
+    }
+
+    @Test
     void reachesTheCoreOfTheHomeItIsGivenWhereverItRuns(@TempDir Path throwawayHome) throws IOException {
         Path copy = Files.createDirectories(userHome.resolve(".edi/worktrees/harness/fit-lamp"));
         try (StubCore throwawayCore = StubCore.recordedIn(throwawayHome)) {
@@ -99,9 +112,13 @@ class DefaultHomeTest {
     }
 
     private int edi(Map<String, String> variables, Path workingDirectory, String... arguments) {
+        return ediReading("", variables, workingDirectory, arguments);
+    }
+
+    private int ediReading(String input, Map<String, String> variables, Path workingDirectory, String... arguments) {
         Map<String, String> environment = new HashMap<>(variables);
         environment.put("HOME", userHome.toString());
-        Edi edi = new Edi(environment, new ByteArrayInputStream(new byte[0]), StandardOutput.OF_THIS_PROCESS, workingDirectory);
+        Edi edi = new Edi(environment, new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)), StandardOutput.OF_THIS_PROCESS, workingDirectory);
         return Edi.commandLine(edi).setOut(new PrintWriter(new StringWriter())).setErr(new PrintWriter(err, true)).execute(arguments);
     }
 }

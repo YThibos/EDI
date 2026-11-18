@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.cli;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -7,10 +8,12 @@ import java.util.Map;
 final class PrimaryWindow {
 
     private final boolean insideTmux;
+    private final Path home;
 
-    PrimaryWindow(Map<String, String> environment) {
+    PrimaryWindow(Map<String, String> environment, Path home) {
         String tmux = environment.get("TMUX");
         this.insideTmux = tmux != null && !tmux.isBlank();
+        this.home = home;
     }
 
     int open(PrimaryLaunch launch) {
@@ -26,10 +29,14 @@ final class PrimaryWindow {
         if (insideTmux) {
             command.add("-d");
         }
-        command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString(), "-e", launch.launchKeyVariable()));
+        command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString(), "-e", homeVariable(), "-e", launch.launchKeyVariable()));
         command.addAll(launch.claude());
         command.addAll(terminalTitledBySessionName(launch.session()));
         return command;
+    }
+
+    private String homeVariable() {
+        return DefaultHome.VARIABLE + "=" + home;
     }
 
     private static List<String> terminalTitledBySessionName(String session) {

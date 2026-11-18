@@ -38,6 +38,8 @@ import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 import jdk.jfr.consumer.RecordingFile;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @Isolated
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
@@ -46,6 +48,7 @@ class NativeSmokeIT {
     private static final RoundTripBudget ROUND_TRIP_BUDGET = new RoundTripBudget(200);
     private static final RoundTripBudget PROOF_BUDGET = new RoundTripBudget(50);
     private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
+    private static final JsonMapper JSON = new JsonMapper();
     private static final Pattern ADDED_TASK_ID = Pattern.compile("\"added\":\\{\"id\":\"([^\"]+)\"");
     private static final String REGISTRY = """
             projects:
@@ -467,7 +470,9 @@ class NativeSmokeIT {
         assertThat(home.resolve("no-mistakes/config.yaml")).content()
                 .isEqualTo("agent: auto\n\nagent_args_override:\n  claude:\n    - --model\n    - claude-opus-5-5\n    - --effort\n    - high\n"
                         + "    - --settings\n    - " + home.resolve("state/pipeline/settings.json") + "\n");
-        assertThat(home.resolve("state/pipeline/settings.json")).content().contains("\"command\" : \"EDI_HOME='" + home + "' edi hook pre-tool-use\"");
+        JsonNode pipelineGuard = JSON.readTree(Files.readString(home.resolve("state/pipeline/settings.json"))).path("hooks").path("PreToolUse").get(0);
+        assertThat(pipelineGuard.path("matcher").asString()).isEqualTo("Bash|Monitor|Read");
+        assertThat(pipelineGuard.path("hooks").get(0).path("command").asString()).isEqualTo("EDI_HOME='" + home + "' edi hook pre-tool-use");
         assertThat(done.output()).contains("native-worker#1", "done: the stub worker finished");
         assertThat(gitOutput(worktree, "log", "--format=%s", "-1")).isEqualTo("HRN-7 Add the stub file\n");
         assertThat(steered.output()).isEqualTo("Message 1 waits for native-worker#1; its idle prompt was told to run edi inbox.\n");

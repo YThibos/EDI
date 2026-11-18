@@ -37,7 +37,7 @@ class WakeDigestTextTest {
     @Test
     void namesTheSessionThatTookThePrimaryRoleAndEndedWhenTheRoleComesBack() {
         UUID taker = UUID.fromString("0f6c3b2a-0000-4000-8000-00000000c0de");
-        RoleReturn back = new RoleReturn(taker, RAISED, RAISED.plus(Duration.ofMinutes(3)));
+        RoleReturn back = new RoleReturn(RAISED.minus(Duration.ofHours(1)), taker, RAISED, RAISED.plus(Duration.ofMinutes(3)));
 
         String text = digest.text(new WakeDelivery(Optional.of(back), List.of(), 0, 8, 0, PRESENT, true));
 

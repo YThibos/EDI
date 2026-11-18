@@ -40,6 +40,10 @@ public class PrimarySessions {
         return transaction.execute(_ -> role().holder().filter(holder -> holder.id().equals(session)).flatMap(holder -> reclaimedBy(holder, now)));
     }
 
+    public void withdrawTheReclaim(UUID session, RoleReturn undelivered) {
+        transaction.executeWithoutResult(_ -> sessions.get(session).ifPresent(holder -> sessions.save(holder.claimed(undelivered.heldSince()))));
+    }
+
     public Optional<Instant> previousReportOf(UUID session) {
         return transaction.execute(_ -> sessions.get(session).map(PrimarySession::turn).map(PrimaryTurn::previousReportAt));
     }

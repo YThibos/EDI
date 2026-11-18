@@ -83,7 +83,8 @@ class WaitForWakesTest {
 
         assertThat(whileTaken).isEqualTo(Standing.STANDBY);
         assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
-        assertThat(delivery.roleReturn()).contains(new RoleReturn(taker, takenAt, endedAt));
+        assertThat(delivery.roleReturn()).get().extracting(RoleReturn::taker, RoleReturn::takenAt, RoleReturn::takerEndedAt)
+                .containsExactly(taker, takenAt, endedAt);
         assertThat(delivery.wakes()).isEmpty();
         assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
     }
@@ -173,11 +174,28 @@ class WaitForWakesTest {
     void deliversAgainWhatAnExpiredWaitWithdrew() {
         WakeStream stream = followedBy(primarySession());
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
-        home.waitForWakes().withdraw(home.waitForWakes().deliverTo(stream).orElseThrow());
+        home.waitForWakes().withdraw(stream, home.waitForWakes().deliverTo(stream).orElseThrow());
 
         WakeDelivery redelivered = home.waitForWakes().deliverTo(stream).orElseThrow();
 
         assertThat(redelivered.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
+    }
+
+    @Test
+    void namesTheSessionThatTookThePrimaryRoleAgainWhenAnExpiredWaitWithdrewTheWakeThatSaidSo() {
+        UUID captains = primarySession();
+        home.clock().advance(Duration.ofMinutes(1));
+        UUID taker = primarySession();
+        home.clock().advance(Duration.ofMinutes(2));
+        home.primaryHooks().sessionEnded(taker);
+        WakeStream stream = followedBy(captains);
+        home.waitForWakes().withdraw(stream, home.waitForWakes().deliverTo(stream).orElseThrow());
+        home.clock().advance(Duration.ofMinutes(1));
+
+        WakeDelivery redelivered = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        assertThat(redelivered.roleReturn()).map(RoleReturn::taker).contains(taker);
+        assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
     }
 
     @Test

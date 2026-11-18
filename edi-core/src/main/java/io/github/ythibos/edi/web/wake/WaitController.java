@@ -91,7 +91,7 @@ class WaitController {
             signal.forget(this);
             String offered = delivery.numbers().stream().map(String::valueOf).collect(Collectors.joining(","));
             if (!result.setResult(ResponseEntity.ok().header(OFFERED_WAKES, offered).body(delivery))) {
-                waits.withdraw(delivery);
+                waits.withdraw(stream, delivery);
             }
         }
     }

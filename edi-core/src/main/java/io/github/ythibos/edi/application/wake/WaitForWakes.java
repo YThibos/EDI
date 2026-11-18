@@ -89,8 +89,11 @@ public class WaitForWakes {
         });
     }
 
-    public void withdraw(WakeDelivery undelivered) {
-        transaction.executeWithoutResult(_ -> wakes.withdraw(undelivered.wakes()));
+    public void withdraw(WakeStream stream, WakeDelivery undelivered) {
+        transaction.executeWithoutResult(_ -> {
+            wakes.withdraw(undelivered.wakes());
+            undelivered.roleReturn().ifPresent(back -> sessions.withdrawTheReclaim(stream.session(), back));
+        });
     }
 
     private List<QueuedWake> dueAmong(List<QueuedWake> pending, Presence captain, Instant now) {
