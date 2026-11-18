@@ -49,7 +49,10 @@ public class GitLabForge implements Forge {
     public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = calls.run(ForgeCommand.GLAB_MR_LIST,
                 List.of("-R", forge.repository().url(), "--source-branch", branch.toString(), "--all", "-F", "json"), Map.of(), null);
-        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(request -> viewOf(forge, request)).toList();
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false)
+                .map(request -> viewOf(forge, request))
+                .map(request -> withTheChecksOnItsHead(forge, request))
+                .toList();
     }
 
     @Override
@@ -84,6 +87,10 @@ public class GitLabForge implements Forge {
     @Override
     public Optional<String> credentialHelperFor(RegisteredForge forge) {
         return Optional.empty();
+    }
+
+    private MergeRequestView withTheChecksOnItsHead(RegisteredForge forge, MergeRequestView listed) {
+        return listed.state() == MergeRequestState.OPEN ? view(forge, listed.address()) : listed;
     }
 
     private void requireTheBoundAccount(RegisteredForge forge) {
