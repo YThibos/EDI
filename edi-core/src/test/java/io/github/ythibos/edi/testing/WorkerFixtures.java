@@ -29,6 +29,7 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -107,12 +108,17 @@ public final class WorkerFixtures {
     }
 
     public static Task queuedShip(String id, String project, String key, DeliveryMode delivery) {
-        Intake intake = new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), WorkKey.parse(key), null, List.of(), delivery);
+        Intake intake = new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), WorkKey.parse(key), null, List.of(), delivery, null);
+        return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
+    }
+
+    public static Task sizedShip(String id, String project, String key, TaskSize size) {
+        Intake intake = new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), WorkKey.parse(key), null, List.of(), null, size);
         return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
     }
 
     public static Task queued(String id, TaskKind kind, String project, String key) {
-        Intake intake = new Intake(kind, "Work on " + id, List.of(new ProjectName(project)), key == null ? null : WorkKey.parse(key), null, List.of(), null);
+        Intake intake = new Intake(kind, "Work on " + id, List.of(new ProjectName(project)), key == null ? null : WorkKey.parse(key), null, List.of(), null, null);
         return Task.queued(new TaskId(id), intake, "Do the work on " + id + ".", TestHome.START);
     }
 

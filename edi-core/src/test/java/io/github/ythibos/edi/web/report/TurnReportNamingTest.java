@@ -115,7 +115,7 @@ class TurnReportNamingTest {
     }
 
     private static Task task(String id) {
-        return Task.queued(new TaskId(id), new Intake(TaskKind.CAPTAIN, "Choose " + id, List.of(new ProjectName("harness")), null, null, List.of(), null), "",
+        return Task.queued(new TaskId(id), new Intake(TaskKind.CAPTAIN, "Choose " + id, List.of(new ProjectName("harness")), null, null, List.of(), null, null), "",
                 NOW);
     }
 

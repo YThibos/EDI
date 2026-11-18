@@ -128,7 +128,7 @@ final class ForkEntryMapping {
     private Intake intakeOf(ForkEntry entry, TaskId id) {
         ForkTags tags = entry.tags();
         return new Intake(kindOf(tags.kind()), tags.title(), projectsOf(entry, id), workKeyOpening(tags.title()), null, blockersOf(entry, id),
-                null);
+                null, null);
     }
 
     private CaptainHold holdOf(ForkEntry entry, TaskId id, Decision decision) {

@@ -66,7 +66,7 @@ class SliceStandingTest {
     }
 
     private static Task paintLamp() {
-        return Task.queued(PAINT_LAMP, new Intake(TaskKind.SHIP, "Paint the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null), "",
+        return Task.queued(PAINT_LAMP, new Intake(TaskKind.SHIP, "Paint the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null, null), "",
                 AT);
     }
 

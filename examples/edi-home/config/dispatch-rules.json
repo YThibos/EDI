@@ -3,9 +3,16 @@
   "projectOverrides": [
     {
       "project": "EDI",
+      "categories": ["implementation", "bugfix"],
+      "sizes": ["XS", "S"],
+      "use": { "model": "claude-sonnet-5-5", "effort": "high" },
+      "why": "The captain asked for a rule that puts small items on Sonnet instead of Opus: an XS or S item carries its full specification in its issue, so it runs on Sonnet 5.5 at high effort."
+    },
+    {
+      "project": "EDI",
       "categories": ["research", "implementation", "implementation-unplanned", "bugfix"],
       "use": { "model": "claude-opus-5-5", "effort": "high" },
-      "why": "Every research and implementation task on EDI itself runs on Opus 5.5 at high effort: nothing more, nothing less."
+      "why": "Every research and implementation task on EDI itself, other than a small item above, runs on Opus 5.5 at high effort: nothing more, nothing less."
     }
   ],
   "pipeline": {

@@ -62,7 +62,7 @@ public class AddPlan {
     }
 
     private static NewTask sliceTask(PlanHeading heading, SliceDraft slice) {
-        return new NewTask(null, new Intake(TaskKind.SHIP, slice.title(), List.of(heading.project()), slice.key(), null, List.of(), null), slice.body());
+        return new NewTask(null, new Intake(TaskKind.SHIP, slice.title(), List.of(heading.project()), slice.key(), null, List.of(), null, null), slice.body());
     }
 
     private Plan planned(PlanDraft draft, List<CheckedTask> slices, Actor actor) {

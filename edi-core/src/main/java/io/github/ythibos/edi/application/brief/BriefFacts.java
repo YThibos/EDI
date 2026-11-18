@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -16,6 +17,7 @@ public record BriefFacts(
         WorkerId worker,
         ProjectEntry project,
         Dispatch dispatch,
+        ChosenRoute route,
         BaseBranch base,
         Path worktree,
         Path taskDirectory,
@@ -29,6 +31,7 @@ public record BriefFacts(
         Objects.requireNonNull(worker, "A brief is for a worker.");
         Objects.requireNonNull(project, "A brief names the project's rules.");
         Objects.requireNonNull(dispatch, "A brief follows the task's dispatch.");
+        Objects.requireNonNull(route, "A brief names the route its worker runs on.");
         Objects.requireNonNull(base, "A brief names the base branch.");
         if (project.craftRules() && (craftRules == null || craftRules.isBlank())) {
             throw new IllegalArgumentException(project.project().name() + " follows the craft rules, so its brief carries their text.");
@@ -57,6 +60,6 @@ public record BriefFacts(
 
     BriefFacts withoutTheCaptainsNotesOrResearchPlan() {
         Task unnoted = new Task(task.id(), task.intake(), task.stage(), "", task.hold(), task.created(), task.closed());
-        return new BriefFacts(unnoted, worker, project, dispatch, base, worktree, taskDirectory, ediSocket, craftRules, null, asksForTheTimeWorked);
+        return new BriefFacts(unnoted, worker, project, dispatch, route, base, worktree, taskDirectory, ediSocket, craftRules, null, asksForTheTimeWorked);
     }
 }

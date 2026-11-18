@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.home;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.ProjectOverride;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.testing.ExampleHome;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -87,9 +89,43 @@ class DispatchRulesFileTest {
         DispatchRules rules = new DispatchRulesFile(new EdiHome(home), new JsonMapper())
                 .validatedAgainst(MachineProfile.workerRosterIn(ExampleHome.file("config/machine.yaml")));
 
-        assertThat(rules.projectOverrides()).singleElement().extracting(ProjectOverride::categories).asInstanceOf(InstanceOfAssertFactories.COLLECTION)
+        assertThat(rules.projectOverrides()).extracting(ProjectOverride::categories).last().asInstanceOf(InstanceOfAssertFactories.COLLECTION)
                 .containsExactlyInAnyOrder(CategoryId.RESEARCH, CategoryId.IMPLEMENTATION, CategoryId.IMPLEMENTATION_UNPLANNED, CategoryId.BUGFIX);
+        assertThat(rules.projectOverrides()).first().satisfies(small -> {
+            assertThat(small.categories()).containsExactlyInAnyOrder(CategoryId.IMPLEMENTATION, CategoryId.BUGFIX);
+            assertThat(small.sizes()).containsExactlyInAnyOrder(TaskSize.XS, TaskSize.S);
+            assertThat(small.route()).isEqualTo(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH));
+            assertThat(small.why()).startsWith("The captain asked for a rule that puts small items on Sonnet instead of Opus");
+        });
         assertThat(rules.pipelineAgent().route()).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
+    }
+
+    @Test
+    void refusesASizeItDoesNotKnowNamingTheFile() throws IOException {
+        Files.createDirectories(home.resolve("config"));
+        Path file = home.resolve("config/dispatch-rules.json");
+        Files.writeString(file, ExampleHome.file("config/dispatch-rules.json").replace("\"sizes\": [\"XS\", \"S\"]", "\"sizes\": [\"XS\", \"XXL\"]"));
+        DispatchRulesFile rules = new DispatchRulesFile(new EdiHome(home), new JsonMapper());
+
+        assertThatThrownBy(() -> rules.validatedAgainst(MachineProfile.workerRosterIn(ExampleHome.file("config/machine.yaml"))))
+                .isInstanceOf(InvalidConfiguration.class)
+                .hasMessage(file + " is refused: The override for EDI covers the size XXL, which is no task size; the sizes are XS, S, M, L.");
+    }
+
+    @Test
+    void refusesACategoryEntryThatNamesSizesAndMoreThanItsRoute() throws IOException {
+        Files.createDirectories(home.resolve("config"));
+        Path file = home.resolve("config/dispatch-rules.json");
+        Files.writeString(file, ExampleHome.file("config/dispatch-rules.json").replace("\"categories\": [\n", """
+                "categories": [
+                    { "id": "documentation", "sizes": ["XS"], "branch": "chore", "use": { "model": "claude-haiku-5-5" }, "why": "A typo." },
+                """));
+        DispatchRulesFile rules = new DispatchRulesFile(new EdiHome(home), new JsonMapper());
+
+        assertThatThrownBy(() -> rules.validatedAgainst(MachineProfile.workerRosterIn(ExampleHome.file("config/machine.yaml"))))
+                .isInstanceOf(InvalidConfiguration.class)
+                .hasMessage(file + " is refused: The category documentation of size XS only routes those sizes; its when, branch and research first"
+                        + " belong to the entry for documentation without sizes.");
     }
 
     private static JsonNode categoryOf(String rules, String id) {

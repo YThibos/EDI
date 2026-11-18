@@ -445,7 +445,8 @@ class NativeSmokeIT {
         CommandRun steered = edi("Look at the lamp again.", "steer", "native-worker");
         CommandRun acknowledged = awaitOutput(List.of("task", "show", "native-worker"), "steer acknowledged");
 
-        assertThat(dispatched.output()).startsWith("Dispatched native-worker to native-worker#1 (implementation, claude-sonnet-5-5 at high) on feature/HRN-7");
+        assertThat(dispatched.output()).startsWith("Dispatched native-worker to native-worker#1 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation) on feature/HRN-7");
         assertThat(home.resolve("no-mistakes/config.yaml")).content()
                 .isEqualTo("agent: auto\n\nagent_args_override:\n  claude:\n    - --model\n    - claude-opus-5-5\n    - --effort\n    - high\n");
         assertThat(done.output()).contains("native-worker#1", "done: the stub worker finished");

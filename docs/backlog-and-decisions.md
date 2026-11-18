@@ -13,7 +13,10 @@ edi task show fit-the-lamp                          # a task id, or the D number
 edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-11-01
 edi release fit-the-lamp
 edi task add --kind ship --project EDI --title "Paint the lamp" --key EDI-15 --blocked-by fit-the-lamp   # waits until that work lands
+edi task add --kind ship --project EDI --title "Oil the hinge" --key EDI-16 --size XS   # XS, S, M or L, or the Size row of a backlog item in --body
 ```
+
+A task's size lets the dispatch rules route it, such as EDI's small implementation and bugfix items on Sonnet at high ([Configuration](configuration.md#the-dispatch-rules)).
 
 A plan is a titled set of slices, each a task with its own key, its number in the plan and one wait: "after N merged", the default on the slice before, "after N landed", or "none" ([plans](decisions/plans.md)).
 The primary enters it as JSON on standard input, and EDI shows each slice's stage, its wait and whether it is eligible to start.
