@@ -16,7 +16,7 @@ public enum TaskSize {
 
     private static final Pattern HEADER_ROW = Pattern.compile("\\|\\s*Field\\s*\\|\\s*Value\\s*\\|\\s*");
     private static final Pattern SEPARATOR_ROW = Pattern.compile("\\|\\s*:?-{3,}:?\\s*\\|\\s*:?-{3,}:?\\s*\\|\\s*");
-    private static final Pattern SIZE_ROW = Pattern.compile("\\|\\s*Size\\s*\\|\\s*([^|]*?)\\s*\\|\\s*");
+    private static final Pattern SIZE_ROW = Pattern.compile("\\|\\s*Size\\s*\\|([^|]*)\\|\\s*");
     private static final String TABLE_ROW_START = "|";
 
     public static TaskSize named(String word) {
@@ -32,7 +32,7 @@ public enum TaskSize {
                 .map(SIZE_ROW::matcher)
                 .filter(Matcher::matches)
                 .findFirst()
-                .map(sizeRow -> named(sizeRow.group(1)));
+                .map(sizeRow -> named(sizeRow.group(1).strip()));
     }
 
     public static String everyWord() {
