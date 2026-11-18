@@ -35,13 +35,16 @@ final class ApiTokenFilter extends OncePerRequestFilter {
             + ConsoleSessionCookie.HEADER + ".";
 
     private final ApiToken token;
+    private final PrimaryLaunchKey launchKey;
     private final WorkerTokens workerTokens;
     private final PrimarySessions primarySessions;
     private final ConsoleAccess consoleAccess;
     private final CallerFirings firings;
 
-    ApiTokenFilter(ApiToken token, WorkerTokens workerTokens, PrimarySessions primarySessions, ConsoleAccess consoleAccess, CallerFirings firings) {
+    ApiTokenFilter(ApiToken token, PrimaryLaunchKey launchKey, WorkerTokens workerTokens, PrimarySessions primarySessions, ConsoleAccess consoleAccess,
+            CallerFirings firings) {
         this.token = token;
+        this.launchKey = launchKey;
         this.workerTokens = workerTokens;
         this.primarySessions = primarySessions;
         this.consoleAccess = consoleAccess;
@@ -58,7 +61,7 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String bearer = bearerTokenOf(request);
-        Optional<Caller> caller = bearer == null ? captainSignedInBy(request) : callerHolding(bearer, sessionOf(request));
+        Optional<Caller> caller = bearer == null ? captainSignedInBy(request) : callerHolding(bearer, request);
         if (caller.isEmpty()) {
             firings.turnedAway(Rule.API_TOKEN, request, REFUSAL);
             refuse(response, HttpStatus.UNAUTHORIZED, REFUSAL);
@@ -71,11 +74,19 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         }
     }
 
-    private Optional<Caller> callerHolding(String presented, UUID session) {
+    private Optional<Caller> callerHolding(String presented, HttpServletRequest request) {
         if (token.admits(presented)) {
-            return Optional.of(Caller.holdingTheHomeToken(session, standingOf(session)));
+            return Optional.of(homeTokenHolder(request));
         }
         return workerTokens.workerHolding(presented).map(worker -> new Caller.WorkerCaller(worker.id()));
+    }
+
+    private Caller homeTokenHolder(HttpServletRequest request) {
+        if (!launchKey.admits(request.getHeader(PrimaryLaunchKey.HEADER))) {
+            return new Caller.Terminal();
+        }
+        UUID session = sessionOf(request);
+        return Caller.holdingTheHomeToken(session, standingOf(session));
     }
 
     private Optional<Caller> captainSignedInBy(HttpServletRequest request) {

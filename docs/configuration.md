@@ -127,7 +127,8 @@ The publish check refuses outgoing commits that carry any of them (see [Delivery
 
 | Variable | Default | Names |
 |---|---|---|
-| `EDI_HOME` | `~/.edi` | the EDI home |
+| `EDI_HOME` | `~/.edi` | the EDI home; `edi` refuses the default inside a worker's isolated copy, a validation's working directory and under a test runner |
+| `EDI_PRIMARY_LAUNCH_KEY` | none | the key `edi up` gives the primary session, which the core asks of every session start, prompt, presence change, task and decision |
 | `EDI_CHECKOUT` | `~/EDI` | the EDI repository `helloedi`, `edi up` and `edi update` use |
 | `EDI_CORE` | `edi-core` next to `edi` | the core executable |
 | `EDI_BIN` | `~/.local/bin` | where `ops/install.sh` installs the executables |

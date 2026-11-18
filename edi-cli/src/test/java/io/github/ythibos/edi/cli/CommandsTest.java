@@ -49,7 +49,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("Queued (0)\n");
-        assertThat(core.received()).isEqualTo(new StubCore.Request("GET", "/api/backlog?ready=true", "Bearer stub-token", "text/plain", null, null, ""));
+        assertThat(core.received()).isEqualTo(new StubCore.Request("GET", "/api/backlog?ready=true", "Bearer stub-token", "text/plain", null, null, null, ""));
     }
 
     @Test
@@ -304,7 +304,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out.toString()).startsWith("Recorded. This turn's report holds 1 done item");
-        assertThat(done).isEqualTo(new StubCore.Request("POST", "/api/turn", "Bearer stub-token", "text/plain", null, null,
+        assertThat(done).isEqualTo(new StubCore.Request("POST", "/api/turn", "Bearer stub-token", "text/plain", null, null, null,
                 "{\"done\":[{\"projects\":[\"harness\",\"garden\"],\"text\":\"Fitted the \\\"brass\\\" lamp\"}]}"));
         assertThat(next.body()).isEqualTo("{\"next\":[{\"text\":\"Test the lamp\"}]}");
     }
@@ -320,7 +320,7 @@ class CommandsTest {
         edi("", "turn", "record", file.toString());
 
         assertThat(exitCode).isZero();
-        assertThat(fromStandardInput).isEqualTo(new StubCore.Request("POST", "/api/turn", "Bearer stub-token", "text/plain", null, null, items));
+        assertThat(fromStandardInput).isEqualTo(new StubCore.Request("POST", "/api/turn", "Bearer stub-token", "text/plain", null, null, null, items));
         assertThat(core.received().body()).isEqualTo("{\"next\":[{\"text\":\"Fit the lamp\"}]}");
     }
 
@@ -334,7 +334,7 @@ class CommandsTest {
         edi("", "plan", "show", "HRN-40");
 
         assertThat(exitCode).isZero();
-        assertThat(added).isEqualTo(new StubCore.Request("POST", "/api/plans", "Bearer stub-token", "text/plain", null, null, plan));
+        assertThat(added).isEqualTo(new StubCore.Request("POST", "/api/plans", "Bearer stub-token", "text/plain", null, null, null, plan));
         assertThat(core.received().target()).isEqualTo("/api/plans/HRN-40");
     }
 
@@ -347,8 +347,8 @@ class CommandsTest {
         edi("", "sitrep", "--json");
         StubCore.Request sitrep = core.received();
 
-        assertThat(report).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, "{}"));
-        assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, ""));
+        assertThat(report).isEqualTo(new StubCore.Request("POST", "/api/report", "Bearer stub-token", "text/plain", null, null, null, "{}"));
+        assertThat(sitrep).isEqualTo(new StubCore.Request("GET", "/api/report", "Bearer stub-token", "application/json", null, null, null, ""));
     }
 
     @Test
@@ -359,7 +359,7 @@ class CommandsTest {
 
         assertThat(exitCode).isZero();
         assertThat(out).hasToString("EDI console: http://127.0.0.1:5490/ is open in your browser.\n");
-        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/console/open", "Bearer stub-token", "text/plain", null, null, "{}"));
+        assertThat(core.received()).isEqualTo(new StubCore.Request("POST", "/api/console/open", "Bearer stub-token", "text/plain", null, null, null, "{}"));
     }
 
     @Test

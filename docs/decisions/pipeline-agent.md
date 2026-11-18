@@ -15,7 +15,7 @@ The pipeline's agent works on no one task, so its entry stays at or below `high`
 `config/dispatch-rules.json` carries a `pipeline` entry, `{ "use": { "model", "effort" }, "why" }`, checked like a category ([dispatch-routing](dispatch-routing.md)): a reason is required, the model must be on the machine profile's allow-list, and the effort must be low, medium or high, or absent for a model that ignores it (`PipelineAgent`, `DispatchRules.validatedAgainst`).
 The rules are refused without a `pipeline` entry, so the pipeline's agent never runs at the harness default; `examples/edi-home/config/dispatch-rules.json` routes it to Opus 5.5 at high effort.
 `LaunchWorker` resolves the pipeline's route from the rules at every launch, the first and every later one, and hands it to the `Pipeline` port's `runAgentOn`, because a worker drives the pipeline and every launch reads the rules as they are then.
-`NoMistakesPipeline.runAgentOn` sets `agent_args_override.claude` in `<pipeline home>/config.yaml` to `--model <model>`, followed by `--effort <effort>` when the route names one.
+`NoMistakesPipeline.runAgentOn` sets `agent_args_override.claude` in `<pipeline home>/config.yaml` to `--model <model>`, followed by `--effort <effort>` when the route names one, and then `--settings` naming `state/pipeline/settings.json` in the EDI home, which `PipelineGuard` writes at the same time: a `PreToolUse` hook on `Bash`, `Monitor` and `Read` that runs `edi hook pre-tool-use` with `EDI_HOME` set to the home, so every agent of the pipeline runs under the primary's guard ([pre-tool-guard](pre-tool-guard.md)), as a caller holding the home token without the primary's launch key, which the core answers only at the tool guard ([api-access](api-access.md)).
 `AgentArguments` writes it through `PipelineConfiguration`, which rewrites only that top-level entry, keeps every other agent's arguments within it and every line of the file outside it, comments included, replaces the file atomically with its permissions, and writes nothing when the arguments already match; the pipeline's commit keys are written the same way ([pipeline-commit-keys](pipeline-commit-keys.md)).
 A configuration EDI cannot read as YAML or cannot replace refuses the launch, naming the file, and leaves no temporary file beside it.
 EDI never creates the pipeline's configuration: a pipeline home without `config.yaml` is left alone.
@@ -35,6 +35,7 @@ Writing at launch keeps the pipeline on the rules as they are when the worker th
 - Rewriting the whole configuration through a YAML mapper - the captain's comments and every other setting's layout would be lost.
 - Creating the configuration when it is missing - EDI never creates another tool's configuration, and the first launch after the pipeline is set up writes the entry.
 - Writing at core start or every supervision round - a launch is when a worker that will drive the pipeline appears, and it already reads the rules.
+- The guard hook in the pipeline's own configuration or in the project's committed `.claude/settings.json` - the pipeline has no key for hooks, and a project's settings would guard every session opened in it, not only the pipeline's agent.
 
 ## Consequences
 
@@ -43,6 +44,7 @@ Writing at launch keeps the pipeline on the rules as they are when the worker th
 - Bad: EDI writes into another tool's configuration, so a change to that key on a later no-mistakes version needs `AgentArguments` to follow.
 - Bad: the pipeline is shared by every project, so its agent runs on one route for all of them, and a run that has already started keeps the arguments it started with.
 - Bad: an EDI home's rules file needs the `pipeline` entry before a core with this decision reads it, or every reader of the rules refuses, the outage list included.
+- Bad: the guard reads the pipeline agent's own commands, not the scripts they run, so a harness script that calls tmux without a socket or `kill-server` is caught only when the agent types it.
 
 ## When to revisit
 
@@ -52,3 +54,4 @@ When no-mistakes takes a model and effort per run or per repository for Claude C
 
 - 23/10/2026: the pipeline's agent had run at the harness default, Opus at medium; the captain asked for an explicit model and effort from the dispatch rules, high effort either way, and Opus 5.5 stayed the model; a hand-written `agent_args_override` served as the stop-gap until EDI took the entry over (EDI-46).
 - 23/10/2026: the rules for rewriting one entry of the pipeline's configuration moved to `PipelineConfiguration`, which the commit keys share (EDI-21).
+- 18/11/2026: a validation's harness stopped the captain's tmux server, so the pipeline's agent runs under the guard through a settings file EDI writes (EDI-278).

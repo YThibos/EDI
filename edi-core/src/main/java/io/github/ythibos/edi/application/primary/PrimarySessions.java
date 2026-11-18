@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.domain.primary.PrimaryRole;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
+import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.primary.Standing;
 
 @Component
@@ -35,11 +36,21 @@ public class PrimarySessions {
         return transaction.execute(_ -> role().holder());
     }
 
+    public Optional<RoleReturn> reclaimIfItsTakerLeft(UUID session, Instant now) {
+        return transaction.execute(_ -> role().holder().filter(holder -> holder.id().equals(session)).flatMap(holder -> reclaimedBy(holder, now)));
+    }
+
     public Optional<Instant> previousReportOf(UUID session) {
         return transaction.execute(_ -> sessions.get(session).map(PrimarySession::turn).map(PrimaryTurn::previousReportAt));
     }
 
     PrimaryRole role() {
         return PrimaryRole.among(sessions.running(), processes::isRunning);
+    }
+
+    private Optional<RoleReturn> reclaimedBy(PrimarySession holder, Instant now) {
+        Optional<RoleReturn> back = RoleReturn.toTheHolder(holder, sessions.all());
+        back.ifPresent(_ -> sessions.save(holder.claimed(now)));
+        return back;
     }
 }

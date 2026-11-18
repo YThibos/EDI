@@ -42,7 +42,7 @@ class PresenceController {
 
     private static void requireTheCaptainOrThePrimary(Caller caller) {
         if (!(caller instanceof Caller.Captain)) {
-            caller.requirePrimary("edi presence");
+            caller.requireThePrimarySession("edi presence");
         }
     }
 

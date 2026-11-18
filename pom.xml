@@ -107,6 +107,7 @@
                         <environmentVariables>
                             <GIT_CONFIG_GLOBAL>/dev/null</GIT_CONFIG_GLOBAL>
                             <GIT_CONFIG_NOSYSTEM>1</GIT_CONFIG_NOSYSTEM>
+                            <EDI_TEST_RUN>surefire</EDI_TEST_RUN>
                         </environmentVariables>
                     </configuration>
                 </plugin>
@@ -118,6 +119,9 @@
                         <properties>
                             <configurationParameters>${test.junitConfiguration}</configurationParameters>
                         </properties>
+                        <environmentVariables>
+                            <EDI_TEST_RUN>failsafe</EDI_TEST_RUN>
+                        </environmentVariables>
                     </configuration>
                 </plugin>
                 <plugin>

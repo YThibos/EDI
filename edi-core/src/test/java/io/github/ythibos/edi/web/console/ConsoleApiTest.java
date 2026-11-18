@@ -471,7 +471,8 @@ class ConsoleApiTest {
     }
 
     private static HttpRequest.Builder withTheHomeToken(String path, String accepted) throws IOException {
-        return withToken(Files.readString(home.resolve("state/core.token")), path, accepted);
+        return withToken(Files.readString(home.resolve("state/core.token")), path, accepted)
+                .header("EDI-Primary-Launch-Key", Files.readString(home.resolve("state/primary-launch.key")).strip());
     }
 
     private static HttpRequest.Builder withToken(String token, String path, String accepted) throws IOException {

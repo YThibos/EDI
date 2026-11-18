@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
+import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.web.presence.PresenceWords;
@@ -36,6 +37,7 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     @Override
     public String text(WakeDelivery delivery) {
         List<String> lines = new ArrayList<>(List.of("EDI wake: " + delivery.wakes().size() + " waiting."));
+        delivery.roleReturn().map(this::roleReturnSentence).ifPresent(lines::add);
         delivery.wakes().forEach(queued -> lines.add(queued.number() + ". " + sentenceOf(queued.wake())));
         lines.add("Fleet: " + Words.quantity(delivery.openDecisions(), "open decision") + ", " + Words.quantity(delivery.ongoing(), "task") + " in flight, "
                 + delivery.outageEntries() + " on the outage hold list.");
@@ -48,6 +50,12 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
         }
         lines.add(closingAdvice(delivery));
         return String.join("\n", lines) + "\n";
+    }
+
+    private String roleReturnSentence(RoleReturn back) {
+        return "The primary role is back with this session: session " + back.taker() + " took it at " + moments.minute(back.takenAt()) + " and "
+                + (back.takerEndedItsSession() ? "ended at " + moments.minute(back.takerEndedAt()) : "its process is gone")
+                + ", so this session supervises the fleet again; if the captain did not open that session, tell them it took the role.";
     }
 
     private static boolean bringsARoundOfDecisions(WakeDelivery delivery) {

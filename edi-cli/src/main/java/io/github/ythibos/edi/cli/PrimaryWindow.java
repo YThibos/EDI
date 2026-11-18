@@ -26,7 +26,7 @@ final class PrimaryWindow {
         if (insideTmux) {
             command.add("-d");
         }
-        command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString()));
+        command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString(), "-e", launch.launchKeyVariable()));
         command.addAll(launch.claude());
         command.addAll(terminalTitledBySessionName(launch.session()));
         return command;

@@ -6,7 +6,7 @@ EDI's own settings carry hooks and the status line only; the captain's permissio
 ## The primary session
 
 The primary is the Claude Code session the captain talks to ([primary-role](decisions/primary-role.md)).
-`edi up` starts it in the EDI home with [claude/primary/settings.json](../claude/primary/settings.json) and a system prompt the core composes at each start ([primary-startup-context](decisions/primary-startup-context.md)): the anchor [claude/primary/CLAUDE.md](../claude/primary/CLAUDE.md), the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
+`edi up` starts it in the EDI home, carrying the launch key that alone lets a session start, type and add work as the primary ([api-access](decisions/api-access.md)), with [claude/primary/settings.json](../claude/primary/settings.json) and a system prompt the core composes at each start ([primary-startup-context](decisions/primary-startup-context.md)): the anchor [claude/primary/CLAUDE.md](../claude/primary/CLAUDE.md), the checkout's own `personal/anchor.local.md` when there is one, and the memory files `profile.md`, `machine.md` and `learnings.md` from `$EDI_HOME/memory/`.
 It opens with no prompt submitted and waits for the captain to type, and a request for the board from any of its turns opens the sitrep page, even when the session's start already opened one ([opening-turn](decisions/opening-turn.md)).
 The anchor holds EDI's character, the hard rules, the turn end and one line per skill ([primary-anchor-and-skills](decisions/primary-anchor-and-skills.md), [personality](decisions/personality.md)).
 

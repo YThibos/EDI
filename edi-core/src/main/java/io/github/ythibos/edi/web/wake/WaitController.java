@@ -42,7 +42,7 @@ class WaitController {
     }
 
     private UUID thePrimarysSession(Caller caller) {
-        caller.requirePrimary("edi wait");
+        caller.requireThePrimarySession("edi wait");
         UUID session = caller.claudeSession()
                 .orElseThrow(() -> new Refusal(Rule.ONE_WAKE_STREAM, "edi wait runs inside the primary's Claude Code session, which names itself in CLAUDE_CODE_SESSION_ID."));
         waits.requireThePrimary(session);

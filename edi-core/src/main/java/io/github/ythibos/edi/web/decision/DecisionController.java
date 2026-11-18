@@ -49,7 +49,7 @@ class DecisionController {
     @PostMapping("/api/tasks/{reference}/decision")
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation raise(@PathVariable String reference, @RequestBody CardRequest card, Caller caller) {
-        caller.requirePrimary("edi decision raise");
+        caller.requireThePrimarySession("edi decision raise");
         DecisionCard raised = card.card();
         CaptainVoice.requireOutcomes("A decision card", raised.wording());
         return new Confirmation.Raised(raiseDecision.raise(TaskReference.parse(reference), raised, caller.actor()));

@@ -26,6 +26,12 @@ class AccessConfiguration {
     }
 
     @Bean
+    @DependsOn(CoreInstanceLock.BEAN)
+    PrimaryLaunchKey primaryLaunchKey(EdiHome home) {
+        return PrimaryLaunchKey.keptIn(home.primaryLaunchKeyFile());
+    }
+
+    @Bean
     FilterRegistrationBean<LoopbackHostFilter> loopbackHostFilter(CallerFirings firings) {
         FilterRegistrationBean<LoopbackHostFilter> registration = new FilterRegistrationBean<>(new LoopbackHostFilter(firings));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
@@ -33,9 +39,9 @@ class AccessConfiguration {
     }
 
     @Bean
-    FilterRegistrationBean<ApiTokenFilter> apiTokenFilter(ApiToken token, WorkerTokens workerTokens, PrimarySessions primarySessions,
-            ConsoleAccess consoleAccess, CallerFirings firings) {
-        return new FilterRegistrationBean<>(new ApiTokenFilter(token, workerTokens, primarySessions, consoleAccess, firings));
+    FilterRegistrationBean<ApiTokenFilter> apiTokenFilter(ApiToken token, PrimaryLaunchKey launchKey, WorkerTokens workerTokens,
+            PrimarySessions primarySessions, ConsoleAccess consoleAccess, CallerFirings firings) {
+        return new FilterRegistrationBean<>(new ApiTokenFilter(token, launchKey, workerTokens, primarySessions, consoleAccess, firings));
     }
 
     @Bean

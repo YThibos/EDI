@@ -19,6 +19,7 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -77,13 +78,14 @@ public class WaitForWakes {
             }
             Instant now = clock.now();
             Presence captain = presence.current().orElseGet(() -> Presence.presentSince(now));
+            Optional<RoleReturn> roleReturn = sessions.reclaimIfItsTakerLeft(stream.session(), now);
             List<QueuedWake> due = dueAmong(wakes.awaitingDeliveryTo(stream.session()), captain, now);
-            if (due.isEmpty()) {
+            if (roleReturn.isEmpty() && due.isEmpty()) {
                 return Optional.<WakeDelivery>empty();
             }
             wakes.offer(due, stream.id());
-            return Optional.of(new WakeDelivery(due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(), outages.open().size(),
-                    captain, stream.follows()));
+            return Optional.of(new WakeDelivery(roleReturn, due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(),
+                    outages.open().size(), captain, stream.follows()));
         });
     }
 

@@ -12,6 +12,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `guard.signal-by-pattern` | `ProcessSignals` | Processes are signalled by their recorded id, never by a name pattern (I-30). |
 | `guard.tmux-without-socket` | `TmuxSockets` | tmux runs only on a named socket, so the captain's own server is never touched (I-31). |
 | `guard.edi-server-control` | `TmuxSockets` | The edi tmux server is never killed, typed into or respawned (I-31). |
+| `guard.tmux-kill-server` | `TmuxSockets` | No tmux server is stopped with kill-server, on any socket; a server is stopped by its own process id. |
 | `guard.tmux-input` | `TmuxSockets` | A worker never types, pastes or runs commands into a tmux pane. |
 | `guard.forced-push` | `GitPushes` | History on a remote is never rewritten by a forced push (I-03). |
 | `guard.base-branch-push` | `GitPushes` | Nothing is pushed to a base branch, so every change goes through review (I-03). |
@@ -35,6 +36,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `access.console-header` | `ApiTokenFilter` | The console changes state only with its own header, so no other page submits as the captain. |
 | `access.loopback-host` | `LoopbackHostFilter` | The core answers only requests addressed to its own loopback host. |
 | `access.caller-role` | `NotPermitted` | Each command runs only under the role it belongs to: the primary, a worker or the captain. |
+| `access.primary-session` | `Caller` | Only the session edi up opened starts or feeds a primary session, changes presence and adds tasks or decisions; the home token alone does none of these. |
 | `access.worker-token-file` | `Edi` | A worker's window calls the core with its own token, never the home token. |
 | `request.valid` | `ApiRefusals` | A request to the core carries every value it needs, well formed. |
 | `authority.captains-word` | `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |

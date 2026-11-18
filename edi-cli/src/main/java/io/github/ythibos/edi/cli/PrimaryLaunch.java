@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-record PrimaryLaunch(String session, Path directory, Path settings, Path systemPrompt) {
+record PrimaryLaunch(String session, Path directory, Path settings, Path systemPrompt, String launchKey) {
 
     private static final String SEPARATOR = ": ";
 
@@ -15,7 +15,11 @@ record PrimaryLaunch(String session, Path directory, Path settings, Path systemP
                 .collect(Collectors.toMap(line -> line.substring(0, line.indexOf(SEPARATOR)), line -> line.substring(line.indexOf(SEPARATOR) + 2),
                         (first, _) -> first));
         return new PrimaryLaunch(required(fields, "session"), Path.of(required(fields, "directory")), Path.of(required(fields, "settings")),
-                Path.of(required(fields, "system prompt")));
+                Path.of(required(fields, "system prompt")), required(fields, "launch key"));
+    }
+
+    String launchKeyVariable() {
+        return ClaudeSession.PRIMARY_LAUNCH_KEY + "=" + launchKey;
     }
 
     List<String> claude() {

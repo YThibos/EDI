@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 class AgentArgumentsTest {
 
     private static final Route OPUS_HIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH);
+    private static final Path GUARD = Path.of("/edi/home/state/pipeline/settings.json");
     private static final String OTHER_SETTINGS = """
             # no-mistakes global configuration
             agent: auto
@@ -55,7 +56,7 @@ class AgentArgumentsTest {
 
                 """ + PROVIDERS);
 
-        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH);
+        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH, GUARD);
 
         assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + """
 
@@ -69,6 +70,8 @@ class AgentArgumentsTest {
                     - claude-opus-5-5
                     - --effort
                     - high
+                    - --settings
+                    - /edi/home/state/pipeline/settings.json
 
                 """ + PROVIDERS);
         assertThat(Files.getPosixFilePermissions(configuration)).isEqualTo(PosixFilePermissions.fromString("rw-------"));
@@ -90,7 +93,7 @@ class AgentArgumentsTest {
                 # Where pull requests open.
                 """ + PROVIDERS);
 
-        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH);
+        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH, GUARD);
 
         assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + """
                 agent_args_override:
@@ -102,6 +105,8 @@ class AgentArgumentsTest {
                     - claude-opus-5-5
                     - --effort
                     - high
+                    - --settings
+                    - /edi/home/state/pipeline/settings.json
                   # The stop-gap ends here.
 
                 # Where pull requests open.
@@ -112,7 +117,7 @@ class AgentArgumentsTest {
     void addsTheClaudeCodeArgumentsToAConfigurationWithoutAny() throws IOException {
         Path configuration = written(OTHER_SETTINGS + PROVIDERS);
 
-        AgentArguments.routeClaudeCodeIn(configuration, new Route(new ModelId("claude-haiku-5-5"), null));
+        AgentArguments.routeClaudeCodeIn(configuration, new Route(new ModelId("claude-haiku-5-5"), null), GUARD);
 
         assertThat(configuration).content().isEqualTo(OTHER_SETTINGS + PROVIDERS + """
 
@@ -120,6 +125,8 @@ class AgentArgumentsTest {
                   claude:
                     - --model
                     - claude-haiku-5-5
+                    - --settings
+                    - /edi/home/state/pipeline/settings.json
                 """);
     }
 
@@ -132,10 +139,12 @@ class AgentArgumentsTest {
                     - claude-opus-5-5
                     - --effort
                     - high
+                    - --settings
+                    - /edi/home/state/pipeline/settings.json
                 """;
         Path configuration = written(routed);
 
-        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH);
+        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH, GUARD);
 
         assertThat(configuration).content().isEqualTo(routed);
     }
@@ -144,7 +153,7 @@ class AgentArgumentsTest {
     void writesNoConfigurationThePipelineHasNotCreated() {
         Path configuration = home.resolve("config.yaml");
 
-        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH);
+        AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH, GUARD);
 
         assertThat(configuration).doesNotExist();
     }
@@ -154,7 +163,7 @@ class AgentArgumentsTest {
         String malformed = "agent: [auto\n";
         Path configuration = written(malformed);
 
-        assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH))
+        assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH, GUARD))
                 .isInstanceOf(Refusal.class)
                 .hasMessageStartingWith("The pipeline configuration " + configuration + " is not readable YAML");
         assertThat(configuration).content().isEqualTo(malformed);
@@ -167,7 +176,7 @@ class AgentArgumentsTest {
         try {
             assumeFalse(Files.isWritable(home), "the pipeline home stays writable for this user, so the refusal cannot be provoked");
 
-            assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH))
+            assertThatThrownBy(() -> AgentArguments.routeClaudeCodeIn(configuration, OPUS_HIGH, GUARD))
                     .isInstanceOf(Refusal.class)
                     .hasMessage("The pipeline configuration " + configuration + " cannot be read or replaced: AccessDeniedException.");
             assertThat(configuration).content().isEqualTo(OTHER_SETTINGS);

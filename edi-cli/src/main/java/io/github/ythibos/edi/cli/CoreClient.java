@@ -52,6 +52,7 @@ final class CoreClient {
                 .header("Accept", accepted);
         core.session().idIfAny().ifPresent(session -> request.header("EDI-Session", session));
         core.session().pidIfAny().ifPresent(pid -> request.header("EDI-Claude-Pid", pid));
+        core.session().primaryLaunchKeyIfAny().ifPresent(key -> request.header("EDI-Primary-Launch-Key", key));
         return request;
     }
 

@@ -14,16 +14,17 @@ final class AgentArguments {
     private AgentArguments() {
     }
 
-    static void routeClaudeCodeIn(Path globalConfiguration, Route route) {
-        List<String> arguments = argumentsFor(route);
+    static void routeClaudeCodeIn(Path globalConfiguration, Route route, Path guardSettings) {
+        List<String> arguments = argumentsFor(route, guardSettings);
         PipelineConfiguration.changeEntry(globalConfiguration, AGENT_ARGUMENTS, agents -> arguments.forEach(agents.putArray(CLAUDE_CODE)::add));
     }
 
-    private static List<String> argumentsFor(Route route) {
+    private static List<String> argumentsFor(Route route, Path guardSettings) {
         List<String> arguments = new ArrayList<>(List.of("--model", route.model().value()));
         if (route.namesAnEffort()) {
             arguments.addAll(List.of("--effort", route.effort().word()));
         }
+        arguments.addAll(List.of("--settings", guardSettings.toString()));
         return arguments;
     }
 }

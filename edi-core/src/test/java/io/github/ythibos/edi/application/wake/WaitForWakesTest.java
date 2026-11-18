@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -21,7 +22,9 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.primary.SessionSource;
+import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -62,6 +65,27 @@ class WaitForWakesTest {
         assertThat(delivery.ongoing()).isOne();
         assertThat(delivery.streamContinues()).isTrue();
         assertThat(delivery.wakes().getFirst().wake().detail()).isEqualTo("(lamp) Brass or oil?");
+    }
+
+    @Test
+    void givesThePrimaryRoleBackOnceTheSessionThatTookItEndsAndSaysSoInTheNextWakeOnly() {
+        UUID captains = primarySession();
+        home.clock().advance(Duration.ofMinutes(1));
+        Instant takenAt = home.clock().now();
+        UUID taker = primarySession();
+        Standing whileTaken = home.primarySessions().standingOf(captains);
+        home.clock().advance(Duration.ofMinutes(2));
+        Instant endedAt = home.clock().now();
+        home.primaryHooks().sessionEnded(taker);
+
+        WakeStream stream = followedBy(captains);
+        WakeDelivery delivery = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        assertThat(whileTaken).isEqualTo(Standing.STANDBY);
+        assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
+        assertThat(delivery.roleReturn()).contains(new RoleReturn(taker, takenAt, endedAt));
+        assertThat(delivery.wakes()).isEmpty();
+        assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
     }
 
     @Test

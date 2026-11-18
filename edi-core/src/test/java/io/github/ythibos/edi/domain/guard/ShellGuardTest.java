@@ -118,6 +118,18 @@ class ShellGuardTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
+        "tmux -L edi-test-42 kill-server",
+        "tmux -S /tmp/junit-42/tmux.sock kill-server",
+        "tmux -L default kill-server",
+        "tmux -L lamp list-sessions \\; kill-server",
+        "zsh -c 'tmux -S \"$TMUX_SOCKET\" kill-server'"})
+    void refusesKillServerOnAnySocketToThePrimaryAndToAWorker(String command) {
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(Rule.TMUX_KILL_SERVER);
+        assertThat(FOR_A_WORKER.check(command, "Bash")).map(GuardRefusal::rule).contains(Rule.TMUX_KILL_SERVER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
         "tmux -L default send-keys -t edi-261028-0930 'yes' Enter",
         "tmux -L default send -t edi-261028-0930 Enter",
         "tmux -L default send-k -t edi-261028-0930 Enter",
@@ -174,7 +186,7 @@ class ShellGuardTest {
         "tmux -L default display-message -p '#{pane_width}'",
         "tmux -L default display -p '#S'",
         "tmux -L default capture-pane -p -t edi-261028-0930",
-        "tmux -L edi-test-42 kill-server",
+        "tmux -L edi-test-42 kill-session -t probe",
         "tmux -L edi-test-42 new-session -d -s probe",
         "tmux -L default new-window -d -n lamp",
         "tmux -L default show-options -g default-command",
@@ -185,7 +197,8 @@ class ShellGuardTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"tmux -S /srv/harbour/lamp kill-server", "tmux -S lamp kill-window -t @3", "tmux -S/srv/harbour/lamp respawn-window -k"})
+    @ValueSource(strings = {"tmux -S /srv/harbour/lamp kill-session -t workers", "tmux -S lamp kill-window -t @3",
+        "tmux -S/srv/harbour/lamp respawn-window -k"})
     void refusesControlOfEdisServerThroughALinkToItsSocket(String command) {
         ShellGuard forThePrimary = new ShellGuard("edi", Set.of("main"), Set.of(), Secrets.NONE, false, path -> LINKED_SOCKETS.getOrDefault(path, path));
 
@@ -204,7 +217,7 @@ class ShellGuardTest {
         "tmux -V",
         "tmux -L edi list-windows -F '#{window_id}'",
         "tmux -L edi capture-pane -p -t @3",
-        "tmux -L edi-test-1234 kill-server",
+        "tmux -L edi-test-1234 kill-session -t probe",
         "tmux -S \"$TMUX_SOCKET\" display-message -p '#{pane_width}'"})
     void allowsTmuxThatNamesItsSocket(String command) {
         assertThat(GUARD.check(command, "Bash")).isEmpty();

@@ -59,7 +59,7 @@ class PublishCheckController {
     private static Optional<TaskId> workersOwnTask(Caller caller) {
         return switch (caller) {
             case Caller.WorkerCaller worker -> Optional.of(worker.worker().task());
-            case Caller.Primary _, Caller.Standby _ -> Optional.empty();
+            case Caller.Primary _, Caller.Standby _, Caller.Terminal _ -> Optional.empty();
             case Caller.Captain _ -> throw new NotPermitted(CONSOLE_REFUSAL);
         };
     }

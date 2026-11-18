@@ -878,7 +878,8 @@ class ApiTest {
         HttpResponse<String> launch = post("/api/primary/launch", "{}", TEXT);
 
         assertThat(launch.statusCode()).isEqualTo(200);
-        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\nsystem prompt: .*system-prompt\\.md\n");
+        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\nsystem prompt: .*system-prompt\\.md\n"
+                + "launch key: [A-Za-z0-9_-]{43}\n");
         assertThat(Files.readString(home.resolve("state/primary/system-prompt.md"))).startsWith("# EDI: the primary's anchor");
     }
 
@@ -1045,6 +1046,7 @@ class ApiTest {
     private static HttpRequest.Builder authorised(String path, String accepted) throws IOException {
         return HttpRequest.newBuilder(uri(path))
                 .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")))
+                .header("EDI-Primary-Launch-Key", Files.readString(home.resolve("state/primary-launch.key")).strip())
                 .header("Accept", accepted);
     }
 

@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.adapter.process.Program;
 import io.github.ythibos.edi.adapter.process.ProgramCall;
@@ -29,10 +30,12 @@ public class NoMistakesPipeline implements Pipeline {
     private final String executable;
     private final Path stateDatabase;
     private final Path globalConfiguration;
+    private final EdiHome ediHome;
 
     public NoMistakesPipeline(ExternalPrograms programs, JsonMapper json, @Value("${edi.pipeline.no-mistakes:}") String executable,
-            @Value("${edi.pipeline.home:${user.home}/.no-mistakes}") Path home) {
+            @Value("${edi.pipeline.home:${user.home}/.no-mistakes}") Path home, EdiHome ediHome) {
         this.programs = programs;
+        this.ediHome = ediHome;
         this.json = json;
         this.executable = executable;
         this.stateDatabase = home.resolve(STATE_DATABASE);
@@ -57,7 +60,7 @@ public class NoMistakesPipeline implements Pipeline {
 
     @Override
     public synchronized void runAgentOn(Route route) {
-        AgentArguments.routeClaudeCodeIn(globalConfiguration, route);
+        AgentArguments.routeClaudeCodeIn(globalConfiguration, route, PipelineGuard.settingsWrittenFor(ediHome, json));
     }
 
     @Override

@@ -39,11 +39,6 @@ public record PrimarySession(
                 notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
     }
 
-    public PrimarySession relinquished() {
-        return new PrimarySession(id, startedAt, process, null, turn, typedAt,
-                notification, notifiedAt, limit, limitReachedAt, endedAt, sitrepOpenedAt);
-    }
-
     public PrimarySession promptSubmitted(Prompt prompt, long eventMark, Instant at) {
         return new PrimarySession(id, startedAt, process, claimedAt, turnAfter(at, eventMark),
                 prompt.isTypedByTheCaptain() ? at : typedAt, notification, notifiedAt, limit, limitReachedAt, endedAt, null);

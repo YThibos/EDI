@@ -72,6 +72,7 @@ class EveryTestCoreRecordsItsBrowserTest {
         String payload = "{\"session_id\":\"" + session + "\"," + fields.substring(1);
         HttpRequest.Builder hook = HttpRequest.newBuilder(uri("/api/hooks/" + event))
                 .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")))
+                .header("EDI-Primary-Launch-Key", Files.readString(home.resolve("state/primary-launch.key")).strip())
                 .header("Accept", JSON)
                 .header("EDI-Session", session.toString())
                 .header("Content-Type", JSON)
