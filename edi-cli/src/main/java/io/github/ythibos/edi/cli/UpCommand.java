@@ -32,7 +32,7 @@ final class UpCommand implements Callable<Integer> {
     public Integer call() {
         try {
             startTheCoreUnlessItRuns();
-            return coreOnly ? 0 : new PrimaryWindow(edi.environment(), UpLaunch.asked(noBoard)).open(launchOfThePrimary());
+            return coreOnly ? 0 : primaryWindow().open(launchOfThePrimary());
         } catch (CommandFailure | CoreUnavailable failed) {
             spec.commandLine().getErr().println(failed.getMessage());
             return REFUSED;
@@ -49,6 +49,10 @@ final class UpCommand implements Callable<Integer> {
             out.println("EDI core is up.");
         }
         out.flush();
+    }
+
+    PrimaryWindow primaryWindow() {
+        return new PrimaryWindow(edi.environment(), UpLaunch.asked(noBoard));
     }
 
     private PrimaryLaunch launchOfThePrimary() {
