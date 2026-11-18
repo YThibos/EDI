@@ -15,6 +15,7 @@ import io.github.ythibos.edi.application.port.Forge;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -30,6 +31,7 @@ public class GitHubForge implements Forge {
     private static final String TEXT_FIELDS = "title,body";
     private static final String WORKFLOW_SCOPE = "workflow";
     private static final Set<String> PASSING_CHECK = Set.of("SUCCESS", "NEUTRAL", "SKIPPED");
+    private static final Set<String> FAILING_CHECK = Set.of("FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -119,18 +121,21 @@ public class GitHubForge implements Forge {
                 pull.path("headRefName").asString(null),
                 pull.path("baseRefName").asString(null),
                 pull.path("headRefOid").asString(null),
-                checksPassedOn(pull),
+                checksOn(pull),
                 pull.path("mergeCommit").path("oid").asString(null),
                 state == MergeRequestState.MERGED ? mergedAtOf(address, pull) : null);
     }
 
-    private static boolean checksPassedOn(JsonNode pull) {
-        List<JsonNode> checks = StreamSupport.stream(pull.path("statusCheckRollup").spliterator(), false).toList();
-        return !checks.isEmpty() && checks.stream().allMatch(GitHubForge::passed);
+    private static HeadChecks checksOn(JsonNode pull) {
+        List<String> outcomes = StreamSupport.stream(pull.path("statusCheckRollup").spliterator(), false).map(GitHubForge::outcomeOf).toList();
+        if (outcomes.stream().anyMatch(FAILING_CHECK::contains)) {
+            return HeadChecks.FAILED;
+        }
+        return !outcomes.isEmpty() && outcomes.stream().allMatch(PASSING_CHECK::contains) ? HeadChecks.PASSED : HeadChecks.UNDECIDED;
     }
 
-    private static boolean passed(JsonNode check) {
-        return PASSING_CHECK.contains(check.path("conclusion").asString(check.path("state").asString("")));
+    private static String outcomeOf(JsonNode check) {
+        return check.path("conclusion").asString(check.path("state").asString(""));
     }
 
     private static MergeRequestState stateOf(String word) {

@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -36,13 +37,13 @@ class DeliveryClaimsTest {
     void findsNoGapInARequestOfTheBranchAtItsHeadWhetherADraftReadyForReviewOrMerged() {
         assertThat(view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD).gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
         assertThat(view(MergeRequestState.OPEN, false, "feature/HRN-3", "main", HEAD).gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
-        assertThat(new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, false, "3333", MERGED_AT)
+        assertThat(new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, "3333", MERGED_AT)
                 .gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).isEmpty();
     }
 
     @Test
     void namesEveryGapBetweenAMergeRequestAndTheDeliveryItShouldBe() {
-        MergeRequestView wrong = new MergeRequestView(ADDRESS, MergeRequestState.CLOSED, false, "feature/HRN-4", "develop", "2222222222222", false, null, null);
+        MergeRequestView wrong = new MergeRequestView(ADDRESS, MergeRequestState.CLOSED, false, "feature/HRN-4", "develop", "2222222222222", HeadChecks.UNDECIDED, null, null);
 
         assertThat(wrong.gapsAsTheDeliveryOf(BRANCH, MAIN, HEAD)).containsExactly(
                 ADDRESS + " is closed without a merge",
@@ -54,10 +55,10 @@ class DeliveryClaimsTest {
     @Test
     void takesTheOpenRequestOfABranchAsItsDeliveryAndOtherwiseItsLatestMerge() {
         MergeRequestView closed = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 9), MergeRequestState.CLOSED, true, "feature/HRN-3",
-                "main", HEAD, false, null, null);
+                "main", HEAD, HeadChecks.UNDECIDED, null, null);
         MergeRequestView open = view(MergeRequestState.OPEN, false, "feature/HRN-3", "main", HEAD);
         MergeRequestView merged = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, false, "3333", MERGED_AT);
+                "main", HEAD, HeadChecks.UNDECIDED, "3333", MERGED_AT);
 
         assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged, open), request -> true)).contains(open);
         assertThat(MergeRequestView.deliveryAmong(List.of(closed, merged), request -> true)).contains(merged);
@@ -67,11 +68,11 @@ class DeliveryClaimsTest {
     @Test
     void takesTheLatestOwnedMergeWhateverOrderTheForgeListsThemIn() {
         MergeRequestView earlier = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 4), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, false, "2222", MERGED_AT.minusSeconds(3600));
+                "main", HEAD, HeadChecks.UNDECIDED, "2222", MERGED_AT.minusSeconds(3600));
         MergeRequestView own = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, false, "3333", MERGED_AT);
+                "main", HEAD, HeadChecks.UNDECIDED, "3333", MERGED_AT);
         MergeRequestView later = new MergeRequestView(new MergeRequestAddress(REPOSITORY, 9), MergeRequestState.MERGED, false, "feature/HRN-3",
-                "main", HEAD, false, "4444", MERGED_AT.plusSeconds(3600));
+                "main", HEAD, HeadChecks.UNDECIDED, "4444", MERGED_AT.plusSeconds(3600));
 
         assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own), request -> request.mergedSince(MERGED_AT))).contains(own);
         assertThat(MergeRequestView.deliveryAmong(List.of(earlier, own, later), request -> true)).contains(later);
@@ -88,12 +89,12 @@ class DeliveryClaimsTest {
     @Test
     void needsTheMomentOfAMerge() {
         assertThatIllegalArgumentException().isThrownBy(() -> new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main",
-                HEAD, false, "3333", null)).withMessageContaining("names when it was merged");
+                HEAD, HeadChecks.UNDECIDED, "3333", null)).withMessageContaining("names when it was merged");
     }
 
     @Test
     void tellsAMergeSinceAMomentFromAnEarlierOne() {
-        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, false, "3333", MERGED_AT);
+        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, "3333", MERGED_AT);
 
         assertThat(merged.mergedSince(MERGED_AT.minusSeconds(60))).isTrue();
         assertThat(merged.mergedSince(MERGED_AT)).isTrue();
@@ -105,7 +106,7 @@ class DeliveryClaimsTest {
     void recordsADeliveryAndFollowsItsState() {
         Instant recorded = Instant.parse("2026-10-16T09:00:00Z");
         Delivery delivery = Delivery.of(new TaskId("fit-lamp"), view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD), recorded);
-        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, true, "feature/HRN-3", "main", HEAD, false, "3333", MERGED_AT);
+        MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, true, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, "3333", MERGED_AT);
 
         Delivery observed = delivery.observed(merged, recorded.plusSeconds(600));
 
@@ -115,7 +116,7 @@ class DeliveryClaimsTest {
         assertThat(observed.landedCommit()).isEqualTo("3333");
         assertThat(observed.recordedAt()).isEqualTo(recorded);
         assertThatIllegalArgumentException().isThrownBy(() -> delivery.observed(new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8),
-                MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD, false, null, null), recorded));
+                MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, null, null), recorded));
     }
 
     @Test
@@ -295,11 +296,11 @@ class DeliveryClaimsTest {
 
     private static Delivery request(boolean checksPassed) {
         return Delivery.of(new TaskId("fit-lamp"), new MergeRequestView(ADDRESS, MergeRequestState.OPEN, false, BRANCH.toString(), MAIN.name(), HEAD,
-                checksPassed, null, null), MERGED_AT);
+                checksPassed ? HeadChecks.PASSED : HeadChecks.UNDECIDED, null, null), MERGED_AT);
     }
 
     private static MergeRequestView view(MergeRequestState state, boolean draft, String source, String target, String head) {
-        return new MergeRequestView(ADDRESS, state, draft, source, target, head, false, null, null);
+        return new MergeRequestView(ADDRESS, state, draft, source, target, head, HeadChecks.UNDECIDED, null, null);
     }
 
     private static OutgoingCommit commitAdding(String id, AddedLine... lines) {

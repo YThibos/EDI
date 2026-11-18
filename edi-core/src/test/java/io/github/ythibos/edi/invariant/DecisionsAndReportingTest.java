@@ -40,6 +40,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -456,7 +457,7 @@ class DecisionsAndReportingTest {
         private static MergeRequestView request(MergeRequestState state) {
             MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
             boolean merged = state == MergeRequestState.MERGED;
-            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", false, merged ? "def456" : null, merged ? TestHome.START : null);
+            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, merged ? "def456" : null, merged ? TestHome.START : null);
         }
 
         private static CallingSession captainSays(TestHome home, String words, String task) {

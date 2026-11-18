@@ -28,6 +28,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -263,14 +264,19 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void putsAHandedOverRequestOfAProjectWithoutCiBeforeTheCaptainOnceItsLocalStepsPassed() {
+    void holdsAHandedOverRequestAsChangingWhileTheForgeShowsFailedChecksOnItsHead() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, false, "2222", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), endedInItsCiStep("failed"), TestHome.START);
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.FAILED), TestHome.START));
+        WaitingOnTheCaptain red = home.fleetSnapshot().snapshot().waiting();
 
-        WaitingOnTheCaptain passed = home.fleetSnapshot().snapshot().waiting();
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.UNDECIDED), TestHome.START));
+        WaitingOnTheCaptain undecided = home.fleetSnapshot().snapshot().waiting();
 
-        assertThat(passed.changing()).isEmpty();
-        assertThat(passed.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(red.reviews()).isEmpty();
+        assertThat(red.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("checks failing on its head"));
+        assertThat(undecided.changing()).isEmpty();
+        assertThat(undecided.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -300,7 +306,7 @@ class FleetSnapshotQueryTest {
     void putsAHandedOverRequestBeforeTheCaptainOnChecksTheForgeShowsPassedAfterItsPipelineFailed() {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", false, "2222", REQUEST.url(), false), TestHome.START);
-        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(onPassedChecks(), TestHome.START));
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.PASSED), TestHome.START));
 
         WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
 
@@ -502,15 +508,15 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
-        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", false, merged ? "3333" : null, merged ? TestHome.START : null);
+        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, merged ? "3333" : null, merged ? TestHome.START : null);
     }
 
     private static MergeRequestView stillADraft() {
-        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", false, null, null);
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null);
     }
 
-    private static MergeRequestView onPassedChecks() {
-        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, false, "feature/HRN-3", "main", "2222", true, null, null);
+    private static MergeRequestView withChecks(HeadChecks checks) {
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, false, "feature/HRN-3", "main", "2222", checks, null, null);
     }
 
     private static PipelineRun endedInItsCiStep(String status) {
@@ -552,7 +558,7 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView firstPassDraft() {
         MergeRequestAddress draft = new MergeRequestAddress(REQUEST.repository(), 6);
-        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", false, null, null);
+        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", HeadChecks.UNDECIDED, null, null);
     }
 
     private void add(NewTask task) {

@@ -3,8 +3,6 @@ package io.github.ythibos.edi.adapter.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
@@ -57,8 +55,6 @@ class AxiStatusTest {
     }
 
     private static String fixture(String name) throws IOException {
-        try (InputStream content = AxiStatusTest.class.getResourceAsStream("/no-mistakes/" + name)) {
-            return new String(content.readAllBytes(), StandardCharsets.UTF_8);
-        }
+        return PipelineStatusFixtures.statusIn(name);
     }
 }

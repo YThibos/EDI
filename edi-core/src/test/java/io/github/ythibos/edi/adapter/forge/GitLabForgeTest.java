@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -66,23 +67,20 @@ class GitLabForgeTest {
         standIns.answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]");
 
         assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 5), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "2222", false, null, null));
+                "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null));
         assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 --all -F json");
     }
 
     @Test
-    void readsTheChecksAsPassedOnlyWhenTheHeadPipelineSucceeded() throws IOException {
-        MergeRequestAddress address = new MergeRequestAddress(FORGE.repository(), 5);
-        String open = REQUEST.formatted("opened", "null", "null", "null");
+    void readsTheChecksOnTheHeadFromItsPipeline() throws IOException {
+        assertThat(checksWithAPipeline("success")).isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWithAPipeline("failed")).isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWithAPipeline("canceled")).isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWithAPipeline("running")).isEqualTo(HeadChecks.UNDECIDED);
 
-        standIns.answering("mr-view", open.replace("\"sha\":\"2222\"", "\"sha\":\"2222\",\"head_pipeline\":{\"status\":\"success\"}"));
-        assertThat(forge.view(FORGE, address).checksPassed()).isTrue();
-
-        standIns.answering("mr-view", open.replace("\"sha\":\"2222\"", "\"sha\":\"2222\",\"head_pipeline\":{\"status\":\"failed\"}"));
-        assertThat(forge.view(FORGE, address).checksPassed()).as("a failed pipeline").isFalse();
-
-        standIns.answering("mr-view", open);
-        assertThat(forge.view(FORGE, address).checksPassed()).as("no pipeline on the head").isFalse();
+        standIns.answering("mr-view", REQUEST.formatted("opened", "null", "null", "null"));
+        assertThat(forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 5)).checks()).as("no pipeline on the head")
+                .isEqualTo(HeadChecks.UNDECIDED);
     }
 
     @Test
@@ -151,5 +149,11 @@ class GitLabForgeTest {
     void neitherNeedsAWorkflowScopeNorBindsGitTransport() {
         assertThat(forge.mayChangeWorkflows(FORGE)).isTrue();
         assertThat(forge.credentialHelperFor(FORGE)).isEmpty();
+    }
+
+    private HeadChecks checksWithAPipeline(String status) throws IOException {
+        standIns.answering("mr-view", REQUEST.formatted("opened", "null", "null", "null")
+                .replace("\"sha\":\"2222\"", "\"sha\":\"2222\",\"head_pipeline\":{\"status\":\"" + status + "\"}"));
+        return forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 5)).checks();
     }
 }

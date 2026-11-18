@@ -5,6 +5,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -16,6 +17,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -29,6 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class GitLabForge implements Forge {
 
     private static final String PASSED_PIPELINE = "success";
+    private static final Set<String> FAILED_PIPELINE = Set.of("failed", "canceled");
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -106,13 +109,17 @@ public class GitLabForge implements Forge {
                 request.path("source_branch").asString(null),
                 request.path("target_branch").asString(null),
                 request.path("sha").asString(null),
-                checksPassedOn(request),
+                checksOn(request),
                 state == MergeRequestState.MERGED ? landedCommitOf(request) : null,
                 state == MergeRequestState.MERGED ? mergedAtOf(address, request) : null);
     }
 
-    private static boolean checksPassedOn(JsonNode request) {
-        return PASSED_PIPELINE.equals(request.path("head_pipeline").path("status").asString(""));
+    private static HeadChecks checksOn(JsonNode request) {
+        String pipeline = request.path("head_pipeline").path("status").asString("");
+        if (PASSED_PIPELINE.equals(pipeline)) {
+            return HeadChecks.PASSED;
+        }
+        return FAILED_PIPELINE.contains(pipeline) ? HeadChecks.FAILED : HeadChecks.UNDECIDED;
     }
 
     private static MergeRequestState stateOf(String word) {

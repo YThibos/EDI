@@ -72,6 +72,10 @@ public final class WorkerFixtures {
                 .writing("memory/craft-rules.md", CRAFT_RULES);
     }
 
+    public static TestHome harnessWithoutCi(TestHome home) throws IOException {
+        return home.registering(REGISTRY.replace("    verify: \"true\"\n", "    verify: \"true\"\n    ciRuns: false\n"));
+    }
+
     public static TestHome homeWithHarnessOnTheLogin(Path directory, String login, Path configDirectory) throws IOException {
         return harnessMovedToTheLogin(homeWithProjects(directory).withTheClaudeLogin(login, configDirectory), login);
     }

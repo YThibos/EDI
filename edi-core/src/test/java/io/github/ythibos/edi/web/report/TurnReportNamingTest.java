@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -100,7 +101,7 @@ class TurnReportNamingTest {
 
     private TurnReport report(Turn turn, List<WorkerQuestion> questions) {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
-        ReadyForReview ready = new ReadyForReview(fitting, new Delivery(fitting.id(), request, true, "abc123", false, MergeRequestState.OPEN, null, NOW, NOW));
+        ReadyForReview ready = new ReadyForReview(fitting, new Delivery(fitting.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW));
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp), lamp)), List.of(), List.of(ready), List.of(), questions);
         return new TurnReport(waiting, turn, WIDTH, null, null, null);
     }

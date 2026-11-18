@@ -11,13 +11,17 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.adapter.pipeline.PipelineStatusFixtures;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
+import io.github.ythibos.edi.domain.delivery.PipelineStep;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
@@ -195,13 +199,57 @@ class ObservePipelinesTest {
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
         WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
 
-        home.forge().passesTheChecksOf(draft.address());
+        home.forge().showsTheChecksOf(draft.address(), HeadChecks.PASSED);
         home.followMerges().watchTheOpenDrafts();
         WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(failed.changing()).extracting(ChangingRequest::whyChanging).containsExactly("pipeline failed in its review step");
         assertThat(green.changing()).isEmpty();
         assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+    }
+
+    @Test
+    void holdsAHandedOverRequestWhoseChecksTurnedRedAfterItsDoneOnceItsWatchGaveUp() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().marksReady(draft.address());
+        home.forge().showsTheChecksOf(draft.address(), HeadChecks.PASSED);
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), true));
+        home.observePipelines().observe();
+        home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
+        WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
+
+        home.forge().showsTheChecksOf(draft.address(), HeadChecks.FAILED);
+        home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "ci", false, "1111", draft.address().url(), false));
+        home.observePipelines().observe();
+        home.followMerges().watchTheOpenDrafts();
+        WaitingOnTheCaptain red = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(red.reviews()).isEmpty();
+        assertThat(red.changing()).extracting(ChangingRequest::whyChanging).containsExactly("checks failing on its head");
+    }
+
+    @Test
+    void putsTheRequestOfAProjectWithoutCiBeforeTheCaptainOnceItsRunPassedItsLocalSteps() throws IOException {
+        WorkerFixtures.harnessWithoutCi(home);
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().marksReady(draft.address());
+        home.pipeline().runs(dispatched.launched().branch(),
+                PipelineStatusFixtures.runIn("status-with-a-run-that-skipped-ci.toon", dispatched.launched().branch()));
+        home.observePipelines().observe();
+        home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
+
+        WaitingOnTheCaptain passed = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(home.registry().entryOf(new ProjectName("harness")).skippedPipelineSteps()).contains(PipelineStep.CI);
+        assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::status).contains("completed");
+        assertThat(home.pipelineRuns().latestOf(LAMP).map(PipelineRun::step)).as("the step a run stopped in, never its skipped ci").isEmpty();
+        assertThat(passed.changing()).isEmpty();
+        assertThat(passed.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test

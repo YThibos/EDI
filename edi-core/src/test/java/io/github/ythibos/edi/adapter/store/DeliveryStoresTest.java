@@ -15,6 +15,7 @@ import io.github.ythibos.edi.domain.delivery.CloneRefresh;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -46,10 +47,10 @@ class DeliveryStoresTest {
 
     @Test
     void keepsADeliveryAndFindsItByTaskUrlAndState() {
-        Delivery open = Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", false, null, null),
+        Delivery open = Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null),
                 TestHome.START);
         home.deliveries().save(open);
-        Delivery merged = open.observed(new MergeRequestView(DRAFT, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "2222", true, "3333",
+        Delivery merged = open.observed(new MergeRequestView(DRAFT, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "2222", HeadChecks.PASSED, "3333",
                 TestHome.START.plusSeconds(600)), TestHome.START.plusSeconds(600));
         home.deliveries().save(merged);
 
@@ -61,7 +62,7 @@ class DeliveryStoresTest {
 
     @Test
     void refusesADeliveryWhosePartsDoNotRebuildItsUrl() {
-        home.deliveries().save(Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", false, null, null),
+        home.deliveries().save(Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null),
                 TestHome.START));
         home.jdbc().sql("update delivery set url = 'https://forge.example.org/elsewhere/-/merge_requests/5'").update();
 

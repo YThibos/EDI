@@ -216,7 +216,7 @@ public class FleetSnapshotQuery {
     private record HandedOverRequest(Task task, Delivery delivery, boolean doneStands, PipelineRun changingPipeline, List<Integer> unacknowledgedSteers) {
 
         boolean isSettled() {
-            return doneStands && !delivery.draft() && changingPipeline == null && unacknowledgedSteers.isEmpty();
+            return doneStands && !delivery.draft() && changingPipeline == null && !delivery.checksFailed() && unacknowledgedSteers.isEmpty();
         }
 
         ReadyForReview readyForReview() {

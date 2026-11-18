@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
@@ -278,7 +279,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static Delivery delivery(Task task) {
-        return new Delivery(task.id(), DRAFT, true, "abc123", false, MergeRequestState.OPEN, null, NOW, NOW);
+        return new Delivery(task.id(), DRAFT, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW);
     }
 
     private static LandedTask landed(String id) {

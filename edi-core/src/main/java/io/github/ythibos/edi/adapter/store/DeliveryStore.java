@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -18,7 +19,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 @Component
 public class DeliveryStore {
 
-    private static final String SELECT_DELIVERIES = "select task_id, provider, host, path, number, url, draft, head_commit, checks_passed, state,"
+    private static final String SELECT_DELIVERIES = "select task_id, provider, host, path, number, url, draft, head_commit, checks, state,"
             + " landed_commit, recorded_at, observed_at from delivery ";
 
     private final JdbcClient store;
@@ -30,12 +31,12 @@ public class DeliveryStore {
     public void save(Delivery delivery) {
         ForgeRepository repository = delivery.address().repository();
         store.sql("""
-                        insert into delivery (task_id, provider, host, path, number, url, draft, head_commit, checks_passed, state, landed_commit,
+                        insert into delivery (task_id, provider, host, path, number, url, draft, head_commit, checks, state, landed_commit,
                                               recorded_at, observed_at)
-                        values (:task, :provider, :host, :path, :number, :url, :draft, :head, :checksPassed, :state, :landed, :recorded, :observed)
+                        values (:task, :provider, :host, :path, :number, :url, :draft, :head, :checks, :state, :landed, :recorded, :observed)
                         on conflict (task_id) do update set provider = excluded.provider, host = excluded.host, path = excluded.path,
                             number = excluded.number, url = excluded.url, draft = excluded.draft, head_commit = excluded.head_commit,
-                            checks_passed = excluded.checks_passed, state = excluded.state, landed_commit = excluded.landed_commit,
+                            checks = excluded.checks, state = excluded.state, landed_commit = excluded.landed_commit,
                             observed_at = excluded.observed_at""")
                 .param("task", delivery.task().value())
                 .param("provider", repository.kind().word())
@@ -45,7 +46,7 @@ public class DeliveryStore {
                 .param("url", delivery.address().url())
                 .param("draft", delivery.draft() ? 1 : 0)
                 .param("head", delivery.headCommit())
-                .param("checksPassed", delivery.checksPassed() ? 1 : 0)
+                .param("checks", delivery.checks().word())
                 .param("state", delivery.state().word())
                 .param("landed", delivery.landedCommit())
                 .param("recorded", Columns.text(delivery.recordedAt()))
@@ -78,7 +79,7 @@ public class DeliveryStore {
                 address,
                 row.getInt("draft") == 1,
                 row.getString("head_commit"),
-                row.getBoolean("checks_passed"),
+                HeadChecks.named(row.getString("checks")),
                 MergeRequestState.named(row.getString("state")),
                 row.getString("landed_commit"),
                 Columns.instant(row.getString("recorded_at")),

@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -54,7 +55,7 @@ class GitHubForgeTest {
         standIns.answering("pr-list", "[" + OPEN_DRAFT + "]");
 
         assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", false, null, null));
+                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", HeadChecks.UNDECIDED, null, null));
         assertThat(standIns.calls()).containsExactly(
                 "auth token --hostname github.com --user example-owner",
                 "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state all --json "
@@ -90,18 +91,20 @@ class GitHubForgeTest {
     }
 
     @Test
-    void readsTheChecksAsPassedOnlyWhenTheHeadHasChecksAndEveryOnePassed() throws IOException {
+    void readsTheChecksOnTheHeadAsPassedOnlyWhenEveryOnePassedAndAsFailedOnceOneFailed() throws IOException {
         String success = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}";
         String skipped = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SKIPPED\"}";
+        String failure = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\"}";
         String inProgress = "{\"__typename\":\"CheckRun\",\"status\":\"IN_PROGRESS\",\"conclusion\":\"\"}";
-        String failedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"FAILURE\"}";
+        String failedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"ERROR\"}";
         String passedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"SUCCESS\"}";
 
-        assertThat(checksPassedWith("[" + success + "," + skipped + "," + passedStatus + "]")).isTrue();
-        assertThat(checksPassedWith("[" + success + "," + inProgress + "]")).as("a check still running").isFalse();
-        assertThat(checksPassedWith("[" + success + "," + failedStatus + "]")).as("a failed status").isFalse();
-        assertThat(checksPassedWith("[]")).as("a head without checks").isFalse();
-        assertThat(checksPassedWith("null")).as("no checks field").isFalse();
+        assertThat(checksWith("[" + success + "," + skipped + "," + passedStatus + "]")).isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWith("[" + success + "," + failure + "," + inProgress + "]")).as("a failed check").isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWith("[" + success + "," + failedStatus + "]")).as("a failed status").isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWith("[" + success + "," + inProgress + "]")).as("a check still running").isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWith("[]")).as("a head without checks").isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWith("null")).as("no checks field").isEqualTo(HeadChecks.UNDECIDED);
     }
 
     @Test
@@ -177,8 +180,8 @@ class GitHubForgeTest {
                 .endsWith("exec '" + standIns.gh() + "' auth git-credential get; }; f"));
     }
 
-    private boolean checksPassedWith(String rollup) throws IOException {
+    private HeadChecks checksWith(String rollup) throws IOException {
         standIns.answering("pr-view", OPEN_DRAFT.replace("\"mergedAt\":null", "\"mergedAt\":null,\"statusCheckRollup\":" + rollup));
-        return forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 7)).checksPassed();
+        return forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 7)).checks();
     }
 }

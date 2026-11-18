@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -60,7 +61,7 @@ class TaskLinksQueryTest {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "SVC-7");
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
         MergeRequestAddress request = new MergeRequestAddress(HARNESS, 13);
-        home.deliveries().save(Delivery.of(lamp.id(), new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/SVC-7", "main", "2222", false, null,
+        home.deliveries().save(Delivery.of(lamp.id(), new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/SVC-7", "main", "2222", HeadChecks.UNDECIDED, null,
                 null), TestHome.START));
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", false, "2222", request.url(), false), TestHome.START);
 
