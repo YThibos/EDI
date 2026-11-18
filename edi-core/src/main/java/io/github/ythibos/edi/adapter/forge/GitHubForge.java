@@ -31,7 +31,7 @@ public class GitHubForge implements Forge {
     private static final String TEXT_FIELDS = "title,body";
     private static final String WORKFLOW_SCOPE = "workflow";
     private static final Set<String> PASSING_CHECK = Set.of("SUCCESS", "NEUTRAL", "SKIPPED");
-    private static final Set<String> FAILING_CHECK = Set.of("FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
+    private static final Set<String> FAILING_CHECK = Set.of("FAILURE", "ERROR", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
 
     private final ForgeCalls calls;
     private final JsonMapper json;

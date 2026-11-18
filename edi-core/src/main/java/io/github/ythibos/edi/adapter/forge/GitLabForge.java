@@ -5,7 +5,6 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -31,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class GitLabForge implements Forge {
 
     private static final String PASSED_PIPELINE = "success";
-    private static final Set<String> FAILED_PIPELINE = Set.of("failed", "canceled");
+    private static final String FAILED_PIPELINE = "failed";
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -119,7 +118,7 @@ public class GitLabForge implements Forge {
         if (PASSED_PIPELINE.equals(pipeline)) {
             return HeadChecks.PASSED;
         }
-        return FAILED_PIPELINE.contains(pipeline) ? HeadChecks.FAILED : HeadChecks.UNDECIDED;
+        return FAILED_PIPELINE.equals(pipeline) ? HeadChecks.FAILED : HeadChecks.UNDECIDED;
     }
 
     private static MergeRequestState stateOf(String word) {

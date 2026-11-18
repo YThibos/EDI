@@ -95,6 +95,7 @@ class GitHubForgeTest {
         String success = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}";
         String skipped = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SKIPPED\"}";
         String failure = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\"}";
+        String cancelled = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"}";
         String inProgress = "{\"__typename\":\"CheckRun\",\"status\":\"IN_PROGRESS\",\"conclusion\":\"\"}";
         String failedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"ERROR\"}";
         String passedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"SUCCESS\"}";
@@ -103,6 +104,7 @@ class GitHubForgeTest {
         assertThat(checksWith("[" + success + "," + failure + "," + inProgress + "]")).as("a failed check").isEqualTo(HeadChecks.FAILED);
         assertThat(checksWith("[" + success + "," + failedStatus + "]")).as("a failed status").isEqualTo(HeadChecks.FAILED);
         assertThat(checksWith("[" + success + "," + inProgress + "]")).as("a check still running").isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWith("[" + success + "," + cancelled + "]")).as("a cancelled check").isEqualTo(HeadChecks.UNDECIDED);
         assertThat(checksWith("[]")).as("a head without checks").isEqualTo(HeadChecks.UNDECIDED);
         assertThat(checksWith("null")).as("no checks field").isEqualTo(HeadChecks.UNDECIDED);
     }

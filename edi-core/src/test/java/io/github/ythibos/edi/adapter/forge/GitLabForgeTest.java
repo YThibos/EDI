@@ -75,7 +75,7 @@ class GitLabForgeTest {
     void readsTheChecksOnTheHeadFromItsPipeline() throws IOException {
         assertThat(checksWithAPipeline("success")).isEqualTo(HeadChecks.PASSED);
         assertThat(checksWithAPipeline("failed")).isEqualTo(HeadChecks.FAILED);
-        assertThat(checksWithAPipeline("canceled")).isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWithAPipeline("canceled")).isEqualTo(HeadChecks.UNDECIDED);
         assertThat(checksWithAPipeline("running")).isEqualTo(HeadChecks.UNDECIDED);
 
         standIns.answering("mr-view", REQUEST.formatted("opened", "null", "null", "null"));

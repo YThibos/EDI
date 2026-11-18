@@ -65,6 +65,8 @@ Failed checks on the head say something about the work, so they hold; this follo
 - Reading every ended run as ready - a run that failed its own review or tests after the done would pass for a finished request.
 - Reading a run that ended in its `ci` step as ready whatever the forge shows - CI that turned red after the done would pass for a finished request.
 - Holding pending checks as well as failed ones - checks that stay pending with no run watching them would hold the request for ever.
+- Holding on a cancelled check - cancelling a check says nothing about the work, the same reason a stop of the pipeline's service holds nothing.
+- Holding only on the checks the forge requires - the views the adapters read do not say which checks are required.
 
 ## Consequences
 
