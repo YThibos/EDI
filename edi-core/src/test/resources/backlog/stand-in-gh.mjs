@@ -19,7 +19,7 @@ if (args[0] !== 'api') {
     fail(`the stand-in answers gh api only, not gh ${args.join(' ')}`);
 }
 const method = args[args.indexOf('--method') + 1] ?? 'GET';
-const route = args.find(arg => arg.startsWith('repos/'));
+const route = args.find(arg => arg.startsWith('repos/') || arg.startsWith('advisories/'));
 const input = args.includes('--input') ? JSON.parse(readFileSync(0, 'utf8') || '{}') : undefined;
 const [path, query] = route.replace(/^repos\/[^/]+\/[^/]+\/?/, '').split('?');
 const parameters = new URLSearchParams(query ?? '');
@@ -31,6 +31,9 @@ if (answer !== undefined) {
 
 function answered(verb, parts, body) {
     const [collection, id, child, grandchild] = parts;
+    if (collection === 'advisories') {
+        return world.advisories?.[id] ?? fail(`no advisory ${id}`);
+    }
     if (parts.length === 0) {
         return { full_name: 'example/edi', owner: world.owner };
     }
