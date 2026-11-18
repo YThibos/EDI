@@ -34,6 +34,7 @@ public class WorkerBriefs {
                 Map.entry("branch", facts.dispatch().branch().toString()),
                 Map.entry("base", facts.base().name()),
                 Map.entry("deliveryMode", facts.delivery().word()),
+                Map.entry("route", facts.route().toString()),
                 Map.entry("worktree", facts.worktree().toString()),
                 Map.entry("taskDirectory", facts.taskDirectory().toString()),
                 Map.entry("socket", facts.ediSocket()),

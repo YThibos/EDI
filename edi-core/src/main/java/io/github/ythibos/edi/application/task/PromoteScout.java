@@ -70,7 +70,7 @@ public class PromoteScout {
     private static Intake shipIntakeOf(Task scout, String shipTitle) {
         Intake researched = scout.intake();
         String title = shipTitle == null || shipTitle.isBlank() ? researched.title() : shipTitle;
-        return new Intake(TaskKind.SHIP, title, researched.projects(), researched.workKey(), researched.base(), List.of(), researched.delivery());
+        return new Intake(TaskKind.SHIP, title, researched.projects(), researched.workKey(), researched.base(), List.of(), researched.delivery(), null);
     }
 
     private String shipNotesOf(Task scout, CaptainsWord word) {

@@ -321,7 +321,8 @@ function holdLocally(run, item, issue) {
 
 function queuedTask(run, item, issue) {
     const added = act(run, `queue the ${item.kind} "${item.title}" on ${issue.key} with edi task add`, () =>
-        queuedTaskIn(command('edi', ['task', 'add', '--kind', item.kind, '--project', PROJECT, '--title', item.title, '--key', issue.key, '--body', '-'], item.spec)));
+        queuedTaskIn(command('edi', ['task', 'add', '--kind', item.kind, '--project', PROJECT, '--title', item.title, '--key', issue.key, '--size', item.size,
+            '--body', '-'], item.spec)));
     return added ? taskNamed(added) : null;
 }
 

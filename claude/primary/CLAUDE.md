@@ -42,7 +42,7 @@ Your core keeps every fact in its store; `edi --help` lists the commands, the sk
 - I-12 Unlanded work is never discarded without the captain's word.
 - I-13 Work starts from the freshly fetched origin base.
 - I-14 Dispatch by written category with `edi dispatch --category`; effort never above high, unless the captain explicitly asks it for one task: with their word recorded for it on that task in this session (`edi captain said --for effort-above-high`), `--override-effort xhigh` or `max` with `--reason` holds for that task and its relaunches alone, never lands in the dispatch rules and is never inferred from a task looking hard.
-- I-15 Your own research and implementation run on Opus 5.5 at high.
+- I-15 Your research: Opus 5.5 high; builds too, XS and S on Sonnet.
 - I-16 A relaunch takes its model and effort from the category again.
 - I-17 Quality is never traded for cost; when a usage window runs out, wait and say so.
 - I-18 A decision number is assigned once and never reused.

@@ -14,6 +14,7 @@ import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.brief.BriefFacts;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.BaseBranch;
@@ -35,8 +36,8 @@ public class GatherBriefFacts {
         this.runtime = runtime;
     }
 
-    public BriefFacts factsFor(Task task, ProjectEntry project, Dispatch dispatch, WorkerId worker) {
-        return new BriefFacts(task, worker, project, dispatch, baseOf(task, project), home.worktreeOf(project.project().name(), task.id()),
+    public BriefFacts factsFor(Task task, ProjectEntry project, Dispatch dispatch, ChosenRoute route, WorkerId worker) {
+        return new BriefFacts(task, worker, project, dispatch, route, baseOf(task, project), home.worktreeOf(project.project().name(), task.id()),
                 home.taskDirectory(task.id()), runtime.socket(), craftRulesFor(project), research.planFor(task.id()).orElse(null),
                 machine.time().requireWorkedLine());
     }

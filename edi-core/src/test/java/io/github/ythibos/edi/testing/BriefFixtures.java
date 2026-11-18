@@ -13,7 +13,11 @@ import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
 import io.github.ythibos.edi.domain.project.AiScaffolding;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
@@ -35,6 +39,8 @@ public final class BriefFixtures {
 
     private static final Path HOME = Path.of("/home/developer/.edi");
     private static final TaskId TASK = new TaskId("fit-lamp");
+    private static final ChosenRoute ROUTE = new ChosenRoute(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
+            "the override for harness on implementation of size S");
     private static final String NATIVE_BUILD = "./mvnw -B -Pnative,quick-build verify";
     private static final RegisteredForge FORGE = new RegisteredForge(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"),
             "example-owner");
@@ -57,46 +63,46 @@ public final class BriefFixtures {
     public static BriefFacts largestShip(String intent, String spec) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), intent, TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.LOCAL_ONLY, NATIVE_BUILD),
-                dispatch(CategoryId.MECHANICAL, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                dispatch(CategoryId.MECHANICAL, spec), ROUTE, new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
                 true);
     }
 
     public static BriefFacts shipFollowing(String plan, String spec, boolean asksForTheTimeWorked) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, null),
-                dispatch(CategoryId.IMPLEMENTATION, spec), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, plan,
+                dispatch(CategoryId.IMPLEMENTATION, spec), ROUTE, new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, plan,
                 asksForTheTimeWorked);
     }
 
     public static BriefFacts shipBuildingANativeImage(DeliveryMode delivery) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(delivery, AiScaffolding.COMMITTED, NATIVE_BUILD),
-                dispatch(CategoryId.IMPLEMENTATION, ""), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                dispatch(CategoryId.IMPLEMENTATION, ""), ROUTE, new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
                 false);
     }
 
     public static BriefFacts shipWhereCi(boolean ciRuns) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, NATIVE_BUILD, ciRuns),
-                dispatch(CategoryId.IMPLEMENTATION, ""), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                dispatch(CategoryId.IMPLEMENTATION, ""), ROUTE, new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
                 false);
     }
 
     public static BriefFacts shipWithoutANativeImageWhereCi(boolean ciRuns) {
         Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, null, ciRuns),
-                dispatch(CategoryId.IMPLEMENTATION, ""), new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
+                dispatch(CategoryId.IMPLEMENTATION, ""), ROUTE, new BaseBranch("main"), worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null,
                 false);
     }
 
     private static BriefFacts facts(TaskKind kind, DeliveryMode delivery, CategoryId category, String spec, AiScaffolding aiScaffolding) {
         Task task = Task.queued(TASK, intake(kind), "Fit the lamp in the hall; offline verification is accepted.", TestHome.START);
-        return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding, null), dispatch(category, spec), new BaseBranch("main"),
+        return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding, null), dispatch(category, spec), ROUTE, new BaseBranch("main"),
                 worktree(), taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null, false);
     }
 
     private static Intake intake(TaskKind kind) {
-        return new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), WorkKey.parse("HRN-3"), null, List.of(), null);
+        return new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), WorkKey.parse("HRN-3"), null, List.of(), null, null);
     }
 
     private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild) {

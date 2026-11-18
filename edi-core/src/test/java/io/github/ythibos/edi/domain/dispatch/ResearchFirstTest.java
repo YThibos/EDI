@@ -49,9 +49,9 @@ class ResearchFirstTest {
     @Test
     void refusesTheSwitchOnACategoryWhoseWorkIsPlannedOrExempt() {
         DispatchRules switchedOnForDocumentation = new DispatchRules(List.of(), List.of(
-                new DispatchCategory(CategoryId.RESEARCH, "", OPUS_HIGH, "Plans.", null, false),
-                new DispatchCategory(CategoryId.IMPLEMENTATION, "", SONNET_HIGH, "Planned work.", null, false),
-                new DispatchCategory(new CategoryId("documentation"), "", SONNET_HIGH, "Prose.", null, true)), PIPELINE_AGENT);
+                new DispatchCategory(CategoryId.RESEARCH, Set.of(), "", OPUS_HIGH, "Plans.", null, false),
+                new DispatchCategory(CategoryId.IMPLEMENTATION, Set.of(), "", SONNET_HIGH, "Planned work.", null, false),
+                new DispatchCategory(new CategoryId("documentation"), Set.of(), "", SONNET_HIGH, "Prose.", null, true)), PIPELINE_AGENT);
 
         assertThatIllegalArgumentException().isThrownBy(() -> switchedOnForDocumentation.validatedAgainst(ROSTER))
                 .withMessage("The category documentation cannot switch research first on; only implementation-unplanned and bugfix work without a"
@@ -61,11 +61,11 @@ class ResearchFirstTest {
 
     private static DispatchRules rules(boolean unplannedResearchFirst, boolean bugfixResearchFirst) {
         return new DispatchRules(List.of(
-                new ProjectOverride(new ProjectName("EDI"), Set.of(), OPUS_HIGH, "EDI runs on Opus."),
-                new ProjectOverride(new ProjectName("lighthouse"), Set.of(), OPUS_HIGH, "The lighthouse runs on Opus.")), List.of(
-                new DispatchCategory(CategoryId.RESEARCH, "", OPUS_HIGH, "Plans.", null, false),
-                new DispatchCategory(CategoryId.IMPLEMENTATION, "", SONNET_HIGH, "Planned work.", null, false),
-                new DispatchCategory(CategoryId.IMPLEMENTATION_UNPLANNED, "", OPUS_HIGH, "Unplanned work.", null, unplannedResearchFirst),
-                new DispatchCategory(CategoryId.BUGFIX, "", SONNET_HIGH, "Known causes.", null, bugfixResearchFirst)), PIPELINE_AGENT);
+                new ProjectOverride(new ProjectName("EDI"), Set.of(), Set.of(), OPUS_HIGH, "EDI runs on Opus."),
+                new ProjectOverride(new ProjectName("lighthouse"), Set.of(), Set.of(), OPUS_HIGH, "The lighthouse runs on Opus.")), List.of(
+                new DispatchCategory(CategoryId.RESEARCH, Set.of(), "", OPUS_HIGH, "Plans.", null, false),
+                new DispatchCategory(CategoryId.IMPLEMENTATION, Set.of(), "", SONNET_HIGH, "Planned work.", null, false),
+                new DispatchCategory(CategoryId.IMPLEMENTATION_UNPLANNED, Set.of(), "", OPUS_HIGH, "Unplanned work.", null, unplannedResearchFirst),
+                new DispatchCategory(CategoryId.BUGFIX, Set.of(), "", SONNET_HIGH, "Known causes.", null, bugfixResearchFirst)), PIPELINE_AGENT);
     }
 }

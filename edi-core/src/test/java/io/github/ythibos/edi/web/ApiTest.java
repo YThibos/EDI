@@ -135,13 +135,15 @@ class ApiTest {
     @Test
     void addsATaskAndShowsItAsTextOrJson() throws Exception {
         HttpResponse<String> added = post("/api/tasks", """
-                {"id":"api-lantern","kind":"ship","projects":["harness"],"title":"Rework the lantern","key":"HRN-3","base":"develop"}""", TEXT);
+                {"id":"api-lantern","kind":"ship","projects":["harness"],"title":"Rework the lantern","key":"HRN-3","base":"develop","size":"S"}""", TEXT);
 
         assertThat(added.statusCode()).isEqualTo(201);
         assertThat(added.body()).isEqualTo("Queued api-lantern on HRN-3.\n");
-        assertThat(get("/api/tasks/api-lantern", TEXT).body()).startsWith("api-lantern  ship  queued\nRework the lantern\nProjects: harness\nWork key: HRN-3\nBase: develop\n");
+        assertThat(get("/api/tasks/api-lantern", TEXT).body())
+                .startsWith("api-lantern  ship  queued\nRework the lantern\nProjects: harness\nWork key: HRN-3\nBase: develop\nSize: S\n");
         assertThat(get("/api/tasks/api-lantern", JSON).body()).contains(
-                "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"stage\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"");
+                "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"stage\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"",
+                "\"size\":\"S\"");
     }
 
     @Test
@@ -936,7 +938,7 @@ class ApiTest {
 
     private void waitForAScout(TaskId ship, TaskId scout) {
         Task waiting = tasks.get(ship);
-        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null), "",
+        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null, null), "",
                 waiting.created()));
         tasks.update(waiting.waitingFor(scout));
     }

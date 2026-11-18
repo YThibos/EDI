@@ -93,6 +93,12 @@ Take a login out of the machine profile only once none of its workers waits for 
 
 `config/dispatch-rules.json` holds the dispatch categories, each with the model and effort it runs on, and the project overrides ([dispatch-routing](decisions/dispatch-routing.md)).
 A project override's `categories` names the categories it covers, and a task of any other category routes by its category; an override without `categories` covers every category.
+A project override's `sizes` names the task sizes it covers, `XS`, `S`, `M` or `L`, and a task of another size or of none goes on to the next override; an override without `sizes` covers every size.
+Overrides apply in the order the file lists them, so a narrower override comes first, and the loader refuses one that an earlier override of its project leaves nothing to route.
+A category may also have further entries with the same `id` and `sizes`, each holding only its `use` and `why`, and its entry without `sizes` routes every other task; the loader refuses an unknown size, naming the file.
+The example sends EDI's `implementation` and `bugfix` tasks of size `XS` and `S` to Sonnet 5.5 at high, as the captain asked, and its larger and research work to Opus 5.5 at high.
+A task takes its size from `edi task add --size`, or else from the `Size` row of the backlog item in its body, and a task without a size routes as if no override or entry named sizes.
+`edi brief` and the dispatch's answer name the model and the rule that chose it, with the size it matched.
 The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([pipeline-agent](decisions/pipeline-agent.md)).
 An effort in the file is `low`, `medium` or `high`; only the captain's word recorded on one task with `--for effort-above-high` lifts that task to `xhigh` or `max`, through `edi dispatch --override-effort`, never through the file.
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).

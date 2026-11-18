@@ -15,6 +15,7 @@ import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.tracker.TicketDetails;
 
 record AddTaskRequest(
@@ -26,6 +27,7 @@ record AddTaskRequest(
         String base,
         List<String> blockedBy,
         String delivery,
+        String size,
         String body,
         String issueType,
         String epic,
@@ -44,6 +46,7 @@ record AddTaskRequest(
                 optional(key, WorkKey::parse),
                 optional(base, BaseBranch::new),
                 each(blockedBy, TaskId::new),
-                optional(delivery, DeliveryMode::named));
+                optional(delivery, DeliveryMode::named),
+                optional(size, TaskSize::named));
     }
 }

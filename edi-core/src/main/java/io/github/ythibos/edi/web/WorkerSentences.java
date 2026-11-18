@@ -13,7 +13,7 @@ final class WorkerSentences {
 
     static String dispatched(DispatchOutcome.Launched launched) {
         Worker worker = launched.worker();
-        return "Dispatched " + worker.id().task() + " to " + worker.id() + " (" + worker.category() + ", " + worker.route() + ") on "
+        return "Dispatched " + worker.id().task() + " to " + worker.id() + " (" + worker.category() + ", " + launched.route() + ") on "
                 + launched.branch() + " in " + launched.worktree() + ".";
     }
 
@@ -24,7 +24,7 @@ final class WorkerSentences {
 
     static String relaunched(DispatchOutcome.Launched launched) {
         Worker worker = launched.worker();
-        return "Relaunched " + worker.id().task() + " as " + worker.id() + " (" + worker.category() + ", " + worker.route() + "), "
+        return "Relaunched " + worker.id().task() + " as " + worker.id() + " (" + worker.category() + ", " + launched.route() + "), "
                 + howItStarted(launched) + ", in " + launched.worktree() + ".";
     }
 

@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -36,7 +37,7 @@ public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plann
         return plannedShip != null;
     }
 
-    public record Launched(Worker worker, BranchName branch, Path worktree, UnresumedSession unresumed) {
+    public record Launched(Worker worker, ChosenRoute route, BranchName branch, Path worktree, UnresumedSession unresumed) {
     }
 
     public record UnresumedSession(UUID session, String why) {

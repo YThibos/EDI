@@ -265,7 +265,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static Task ship(String id, String title, Instant filed) {
-        return Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(), null), "", filed);
+        return Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, title, List.of(new ProjectName("harness")), null, null, List.of(), null, null), "", filed);
     }
 
     private static Task keyed(Task task, String key) {

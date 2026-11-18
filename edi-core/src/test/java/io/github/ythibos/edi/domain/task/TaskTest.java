@@ -179,7 +179,7 @@ class TaskTest {
 
     @Test
     void followsItsProjectsDeliveryUnlessTheCaptainAskedForAnotherOne() {
-        Intake ownWay = new Intake(TaskKind.SHIP, "Fit", List.of(new ProjectName("harness")), null, null, List.of(), DeliveryMode.LOCAL_APPLY);
+        Intake ownWay = new Intake(TaskKind.SHIP, "Fit", List.of(new ProjectName("harness")), null, null, List.of(), DeliveryMode.LOCAL_APPLY, null);
 
         assertThat(ship().intake().deliveryOr(DeliveryMode.DRAFT_REVIEW)).isEqualTo(DeliveryMode.DRAFT_REVIEW);
         assertThat(ownWay.deliveryOr(DeliveryMode.DRAFT_REVIEW)).isEqualTo(DeliveryMode.LOCAL_APPLY);
@@ -202,7 +202,7 @@ class TaskTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.DROPPED, "", null, AT, null));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.DROPPED, "", DEFERRAL, AT, LATER));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id,
-                new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id), null), TaskStage.QUEUED, "", null, AT, null));
+                new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id), null, null), TaskStage.QUEUED, "", null, AT, null));
     }
 
     @Test
@@ -210,7 +210,7 @@ class TaskTest {
         TaskId cleanup = new TaskId("refuse-cleanup");
         TaskId drill = new TaskId("choose-drill");
         Task waiting = Task.queued(new TaskId("plan-timesheet"),
-                new Intake(TaskKind.SHIP, "Plan the timesheet", List.of(new ProjectName("harness")), null, null, List.of(cleanup, drill), null), "", AT);
+                new Intake(TaskKind.SHIP, "Plan the timesheet", List.of(new ProjectName("harness")), null, null, List.of(cleanup, drill), null, null), "", AT);
 
         assertThat(waiting.noLongerWaitingFor(cleanup).intake().blockedBy()).containsExactly(drill);
         assertThat(waiting.noLongerWaitingFor(cleanup).noLongerWaitingFor(drill).intake().blockedBy()).isEmpty();
@@ -229,11 +229,11 @@ class TaskTest {
     }
 
     private static Task captainItem() {
-        return Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null), "", AT);
+        return Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null, null), "", AT);
     }
 
     private static Task ship() {
         return Task.queued(new TaskId("fit-lamp"),
-                new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null), "  Intake notes. ", AT);
+                new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null, null), "  Intake notes. ", AT);
     }
 }

@@ -87,6 +87,9 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         if (intake.delivery() != null) {
             lines.add("Delivery: " + intake.delivery().word());
         }
+        if (intake.size() != null) {
+            lines.add("Size: " + intake.size().word());
+        }
         lines.add("Since: " + moments.day(task.created()));
         if (task.isClosed()) {
             lines.add(capitalised(task.stage().word()) + ": " + moments.day(task.closed()));

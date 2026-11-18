@@ -11,4 +11,8 @@ public record CaptainOverride(Route route, String reason) {
             throw new IllegalArgumentException("An override of the dispatch rules records the captain's reason for it.");
         }
     }
+
+    public ChosenRoute chosen() {
+        return new ChosenRoute(route, "the captain's override: " + reason);
+    }
 }
