@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -35,6 +37,7 @@ public class GitHubForge implements Forge {
     private static final String WORKFLOW_SCOPE = "workflow";
     private static final Set<String> PASSING_CHECK = Set.of("SUCCESS", "NEUTRAL", "SKIPPED");
     private static final Set<String> FAILING_CHECK = Set.of("FAILURE", "ERROR", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
+    private static final Pattern WORKFLOW_RUN = Pattern.compile("/actions/runs/(\\d+)/");
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -145,7 +148,12 @@ public class GitHubForge implements Forge {
 
     private static String checkOf(JsonNode run) {
         return String.join("/", run.path("__typename").asString(""), run.path("context").asString(""),
-                run.path("workflowName").asString(""), run.path("name").asString(""));
+                run.path("workflowName").asString(""), workflowRunOf(run), run.path("name").asString(""));
+    }
+
+    private static String workflowRunOf(JsonNode run) {
+        Matcher workflowRun = WORKFLOW_RUN.matcher(run.path("detailsUrl").asString(""));
+        return workflowRun.find() ? workflowRun.group(1) : "";
     }
 
     private static JsonNode laterOf(JsonNode earlier, JsonNode later) {
