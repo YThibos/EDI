@@ -34,6 +34,8 @@ Validating the host and the account where they are read, and quoting them where 
 - The forges' HTTP APIs from Java - two more clients with their tokens and pagination, where the captain's tools already hold the logins.
 - `gh auth switch` before each call - changes the captain's own terminal state.
 - Checking the configured `remote.origin.url` - an `insteadOf` rewrite would carry the push elsewhere unseen.
+- Keying a GitHub check by its workflow and job name alone - a passed push run of a job would hide its failed pull request run, and a request with a red check would read as ready.
+- Reading the checks through `gh pr checks`, which tells runs apart by the event that started them - a new allow-list entry and a second call on every view, worth it only if false holds show up in practice.
 
 ## Consequences
 
@@ -41,10 +43,11 @@ Validating the host and the account where they are read, and quoting them where 
 - Bad: every GitHub call costs one extra local `gh auth token`, a new forge feature means a reviewed allow-list entry, and a project behind a mirror registers the mirror as its forge.
 - Bad: a host written as an IPv6 literal, or with characters outside a DNS name, is refused, and the snippet's safety rests on that validation, which a test pins; anyone who can write the registry runs as the captain's own user and can reach the shell in other ways, which this does not contain.
 - Bad: the validation pipeline's own pushes do not use this binding ([docs/verification/no-mistakes.md](../verification/no-mistakes.md)).
+- Bad: the rollup does not name the event that started a run, so keying a GitHub check by its workflow run errs towards holding: a new run of a job that the same event started on the same head, such as after a pull request is closed and reopened, leaves the old run's failure in place, and the request reads as changing until the failed jobs are re-run or a new head is pushed.
 
 ## When to revisit
 
-When a third forge is registered, `glab` supports several accounts per host, or a project publishes to more than one repository.
+When a third forge is registered, `glab` supports several accounts per host, a project publishes to more than one repository, or a false hold from a re-triggered GitHub check is seen in practice.
 
 ## How we got here
 
@@ -55,3 +58,4 @@ When a third forge is registered, `glab` supports several accounts per host, or 
 - 18/11/2026: a view tells failed checks apart from pending or missing ones, so failed checks hold a handed-over request (EDI-265).
 - 18/11/2026: a GitHub view reads only the latest run of each check, so a failed check that passed on its re-run no longer reads as failed (EDI-265).
 - 18/11/2026: a check of GitHub Actions is told apart by its workflow run too, so a passed push run of a job no longer hides its failed pull request run (EDI-265).
+- 18/11/2026: the captain kept the workflow-run key, which errs towards holding, over one that could call a request with a red check ready, and left reading the checks by event to its own item should false holds show up (EDI-265).
