@@ -71,13 +71,26 @@ class AddTaskTest {
     void refusesASizeThatDiffersFromItsBacklogItemsOrThatIsNoSize() {
         Intake intake = ship("unused", "Fit the lamp").intake();
 
-        assertThatThrownBy(() -> home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake.sized(TaskSize.XS), "| Size | M |"), Actor.PRIMARY))
+        assertThatThrownBy(() -> home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake.sized(TaskSize.XS), backlogItemOfSize("M")), Actor.PRIMARY))
                 .isInstanceOf(Refusal.class)
                 .hasMessage("The task is given size XS, but the Size row of its backlog item says M; a task has one size.");
-        assertThatThrownBy(() -> home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake, "| Size | huge |"), Actor.PRIMARY))
+        assertThatThrownBy(() -> home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake, backlogItemOfSize("huge")), Actor.PRIMARY))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("A size is XS, S, M, L, not huge.");
         assertThat(home.tasks().contains(new TaskId("fit-lamp"))).isFalse();
+    }
+
+    @Test
+    void readsNoSizeFromASizeRowOutsideTheTableABacklogItemOpensWith() {
+        Intake intake = ship("unused", "Fit the lamp").intake();
+        String comparison = "The lamps compared:\n\n| Field | Value |\n|---|---|\n| Size | 3 MB |\n";
+        String fenced = "```\n" + backlogItemOfSize("S") + "\n```\n";
+
+        TaskId compared = home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake, comparison), Actor.PRIMARY).id();
+        TaskId quoted = home.addTask().add(new NewTask(new TaskId("fit-horn"), intake, fenced), Actor.PRIMARY).id();
+
+        assertThat(home.tasks().get(compared).intake().size()).isNull();
+        assertThat(home.tasks().get(quoted).intake().size()).isNull();
     }
 
     @Test
@@ -134,5 +147,9 @@ class AddTaskTest {
                 .isInstanceOf(Refusal.class)
                 .hasMessage("lantern is already done, so no task can wait for it.");
         assertThat(home.tasks().contains(new TaskId("fog-horn"))).isFalse();
+    }
+
+    private static String backlogItemOfSize(String size) {
+        return "| Field | Value |\n|---|---|\n| Kind | ship |\n| Size | " + size + " |\n\n## Goal\n\nA lamp.";
     }
 }

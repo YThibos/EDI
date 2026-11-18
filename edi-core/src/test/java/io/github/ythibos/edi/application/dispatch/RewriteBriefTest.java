@@ -20,6 +20,9 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 @Tag("adapter")
 class RewriteBriefTest {
@@ -27,6 +30,7 @@ class RewriteBriefTest {
     private static final String SPEC = "Fit the lamp; the hall switch also dims it, with a test for the dimmer.";
     private static final String SCOPE_NOTE = "Scope addition: the porch lamp gets the same dimmer, with a test.";
     private static final String RULES = "config/dispatch-rules.json";
+    private static final CategoryId DOCUMENTATION = new CategoryId("documentation");
     private static final String IMPLEMENTATION_ON_SONNET = """
             "use": { "model": "claude-sonnet-5-5", "effort": "high" },
                   "why": "The hard reasoning""";
@@ -96,6 +100,18 @@ class RewriteBriefTest {
     }
 
     @Test
+    void savesANoteOnceAndNamesTheLaunchedModelWhenTheRulesNoLongerHoldItsCategory() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        dispatch("fit-lamp", DOCUMENTATION);
+        home.writing(RULES, withoutTheCategory(ExampleHome.file(RULES), DOCUMENTATION));
+
+        home.noteTask().note(TaskReference.parse("fit-lamp"), SCOPE_NOTE, Actor.PRIMARY);
+
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).notes()).isEqualTo("Do the work on fit-lamp.\n\n" + SCOPE_NOTE);
+        assertThat(briefOf("fit-lamp")).contains("- Model: claude-sonnet-5-5 at low, as at its launch\n", SCOPE_NOTE);
+    }
+
+    @Test
     void writesNoBriefForATaskNotYetDispatched() {
         home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
 
@@ -118,8 +134,21 @@ class RewriteBriefTest {
     }
 
     private void dispatch(String task) {
-        home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(CategoryId.IMPLEMENTATION, SPEC, List.of(), null),
-                CallingSession.UNNAMED, Actor.PRIMARY);
+        dispatch(task, CategoryId.IMPLEMENTATION);
+    }
+
+    private void dispatch(String task, CategoryId category) {
+        home.dispatchTask().dispatch(TaskReference.parse(task), new DispatchRequest(category, SPEC, List.of(), null), CallingSession.UNNAMED,
+                Actor.PRIMARY);
+    }
+
+    private static String withoutTheCategory(String rules, CategoryId category) {
+        JsonMapper json = new JsonMapper();
+        ObjectNode document = (ObjectNode) json.readTree(rules);
+        ArrayNode kept = document.arrayNode();
+        document.get("categories").valueStream().filter(entry -> !entry.get("id").asString().equals(category.toString())).forEach(kept::add);
+        document.set("categories", kept);
+        return json.writeValueAsString(document);
     }
 
     private String intentOf(String task) throws IOException {

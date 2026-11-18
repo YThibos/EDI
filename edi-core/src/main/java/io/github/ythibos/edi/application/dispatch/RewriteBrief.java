@@ -67,7 +67,7 @@ public class RewriteBrief {
     private Optional<ChosenRoute> currentChoiceFor(Task task, Dispatch dispatch) {
         try {
             return Optional.of(routes.chosenFor(task, dispatch));
-        } catch (InvalidConfiguration unloadable) {
+        } catch (InvalidConfiguration | IllegalArgumentException unresolvable) {
             return Optional.empty();
         }
     }
