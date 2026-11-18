@@ -30,7 +30,7 @@ public record ProjectOverride(ProjectName project, Set<CategoryId> categories, S
     }
 
     public ChosenRoute chosenFor(CategoryId category, TaskSize size) {
-        return new ChosenRoute(route, "the override for " + project + " on " + category + matchedSize(size));
+        return ChosenRoute.chosenBy(route, "the override for " + project + " on " + category + matchedSize(size));
     }
 
     public String name() {

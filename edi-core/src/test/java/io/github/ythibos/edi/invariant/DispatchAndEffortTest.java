@@ -230,7 +230,7 @@ class DispatchAndEffortTest {
                 assertThat(rules.routeFor(EDI, CategoryId.IMPLEMENTATION_UNPLANNED, small, null).route()).isEqualTo(OPUS_HIGH);
                 assertThat(rules.routeFor(EDI, CategoryId.RESEARCH, small, null).route()).isEqualTo(OPUS_HIGH);
             }
-            assertThat(rules.routeFor(EDI, CategoryId.BUGFIX, TaskSize.XS, null).rule()).isEqualTo("the override for EDI on bugfix of size XS");
+            assertThat(rules.routeFor(EDI, CategoryId.BUGFIX, TaskSize.XS, null).choice()).isEqualTo("chosen by the override for EDI on bugfix of size XS");
         }
     }
 

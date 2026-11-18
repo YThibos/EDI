@@ -36,10 +36,10 @@ class DispatchRulesTest {
         CaptainOverride captain = new CaptainOverride(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.LOW), "the captain asked");
 
         assertThat(RULES.routeFor(List.of(new ProjectName("harness")), CategoryId.IMPLEMENTATION, null, null))
-                .isEqualTo(new ChosenRoute(SONNET_MEDIUM, "the category implementation"));
-        assertThat(RULES.routeFor(EDI, CategoryId.IMPLEMENTATION, null, null)).isEqualTo(new ChosenRoute(OPUS_HIGH, "the override for EDI on implementation"));
+                .isEqualTo(ChosenRoute.chosenBy(SONNET_MEDIUM, "the category implementation"));
+        assertThat(RULES.routeFor(EDI, CategoryId.IMPLEMENTATION, null, null)).isEqualTo(ChosenRoute.chosenBy(OPUS_HIGH, "the override for EDI on implementation"));
         assertThat(RULES.routeFor(EDI, CategoryId.IMPLEMENTATION, null, captain))
-                .isEqualTo(new ChosenRoute(captain.route(), "the captain's override: the captain asked"));
+                .isEqualTo(ChosenRoute.chosenBy(captain.route(), "the captain's override: the captain asked"));
         assertThatIllegalArgumentException().isThrownBy(() -> RULES.routeFor(EDI, new CategoryId("flying"), null, null))
                 .withMessage("No dispatch category is called flying; the categories are implementation, mechanical.");
     }
@@ -65,11 +65,11 @@ class DispatchRulesTest {
                 CATEGORIES, PIPELINE_AGENT).validatedAgainst(ROSTER);
 
         assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.S, null))
-                .isEqualTo(new ChosenRoute(SONNET_HIGH, "the override for EDI on implementation of size S"));
+                .isEqualTo(ChosenRoute.chosenBy(SONNET_HIGH, "the override for EDI on implementation of size S"));
         assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.L, null))
-                .isEqualTo(new ChosenRoute(OPUS_HIGH, "the override for EDI on implementation"));
+                .isEqualTo(ChosenRoute.chosenBy(OPUS_HIGH, "the override for EDI on implementation"));
         assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, null, null))
-                .isEqualTo(new ChosenRoute(OPUS_HIGH, "the override for EDI on implementation"));
+                .isEqualTo(ChosenRoute.chosenBy(OPUS_HIGH, "the override for EDI on implementation"));
         assertThat(bySize.routeFor(List.of(new ProjectName("harness")), CategoryId.IMPLEMENTATION, TaskSize.XS, null).route()).isEqualTo(SONNET_MEDIUM);
     }
 
@@ -80,7 +80,7 @@ class DispatchRulesTest {
         CaptainOverride captain = new CaptainOverride(OPUS_HIGH, "this one is subtle");
 
         assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.S, captain))
-                .isEqualTo(new ChosenRoute(OPUS_HIGH, "the captain's override: this one is subtle"));
+                .isEqualTo(ChosenRoute.chosenBy(OPUS_HIGH, "the captain's override: this one is subtle"));
     }
 
     @Test
@@ -89,8 +89,8 @@ class DispatchRulesTest {
                 new DispatchCategory(CategoryId.IMPLEMENTATION, Set.of(TaskSize.XS), null, HAIKU, "A tiny change is rote.", null, false),
                 CATEGORIES.getFirst(), CATEGORIES.getLast()), PIPELINE_AGENT).validatedAgainst(ROSTER);
 
-        assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.XS, null)).isEqualTo(new ChosenRoute(HAIKU, "the category implementation of size XS"));
-        assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.M, null)).isEqualTo(new ChosenRoute(SONNET_MEDIUM, "the category implementation"));
+        assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.XS, null)).isEqualTo(ChosenRoute.chosenBy(HAIKU, "the category implementation of size XS"));
+        assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, TaskSize.M, null)).isEqualTo(ChosenRoute.chosenBy(SONNET_MEDIUM, "the category implementation"));
         assertThat(bySize.routeFor(EDI, CategoryId.IMPLEMENTATION, null, null).route()).isEqualTo(SONNET_MEDIUM);
         assertThat(bySize.category(CategoryId.IMPLEMENTATION)).isEqualTo(CATEGORIES.getFirst());
     }

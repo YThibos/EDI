@@ -92,9 +92,9 @@ class DispatchTaskTest {
         assertThat(Files.readString(home.home().root().resolve("data/tasks/fit-horn/brief.md")))
                 .contains("- Model: claude-sonnet-5-5 at high, chosen by the override for EDI on implementation of size S\n");
         assertThat(largeRoute).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
-        assertThat(large.launched().route().rule()).isEqualTo("the override for EDI on implementation");
+        assertThat(large.launched().route().choice()).isEqualTo("chosen by the override for EDI on implementation");
         assertThat(home.runtime().lastLaunch().route()).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
-        assertThat(unsized.launched().route().rule()).isEqualTo("the override for EDI on bugfix");
+        assertThat(unsized.launched().route().choice()).isEqualTo("chosen by the override for EDI on bugfix");
     }
 
     @Test
@@ -109,7 +109,7 @@ class DispatchTaskTest {
 
         assertThat(brief).contains("- Model: claude-opus-5-5 at medium, chosen by the captain's override: the horn is subtle\n");
         assertThat(home.runtime().lastLaunch().route()).isEqualTo(captains.route());
-        assertThat(outcome.launched().route().rule()).isEqualTo("the captain's override: the horn is subtle");
+        assertThat(outcome.launched().route().choice()).isEqualTo("chosen by the captain's override: the horn is subtle");
     }
 
     @Test

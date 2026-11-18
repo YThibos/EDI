@@ -99,6 +99,7 @@ A category may also have further entries with the same `id` and `sizes`, each ho
 The example sends EDI's `implementation` and `bugfix` tasks of size `XS` and `S` to Sonnet 5.5 at high, as the captain asked, and its larger and research work to Opus 5.5 at high.
 A task takes its size from `edi task add --size`, or else from the `Size` row of the backlog item in its body, and a task without a size routes as if no override or entry named sizes.
 `edi brief` and the dispatch's answer name the model and the rule that chose it, with the size it matched.
+A note that rewrites a live worker's brief keeps the model the worker was launched on, and names it "as at its launch" when the rules no longer choose it or no longer load.
 The `pipeline` entry names the model and effort of the validation pipeline's agent, and EDI writes it into the pipeline's own configuration at every worker launch ([pipeline-agent](decisions/pipeline-agent.md)).
 An effort in the file is `low`, `medium` or `high`; only the captain's word recorded on one task with `--for effort-above-high` lifts that task to `xhigh` or `max`, through `edi dispatch --override-effort`, never through the file.
 `"researchFirst": true` on `implementation-unplanned` or `bugfix` plans that work in a research task first (see [Trackers and time](trackers-and-time.md)).

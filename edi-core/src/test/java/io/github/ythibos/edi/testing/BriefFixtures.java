@@ -39,7 +39,7 @@ public final class BriefFixtures {
 
     private static final Path HOME = Path.of("/home/developer/.edi");
     private static final TaskId TASK = new TaskId("fit-lamp");
-    private static final ChosenRoute ROUTE = new ChosenRoute(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
+    private static final ChosenRoute ROUTE = ChosenRoute.chosenBy(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
             "the override for harness on implementation of size S");
     private static final String NATIVE_BUILD = "./mvnw -B -Pnative,quick-build verify";
     private static final RegisteredForge FORGE = new RegisteredForge(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"),

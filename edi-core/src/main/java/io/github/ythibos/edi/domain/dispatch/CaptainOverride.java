@@ -13,6 +13,6 @@ public record CaptainOverride(Route route, String reason) {
     }
 
     public ChosenRoute chosen() {
-        return new ChosenRoute(route, "the captain's override: " + reason);
+        return ChosenRoute.chosenBy(route, "the captain's override: " + reason);
     }
 }

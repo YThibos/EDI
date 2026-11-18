@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.testing.ExampleHome;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -25,6 +26,10 @@ class RewriteBriefTest {
 
     private static final String SPEC = "Fit the lamp; the hall switch also dims it, with a test for the dimmer.";
     private static final String SCOPE_NOTE = "Scope addition: the porch lamp gets the same dimmer, with a test.";
+    private static final String RULES = "config/dispatch-rules.json";
+    private static final String IMPLEMENTATION_ON_SONNET = """
+            "use": { "model": "claude-sonnet-5-5", "effort": "high" },
+                  "why": "The hard reasoning""";
 
     @TempDir
     private Path directory;
@@ -53,8 +58,41 @@ class RewriteBriefTest {
         home.noteTask().note(TaskReference.parse("fit-lamp"), SCOPE_NOTE, Actor.PRIMARY);
 
         assertThat(intentOf("fit-lamp")).contains("Do the work on fit-lamp.\n\n" + SCOPE_NOTE + "\n\n## Spec\n\n" + SPEC);
-        assertThat(Files.readString(taskDirectory("fit-lamp").resolve("brief.md"))).contains("## Captain's intent\n\nDo the work on fit-lamp.\n\n"
+        assertThat(briefOf("fit-lamp")).contains("## Captain's intent\n\nDo the work on fit-lamp.\n\n"
                 + SCOPE_NOTE + "\n\n## Spec");
+    }
+
+    @Test
+    void keepsNamingTheRuleThatChoseTheWorkersModelWhileTheRulesStillChooseIt() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        dispatch("fit-lamp");
+
+        home.noteTask().note(TaskReference.parse("fit-lamp"), SCOPE_NOTE, Actor.PRIMARY);
+
+        assertThat(briefOf("fit-lamp")).contains("- Model: claude-sonnet-5-5 at high, chosen by the category implementation\n");
+    }
+
+    @Test
+    void namesTheModelTheWorkerWasLaunchedOnWhenTheRulesNowChooseAnother() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        dispatch("fit-lamp");
+        home.writing(RULES, ExampleHome.file(RULES).replace(IMPLEMENTATION_ON_SONNET, IMPLEMENTATION_ON_SONNET.replace("claude-sonnet-5-5", "claude-opus-5-5")));
+
+        home.noteTask().note(TaskReference.parse("fit-lamp"), SCOPE_NOTE, Actor.PRIMARY);
+
+        assertThat(briefOf("fit-lamp")).contains("- Model: claude-sonnet-5-5 at high, as at its launch\n", SCOPE_NOTE);
+    }
+
+    @Test
+    void savesANoteOnceAndNamesTheLaunchedModelWhenTheRulesNoLongerLoad() throws IOException {
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        dispatch("fit-lamp");
+        home.writing(RULES, "{ \"schema\": ");
+
+        home.noteTask().note(TaskReference.parse("fit-lamp"), SCOPE_NOTE, Actor.PRIMARY);
+
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).notes()).isEqualTo("Do the work on fit-lamp.\n\n" + SCOPE_NOTE);
+        assertThat(briefOf("fit-lamp")).contains("- Model: claude-sonnet-5-5 at high, as at its launch\n", SCOPE_NOTE);
     }
 
     @Test
@@ -86,6 +124,10 @@ class RewriteBriefTest {
 
     private String intentOf(String task) throws IOException {
         return Files.readString(taskDirectory(task).resolve("intent.md"));
+    }
+
+    private String briefOf(String task) throws IOException {
+        return Files.readString(taskDirectory(task).resolve("brief.md"));
     }
 
     private Path taskDirectory(String task) {

@@ -175,7 +175,7 @@ class ConfirmationTextTest {
     @Test
     void confirmsADispatchWithTheRuleThatChoseItsModelAndTheSizeItMatched() {
         Worker dispatched = relaunchedAs(LaunchKind.DISPATCH);
-        ChosenRoute small = new ChosenRoute(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), "the override for EDI on implementation of size S");
+        ChosenRoute small = ChosenRoute.chosenBy(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), "the override for EDI on implementation of size S");
 
         assertThat(text.text(new Confirmation.Dispatched(new Launched(dispatched, small, BranchName.parse("feature/HRN-3"),
                 Path.of("/edi/worktrees/harness/lantern"), null))))
@@ -224,7 +224,7 @@ class ConfirmationTextTest {
     }
 
     private static ChosenRoute routeOf(Worker worker) {
-        return new ChosenRoute(worker.route(), "the category " + worker.category());
+        return ChosenRoute.chosenBy(worker.route(), "the category " + worker.category());
     }
 
     private static Worker relaunchedAs(LaunchKind kind) {

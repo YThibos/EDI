@@ -34,7 +34,7 @@ public record DispatchCategory(CategoryId id, Set<TaskSize> sizes, String when, 
     }
 
     public ChosenRoute chosenFor(TaskSize size) {
-        return new ChosenRoute(route, "the category " + id + (namesSizes() ? " of size " + size.word() : ""));
+        return ChosenRoute.chosenBy(route, "the category " + id + (namesSizes() ? " of size " + size.word() : ""));
     }
 
     public String name() {
