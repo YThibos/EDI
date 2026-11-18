@@ -53,8 +53,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     }
 
     private String roleReturnSentence(RoleReturn back) {
-        return "The primary role came back here: session " + back.taker() + " took it at " + moments.minute(back.takenAt()) + " and "
-                + (back.takerEndedItsSession() ? "ended at " + moments.minute(back.takerEndedAt()) : "its process is gone") + ".";
+        return "The primary role came back here: session " + back.taker() + ", which last took it at " + moments.minute(back.lastClaimedAt()) + ", "
+                + (back.takerEndedItsSession() ? "ended at " + moments.minute(back.takerEndedAt()) : "lost its process") + ".";
     }
 
     private static boolean bringsARoundOfDecisions(WakeDelivery delivery) {

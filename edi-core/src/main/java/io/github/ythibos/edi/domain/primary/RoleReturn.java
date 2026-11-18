@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public record RoleReturn(UUID taker, Instant takenAt, Instant takerEndedAt) {
+public record RoleReturn(UUID taker, Instant lastClaimedAt, Instant takerEndedAt) {
 
     public static Optional<RoleReturn> toTheHolder(PrimarySession holder, List<PrimarySession> sessions) {
         return sessions.stream()

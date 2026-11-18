@@ -69,12 +69,14 @@ class WaitForWakesTest {
     }
 
     @Test
-    void givesThePrimaryRoleBackOnceTheSessionThatTookItEndsAndSaysSoInEveryWakeUntilTheCaptainTypesThere() {
+    void givesThePrimaryRoleBackOnceTheSessionThatTookItEndsAndNamesItsLastClaimInEveryWakeUntilTheCaptainTypesThere() {
         UUID captains = primarySession();
         home.clock().advance(Duration.ofMinutes(1));
-        Instant takenAt = home.clock().now();
         UUID taker = primarySession();
         Standing whileTaken = home.primarySessions().standingOf(captains);
+        home.clock().advance(Duration.ofMinutes(1));
+        Instant lastClaimedAt = home.clock().now();
+        home.primaryHooks().promptSubmitted(taker, "Look again.");
         home.clock().advance(Duration.ofMinutes(2));
         Instant endedAt = home.clock().now();
         home.primaryHooks().sessionEnded(taker);
@@ -95,7 +97,7 @@ class WaitForWakesTest {
         assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
         assertThat(quietWithoutAWake).isTrue();
         assertThat(List.of(first, second)).extracting(WakeDelivery::roleReturn)
-                .containsOnly(Optional.of(new RoleReturn(taker, takenAt, endedAt)));
+                .containsOnly(Optional.of(new RoleReturn(taker, lastClaimedAt, endedAt)));
         assertThat(afterTyping.roleReturn()).isEmpty();
     }
 
