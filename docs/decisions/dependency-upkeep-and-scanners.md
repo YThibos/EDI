@@ -29,7 +29,7 @@ CI runs on every push and pull request:
 A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, kept current by a Renovate regex manager, until Spring Boot 4.1.2 managed the fixed Tomcat.
 Likewise the parent `pom.xml` overrides `sqlite-jdbc.version` with 3.54.1.0, kept current by a Renovate regex manager, while Spring Boot 4.1.2 manages a 3.53.4.0 that Dependency-Check scores 8.5; the override goes once Spring Boot manages 3.54.1.0 or later.
 Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, until `@angular/build` 22.2.5 brought the fixed Vite.
-A finding with no fix anywhere is the one case a suppression is allowed, as an exception in `edi-console/npm-audit-exceptions.json`, which is the only place an exception lives:
+A finding with no fix anywhere is the one case a suppression is allowed, as an exception in `edi-console/npm-audit-exceptions.json`, which is the only place an exception lives and which `ops/npm-audit/exceptions.mjs` reads:
 
 - an exception names one advisory by its GHSA id and carries its reason, the date it was accepted and the date it is reviewed again, all four; an exception with a field missing, a field of another name, or a date that is not `YYYY-MM-DD` fails the check, so nothing is excepted by severity, by package or by a wildcard;
 - the check prints every exception it applied, with its reason and review date, on each run;
