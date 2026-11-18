@@ -36,12 +36,9 @@ public class PrimarySessions {
         return transaction.execute(_ -> role().holder());
     }
 
-    public Optional<RoleReturn> reclaimIfItsTakerLeft(UUID session, Instant now) {
-        return transaction.execute(_ -> role().holder().filter(holder -> holder.id().equals(session)).flatMap(holder -> reclaimedBy(holder, now)));
-    }
-
-    public void withdrawTheReclaim(UUID session, RoleReturn undelivered) {
-        transaction.executeWithoutResult(_ -> sessions.get(session).ifPresent(holder -> sessions.save(holder.claimed(undelivered.heldSince()))));
+    public Optional<RoleReturn> roleReturnTo(UUID session) {
+        return transaction.execute(_ -> role().holder().filter(holder -> holder.id().equals(session))
+                .flatMap(holder -> RoleReturn.toTheHolder(holder, sessions.all())));
     }
 
     public Optional<Instant> previousReportOf(UUID session) {
@@ -50,11 +47,5 @@ public class PrimarySessions {
 
     PrimaryRole role() {
         return PrimaryRole.among(sessions.running(), processes::isRunning);
-    }
-
-    private Optional<RoleReturn> reclaimedBy(PrimarySession holder, Instant now) {
-        Optional<RoleReturn> back = RoleReturn.toTheHolder(holder, sessions.all());
-        back.ifPresent(_ -> sessions.save(holder.claimed(now)));
-        return back;
     }
 }

@@ -53,9 +53,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     }
 
     private String roleReturnSentence(RoleReturn back) {
-        return "The primary role is back with this session: session " + back.taker() + " took it at " + moments.minute(back.takenAt()) + " and "
-                + (back.takerEndedItsSession() ? "ended at " + moments.minute(back.takerEndedAt()) : "its process is gone")
-                + ", so this session supervises the fleet again; if the captain did not open that session, tell them it took the role.";
+        return "The primary role came back here: session " + back.taker() + " took it at " + moments.minute(back.takenAt()) + " and "
+                + (back.takerEndedItsSession() ? "ended at " + moments.minute(back.takerEndedAt()) : "its process is gone") + ".";
     }
 
     private static boolean bringsARoundOfDecisions(WakeDelivery delivery) {

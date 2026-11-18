@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -68,7 +69,7 @@ class WaitForWakesTest {
     }
 
     @Test
-    void givesThePrimaryRoleBackOnceTheSessionThatTookItEndsAndSaysSoInTheNextWakeOnly() {
+    void givesThePrimaryRoleBackOnceTheSessionThatTookItEndsAndSaysSoInEveryWakeUntilTheCaptainTypesThere() {
         UUID captains = primarySession();
         home.clock().advance(Duration.ofMinutes(1));
         Instant takenAt = home.clock().now();
@@ -77,16 +78,25 @@ class WaitForWakesTest {
         home.clock().advance(Duration.ofMinutes(2));
         Instant endedAt = home.clock().now();
         home.primaryHooks().sessionEnded(taker);
-
         WakeStream stream = followedBy(captains);
-        WakeDelivery delivery = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        boolean quietWithoutAWake = home.waitForWakes().deliverTo(stream).isEmpty();
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
+        WakeDelivery first = home.waitForWakes().deliverTo(stream).orElseThrow();
+        printed(captains, stream, first);
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+        WakeDelivery second = home.waitForWakes().deliverTo(stream).orElseThrow();
+        printed(captains, stream, second);
+        home.primaryHooks().promptSubmitted(captains, "Carry on.");
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("socket"), null, "Brass or oil?");
+        WakeDelivery afterTyping = home.waitForWakes().deliverTo(stream).orElseThrow();
 
         assertThat(whileTaken).isEqualTo(Standing.STANDBY);
         assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
-        assertThat(delivery.roleReturn()).get().extracting(RoleReturn::taker, RoleReturn::takenAt, RoleReturn::takerEndedAt)
-                .containsExactly(taker, takenAt, endedAt);
-        assertThat(delivery.wakes()).isEmpty();
-        assertThat(home.waitForWakes().deliverTo(stream)).isEmpty();
+        assertThat(quietWithoutAWake).isTrue();
+        assertThat(List.of(first, second)).extracting(WakeDelivery::roleReturn)
+                .containsOnly(Optional.of(new RoleReturn(taker, takenAt, endedAt)));
+        assertThat(afterTyping.roleReturn()).isEmpty();
     }
 
     @Test
@@ -174,28 +184,11 @@ class WaitForWakesTest {
     void deliversAgainWhatAnExpiredWaitWithdrew() {
         WakeStream stream = followedBy(primarySession());
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Brass or oil?");
-        home.waitForWakes().withdraw(stream, home.waitForWakes().deliverTo(stream).orElseThrow());
+        home.waitForWakes().withdraw(home.waitForWakes().deliverTo(stream).orElseThrow());
 
         WakeDelivery redelivered = home.waitForWakes().deliverTo(stream).orElseThrow();
 
         assertThat(redelivered.wakes()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.NEEDS_DECISION);
-    }
-
-    @Test
-    void namesTheSessionThatTookThePrimaryRoleAgainWhenAnExpiredWaitWithdrewTheWakeThatSaidSo() {
-        UUID captains = primarySession();
-        home.clock().advance(Duration.ofMinutes(1));
-        UUID taker = primarySession();
-        home.clock().advance(Duration.ofMinutes(2));
-        home.primaryHooks().sessionEnded(taker);
-        WakeStream stream = followedBy(captains);
-        home.waitForWakes().withdraw(stream, home.waitForWakes().deliverTo(stream).orElseThrow());
-        home.clock().advance(Duration.ofMinutes(1));
-
-        WakeDelivery redelivered = home.waitForWakes().deliverTo(stream).orElseThrow();
-
-        assertThat(redelivered.roleReturn()).map(RoleReturn::taker).contains(taker);
-        assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
     }
 
     @Test

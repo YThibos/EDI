@@ -35,14 +35,24 @@ class WakeDigestTextTest {
             new ManualClock(RAISED.plus(Duration.ofMinutes(25))));
 
     @Test
-    void namesTheSessionThatTookThePrimaryRoleAndEndedWhenTheRoleComesBack() {
+    void namesInOneLineTheSessionThatTookThePrimaryRoleAndEndedWhenTheRoleComesBack() {
         UUID taker = UUID.fromString("0f6c3b2a-0000-4000-8000-00000000c0de");
-        RoleReturn back = new RoleReturn(RAISED.minus(Duration.ofHours(1)), taker, RAISED, RAISED.plus(Duration.ofMinutes(3)));
+        RoleReturn back = new RoleReturn(taker, RAISED, RAISED.plus(Duration.ofMinutes(3)));
 
         String text = digest.text(new WakeDelivery(Optional.of(back), List.of(), 0, 8, 0, PRESENT, true));
 
-        assertThat(text).contains("The primary role is back with this session: session " + taker + " took it at", " and ended at ",
-                "so this session supervises the fleet again; if the captain did not open that session, tell them it took the role.");
+        assertThat(text.lines().toList().get(1)).startsWith("The primary role came back here: session " + taker + " took it at ")
+                .contains(" and ended at ").endsWith(".");
+    }
+
+    @Test
+    void saysTheProcessOfTheSessionThatTookThePrimaryRoleIsGoneWhenItNeverEnded() {
+        UUID taker = UUID.fromString("0f6c3b2a-0000-4000-8000-00000000c0de");
+
+        String text = digest.text(new WakeDelivery(Optional.of(new RoleReturn(taker, RAISED, null)), List.of(), 0, 8, 0, PRESENT, true));
+
+        assertThat(text.lines().toList().get(1)).startsWith("The primary role came back here: session " + taker + " took it at ")
+                .endsWith(" and its process is gone.");
     }
 
     @Test

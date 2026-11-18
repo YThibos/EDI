@@ -19,7 +19,6 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.primary.PrimarySessions;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.presence.Presence;
-import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -78,22 +77,18 @@ public class WaitForWakes {
             }
             Instant now = clock.now();
             Presence captain = presence.current().orElseGet(() -> Presence.presentSince(now));
-            Optional<RoleReturn> roleReturn = sessions.reclaimIfItsTakerLeft(stream.session(), now);
             List<QueuedWake> due = dueAmong(wakes.awaitingDeliveryTo(stream.session()), captain, now);
-            if (roleReturn.isEmpty() && due.isEmpty()) {
+            if (due.isEmpty()) {
                 return Optional.<WakeDelivery>empty();
             }
             wakes.offer(due, stream.id());
-            return Optional.of(new WakeDelivery(roleReturn, due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(),
+            return Optional.of(new WakeDelivery(sessions.roleReturnTo(stream.session()), due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(),
                     outages.open().size(), captain, stream.follows()));
         });
     }
 
-    public void withdraw(WakeStream stream, WakeDelivery undelivered) {
-        transaction.executeWithoutResult(_ -> {
-            wakes.withdraw(undelivered.wakes());
-            undelivered.roleReturn().ifPresent(back -> sessions.withdrawTheReclaim(stream.session(), back));
-        });
+    public void withdraw(WakeDelivery undelivered) {
+        transaction.executeWithoutResult(_ -> wakes.withdraw(undelivered.wakes()));
     }
 
     private List<QueuedWake> dueAmong(List<QueuedWake> pending, Presence captain, Instant now) {
