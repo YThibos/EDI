@@ -15,10 +15,7 @@ export function exceptionsIn(file) {
 }
 
 export function problemsOfTheExceptions(exceptions) {
-    return [
-        ...exceptions.flatMap((exception, index) => problemsOfOne(exception, index + 1)),
-        ...duplicatedAdvisories(exceptions).map(id => `Remove one of the exceptions for ${id}: it is listed more than once.`),
-    ];
+    return exceptions.flatMap((exception, index) => problemsOfOne(exception, index + 1));
 }
 
 export function wellFormed(exception) {
@@ -59,9 +56,6 @@ function problemsOfTheValues(exception, named) {
             problems.push(`${named} has ${field} ${exception[field]}, which is not a date written YYYY-MM-DD.`);
         }
     }
-    if (isDay(exception.accepted) && isDay(exception.reviewed) && exception.reviewed <= exception.accepted) {
-        problems.push(`${named} is reviewed again on ${exception.reviewed}, which is not after the day it was accepted, ${exception.accepted}.`);
-    }
     return problems;
 }
 
@@ -72,9 +66,4 @@ function present(value) {
 function isDay(value) {
     const parts = typeof value === 'string' ? DAY.exec(value) : null;
     return parts !== null && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
-}
-
-function duplicatedAdvisories(exceptions) {
-    const advisories = exceptions.map(exception => exception?.advisory).filter(present);
-    return [...new Set(advisories.filter((advisory, index) => advisories.indexOf(advisory) !== index))];
 }

@@ -11,15 +11,13 @@ const ADVISORY_URL = /\/advisories\/(GHSA-[^/?#]+)$/;
 refusalsReported(() => check(optionsFrom(process.argv.slice(2))));
 
 function check(options) {
-    const blocking = blockingAdvisoriesOf(auditReportFrom(options.report));
+    const advisories = advisoriesOf(auditReportFrom(options.report));
     const exceptions = exceptionsIn(options.exceptions);
     const problems = problemsOfTheExceptions(exceptions);
     const inForce = exceptions.filter(wellFormed);
-    const ended = inForce.flatMap(exception => reasonsEnded(exception, blocking, options.today));
-    const applied = inForce.filter(exception => blocking.has(exception.advisory) && !ended.some(reason => reason.exception === exception));
-    const unexcepted = [...blocking.values()].filter(advisory => !inForce.some(exception => exception.advisory === advisory.id));
-    printApplied(applied, blocking);
-    finish([...problems, ...ended.map(reason => reason.text), ...unexcepted.map(unexceptedText)]);
+    const ended = inForce.flatMap(exception => reasonsEnded(exception, advisories, options.today));
+    printApplied(exceptionsApplied(inForce, ended), advisories);
+    finish([...problems, ...ended.map(reason => reason.text), ...advisoriesUnexcepted(advisories, inForce).map(unexceptedText)]);
 }
 
 function optionsFrom(args) {
@@ -56,26 +54,38 @@ function npmAudit() {
     return run.stdout;
 }
 
-function blockingAdvisoriesOf(report) {
+function advisoriesOf(report) {
     const advisories = new Map();
     for (const vulnerability of Object.values(report.vulnerabilities)) {
-        for (const via of vulnerability.via.filter(cause => typeof cause === 'object' && BLOCKING.includes(cause.severity))) {
-            const id = ADVISORY_URL.exec(via.url)?.[1] ?? via.url;
+        for (const via of vulnerability.via.filter(cause => typeof cause === 'object')) {
+            const id = advisoryIdOf(via);
             advisories.set(id, { id, package: via.name, severity: via.severity, title: via.title });
         }
     }
     return advisories;
 }
 
-function reasonsEnded(exception, blocking, today) {
+function advisoryIdOf(via) {
+    return ADVISORY_URL.exec(via.url)?.[1] ?? via.url;
+}
+
+function reasonsEnded(exception, advisories, today) {
     const named = `Remove the exception for ${exception.advisory}`;
-    if (!blocking.has(exception.advisory)) {
+    const advisory = advisories.get(exception.advisory);
+    if (advisory === undefined) {
         return [{ exception, text: `${named}: the advisory no longer applies to the installed tree.` }];
+    }
+    if (!blocks(advisory)) {
+        return [{ exception, text: `${named}: the advisory no longer reaches the high level, it is ${advisory.severity}.` }];
     }
     return [
         ...(reviewHasPassed(exception, today) ? [{ exception, text: `${named}: its review date ${exception.reviewed} has passed.` }] : []),
-        ...patchedVersionsOf(blocking.get(exception.advisory)).map(version => ({ exception, text: `${named}: the advisory has a patched version, ${version}.` })),
+        ...patchedVersionsOf(advisory).map(version => ({ exception, text: `${named}: the advisory has a patched version, ${version}.` })),
     ];
+}
+
+function blocks(advisory) {
+    return BLOCKING.includes(advisory.severity);
 }
 
 function patchedVersionsOf(advisory) {
@@ -85,11 +95,21 @@ function patchedVersionsOf(advisory) {
         .map(vulnerable => vulnerable.first_patched_version);
 }
 
-function printApplied(applied, blocking) {
+function exceptionsApplied(inForce, ended) {
+    return inForce.filter(exception => !ended.some(reason => reason.exception === exception));
+}
+
+function printApplied(applied, advisories) {
     for (const exception of applied) {
-        const advisory = blocking.get(exception.advisory);
+        const advisory = advisories.get(exception.advisory);
         console.log(`Excepted ${exception.advisory} (${advisory.package}, ${advisory.severity}): ${exception.reason} - reviewed again on ${exception.reviewed}.`);
     }
+}
+
+function advisoriesUnexcepted(advisories, inForce) {
+    return [...advisories.values()]
+        .filter(blocks)
+        .filter(advisory => !inForce.some(exception => exception.advisory === advisory.id));
 }
 
 function unexceptedText(advisory) {

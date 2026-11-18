@@ -31,7 +31,7 @@ Likewise the parent `pom.xml` overrides `sqlite-jdbc.version` with 3.54.1.0, kep
 Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, until `@angular/build` 22.2.5 brought the fixed Vite.
 A finding with no fix anywhere is the one case a suppression is allowed, as an exception in `edi-console/npm-audit-exceptions.json`, which is the only place an exception lives:
 
-- an exception names one advisory by its GHSA id and carries its reason, the date it was accepted and the date it is reviewed again, all four, with the review date after the acceptance date; an exception with a field missing, a field of another name, a date that is not `YYYY-MM-DD` or a second entry for the same advisory fails the check, so nothing is excepted by severity, by package or by a wildcard;
+- an exception names one advisory by its GHSA id and carries its reason, the date it was accepted and the date it is reviewed again, all four; an exception with a field missing, a field of another name, or a date that is not `YYYY-MM-DD` fails the check, so nothing is excepted by severity, by package or by a wildcard;
 - the check prints every exception it applied, with its reason and review date, on each run;
 - an exception ends by itself: the check fails and names the exception to remove when the advisory no longer applies to the installed tree or no longer reaches the high level, when its review date has passed, or when GitHub's advisory database lists a patched version of the vulnerable package, which the check reads through `gh api advisories/<id>`, so a patched version in any release line asks for a human review;
 - the file holds only the exceptions in force, so it is an empty list while nothing is excepted, and no version is pinned or capped to get the check green.
@@ -53,7 +53,7 @@ An image tag and an unnamed mise version move the same way, and a check that rea
 - A new-code quality gate - meaningless on a server with no history.
 - OWASP DockSec - analyses container images, which EDI does not ship.
 - Suppressing the Tomcat findings, or waiting for Spring Boot - hides real vulnerabilities, or leaves them in the core and the gate red.
-- `audit-ci` and `better-npm-audit` for the exceptions - both accept an exception by package or by wildcard, neither requires the date an exception was accepted, and neither fails on an exception that is unused or whose advisory has been patched, so none does all of the criteria, and each would add a dependency tree to CI; a script of about 150 lines over `npm audit --json`, with its own tests, adds none.
+- `audit-ci` and `better-npm-audit` for the exceptions - both accept an exception by package or by wildcard, neither requires the date an exception was accepted, and neither fails on an exception that is unused or whose advisory has been patched, so none does all of the criteria, and each would add a dependency tree to CI; a small script over `npm audit --json`, with its own tests, adds none.
 - Capping or pinning `picomatch`, or an override, to silence the check - no release is fixed, so there is nothing to move to, and a pin would hide the day one arrives.
 
 ## Consequences

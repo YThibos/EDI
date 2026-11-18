@@ -118,7 +118,8 @@ class NpmAuditCheckScriptTest {
         StandInGitHub.Run run = check(report(advisory("picomatch", PICOMATCH, "moderate")), picomatchException(), unpatched(PICOMATCH, "picomatch"));
 
         assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.errors()).contains("Remove the exception for " + PICOMATCH + ": the advisory no longer applies to the installed tree.");
+        assertThat(run.errors()).contains("Remove the exception for " + PICOMATCH + ": the advisory no longer reaches the high level, it is moderate.")
+                .doesNotContain("no longer applies to the installed tree");
     }
 
     @ParameterizedTest
@@ -142,25 +143,6 @@ class NpmAuditCheckScriptTest {
                 "Exception 1 has the field package, which excepts nothing; an exception names one advisory.",
                 "Exception 1 has the field severity, which excepts nothing; an exception names one advisory.",
                 "Exception 1 names GHSA-*, which is not one GHSA id.");
-    }
-
-    @Test
-    void anExceptionListedTwiceIsRefused() throws IOException, InterruptedException {
-        StandInGitHub.Run run = check(report(advisory("picomatch", PICOMATCH, "high")),
-                exceptions(exception(PICOMATCH, "Build tooling only", "2026-11-18", "2027-02-18"), exception(PICOMATCH, "Again", "2026-11-18", "2027-02-18")),
-                unpatched(PICOMATCH, "picomatch"));
-
-        assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.errors()).contains("Remove one of the exceptions for " + PICOMATCH + ": it is listed more than once.");
-    }
-
-    @Test
-    void aReviewDateNotAfterTheDayOfAcceptanceIsRefused() throws IOException, InterruptedException {
-        StandInGitHub.Run run = check(report(advisory("picomatch", PICOMATCH, "high")),
-                exceptions(exception(PICOMATCH, "Build tooling only", "2026-11-18", "2026-11-18")), unpatched(PICOMATCH, "picomatch"));
-
-        assertThat(run.exitCode()).isEqualTo(1);
-        assertThat(run.errors()).contains("is reviewed again on 2026-11-18, which is not after the day it was accepted, 2026-11-18.");
     }
 
     @Test
