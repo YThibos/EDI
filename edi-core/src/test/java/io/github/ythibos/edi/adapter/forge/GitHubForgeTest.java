@@ -92,13 +92,13 @@ class GitHubForgeTest {
 
     @Test
     void readsTheChecksOnTheHeadAsPassedOnlyWhenEveryOnePassedAndAsFailedOnceOneFailed() throws IOException {
-        String success = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}";
-        String skipped = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"SKIPPED\"}";
-        String failure = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\"}";
-        String cancelled = "{\"__typename\":\"CheckRun\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"}";
-        String inProgress = "{\"__typename\":\"CheckRun\",\"status\":\"IN_PROGRESS\",\"conclusion\":\"\"}";
-        String failedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"ERROR\"}";
-        String passedStatus = "{\"__typename\":\"StatusContext\",\"state\":\"SUCCESS\"}";
+        String success = checkRun("build", "COMPLETED", "SUCCESS", "2026-11-17T10:00:00Z");
+        String skipped = checkRun("deploy", "COMPLETED", "SKIPPED", "2026-11-17T10:00:00Z");
+        String failure = checkRun("test", "COMPLETED", "FAILURE", "2026-11-17T10:00:00Z");
+        String cancelled = checkRun("lint", "COMPLETED", "CANCELLED", "2026-11-17T10:00:00Z");
+        String inProgress = checkRun("native", "IN_PROGRESS", "", "2026-11-17T10:00:00Z");
+        String failedStatus = statusContext("sonar", "ERROR", "2026-11-17T10:00:00Z");
+        String passedStatus = statusContext("sonar", "SUCCESS", "2026-11-17T10:00:00Z");
 
         assertThat(checksWith("[" + success + "," + skipped + "," + passedStatus + "]")).isEqualTo(HeadChecks.PASSED);
         assertThat(checksWith("[" + success + "," + failure + "," + inProgress + "]")).as("a failed check").isEqualTo(HeadChecks.FAILED);
@@ -107,6 +107,20 @@ class GitHubForgeTest {
         assertThat(checksWith("[" + success + "," + cancelled + "]")).as("a cancelled check").isEqualTo(HeadChecks.UNDECIDED);
         assertThat(checksWith("[]")).as("a head without checks").isEqualTo(HeadChecks.UNDECIDED);
         assertThat(checksWith("null")).as("no checks field").isEqualTo(HeadChecks.UNDECIDED);
+    }
+
+    @Test
+    void readsOnlyTheLatestRunOfEachCheckOnTheHead() throws IOException {
+        String failedFirst = checkRun("test", "COMPLETED", "FAILURE", "2026-11-17T10:00:00Z");
+        String passedOnItsRerun = checkRun("test", "COMPLETED", "SUCCESS", "2026-11-17T10:30:00Z");
+        String erroredFirst = statusContext("sonar", "ERROR", "2026-11-17T10:00:00Z");
+        String passedOnItsRetry = statusContext("sonar", "SUCCESS", "2026-11-17T10:30:00Z");
+        String passedFirst = checkRun("build", "COMPLETED", "SUCCESS", "2026-11-17T10:00:00Z");
+        String failedOnItsRerun = checkRun("build", "COMPLETED", "FAILURE", "2026-11-17T10:30:00Z");
+
+        assertThat(checksWith("[" + passedOnItsRerun + "," + failedFirst + "]")).as("a failed check passed on its re-run").isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWith("[" + erroredFirst + "," + passedOnItsRetry + "]")).as("an errored status passed on its retry").isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWith("[" + passedFirst + "," + failedOnItsRerun + "]")).as("a passed check failed on its re-run").isEqualTo(HeadChecks.FAILED);
     }
 
     @Test
@@ -180,6 +194,15 @@ class GitHubForgeTest {
         assertThat(forge.credentialHelperFor(FORGE)).hasValueSatisfying(helper -> assertThat(helper)
                 .startsWith("!f() { test \"$1\" = get || exit 0; GH_TOKEN=\"$('" + standIns.gh() + "' auth token --hostname 'github.com' --user 'example-owner')\"")
                 .endsWith("exec '" + standIns.gh() + "' auth git-credential get; }; f"));
+    }
+
+    private static String checkRun(String name, String status, String conclusion, String startedAt) {
+        return "{\"__typename\":\"CheckRun\",\"name\":\"" + name + "\",\"workflowName\":\"CI\",\"status\":\"" + status
+                + "\",\"conclusion\":\"" + conclusion + "\",\"startedAt\":\"" + startedAt + "\"}";
+    }
+
+    private static String statusContext(String context, String state, String startedAt) {
+        return "{\"__typename\":\"StatusContext\",\"context\":\"" + context + "\",\"state\":\"" + state + "\",\"startedAt\":\"" + startedAt + "\"}";
     }
 
     private HeadChecks checksWith(String rollup) throws IOException {

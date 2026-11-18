@@ -2,10 +2,13 @@ package io.github.ythibos.edi.adapter.forge;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Component;
@@ -127,11 +130,30 @@ public class GitHubForge implements Forge {
     }
 
     private static HeadChecks checksOn(JsonNode pull) {
-        List<String> outcomes = StreamSupport.stream(pull.path("statusCheckRollup").spliterator(), false).map(GitHubForge::outcomeOf).toList();
+        List<String> outcomes = latestRunOfEachCheck(pull).map(GitHubForge::outcomeOf).toList();
         if (outcomes.stream().anyMatch(FAILING_CHECK::contains)) {
             return HeadChecks.FAILED;
         }
         return !outcomes.isEmpty() && outcomes.stream().allMatch(PASSING_CHECK::contains) ? HeadChecks.PASSED : HeadChecks.UNDECIDED;
+    }
+
+    private static Stream<JsonNode> latestRunOfEachCheck(JsonNode pull) {
+        return StreamSupport.stream(pull.path("statusCheckRollup").spliterator(), false)
+                .collect(Collectors.toMap(GitHubForge::checkOf, run -> run, GitHubForge::laterOf, LinkedHashMap::new))
+                .values().stream();
+    }
+
+    private static String checkOf(JsonNode run) {
+        return String.join("/", run.path("__typename").asString(""), run.path("context").asString(""),
+                run.path("workflowName").asString(""), run.path("name").asString(""));
+    }
+
+    private static JsonNode laterOf(JsonNode earlier, JsonNode later) {
+        return startOf(later).compareTo(startOf(earlier)) >= 0 ? later : earlier;
+    }
+
+    private static String startOf(JsonNode run) {
+        return run.path("startedAt").asString("");
     }
 
     private static String outcomeOf(JsonNode check) {
