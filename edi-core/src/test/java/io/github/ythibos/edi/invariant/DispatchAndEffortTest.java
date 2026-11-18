@@ -35,6 +35,7 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.DispatchCategory;
 import io.github.ythibos.edi.domain.dispatch.DispatchRules;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
@@ -44,6 +45,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
 import io.github.ythibos.edi.domain.worker.PermissionMode;
@@ -56,6 +58,7 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 class DispatchAndEffortTest {
 
     private static final Route OPUS_HIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH);
+    private static final List<ProjectName> EDI = List.of(new ProjectName("EDI"));
     private static final Set<CategoryId> EDIS_RESEARCH_AND_IMPLEMENTATION = Set.of(CategoryId.RESEARCH, CategoryId.IMPLEMENTATION,
             CategoryId.IMPLEMENTATION_UNPLANNED, CategoryId.BUGFIX);
     private static final String PIPELINE = "{\"use\": {\"model\": \"claude-opus-5-5\", \"effort\": \"high\"}, \"why\": \"The last judge.\"}";
@@ -190,7 +193,7 @@ class DispatchAndEffortTest {
     }
 
     @Nested
-    @DisplayName("I-15 EDI's own research and implementation run on Opus 5.5 high")
+    @DisplayName("I-15 EDI's own research, and its implementation that is not small, run on Opus 5.5 high")
     class EdiWorkRunsOnTheProjectOverride {
 
         @Test
@@ -202,14 +205,32 @@ class DispatchAndEffortTest {
 
             for (DispatchCategory category : rules.categories()) {
                 Route ediRoute = EDIS_RESEARCH_AND_IMPLEMENTATION.contains(category.id()) ? OPUS_HIGH : category.route();
-                assertThat(rules.routeFor(List.of(new ProjectName("EDI")), category.id(), null)).as("EDI work as %s", category.id()).isEqualTo(ediRoute);
-                assertThat(rules.routeFor(List.of(new ProjectName("harness")), category.id(), null)).isEqualTo(category.route());
+                for (TaskSize size : Arrays.asList(null, TaskSize.M, TaskSize.L)) {
+                    assertThat(rules.routeFor(EDI, category.id(), size, null).route()).as("EDI work as %s of size %s", category.id(), size).isEqualTo(ediRoute);
+                }
+                assertThat(rules.routeFor(List.of(new ProjectName("harness")), category.id(), TaskSize.S, null).route()).isEqualTo(category.route());
             }
             home.storing(List.of(WorkerFixtures.queuedShip("fit-horn", "EDI", "EDI-9"), WorkerFixtures.queuedShip("fit-bell", "EDI", "EDI-10")));
             dispatch(home, "fit-horn", "implementation");
             assertThat(home.runtime().lastLaunch().route()).isEqualTo(OPUS_HIGH);
             dispatch(home, "fit-bell", "documentation");
             assertThat(home.runtime().lastLaunch().route()).isEqualTo(rules.category(new CategoryId("documentation")).route());
+        }
+
+        @Test
+        @DisplayName("a small implementation or bugfix task on the EDI project runs on Sonnet 5.5 at high, and its research of any size on Opus")
+        @Tag("adapter")
+        void aSmallEdiImplementationOrBugfixRunsOnSonnet() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            DispatchRules rules = home.dispatchRulesFile().validatedAgainst(home.machineProfile().workers().models());
+
+            for (TaskSize small : List.of(TaskSize.XS, TaskSize.S)) {
+                assertThat(rules.routeFor(EDI, CategoryId.IMPLEMENTATION, small, null).route()).isEqualTo(SONNET_HIGH);
+                assertThat(rules.routeFor(EDI, CategoryId.BUGFIX, small, null).route()).isEqualTo(SONNET_HIGH);
+                assertThat(rules.routeFor(EDI, CategoryId.IMPLEMENTATION_UNPLANNED, small, null).route()).isEqualTo(OPUS_HIGH);
+                assertThat(rules.routeFor(EDI, CategoryId.RESEARCH, small, null).route()).isEqualTo(OPUS_HIGH);
+            }
+            assertThat(rules.routeFor(EDI, CategoryId.BUGFIX, TaskSize.XS, null).choice()).isEqualTo("chosen by the override for EDI on bugfix of size XS");
         }
     }
 
@@ -245,9 +266,9 @@ class DispatchAndEffortTest {
         @Test
         @DisplayName("AT-17 the dispatch resolver takes no budget input")
         void theResolverHasNoBudgetInput() throws NoSuchMethodException {
-            Method resolver = DispatchRules.class.getMethod("routeFor", List.class, CategoryId.class, CaptainOverride.class);
+            Method resolver = DispatchRules.class.getMethod("routeFor", List.class, CategoryId.class, TaskSize.class, CaptainOverride.class);
 
-            assertThat(resolver.getReturnType()).isEqualTo(Route.class);
+            assertThat(resolver.getReturnType()).isEqualTo(ChosenRoute.class);
             assertThat(Stream.of(DispatchRules.class, DispatchTask.class, LaunchWorker.class, DispatchRequest.class, CaptainOverride.class)
                     .flatMap(type -> Stream.concat(Arrays.stream(type.getDeclaredMethods()).flatMap(method -> Arrays.stream(method.getParameterTypes())),
                             Arrays.stream(type.getDeclaredFields()).map(Field::getType)))

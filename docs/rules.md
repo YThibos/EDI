@@ -43,7 +43,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `authority.typed-words` | `CaptainMessages`, `CaptainsWordEvidence` | Only words the captain typed in a known primary session count as the captain's word. |
 | `task.stage` | `AddTask`, `DiscardWork`, `PromoteScout`, `StageTransitions`, `Task` | A task moves only along the stages its kind allows. |
 | `task.hold` | `DropTask`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A held task stays held until its hold is released or its decision answered. |
-| `task.intake` | `AddTask`, `ProjectRegistry` | A new task names a registered project and an id never used before. |
+| `task.intake` | `AddTask`, `NewTask`, `ProjectRegistry` | A new task names a registered project and an id never used before. |
 | `task.plan-intake` | `AddPlan` | A plan is known by an umbrella key no other plan has, and works on no more slices at once than its project. |
 | `task.work-key` | `AdoptForkTask`, `DispatchTask`, `GitHubIssuesTracker`, `NoTracker`, `Task`, `TaskKeys`, `TicketProposals`, `TrackedProject` | A task books its work on one key of its project's tracker. |
 | `task.dispatched` | `LaunchWorker`, `WorkerContext`, `WorkerDetailQuery`, `WorkerLookup`, `WrittenBriefQuery` | A task's worker, brief and copy exist only once it is dispatched. |

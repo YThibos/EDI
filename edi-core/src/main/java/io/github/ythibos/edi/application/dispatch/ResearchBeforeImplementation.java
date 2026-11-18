@@ -94,7 +94,7 @@ public class ResearchBeforeImplementation {
     private Task researchTaskFor(Task ship, Instant now) {
         Intake shipIntake = ship.intake();
         Intake intake = new Intake(TaskKind.SCOUT, "Plan: " + shipIntake.title(), shipIntake.projects(), shipIntake.workKey(), shipIntake.base(),
-                List.of(), null);
+                List.of(), null, null);
         return Task.queued(tasks.firstFreeIdFrom(TaskId.sluggedFrom("plan " + shipIntake.title())), intake, ship.notes(), now);
     }
 

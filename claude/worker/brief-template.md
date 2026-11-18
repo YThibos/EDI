@@ -14,6 +14,7 @@ Everything you write is read by EDI, by tools and by reviewers, so write it plai
 - Work key: `{{key}}`
 - Branch: `{{branch}}`, started from `origin/{{base}}`
 - Delivery: {{deliveryMode}}
+- Model: {{route}}
 - Isolated copy: `{{worktree}}`
 - Task directory: `{{taskDirectory}}`
 

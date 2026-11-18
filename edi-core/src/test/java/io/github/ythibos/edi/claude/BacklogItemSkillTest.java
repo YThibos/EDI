@@ -130,7 +130,7 @@ class BacklogItemSkillTest {
 
         assertThat(run.exitCode()).as(run.all()).isZero();
         assertThat(ediCalls()).contains(
-                "edi task add --kind ship --project EDI --title Harbour lamps light themselves at dusk --key EDI-9 --body -",
+                "edi task add --kind ship --project EDI --title Harbour lamps light themselves at dusk --key EDI-9 --size S --body -",
                 "edi hold harbour-lamps --kind deferral --reason Backlogged upstream as https://github.com/example/edi/issues/9;"
                         + " it is taken from there, never from the local queue");
         assertThat(github.writes()).noneMatch(call -> call.contains("/pulls"));

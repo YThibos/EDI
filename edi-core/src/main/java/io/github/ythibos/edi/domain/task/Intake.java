@@ -15,7 +15,8 @@ public record Intake(
         WorkKey workKey,
         BaseBranch base,
         List<TaskId> blockedBy,
-        DeliveryMode delivery) {
+        DeliveryMode delivery,
+        TaskSize size) {
 
     public Intake {
         title = title.strip();
@@ -30,17 +31,21 @@ public record Intake(
     }
 
     public Intake keyedOn(WorkKey key) {
-        return new Intake(kind, title, projects, key, base, blockedBy, delivery);
+        return new Intake(kind, title, projects, key, base, blockedBy, delivery, size);
+    }
+
+    public Intake sized(TaskSize itemSize) {
+        return new Intake(kind, title, projects, workKey, base, blockedBy, delivery, itemSize);
     }
 
     public Intake blockedOnlyBy(List<TaskId> blockers) {
-        return new Intake(kind, title, projects, workKey, base, blockers, delivery);
+        return new Intake(kind, title, projects, workKey, base, blockers, delivery, size);
     }
 
     public Intake blockedAlsoBy(TaskId blocker) {
         List<TaskId> blockers = new ArrayList<>(blockedBy);
         blockers.add(blocker);
-        return new Intake(kind, title, projects, workKey, base, blockers, delivery);
+        return new Intake(kind, title, projects, workKey, base, blockers, delivery, size);
     }
 
     public DeliveryMode deliveryOr(DeliveryMode projectsDelivery) {

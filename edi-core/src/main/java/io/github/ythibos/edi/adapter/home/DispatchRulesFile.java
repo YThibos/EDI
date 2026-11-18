@@ -24,6 +24,7 @@ import io.github.ythibos.edi.domain.dispatch.PipelineAgent;
 import io.github.ythibos.edi.domain.dispatch.ProjectOverride;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -47,6 +48,7 @@ public class DispatchRulesFile {
     private static final String ID = "id";
     private static final String PROJECT = "project";
     private static final String WHY = "why";
+    private static final String SIZES = "sizes";
 
     private final Path file;
     private final JsonMapper json;
@@ -111,7 +113,9 @@ public class DispatchRulesFile {
 
     private static void carryAll(JsonNode document, String list, String key, Function<String, List<String>> reasonsOf) {
         for (JsonNode entry : document.path(list)) {
-            carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
+            if (!entry.has(SIZES)) {
+                carryInto(entry, reasonsOf.apply(entry.path(key).asString("")));
+            }
         }
     }
 
@@ -136,10 +140,11 @@ public class DispatchRulesFile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record OverrideEntry(String project, List<String> categories, RouteEntry use, String why) {
+    record OverrideEntry(String project, List<String> categories, List<String> sizes, RouteEntry use, String why) {
 
         ProjectOverride asOverride() {
-            return new ProjectOverride(new ProjectName(project), coveredCategories(), RouteEntry.routeOf(use, "The override for " + project), why);
+            return new ProjectOverride(new ProjectName(project), coveredCategories(), coveredSizes(sizes, "The override for " + project),
+                    RouteEntry.routeOf(use, "The override for " + project), why);
         }
 
         private Set<CategoryId> coveredCategories() {
@@ -148,17 +153,35 @@ public class DispatchRulesFile {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record CategoryEntry(String id, String when, RouteEntry use, String why, String branch, Boolean researchFirst) {
+    record CategoryEntry(String id, List<String> sizes, String when, RouteEntry use, String why, String branch, Boolean researchFirst) {
 
         DispatchCategory asCategory() {
+            requireOnlyARouteWhenSized();
             return new DispatchCategory(
                     new CategoryId(id),
+                    coveredSizes(sizes, "The category " + id),
                     when,
                     RouteEntry.routeOf(use, "The category " + id),
                     why,
                     branch == null ? null : BranchKind.named(branch),
                     Boolean.TRUE.equals(researchFirst));
         }
+
+        private void requireOnlyARouteWhenSized() {
+            if (sizes != null && !sizes.isEmpty() && (when != null || branch != null || researchFirst != null)) {
+                throw new IllegalArgumentException("The category " + id + " of size " + String.join(", ", sizes) + " only routes those sizes;"
+                        + " its when, branch and research first belong to the entry for " + id + " without sizes.");
+            }
+        }
+    }
+
+    private static Set<TaskSize> coveredSizes(List<String> sizes, String coveredBy) {
+        return Set.copyOf(Objects.requireNonNullElse(sizes, List.<String>of()).stream().map(size -> sizeOf(size, coveredBy)).toList());
+    }
+
+    private static TaskSize sizeOf(String size, String coveredBy) {
+        return TaskSize.find(size).orElseThrow(() -> new IllegalArgumentException(coveredBy + " covers the size " + size
+                + ", which is no task size; the sizes are " + TaskSize.everyWord() + "."));
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

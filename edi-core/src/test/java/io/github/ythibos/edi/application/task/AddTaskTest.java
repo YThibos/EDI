@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
 import io.github.ythibos.edi.testing.Intakes;
@@ -53,6 +54,46 @@ class AddTaskTest {
     }
 
     @Test
+    void takesTheSizeFromTheSizeRowOfItsBacklogItemWhenGivenNone() {
+        Intake intake = ship("unused", "Fit the lamp").intake();
+        String item = "| Field | Value |\n|---|---|\n| Kind | ship |\n| Size | S |\n\n## Goal\n\nA lamp.";
+
+        TaskId fromItsItem = home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake, item), Actor.PRIMARY).id();
+        TaskId given = home.addTask().add(new NewTask(new TaskId("fit-horn"), intake.sized(TaskSize.L), "Tune it."), Actor.PRIMARY).id();
+        TaskId unsized = home.addTask().add(new NewTask(new TaskId("fit-bell"), intake, "Hang it."), Actor.PRIMARY).id();
+
+        assertThat(home.tasks().get(fromItsItem).intake().size()).isEqualTo(TaskSize.S);
+        assertThat(home.tasks().get(given).intake().size()).isEqualTo(TaskSize.L);
+        assertThat(home.tasks().get(unsized).intake().size()).isNull();
+    }
+
+    @Test
+    void refusesASizeThatDiffersFromItsBacklogItemsOrThatIsNoSize() {
+        Intake intake = ship("unused", "Fit the lamp").intake();
+
+        assertThatThrownBy(() -> home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake.sized(TaskSize.XS), backlogItemOfSize("M")), Actor.PRIMARY))
+                .isInstanceOf(Refusal.class)
+                .hasMessage("The task is given size XS, but the Size row of its backlog item says M; a task has one size.");
+        assertThatThrownBy(() -> home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake, backlogItemOfSize("huge")), Actor.PRIMARY))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("A size is XS, S, M, L, not huge.");
+        assertThat(home.tasks().contains(new TaskId("fit-lamp"))).isFalse();
+    }
+
+    @Test
+    void readsNoSizeFromASizeRowOutsideTheTableABacklogItemOpensWith() {
+        Intake intake = ship("unused", "Fit the lamp").intake();
+        String comparison = "The lamps compared:\n\n| Field | Value |\n|---|---|\n| Size | 3 MB |\n";
+        String fenced = "```\n" + backlogItemOfSize("S") + "\n```\n";
+
+        TaskId compared = home.addTask().add(new NewTask(new TaskId("fit-lamp"), intake, comparison), Actor.PRIMARY).id();
+        TaskId quoted = home.addTask().add(new NewTask(new TaskId("fit-horn"), intake, fenced), Actor.PRIMARY).id();
+
+        assertThat(home.tasks().get(compared).intake().size()).isNull();
+        assertThat(home.tasks().get(quoted).intake().size()).isNull();
+    }
+
+    @Test
     void namesATaskAfterItsTitleWhenNoIdIsChosen() {
         Intake intake = ship("unused", "Fit the lamp!").intake();
 
@@ -75,7 +116,7 @@ class AddTaskTest {
     @Test
     void takesWorkOnlyForARegisteredProject() {
         NewTask elsewhere = new NewTask(new TaskId("elsewhere"),
-                new Intake(TaskKind.SHIP, "Work elsewhere", List.of(new ProjectName("unknown-project")), null, null, List.of(), null), "");
+                new Intake(TaskKind.SHIP, "Work elsewhere", List.of(new ProjectName("unknown-project")), null, null, List.of(), null, null), "");
 
         assertThatThrownBy(() -> home.addTask().add(elsewhere, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class)
@@ -84,7 +125,7 @@ class AddTaskTest {
 
     @Test
     void needsTheProjectOfAShipOrScoutButNotOfACaptainItem() {
-        NewTask projectless = new NewTask(new TaskId("drift"), new Intake(TaskKind.SCOUT, "Look around", List.of(), null, null, List.of(), null), "");
+        NewTask projectless = new NewTask(new TaskId("drift"), new Intake(TaskKind.SCOUT, "Look around", List.of(), null, null, List.of(), null, null), "");
 
         assertThatThrownBy(() -> home.addTask().add(projectless, Actor.PRIMARY)).isInstanceOf(Refusal.class).hasMessage("A scout names the project it works on.");
         assertThat(home.addTask().add(captainItem("lamp-choice", "Choose the lamp"), Actor.PRIMARY).id()).isEqualTo(new TaskId("lamp-choice"));
@@ -106,5 +147,9 @@ class AddTaskTest {
                 .isInstanceOf(Refusal.class)
                 .hasMessage("lantern is already done, so no task can wait for it.");
         assertThat(home.tasks().contains(new TaskId("fog-horn"))).isFalse();
+    }
+
+    private static String backlogItemOfSize(String size) {
+        return "| Field | Value |\n|---|---|\n| Kind | ship |\n| Size | " + size + " |\n\n## Goal\n\nA lamp.";
     }
 }

@@ -88,19 +88,19 @@ public final class PresenterFixtures {
 
     public static Task lantern() {
         return Task.queued(new TaskId("lantern"),
-                new Intake(TaskKind.SHIP, "Rework the lantern", List.of(new ProjectName("harness"), new ProjectName("garden")), WorkKey.parse("HRN-3"), null, List.of(), null),
+                new Intake(TaskKind.SHIP, "Rework the lantern", List.of(new ProjectName("harness"), new ProjectName("garden")), WorkKey.parse("HRN-3"), null, List.of(), null, null),
                 "", AT);
     }
 
     public static Task heldHorn() {
         return Task.queued(new TaskId("fog-horn"),
-                        new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(new TaskId("lantern")), null),
+                        new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(new TaskId("lantern")), null, null),
                         "", AT)
                 .held(new CaptainHold(HoldKind.DEFERRAL, "after the storm", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
     }
 
     public static Task captainItem() {
-        return Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null), "", AT);
+        return Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null, null), "", AT);
     }
 
     public static Decision openDecision() {
@@ -113,7 +113,7 @@ public final class PresenterFixtures {
 
     public static WaitingBoard boardBinding(String subject, int firstNumber, int bound) {
         Task research = Task.queued(new TaskId(subject + "-research"),
-                new Intake(TaskKind.SCOUT, "Research the " + subject, List.of(new ProjectName("harness")), null, null, List.of(), null), "", AT);
+                new Intake(TaskKind.SCOUT, "Research the " + subject, List.of(new ProjectName("harness")), null, null, List.of(), null, null), "", AT);
         List<OpenDecision> decisions = IntStream.range(firstNumber, firstNumber + bound)
                 .mapToObj(number -> new OpenDecision(Decision.raised(new DecisionNumber(number), research.id(), Cards.card("Which " + subject + "?"), AT), research))
                 .toList();

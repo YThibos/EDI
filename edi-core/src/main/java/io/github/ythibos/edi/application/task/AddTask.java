@@ -55,9 +55,10 @@ public class AddTask {
     }
 
     public CheckedTask checked(NewTask newTask) {
-        requireItsProject(newTask.intake());
-        requireRegistered(newTask.intake().projects());
-        return new CheckedTask(newTask, keys.keyingFor(newTask.intake(), newTask.notes(), newTask.ticket()));
+        NewTask sized = newTask.sizedByItsBacklogItem();
+        requireItsProject(sized.intake());
+        requireRegistered(sized.intake().projects());
+        return new CheckedTask(sized, keys.keyingFor(sized.intake(), sized.notes(), sized.ticket()));
     }
 
     public AddedTask queued(CheckedTask checked, Actor actor) {

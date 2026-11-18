@@ -35,6 +35,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
@@ -172,6 +173,17 @@ class ConfirmationTextTest {
     }
 
     @Test
+    void confirmsADispatchWithTheRuleThatChoseItsModelAndTheSizeItMatched() {
+        Worker dispatched = relaunchedAs(LaunchKind.DISPATCH);
+        ChosenRoute small = ChosenRoute.chosenBy(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH), "the override for EDI on implementation of size S");
+
+        assertThat(text.text(new Confirmation.Dispatched(new Launched(dispatched, small, BranchName.parse("feature/HRN-3"),
+                Path.of("/edi/worktrees/harness/lantern"), null))))
+                .isEqualTo("Dispatched lantern to lantern#2 (implementation, claude-sonnet-5-5 at high, chosen by the override for EDI on implementation"
+                        + " of size S) on feature/HRN-3 in /edi/worktrees/harness/lantern.\n");
+    }
+
+    @Test
     void confirmsWhetherARelaunchResumedItsSessionOrStartedAfresh() {
         UUID lost = UUID.fromString("4d532fb2-0000-4000-8000-000000000001");
         Worker resumed = relaunchedAs(LaunchKind.RESUME);
@@ -179,11 +191,11 @@ class ConfirmationTextTest {
         BranchName branch = BranchName.parse("feature/HRN-3");
         Path copy = Path.of("/edi/worktrees/harness/lantern");
 
-        assertThat(text.text(new Confirmation.Relaunched(new Launched(resumed, branch, copy, null)))).isEqualTo("Relaunched lantern as lantern#2"
-                + " (implementation, claude-opus-5-5 at high), resuming session " + resumed.session() + ", in /edi/worktrees/harness/lantern.\n");
-        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, null))))
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(resumed, routeOf(resumed), branch, copy, null)))).isEqualTo("Relaunched lantern as lantern#2"
+                + " (implementation, claude-opus-5-5 at high, chosen by the category implementation), resuming session " + resumed.session() + ", in /edi/worktrees/harness/lantern.\n");
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, routeOf(fresh), branch, copy, null))))
                 .contains(", with a fresh session and a handover, in /edi/worktrees/harness/lantern.\n");
-        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, branch, copy, UnresumedSession.withoutATranscript(lost))))).contains(", with a fresh session and a handover"
+        assertThat(text.text(new Confirmation.Relaunched(new Launched(fresh, routeOf(fresh), branch, copy, UnresumedSession.withoutATranscript(lost))))).contains(", with a fresh session and a handover"
                 + " because session 4d532fb2-0000-4000-8000-000000000001 left no transcript to resume, in /edi/worktrees/harness/lantern.\n");
     }
 
@@ -209,6 +221,10 @@ class ConfirmationTextTest {
         Task released = Stages.answered(PresenterFixtures.captainItem()
                 .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
         return text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, ticket, Optional.empty()));
+    }
+
+    private static ChosenRoute routeOf(Worker worker) {
+        return ChosenRoute.chosenBy(worker.route(), "the category " + worker.category());
     }
 
     private static Worker relaunchedAs(LaunchKind kind) {

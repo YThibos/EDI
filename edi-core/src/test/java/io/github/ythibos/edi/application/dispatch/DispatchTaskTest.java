@@ -18,6 +18,7 @@ import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
@@ -30,6 +31,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.worker.LoginName;
@@ -72,6 +74,42 @@ class DispatchTaskTest {
         assertThat(Files.readString(home.home().root().resolve("data/tasks/fit-lamp/brief.md"))).contains("# Brief: fit-lamp", "feature/HRN-3");
         assertThat(home.tasks().get(new TaskId("fit-lamp")).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).containsExactly("TaskDispatched", "StageChanged");
+    }
+
+    @Test
+    void runsASmallEdiTaskOnSonnetAndALargeOneOnOpusAndSaysWhichRuleChoseEach() throws IOException {
+        home.storing(List.of(WorkerFixtures.sizedShip("fit-horn", "EDI", "EDI-9", TaskSize.S), WorkerFixtures.sizedShip("fit-bell", "EDI", "EDI-10", TaskSize.L),
+                WorkerFixtures.queuedShip("fit-gong", "EDI", "EDI-11")));
+
+        DispatchOutcome small = dispatch("fit-horn", "implementation");
+        Route smallRoute = home.runtime().lastLaunch().route();
+        DispatchOutcome large = dispatch("fit-bell", "implementation");
+        Route largeRoute = home.runtime().lastLaunch().route();
+        DispatchOutcome unsized = dispatch("fit-gong", "bugfix");
+
+        assertThat(smallRoute).isEqualTo(new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH));
+        assertThat(small.launched().route()).hasToString("claude-sonnet-5-5 at high, chosen by the override for EDI on implementation of size S");
+        assertThat(Files.readString(home.home().root().resolve("data/tasks/fit-horn/brief.md")))
+                .contains("- Model: claude-sonnet-5-5 at high, chosen by the override for EDI on implementation of size S\n");
+        assertThat(largeRoute).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
+        assertThat(large.launched().route().choice()).isEqualTo("chosen by the override for EDI on implementation");
+        assertThat(home.runtime().lastLaunch().route()).isEqualTo(new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH));
+        assertThat(unsized.launched().route().choice()).isEqualTo("chosen by the override for EDI on bugfix");
+    }
+
+    @Test
+    void runsTheCaptainsOverrideAboveARuleThatNamesTheTasksSize() throws IOException {
+        home.storing(List.of(WorkerFixtures.sizedShip("fit-horn", "EDI", "EDI-9", TaskSize.XS)));
+        CaptainOverride captains = new CaptainOverride(new Route(new ModelId("claude-opus-5-5"), EffortLevel.MEDIUM), "the horn is subtle");
+
+        String brief = home.dispatchTask().previewBrief(TaskReference.parse("fit-horn"),
+                new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), captains));
+        DispatchOutcome outcome = home.dispatchTask().dispatch(TaskReference.parse("fit-horn"),
+                new DispatchRequest(CategoryId.IMPLEMENTATION, "", List.of(), captains), CallingSession.UNNAMED, Actor.PRIMARY);
+
+        assertThat(brief).contains("- Model: claude-opus-5-5 at medium, chosen by the captain's override: the horn is subtle\n");
+        assertThat(home.runtime().lastLaunch().route()).isEqualTo(captains.route());
+        assertThat(outcome.launched().route().choice()).isEqualTo("chosen by the captain's override: the horn is subtle");
     }
 
     @Test

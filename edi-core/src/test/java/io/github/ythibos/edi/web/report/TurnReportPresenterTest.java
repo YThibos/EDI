@@ -204,7 +204,7 @@ class TurnReportPresenterTest {
 
     @Test
     void drawsAWorkerQuestionAsALineWaitingOnEdiAndNeverSaysNothingWaits() {
-        Task lamp = Task.queued(new TaskId("fit-lamp"), new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null),
+        Task lamp = Task.queued(new TaskId("fit-lamp"), new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null, null),
                 "", NOW);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
                 List.of(new WorkerQuestion(lamp, asking(lamp, "Which socket does the lamp take, the bayonet one or the screw one the old lamp used?"),
@@ -238,12 +238,12 @@ class TurnReportPresenterTest {
 
     private static Task captainItem(String id, String project) {
         return Task.queued(new TaskId(id), new Intake(TaskKind.CAPTAIN, "Choose " + id.replace("-choice", ""), List.of(new ProjectName(project)), null, null,
-                List.of(), null), "", NOW);
+                List.of(), null, null), "", NOW);
     }
 
     private static Task runningShip(String id, String project) {
         return Stages.working(Task.queued(new TaskId(id), new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName(project)), null, null,
-                List.of(), null), "", NOW));
+                List.of(), null, null), "", NOW));
     }
 
     private static Decision urgent(Decision decision) {

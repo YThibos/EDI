@@ -1,12 +1,13 @@
 package io.github.ythibos.edi.domain.dispatch;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.task.TaskSize;
 
 public record DispatchRules(List<ProjectOverride> projectOverrides, List<DispatchCategory> categories, PipelineAgent pipelineAgent) {
 
@@ -16,14 +17,14 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
         projectOverrides = List.copyOf(projectOverrides);
         categories = List.copyOf(categories);
         Objects.requireNonNull(pipelineAgent, "The dispatch rules name the route of the validation pipeline's agent.");
-        if (new HashSet<>(categories.stream().map(DispatchCategory::id).toList()).size() < categories.size()) {
-            throw new IllegalArgumentException("The dispatch rules name each category once.");
-        }
+        requireOneEntryWithoutSizesPerCategory(categories);
+        requireNoSizeCoveredTwice(categories);
     }
 
     public DispatchRules validatedAgainst(ModelRoster roster) {
         projectOverrides.forEach(override -> requireAllowedAndExplained(override, roster));
         projectOverrides.forEach(this::requireCoveredCategoriesExist);
+        requireEveryOverrideReachable();
         categories.forEach(category -> requireAllowedAndExplained(category, roster));
         requireAllowedAndExplained(pipelineAgent, roster);
         requireResearchFirstOnlyWhereWorkIsUnplanned();
@@ -33,18 +34,18 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
 
     public DispatchCategory category(CategoryId id) {
         return categories.stream()
-                .filter(category -> category.id().equals(id))
+                .filter(category -> category.id().equals(id) && !category.namesSizes())
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No dispatch category is called " + id + "; the categories are "
                         + categoryNames() + "."));
     }
 
-    public Route routeFor(List<ProjectName> projects, CategoryId category, CaptainOverride captainsOverride) {
-        Route categoryRoute = category(category).route();
+    public ChosenRoute routeFor(List<ProjectName> projects, CategoryId category, TaskSize size, CaptainOverride captainsOverride) {
+        ChosenRoute categoryRoute = categoryEntryFor(category, size).chosenFor(size);
         if (captainsOverride != null) {
-            return captainsOverride.route();
+            return captainsOverride.chosen();
         }
-        return projectOverrideFor(projects, category).map(ProjectOverride::route).orElse(categoryRoute);
+        return projectOverrideFor(projects, category, size).map(override -> override.chosenFor(category, size)).orElse(categoryRoute);
     }
 
     public ResearchFirst researchFirstFor(List<ProjectName> projects, CategoryId category, boolean causeUnknown) {
@@ -55,8 +56,35 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
         return chosen.researchFirst() ? ResearchFirst.QUEUES_RESEARCH : ResearchFirst.SWITCHED_OFF;
     }
 
+    private static void requireOneEntryWithoutSizesPerCategory(List<DispatchCategory> categories) {
+        categories.stream().map(DispatchCategory::id).distinct().forEach(id -> requireOneEntryWithoutSizes(id, categories));
+    }
+
+    private static void requireOneEntryWithoutSizes(CategoryId id, List<DispatchCategory> categories) {
+        long withoutSizes = categories.stream().filter(category -> category.id().equals(id) && !category.namesSizes()).count();
+        if (withoutSizes > 1) {
+            throw new IllegalArgumentException("The dispatch rules name each category once; a further entry for " + id
+                    + " names the sizes it covers.");
+        }
+        if (withoutSizes == 0) {
+            throw new IllegalArgumentException("Every entry for the category " + id + " names sizes, so a task of another size or of none"
+                    + " has no route; one entry for " + id + " names no sizes.");
+        }
+    }
+
+    private static void requireNoSizeCoveredTwice(List<DispatchCategory> categories) {
+        categories.stream()
+                .filter(DispatchCategory::namesSizes)
+                .filter(sized -> categories.stream().anyMatch(other -> other != sized && sized.sharesASizeWith(other)))
+                .findFirst()
+                .ifPresent(sized -> {
+                    throw new IllegalArgumentException("Two entries for the category " + sized.id() + " cover the same size; each size of a"
+                            + " category has one route.");
+                });
+    }
+
     private static void requireAllowedAndExplained(ProjectOverride override, ModelRoster roster) {
-        String usedBy = "The override for " + override.project();
+        String usedBy = override.name();
         if (!override.statesWhy()) {
             throw new IllegalArgumentException(usedBy + " states no why.");
         }
@@ -73,8 +101,23 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
                 });
     }
 
+    private void requireEveryOverrideReachable() {
+        IntStream.range(0, projectOverrides.size()).forEach(this::requireReachable);
+    }
+
+    private void requireReachable(int position) {
+        ProjectOverride later = projectOverrides.get(position);
+        projectOverrides.subList(0, position).stream()
+                .filter(earlier -> earlier.leavesNothingFor(later))
+                .findFirst()
+                .ifPresent(earlier -> {
+                    throw new IllegalArgumentException(later.name() + " never applies: the earlier override for " + earlier.scope()
+                            + " covers every task it covers; put the narrower override first.");
+                });
+    }
+
     private static void requireAllowedAndExplained(DispatchCategory category, ModelRoster roster) {
-        String usedBy = "The category " + category.id();
+        String usedBy = category.name();
         if (!category.statesWhy()) {
             throw new IllegalArgumentException(usedBy + " states no why.");
         }
@@ -104,11 +147,22 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
             return;
         }
         ModelId researcher = category(CategoryId.RESEARCH).route().model();
-        ModelId implementer = category(CategoryId.IMPLEMENTATION).route().model();
-        if (roster.isWeaker(researcher, implementer)) {
-            throw new IllegalArgumentException("Research before implementation needs a researcher at least as strong as the implementer, but research runs "
-                    + researcher + " and implementation runs " + implementer + ".");
-        }
+        categories.stream()
+                .filter(category -> category.id().equals(CategoryId.IMPLEMENTATION))
+                .filter(implementation -> roster.isWeaker(researcher, implementation.route().model()))
+                .findFirst()
+                .ifPresent(implementation -> {
+                    throw new IllegalArgumentException("Research before implementation needs a researcher at least as strong as the implementer, but"
+                            + " research runs " + researcher + " and " + implementation.scope() + " runs "
+                            + implementation.route().model() + ".");
+                });
+    }
+
+    private DispatchCategory categoryEntryFor(CategoryId id, TaskSize size) {
+        return categories.stream()
+                .filter(category -> category.id().equals(id) && category.covers(size))
+                .findFirst()
+                .orElseGet(() -> category(id));
     }
 
     private boolean namesCategory(CategoryId id) {
@@ -116,11 +170,11 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
     }
 
     private String categoryNames() {
-        return categories.stream().map(category -> category.id().value()).collect(Collectors.joining(", "));
+        return categories.stream().map(category -> category.id().value()).distinct().collect(Collectors.joining(", "));
     }
 
-    private Optional<ProjectOverride> projectOverrideFor(List<ProjectName> projects, CategoryId category) {
-        return projectOverrides.stream().filter(override -> override.covers(projects, category)).findFirst();
+    private Optional<ProjectOverride> projectOverrideFor(List<ProjectName> projects, CategoryId category, TaskSize size) {
+        return projectOverrides.stream().filter(override -> override.covers(projects, category, size)).findFirst();
     }
 
     private static boolean isEdiItself(List<ProjectName> projects) {

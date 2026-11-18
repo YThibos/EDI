@@ -42,7 +42,7 @@ class DecisionStoreTest {
     @BeforeEach
     void openAStoreWithATask() throws IOException {
         TestHome home = TestHome.in(directory).continuingDecisionsFrom(57);
-        home.tasks().insert(Task.queued(LAMP, new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null), "", AT));
+        home.tasks().insert(Task.queued(LAMP, new Intake(TaskKind.CAPTAIN, "Choose the lamp", List.of(), null, null, List.of(), null, null), "", AT));
         decisions = home.decisions();
     }
 

@@ -47,6 +47,7 @@ import io.github.ythibos.edi.domain.OperationalText;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.dispatch.CaptainOverride;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.DispatchRules;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -230,13 +231,13 @@ public class LaunchWorker {
         ProjectEntry project = registry.entryOf(task.intake().projects().getFirst());
         WorkerSettings settings = machine.workers();
         DispatchRules rules = rulesFile.validatedAgainst(settings.models());
-        Route route = rules.routeFor(task.intake().projects(), dispatch.category(), dispatch.captainsOverride());
+        ChosenRoute route = rules.routeFor(task.intake().projects(), dispatch.category(), task.intake().size(), dispatch.captainsOverride());
         places.requireNoLiveWorker(task.id());
         Worker earlier = workers.latestOf(task.id()).orElse(null);
         WorkerId worker = earlier == null ? WorkerId.first(task.id()) : earlier.id().next();
         SessionStart start = sessionStartFor(kind, task, earlier, project, answered);
         return new Incarnation(task, project, start.login(), dispatch, start.kind(), start.launchedAs(), worker, start.session(), start.unresumed(), earlier,
-                route, rules.pipelineAgent().route(), settings, briefFacts.factsFor(task, project, dispatch, worker), answered);
+                route, rules.pipelineAgent().route(), settings, briefFacts.factsFor(task, project, dispatch, route, worker), answered);
     }
 
     private static Task withoutTheOutageHold(Task task, OutageEntry answered) {
@@ -334,7 +335,7 @@ public class LaunchWorker {
                 "EDI_TASK_ID", incarnation.task().id().value(),
                 "EDI_WORKER", incarnation.worker().toString(),
                 "EDI_TOKEN_FILE", token.file().toString());
-        return new Launch(incarnation.worker(), incarnation.launchedAs(), incarnation.session(), incarnation.route(), incarnation.login(), worktree,
+        return new Launch(incarnation.worker(), incarnation.launchedAs(), incarnation.session(), incarnation.route().route(), incarnation.login(), worktree,
                 incarnation.project().projectClone(), taskDirectory, stateDirectory, environment,
                 incarnation.settings().disallowedTools(), incarnation.settings().permissionMode(), firstPrompt);
     }
@@ -343,14 +344,14 @@ public class LaunchWorker {
             String because, Actor actor) {
         Instant now = clock.now();
         Worker worker = Worker.launched(incarnation.worker(), incarnation.session(), incarnation.dispatch().category(),
-                incarnation.route(), window, new WorkerLaunch(incarnation.launchedAs(), now, boot.current(), incarnation.login().name()));
+                incarnation.route().route(), window, new WorkerLaunch(incarnation.launchedAs(), now, boot.current(), incarnation.login().name()));
         retireTheEarlierWorker(incarnation, now, actor);
         workers.insert(worker, token.digest());
         settleTheOutageEntry(incarnation, now, actor);
         dispatches.save(incarnation.dispatch().undeferred());
         events.record(launchEventOf(incarnation, worker, because), actor, now);
         start.ifPresent(change -> stages.changed(tasks.get(change.task()), change, actor, now));
-        return new Launched(worker, incarnation.dispatch().branch(), worktree, incarnation.unresumed());
+        return new Launched(worker, incarnation.route(), incarnation.dispatch().branch(), worktree, incarnation.unresumed());
     }
 
     private void retireTheEarlierWorker(Incarnation incarnation, Instant now, Actor actor) {
@@ -410,7 +411,7 @@ public class LaunchWorker {
             UUID session,
             UnresumedSession unresumed,
             Worker earlier,
-            Route route,
+            ChosenRoute route,
             Route pipelineRoute,
             WorkerSettings settings,
             BriefFacts brief,

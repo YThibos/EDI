@@ -44,7 +44,7 @@ public final class TrackerFixtures {
 
     public static NewTask ship(String id, String project, String title, String key, TicketDetails details) {
         Intake intake = new Intake(TaskKind.SHIP, title, List.of(new ProjectName(project)), key == null ? null : WorkKey.parse(key), null, List.of(),
-                null);
+                null, null);
         return new NewTask(new TaskId(id), intake, "Do " + title.toLowerCase(Locale.ROOT) + ".", details);
     }
 }

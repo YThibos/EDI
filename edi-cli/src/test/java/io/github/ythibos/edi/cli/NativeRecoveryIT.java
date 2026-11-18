@@ -110,7 +110,8 @@ class NativeRecoveryIT {
         assertThat(listed.output()).contains("Outage hold list (2)", "1   restart-lamp  harness  lost when the machine restarted",
                 "2   restart-horn  harness  lost when the machine restarted", "outcome so far: working: the horn worker started",
                 "ran on claude-sonnet-5-5 at high; its category gives claude-sonnet-5-5 at high now");
-        assertThat(resumed.output()).startsWith("Relaunched restart-horn as restart-horn#2 (implementation, claude-sonnet-5-5 at high), resuming session ");
+        assertThat(resumed.output()).startsWith("Relaunched restart-horn as restart-horn#2 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation), resuming session ");
         assertThat(hornLaunches.get(1)).contains("--resume " + sessionOf(hornLaunches.getFirst()));
         assertThat(launchesOf("restart-lamp")).hasSize(1);
         assertThat(remaining.output()).contains("Outage hold list (1)", "1   restart-lamp").doesNotContain("restart-horn  harness");
@@ -132,8 +133,8 @@ class NativeRecoveryIT {
         List<String> launches = awaitLaunches("restart-buoy", 2);
         CommandRun workers = awaitOutput(List.of("worker", "list"), "restart-buoy#2");
 
-        assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high), with a fresh"
-                + " session and a handover because session " + session + " left no transcript to resume, in ");
+        assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation), with a fresh session and a handover because session " + session + " left no transcript to resume, in ");
         assertThat(launches).hasSize(2);
         assertThat(sessionOf(launches.get(1))).isNotEqualTo(session);
         assertThat(launches.get(1)).doesNotContain("--resume")
@@ -164,7 +165,8 @@ class NativeRecoveryIT {
         assertThat(woken.output()).contains("edi worker stop fill-lamp, then edi worker relaunch fill-lamp starts a fresh session in its copy with a handover.");
         assertThat(refused.output()).contains("fill-lamp#1's context is full and its session still runs; stop it first with edi worker stop");
         assertThat(stopped.output()).contains("edi worker relaunch fill-lamp starts a fresh session with a handover, since its context is full.");
-        assertThat(relaunched.output()).startsWith("Relaunched fill-lamp as fill-lamp#2 (implementation, claude-sonnet-5-5 at high), with a fresh session and a handover");
+        assertThat(relaunched.output()).startsWith("Relaunched fill-lamp as fill-lamp#2 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation), with a fresh session and a handover");
         assertThat(launches).hasSize(2);
         assertThat(launches.get(1)).doesNotContain("--resume").doesNotContain(sessionOf(launches.getFirst()))
                 .contains("fresh start after its context filled up: read the handover " + handover);
