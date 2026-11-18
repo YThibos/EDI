@@ -50,11 +50,25 @@ class PrimaryRulesTest {
 
     @Test
     void opensTheSitrepOnlyForTheLaunchOfANewSessionThatHoldsThePrimaryRole() {
-        assertThat(new SessionStart(true, true, Standing.PRIMARY).opensTheSitrep()).isTrue();
-        assertThat(new SessionStart(false, true, Standing.PRIMARY).opensTheSitrep()).isFalse();
-        assertThat(new SessionStart(true, false, Standing.PRIMARY).opensTheSitrep()).isFalse();
-        assertThat(new SessionStart(true, true, Standing.STANDBY).opensTheSitrep()).isFalse();
-        assertThat(new SessionStart(true, true, Standing.UNCLAIMED).opensTheSitrep()).isFalse();
+        assertThat(new SessionStart(true, true, Standing.PRIMARY).opensTheSitrep(LaunchOrigin.ELSEWHERE)).isTrue();
+        assertThat(new SessionStart(false, true, Standing.PRIMARY).opensTheSitrep(LaunchOrigin.ELSEWHERE)).isFalse();
+        assertThat(new SessionStart(true, false, Standing.PRIMARY).opensTheSitrep(LaunchOrigin.ELSEWHERE)).isFalse();
+        assertThat(new SessionStart(true, true, Standing.STANDBY).opensTheSitrep(LaunchOrigin.ELSEWHERE)).isFalse();
+        assertThat(new SessionStart(true, true, Standing.UNCLAIMED).opensTheSitrep(LaunchOrigin.ELSEWHERE)).isFalse();
+    }
+
+    @Test
+    void opensTheSitrepForTheLaunchOfANewSessionThatEdiUpOpenedWhateverItsStanding() {
+        assertThat(new SessionStart(true, true, Standing.STANDBY).opensTheSitrep(LaunchOrigin.EDI_UP)).isTrue();
+        assertThat(new SessionStart(true, true, Standing.PRIMARY).opensTheSitrep(LaunchOrigin.EDI_UP)).isTrue();
+        assertThat(new SessionStart(false, true, Standing.STANDBY).opensTheSitrep(LaunchOrigin.EDI_UP)).isFalse();
+        assertThat(new SessionStart(true, false, Standing.STANDBY).opensTheSitrep(LaunchOrigin.EDI_UP)).isFalse();
+    }
+
+    @Test
+    void opensNoSitrepWhenEdiUpWasToldNotTo() {
+        assertThat(new SessionStart(true, true, Standing.PRIMARY).opensTheSitrep(LaunchOrigin.EDI_UP_WITHOUT_THE_BOARD)).isFalse();
+        assertThat(new SessionStart(true, true, Standing.STANDBY).opensTheSitrep(LaunchOrigin.EDI_UP_WITHOUT_THE_BOARD)).isFalse();
     }
 
     @Test

@@ -27,6 +27,7 @@ import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.primary.LaunchOrigin;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.primary.TurnEnd;
@@ -50,6 +51,8 @@ class HookController {
 
     private static final String LAUNCH = "startup";
     private static final String COMPACTION = "compact";
+    private static final String EDI_UP = "edi-up";
+    private static final String EDI_UP_WITHOUT_THE_BOARD = "edi-up-no-board";
     private static final String ASKS_THE_CAPTAIN = "AskUserQuestion";
 
     private final WorkerHooks workerHooks;
@@ -83,11 +86,11 @@ class HookController {
     @PostMapping(value = "/api/hooks/{event}", produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<String> hook(@PathVariable String event, @RequestBody JsonNode payload, Caller caller,
             @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid, @RequestParam(required = false) Integer paneWidth,
-            HttpServletRequest request) {
+            @RequestParam(required = false) String launch, HttpServletRequest request) {
         HookEvent hook = HookEvent.named(event);
         return switch (caller) {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
-            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, new PrimaryCall(claudePid, paneWidth, ConsoleAddress.servedTo(request)));
+            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload, new PrimaryCall(claudePid, paneWidth, ConsoleAddress.servedTo(request), originOf(launch)));
             case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
@@ -107,7 +110,7 @@ class HookController {
 
     private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, PrimaryCall call) {
         return switch (hook) {
-            case SESSION_START -> sessionStarted(sessionIn(payload), call.claudePid(), sourceOf(payload), call.console());
+            case SESSION_START -> sessionStarted(sessionIn(payload), call.claudePid(), sourceOf(payload), call.origin(), call.console());
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
@@ -118,10 +121,10 @@ class HookController {
         };
     }
 
-    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, SessionSource source, URI console) {
+    private ResponseEntity<String> sessionStarted(UUID session, Long claudePid, SessionSource source, LaunchOrigin origin, URI console) {
         SessionStart start = primaryHooks.sessionStarted(session, claudePid, source);
         SessionStartDigest digest = digests.digestFor(session);
-        SessionStartDigest told = sitrep.openFor(session, start, console).map(digest::withSitrep).orElse(digest);
+        SessionStartDigest told = sitrep.openFor(session, start, origin, console).map(digest::withSitrep).orElse(digest);
         return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
     }
 
@@ -162,6 +165,14 @@ class HookController {
             case LAUNCH -> SessionSource.LAUNCH;
             case COMPACTION -> SessionSource.COMPACTION;
             default -> SessionSource.RESTART;
+        };
+    }
+
+    private static LaunchOrigin originOf(String launch) {
+        return switch (String.valueOf(launch)) {
+            case EDI_UP -> LaunchOrigin.EDI_UP;
+            case EDI_UP_WITHOUT_THE_BOARD -> LaunchOrigin.EDI_UP_WITHOUT_THE_BOARD;
+            default -> LaunchOrigin.ELSEWHERE;
         };
     }
 
@@ -223,6 +234,6 @@ class HookController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json.writeValueAsString(output));
     }
 
-    private record PrimaryCall(Long claudePid, Integer paneWidth, URI console) {
+    private record PrimaryCall(Long claudePid, Integer paneWidth, URI console, LaunchOrigin origin) {
     }
 }

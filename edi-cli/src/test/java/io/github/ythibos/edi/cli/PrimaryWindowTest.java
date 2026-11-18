@@ -14,9 +14,10 @@ class PrimaryWindowTest {
 
     @Test
     void opensTheSessionAttachedAndTitlesTheTerminalWithItsName() {
-        PrimaryWindow outsideTmux = new PrimaryWindow(Map.of());
+        PrimaryWindow outsideTmux = new PrimaryWindow(Map.of(), UpLaunch.WITH_THE_BOARD);
 
         assertThat(outsideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-s", "edi-261028-0737", "-c", "/edi/home",
+                "env", "EDI_PRIMARY_LAUNCH=edi-up",
                 "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
@@ -24,11 +25,19 @@ class PrimaryWindowTest {
 
     @Test
     void opensTheSessionDetachedInsideTmuxAndStillTitlesTheTerminalWithItsName() {
-        PrimaryWindow insideTmux = new PrimaryWindow(Map.of("TMUX", "/tmp/tmux-1000/default,1,0"));
+        PrimaryWindow insideTmux = new PrimaryWindow(Map.of("TMUX", "/tmp/tmux-1000/default,1,0"), UpLaunch.WITH_THE_BOARD);
 
         assertThat(insideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-d", "-s", "edi-261028-0737", "-c", "/edi/home",
+                "env", "EDI_PRIMARY_LAUNCH=edi-up",
                 "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
+    }
+
+    @Test
+    void tellsTheSessionItsStartWasAskedToLeaveTheBoardClosed() {
+        PrimaryWindow withoutTheBoard = new PrimaryWindow(Map.of(), UpLaunch.WITHOUT_THE_BOARD);
+
+        assertThat(withoutTheBoard.newSession(LAUNCH)).contains("env", "EDI_PRIMARY_LAUNCH=edi-up-no-board");
     }
 }
