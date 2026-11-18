@@ -89,7 +89,7 @@ public class TaskLinksQuery {
 
     private static TaskLinks.Request requestOf(Delivery delivery, Optional<PipelineRun> run) {
         return new TaskLinks.Request(delivery.address().url(), delivery.address().number(), delivery.state().word(),
-                run.filter(PipelineRun::isRunning).map(PipelineRun::activeStep).orElse(null));
+                run.filter(PipelineRun::isRunning).map(PipelineRun::step).orElse(null));
     }
 
     private static TaskLinks.Branch branchOf(Dispatch dispatch, Optional<ProjectEntry> project) {

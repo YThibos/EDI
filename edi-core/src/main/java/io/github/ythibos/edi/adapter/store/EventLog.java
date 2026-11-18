@@ -419,7 +419,7 @@ public class EventLog {
     private static ObjectNode withRun(ObjectNode payload, PipelineRun run) {
         return payload.put("run", run.id())
                 .put("status", run.status())
-                .put("step", run.activeStep())
+                .put("step", run.step())
                 .put("head", run.headCommit())
                 .put("mergeRequest", run.mergeRequestUrl());
     }

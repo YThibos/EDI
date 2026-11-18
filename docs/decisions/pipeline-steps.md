@@ -17,6 +17,7 @@ The brief tells the worker to fetch before each run and, when the branch is behi
 The hard rules forbid merging into a base branch, not merging the base into the worker's own branch.
 On a project whose CI does not run, the brief has the worker mark the merge request ready for review once the pipeline passes, and its definition of done takes the local verification as the evidence instead of green CI: the project's verify command, or the JVM build and its tests when none is registered, plus the local native build when the change can reach the native image, reported in the task's report.
 A brief for a project whose CI runs keeps waiting for green checks.
+A run that skips its `ci` step ends completed once its last local step passes, and EDI reads its request as ready for review once the worker's done is accepted ([fleet-snapshot](fleet-snapshot.md)).
 
 ## Why
 
@@ -44,3 +45,4 @@ When EDI drives the validation steps in its own code flow, or the pipeline gains
 ## How we got here
 
 - 27/10/2026: runs that failed after their own rebase refused every later run on two branches, so every run skips the rebase step, a project whose CI does not run also skips the CI step and takes the local verification as the evidence of done, and the worker merges the base in (EDI-104).
+- 17/11/2026: a request whose run never saw a CI result kept reading as changing, so a run that ended in or past its `ci` step no longer holds the request after an accepted done (EDI-265).

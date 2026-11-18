@@ -29,6 +29,7 @@ import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -189,8 +190,8 @@ class ConfirmationTextTest {
     @Test
     void confirmsADeliveryAMergeAndACleanUp() {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
-        MergeRequestView merged = new MergeRequestView(address, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "1111", "3333", Instant.parse("2026-10-16T10:00:00Z"));
-        Delivery delivery = Delivery.of(LANTERN, new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", null, null),
+        MergeRequestView merged = new MergeRequestView(address, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, "3333", Instant.parse("2026-10-16T10:00:00Z"));
+        Delivery delivery = Delivery.of(LANTERN, new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, null, null),
                 Instant.parse("2026-10-16T09:00:00Z"));
 
         assertThat(text.text(new Confirmation.DraftDelivered(new DeliveredDraft(delivery, true)))).isEqualTo(

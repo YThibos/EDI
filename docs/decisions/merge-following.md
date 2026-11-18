@@ -14,7 +14,7 @@ The captain may mark a request ready and merge it before the worker reports done
 `FollowMerges` records a `draft-review` ship's request as soon as it exists (`DraftRecorded`): each time the task's pipeline run changes, each time its worker reports a status, and when a done is accepted.
 Once it is recorded, each such run change and status report views the open request again, so EDI keeps its draft flag as the forge shows it and follows a merge or a closure it finds (`FollowMerges.followTheRequestOf`).
 `DeliveryRound` asks `FollowMerges` every `edi.delivery.drafts` (PT10M by default) to view each open delivery of a task in flight, on the account its project binds now; only an exact `merged` state counts.
-Each view of an open request saves its head and draft flag as the forge shows them, so the request stays current after the done as before it.
+Each view of an open request saves its head, draft flag and head checks as the forge shows them, so the request stays current after the done as before it.
 A followed merge moves the task to MERGED ([task-lifecycle](task-lifecycle.md)) and names the branch's commits after the merged head as not landed.
 A merge records `DraftMerged` with the commit it landed and a `CloneRefresh`; a closed request records `DraftClosed`; both wake the primary.
 `edi merged <task|url>` asks the forge at once, so the captain's word is followed the same way and never taken alone; a task delivered to the captain's checkout goes straight to its clean-up, whose landed-work test decides.
@@ -52,3 +52,4 @@ When the forges offer a cheap local notification of a new or merged request.
 - 21/10/2026: a request marked ready and merged before its done was never recorded, so EDI started recording requests as soon as they exist and following merged ones it finds (EDI-23).
 - 09/11/2026: a request began reading as ready for review only out of draft ([fleet-snapshot](fleet-snapshot.md)), so a recorded open request is viewed again on each run change and status report, not only every ten minutes (EDI-238).
 - 12/11/2026: a followed merge moves the task to MERGED and names the branch's commits after the merged head as not landed (EDI-85).
+- 18/11/2026: a view saves the checks the forge shows on the request's head, so a request whose run ended before it saw them reads as ready and failed checks hold it ([fleet-snapshot](fleet-snapshot.md), EDI-265).

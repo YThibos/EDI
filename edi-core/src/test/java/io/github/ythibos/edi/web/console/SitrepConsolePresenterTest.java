@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
@@ -99,7 +100,7 @@ class SitrepConsolePresenterTest {
         Task bell = ship("bell", "Polish the bell");
         Task mast = ship("mast", "Paint the mast");
         Worker reporting = workerOn(horn).reported(new StatusReport(StatusState.WORKING, null, null, "Fitting the brass."), NOW);
-        PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", "abc123", null, false);
+        PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", false, "abc123", null, false);
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
                 new OngoingTask(horn, reporting, null, delivery(horn)),
@@ -173,7 +174,7 @@ class SitrepConsolePresenterTest {
     @Test
     void presentsARequestStillChangingWithWhyInsteadOfAsReady() {
         Task lamp = ship("fit-lamp", "Fit the lamp");
-        PipelineRun running = new PipelineRun("01RUN", "running", null, "abc123", DRAFT.url(), false);
+        PipelineRun running = new PipelineRun("01RUN", "running", null, false, "abc123", DRAFT.url(), false);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
                 List.of(new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2))));
 
@@ -278,7 +279,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static Delivery delivery(Task task) {
-        return new Delivery(task.id(), DRAFT, true, "abc123", MergeRequestState.OPEN, null, NOW, NOW);
+        return new Delivery(task.id(), DRAFT, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW);
     }
 
     private static LandedTask landed(String id) {

@@ -3,16 +3,23 @@ package io.github.ythibos.edi.adapter.pipeline;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 
 final class AxiStatus {
 
     private static final String RUN_BLOCK = "run:";
+    private static final String ERROR = "error";
     private static final String FIELD_INDENT = "  ";
     private static final String ROW_INDENT = "    ";
     private static final String ACTIVE_STEPS = "active_steps[";
+    private static final String STEPS = "steps[";
+    private static final Set<String> PASSED_STEP = Set.of("completed", "skipped");
+    private static final Pattern SERVICE_STOP = Pattern.compile("daemon (shutting down|crashed|restart)");
     private static final String FIELD_SEPARATOR = ": ";
     private static final String CELL_SEPARATOR = ",";
     private static final char QUOTE = '"';
@@ -22,12 +29,14 @@ final class AxiStatus {
     }
 
     static Optional<PipelineRun> currentRunIn(String status, String branch) {
-        List<String> block = runBlockOf(status.lines().toList());
+        List<String> lines = status.lines().toList();
+        List<String> block = runBlockOf(lines);
         Map<String, String> fields = fieldsOf(block);
         if (!branch.equals(fields.get("branch")) || !fields.containsKey("id") || !fields.containsKey("status")) {
             return Optional.empty();
         }
-        return Optional.of(new PipelineRun(fields.get("id"), fields.get("status"), activeStepIn(block), fields.get("head_sha"), fields.get("pr"), false));
+        return Optional.of(new PipelineRun(fields.get("id"), fields.get("status"), stepIn(block), stoppedByThePipelineService(lines),
+                fields.get("head_sha"), fields.get("pr"), false));
     }
 
     private static List<String> runBlockOf(List<String> lines) {
@@ -43,14 +52,36 @@ final class AxiStatus {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (first, _) -> first));
     }
 
-    private static String activeStepIn(List<String> block) {
-        return block.stream()
-                .dropWhile(line -> !line.strip().startsWith(ACTIVE_STEPS))
-                .skip(1)
-                .takeWhile(line -> line.startsWith(ROW_INDENT))
+    private static String stepIn(List<String> block) {
+        return activeStepIn(block).or(() -> stepItStoppedIn(block)).orElse(null);
+    }
+
+    private static Optional<String> activeStepIn(List<String> block) {
+        return rowsOf(block, ACTIVE_STEPS).findFirst().map(row -> firstCellOf(row.strip()));
+    }
+
+    private static Optional<String> stepItStoppedIn(List<String> block) {
+        return rowsOf(block, STEPS)
+                .map(row -> List.of(row.strip().split(CELL_SEPARATOR)))
+                .filter(cells -> cells.size() > 1 && !PASSED_STEP.contains(cells.get(1)))
                 .findFirst()
-                .map(row -> firstCellOf(row.strip()))
-                .orElse(null);
+                .map(List::getFirst);
+    }
+
+    private static Stream<String> rowsOf(List<String> block, String table) {
+        return block.stream()
+                .dropWhile(line -> !line.strip().startsWith(table))
+                .skip(1)
+                .takeWhile(line -> line.startsWith(ROW_INDENT));
+    }
+
+    private static boolean stoppedByThePipelineService(List<String> lines) {
+        return lines.stream()
+                .filter(line -> !line.startsWith(FIELD_INDENT))
+                .map(AxiStatus::fieldOf)
+                .flatMap(Optional::stream)
+                .filter(field -> ERROR.equals(field.getKey()))
+                .anyMatch(error -> SERVICE_STOP.matcher(error.getValue()).find());
     }
 
     private static Optional<Map.Entry<String, String>> fieldOf(String line) {

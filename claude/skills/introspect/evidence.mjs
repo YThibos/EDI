@@ -48,7 +48,7 @@ export function storeFacts(store, window) {
         .map(row => ({ ...row, raised_at: Date.parse(row.raised_at), delivered_at: momentOrNull(row.delivered_at), acknowledged_at: momentOrNull(row.acknowledged_at) }));
     const streams = store.prepare('select id, session_id, follows, started_at, ended_at from wake_stream order by started_at').all()
         .map(row => ({ ...row, started_at: Date.parse(row.started_at), ended_at: momentOrNull(row.ended_at) }));
-    const runs = store.prepare('select run_id, task_id, status, active_step, seen_at, observed_at from pipeline_run').all()
+    const runs = store.prepare('select run_id, task_id, status, step, seen_at, observed_at from pipeline_run').all()
         .map(row => ({ ...row, seen_at: Date.parse(row.seen_at), observed_at: Date.parse(row.observed_at) }));
     const reports = store.prepare('select session_id, reported_at from primary_session where reported_at is not null').all()
         .map(row => ({ session: row.session_id, at: Date.parse(row.reported_at) }));
@@ -75,7 +75,7 @@ export function timelineOf(facts) {
         add(stream.ended_at, '-', `${stream.follows ? 'edi wait --follow' : 'edi wait'} ended in session ${short(stream.session_id)}`);
     });
     facts.runs.forEach(pipeline => add(pipeline.observed_at, pipeline.task_id,
-        `pipeline run ${pipeline.run_id} ${pipeline.status}${pipeline.active_step ? ' at ' + pipeline.active_step : ''}`));
+        `pipeline run ${pipeline.run_id} ${pipeline.status}${pipeline.step ? ' at ' + pipeline.step : ''}`));
     facts.reports.forEach(report => add(report.at, '-', `turn report rendered in session ${short(report.session)}`));
     facts.presence.forEach(presence => add(presence.since, '-', `presence ${presence.mode} (${presence.cause})`));
     return lines.filter(line => line.text !== null).sort((one, other) => one.at - other.at);

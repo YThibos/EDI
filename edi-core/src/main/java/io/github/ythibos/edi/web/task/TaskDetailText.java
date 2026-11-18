@@ -106,7 +106,7 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         List<String> lines = new ArrayList<>();
         if (detail.pipelineRun() != null) {
             lines.add("Pipeline: run " + detail.pipelineRun().id() + " " + detail.pipelineRun().status()
-                    + (detail.pipelineRun().activeStep() == null ? "" : " at " + detail.pipelineRun().activeStep()));
+                    + (detail.pipelineRun().step() == null ? "" : " at " + detail.pipelineRun().step()));
         }
         if (detail.delivery() != null) {
             Delivery delivery = detail.delivery();

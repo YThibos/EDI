@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -62,12 +63,26 @@ class GitLabForgeTest {
     }
 
     @Test
-    void findsTheOpenMergeRequestOfABranchByTheProjectsUrl() throws IOException {
-        standIns.answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]");
+    void findsTheOpenMergeRequestOfABranchByTheProjectsUrlWithTheChecksItsViewShows() throws IOException {
+        standIns.answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]")
+                .answering("mr-view", withAHeadPipeline(REQUEST.formatted("opened", "null", "null", "null"), "success"));
 
         assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 5), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "2222", null, null));
-        assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 --all -F json");
+                "feature/HRN-3", "main", "2222", HeadChecks.PASSED, null, null));
+        assertThat(standIns.calls()).containsExactly("mr list -R https://forge.example.org/team/harness --source-branch feature/HRN-3 --all -F json",
+                "mr view 5 -R https://forge.example.org/team/harness -F json");
+    }
+
+    @Test
+    void readsTheChecksOnTheHeadFromItsPipeline() throws IOException {
+        assertThat(checksWithAPipeline("success")).isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWithAPipeline("failed")).isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWithAPipeline("canceled")).isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWithAPipeline("running")).isEqualTo(HeadChecks.UNDECIDED);
+
+        standIns.answering("mr-view", REQUEST.formatted("opened", "null", "null", "null"));
+        assertThat(forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 5)).checks()).as("no pipeline on the head")
+                .isEqualTo(HeadChecks.UNDECIDED);
     }
 
     @Test
@@ -126,7 +141,8 @@ class GitLabForgeTest {
                 .hasMessageContaining("glab is logged in to forge.example.org as someone-else, but https://forge.example.org/team/harness is bound to example-owner");
         assertThat(standIns.calls()).noneMatch(call -> call.startsWith("mr create"));
 
-        standIns.answering("api-user", "{\"username\":\"example-owner\"}").answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]");
+        standIns.answering("api-user", "{\"username\":\"example-owner\"}").answering("mr-list", "[" + REQUEST.formatted("opened", "null", "null", "null") + "]")
+                .answering("mr-view", REQUEST.formatted("opened", "null", "null", "null"));
         assertThat(forge.openDraft(FORGE, proposal).draft()).isTrue();
         assertThat(standIns.calls()).contains("mr create -R https://forge.example.org/team/harness --draft --source-branch feature/HRN-3"
                 + " --target-branch main --title HRN-3 Fit the lamp --description The brass lamp. --yes");
@@ -136,5 +152,14 @@ class GitLabForgeTest {
     void neitherNeedsAWorkflowScopeNorBindsGitTransport() {
         assertThat(forge.mayChangeWorkflows(FORGE)).isTrue();
         assertThat(forge.credentialHelperFor(FORGE)).isEmpty();
+    }
+
+    private HeadChecks checksWithAPipeline(String status) throws IOException {
+        standIns.answering("mr-view", withAHeadPipeline(REQUEST.formatted("opened", "null", "null", "null"), status));
+        return forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 5)).checks();
+    }
+
+    private static String withAHeadPipeline(String request, String status) {
+        return request.replace("\"sha\":\"2222\"", "\"sha\":\"2222\",\"head_pipeline\":{\"status\":\"" + status + "\"}");
     }
 }

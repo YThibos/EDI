@@ -27,6 +27,7 @@ import io.github.ythibos.edi.domain.decision.Recommendation;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -266,6 +267,6 @@ class TurnReportPresenterTest {
 
     private static ReadyForReview readyForReview(Task task) {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
-        return new ReadyForReview(task, new Delivery(task.id(), request, true, "abc123", MergeRequestState.OPEN, null, NOW, NOW));
+        return new ReadyForReview(task, new Delivery(task.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW));
     }
 }

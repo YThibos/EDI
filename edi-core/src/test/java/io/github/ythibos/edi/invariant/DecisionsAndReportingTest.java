@@ -40,6 +40,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -389,14 +390,14 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST, false), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST, false), TestHome.START);
             home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Amend the record too.", null, Actor.PRIMARY);
 
             String report = captainReport(home, Turn.NONE);
             String brief = returnBrief(home);
             ConsoleSitrep onTheConsole = consoleSitrep(home);
             String digest = digestOf(home);
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST, false), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST, false), TestHome.START);
             home.workerInbox().acknowledge(worker.id(), 1);
             String settled = captainReport(home, Turn.NONE);
 
@@ -422,7 +423,7 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", "abc123", REQUEST, true);
+            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", false, "abc123", REQUEST, true);
             home.pipelineRuns().save(worker.id().task(), watching, TestHome.START);
 
             String report = captainReport(home, Turn.NONE);
@@ -456,7 +457,7 @@ class DecisionsAndReportingTest {
         private static MergeRequestView request(MergeRequestState state) {
             MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
             boolean merged = state == MergeRequestState.MERGED;
-            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", merged ? "def456" : null, merged ? TestHome.START : null);
+            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, merged ? "def456" : null, merged ? TestHome.START : null);
         }
 
         private static CallingSession captainSays(TestHome home, String words, String task) {
