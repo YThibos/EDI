@@ -41,8 +41,8 @@ class WakeDigestTextTest {
 
         String text = digest.text(new WakeDelivery(Optional.of(back), List.of(), 0, 8, 0, PRESENT, true));
 
-        assertThat(text.lines().toList().get(1)).startsWith("The primary role came back here: session " + taker + ", which last took it at ")
-                .contains(", ended at ").endsWith(".");
+        assertThat(text.lines().toList().get(1)).isEqualTo("The primary role came back here: session " + taker
+                + ", which last took it at 2026-10-16 09:00 UTC, ended at 2026-10-16 09:03 UTC.");
     }
 
     @Test
@@ -51,8 +51,8 @@ class WakeDigestTextTest {
 
         String text = digest.text(new WakeDelivery(Optional.of(new RoleReturn(taker, RAISED, null)), List.of(), 0, 8, 0, PRESENT, true));
 
-        assertThat(text.lines().toList().get(1)).startsWith("The primary role came back here: session " + taker + ", which last took it at ")
-                .endsWith(", lost its process.");
+        assertThat(text.lines().toList().get(1)).isEqualTo("The primary role came back here: session " + taker
+                + ", which last took it at 2026-10-16 09:00 UTC, lost its process.");
     }
 
     @Test
