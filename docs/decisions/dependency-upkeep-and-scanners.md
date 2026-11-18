@@ -22,13 +22,21 @@ Renovate runs in this repository's GitHub Actions (`renovatebot/github-action`),
 CI runs on every push and pull request:
 
 - OWASP Dependency-Check, failing at CVSS 7 or above, with its vulnerability database cached between runs, kept only from a run that was not cancelled and freed of any update lock a stopped run left in it, and NVD requests spaced to avoid the NVD's 403s;
-- `npm audit --audit-level=high` over the console's build dependencies, in a job that installs every tool `mise.toml` pins, since mise cannot render `JAVA_HOME` without GraalVM installed;
+- `npm audit --json` over the console's build dependencies, read by `ops/npm-audit/npm-audit-check.mjs`, which fails on any high or critical advisory the console's `npm-audit-exceptions.json` does not except, in a job that installs every tool `mise.toml` pins, since mise cannot render `JAVA_HOME` without GraalVM installed;
 - SonarQube Community Build as a service container, with a quality gate on overall code: reliability, security and maintainability rated A and at most 3% duplication;
 - gitleaks and the publish guard ([publish-guard](publish-guard.md)).
 
 A finding is fixed, not suppressed: when Spring Boot's managed Tomcat carried vulnerabilities and no Spring Boot release fixed them, the parent `pom.xml` overrode `tomcat.version`, kept current by a Renovate regex manager, until Spring Boot 4.1.2 managed the fixed Tomcat.
 Likewise the parent `pom.xml` overrides `sqlite-jdbc.version` with 3.54.1.0, kept current by a Renovate regex manager, while Spring Boot 4.1.2 manages a 3.53.4.0 that Dependency-Check scores 8.5; the override goes once Spring Boot manages 3.54.1.0 or later.
 Likewise, when the Angular build pinned a vulnerable Vite, the console's `package.json` overrode `vite` with its patched release, until `@angular/build` 22.2.5 brought the fixed Vite.
+A finding with no fix anywhere is the one case a suppression is allowed, as an exception in `edi-console/npm-audit-exceptions.json`, which is the only place an exception lives:
+
+- an exception names one advisory by its GHSA id and carries its reason, the date it was accepted and the date it is reviewed again, all four, with the review date after the acceptance date; an exception with a field missing, a field of another name, a date that is not `YYYY-MM-DD` or a second entry for the same advisory fails the check, so nothing is excepted by severity, by package or by a wildcard;
+- the check prints every exception it applied, with its reason and review date, on each run;
+- an exception ends by itself: the check fails and names the exception to remove when the advisory no longer applies to the installed tree or no longer reaches the high level, when its review date has passed, or when GitHub's advisory database lists a patched version of the vulnerable package, which the check reads through `gh api advisories/<id>`, so a patched version in any release line asks for a human review;
+- the file holds only the exceptions in force, so it is an empty list while nothing is excepted, and no version is pinned or capped to get the check green.
+
+Taking the patched or fixed version stays the first choice, as the Vite override was.
 The `edi-upkeep` skill lists Renovate's pull requests with their checks, raises one decision per green batch, and turns a red major into a migration task.
 
 ## Why
@@ -45,6 +53,8 @@ An image tag and an unnamed mise version move the same way, and a check that rea
 - A new-code quality gate - meaningless on a server with no history.
 - OWASP DockSec - analyses container images, which EDI does not ship.
 - Suppressing the Tomcat findings, or waiting for Spring Boot - hides real vulnerabilities, or leaves them in the core and the gate red.
+- `audit-ci` and `better-npm-audit` for the exceptions - both accept an exception by package or by wildcard, neither requires the date an exception was accepted, and neither fails on an exception that is unused or whose advisory has been patched, so none does all of the criteria, and each would add a dependency tree to CI; a script of about 150 lines over `npm audit --json`, with its own tests, adds none.
+- Capping or pinning `picomatch`, or an override, to silence the check - no release is fixed, so there is nothing to move to, and a pin would hide the day one arrives.
 
 ## Consequences
 
@@ -66,3 +76,4 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 03/11/2026: CI came back red on main: a cancelled run had cached Dependency-Check's update lock, so every later run waited forty minutes for it and failed, and the `npm audit` job, installing only Node, could not render `JAVA_HOME`; the cache now keeps no cancelled run and drops a stale lock, the job installs every pinned tool, and the Dependency-Check job allows five hours instead of 150 minutes, since a run that reached 79% of a cold download at the limit was cancelled and kept nothing (EDI-168).
 - 03/11/2026: the first complete Dependency-Check run found CVEs scored up to 8.5 in sqlite-jdbc 3.53.4.0, the version Spring Boot 4.1.2 manages, so the parent overrides it with 3.54.1.0, which bundles SQLite 3.54.1, under a regex manager as Tomcat's override was (EDI-168).
 - 03/11/2026: commonmark joined the core's dependencies, to render a task's report and brief, kept current by Renovate like every Maven dependency (EDI-57).
+- 18/11/2026: `npm audit` failed on every pull request for GHSA-fc5q-39xc-vjpf, a ReDoS in `picomatch`, which every published version, up to 4.0.7, carries and no release fixes, and which the Angular build, Vite and Vitest pull in as build tooling; the check now reads `npm audit --json` and honours exceptions kept in one file, each ending by itself, and the picomatch advisory is the first (EDI-295).

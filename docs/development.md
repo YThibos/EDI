@@ -26,7 +26,8 @@ Where CI cannot run, `./mvnw verify` is the fallback evidence, with a local nati
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` builds and tests on the JVM, builds the native executables and runs the smoke test, and runs four scanners on every push and pull request ([dependency-upkeep-and-scanners](decisions/dependency-upkeep-and-scanners.md)): OWASP Dependency-Check, `npm audit` over the console's build dependencies, a SonarQube Community Build quality gate, and the publish guard with gitleaks ([publish-guard](decisions/publish-guard.md)).
+`.github/workflows/ci.yml` builds and tests on the JVM, builds the native executables and runs the smoke test, and runs four scanners on every push and pull request ([dependency-upkeep-and-scanners](decisions/dependency-upkeep-and-scanners.md)): OWASP Dependency-Check, `npm audit` over the console's build dependencies, whose one exception, for an advisory with no fixed version, is kept with its reason and review date in `edi-console/npm-audit-exceptions.json`, a SonarQube Community Build quality gate, and the publish guard with gitleaks ([publish-guard](decisions/publish-guard.md)).
+`node ../ops/npm-audit/npm-audit-check.mjs` run in `edi-console` is the same `npm audit` check CI runs, and it needs `gh` to read the advisory database.
 The same SonarQube image runs locally for a deeper look: `docker compose -f ops/sonar.yml up -d`, then `ops/sonar-setup.sh`, then `./mvnw -Psonar verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar` with the printed token in `SONAR_TOKEN`.
 `ops/catalogue-summary.sh` reports the acceptance tests still pending, and `ops/main-code-size.sh` reports the size of the main code.
 

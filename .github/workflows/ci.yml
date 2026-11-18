@@ -131,7 +131,9 @@ jobs:
           version: 2026.10.25
       - name: Audit the console's build dependencies
         working-directory: edi-console
-        run: npm audit --audit-level=high
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ../ops/npm-audit/npm-audit-check.mjs
 
   sonarqube:
     name: SonarQube quality gate
