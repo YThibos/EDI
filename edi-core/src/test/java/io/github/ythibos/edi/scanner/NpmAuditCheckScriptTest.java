@@ -132,6 +132,17 @@ class NpmAuditCheckScriptTest {
         assertThat(run.output()).doesNotContain("Excepted");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-13-01", "2026-00-10", "2027-02-30", "18/02/2027"})
+    void aReviewDateThatIsNoDayOfTheCalendarIsRefused(String reviewed) throws IOException, InterruptedException {
+        StandInGitHub.Run run = check(report(advisory("picomatch", PICOMATCH, "high")),
+                exceptions(exception(PICOMATCH, "Build tooling only", "2026-11-18", reviewed)), unpatched(PICOMATCH, "picomatch"));
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("Exception 1 has reviewed " + reviewed + ", which is not a date written YYYY-MM-DD.");
+        assertThat(run.output()).doesNotContain("Excepted");
+    }
+
     @Test
     void anExceptionByPackageSeverityOrWildcardIsRefused() throws IOException, InterruptedException {
         String byPackage = exceptions("{\"package\": \"picomatch\", \"severity\": \"high\", \"advisory\": \"GHSA-*\", \"reason\": \"x\", \"accepted\": \"2026-11-18\", \"reviewed\": \"2027-02-18\"}");

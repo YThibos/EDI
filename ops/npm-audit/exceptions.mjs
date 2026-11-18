@@ -3,7 +3,7 @@ import { Refusal } from '../backlog/backlog.mjs';
 
 const FIELDS = ['advisory', 'reason', 'accepted', 'reviewed'];
 const ADVISORY_ID = /^GHSA(-[2-9cfghjmpqrvwx]{4}){3}$/;
-const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function exceptionsIn(file) {
     const document = documentIn(file);
@@ -64,6 +64,6 @@ function present(value) {
 }
 
 function isDay(value) {
-    const parts = typeof value === 'string' ? DAY.exec(value) : null;
-    return parts !== null && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
+    const day = new Date(`${value}T00:00:00Z`);
+    return DAY.test(value) && !Number.isNaN(day.getTime()) && day.toISOString().startsWith(value);
 }
