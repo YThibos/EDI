@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.application.access.OpenConsole;
 import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.primary.LaunchOrigin;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 
 @Service
@@ -32,12 +33,12 @@ public class OpenTheSitrepAtSessionStart {
         this.transaction = transaction;
     }
 
-    public Optional<ConsoleOpening> openFor(UUID session, SessionStart start, URI consoleAddress) {
-        return isWantedAt(start) ? Optional.of(recordedFor(session, console.open(consoleAddress))) : Optional.empty();
+    public Optional<ConsoleOpening> openFor(UUID session, SessionStart start, LaunchOrigin origin, URI consoleAddress) {
+        return isWantedAt(start, origin) ? Optional.of(recordedFor(session, console.open(consoleAddress))) : Optional.empty();
     }
 
-    private boolean isWantedAt(SessionStart start) {
-        return start.opensTheSitrep() && machine.opensTheSitrepAtSessionStart();
+    private boolean isWantedAt(SessionStart start, LaunchOrigin origin) {
+        return start.opensTheSitrep(origin) && machine.opensTheSitrepAtSessionStart();
     }
 
     private ConsoleOpening recordedFor(UUID session, ConsoleOpening opening) {
