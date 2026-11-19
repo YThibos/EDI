@@ -13,7 +13,7 @@ EDI has no merge capability of any kind, and `NameAMergeOperation` refuses any c
 ## Decision
 
 A `Spark` holds its number, counted from 1 across the home, its text, its `SparkAuthor` (the captain or the primary), the Claude Code session it came from, its `Focus` (a task, a project, or neither), the time it was caught, and once sorted its `SparkSorting`; table `spark` holds them (`SparkStore`).
-`edi spark "<idea>"`, or `edi spark -` reading the idea from standard input, catches a spark through `CatchSpark.caught`; a call from a Claude Code session is the primary's spark, and a call under the home's token without a session is the captain's, from their own terminal; a worker, the console and a standby session are refused.
+`edi spark "<idea>"`, or `edi spark -` reading the idea from standard input, catches a spark through `CatchSpark.caught`; a call from a Claude Code session is the primary's spark, and a call with the primary's launch key but without a session is the captain's, from a shell in the primary's tmux session; the home token alone, a worker, the console and a standby session are refused ([api-access](api-access.md)).
 `--task` or `--project` names the focus; without either, the focus is the task the primary or the captain acted on last, the latest event in the event log whose actor is one of them (`EventLog.latestTaskActedOnBy`), or no focus when there is none.
 The primary's `UserPromptSubmit` hook catches a message the captain typed that opens with `Spark:` or `spark:` as the captain's spark, with the rest of the message as its text, the session and the same focus (`SparkMessage.ideaIn`, `CatchSpark.fromTheCaptainsMessage`); the message is stored as the captain's message as well, and the hook's additional context tells the primary the spark's number and focus and to acknowledge it in one line and carry on (`SparkSentences`).
 A notification, EDI's own operational text and a message with nothing after the opening are no spark.
@@ -51,3 +51,4 @@ When the console gains a way to sort sparks between gardening rounds, or when th
 
 - 09/11/2026: sparks caught by `edi spark` and by the captain's `Spark:` message, listed and sorted by backlogging, folding into an existing item or dropping with a reason (EDI-166).
 - 13/11/2026: the gardening board took over sorting the sparks from the chat round of `edi-upkeep` (EDI-165).
+- 19/11/2026: the home token alone no longer catches a spark, so the captain's own spark from a shell needs the primary's launch key, which the primary's tmux session carries (EDI-278).
