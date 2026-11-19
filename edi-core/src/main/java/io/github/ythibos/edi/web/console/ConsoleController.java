@@ -19,7 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestController
 class ConsoleController {
 
-    private static final String SIGN_IN_REFUSED = "This sign-in link was used already or has expired; run edi console for a new one.\n";
+    private static final String SIGN_IN_REFUSED = "This sign-in link was used already or has expired: ask the primary session for the console for a new one; edi up opens it first.\n";
     private static final String HEADER_MISSING = "Signing in to the console carries the console's own header, " + ConsoleSessionCookie.HEADER + ".\n";
 
     private final OpenTheConsoleOnRequest openConsole;

@@ -112,7 +112,7 @@ class ConsoleApiTest {
         assertThat(signedIn.headers().firstValue("Set-Cookie")).hasValueSatisfying(cookie -> assertThat(cookie)
                 .startsWith("EDI-Console=").contains("Path=/", "Max-Age=43200", "HttpOnly", "SameSite=Strict"));
         assertThat(usedAgain.statusCode()).isEqualTo(401);
-        assertThat(usedAgain.body()).isEqualTo("This sign-in link was used already or has expired; run edi console for a new one.\n");
+        assertThat(usedAgain.body()).isEqualTo("This sign-in link was used already or has expired: ask the primary session for the console for a new one; edi up opens it first.\n");
     }
 
     @Test
@@ -130,7 +130,7 @@ class ConsoleApiTest {
         assertThat(link).startsWith(console() + "login#");
         assertThat(signIn(tokenOf(link)).statusCode()).isEqualTo(204);
         assertThat(followedAgain.statusCode()).isEqualTo(404);
-        assertThat(followedAgain.body()).isEqualTo("This page was opened already or has expired; run edi console to open the console again.\n");
+        assertThat(followedAgain.body()).isEqualTo("This page was opened already or has expired: ask the primary session for the console to open it again; edi up opens it first.\n");
     }
 
     @Test

@@ -30,7 +30,7 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     private static final String BEARER = "Bearer ";
     private static final String SESSION = "EDI-Session";
     private static final String REFUSAL = "This call needs the EDI token from state/core.token in the EDI home, the token a worker got at launch, "
-            + "or a console session opened through edi console.";
+            + "or a console session the primary session opened.";
     private static final String CONSOLE_HEADER_REFUSAL = "A console request that changes the fleet carries the console's own header, "
             + ConsoleSessionCookie.HEADER + ".";
 
