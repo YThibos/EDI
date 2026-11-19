@@ -131,7 +131,8 @@ class OutsideThePrimarySessionTest {
                 post(homeTokenAlone(), task + "/drop", "{\"discardWork\":true}"),
                 post(homeTokenAlone(), task + "/hold", "{\"kind\":\"deferral\",\"reason\":\"Not now.\"}"),
                 post(homeTokenAlone(), task + "/dispatch", "{\"category\":\"implementation\",\"spec\":\"Fit the lamp.\"}"),
-                post(homeTokenAlone(), task + "/stop", "{}"));
+                post(homeTokenAlone(), task + "/stop", "{}"),
+                post(homeTokenAlone(), "/api/console/open", "{}"));
         HttpResponse<String> read = get(homeTokenAlone(), task);
 
         assertThat(refused).allSatisfy(response -> {

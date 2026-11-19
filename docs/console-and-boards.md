@@ -3,7 +3,7 @@
 ## The EDI console
 
 The core serves the EDI console on its own port, in the approved dark skin ([console](decisions/console.md), [console-look](decisions/console-look.md)).
-`edi console` opens it in the browser through a link that signs in once, within two minutes, and the session lasts twelve hours ([api-access](decisions/api-access.md)).
+`edi console`, run in the primary session, opens it in the browser through a link that signs in once, within two minutes, and the session lasts twelve hours ([api-access](decisions/api-access.md)).
 
 ```sh
 edi console                                         # open the console in the browser, signed in

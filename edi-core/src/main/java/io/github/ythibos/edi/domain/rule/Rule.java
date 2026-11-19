@@ -32,8 +32,8 @@ public enum Rule {
     CONSOLE_HEADER(RuleArea.ACCESS, "The console changes state only with its own header, so no other page submits as the captain."),
     LOOPBACK_HOST(RuleArea.ACCESS, "The core answers only requests addressed to its own loopback host."),
     CALLER_ROLE(RuleArea.ACCESS, "Each command runs only under the role it belongs to: the primary, a worker or the captain."),
-    PRIMARY_SESSION(RuleArea.ACCESS, "Only the session edi up opened starts or feeds a primary session, changes presence and adds tasks or decisions;"
-            + " the home token alone does none of these."),
+    PRIMARY_SESSION(RuleArea.ACCESS, "Only the session edi up opened starts or feeds a primary session and changes the fleet; the home token alone"
+            + " keeps edi up, edi health, edi down and the reads."),
     WORKER_TOKEN_FILE(RuleArea.ACCESS, "A worker's window calls the core with its own token, never the home token."),
     REQUEST_VALID(RuleArea.REQUEST, "A request to the core carries every value it needs, well formed."),
     CAPTAINS_WORD(RuleArea.AUTHORITY, "Destructive and irreversible acts wait for the captain's word (I-06)."),

@@ -24,6 +24,10 @@ record ClaudeSession(String id, String pid, String primaryLaunchKey) {
         return Optional.ofNullable(primaryLaunchKey);
     }
 
+    boolean runsWithoutTheLaunchKey() {
+        return id != null && primaryLaunchKey == null;
+    }
+
     private static String present(String value) {
         return value == null || value.isBlank() ? null : value.strip();
     }

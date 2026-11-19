@@ -66,7 +66,7 @@ helloedi                   # update EDI when the installed build lacks origin/ma
 edi up                     # start the core unless it runs, then open the primary session in tmux
 edi up --core-only         # start only the core
 edi up --resume <session>  # reopen an earlier primary session with its launch key, as edi up opens a new one
-edi console                # open the EDI console in the browser, signed in
+edi console                # open the EDI console in the browser, signed in, from the primary session
 edi health                 # check that the core answers and the primary's wake stream is live
 edi health --metrics       # add the core's own latencies and memory over the last week
 edi rules                  # how often each rule fired over the last week, and which never did

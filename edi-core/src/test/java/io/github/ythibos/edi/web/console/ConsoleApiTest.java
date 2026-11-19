@@ -200,7 +200,7 @@ class ConsoleApiTest {
         HttpResponse<String> page = send(HttpRequest.newBuilder(uri("/login")).GET());
 
         assertThat(refused.statusCode()).isEqualTo(403);
-        assertThat(refused.body()).isEqualTo("edi console runs under the EDI home's own token, in the captain's terminal or the primary session.\n");
+        assertThat(refused.body()).isEqualTo("edi console is the primary's to run; a worker reports through edi status and reads edi inbox.\n");
         assertThat(page.statusCode()).isEqualTo(200);
         assertThat(page.body()).contains("<app-root></app-root>");
     }

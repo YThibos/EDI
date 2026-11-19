@@ -32,7 +32,7 @@ class ConsoleController {
 
     @PostMapping("/api/console/open")
     ConsoleOpening open(HttpServletRequest request, Caller caller) {
-        caller.requireTheHomeToken("edi console");
+        caller.requirePrimary("edi console");
         return openConsole.openFor(caller.claudeSession(), ConsoleAddress.servedTo(request));
     }
 

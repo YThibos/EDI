@@ -70,7 +70,7 @@ class CoreRestartTest {
         cloneTheEdiRepository();
         long oldCore = runningCoreThatStopsWithin(FINISHING_ITS_WORK).pid();
 
-        int updated = ediIn(Map.of("EDI_PRIMARY_LAUNCH_KEY", "launch-key-of-the-primary"), "update");
+        int updated = edi("update");
 
         assertThat(updated).as(err.toString()).isZero();
         assertThat(out.toString()).startsWith("Updated to ").doesNotContain("launch key");
