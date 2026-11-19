@@ -183,7 +183,7 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
         started(primary, LAUNCHED);
 
-        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(primary));
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(primary, home.home().root()));
 
         assertThat(digest).contains("\nThis start did not open the console's sitrep page in the captain's browser; edi console opens it signed in.\n");
     }
