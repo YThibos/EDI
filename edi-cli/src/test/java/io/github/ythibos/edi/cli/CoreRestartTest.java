@@ -92,6 +92,18 @@ class CoreRestartTest {
     }
 
     @Test
+    void updateLeavesAPrimarySessionThatCarriesItsLaunchKeyAsItIs() throws Exception {
+        cloneTheEdiRepository();
+        runningCoreThatStopsWithin(FINISHING_ITS_WORK);
+
+        int updated = ediIn(Map.of("CLAUDE_CODE_SESSION_ID", "0f6c3b2a-0000-4000-8000-00000000c0de", "EDI_PRIMARY_LAUNCH_KEY",
+                "launch-key-of-the-primary"), "update");
+
+        assertThat(updated).as(err.toString()).isZero();
+        assertThat(out.toString()).startsWith("Updated to ").doesNotContain("launch key");
+    }
+
+    @Test
     void downReturnsOnlyOnceTheCoreHasLetGoOfTheHome() throws Exception {
         runningCoreThatStopsWithin(FINISHING_ITS_WORK);
 
