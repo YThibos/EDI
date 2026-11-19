@@ -18,7 +18,7 @@ The procedures nobody types are skills with the `edi-` prefix: `edi-ship`, `edi-
 `introspect` and `gardening` are the procedures named for the word the captain says rather than a command, so they carry no prefix; the introspect script `introspect.mjs` prints, from the store, opened read-only, one compact timeline and the usual soft failures, and writes backlog draft skeletons for `edi-backlog-item`, so the skill holds only the judgement.
 Its store reading, timeline and soft-failure detectors live in `evidence.mjs` beside it, which `gardening.mjs` builds on for the weekly round ([weekly-gardening](weekly-gardening.md)).
 `ClaudeLayerTest` holds every command the anchor or a trigger names to a skill of that name, and every skill to a directory `ops/install.sh` links.
-`claude/primary/settings.json` holds the seven hooks ([worker-sessions](worker-sessions.md)) and the status line, and no permission rule.
+`claude/primary/settings.json` holds the seven hooks ([worker-sessions](worker-sessions.md)), the status line and the `outputStyle` that loads the anchor ([primary-startup-context](primary-startup-context.md)), and no permission rule.
 `edi statusline` posts the statusLine JSON to `/api/statusline` and prints the core's line, or why the core is not answering, always exiting 0; `StatusLineText` writes model and effort, context, session tokens, the two usage limits with their resets, the current directory's branch from one `git status --porcelain=v2 --branch`, and the cache hit ratio, refreshed every 60 seconds, with "Wait: none" after them while work is in flight and no `edi wait` is live ([wakes-and-turn-end](wakes-and-turn-end.md)).
 
 ## Why
@@ -54,3 +54,4 @@ When the anchor nears its budget, Claude Code gives skills command aliases or ch
 - 03/11/2026: the captain asked for introspection after an unseen worker question to be a scripted routine, so the `introspect` skill joined, and two anchor lines lost a few words to keep the anchor within its budget (EDI-155).
 - 03/11/2026: a request that takes more than one merge request goes through a scout's board first, and the `edi-ship` and `edi-scout` skills say so, since board-first features reached a sliced plan in a working day (EDI-75).
 - 13/11/2026: the `gardening` skill joined for the weekly round, with the `edi-upkeep` check as its first part, and the anchor's upkeep line names both (EDI-165).
+- 13/11/2026: the anchor reaches the session as the output style the primary's settings name instead of a command-line option, which Claude Code dropped when it relaunched the primary in the background; the anchor itself is unchanged (EDI-268).

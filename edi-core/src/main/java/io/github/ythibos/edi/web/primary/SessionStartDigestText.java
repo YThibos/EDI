@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.web.primary;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -15,8 +17,10 @@ import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
+import io.github.ythibos.edi.application.primary.SessionAnchor;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
 import io.github.ythibos.edi.domain.memory.WorkaroundCount;
+import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.web.personality.PersonalityText;
@@ -52,7 +56,9 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     @Override
     public String text(SessionStartDigest digest) {
-        List<String> lines = new ArrayList<>(List.of("EDI session-start digest", standingOf(digest.standing())));
+        List<String> lines = new ArrayList<>(List.of("EDI session-start digest"));
+        lines.addAll(anchorOf(digest.anchor()));
+        lines.add(standingOf(digest.standing()));
         lines.addAll(personalityText.lines(digest.personality()));
         lines.add("Presence: " + presenceWords.of(digest.presence()) + ".");
         lines.addAll(sitrepOf(digest.sitrep()));
@@ -68,6 +74,52 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.addAll(gardeningOf(digest));
         lines.addAll(waitAdvice(digest));
         return String.join("\n", lines) + "\n";
+    }
+
+    private static List<String> anchorOf(SessionAnchor anchor) {
+        return switch (anchor.held()) {
+            case CURRENT -> List.of(confirmationOf(anchor));
+            case OLDER -> List.of(olderAnchorOf(anchor), confirmationOf(anchor));
+            case UNWRITTEN -> List.of(unwrittenAnchorOf(anchor), confirmationOf(anchor));
+            case OUTSIDE_THE_HOME -> List.of(warningOf(anchor), confirmationOf(anchor));
+        };
+    }
+
+    private static String olderAnchorOf(SessionAnchor anchor) {
+        return "This session holds an older anchor than the core's: the " + PrimaryOutputStyle.NAME + " output style at " + anchor.outputStyle()
+                + " predates the core's build, and a compaction or a new start loads that older anchor again until edi up refreshes it. "
+                + currentAnchorToRead(anchor);
+    }
+
+    private static String currentAnchorToRead(SessionAnchor anchor) {
+        return anchorFileToRead(anchor)
+                .map(current -> "Read " + current + " now and hold to every line of it.")
+                .orElse("The core finds no checkout of its anchor to read, so tell the captain and ask for edi up, which writes the current one into the"
+                        + " output style.");
+    }
+
+    private static Optional<Path> anchorFileToRead(SessionAnchor anchor) {
+        return switch (anchor.held()) {
+            case CURRENT, OUTSIDE_THE_HOME -> Optional.of(anchor.outputStyle());
+            case OLDER, UNWRITTEN -> anchor.currentAnchor();
+        };
+    }
+
+    private static String unwrittenAnchorOf(SessionAnchor anchor) {
+        return "The " + PrimaryOutputStyle.NAME + " output style at " + anchor.outputStyle() + " does not carry the anchor yet, so Claude Code has none"
+                + " to load for this session until edi up writes it. " + currentAnchorToRead(anchor);
+    }
+
+    private static String warningOf(SessionAnchor anchor) {
+        return "The anchor is not in this session: Claude Code loads it, as the " + PrimaryOutputStyle.NAME
+                + " output style the primary's settings name, only for a session started in " + anchor.home() + ". Read " + anchor.outputStyle()
+                + " now and hold to every line of it, and tell the captain this session runs without its anchor until edi up starts the primary again.";
+    }
+
+    private static String confirmationOf(SessionAnchor anchor) {
+        return "Confirm that this session's system prompt holds the heading \"" + anchor.heading() + "\"; if it does not, "
+                + anchorFileToRead(anchor).map(file -> "read " + file + " at once and tell the captain").orElse("tell the captain at once")
+                + " this session runs without its anchor, for a primary never works unaware.";
     }
 
     private static String standingOf(Standing standing) {

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -662,7 +663,8 @@ class ApiTest {
 
         assertThat(started.statusCode()).isEqualTo(200);
         assertThat(new JsonMapper().readTree(started.body()).path("hookSpecificOutput").path("additionalContext").asString())
-                .startsWith("EDI session-start digest\nThis session is the primary")
+                .startsWith("EDI session-start digest\n")
+                .contains("\nThis session is the primary: ")
                 .contains("\nPersonality: ", "\nAddress word \"Commander\": ", "\nBad news: humour 0, ")
                 .contains("\nThe console's sitrep page is open in the captain's browser at " + uri("/") + ".\n");
         assertThat(refused.statusCode()).isEqualTo(403);
@@ -880,8 +882,41 @@ class ApiTest {
         HttpResponse<String> launch = post("/api/primary/launch", "{}", TEXT);
 
         assertThat(launch.statusCode()).isEqualTo(200);
-        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\nsystem prompt: .*system-prompt\\.md\n");
-        assertThat(Files.readString(home.resolve("state/primary/system-prompt.md"))).startsWith("# EDI: the primary's anchor");
+        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\n");
+        assertThat(Files.readString(home.resolve(".claude/output-styles/edi-primary.md"))).contains("\n# EDI: the primary's anchor\n");
+    }
+
+    @Test
+    void warnsASessionStartedWithThePrimarysSettingsOutsideTheHomeThatItLacksTheAnchor(@TempDir Path elsewhere) throws Exception {
+        UUID inTheHome = UUID.randomUUID();
+        UUID outside = UUID.randomUUID();
+
+        post("/api/primary/launch", "{}", TEXT);
+        HttpResponse<String> anchored = primaryHook(inTheHome, "session-start", "{\"source\":\"startup\",\"cwd\":\"" + home + "\"}");
+        HttpResponse<String> unanchored = primaryHook(outside, "session-start", "{\"source\":\"startup\",\"cwd\":\"" + elsewhere + "\"}");
+        primaryHook(inTheHome, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+        primaryHook(outside, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(digestIn(anchored)).startsWith("EDI session-start digest\n" + confirmationOfTheAnchor() + "\n")
+                .doesNotContain("The anchor is not in this session");
+        assertThat(digestIn(unanchored)).startsWith("EDI session-start digest\nThe anchor is not in this session: Claude Code loads it, as the"
+                + " edi-primary output style the primary's settings name, only for a session started in " + home + ". Read "
+                + home.resolve(".claude/output-styles/edi-primary.md") + " now")
+                .contains(" until edi up starts the primary again.\n" + confirmationOfTheAnchor() + "\n");
+    }
+
+    @Test
+    void judgesTheAnchorByTheDirectoryClaudeCodeStartedThePrimaryInRatherThanWhereItHasSinceMoved(@TempDir Path workerDirectory) throws Exception {
+        UUID primary = UUID.randomUUID();
+
+        post("/api/primary/launch", "{}", TEXT);
+        HttpResponse<String> compacted = send(inSession(primary, "/api/hooks/session-start", JSON).header("Content-Type", JSON)
+                .header("EDI-Claude-Project-Dir", URLEncoder.encode(home.toString(), StandardCharsets.UTF_8))
+                .POST(BodyPublishers.ofString("{\"session_id\":\"" + primary + "\",\"source\":\"compact\",\"cwd\":\"" + workerDirectory + "\"}")));
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(digestIn(compacted)).startsWith("EDI session-start digest\n" + confirmationOfTheAnchor() + "\n")
+                .doesNotContain("The anchor is not in this session");
     }
 
     @Test
@@ -989,6 +1024,16 @@ class ApiTest {
         String poll = "{\"stream\":\"" + stream + "\",\"pid\":" + ProcessHandle.current().pid() + ",\"follows\":true,\"printed\":[" + printed
                 + "],\"ending\":" + ending + "}";
         return inSession(session, "/api/wait", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString(poll));
+    }
+
+    private static String digestIn(HttpResponse<String> sessionStart) {
+        return new JsonMapper().readTree(sessionStart.body()).path("hookSpecificOutput").path("additionalContext").asString();
+    }
+
+    private static String confirmationOfTheAnchor() {
+        return "Confirm that this session's system prompt holds the heading \"# EDI: the primary's anchor\"; if it does not, read "
+                + home.resolve(".claude/output-styles/edi-primary.md")
+                + " at once and tell the captain this session runs without its anchor, for a primary never works unaware.";
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {

@@ -9,8 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class PrimaryWindowTest {
 
-    private static final PrimaryLaunch LAUNCH = new PrimaryLaunch("edi-261028-0737", Path.of("/edi/home"), Path.of("/edi/home/settings.json"),
-            Path.of("/edi/home/anchor.md"));
+    private static final PrimaryLaunch LAUNCH = new PrimaryLaunch("edi-261028-0737", Path.of("/edi/home"), Path.of("/edi/home/settings.json"));
 
     @Test
     void opensTheSessionAttachedAndTitlesTheTerminalWithItsName() {
@@ -18,7 +17,7 @@ class PrimaryWindowTest {
 
         assertThat(outsideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-s", "edi-261028-0737", "-c", "/edi/home",
                 "env", "EDI_PRIMARY_LAUNCH=edi-up",
-                "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
+                "claude", "--settings", "/edi/home/settings.json",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
     }
@@ -29,7 +28,7 @@ class PrimaryWindowTest {
 
         assertThat(insideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-d", "-s", "edi-261028-0737", "-c", "/edi/home",
                 "env", "EDI_PRIMARY_LAUNCH=edi-up",
-                "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
+                "claude", "--settings", "/edi/home/settings.json",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
     }

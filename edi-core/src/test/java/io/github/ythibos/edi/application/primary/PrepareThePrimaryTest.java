@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.testing.TestHome;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -18,7 +19,7 @@ class PrepareThePrimaryTest {
     private Path directory;
 
     @Test
-    void writesTheSettingsAndTheSystemPromptTheSessionStartsWith() throws IOException {
+    void writesTheSettingsAndTheOutputStyleTheyNameWithTheAnchorAndTheMemory() throws IOException {
         Path checkout = Files.createDirectories(directory.resolve("checkout/personal"));
         Files.writeString(checkout.resolve("anchor.local.md"), "Personal addendum for this checkout.\n");
         TestHome home = TestHome.in(directory.resolve("home")).writing("memory/profile.md", "# Profile\n\n- A rule. (2026-10-15)\n");
@@ -30,8 +31,10 @@ class PrepareThePrimaryTest {
         assertThat(Files.readString(launch.settings())).contains("\"command\": \"edi hook session-start\"");
         assertThat(new JsonMapper().readTree(launch.settings().toFile()).path("statusLine"))
                 .hasToString("{\"type\":\"command\",\"command\":\"edi statusline\",\"refreshInterval\":60}");
-        assertThat(Files.readString(launch.systemPrompt()))
-                .startsWith("# EDI: the primary's anchor")
+        assertThat(new JsonMapper().readTree(launch.settings().toFile()).path("outputStyle").asString()).isEqualTo(PrimaryOutputStyle.NAME);
+        assertThat(Files.readString(home.home().root().resolve(".claude/output-styles/edi-primary.md")))
+                .startsWith("---\nname: edi-primary\n")
+                .contains("\nkeep-coding-instructions: true\n---\n\n# EDI: the primary's anchor\n")
                 .contains("Personal addendum for this checkout.", "# The captain's memory, loaded at session start", "<!-- memory/profile.md -->",
                         "- A rule. (2026-10-15)");
     }

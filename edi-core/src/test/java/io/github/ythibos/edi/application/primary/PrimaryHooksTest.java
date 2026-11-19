@@ -236,8 +236,8 @@ class PrimaryHooksTest {
         UUID later = UUID.randomUUID();
         home.primaryHooks().sessionStarted(later, null, SessionSource.LAUNCH);
 
-        assertThat(home.sessionStartDigest().digestFor(next).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
-        assertThat(home.sessionStartDigest().digestFor(later).previousLimitStop()).isNull();
+        assertThat(home.sessionStartDigest().digestFor(next, home.home().root()).previousLimitStop().limit()).isEqualTo(new UsageLimit("session limit", reset));
+        assertThat(home.sessionStartDigest().digestFor(later, home.home().root()).previousLimitStop()).isNull();
     }
 
     @Test
