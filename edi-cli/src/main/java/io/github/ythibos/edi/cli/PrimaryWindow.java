@@ -9,11 +9,13 @@ final class PrimaryWindow {
 
     private final boolean insideTmux;
     private final Path home;
+    private final UpLaunch upLaunch;
 
-    PrimaryWindow(Map<String, String> environment, Path home) {
+    PrimaryWindow(Map<String, String> environment, Path home, UpLaunch upLaunch) {
         String tmux = environment.get("TMUX");
         this.insideTmux = tmux != null && !tmux.isBlank();
         this.home = home;
+        this.upLaunch = upLaunch;
     }
 
     int open(PrimaryLaunch launch) {
@@ -30,6 +32,7 @@ final class PrimaryWindow {
             command.add("-d");
         }
         command.addAll(List.of("-s", launch.session(), "-c", launch.directory().toString(), "-e", homeVariable(), "-e", launch.launchKeyVariable()));
+        command.addAll(List.of("env", upLaunch.environmentSetting()));
         command.addAll(launch.claude());
         command.addAll(terminalTitledBySessionName(launch.session()));
         return command;

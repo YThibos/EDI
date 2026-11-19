@@ -19,6 +19,7 @@ final class HookCommand implements Callable<Integer> {
     private static final int BLOCKED = 2;
     private static final String GUARD = "pre-tool-use";
     private static final String STOP = "stop";
+    private static final String SESSION_START = "session-start";
     private static final String CORE_UNREACHABLE = "guard.core-unreachable";
     private static final String HOOK_NOT_TAKEN = "hook.not-taken";
 
@@ -53,7 +54,15 @@ final class HookCommand implements Callable<Integer> {
 
     private String hookPath() {
         String hook = "/api/hooks/" + CoreExchange.encoded(event);
+        if (event.equals(SESSION_START)) {
+            return namingTheLaunch(hook);
+        }
         return handsOverTheTurnReport() ? ReportCommand.sizedForThePane(hook, edi.paneWidth()) : hook;
+    }
+
+    private String namingTheLaunch(String hook) {
+        String launch = edi.environment().get(UpLaunch.VARIABLE);
+        return launch == null || launch.isBlank() ? hook : hook + "?launch=" + CoreExchange.encoded(launch.strip());
     }
 
     private boolean handsOverTheTurnReport() {

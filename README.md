@@ -64,6 +64,7 @@ Make sure `~/.local/bin` is on the `PATH`.
 ```sh
 helloedi                   # update EDI when the installed build lacks origin/main, then edi up
 edi up                     # start the core unless it runs, then open the primary session in tmux
+edi up --no-board          # open the primary session without opening the console's sitrep page
 edi up --core-only         # start only the core
 edi up --resume <session>  # reopen an earlier primary session with its launch key, as edi up opens a new one
 edi console                # open the EDI console in the browser, signed in, from the primary session
@@ -74,7 +75,7 @@ edi down                   # stop the core when no worker runs
 edi update                 # pull the repository, build, test and install it, restart the core, re-read the anchor
 ```
 
-Each new primary session opens the console's sitrep page in the browser, signed in; `console.openSitrepAtSessionStart: false` in the machine profile switches that off.
+Each new primary session opens the console's sitrep page in the browser, signed in; `console.openSitrepAtSessionStart: false` in the machine profile and `edi up --no-board` switch that off.
 From then on the captain talks to the primary session, and every actor, the captain included, can use `edi --help` for the full command list.
 In the primary session the captain also types these commands, each a skill of the same name:
 

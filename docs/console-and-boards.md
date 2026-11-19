@@ -24,9 +24,12 @@ Keep stores the levels exactly as `edi personality` or `/personality` would, so 
 The console opens through a once-only http address of the console that leads on to the sign-in link, handed to `cmd.exe /c start` from `/mnt/c` on WSL, so Windows' default web browser opens it, and to `xdg-open` on a Linux desktop, so the link never shows in the process list; elsewhere, or when that fails, the command prints the sign-in link instead ([console](decisions/console.md)).
 
 Every new primary session opens the sitrep page in the browser by itself, signed in, as `edi console` does ([console](decisions/console.md)).
-It opens once, at the launch of the session that holds the primary role, and not for a standby session, a worker, or the same primary resumed, cleared or compacted.
+It opens once, at the launch of the session that holds the primary role or that a fresh `edi up` opened, and not for a standby session started any other way, a worker, or the same primary resumed, cleared or compacted.
+A fresh `edi up` opens it even when an earlier session, such as one an outage left behind, still holds the primary role; who holds the role does not change.
 When the browser cannot open it, the session starts anyway, and its digest names the console's address and `edi console` as the way to open it.
-`console.openSitrepAtSessionStart: false` in the machine profile switches it off.
+Every session's digest says in one line whether its start opened the page, and names `edi console` as the way to open it when it did not.
+`console.openSitrepAtSessionStart: false` in the machine profile switches it off, and `edi up --no-board` leaves the page closed for that start, whatever the profile says.
+`edi up --core-only` starts no session and opens nothing.
 
 ## Research boards
 

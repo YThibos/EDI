@@ -288,8 +288,29 @@ class ClaudeLayerCommandsTest {
         assertThat(err.toString()).isEmpty();
     }
 
+    @Test
+    void tellsTheCoreHowEdiUpLaunchedThePrimaryOnItsSessionStartAndOnNoOtherHook() {
+        edi(Map.of("EDI_HOME", home.toString(), "EDI_PRIMARY_LAUNCH", "edi-up"), "{}", "hook", "session-start");
+        String withTheBoard = core.received().target();
+        edi(Map.of("EDI_HOME", home.toString(), "EDI_PRIMARY_LAUNCH", "edi-up-no-board"), "{}", "hook", "session-start");
+        String withoutTheBoard = core.received().target();
+        edi(Map.of("EDI_HOME", home.toString()), "{}", "hook", "session-start");
+        String elsewhere = core.received().target();
+        edi(Map.of("EDI_HOME", home.toString(), "EDI_PRIMARY_LAUNCH", "edi-up"), "{}", "hook", "user-prompt-submit");
+        String laterHook = core.received().target();
+
+        assertThat(withTheBoard).isEqualTo("/api/hooks/session-start?launch=edi-up");
+        assertThat(withoutTheBoard).isEqualTo("/api/hooks/session-start?launch=edi-up-no-board");
+        assertThat(elsewhere).isEqualTo("/api/hooks/session-start");
+        assertThat(laterHook).isEqualTo("/api/hooks/user-prompt-submit");
+    }
+
     private int edi(String input, String... arguments) {
-        return new CommandLine(new Edi(Map.of("EDI_HOME", home.toString()), new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8))))
+        return edi(Map.of("EDI_HOME", home.toString()), input, arguments);
+    }
+
+    private int edi(Map<String, String> environment, String input, String... arguments) {
+        return new CommandLine(new Edi(environment, new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8))))
                 .setOut(new PrintWriter(out, true))
                 .setErr(new PrintWriter(err, true))
                 .execute(arguments);

@@ -64,8 +64,30 @@ class EveryTestCoreRecordsItsBrowserTest {
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(core.getBeansOfType(CaptainsBrowser.class).values()).singleElement().isSameAs(browser);
-        assertThat(browser.opened()).singleElement().asString().startsWith(uri("/hand-off/").toString());
+        assertThat(browser.lastOpened().toString()).startsWith(uri("/hand-off/").toString());
         assertThat(started.body()).contains("The console's sitrep page is open in the captain's browser at " + uri("/") + ".");
+    }
+
+    @Test
+    void recordsTheSitrepEdiUpAsksForWhateverTheSessionsStandingAndNoneWhenEdiUpIsToldNotTo() throws Exception {
+        UUID holder = UUID.randomUUID();
+        UUID launchedByEdiUp = UUID.randomUUID();
+        UUID launchedWithoutTheBoard = UUID.randomUUID();
+        primaryHook(holder, "session-start", "{\"source\":\"startup\"}");
+        int openedBefore = browser.opened().size();
+
+        HttpResponse<String> withTheBoard = primaryHook(launchedByEdiUp, "session-start?launch=edi-up", "{\"source\":\"startup\"}");
+        int openedByEdiUp = browser.opened().size();
+        HttpResponse<String> withoutTheBoard = primaryHook(launchedWithoutTheBoard, "session-start?launch=edi-up-no-board", "{\"source\":\"startup\"}");
+        int openedAfterwards = browser.opened().size();
+        primaryHook(launchedByEdiUp, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+        primaryHook(launchedWithoutTheBoard, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+        primaryHook(holder, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(openedByEdiUp).isEqualTo(openedBefore + 1);
+        assertThat(withTheBoard.body()).contains("The console's sitrep page is open in the captain's browser at " + uri("/") + ".");
+        assertThat(openedAfterwards).isEqualTo(openedByEdiUp);
+        assertThat(withoutTheBoard.body()).contains("This start did not open the console's sitrep page in the captain's browser; edi console opens it signed in.");
     }
 
     private static HttpResponse<String> primaryHook(UUID session, String event, String fields) throws Exception {

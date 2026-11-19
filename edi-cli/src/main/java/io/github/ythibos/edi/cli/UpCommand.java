@@ -30,11 +30,14 @@ final class UpCommand implements Callable<Integer> {
             + " key a primary session needs; a session opened before the launch key existed comes back this way.")
     private UUID resumedSession;
 
+    @Option(names = "--no-board", description = "Opens the primary session without opening the console's sitrep page, whatever console.openSitrepAtSessionStart says.")
+    private boolean noBoard;
+
     @Override
     public Integer call() {
         try {
             startTheCoreUnlessItRuns();
-            return coreOnly ? 0 : new PrimaryWindow(edi.environment(), edi.home()).open(launchOfThePrimary());
+            return coreOnly ? 0 : primaryWindow().open(launchOfThePrimary());
         } catch (CommandFailure | CoreUnavailable failed) {
             spec.commandLine().getErr().println(failed.getMessage());
             return REFUSED;
@@ -51,6 +54,10 @@ final class UpCommand implements Callable<Integer> {
             out.println("EDI core is up.");
         }
         out.flush();
+    }
+
+    PrimaryWindow primaryWindow() {
+        return new PrimaryWindow(edi.environment(), edi.home(), UpLaunch.asked(noBoard));
     }
 
     private PrimaryLaunch launchOfThePrimary() {
