@@ -161,7 +161,7 @@ final class ReportGoldenCases {
         add(home, "dated-call", captainItemOn("A deferred call", "Gatehouse"));
         hold(home, "dated-call", "revisit after the demo", HoldUntil.day(AFTER_THE_DEMO));
         add(home, "prereq", shipOn("Prerequisite work", "Gatehouse"));
-        add(home, "blocked-call", new Intake(TaskKind.CAPTAIN, "Call blocked-call", projects("Gatehouse"), null, null, List.of(new TaskId("prereq")), null));
+        add(home, "blocked-call", new Intake(TaskKind.CAPTAIN, "Call blocked-call", projects("Gatehouse"), null, null, List.of(new TaskId("prereq")), null, null));
         raise(home, "blocked-call", card("A blocked call", ""));
         return Shown.withoutTurn(ReportWidth.standard());
     }
@@ -204,7 +204,7 @@ final class ReportGoldenCases {
         add(home, "tide-tables", shipOn("Print the tide tables for the whole of next season, including the spring tides and the neap tides", "quayside"));
         add(home, "mooring-plan", shipOn("Draw the mooring plan for the new pontoon on the east side of the harbour", "quayside"));
         add(home, "crane-call", new Intake(TaskKind.CAPTAIN, "Call crane-call", projects("quayside"), null, null,
-                List.of(new TaskId("tide-tables"), new TaskId("mooring-plan")), null));
+                List.of(new TaskId("tide-tables"), new TaskId("mooring-plan")), null, null));
         raise(home, "crane-call", card("Rent the crane", ""));
         inFlight(home, "survey", "Survey the breakwater after the storm and list every block that moved more than a hand's width", "HarbourMaster");
         return new Shown(turn("""
@@ -215,11 +215,11 @@ final class ReportGoldenCases {
     }
 
     private static Intake shipOn(String title, String project) {
-        return new Intake(TaskKind.SHIP, title, projects(project), null, null, List.of(), null);
+        return new Intake(TaskKind.SHIP, title, projects(project), null, null, List.of(), null, null);
     }
 
     private static void heldForDecision(TestHome home, String id, DecisionCard card, String... projects) {
-        add(home, id, new Intake(TaskKind.CAPTAIN, "Call " + id, projects(projects), null, null, List.of(), null));
+        add(home, id, new Intake(TaskKind.CAPTAIN, "Call " + id, projects(projects), null, null, List.of(), null, null));
         raise(home, id, card);
     }
 
@@ -254,7 +254,7 @@ final class ReportGoldenCases {
     }
 
     private static Intake captainItemOn(String title, String project) {
-        return new Intake(TaskKind.CAPTAIN, title, projects(project), null, null, List.of(), null);
+        return new Intake(TaskKind.CAPTAIN, title, projects(project), null, null, List.of(), null, null);
     }
 
     private static void hold(TestHome home, String id, String reason, HoldUntil until) {

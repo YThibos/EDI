@@ -29,6 +29,7 @@ import io.github.ythibos.edi.application.worker.HookAnswer;
 import io.github.ythibos.edi.application.worker.ToolCall;
 import io.github.ythibos.edi.application.worker.WorkerHooks;
 import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.primary.LaunchOrigin;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
 import io.github.ythibos.edi.domain.primary.TurnEnd;
@@ -38,6 +39,7 @@ import io.github.ythibos.edi.web.access.NotPermitted;
 import io.github.ythibos.edi.web.console.ConsoleAddress;
 import io.github.ythibos.edi.web.presence.ReturnBriefText;
 import io.github.ythibos.edi.web.primary.SessionStartDigestText;
+import io.github.ythibos.edi.web.report.Reply;
 import io.github.ythibos.edi.web.report.TurnReports;
 import io.github.ythibos.edi.web.spark.SparkSentences;
 import tools.jackson.databind.JsonNode;
@@ -51,6 +53,8 @@ class HookController {
 
     private static final String LAUNCH = "startup";
     private static final String COMPACTION = "compact";
+    private static final String EDI_UP = "edi-up";
+    private static final String EDI_UP_WITHOUT_THE_BOARD = "edi-up-no-board";
     private static final String ASKS_THE_CAPTAIN = "AskUserQuestion";
 
     private final WorkerHooks workerHooks;
@@ -85,12 +89,12 @@ class HookController {
     ResponseEntity<String> hook(@PathVariable String event, @RequestBody JsonNode payload, Caller caller,
             @RequestHeader(value = "EDI-Claude-Pid", required = false) Long claudePid,
             @RequestHeader(value = "EDI-Claude-Project-Dir", required = false) String projectDirectory, @RequestParam(required = false) Integer paneWidth,
-            HttpServletRequest request) {
+            @RequestParam(required = false) String launch, HttpServletRequest request) {
         HookEvent hook = HookEvent.named(event);
         return switch (caller) {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
-            case Caller.Primary _, Caller.Standby _ ->
-                    primaryHook(hook, payload, new PrimaryCall(claudePid, projectDirectory, paneWidth, ConsoleAddress.servedTo(request)));
+            case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload,
+                    new PrimaryCall(claudePid, projectDirectory, paneWidth, ConsoleAddress.servedTo(request), originOf(launch)));
             case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
@@ -111,21 +115,22 @@ class HookController {
     private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, PrimaryCall call) {
         return switch (hook) {
             case SESSION_START -> sessionStarted(sessionIn(payload), projectDirectoryOf(call.projectDirectory(), payload), call.claudePid(), sourceOf(payload),
-                    call.console());
+                    call.origin(), call.console());
             case USER_PROMPT_SUBMIT -> promptSubmitted(sessionIn(payload), payload.path("prompt").asString(""));
             case PRE_TOOL_USE -> rendered(guard.checkForPrimary(toolCallIn(payload), callingSessionIn(payload)));
             case POST_TOOL_USE -> rendered(toolUsed(sessionIn(payload), payload));
-            case STOP -> turnEnded(sessionIn(payload), call.paneWidth());
+            case STOP -> turnEnded(sessionIn(payload), call.paneWidth(), Reply.of(textIn(payload, "last_assistant_message")));
             case STOP_FAILURE -> rendered(primaryHooks.stopFailed(sessionIn(payload), textIn(payload, "transcript_path")));
             case NOTIFICATION -> rendered(primaryHooks.notified(sessionIn(payload), textIn(payload, "notification_type")));
             case SESSION_END -> rendered(primaryHooks.sessionEnded(sessionIn(payload)));
         };
     }
 
-    private ResponseEntity<String> sessionStarted(UUID session, Path projectDirectory, Long claudePid, SessionSource source, URI console) {
+    private ResponseEntity<String> sessionStarted(UUID session, Path projectDirectory, Long claudePid, SessionSource source, LaunchOrigin origin,
+            URI console) {
         SessionStart start = primaryHooks.sessionStarted(session, claudePid, source);
         SessionStartDigest digest = digests.digestFor(session, projectDirectory);
-        SessionStartDigest told = sitrep.openFor(session, start, console).map(digest::withSitrep).orElse(digest);
+        SessionStartDigest told = sitrep.openFor(session, start, origin, console).map(digest::withSitrep).orElse(digest);
         return asJson(additionalContext(HookEvent.SESSION_START, digestText.text(told)));
     }
 
@@ -135,14 +140,20 @@ class HookController {
         return contextIfAny(HookEvent.USER_PROMPT_SUBMIT, Stream.of(returnBrief, spark).flatMap(Optional::stream).toList());
     }
 
-    private ResponseEntity<String> turnEnded(UUID session, Integer paneWidth) {
+    private ResponseEntity<String> turnEnded(UUID session, Integer paneWidth, Reply reply) {
         TurnEnd end = primaryHooks.stopping(session);
         return switch (end) {
             case ENDS -> rendered(HookAnswer.PROCEED);
             case CARRIES_THE_ANSWERS -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n" + UndeliveredAnswerText.lines(undeliveredAnswers.waiting())));
             case STARTS_THE_WAIT -> rendered(HookAnswer.blockTheStop(end.instruction()));
-            case HANDS_OVER_THE_REPORT -> rendered(HookAnswer.blockTheStop(end.instruction() + "\n\n" + turnReports.handedOverIn(session, paneWidth)));
+            case SHOWS_THE_REPORT -> turnReports.shownAtTheStopOf(session, paneWidth, reply)
+                    .map(this::shownToTheCaptain)
+                    .orElseGet(() -> rendered(HookAnswer.PROCEED));
         };
+    }
+
+    private ResponseEntity<String> shownToTheCaptain(String report) {
+        return asJson(json.createObjectNode().put("systemMessage", "\n" + report));
     }
 
     private ResponseEntity<String> contextIfAny(HookEvent hook, List<String> context) {
@@ -169,6 +180,14 @@ class HookController {
             case LAUNCH -> SessionSource.LAUNCH;
             case COMPACTION -> SessionSource.COMPACTION;
             default -> SessionSource.RESTART;
+        };
+    }
+
+    private static LaunchOrigin originOf(String launch) {
+        return switch (String.valueOf(launch)) {
+            case EDI_UP -> LaunchOrigin.EDI_UP;
+            case EDI_UP_WITHOUT_THE_BOARD -> LaunchOrigin.EDI_UP_WITHOUT_THE_BOARD;
+            default -> LaunchOrigin.ELSEWHERE;
         };
     }
 
@@ -229,6 +248,6 @@ class HookController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json.writeValueAsString(output));
     }
 
-    private record PrimaryCall(Long claudePid, String projectDirectory, Integer paneWidth, URI console) {
+    private record PrimaryCall(Long claudePid, String projectDirectory, Integer paneWidth, URI console, LaunchOrigin origin) {
     }
 }

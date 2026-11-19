@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -27,6 +28,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -196,10 +198,10 @@ class FleetSnapshotQueryTest {
     @Test
     void holdsAHandedOverRequestAsChangingWhileItsPipelineRuns() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST.url(), false), TestHome.START);
 
         WaitingOnTheCaptain running = home.fleetSnapshot().snapshot().waiting();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST.url(), false), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST.url(), false), TestHome.START);
         WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(running.reviews()).isEmpty();
@@ -239,7 +241,7 @@ class FleetSnapshotQueryTest {
     @Test
     void putsAHandedOverRequestBeforeTheCaptainOnceItsPipelineEndedOnPassedChecks() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "handed_off", null, "2222", REQUEST.url(), true), TestHome.START);
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "handed_off", null, false, "2222", REQUEST.url(), true), TestHome.START);
 
         WaitingOnTheCaptain handedOff = home.fleetSnapshot().snapshot().waiting();
 
@@ -248,15 +250,68 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void holdsAHandedOverRequestAsChangingOnceItsWatchWasInterruptedBeforeItsChecksPassed() {
+    void putsAHandedOverRequestBeforeTheCaptainWhateverItsCiStepEndedIn() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "ci_monitor_interrupted", null, "2222", REQUEST.url(), false), TestHome.START);
+        for (PipelineRun ended : List.of(endedInItsCiStep("cancelled"), endedInItsCiStep("failed"),
+                new PipelineRun("01RUN", "ci_monitor_interrupted", null, false, "2222", REQUEST.url(), false))) {
+            home.pipelineRuns().save(lamp.id(), ended, TestHome.START);
 
-        WaitingOnTheCaptain interrupted = home.fleetSnapshot().snapshot().waiting();
+            WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
 
-        assertThat(interrupted.reviews()).isEmpty();
-        assertThat(interrupted.changing()).singleElement()
-                .satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline ci_monitor_interrupted without passed checks"));
+            assertThat(waiting.changing()).as(ended.status()).isEmpty();
+            assertThat(waiting.reviews()).as(ended.status()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        }
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingWhileTheForgeShowsFailedChecksOnItsHead() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), endedInItsCiStep("failed"), TestHome.START);
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.FAILED), TestHome.START));
+        WaitingOnTheCaptain red = home.fleetSnapshot().snapshot().waiting();
+
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.UNDECIDED), TestHome.START));
+        WaitingOnTheCaptain undecided = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(red.reviews()).isEmpty();
+        assertThat(red.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("checks failing on its head"));
+        assertThat(undecided.changing()).isEmpty();
+        assertThat(undecided.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void holdsAHandedOverRequestAsChangingOnceItsPipelineFailedInAStepOfItsOwn() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "test", false, "2222", REQUEST.url(), false), TestHome.START);
+
+        WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(failed.reviews()).isEmpty();
+        assertThat(failed.changing()).singleElement()
+                .satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline failed in its test step"));
+    }
+
+    @Test
+    void putsAHandedOverRequestBeforeTheCaptainOnceAStopOfThePipelineServiceEndedItsRun() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "review", true, "2222", REQUEST.url(), false), TestHome.START);
+
+        WaitingOnTheCaptain stopped = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(stopped.changing()).isEmpty();
+        assertThat(stopped.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void putsAHandedOverRequestBeforeTheCaptainOnChecksTheForgeShowsPassedAfterItsPipelineFailed() {
+        Task lamp = handedOverWithAnOpenRequest();
+        home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", false, "2222", REQUEST.url(), false), TestHome.START);
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.PASSED), TestHome.START));
+
+        WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
+
+        assertThat(green.changing()).isEmpty();
+        assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -359,7 +414,7 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void putsAWorkerQuestionBeforeEdiWithHowLongItWaitedUntilASteerThatResolvesItIsAcknowledged() {
+    void putsAWorkerQuestionBeforeEdiWithHowLongItWaitedUntilASteerThatResolvesItIsSent() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
         ask(lamp, "Which socket does the lamp take?");
@@ -369,7 +424,7 @@ class FleetSnapshotQueryTest {
         home.steerWorker().steer(new TaskReference.ById(lamp.id()), "The bayonet socket.", SOCKET, Actor.PRIMARY);
         WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
         home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
-        WaitingOnTheCaptain settled = home.fleetSnapshot().snapshot().waiting();
+        WaitingOnTheCaptain acknowledged = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(asked.workerQuestions()).singleElement().satisfies(question -> {
             assertThat(question.task().id()).isEqualTo(lamp.id());
@@ -378,9 +433,9 @@ class FleetSnapshotQueryTest {
         });
         assertThat(asked.isEmpty()).isTrue();
         assertThat(asked.hasNothingWaiting()).isFalse();
-        assertThat(steered.workerQuestions()).hasSize(1);
-        assertThat(settled.workerQuestions()).isEmpty();
-        assertThat(settled.hasNothingWaiting()).isTrue();
+        assertThat(steered.workerQuestions()).isEmpty();
+        assertThat(steered.hasNothingWaiting()).isTrue();
+        assertThat(acknowledged.workerQuestions()).isEmpty();
     }
 
     @Test
@@ -425,7 +480,7 @@ class FleetSnapshotQueryTest {
         add(ship("anchor", "Raise the anchor"));
         add(captainItem("lamp-choice", "Choose the lamp"));
         home.putInFlight(new TaskId("horn"));
-        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", "abc123", null, false), TestHome.START);
+        home.pipelineRuns().save(new TaskId("horn"), new PipelineRun("01RUN", "running", "review", false, "abc123", null, false), TestHome.START);
         home.markDone(new TaskId("anchor"));
         home.clock().advance(Duration.ofDays(8));
         home.markDone(new TaskId("lantern"));
@@ -436,7 +491,7 @@ class FleetSnapshotQueryTest {
         FleetSnapshot fleet = home.fleetSnapshot().snapshot();
 
         assertThat(fleet.ongoing()).singleElement().satisfies(horn -> {
-            assertThat(horn.pipelineRun().activeStep()).isEqualTo("review");
+            assertThat(horn.pipelineRun().step()).isEqualTo("review");
             assertThat(horn.worker()).isNull();
             assertThat(horn.delivery()).isNull();
         });
@@ -453,15 +508,23 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView requestIn(MergeRequestState state) {
         boolean merged = state == MergeRequestState.MERGED;
-        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", merged ? "3333" : null, merged ? TestHome.START : null);
+        return new MergeRequestView(REQUEST, state, false, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, merged ? "3333" : null, merged ? TestHome.START : null);
     }
 
     private static MergeRequestView stillADraft() {
-        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", null, null);
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null);
+    }
+
+    private static MergeRequestView withChecks(HeadChecks checks) {
+        return new MergeRequestView(REQUEST, MergeRequestState.OPEN, false, "feature/HRN-3", "main", "2222", checks, null, null);
+    }
+
+    private static PipelineRun endedInItsCiStep(String status) {
+        return new PipelineRun("01RUN", status, "ci", false, "2222", REQUEST.url(), false);
     }
 
     private static PipelineRun watchingTheChecks(boolean passed) {
-        return new PipelineRun("01RUN", "running", "ci", "2222", REQUEST.url(), passed);
+        return new PipelineRun("01RUN", "running", "ci", false, "2222", REQUEST.url(), passed);
     }
 
     private Task handedOverWithAnOpenRequest() {
@@ -495,7 +558,7 @@ class FleetSnapshotQueryTest {
 
     private static MergeRequestView firstPassDraft() {
         MergeRequestAddress draft = new MergeRequestAddress(REQUEST.repository(), 6);
-        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", null, null);
+        return new MergeRequestView(draft, MergeRequestState.OPEN, true, "feature/HRN-4", "main", "4444", HeadChecks.UNDECIDED, null, null);
     }
 
     private void add(NewTask task) {

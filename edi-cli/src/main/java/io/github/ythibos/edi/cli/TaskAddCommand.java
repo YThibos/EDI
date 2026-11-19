@@ -38,6 +38,10 @@ final class TaskAddCommand implements Callable<Integer> {
             description = "How this task's work reaches the captain when not the project's own way: draft-review, local-branch, local-apply or report.")
     private String delivery;
 
+    @Option(names = "--size", paramLabel = "SIZE", description = "The task's size, XS, S, M or L, which the dispatch rules may route by;"
+            + " by default the Size row of a backlog item in the body.")
+    private String size;
+
     @Option(names = "--body", paramLabel = "-|FILE", description = "The task's notes, from standard input (-) or a file.")
     private String body;
 
@@ -65,6 +69,7 @@ final class TaskAddCommand implements Callable<Integer> {
                 .with("base", base)
                 .with("blockedBy", blockedBy)
                 .with("delivery", delivery)
+                .with("size", size)
                 .with("body", body == null ? null : core.contentOf(body))
                 .with("issueType", issueType)
                 .with("epic", epic)

@@ -29,6 +29,7 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
@@ -69,7 +70,7 @@ class TaskStoreTest {
 
     @Test
     void keepsTheChangesToAState() {
-        Task captainItem = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of(), null), "", AT);
+        Task captainItem = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of(), null, null), "", AT);
         tasks.insert(captainItem);
         CaptainHold decisionHold = new CaptainHold(HoldKind.DECISION, "D1 Which lamp?", HoldUntil.captainsWord(), AT);
 
@@ -131,7 +132,7 @@ class TaskStoreTest {
 
     private static Task task(String id, List<TaskId> blockedBy) {
         Intake intake = new Intake(TaskKind.SHIP, "Work on " + id, List.of(new ProjectName("harness"), new ProjectName("garden")),
-                WorkKey.parse("HRN-4"), new BaseBranch("develop"), blockedBy, null);
+                WorkKey.parse("HRN-4"), new BaseBranch("develop"), blockedBy, null, TaskSize.S);
         return Task.queued(new TaskId(id), intake, "Notes for " + id + ".", AT);
     }
 }

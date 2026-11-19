@@ -13,7 +13,10 @@ edi task show fit-the-lamp                          # a task id, or the D number
 edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-11-01
 edi release fit-the-lamp
 edi task add --kind ship --project EDI --title "Paint the lamp" --key EDI-15 --blocked-by fit-the-lamp   # waits until that work lands
+edi task add --kind ship --project EDI --title "Oil the hinge" --key EDI-16 --size XS   # XS, S, M or L, or the Size row of a backlog item in --body
 ```
+
+A task's size lets the dispatch rules route it, such as EDI's small implementation and bugfix items on Sonnet at high ([Configuration](configuration.md#the-dispatch-rules)).
 
 A plan is a titled set of slices, each a task with its own key, its number in the plan and one wait: "after N merged", the default on the slice before, "after N landed", or "none" ([plans](decisions/plans.md)).
 The primary enters it as JSON on standard input, and EDI shows each slice's stage, its wait and whether it is eligible to start.
@@ -58,7 +61,7 @@ A running ship's decision waits in the console and reaches the captain in a roun
 ## Reports
 
 One fleet snapshot sorts the open work into what waits on the captain, ongoing, parked and queued work, and `edi sitrep` prints it as the boxed captain report ([captain-report](decisions/captain-report.md)).
-The turn report ends a state-changing turn, and the primary's stop hook renders it and hands it over to paste: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision that is not urgent always on one line ([turn-report](decisions/turn-report.md)).
+The turn report ends a turn that changed something for the captain, and the primary's stop hook renders and shows it once, leaving it out when the reply names every item: only what needs the captain, with a decision card in full in the turn it is raised and one line after that, and a running ship's decision that is not urgent always on one line ([turn-report](decisions/turn-report.md)).
 What waits on the captain is every open decision, whatever holds or blocks its task, every research board with questions or bound decisions he has not answered, and every request ready for his review; the report, the sitrep page and the return brief all show them under "Needs your decision" ([fleet-snapshot](decisions/fleet-snapshot.md)).
 A task that is dropped or finished no longer blocks any other task ([task-intake](decisions/task-intake.md)).
 

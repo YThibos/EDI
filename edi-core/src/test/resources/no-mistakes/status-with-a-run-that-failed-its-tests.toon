@@ -1,0 +1,20 @@
+run:
+  id: "01M7AZFB8QP4AD5TG83CYB365X"
+  branch: feature/HRN-3
+  status: failed
+  head: 6a352a6c
+  head_sha: 6a352a6cdba64984708f8d27640124d9f4275d21
+  verification_plan: none
+  findings: 1 awaiting
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,27
+    rebase,skipped,0,0
+    review,completed,1,1448282
+    test,failed,0,87059
+    document,pending,0,0
+    lint,pending,0,0
+    push,pending,0,0
+    pr,pending,0,0
+    ci,pending,0,0
+outcome: failed
+error: "step test failed: agent run tests: claude exited: exit status 1: "

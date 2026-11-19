@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.home.DispatchRulesFile;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.task.Task;
@@ -20,7 +21,11 @@ public class CurrentRoutes {
     }
 
     public Route of(Task task, Dispatch dispatch) {
+        return chosenFor(task, dispatch).route();
+    }
+
+    public ChosenRoute chosenFor(Task task, Dispatch dispatch) {
         return rulesFile.validatedAgainst(machine.workers().models())
-                .routeFor(task.intake().projects(), dispatch.category(), dispatch.captainsOverride());
+                .routeFor(task.intake().projects(), dispatch.category(), task.intake().size(), dispatch.captainsOverride());
     }
 }

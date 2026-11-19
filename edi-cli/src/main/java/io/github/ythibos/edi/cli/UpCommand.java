@@ -25,11 +25,14 @@ final class UpCommand implements Callable<Integer> {
     @Option(names = "--core-only", description = "Starts only the core.")
     private boolean coreOnly;
 
+    @Option(names = "--no-board", description = "Opens the primary session without opening the console's sitrep page, whatever console.openSitrepAtSessionStart says.")
+    private boolean noBoard;
+
     @Override
     public Integer call() {
         try {
             startTheCoreUnlessItRuns();
-            return coreOnly ? 0 : new PrimaryWindow(edi.environment()).open(launchOfThePrimary());
+            return coreOnly ? 0 : primaryWindow().open(launchOfThePrimary());
         } catch (CommandFailure | CoreUnavailable failed) {
             spec.commandLine().getErr().println(failed.getMessage());
             return REFUSED;
@@ -46,6 +49,10 @@ final class UpCommand implements Callable<Integer> {
             out.println("EDI core is up.");
         }
         out.flush();
+    }
+
+    PrimaryWindow primaryWindow() {
+        return new PrimaryWindow(edi.environment(), UpLaunch.asked(noBoard));
     }
 
     private PrimaryLaunch launchOfThePrimary() {

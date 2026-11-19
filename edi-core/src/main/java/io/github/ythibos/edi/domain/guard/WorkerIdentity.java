@@ -61,7 +61,8 @@ final class WorkerIdentity {
     }
 
     private static Optional<GuardRefusal> refused(Set<String> touched) {
-        return Optional.of(new GuardRefusal(Rule.WORKER_IDENTITY, "this command unsets or reassigns " + String.join(", ", touched)
+        String variables = String.join(", ", touched);
+        return Optional.of(new GuardRefusal(Rule.WORKER_IDENTITY, "a change to " + variables, "this command unsets or reassigns " + variables
                 + ", which tells the edi command and the core which worker is calling; a worker calls the core only as itself, with its own token file,"
                 + " and never with the primary's home token."));
     }

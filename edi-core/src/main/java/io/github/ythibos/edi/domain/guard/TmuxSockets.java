@@ -37,15 +37,15 @@ final class TmuxSockets {
             return Optional.empty();
         }
         if (!tmux.namesItsServer()) {
-            return Optional.of(new GuardRefusal(Rule.TMUX_WITHOUT_SOCKET,
+            return Optional.of(new GuardRefusal(Rule.TMUX_WITHOUT_SOCKET, "tmux without a named socket",
                     "tmux without -L or -S reaches whichever server it finds, often the captain's own; name the socket with -L or -S (I-31)."));
         }
         if (tmux.isOn(ediSocket, socketPaths) && tmux.controlsTheServer()) {
-            return Optional.of(new GuardRefusal(Rule.EDI_SERVER_CONTROL,
+            return Optional.of(new GuardRefusal(Rule.EDI_SERVER_CONTROL, "control of the " + ediSocket + " tmux server",
                     "the " + ediSocket + " tmux server and its windows belong to the core: message a worker with edi steer and never send it keys or kill its windows (I-28, I-31)."));
         }
         if (forAWorker && tmux.sendsInput()) {
-            return Optional.of(new GuardRefusal(Rule.TMUX_INPUT,
+            return Optional.of(new GuardRefusal(Rule.TMUX_INPUT, "input sent to a tmux pane",
                     "this tmux command types, pastes or runs commands into a pane, and on the captain's server that pane may be the primary session,"
                             + " where typed text counts as the captain's word; a worker never sends input to a tmux pane, on any socket:"
                             + " report with edi status and let the primary steer (I-06, I-31)."));

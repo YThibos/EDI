@@ -112,7 +112,7 @@ public class WorkerDetailText implements TextPresenter<WorkerDetail> {
         if (run == null) {
             return "Pipeline: no run yet.";
         }
-        String step = run.activeStep() == null || run.activeStep().isBlank() ? "" : " at its " + run.activeStep() + " step";
+        String step = run.step() == null || run.step().isBlank() ? "" : " at its " + run.step() + " step";
         return "Pipeline: run " + run.id() + step + ", " + run.status() + ".";
     }
 }

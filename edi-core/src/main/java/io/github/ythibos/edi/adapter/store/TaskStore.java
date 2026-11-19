@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskStage;
+import io.github.ythibos.edi.domain.task.TaskSize;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.UnknownTask;
 import io.github.ythibos.edi.domain.task.Wait;
@@ -37,7 +38,7 @@ import io.github.ythibos.edi.domain.task.Wait;
 @Component
 public class TaskStore {
 
-    private static final String SELECT_TASKS = "select id, kind, title, stage, work_key, base, delivery, notes, created_at, closed_at from task ";
+    private static final String SELECT_TASKS = "select id, kind, title, stage, work_key, base, delivery, size, notes, created_at, closed_at from task ";
 
     private final JdbcClient store;
 
@@ -66,8 +67,8 @@ public class TaskStore {
 
     public void insert(Task task) {
         store.sql("""
-                        insert into task (id, kind, title, stage, work_key, base, delivery, notes, created_at, closed_at)
-                        values (:id, :kind, :title, :stage, :workKey, :base, :delivery, :notes, :created, :closed)""")
+                        insert into task (id, kind, title, stage, work_key, base, delivery, size, notes, created_at, closed_at)
+                        values (:id, :kind, :title, :stage, :workKey, :base, :delivery, :size, :notes, :created, :closed)""")
                 .param("id", task.id().value())
                 .param("kind", task.intake().kind().word())
                 .param("title", task.intake().title())
@@ -75,6 +76,7 @@ public class TaskStore {
                 .param("workKey", Columns.textOf(task.intake().workKey()))
                 .param("base", Columns.textOf(task.intake().base()))
                 .param("delivery", task.intake().delivery() == null ? null : task.intake().delivery().word())
+                .param("size", task.intake().size() == null ? null : task.intake().size().word())
                 .param("notes", task.notes())
                 .param("created", Columns.text(task.created()))
                 .param("closed", Columns.text(task.closed()))
@@ -222,6 +224,7 @@ public class TaskStore {
                 row.getString("work_key"),
                 row.getString("base"),
                 row.getString("delivery"),
+                row.getString("size"),
                 row.getString("notes"),
                 row.getString("created_at"),
                 row.getString("closed_at"));
@@ -273,6 +276,7 @@ public class TaskStore {
             String workKey,
             String base,
             String delivery,
+            String size,
             String notes,
             String created,
             String closed) {
@@ -285,7 +289,8 @@ public class TaskStore {
                     workKey == null ? null : WorkKey.parse(workKey),
                     base == null ? null : new BaseBranch(base),
                     parts.blockers().getOrDefault(id, List.of()),
-                    delivery == null ? null : DeliveryMode.named(delivery));
+                    delivery == null ? null : DeliveryMode.named(delivery),
+                    size == null ? null : TaskSize.named(size));
             return new Task(
                     new TaskId(id),
                     intake,

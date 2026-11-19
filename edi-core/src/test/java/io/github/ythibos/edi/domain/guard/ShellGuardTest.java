@@ -63,7 +63,11 @@ class ShellGuardTest {
         "!(pkill -f java)",
         "ls @(pkill -f java)",
         "echo lamp !(killall java)",
-        "ls core.(pkill|lamp)"})
+        "ls core.(pkill|lamp)",
+        "2>/dev/null pkill java",
+        ">/tmp/kills.log killall -q java",
+        "sudo 2>&1 pkill java",
+        "{fd}>/dev/null pkill java"})
     void refusesSignalsByPattern(String command) {
         assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(Rule.SIGNAL_BY_PATTERN);
     }
@@ -228,7 +232,9 @@ class ShellGuardTest {
         "git push origin :main",
         "git push origin feature/EDI-4",
         "git push --all origin",
-        "git -c push.default=current push origin HEAD:feature/EDI-4"})
+        "git -c push.default=current push origin HEAD:feature/EDI-4",
+        ">/tmp/push.log git push origin main",
+        "git push origin main 2>&1"})
     void refusesPushesToABaseBranch(String command) {
         assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(Rule.BASE_BRANCH_PUSH);
     }
@@ -254,10 +260,47 @@ class ShellGuardTest {
         "gh api -X PUT repos/owner/repo/pulls/12/merge",
         "glab api --method PUT projects/4/merge_requests/7/merge",
         "gh api graphql -f query='mutation { enablePullRequestAutoMerge(input: {}) { clientMutationId } }'",
+        "gh api graphql -f query='mutation($id: ID!) { mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } }' -f id=PR_1",
+        "gh api graphql -F query='mutation { enqueuePullRequest(input: {}) { clientMutationId } }'",
+        "gh api -XPUT repos/owner/repo/pulls/12/merge",
+        "gh api --method=put /repos/owner/repo/pulls/12/merge/",
+        "gh api repos/owner/repo/pulls/12/merge -f merge_method=squash",
+        "gh api https://api.github.com/repos/owner/repo/pulls/12/merge --input merge.json",
+        "gh api repos/owner/repo/merges -f base=main -f head=feature/EDI-5",
+        "gh api -X \"$METHOD\" repos/owner/repo/pulls/12/merge",
+        "gh api -iX PUT repos/owner/repo/pulls/12/merge",
+        "gh api -iXPUT repos/owner/repo/pulls/12/merge",
+        "gh api -iX=PUT repos/owner/repo/pulls/12/merge",
+        "gh api --method=PUT -- repos/owner/repo/pulls/12/merge",
+        "gh api repos/owner/repo/merges -iF base=main -iF head=feature/EDI-5",
+        "gh api repositories/123456/merges -f base=main -f head=feature/EDI-5",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge -t -XGET",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge --jq -XGET",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge -iq -XGET",
+        "glab api -iXPUT projects/4/merge_requests/7/merge",
+        "gh api graphql -f $'query=mutation { #\\r mergePullRequest(input: {pullRequestId: \"PR_1\"}) { clientMutationId } }'",
+        "gh api graphql -f 'query=mutation { #\r mergePullRequest(input: {pullRequestId: \"PR_1\"}) { clientMutationId } }'",
+        "gh api graphql -f id=PR_1 -f $'query=mutation($id: ID!) { # \"\\n mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } # \"\\n}'",
+        "gh api graphql -f id=PR_1 -f 'query=mutation($id: ID!) { # \"\n mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } # \"\n}'",
+        "glab api -X PUT projects/4/merge_requests/7 -f merge_when_pipeline_succeeds=true",
+        "glab api -X PUT 'projects/4/merge_requests/7?auto_merge=true'",
         "git push -o merge_request.merge_when_pipeline_succeeds origin feature/EDI-5",
         "git push --push-option=merge_request.auto_merge origin feature/EDI-5"})
     void refusesMerges(String command) {
         assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::rule).contains(Rule.MERGE);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "gh pr merge 12 --squash                              | a merge through gh pr merge",
+        "glab mr accept 7                                     | a merge through glab mr accept",
+        "gh api -X PUT repos/owner/repo/pulls/12/merge         | a forge API PUT to a merge endpoint",
+        "glab api -X PUT projects/4/merge_requests/7 -f auto_merge=true | a forge API PUT that arms a merge",
+        "gh api graphql -f query='mutation { mergePullRequest(input: {}) { clientMutationId } }' | a forge GraphQL mutation that merges or arms a merge",
+        "git push -o merge_request.merge_when_pipeline_succeeds origin feature/EDI-5 | a push whose push options arm a merge"})
+    void namesTheMergeItJudgedAndItsRule(String command, String act) {
+        assertThat(GUARD.check(command, "Bash")).map(GuardRefusal::verdict)
+                .hasValueSatisfying(verdict -> assertThat(verdict).startsWith("The guard refuses " + act + " under the rule guard.merge: "));
     }
 
     @ParameterizedTest
@@ -266,7 +309,23 @@ class ShellGuardTest {
         "gh pr view 12 --json mergeStateStatus",
         "glab mr view 7",
         "git merge origin/main",
-        "gh api repos/owner/repo/pulls/12"})
+        "gh api repos/owner/repo/pulls/12",
+        "gh api repos/owner/repo/git/refs/pull/12/merge",
+        "gh api repos/owner/repo/git/ref/pull/12/merge --jq .object.sha",
+        "gh api repos/owner/repo/pulls/12/merge",
+        "gh api -iH 'Accept: application/vnd.github+json' repos/owner/repo/pulls/12/merge",
+        "gh api -i -q .merged repos/owner/repo/pulls/12/merge",
+        "gh api -X GET repos/owner/repo/pulls/12/merge -f merge_method=squash",
+        "gh api --method HEAD repos/owner/repo/pulls/12/merge",
+        "gh api 'repos/owner/repo/commits?sha=refs/pull/12/merge&per_page=1'",
+        "gh api -X GET search/issues -f q='is:pr is:merged merge'",
+        "gh api repos/owner/repo/pulls/12/comments -f body='Ready to merge once CI is green; see refs/pull/12/merge'",
+        "gh api repos/owner/repo/issues/12/labels -f 'labels[]=merge-queue'",
+        "gh api graphql -f query='query { repository(owner: \"o\", name: \"r\") { pullRequest(number: 12) { mergeable autoMergeRequest { enabledAt } } } }'",
+        "gh api graphql -f query='mutation { addComment(input: {subjectId: \"PR_1\", body: \"mergePullRequest waits for the captain\"}) { clientMutationId } }'",
+        "glab api projects/4/merge_requests/7/merge_ref",
+        "glab api projects/4/merge_requests/7/merge",
+        "glab api 'projects/4/merge_requests?state=merged&merge_when_pipeline_succeeds=true'"})
     void allowsWhatOnlyObservesOrPreparesADraft(String command) {
         assertThat(GUARD.check(command, "Bash")).isEmpty();
     }

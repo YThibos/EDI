@@ -94,8 +94,13 @@ public class FleetSnapshotQuery {
     private List<WorkerQuestion> questionsOfWorkersAmong(List<Task> inFlight, Instant now) {
         return inFlight.stream()
                 .flatMap(task -> workers.latestOf(task.id()).filter(not(Worker::isRetired)).filter(Worker::waitsOnThePrimary)
+                        .filter(not(this::questionSettledByASteer))
                         .map(worker -> new WorkerQuestion(task, worker, Duration.between(worker.lastStatus().at(), now))).stream())
                 .toList();
+    }
+
+    private boolean questionSettledByASteer(Worker worker) {
+        return worker.openQuestion().filter(question -> question.isResolvedByOneOf(inbox.resolvingOf(question.task()))).isPresent();
     }
 
     private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {
@@ -127,15 +132,16 @@ public class FleetSnapshotQuery {
         return deliveries.of(task.id())
                 .filter(Delivery::isOpen)
                 .filter(_ -> hadADoneAccepted(task, doneStands))
-                .map(delivery -> new HandedOverRequest(task, delivery, doneStands, pipelineStillChanging(task), unacknowledgedSteersOf(task)));
+                .map(delivery -> new HandedOverRequest(task, delivery, doneStands, pipelineStillChanging(task, delivery),
+                        unacknowledgedSteersOf(task)));
     }
 
     private boolean hadADoneAccepted(Task task, boolean doneStands) {
         return doneStands || events.hadADoneAccepted(task.id());
     }
 
-    private PipelineRun pipelineStillChanging(Task task) {
-        return pipelineRuns.latestOf(task.id()).filter(PipelineRun::stillChangesTheRequest).orElse(null);
+    private PipelineRun pipelineStillChanging(Task task, Delivery delivery) {
+        return pipelineRuns.latestOf(task.id()).filter(run -> run.stillChanges(delivery)).orElse(null);
     }
 
     private List<Integer> unacknowledgedSteersOf(Task task) {
@@ -210,7 +216,7 @@ public class FleetSnapshotQuery {
     private record HandedOverRequest(Task task, Delivery delivery, boolean doneStands, PipelineRun changingPipeline, List<Integer> unacknowledgedSteers) {
 
         boolean isSettled() {
-            return doneStands && !delivery.draft() && changingPipeline == null && unacknowledgedSteers.isEmpty();
+            return doneStands && !delivery.draft() && changingPipeline == null && !delivery.checksFailed() && unacknowledgedSteers.isEmpty();
         }
 
         ReadyForReview readyForReview() {

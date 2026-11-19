@@ -84,7 +84,7 @@ class AddPlanTest {
         home.addPlan().add(threeSlices(2), Actor.PRIMARY);
 
         home.tasks().insert(Task.queued(PLAN_THE_LAMP, new Intake(TaskKind.SCOUT, "Plan the lamp", List.of(new ProjectName("harness")), null, null,
-                List.of(), null), "", TestHome.START));
+                List.of(), null, null), "", TestHome.START));
         home.tasks().update(home.tasks().get(FIT_LAMP).waitingFor(PLAN_THE_LAMP));
 
         assertThat(eligibleIn(home)).containsExactly(OIL_GATE);

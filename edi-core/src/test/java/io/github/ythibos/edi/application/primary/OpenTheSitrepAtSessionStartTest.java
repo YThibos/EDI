@@ -16,8 +16,10 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.browser.CaptainsBrowser;
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.application.access.OpenConsole.ConsoleOpening;
+import io.github.ythibos.edi.domain.primary.LaunchOrigin;
 import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.primary.SessionStart;
+import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.web.PresenterFixtures;
@@ -27,6 +29,7 @@ class OpenTheSitrepAtSessionStartTest {
     private static final URI CONSOLE = URI.create("http://127.0.0.1:5490/");
     private static final SessionSource LAUNCHED = SessionSource.LAUNCH;
     private static final SessionSource RESUMED = SessionSource.RESTART;
+    private static final LaunchOrigin ELSEWHERE = LaunchOrigin.ELSEWHERE;
     private static final String NO_DESKTOP = "";
     private static final String CAPTAINS_FIRST_PROMPT = "/sitrep board";
 
@@ -48,13 +51,13 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
         UUID standby = UUID.randomUUID();
 
-        ConsoleOpening launch = sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE).orElseThrow();
+        ConsoleOpening launch = sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE).orElseThrow();
 
         assertThat(launch.opened()).isTrue();
         assertThat(launch.console()).isEqualTo(CONSOLE);
-        assertThat(sitrep.openFor(primary, started(primary, RESUMED), CONSOLE)).isEmpty();
-        assertThat(sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE)).isEmpty();
-        assertThat(sitrep.openFor(standby, started(standby, LAUNCHED), CONSOLE)).isEmpty();
+        assertThat(sitrep.openFor(primary, started(primary, RESUMED), ELSEWHERE, CONSOLE)).isEmpty();
+        assertThat(sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE)).isEmpty();
+        assertThat(sitrep.openFor(standby, started(standby, LAUNCHED), ELSEWHERE, CONSOLE)).isEmpty();
         assertThat(Files.readAllLines(opened)).singleElement().asString().startsWith("/c start " + CONSOLE + "hand-off/");
     }
 
@@ -64,8 +67,53 @@ class OpenTheSitrepAtSessionStartTest {
         OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserThatOpens());
         UUID newcomer = UUID.randomUUID();
 
-        assertThat(sitrep.openFor(newcomer, started(newcomer, LAUNCHED), CONSOLE)).isEmpty();
+        assertThat(sitrep.openFor(newcomer, started(newcomer, LAUNCHED), ELSEWHERE, CONSOLE)).isEmpty();
         assertThat(opened).doesNotExist();
+    }
+
+    @Test
+    void opensTheSitrepForAFreshEdiUpWhileADeadSessionStillHoldsThePrimaryRole() throws IOException {
+        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserThatOpens());
+        UUID beforeTheOutage = UUID.randomUUID();
+        UUID afterTheOutage = UUID.randomUUID();
+        started(beforeTheOutage, LAUNCHED);
+
+        SessionStart restart = started(afterTheOutage, LAUNCHED);
+        ConsoleOpening opening = sitrep.openFor(afterTheOutage, restart, LaunchOrigin.EDI_UP, CONSOLE).orElseThrow();
+
+        assertThat(restart.standing()).isEqualTo(Standing.STANDBY);
+        assertThat(opening.opened()).isTrue();
+        assertThat(Files.readAllLines(opened)).singleElement().asString().startsWith("/c start " + CONSOLE + "hand-off/");
+    }
+
+    @Test
+    void opensNothingWhenEdiUpIsToldNotToEvenThoughTheProfileWantsTheBoard() throws IOException {
+        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserThatOpens());
+        UUID newcomer = UUID.randomUUID();
+
+        assertThat(sitrep.openFor(newcomer, started(newcomer, LAUNCHED), LaunchOrigin.EDI_UP_WITHOUT_THE_BOARD, CONSOLE)).isEmpty();
+        assertThat(opened).doesNotExist();
+    }
+
+    @Test
+    void opensNothingForAFreshEdiUpWhenTheMachineProfileSwitchesItOff() throws IOException {
+        home.writing("config/machine.yaml", "console:\n  openSitrepAtSessionStart: false\n");
+        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserThatOpens());
+        UUID newcomer = UUID.randomUUID();
+
+        assertThat(sitrep.openFor(newcomer, started(newcomer, LAUNCHED), LaunchOrigin.EDI_UP, CONSOLE)).isEmpty();
+        assertThat(opened).doesNotExist();
+    }
+
+    @Test
+    void opensNothingForTheResumeOfASessionEdiUpOpened() throws IOException {
+        OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserThatOpens());
+        UUID primary = UUID.randomUUID();
+
+        sitrep.openFor(primary, started(primary, LAUNCHED), LaunchOrigin.EDI_UP, CONSOLE);
+
+        assertThat(sitrep.openFor(primary, started(primary, RESUMED), LaunchOrigin.EDI_UP, CONSOLE)).isEmpty();
+        assertThat(Files.readAllLines(opened)).hasSize(1);
     }
 
     @Test
@@ -75,7 +123,7 @@ class OpenTheSitrepAtSessionStartTest {
         OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
         UUID primary = UUID.randomUUID();
 
-        sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
+        sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE);
         home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
         ConsoleOpening firstTurn = console.openFor(Optional.of(primary), CONSOLE);
 
@@ -91,8 +139,8 @@ class OpenTheSitrepAtSessionStartTest {
         OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
         UUID primary = UUID.randomUUID();
 
-        sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
-        sitrep.openFor(primary, started(primary, RESUMED), CONSOLE);
+        sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE);
+        sitrep.openFor(primary, started(primary, RESUMED), ELSEWHERE, CONSOLE);
         ConsoleOpening afterTheResume = console.openFor(Optional.of(primary), CONSOLE);
 
         assertThat(afterTheResume.opened()).isTrue();
@@ -108,7 +156,7 @@ class OpenTheSitrepAtSessionStartTest {
         OpenTheConsoleOnRequest console = home.openTheConsoleOnRequest(browser);
         UUID primary = UUID.randomUUID();
 
-        sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE);
+        sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE);
         home.primaryHooks().promptSubmitted(primary, CAPTAINS_FIRST_PROMPT);
         ConsoleOpening fromTheSession = console.openFor(Optional.of(primary), CONSOLE);
         ConsoleOpening fromATerminal = console.openFor(Optional.empty(), CONSOLE);
@@ -123,7 +171,7 @@ class OpenTheSitrepAtSessionStartTest {
         OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserBesideNothing());
         UUID primary = UUID.randomUUID();
 
-        ConsoleOpening failed = sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE).orElseThrow();
+        ConsoleOpening failed = sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE).orElseThrow();
 
         assertThat(failed.opened()).isFalse();
         assertThat(digestTelling(primary, failed)).contains("\nYou could not open the console's sitrep page in the captain's browser; it is at " + CONSOLE
@@ -131,11 +179,21 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     @Test
+    void tellsTheSessionTheStartOpenedNoSitrepAndHowToOpenIt() {
+        UUID primary = UUID.randomUUID();
+        started(primary, LAUNCHED);
+
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(primary));
+
+        assertThat(digest).contains("\nThis start did not open the console's sitrep page in the captain's browser; edi console opens it signed in.\n");
+    }
+
+    @Test
     void tellsTheSessionWhereTheSitrepOpened() throws IOException {
         OpenTheSitrepAtSessionStart sitrep = home.openTheSitrepAtSessionStart(browserThatOpens());
         UUID primary = UUID.randomUUID();
 
-        ConsoleOpening launch = sitrep.openFor(primary, started(primary, LAUNCHED), CONSOLE).orElseThrow();
+        ConsoleOpening launch = sitrep.openFor(primary, started(primary, LAUNCHED), ELSEWHERE, CONSOLE).orElseThrow();
 
         assertThat(digestTelling(primary, launch)).contains("\nThe console's sitrep page is open in the captain's browser at " + CONSOLE + ".\n");
     }

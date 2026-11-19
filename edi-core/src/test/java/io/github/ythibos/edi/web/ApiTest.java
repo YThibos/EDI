@@ -19,6 +19,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -36,6 +37,7 @@ import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -134,13 +136,15 @@ class ApiTest {
     @Test
     void addsATaskAndShowsItAsTextOrJson() throws Exception {
         HttpResponse<String> added = post("/api/tasks", """
-                {"id":"api-lantern","kind":"ship","projects":["harness"],"title":"Rework the lantern","key":"HRN-3","base":"develop"}""", TEXT);
+                {"id":"api-lantern","kind":"ship","projects":["harness"],"title":"Rework the lantern","key":"HRN-3","base":"develop","size":"S"}""", TEXT);
 
         assertThat(added.statusCode()).isEqualTo(201);
         assertThat(added.body()).isEqualTo("Queued api-lantern on HRN-3.\n");
-        assertThat(get("/api/tasks/api-lantern", TEXT).body()).startsWith("api-lantern  ship  queued\nRework the lantern\nProjects: harness\nWork key: HRN-3\nBase: develop\n");
+        assertThat(get("/api/tasks/api-lantern", TEXT).body())
+                .startsWith("api-lantern  ship  queued\nRework the lantern\nProjects: harness\nWork key: HRN-3\nBase: develop\nSize: S\n");
         assertThat(get("/api/tasks/api-lantern", JSON).body()).contains(
-                "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"stage\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"");
+                "\"id\":\"api-lantern\"", "\"kind\":\"ship\"", "\"stage\":\"queued\"", "\"projects\":[\"harness\"]", "\"workKey\":\"HRN-3\"", "\"base\":\"develop\"",
+                "\"size\":\"S\"");
     }
 
     @Test
@@ -336,7 +340,7 @@ class ApiTest {
         HttpResponse<String> sitrep = send(inSession(primary, "/api/report", TEXT).GET());
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
-        assertThat(recorded.body()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hands it to you to paste.\n");
+        assertThat(recorded.body()).isEqualTo("Recorded. This turn's report holds 1 done item and 0 next items; the stop hook shows it, unless your reply names each item.\n");
 
         assertThat(sitrep.statusCode()).isEqualTo(200);
         assertThat(sitrep.body().lines().findFirst().orElseThrow()).startsWith("╔══ NEEDS YOUR DECISION ══ ").hasSize(120);
@@ -354,7 +358,7 @@ class ApiTest {
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
         assertThat(recorded.body())
-                .isEqualTo("Recorded. This turn's report holds 0 done items, 0 next items and 1 reworded task; the stop hands it to you to paste.\n");
+                .isEqualTo("Recorded. This turn's report holds 0 done items, 0 next items and 1 reworded task; the stop hook shows it, unless your reply names each item.\n");
     }
 
     @Test
@@ -514,10 +518,10 @@ class ApiTest {
 
         assertThat(denied.statusCode()).isEqualTo(200);
         assertThat(denied.body()).startsWith("{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\","
-                + "\"permissionDecisionReason\":\"The guard refuses this: pkill signals every process");
+                + "\"permissionDecisionReason\":\"The guard refuses pkill under the rule guard.signal-by-pattern: pkill signals every process");
         assertThat(allowed.statusCode()).isEqualTo(204);
         assertThat(stopped.statusCode()).isEqualTo(204);
-        assertThat(searched.body()).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
+        assertThat(searched.body()).contains("\"permissionDecision\":\"deny\"", "a file search that touches a secret");
         assertRefusal(hook(worker, "teleport", "{}"), 400, "The hooks answered are session-start, user-prompt-submit, pre-tool-use, post-tool-use, stop, stop-failure,"
                 + " notification and session-end, not teleport.");
         assertThat(send(authorised("/api/hooks/pre-tool-use", JSON).header("Content-Type", JSON)
@@ -536,10 +540,10 @@ class ApiTest {
             String shell = "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"cat " + login.resolve(CREDENTIALS) + "\"},\"cwd\":\"/tmp\"}";
             String search = "{\"tool_name\":\"Glob\",\"tool_input\":{\"pattern\":\".cred*\",\"path\":\"" + login + "\"},\"cwd\":\"/tmp\"}";
 
-            assertThat(hook(worker, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
-            assertThat(hook(worker, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "this command touches a secret");
-            assertThat(hook(worker, "pre-tool-use", search).body()).as(search).contains("\"permissionDecision\":\"deny\"", "this file search touches a secret");
-            assertThat(primaryHook(primary, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "this read touches a secret");
+            assertThat(hook(worker, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "a file read that touches a secret");
+            assertThat(hook(worker, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "a command that touches a secret");
+            assertThat(hook(worker, "pre-tool-use", search).body()).as(search).contains("\"permissionDecision\":\"deny\"", "a file search that touches a secret");
+            assertThat(primaryHook(primary, "pre-tool-use", read).body()).as(read).contains("\"permissionDecision\":\"deny\"", "a file read that touches a secret");
             assertThat(primaryHook(primary, "pre-tool-use", shell).body()).as(shell).contains("\"permissionDecision\":\"deny\"", "edi captain said");
         }
     }
@@ -654,9 +658,6 @@ class ApiTest {
                 .POST(BodyPublishers.ofString("{\"id\":\"api-anchor\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Weigh the anchor\"}")));
         HttpResponse<String> queued = send(inSession(second, "/api/tasks", TEXT).header("Content-Type", JSON)
                 .POST(BodyPublishers.ofString("{\"id\":\"api-anchor\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Weigh the anchor\"}")));
-        HttpResponse<String> unreported = primaryHook(second, "stop", "{\"stop_hook_active\":false}");
-        send(inSession(second, "/api/report", TEXT).GET());
-        HttpResponse<String> reported = primaryHook(second, "stop", "{\"stop_hook_active\":false}");
         primaryHook(first, "session-end", "{\"reason\":\"prompt_input_exit\"}");
         primaryHook(second, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
@@ -669,31 +670,52 @@ class ApiTest {
         assertThat(refused.statusCode()).isEqualTo(403);
         assertThat(refused.body()).startsWith("This session is standby: the captain typed last in another EDI session");
         assertThat(queued.statusCode()).isEqualTo(201);
-        assertThat(unreported.body()).startsWith("{\"decision\":\"block\",\"reason\":\"This turn's report follows: "
-                + "paste it verbatim in one fenced block, then stop.\\n\\n");
-        assertThat(reported.statusCode()).isEqualTo(204);
     }
 
     @Test
-    void handsOverTheTurnReportWithTheItemsRecordedOneByOneAtTheStopOfTheTurn() throws Exception {
+    void showsTheTurnReportOnceAsTheStopHooksOwnMessageAndNeverAsksForAPaste() throws Exception {
         UUID primary = UUID.randomUUID();
         primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
         primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"What did the anchor survey say?\"}");
         turnItemsInSession(primary, "{\"done\":[{\"projects\":[\"harness\"],\"text\":\"Read the anchor survey\"}]}");
         turnItemsInSession(primary, "{\"next\":[{\"projects\":[\"harness\"],\"text\":\"Weigh the anchor at dawn\"}]}");
 
-        HttpResponse<String> handedOver = primaryHook(primary, "stop", "{\"stop_hook_active\":false}");
-        HttpResponse<String> afterThePaste = primaryHook(primary, "stop", "{\"stop_hook_active\":true}");
+        HttpResponse<String> shown = primaryHook(primary, "stop", "{\"stop_hook_active\":false,\"last_assistant_message\":\"The survey is read.\"}");
+        HttpResponse<String> again = primaryHook(primary, "stop", "{\"stop_hook_active\":false,\"last_assistant_message\":\"The survey is read.\"}");
         primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
 
-        assertThat(handedOver.statusCode()).isEqualTo(200);
-        JsonNode answer = new JsonMapper().readTree(handedOver.body());
-        assertThat(answer.path("decision").asString()).isEqualTo("block");
-        assertThat(answer.path("reason").asString())
-                .startsWith("This turn's report follows: paste it verbatim in one fenced block, then stop.\n\n")
+        assertThat(shown.statusCode()).isEqualTo(200);
+        JsonNode answer = new JsonMapper().readTree(shown.body());
+        assertThat(answer.has("decision")).isFalse();
+        assertThat(answer.has("reason")).isFalse();
+        assertThat(answer.path("systemMessage").asString())
                 .contains("\nDONE THIS TURN  (1)\n───────────────────\n  harness           • Read the anchor survey\n",
                         "\nNEXT\n────\n  harness           • Weigh the anchor at dawn\n");
-        assertThat(afterThePaste.statusCode()).isEqualTo(204);
+        assertThat(again.statusCode()).isEqualTo(204);
+    }
+
+    @Test
+    void endsAReplyThatNamesEveryOpenDecisionWithoutTheBoxAndDrawsItsCardInFullInTheNextBoxShown() throws Exception {
+        String decision = """
+                {"title":"Which lamp?","context":"","options":[{"key":"A","text":"LED"},{"key":"B","text":"A tallow candle"}],"recommend":{"key":"A","why":"it lasts"}}""";
+        String bellDecision = """
+                {"title":"Which bell?","context":"","options":[{"key":"A","text":"Brass"},{"key":"B","text":"Iron"}],"recommend":{"key":"A","why":"it rings"}}""";
+        post("/api/tasks", "{\"id\":\"api-named-lamp\",\"kind\":\"captain\",\"title\":\"Choose the lamp\"}", TEXT);
+        post("/api/tasks", "{\"id\":\"api-named-bell\",\"kind\":\"captain\",\"title\":\"Choose the bell\"}", TEXT);
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{\"source\":\"startup\"}");
+
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"Ask me about the lamp.\"}");
+        String lamp = post("/api/tasks/api-named-lamp/decision", decision, TEXT).body().strip();
+        HttpResponse<String> named = primaryHook(primary, "stop", "{\"last_assistant_message\":\"" + openDecisionNumbers() + " are yours.\"}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"And the bell?\"}");
+        String bell = post("/api/tasks/api-named-bell/decision", bellDecision, TEXT).body().strip();
+        HttpResponse<String> unnamed = primaryHook(primary, "stop", "{\"last_assistant_message\":\"The bell is yours.\"}");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+
+        assertThat(named.statusCode()).isEqualTo(204);
+        assertThat(unnamed.statusCode()).isEqualTo(200);
+        assertThat(new JsonMapper().readTree(unnamed.body()).path("systemMessage").asString()).contains("NEEDS YOUR DECISION", lamp, bell, "A tallow candle");
     }
 
     @Test
@@ -951,7 +973,7 @@ class ApiTest {
 
     private void waitForAScout(TaskId ship, TaskId scout) {
         Task waiting = tasks.get(ship);
-        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null), "",
+        tasks.insert(Task.queued(scout, new Intake(TaskKind.SCOUT, "Plan the work", waiting.intake().projects(), null, null, List.of(), null, null), "",
                 waiting.created()));
         tasks.update(waiting.waitingFor(scout));
     }
@@ -982,6 +1004,11 @@ class ApiTest {
 
     private static HttpResponse<String> turnReportInSession(UUID session) throws Exception {
         return send(inSession(session, "/api/report", TEXT).header("Content-Type", JSON).POST(BodyPublishers.ofString("{}")));
+    }
+
+    private String openDecisionNumbers() throws Exception {
+        return get("/api/decisions?open=true", TEXT).body().lines().map(line -> line.split("\\s+")[0]).filter(DecisionNumber::isWritten)
+                .collect(Collectors.joining(", "));
     }
 
     private static HttpResponse<String> turnItemsInSession(UUID session, String items) throws Exception {

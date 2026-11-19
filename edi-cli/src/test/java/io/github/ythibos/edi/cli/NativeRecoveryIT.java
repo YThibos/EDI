@@ -110,7 +110,8 @@ class NativeRecoveryIT {
         assertThat(listed.output()).contains("Outage hold list (2)", "1   restart-lamp  harness  lost when the machine restarted",
                 "2   restart-horn  harness  lost when the machine restarted", "outcome so far: working: the horn worker started",
                 "ran on claude-sonnet-5-5 at high; its category gives claude-sonnet-5-5 at high now");
-        assertThat(resumed.output()).startsWith("Relaunched restart-horn as restart-horn#2 (implementation, claude-sonnet-5-5 at high), resuming session ");
+        assertThat(resumed.output()).startsWith("Relaunched restart-horn as restart-horn#2 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation), resuming session ");
         assertThat(hornLaunches.get(1)).contains("--resume " + sessionOf(hornLaunches.getFirst()));
         assertThat(launchesOf("restart-lamp")).hasSize(1);
         assertThat(remaining.output()).contains("Outage hold list (1)", "1   restart-lamp").doesNotContain("restart-horn  harness");
@@ -132,8 +133,8 @@ class NativeRecoveryIT {
         List<String> launches = awaitLaunches("restart-buoy", 2);
         CommandRun workers = awaitOutput(List.of("worker", "list"), "restart-buoy#2");
 
-        assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high), with a fresh"
-                + " session and a handover because session " + session + " left no transcript to resume, in ");
+        assertThat(relaunched.output()).startsWith("Relaunched restart-buoy as restart-buoy#2 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation), with a fresh session and a handover because session " + session + " left no transcript to resume, in ");
         assertThat(launches).hasSize(2);
         assertThat(sessionOf(launches.get(1))).isNotEqualTo(session);
         assertThat(launches.get(1)).doesNotContain("--resume")
@@ -164,7 +165,8 @@ class NativeRecoveryIT {
         assertThat(woken.output()).contains("edi worker stop fill-lamp, then edi worker relaunch fill-lamp starts a fresh session in its copy with a handover.");
         assertThat(refused.output()).contains("fill-lamp#1's context is full and its session still runs; stop it first with edi worker stop");
         assertThat(stopped.output()).contains("edi worker relaunch fill-lamp starts a fresh session with a handover, since its context is full.");
-        assertThat(relaunched.output()).startsWith("Relaunched fill-lamp as fill-lamp#2 (implementation, claude-sonnet-5-5 at high), with a fresh session and a handover");
+        assertThat(relaunched.output()).startsWith("Relaunched fill-lamp as fill-lamp#2 (implementation, claude-sonnet-5-5 at high,"
+                + " chosen by the category implementation), with a fresh session and a handover");
         assertThat(launches).hasSize(2);
         assertThat(launches.get(1)).doesNotContain("--resume").doesNotContain(sessionOf(launches.getFirst()))
                 .contains("fresh start after its context filled up: read the handover " + handover);
@@ -173,15 +175,17 @@ class NativeRecoveryIT {
     }
 
     @Test
-    void thePrimaryEndsAStateChangingTurnWithTheReportAndEdiWaitPrintsWhatNeedsIt() throws Exception {
+    void theStopHookShowsTheReportOfATurnThatRaisedADecisionOnceAndEdiWaitPrintsWhatNeedsIt() throws Exception {
         assumeTrue(answers("tmux", "-V"), "tmux is not installed");
         String session = UUID.randomUUID().toString();
         Map<String, String> primary = Map.of("CLAUDE_CODE_SESSION_ID", session);
 
         CommandRun started = edi(primary, payload(session, "\"source\":\"startup\""), "hook", "session-start");
         edi(primary, payload(session, "\"prompt\":\"Queue the bell.\""), "hook", "user-prompt-submit");
-        edi(primary, "", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Ring the bell", "--key", "HRN-13");
-        CommandRun unreported = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
+        edi(primary, "", "task", "add", "--kind", "ship", "--project", "harness", "--title", "Ring the bell", "--key", "HRN-13", "--id", "ring-the-bell");
+        edi(primary, "{\"title\":\"Which bell?\",\"options\":[{\"key\":\"A\",\"text\":\"Brass\"}],\"recommend\":{\"key\":\"A\",\"why\":\"it rings\"}}",
+                "decision", "raise", "ring-the-bell", "--card", "-");
+        CommandRun shown = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
         CommandRun reported = edi(primary, payload(session, "\"stop_hook_active\":false"), "hook", "stop");
         dispatch("wake-bell", "HRN-14", "stub-run: edi status needs-decision --key bell -- Brass or bronze?");
         workerServer().ifPresent(server -> processes.register(server.pid()));
@@ -190,7 +194,8 @@ class NativeRecoveryIT {
         assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThis session is the primary",
                 "The console's sitrep page is open in the captain's browser at http://127.0.0.1:");
         assertThat(home.resolve("opened-in-the-browser")).content().startsWith("/c start http://127.0.0.1:").contains("/hand-off/");
-        assertThat(unreported.output()).contains("\"decision\":\"block\"", "This turn's report follows: paste it verbatim in one fenced block");
+        assertThat(shown.output()).contains("\"systemMessage\":", "NEEDS YOUR DECISION", "Which bell?")
+                .doesNotContain("\"decision\":\"block\"", "paste it verbatim");
         assertThat(reported.exitCode()).isZero();
         assertThat(reported.output()).isEmpty();
         assertThat(woken.exitCode()).isZero();

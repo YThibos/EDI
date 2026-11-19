@@ -15,6 +15,7 @@ A remote URL may carry a token, and no refusal may repeat a secret (I-32).
 `ForgeCommand` is the allow-list: `gh auth token`, `gh auth status`, `gh auth git-credential`, `gh pr list`, `gh pr view`, `gh pr create`, `glab api user`, `glab mr list`, `glab mr view` and `glab mr create`, each a program and its fixed leading words.
 `ForgeCalls` is the only class in `adapter.forge` that starts a program, and runs only a `ForgeCommand` followed by flags and values; `GitHubForge` and `GitLabForge` read the tools' JSON output, and `Forges` picks one by the project's registered `kind` at the moment of the call.
 Creating always passes `--draft`, and a view whose URL does not match the address rebuilt from the registered repository is refused; only an exact `merged` or `MERGED` counts as merged.
+A view carries the checks the forge shows on the request's head (`MergeRequestView.checks`, a `HeadChecks`): on GitHub only the latest run of each check in the `statusCheckRollup` field counts, a check of GitHub Actions being one job of one workflow run as its `detailsUrl` names it, so a re-run replaces the attempt it repeats while the runs of one job that a push and a pull request started both count, and they failed once any such run failed, errored, timed out, needs action or failed to start, and passed when there is at least one and every one succeeded, was neutral or was skipped; on GitLab the head pipeline's status `success` passes them and `failed` fails them, which `glab mr view` gives and `glab mr list` does not, so a listed open request is read through its view; anything else leaves them undecided, a cancelled check or pipeline among them, since cancelling says nothing about the work ([fleet-snapshot](fleet-snapshot.md)).
 A project's `forge` entry is `{ kind, host, path, account }`.
 `GitHubForge` reads the bound account's token with `gh auth token --hostname <host> --user <account>` before each call and passes it to that call alone as `GH_TOKEN`, while `ForgeCalls` withholds any inherited `GH_TOKEN` or `GITHUB_TOKEN`; `GitLabForge`, whose tool holds one login per host, checks with `glab api user` that the login is the bound account before it opens a draft.
 `IsolatedCopies` binds the clone's git transport to a repository-local credential helper that asks `gh` for the bound account's token at call time; the helper is a shell snippet, and it carries the host and the account in single quotes.
@@ -33,6 +34,8 @@ Validating the host and the account where they are read, and quoting them where 
 - The forges' HTTP APIs from Java - two more clients with their tokens and pagination, where the captain's tools already hold the logins.
 - `gh auth switch` before each call - changes the captain's own terminal state.
 - Checking the configured `remote.origin.url` - an `insteadOf` rewrite would carry the push elsewhere unseen.
+- Keying a GitHub check by its workflow and job name alone - a passed push run of a job would hide its failed pull request run, and a request with a red check would read as ready.
+- Reading the checks through `gh pr checks`, which tells runs apart by the event that started them - a new allow-list entry and a second call on every view, worth it only if false holds show up in practice.
 
 ## Consequences
 
@@ -40,13 +43,20 @@ Validating the host and the account where they are read, and quoting them where 
 - Bad: every GitHub call costs one extra local `gh auth token`, a new forge feature means a reviewed allow-list entry, and a project behind a mirror registers the mirror as its forge.
 - Bad: a host written as an IPv6 literal, or with characters outside a DNS name, is refused, and the snippet's safety rests on that validation, which a test pins; anyone who can write the registry runs as the captain's own user and can reach the shell in other ways, which this does not contain.
 - Bad: the validation pipeline's own pushes do not use this binding ([docs/verification/no-mistakes.md](../verification/no-mistakes.md)).
+- Bad: the rollup does not name the event that started a run, so keying a GitHub check by its workflow run errs towards holding: a new run of a job that the same event started on the same head, such as after a pull request is closed and reopened, leaves the old run's failure in place, and the request reads as changing until the failed jobs are re-run or a new head is pushed.
 
 ## When to revisit
 
-When a third forge is registered, `glab` supports several accounts per host, or a project publishes to more than one repository.
+When a third forge is registered, `glab` supports several accounts per host, a project publishes to more than one repository, or a false hold from a re-triggered GitHub check is seen in practice.
 
 ## How we got here
 
 - 16/10/2026: slice S5 built both adapters on the allow-list, bound every call to the registry's account after the failed deliveries of 14/10/2026, and refused pushes to any other repository.
 - 21/10/2026: the adapters learnt to list every request from a branch, merged ones included ([merge-following](merge-following.md)).
 - 30/10/2026: the credential helper quotes the host and the account, and a forge host or a remote's host must be a DNS name, since a crafted remote could otherwise reach the helper's shell snippet (EDI-128).
+- 17/11/2026: a view reads whether the request's head passed its checks, so a request whose validation run ended before it saw them reads as ready (EDI-265).
+- 18/11/2026: a view tells failed checks apart from pending or missing ones, so failed checks hold a handed-over request (EDI-265).
+- 18/11/2026: a GitHub view reads only the latest run of each check, so a failed check that passed on its re-run no longer reads as failed (EDI-265).
+- 18/11/2026: a check of GitHub Actions is told apart by its workflow run too, so a passed push run of a job no longer hides its failed pull request run (EDI-265).
+- 18/11/2026: the captain kept the workflow-run key, which errs towards holding, over one that could call a request with a red check ready, and left reading the checks by event to its own item should false holds show up (EDI-265).
+- 18/11/2026: a listed open GitLab request is read through its view, so recording it no longer drops the checks a view read (EDI-265).

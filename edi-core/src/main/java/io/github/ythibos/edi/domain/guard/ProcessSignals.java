@@ -28,24 +28,25 @@ final class ProcessSignals {
 
     private static Optional<GuardRefusal> refusalFor(ShellCommand command) {
         if (PATTERN_KILLERS.contains(command.program())) {
-            return refused(command.program() + " signals every process whose name matches a pattern, which reaches other workers and the captain's own sessions");
+            return refused(command.program(),
+                    command.program() + " signals every process whose name matches a pattern, which reaches other workers and the captain's own sessions");
         }
         if (command.runs("fuser") && command.argumentTexts().stream().anyMatch(ProcessSignals::isFuserKill)) {
-            return refused("fuser -k signals every process that uses a file");
+            return refused("fuser -k", "fuser -k signals every process that uses a file");
         }
         return command.runs("kill") ? killRefusal(command) : Optional.empty();
     }
 
     private static Optional<GuardRefusal> killRefusal(ShellCommand kill) {
         if (kill.argumentsFromInput()) {
-            return refused("kill fed from a pipe signals whatever the pipe found");
+            return refused("kill fed from a pipe", "kill fed from a pipe signals whatever the pipe found");
         }
         for (ShellWord target : killTargets(kill.arguments())) {
             if (target.substitutions().stream().anyMatch(ProcessSignals::looksUpProcesses)) {
-                return refused("kill $(pgrep ...) signals the processes a lookup by pattern found");
+                return refused("kill fed from a process lookup", "kill $(pgrep ...) signals the processes a lookup by pattern found");
             }
             if (!target.isSubstituted() && isProcessGroup(target.text())) {
-                return refused("kill " + target.text() + " signals a whole process group");
+                return refused("a signal to a process group", "kill " + target.text() + " signals a whole process group");
             }
         }
         return Optional.empty();
@@ -54,7 +55,9 @@ final class ProcessSignals {
     private static Optional<GuardRefusal> lookupFeedingAKill(List<ShellCommand> commands) {
         boolean looksUpByPattern = commands.stream().anyMatch(command -> PATTERN_LOOKUPS.contains(command.program()));
         boolean kills = commands.stream().anyMatch(command -> command.runs("kill"));
-        return looksUpByPattern && kills ? refused("a command line that looks processes up by pattern and kills signals what the lookup found") : Optional.empty();
+        return looksUpByPattern && kills
+                ? refused("a kill of what a lookup by pattern found", "a command line that looks processes up by pattern and kills signals what the lookup found")
+                : Optional.empty();
     }
 
     private static List<ShellWord> killTargets(List<ShellWord> arguments) {
@@ -95,7 +98,7 @@ final class ProcessSignals {
         return argument.equals("--kill") || !argument.startsWith("--") && argument.startsWith("-") && argument.indexOf('k') > 0;
     }
 
-    private static Optional<GuardRefusal> refused(String what) {
-        return Optional.of(new GuardRefusal(Rule.SIGNAL_BY_PATTERN, what + CAPTURED_PIDS_ONLY));
+    private static Optional<GuardRefusal> refused(String act, String what) {
+        return Optional.of(new GuardRefusal(Rule.SIGNAL_BY_PATTERN, act, what + CAPTURED_PIDS_ONLY));
     }
 }

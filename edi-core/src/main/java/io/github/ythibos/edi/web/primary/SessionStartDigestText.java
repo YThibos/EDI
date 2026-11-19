@@ -132,7 +132,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
 
     private static List<String> sitrepOf(ConsoleOpening opening) {
         if (opening == null) {
-            return List.of();
+            return List.of("This start did not open the console's sitrep page in the captain's browser; edi console opens it signed in.");
         }
         return List.of(opening.opened()
                 ? "The console's sitrep page is open in the captain's browser at " + opening.console() + "."

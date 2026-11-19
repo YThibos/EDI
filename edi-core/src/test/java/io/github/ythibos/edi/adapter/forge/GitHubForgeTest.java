@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -54,11 +55,11 @@ class GitHubForgeTest {
         standIns.answering("pr-list", "[" + OPEN_DRAFT + "]");
 
         assertThat(forge.mergeRequestsFrom(FORGE, BRANCH)).containsExactly(new MergeRequestView(new MergeRequestAddress(FORGE.repository(), 7), MergeRequestState.OPEN, true,
-                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", null, null));
+                "feature/HRN-3", "main", "1111111111111111111111111111111111111111", HeadChecks.UNDECIDED, null, null));
         assertThat(standIns.calls()).containsExactly(
                 "auth token --hostname github.com --user example-owner",
                 "pr list --repo github.com/example-owner/harness --head feature/HRN-3 --state all --json "
-                        + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,mergedAt");
+                        + "number,url,state,isDraft,headRefName,baseRefName,headRefOid,statusCheckRollup,mergeCommit,mergedAt");
         assertThat(standIns.tokens()).containsExactly("none", ForgeStandIns.TOKEN);
     }
 
@@ -87,6 +88,47 @@ class GitHubForgeTest {
             assertThat(request.landedCommit()).isEqualTo("3333");
             assertThat(request.mergedAt()).isEqualTo(Instant.parse("2026-10-21T12:37:04Z"));
         });
+    }
+
+    @Test
+    void readsTheChecksOnTheHeadAsPassedOnlyWhenEveryOnePassedAndAsFailedOnceOneFailed() throws IOException {
+        String success = checkRun("1001", "build", "COMPLETED", "SUCCESS", "2026-11-17T10:00:00Z");
+        String skipped = checkRun("1001", "deploy", "COMPLETED", "SKIPPED", "2026-11-17T10:00:00Z");
+        String failure = checkRun("1001", "test", "COMPLETED", "FAILURE", "2026-11-17T10:00:00Z");
+        String cancelled = checkRun("1001", "lint", "COMPLETED", "CANCELLED", "2026-11-17T10:00:00Z");
+        String inProgress = checkRun("1001", "native", "IN_PROGRESS", "", "2026-11-17T10:00:00Z");
+        String failedStatus = statusContext("sonar", "ERROR", "2026-11-17T10:00:00Z");
+        String passedStatus = statusContext("sonar", "SUCCESS", "2026-11-17T10:00:00Z");
+
+        assertThat(checksWith("[" + success + "," + skipped + "," + passedStatus + "]")).isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWith("[" + success + "," + failure + "," + inProgress + "]")).as("a failed check").isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWith("[" + success + "," + failedStatus + "]")).as("a failed status").isEqualTo(HeadChecks.FAILED);
+        assertThat(checksWith("[" + success + "," + inProgress + "]")).as("a check still running").isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWith("[" + success + "," + cancelled + "]")).as("a cancelled check").isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWith("[]")).as("a head without checks").isEqualTo(HeadChecks.UNDECIDED);
+        assertThat(checksWith("null")).as("no checks field").isEqualTo(HeadChecks.UNDECIDED);
+    }
+
+    @Test
+    void readsOnlyTheLatestRunOfEachCheckOnTheHead() throws IOException {
+        String failedFirst = checkRun("1001", "test", "COMPLETED", "FAILURE", "2026-11-17T10:00:00Z");
+        String passedOnItsRerun = checkRun("1001", "test", "COMPLETED", "SUCCESS", "2026-11-17T10:30:00Z");
+        String erroredFirst = statusContext("sonar", "ERROR", "2026-11-17T10:00:00Z");
+        String passedOnItsRetry = statusContext("sonar", "SUCCESS", "2026-11-17T10:30:00Z");
+        String passedFirst = checkRun("1001", "build", "COMPLETED", "SUCCESS", "2026-11-17T10:00:00Z");
+        String failedOnItsRerun = checkRun("1001", "build", "COMPLETED", "FAILURE", "2026-11-17T10:30:00Z");
+
+        assertThat(checksWith("[" + passedOnItsRerun + "," + failedFirst + "]")).as("a failed check passed on its re-run").isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWith("[" + erroredFirst + "," + passedOnItsRetry + "]")).as("an errored status passed on its retry").isEqualTo(HeadChecks.PASSED);
+        assertThat(checksWith("[" + passedFirst + "," + failedOnItsRerun + "]")).as("a passed check failed on its re-run").isEqualTo(HeadChecks.FAILED);
+    }
+
+    @Test
+    void keepsTheRunsOfOneCheckThatDifferentEventsStartedApart() throws IOException {
+        String failedOnThePullRequest = checkRun("1001", "build", "COMPLETED", "FAILURE", "2026-11-17T10:00:00Z");
+        String passedOnThePush = checkRun("1002", "build", "COMPLETED", "SUCCESS", "2026-11-17T10:00:01Z");
+
+        assertThat(checksWith("[" + failedOnThePullRequest + "," + passedOnThePush + "]")).isEqualTo(HeadChecks.FAILED);
     }
 
     @Test
@@ -160,5 +202,20 @@ class GitHubForgeTest {
         assertThat(forge.credentialHelperFor(FORGE)).hasValueSatisfying(helper -> assertThat(helper)
                 .startsWith("!f() { test \"$1\" = get || exit 0; GH_TOKEN=\"$('" + standIns.gh() + "' auth token --hostname 'github.com' --user 'example-owner')\"")
                 .endsWith("exec '" + standIns.gh() + "' auth git-credential get; }; f"));
+    }
+
+    private static String checkRun(String workflowRun, String name, String status, String conclusion, String startedAt) {
+        return "{\"__typename\":\"CheckRun\",\"name\":\"" + name + "\",\"workflowName\":\"CI\",\"status\":\"" + status
+                + "\",\"conclusion\":\"" + conclusion + "\",\"startedAt\":\"" + startedAt
+                + "\",\"detailsUrl\":\"https://github.com/hrn/app/actions/runs/" + workflowRun + "/job/7\"}";
+    }
+
+    private static String statusContext(String context, String state, String startedAt) {
+        return "{\"__typename\":\"StatusContext\",\"context\":\"" + context + "\",\"state\":\"" + state + "\",\"startedAt\":\"" + startedAt + "\"}";
+    }
+
+    private HeadChecks checksWith(String rollup) throws IOException {
+        standIns.answering("pr-view", OPEN_DRAFT.replace("\"mergedAt\":null", "\"mergedAt\":null,\"statusCheckRollup\":" + rollup));
+        return forge.view(FORGE, new MergeRequestAddress(FORGE.repository(), 7)).checks();
     }
 }

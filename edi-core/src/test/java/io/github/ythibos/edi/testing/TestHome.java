@@ -500,7 +500,8 @@ public final class TestHome {
     }
 
     public RewriteBrief rewriteBrief() {
-        return new RewriteBrief(tasks, dispatches, workers, registry, gatherBriefFacts(), writtenBriefs(), transaction);
+        return new RewriteBrief(tasks, dispatches, workers, registry, gatherBriefFacts(), new CurrentRoutes(dispatchRulesFile(), machineProfile()), writtenBriefs(),
+                transaction);
     }
 
     public GatherBriefFacts gatherBriefFacts() {

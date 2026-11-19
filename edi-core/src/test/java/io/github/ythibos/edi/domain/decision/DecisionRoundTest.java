@@ -57,7 +57,7 @@ class DecisionRoundTest {
     }
 
     private static Task task(TaskKind kind) {
-        return Task.queued(new TaskId("fit-lamp"), new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null), "",
+        return Task.queued(new TaskId("fit-lamp"), new Intake(kind, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null, null), "",
                 OPENED);
     }
 

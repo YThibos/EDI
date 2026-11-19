@@ -18,6 +18,7 @@ public record MergeRequestView(
         String sourceBranch,
         String targetBranch,
         String headCommit,
+        HeadChecks checks,
         String landedCommit,
         Instant mergedAt) {
 

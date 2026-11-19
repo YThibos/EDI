@@ -2,19 +2,19 @@ package io.github.ythibos.edi.domain.primary;
 
 import java.time.Instant;
 
-public record TurnCircumstances(boolean stateChanged, Instant lastItemRecordedAt, boolean chatKeptQuiet, boolean workInFlight, boolean waitIsLive,
-        boolean answerUndelivered) {
+public record TurnCircumstances(boolean somethingReachedTheCaptain, Instant lastItemRecordedAt, boolean chatKeptQuiet, boolean workInFlight,
+        boolean waitIsLive, boolean answerUndelivered) {
 
     boolean needsTheReport(PrimaryTurn turn) {
-        return !chatKeptQuiet && (unreportedStateChange(turn) || itemRecordedSinceTheReport(turn));
+        return !chatKeptQuiet && (unreportedChangeForTheCaptain(turn) || itemRecordedSinceTheReport(turn));
     }
 
     boolean needsAWait() {
         return workInFlight && !waitIsLive;
     }
 
-    private boolean unreportedStateChange(PrimaryTurn turn) {
-        return stateChanged && !turn.renderedTheReport();
+    private boolean unreportedChangeForTheCaptain(PrimaryTurn turn) {
+        return somethingReachedTheCaptain && !turn.renderedTheReport();
     }
 
     private boolean itemRecordedSinceTheReport(PrimaryTurn turn) {

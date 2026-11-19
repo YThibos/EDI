@@ -15,22 +15,22 @@ class IntakeTest {
 
     @Test
     void needsATitle() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new Intake(TaskKind.SHIP, "  ", HARNESS, null, null, List.of(), null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Intake(TaskKind.SHIP, "  ", HARNESS, null, null, List.of(), null, null));
     }
 
     @Test
     void namesEachProjectAndBlockerOnce() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new Intake(TaskKind.SHIP, "Fit", List.of(new ProjectName("a"), new ProjectName("a")), null, null, List.of(), null));
+                .isThrownBy(() -> new Intake(TaskKind.SHIP, "Fit", List.of(new ProjectName("a"), new ProjectName("a")), null, null, List.of(), null, null));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new Intake(TaskKind.SHIP, "Fit", HARNESS, null, null, List.of(new TaskId("x"), new TaskId("x")), null));
+                .isThrownBy(() -> new Intake(TaskKind.SHIP, "Fit", HARNESS, null, null, List.of(new TaskId("x"), new TaskId("x")), null, null));
     }
 
     @Test
     void knowsWhetherItNamesTheProjectItWorksOn() {
-        assertThat(new Intake(TaskKind.SHIP, "Fit", HARNESS, null, null, List.of(), null).namesTheProjectItWorksOn()).isTrue();
-        assertThat(new Intake(TaskKind.SCOUT, "Look", List.of(), null, null, List.of(), null).namesTheProjectItWorksOn()).isFalse();
-        assertThat(new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of(), null).namesTheProjectItWorksOn()).isTrue();
+        assertThat(new Intake(TaskKind.SHIP, "Fit", HARNESS, null, null, List.of(), null, null).namesTheProjectItWorksOn()).isTrue();
+        assertThat(new Intake(TaskKind.SCOUT, "Look", List.of(), null, null, List.of(), null, null).namesTheProjectItWorksOn()).isFalse();
+        assertThat(new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of(), null, null).namesTheProjectItWorksOn()).isTrue();
     }
 
     @Test

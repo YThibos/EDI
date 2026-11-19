@@ -40,6 +40,7 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -389,14 +390,14 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", "abc123", REQUEST, false), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST, false), TestHome.START);
             home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Amend the record too.", null, Actor.PRIMARY);
 
             String report = captainReport(home, Turn.NONE);
             String brief = returnBrief(home);
             ConsoleSitrep onTheConsole = consoleSitrep(home);
             String digest = digestOf(home);
-            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, "abc123", REQUEST, false), TestHome.START);
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST, false), TestHome.START);
             home.workerInbox().acknowledge(worker.id(), 1);
             String settled = captainReport(home, Turn.NONE);
 
@@ -422,7 +423,7 @@ class DecisionsAndReportingTest {
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
-            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", "abc123", REQUEST, true);
+            PipelineRun watching = new PipelineRun("01RUN", "running", "ci", false, "abc123", REQUEST, true);
             home.pipelineRuns().save(worker.id().task(), watching, TestHome.START);
 
             String report = captainReport(home, Turn.NONE);
@@ -456,7 +457,7 @@ class DecisionsAndReportingTest {
         private static MergeRequestView request(MergeRequestState state) {
             MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
             boolean merged = state == MergeRequestState.MERGED;
-            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", merged ? "def456" : null, merged ? TestHome.START : null);
+            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, merged ? "def456" : null, merged ? TestHome.START : null);
         }
 
         private static CallingSession captainSays(TestHome home, String words, String task) {
@@ -522,12 +523,12 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-21 Every state-changing turn ends with the turn report")
+    @DisplayName("I-21 A turn that changes something for the captain ends with the turn report, shown once")
     class StateChangingTurnsEndWithTheReport {
 
         @Test
-        @DisplayName("AT-21 the primary's Stop hook hands over the turn report in a state-changing turn until a report was shown in that turn")
-        void theStopHookHandsOverTheReport() throws IOException {
+        @DisplayName("AT-21 the primary's Stop hook shows the turn report in a turn that raised something for the captain until a report was shown in that turn")
+        void theStopHookShowsTheReport() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             UUID primary = UUID.randomUUID();
             home.primaryHooks().sessionStarted(primary, null, SessionSource.LAUNCH);
@@ -536,13 +537,13 @@ class DecisionsAndReportingTest {
 
             home.primaryHooks().promptSubmitted(primary, "Queue the brass lamp.");
             home.addTask().add(ship("fit-lamp", "Fit the brass lamp"), Actor.PRIMARY);
+            home.raiseDecision().raise(TaskReference.parse("fit-lamp"), card("Which lamp?"), Actor.PRIMARY);
             TurnEnd unreported = home.primaryHooks().stopping(primary);
             home.primaryHooks().reportRendered(primary);
             TurnEnd reported = home.primaryHooks().stopping(primary);
 
             assertThat(quietTurn).isEqualTo(TurnEnd.ENDS);
-            assertThat(unreported).isEqualTo(TurnEnd.HANDS_OVER_THE_REPORT);
-            assertThat(unreported.instruction()).isEqualTo("This turn's report follows: paste it verbatim in one fenced block, then stop.");
+            assertThat(unreported).isEqualTo(TurnEnd.SHOWS_THE_REPORT);
             assertThat(reported).isEqualTo(TurnEnd.ENDS);
         }
     }

@@ -130,7 +130,7 @@ public class PrimaryHooks {
 
     public TurnEnd stopping(UUID id) {
         TurnEnd end = transaction.execute(_ -> sessions.get(id).map(this::answeredStop).orElse(TurnEnd.ENDS));
-        if (end.leavesWorkPending()) {
+        if (end.holdsTheStop()) {
             firedRules.record(new RuleFired(Rule.TURN_END_WITH_WORK_PENDING, RuleOutcome.REFUSED, Actor.PRIMARY, null, id,
                     RuleReason.of(end.instruction())));
         }
@@ -183,7 +183,7 @@ public class PrimaryHooks {
         if (turn == null) {
             return TurnEnd.ENDS;
         }
-        return TurnEnd.of(turn, new TurnCircumstances(events.anyAfter(turn.eventMark()), turnItems.lastRecordedIn(session.id()).orElse(null),
+        return TurnEnd.of(turn, new TurnCircumstances(events.anyReachingTheCaptainAfter(turn.eventMark()), turnItems.lastRecordedIn(session.id()).orElse(null),
                 presenceNow.current().keepsTheChatQuiet(), !tasks.inState(TaskState.IN_FLIGHT).isEmpty(), streams.liveOf(session.id()).isPresent(),
                 !undeliveredAnswers.waiting().isEmpty()));
     }

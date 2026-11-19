@@ -3,8 +3,6 @@ package io.github.ythibos.edi.adapter.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
@@ -15,18 +13,38 @@ class AxiStatusTest {
     @Test
     void readsTheRunningRunOfTheCurrentBranchWithItsActiveStep() throws IOException {
         assertThat(AxiStatus.currentRunIn(fixture("status-with-a-running-run.toon"), "feature/HRN-3")).contains(new PipelineRun(
-                "01M527P0FFESZMZCVXFT9VHVW5", "running", "ci", "aacda7bfd12398c1d7960f58d68177e003550ad7",
+                "01M527P0FFESZMZCVXFT9VHVW5", "running", "ci", false, "aacda7bfd12398c1d7960f58d68177e003550ad7",
                 "https://github.com/example-owner/harness/pull/6", false));
     }
 
     @Test
-    void readsAFinishedRunWithoutAnActiveStepOrAMergeRequest() throws IOException {
-        PipelineRun failed = AxiStatus.currentRunIn(fixture("status-with-a-failed-run.toon"), "feature/HRN-3").orElseThrow();
+    void readsARunThatFailedInAStepOfItsOwnWithThatStep() throws IOException {
+        PipelineRun failed = AxiStatus.currentRunIn(fixture("status-with-a-run-that-failed-its-tests.toon"), "feature/HRN-3").orElseThrow();
 
         assertThat(failed.status()).isEqualTo("failed");
         assertThat(failed.isRunning()).isFalse();
-        assertThat(failed.activeStep()).isNull();
-        assertThat(failed.mergeRequestUrl()).isNull();
+        assertThat(failed.step()).isEqualTo("test");
+        assertThat(failed.stoppedByThePipelineService()).isFalse();
+    }
+
+    @Test
+    void readsARunTheShutdownOfThePipelinesServiceStoppedWithTheStepItStoppedInAndWithoutAMergeRequest() throws IOException {
+        PipelineRun stopped = AxiStatus.currentRunIn(fixture("status-with-a-failed-run.toon"), "feature/HRN-3").orElseThrow();
+
+        assertThat(stopped.status()).isEqualTo("failed");
+        assertThat(stopped.step()).isEqualTo("review");
+        assertThat(stopped.stoppedByThePipelineService()).isTrue();
+        assertThat(stopped.mergeRequestUrl()).isNull();
+    }
+
+    @Test
+    void readsARunThatSkippedItsCiStepAsPassedWithNoStepLeft() throws IOException {
+        PipelineRun passed = AxiStatus.currentRunIn(fixture("status-with-a-run-that-skipped-ci.toon"), "feature/HRN-3").orElseThrow();
+
+        assertThat(passed.status()).isEqualTo("completed");
+        assertThat(passed.isRunning()).isFalse();
+        assertThat(passed.step()).isNull();
+        assertThat(passed.stoppedByThePipelineService()).isFalse();
     }
 
     @Test
@@ -37,8 +55,6 @@ class AxiStatusTest {
     }
 
     private static String fixture(String name) throws IOException {
-        try (InputStream content = AxiStatusTest.class.getResourceAsStream("/no-mistakes/" + name)) {
-            return new String(content.readAllBytes(), StandardCharsets.UTF_8);
-        }
+        return PipelineStatusFixtures.statusIn(name);
     }
 }

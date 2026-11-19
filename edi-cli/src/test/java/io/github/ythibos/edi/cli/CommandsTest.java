@@ -295,7 +295,7 @@ class CommandsTest {
 
     @Test
     void recordsOneItemOfTheTurnWithItsProjects() {
-        core.answering(200, "Recorded. This turn's report holds 1 done item and 0 next items; the stop hands it to you to paste.\n");
+        core.answering(200, "Recorded. This turn's report holds 1 done item and 0 next items; the stop hook shows it, unless your reply names each item.\n");
 
         int exitCode = edi("", "turn", "done", "--project", "harness", "--project", "garden", "Fitted", "the \"brass\" lamp");
         StubCore.Request done = core.received();

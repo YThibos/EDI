@@ -17,6 +17,12 @@ class WorkerBriefsTest {
     private final WorkerBriefs briefs = new WorkerBriefs();
 
     @Test
+    void namesTheModelAndTheRuleThatChoseItWithTheSizeItMatched() {
+        assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false)))
+                .contains("- Delivery: draft-review\n- Model: claude-sonnet-5-5 at high, chosen by the override for harness on implementation of size S\n");
+    }
+
+    @Test
     void putsThePlanOfAPlannedShipBeforeItsOwnBuildInstructions() {
         String brief = briefs.briefFor(BriefFixtures.shipFollowing(PLAN, "Keep the old bracket.", false));
 

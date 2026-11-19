@@ -16,7 +16,7 @@ public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAt
     }
 
     public String whyChanging() {
-        return Stream.of(workerStillAtWork(), stillADraft(), pipelineStillChanging(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
+        return Stream.of(workerStillAtWork(), stillADraft(), pipelineStillChanging(), checksFailing(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
     }
 
     private Optional<String> workerStillAtWork() {
@@ -32,7 +32,11 @@ public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAt
     }
 
     private static String whyThePipelineStillChangesIt(PipelineRun run) {
-        return run.isRunning() ? "pipeline " + run.currentStep() : "pipeline " + run.status() + " without passed checks";
+        return run.isRunning() ? "pipeline " + run.currentStep() : "pipeline " + run.status() + " in its " + run.step() + " step";
+    }
+
+    private Optional<String> checksFailing() {
+        return delivery.checksFailed() ? Optional.of("checks failing on its head") : Optional.empty();
     }
 
     private Optional<String> steersStillWaiting() {

@@ -36,15 +36,25 @@ public class TurnReports {
         this.presenter = presenter;
     }
 
-    public String handedOverIn(UUID session, Integer paneWidth) {
-        return presenter.text(shownIn(Optional.of(session), paneWidth));
+    public Optional<String> shownAtTheStopOf(UUID session, Integer paneWidth, Reply reply) {
+        Optional<UUID> stopping = Optional.of(session);
+        TurnReport report = reportOf(stopping, paneWidth);
+        if (report.hasNothingForTheCaptain() || report.isNamedIn(reply)) {
+            return Optional.empty();
+        }
+        recordTheReportShownIn(stopping);
+        return Optional.of(presenter.text(report));
     }
 
     TurnReport shownIn(Optional<UUID> session, Integer paneWidth) {
-        TurnReport report = new TurnReport(fleet.snapshot().waiting(), itemsRecordedIn(session), ReportWidth.forPaneIfKnown(paneWidth),
-                calendar.unreadable().orElse(null), previousReportShownIn(session), decisionRounds.gathering().orElse(null));
+        TurnReport report = reportOf(session, paneWidth);
         recordTheReportShownIn(session);
         return report;
+    }
+
+    private TurnReport reportOf(Optional<UUID> session, Integer paneWidth) {
+        return new TurnReport(fleet.snapshot().waiting(), itemsRecordedIn(session), ReportWidth.forPaneIfKnown(paneWidth),
+                calendar.unreadable().orElse(null), previousReportShownIn(session), decisionRounds.gathering().orElse(null));
     }
 
     Turn itemsRecordedIn(Optional<UUID> session) {

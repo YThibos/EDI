@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.DraftProposal;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
 import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
@@ -27,6 +28,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class GitLabForge implements Forge {
+
+    private static final String PASSED_PIPELINE = "success";
+    private static final String FAILED_PIPELINE = "failed";
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -45,7 +49,10 @@ public class GitLabForge implements Forge {
     public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = calls.run(ForgeCommand.GLAB_MR_LIST,
                 List.of("-R", forge.repository().url(), "--source-branch", branch.toString(), "--all", "-F", "json"), Map.of(), null);
-        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(request -> viewOf(forge, request)).toList();
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false)
+                .map(request -> viewOf(forge, request))
+                .map(request -> withTheChecksOnItsHead(forge, request))
+                .toList();
     }
 
     @Override
@@ -82,6 +89,10 @@ public class GitLabForge implements Forge {
         return Optional.empty();
     }
 
+    private MergeRequestView withTheChecksOnItsHead(RegisteredForge forge, MergeRequestView listed) {
+        return listed.state() == MergeRequestState.OPEN ? view(forge, listed.address()) : listed;
+    }
+
     private void requireTheBoundAccount(RegisteredForge forge) {
         String user = calls.run(ForgeCommand.GLAB_API_USER, List.of("--hostname", forge.repository().host()), Map.of(), null);
         String loggedIn = json.readTree(user).path("username").asString("");
@@ -104,8 +115,17 @@ public class GitLabForge implements Forge {
                 request.path("source_branch").asString(null),
                 request.path("target_branch").asString(null),
                 request.path("sha").asString(null),
+                checksOn(request),
                 state == MergeRequestState.MERGED ? landedCommitOf(request) : null,
                 state == MergeRequestState.MERGED ? mergedAtOf(address, request) : null);
+    }
+
+    private static HeadChecks checksOn(JsonNode request) {
+        String pipeline = request.path("head_pipeline").path("status").asString("");
+        if (PASSED_PIPELINE.equals(pipeline)) {
+            return HeadChecks.PASSED;
+        }
+        return FAILED_PIPELINE.equals(pipeline) ? HeadChecks.FAILED : HeadChecks.UNDECIDED;
     }
 
     private static MergeRequestState stateOf(String word) {

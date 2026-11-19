@@ -88,7 +88,7 @@ public class ResearchFirstPilot {
 
     private void raiseTheDecision(PilotComparison comparison) {
         Instant now = clock.now();
-        Task decisionTask = Task.queued(DECISION_TASK, new Intake(TaskKind.CAPTAIN, DECISION_TITLE, List.of(), null, null, List.of(), null), "", now);
+        Task decisionTask = Task.queued(DECISION_TASK, new Intake(TaskKind.CAPTAIN, DECISION_TITLE, List.of(), null, null, List.of(), null, null), "", now);
         tasks.insert(decisionTask);
         events.record(new TaskAdded(decisionTask.id(), decisionTask.intake()), Actor.CORE, now);
         raiseDecision.raise(new TaskReference.ById(DECISION_TASK), comparison.card(), Actor.CORE);
