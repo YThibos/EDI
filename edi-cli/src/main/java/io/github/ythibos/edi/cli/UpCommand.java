@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.cli;
 
 import java.io.PrintWriter;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
@@ -9,8 +10,8 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
-@Command(name = "up", description = "Starts EDI's core when it is not running, then opens the primary session in tmux with its anchor, memory"
-        + " and hooks.")
+@Command(name = "up", description = "Starts EDI's core when it is not running, then opens the primary session in tmux with its anchor, memory,"
+        + " hooks and launch key, or resumes an earlier one with --resume.")
 final class UpCommand implements Callable<Integer> {
 
     private static final int REFUSED = 1;
@@ -24,6 +25,10 @@ final class UpCommand implements Callable<Integer> {
 
     @Option(names = "--core-only", description = "Starts only the core.")
     private boolean coreOnly;
+
+    @Option(names = "--resume", paramLabel = "SESSION", description = "Resumes the primary session with this Claude Code session id, with the launch"
+            + " key a primary session needs; a session opened before the launch key existed comes back this way.")
+    private UUID resumedSession;
 
     @Override
     public Integer call() {
@@ -53,6 +58,6 @@ final class UpCommand implements Callable<Integer> {
         if (!reply.succeeded()) {
             throw new CommandFailure(reply.body().strip());
         }
-        return PrimaryLaunch.read(reply.body());
+        return PrimaryLaunch.read(reply.body()).resuming(resumedSession);
     }
 }

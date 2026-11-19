@@ -37,7 +37,7 @@ class CoreController {
 
     @PostMapping("/api/core/stop")
     Confirmation stop(@RequestBody StopRequest request, Caller caller) {
-        caller.requirePrimary("edi down");
+        caller.requireThePrimaryOrTheTerminal("edi down");
         List<Worker> stopped = stopTheCore.stopFor(request.stop(), caller.callingSession(), caller.actor());
         exit.afterTheAnswer();
         return new Confirmation.CoreStopping(stopped);

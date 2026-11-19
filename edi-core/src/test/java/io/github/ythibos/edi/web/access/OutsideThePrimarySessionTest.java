@@ -122,6 +122,28 @@ class OutsideThePrimarySessionTest {
     }
 
     @Test
+    void refusesEveryChangeToTheFleetFromTheHomeTokenAloneAndChangesNothingYetLetsItRead() throws Exception {
+        String task = "/api/tasks/" + aTaskOfTheFleet();
+        Map<String, List<Map<String, Object>>> before = theStoreBesidesItsRuleFirings();
+
+        List<HttpResponse<String>> refused = List.of(
+                post(homeTokenAlone(), task + "/steer", "{\"text\":\"Stop and wait.\"}"),
+                post(homeTokenAlone(), task + "/drop", "{\"discardWork\":true}"),
+                post(homeTokenAlone(), task + "/hold", "{\"kind\":\"deferral\",\"reason\":\"Not now.\"}"),
+                post(homeTokenAlone(), task + "/dispatch", "{\"category\":\"implementation\",\"spec\":\"Fit the lamp.\"}"),
+                post(homeTokenAlone(), task + "/stop", "{}"));
+        HttpResponse<String> read = get(homeTokenAlone(), task);
+
+        assertThat(refused).allSatisfy(response -> {
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(403);
+            assertThat(response.body()).contains("is refused: this call holds the EDI home's token but not the launch key edi up gave the primary session",
+                    "reopened with edi up, or resumed with edi up --resume");
+        });
+        assertThat(theStoreBesidesItsRuleFirings()).isEqualTo(before);
+        assertThat(read.statusCode()).as(read.body()).isEqualTo(200);
+    }
+
+    @Test
     void neverGivesThePrimaryRoleToASessionStartedOutsideEdiUp() throws Exception {
         UUID startedElsewhere = UUID.randomUUID();
 
@@ -184,6 +206,12 @@ class OutsideThePrimarySessionTest {
                 .POST(BodyPublishers.ofString(json)).build();
         try (HttpClient http = HttpClient.newHttpClient()) {
             return http.send(request, BodyHandlers.ofString());
+        }
+    }
+
+    private static HttpResponse<String> get(HttpRequest.Builder caller, String path) throws Exception {
+        try (HttpClient http = HttpClient.newHttpClient()) {
+            return http.send(caller.uri(uri(path)).header("Accept", JSON).GET().build(), BodyHandlers.ofString());
         }
     }
 

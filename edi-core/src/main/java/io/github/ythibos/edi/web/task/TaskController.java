@@ -62,7 +62,7 @@ class TaskController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation add(@RequestBody AddTaskRequest request, Caller caller) {
-        caller.requireThePrimarySession("edi task add");
+        caller.requirePrimary("edi task add");
         return new Confirmation.Queued(addTask.add(request.newTask(), caller.actor()));
     }
 
@@ -81,7 +81,7 @@ class TaskController {
     @PostMapping("/{reference}/promote")
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation promote(@PathVariable String reference, @RequestBody PromoteRequest request, Caller caller) {
-        caller.requireThePrimarySession("edi task promote");
+        caller.requirePrimary("edi task promote");
         return new Confirmation.Promoted(promoteScout.promote(TaskReference.parse(reference), request.title(), caller.callingSession(), caller.actor()));
     }
 
@@ -102,7 +102,7 @@ class TaskController {
     @PostMapping("/{id}/adopt")
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation adopt(@PathVariable String id, @RequestBody AdoptRequest request, Caller caller) {
-        caller.requireThePrimarySession("edi task adopt");
+        caller.requirePrimary("edi task adopt");
         return new Confirmation.Adopted(adoptForkTask.adopt(new TaskId(id), request.oldHome(), request.branchName(), request.oldCopy(),
                 request.sessionToResume(), caller.actor()));
     }

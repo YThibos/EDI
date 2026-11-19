@@ -198,6 +198,15 @@ class ClaudeLayerCommandsTest {
     }
 
     @Test
+    void refusesToResumeAPrimarySessionNamedByAnythingButASessionIdBeforeReachingTheCore() {
+        int refused = edi("", "up", "--resume", "the-old-primary");
+
+        assertThat(refused).isEqualTo(2);
+        assertThat(err.toString()).contains("--resume", "the-old-primary");
+        assertThat(core.requests()).isEmpty();
+    }
+
+    @Test
     void letsThePrimaryRunPlainEdiCommandsWhileTheCoreIsDown() throws IOException {
         core.stopAnswering();
 

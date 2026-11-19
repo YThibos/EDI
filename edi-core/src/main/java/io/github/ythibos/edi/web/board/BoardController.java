@@ -39,7 +39,7 @@ class BoardController {
     @GetMapping("/api/tasks/{reference}/board")
     AnsweredRounds show(@PathVariable String reference, @RequestParam(required = false) Integer round, Caller caller) {
         if (!(caller instanceof Caller.Captain)) {
-            caller.requirePrimary("edi board show");
+            caller.requireThePrimaryOrTheTerminal("edi board show");
         }
         return rounds.roundsOf(TaskReference.parse(reference), round);
     }

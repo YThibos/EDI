@@ -45,6 +45,8 @@ Writing at launch keeps the pipeline on the rules as they are when the worker th
 - Bad: the pipeline is shared by every project, so its agent runs on one route for all of them, and a run that has already started keeps the arguments it started with.
 - Bad: an EDI home's rules file needs the `pipeline` entry before a core with this decision reads it, or every reader of the rules refuses, the outage list included.
 - Bad: the guard reads the pipeline agent's own commands, not the scripts they run, so a harness script that calls tmux without a socket or `kill-server` is caught only when the agent types it.
+- Bad: the guard alone of the pipeline's agents talks to the captain's core, with the home token and no launch key, so the core answers it only at the tool guard, and the refusals it records count as the primary's firings.
+- Bad: the settings file serves every project's validation, so while the core is down, at `edi down`, in the restart of `edi update` or with EDI stopped, the guard refuses every tool call of every validation agent, which waits for the core; the captain chose that over a pipeline that runs unguarded.
 
 ## When to revisit
 
@@ -55,3 +57,4 @@ When no-mistakes takes a model and effort per run or per repository for Claude C
 - 23/10/2026: the pipeline's agent had run at the harness default, Opus at medium; the captain asked for an explicit model and effort from the dispatch rules, high effort either way, and Opus 5.5 stayed the model; a hand-written `agent_args_override` served as the stop-gap until EDI took the entry over (EDI-46).
 - 23/10/2026: the rules for rewriting one entry of the pipeline's configuration moved to `PipelineConfiguration`, which the commit keys share (EDI-21).
 - 18/11/2026: a validation's harness stopped the captain's tmux server, so the pipeline's agent runs under the guard through a settings file EDI writes (EDI-278).
+- 19/11/2026: on the captain's answer to D138, the pipeline's agents stay behind the guard and wait while the core is down, at the cost of the guard's contact with the captain's core and its firings counted as the primary's (EDI-278).

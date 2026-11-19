@@ -36,7 +36,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `access.console-header` | `ApiTokenFilter` | The console changes state only with its own header, so no other page submits as the captain. |
 | `access.loopback-host` | `LoopbackHostFilter` | The core answers only requests addressed to its own loopback host. |
 | `access.caller-role` | `NotPermitted` | Each command runs only under the role it belongs to: the primary, a worker or the captain. |
-| `access.primary-session` | `Caller` | Only the session edi up opened starts or feeds a primary session, changes presence and adds tasks or decisions; the home token alone does none of these. |
+| `access.primary-session` | `Caller` | Only the session edi up opened starts or feeds a primary session and changes the fleet; the home token alone keeps edi up, edi health, edi down and the reads. |
 | `access.worker-token-file` | `Edi` | A worker's window calls the core with its own token, never the home token. |
 | `request.valid` | `ApiRefusals` | A request to the core carries every value it needs, well formed. |
 | `authority.captains-word` | `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |

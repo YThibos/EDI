@@ -32,7 +32,7 @@ class PlanController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation add(@RequestBody JsonNode plan, Caller caller) {
-        caller.requireThePrimarySession("edi plan add");
+        caller.requirePrimary("edi plan add");
         return new Confirmation.Planned(addPlan.add(PlanDocument.read(plan), caller.actor()));
     }
 

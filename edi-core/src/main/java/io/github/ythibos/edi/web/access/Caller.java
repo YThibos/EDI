@@ -28,6 +28,13 @@ public sealed interface Caller {
     }
 
     default void requirePrimary(String command) {
+        requireThePrimaryOrTheTerminal(command);
+        if (this instanceof Terminal terminal) {
+            throw terminal.refused(command);
+        }
+    }
+
+    default void requireThePrimaryOrTheTerminal(String command) {
         if (this instanceof WorkerCaller) {
             throw new NotPermitted(command + " is the primary's to run; a worker reports through edi status and reads edi inbox.");
         }
@@ -37,13 +44,6 @@ public sealed interface Caller {
         if (this instanceof Standby) {
             throw new NotPermitted("This session is standby: the captain typed last in another EDI session, which is the primary now, so "
                     + command + " is refused here and this session only reads; it becomes the primary again when the captain types in it.");
-        }
-    }
-
-    default void requireThePrimarySession(String command) {
-        requirePrimary(command);
-        if (this instanceof Terminal terminal) {
-            throw terminal.refused(command);
         }
     }
 
@@ -114,7 +114,9 @@ public sealed interface Caller {
         public NotPermitted refused(String command) {
             return new NotPermitted(Rule.PRIMARY_SESSION, command + " is refused: this call holds the EDI home's token but not the launch key edi up"
                     + " gave the primary session, so it comes from a terminal, a script or a test, never from the primary session or a worker."
-                    + " A test or a validation runs against a throwaway EDI home of its own; the captain uses the primary session or the console.");
+                    + " A test or a validation runs against a throwaway EDI home of its own; the captain uses the primary session or the console."
+                    + " A primary session opened before its launch key existed is reopened with edi up, or resumed with edi up --resume and its"
+                    + " session id.");
         }
     }
 

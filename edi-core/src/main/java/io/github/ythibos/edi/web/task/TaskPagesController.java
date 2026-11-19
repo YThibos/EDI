@@ -51,7 +51,7 @@ class TaskPagesController {
 
     private ResponseEntity<String> page(String reference, String file, String what, Caller caller) {
         if (!(caller instanceof Caller.Captain)) {
-            caller.requirePrimary("Reading a task's " + what);
+            caller.requireThePrimaryOrTheTerminal("Reading a task's " + what);
         }
         TaskId task = tasks.get(TaskReference.parse(reference)).id();
         Path page = home.taskDirectory(task).resolve(file);
