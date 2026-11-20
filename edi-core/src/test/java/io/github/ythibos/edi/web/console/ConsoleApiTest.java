@@ -34,10 +34,14 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import io.github.ythibos.edi.adapter.store.DispatchStore;
+import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
+import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.delivery.PipelineReview;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
@@ -47,6 +51,7 @@ import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -75,6 +80,12 @@ class ConsoleApiTest {
 
     @Autowired
     private DispatchStore dispatches;
+
+    @Autowired
+    private TaskCostStore costs;
+
+    @Autowired
+    private PipelineReviewStore reviews;
 
     @Autowired
     private WorkerTokens workerTokens;
@@ -372,6 +383,10 @@ class ConsoleApiTest {
     void servesTheWeeksWorkedTimeToTheConsoleAndThePrimaryAndRefusesAWorker() throws Exception {
         String cookie = signedInCookie();
         String worker = workerTokenFor("lamp-week");
+        Instant counted = Instant.parse("2026-10-15T09:00:00Z");
+        costs.save(new TaskCost(new TaskId("lamp-week"), new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH), new TokenUsage(1000, 10000, 400, 200),
+                null, counted));
+        reviews.save(new TaskId("lamp-week"), new PipelineReview(2, 3), counted);
 
         HttpResponse<String> shown = send(withTheCookie("/api/week?from=2026-10-12", cookie, "application/json").GET());
         HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/week?from=2026-10-12", "application/json").GET());
@@ -380,7 +395,11 @@ class ConsoleApiTest {
         HttpResponse<String> thisWeek = send(withTheCookie("/api/week", cookie, "application/json").GET());
 
         assertThat(shown.statusCode()).isEqualTo(200);
-        assertThat(shown.body()).contains("\"from\":\"2026-10-12\"", "\"days\":[\"2026-10-12\",", "\"2026-10-18\"]", "\"tasks\":[");
+        assertThat(shown.body()).contains("\"from\":\"2026-10-12\"", "\"days\":[\"2026-10-12\",", "\"2026-10-18\"]", "\"tasks\":[",
+                "\"efforts\":[{\"effort\":\"xhigh\",\"tasks\":1,\"weightedWorkerTokens\":3500,\"weightedWorkerTokensPerTask\":3500,\"weightedPipelineTokens\":0,"
+                        + "\"workerTokens\":{\"input\":1000,\"cacheRead\":10000,\"cacheWrite\":400,\"output\":200},"
+                        + "\"pipelineTokens\":{\"input\":0,\"cacheRead\":0,\"cacheWrite\":0,\"output\":0},"
+                        + "\"reviewRounds\":2,\"findings\":3,\"findingsPerReviewRound\":1.5}]");
         assertThat(toThePrimary.statusCode()).isEqualTo(200);
         assertThat(toTheWorker.statusCode()).isEqualTo(403);
         assertThat(toTheWorker.body()).isEqualTo("The week's worked time is the primary's and the captain's to read; a worker reads its brief and edi inbox.\n");

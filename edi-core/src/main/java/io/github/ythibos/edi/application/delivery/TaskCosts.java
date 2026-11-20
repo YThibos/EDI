@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.delivery;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -14,6 +15,7 @@ import io.github.ythibos.edi.application.port.Pipeline;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.domain.worker.Worker;
 
@@ -35,16 +37,28 @@ public class TaskCosts {
     }
 
     public TaskCost countFor(Workplace workplace) {
-        TokenUsage spentByWorkers = earliestLaunchPerTranscript(workplace).entrySet().stream()
-                .map(transcript -> runtime.tokensSpentIn(transcript.getKey(), transcript.getValue()))
-                .reduce(TokenUsage.NONE, TokenUsage::plus);
-        TokenUsage spentByThePipeline = pipeline.tokensSpentOn(workplace.project().projectClone(), workplace.dispatch().branch()).orElse(null);
-        return new TaskCost(workplace.task().id(), spentByWorkers, spentByThePipeline, clock.now());
+        List<Worker> workersOfTheTask = transaction.execute(_ -> workers.allOf(workplace.task().id()));
+        return new TaskCost(workplace.task().id(), dispatchedRoute(workersOfTheTask), spentBy(workersOfTheTask), spentByThePipelineOn(workplace),
+                clock.now());
     }
 
-    private Map<String, Instant> earliestLaunchPerTranscript(Workplace workplace) {
-        return transaction.execute(_ -> workers.allOf(workplace.task().id())).stream()
+    private static Route dispatchedRoute(List<Worker> workersOfTheTask) {
+        return workersOfTheTask.stream().findFirst().map(Worker::route).orElse(null);
+    }
+
+    private TokenUsage spentBy(List<Worker> workersOfTheTask) {
+        return earliestLaunchPerTranscript(workersOfTheTask).entrySet().stream()
+                .map(transcript -> runtime.tokensSpentIn(transcript.getKey(), transcript.getValue()))
+                .reduce(TokenUsage.NONE, TokenUsage::plus);
+    }
+
+    private static Map<String, Instant> earliestLaunchPerTranscript(List<Worker> workersOfTheTask) {
+        return workersOfTheTask.stream()
                 .filter(worker -> Objects.nonNull(worker.transcript()))
                 .collect(Collectors.toMap(Worker::transcript, Worker::launchedAt, (first, second) -> first.isBefore(second) ? first : second));
+    }
+
+    private TokenUsage spentByThePipelineOn(Workplace workplace) {
+        return pipeline.tokensSpentOn(workplace.project().projectClone(), workplace.dispatch().branch()).orElse(null);
     }
 }

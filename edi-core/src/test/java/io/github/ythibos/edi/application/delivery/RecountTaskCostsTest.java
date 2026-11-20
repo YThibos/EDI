@@ -46,7 +46,7 @@ class RecountTaskCostsTest {
 
         RecountedCosts recounted = home.recountTaskCosts().recountSince(SINCE, Actor.PRIMARY);
 
-        TaskCost after = new TaskCost(before.task(), WORKERS, SPENT, before.countedAt());
+        TaskCost after = new TaskCost(before.task(), before.route(), WORKERS, SPENT, before.countedAt());
         assertThat(recounted).isEqualTo(new RecountedCosts(SINCE, 1, List.of(new Recount(before, after))));
         assertThat(home.taskCosts().of(before.task())).contains(after);
         assertThat(home.eventTypesOf(before.task())).endsWith("TaskCostRecounted");
@@ -82,7 +82,7 @@ class RecountTaskCostsTest {
 
     private TaskCost counted(String task, String key, TokenUsage pipeline, String at) {
         DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip(task, "harness", key));
-        TaskCost cost = new TaskCost(new TaskId(task), WORKERS, pipeline, Instant.parse(at));
+        TaskCost cost = new TaskCost(new TaskId(task), null, WORKERS, pipeline, Instant.parse(at));
         home.taskCosts().save(cost);
         return cost;
     }
