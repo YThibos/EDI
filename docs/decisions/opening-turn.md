@@ -4,7 +4,7 @@
 
 ## Context
 
-`edi up` opens the primary in a new tmux session running `claude --settings ... --append-system-prompt-file ...` ([core-lifecycle](core-lifecycle.md), [primary-startup-context](primary-startup-context.md)).
+`edi up` opens the primary in a new tmux session running `claude --settings ...` ([core-lifecycle](core-lifecycle.md), [primary-startup-context](primary-startup-context.md)).
 The captain asked for the session to open with no prompt submitted, so that it waits for the captain to type.
 A new primary session already opens the sitrep page at its start ([console](console.md)), and a `/sitrep board` runs `edi sitrep --board`, which asks the core to open the console through `POST /api/console/open`.
 With no opening prompt, the captain's first prompt may come long after the start, when the captain has closed that page.
@@ -12,7 +12,7 @@ A call made inside a Claude Code session names that session to the core, and the
 
 ## Decision
 
-`PrimaryLaunch.claude()` ends the primary's command line with the system prompt file and passes no prompt, so the session waits for the captain to type; the captain's first prompt starts the opening turn.
+`PrimaryLaunch.claude()` ends the primary's command line with its settings file and passes no prompt, so the session waits for the captain to type; the captain's first prompt starts the opening turn.
 The session name `edi-<yymmdd-HHmm>` changes every minute, so tmux refuses only a second `edi up` in the same minute; a later `edi up` opens another, new primary session.
 When `OpenTheSitrepAtSessionStart` opens the page, it records the time on the session as `primary_session.sitrep_opened_at` (`V13__the_sitrep_opened_at_session_start.sql`, `PrimarySessionStore`).
 `OpenTheConsoleOnRequest` answers `POST /api/console/open` from a session that carries that mark with `ConsoleOpening.openedAtSessionStart`, which `ConsoleOpeningText` turns into the page's address while nothing opens, and otherwise opens the console through `OpenConsole` as before.
@@ -48,3 +48,4 @@ When the captain wants EDI to speak first, wants `edi up` to switch to a primary
 
 - 23/10/2026: at the captain's request `edi up` opened the primary with the opening prompt, and the opening turn stopped opening a second sitrep page (EDI-43).
 - 27/10/2026: at the captain's request `edi up` opens the primary with no prompt submitted, so the session waits for the captain to type, and the captain's first typed prompt clears the session-start mark (EDI-101).
+- 13/11/2026: the command line lost its anchor option, since the settings now load the anchor (EDI-268).

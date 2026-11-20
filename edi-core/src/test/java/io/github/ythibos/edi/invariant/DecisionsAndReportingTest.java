@@ -279,8 +279,8 @@ class DecisionsAndReportingTest {
                     .containsExactly(new ConsoleSitrep.BoardDecision(lamp.toString(), "Which lamp?"));
             assertThat(returnBrief(home)).contains("Needs your decision (2)\n  " + paint + "  Which paint?\n  Board for Work on survey-lamps: 2 questions "
                     + "waiting at " + BoardRounds.LINK + "\n    " + lamp + "  Which lamp?\n");
-            assertThat(PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()))).contains("  " + paint
-                    + "  paint-choice  Which paint?\n  board  survey-lamps  2 questions at " + BoardRounds.LINK + "\n    " + lamp + "  survey-lamps  Which lamp?\n");
+            assertThat(PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root())))
+                    .contains("  " + paint + "  paint-choice  Which paint?\n  board  survey-lamps  2 questions at " + BoardRounds.LINK + "\n    " + lamp + "  survey-lamps  Which lamp?\n");
         }
 
         @Test
@@ -317,7 +317,7 @@ class DecisionsAndReportingTest {
             home.armBoard().arm(scout.id(), TaskReference.parse("survey-lamps"), board, BoardRounds.asking(0, lamp));
             String boundOnly = captainReport(home, Turn.NONE);
             String boundOnlyBrief = returnBrief(home);
-            String boundOnlyDigest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
+            String boundOnlyDigest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
             home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
             home.postBoardRound().post(board, BoardRounds.LINK, 2, Actor.PRIMARY);
             String posted = captainReport(home, Turn.NONE);
@@ -451,7 +451,7 @@ class DecisionsAndReportingTest {
         }
 
         private static String digestOf(TestHome home) {
-            return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID()));
+            return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
         }
 
         private static MergeRequestView request(MergeRequestState state) {

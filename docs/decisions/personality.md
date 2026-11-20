@@ -40,7 +40,7 @@ The repository keeps the meaning of each level and no captain's numbers, which l
 - Bad news as a setting - the captain chose a fixed rail.
 - The personality in the sitrep document - `ArchitectureRulesTest` keeps the personality packages out of everything others read, the sitrep among them, and the desk needs the levels only while it is open.
 - The sample message composed in the core - the sliders would wait on a request at every step, for a sample that carries no rule of its own.
-- An output style, or a `CLAUDE.md` in the EDI home - the captain ruled both out; the anchor and the skills are the primary's only instructions.
+- An output style of its own, or a `CLAUDE.md` in the EDI home - the captain ruled both out; the anchor and the skills are the primary's only instructions, and the `edi-primary` style only carries the anchor ([primary-startup-context](primary-startup-context.md)).
 - A new port for the personal configuration - application services already read `PersonalConfiguration`, so the six ports stay six.
 
 ## Consequences
@@ -60,3 +60,4 @@ When the captain asks to collapse scales, a new preset ships, or the anchor near
 - 23/10/2026: scout EDI-25 settled the scales, the address-word curve and the bad-news rail with the captain over three board rounds, and EDI-31 replaced the fixed voice with them.
 - 27/10/2026: the console's sitrep page gained the personality desk, modelled on the EDI-25 board's mixing desk (EDI-98).
 - 27/10/2026: the register moved from `edi-voice` into the anchor's Voice section (EDI-82).
+- 16/11/2026: the anchor reaches the primary as the `edi-primary` output style, which carries only the anchor, so the ruling against an output style reads as one with instructions of its own, as the captain confirmed (EDI-268).

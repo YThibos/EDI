@@ -13,9 +13,9 @@ import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 
-public record SessionStartDigest(Standing standing, PersonalityInForce personality, PrimarySession previousLimitStop, FleetSnapshot fleet, WorkerList workers,
-        List<OutageEntry> outage, int wakesWaiting, Presence presence, MemoryCheck memory, WorkaroundCount workarounds, boolean gardeningDue,
-        List<String> missingFromTheHome, ConsoleOpening sitrep) {
+public record SessionStartDigest(SessionAnchor anchor, Standing standing, PersonalityInForce personality, PrimarySession previousLimitStop,
+        FleetSnapshot fleet, WorkerList workers, List<OutageEntry> outage, int wakesWaiting, Presence presence, MemoryCheck memory,
+        WorkaroundCount workarounds, boolean gardeningDue, List<String> missingFromTheHome, ConsoleOpening sitrep) {
 
     public SessionStartDigest {
         outage = List.copyOf(outage);
@@ -23,7 +23,7 @@ public record SessionStartDigest(Standing standing, PersonalityInForce personali
     }
 
     public SessionStartDigest withSitrep(ConsoleOpening opening) {
-        return new SessionStartDigest(standing, personality, previousLimitStop, fleet, workers, outage, wakesWaiting, presence, memory, workarounds,
+        return new SessionStartDigest(anchor, standing, personality, previousLimitStop, fleet, workers, outage, wakesWaiting, presence, memory, workarounds,
                 gardeningDue, missingFromTheHome, opening);
     }
 }

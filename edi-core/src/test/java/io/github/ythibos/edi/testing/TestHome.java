@@ -149,6 +149,7 @@ import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
 import io.github.ythibos.edi.application.presence.NotifyTheCaptain;
 import io.github.ythibos.edi.application.presence.PresenceQuery;
 import io.github.ythibos.edi.application.presence.ReturnBriefQuery;
+import io.github.ythibos.edi.application.primary.CheckTheSessionAnchor;
 import io.github.ythibos.edi.application.primary.OpenTheConsoleOnRequest;
 import io.github.ythibos.edi.application.primary.OpenTheSitrepAtSessionStart;
 import io.github.ythibos.edi.application.primary.PrepareThePrimary;
@@ -1012,8 +1013,8 @@ public final class TestHome {
     }
 
     public SessionStartDigestQuery sessionStartDigest() {
-        return new SessionStartDigestQuery(primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages, wakes, presenceQuery(), memory(),
-                new HomeSetup(home), personalityQuery(), clock, transaction);
+        return new SessionStartDigestQuery(new CheckTheSessionAnchor(home, home.root().resolve("checkout")), primarySessions(), primarySessions, fleetSnapshot(), workerList(), outages,
+                wakes, presenceQuery(), memory(), new HomeSetup(home), personalityQuery(), clock, transaction);
     }
 
     public PersonalityQuery personalityQuery() {

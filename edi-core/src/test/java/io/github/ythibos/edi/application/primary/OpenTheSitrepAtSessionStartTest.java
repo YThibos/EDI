@@ -183,7 +183,7 @@ class OpenTheSitrepAtSessionStartTest {
         UUID primary = UUID.randomUUID();
         started(primary, LAUNCHED);
 
-        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(primary));
+        String digest = PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(primary, home.home().root()));
 
         assertThat(digest).contains("\nThis start did not open the console's sitrep page in the captain's browser; edi console opens it signed in.\n");
     }
@@ -212,6 +212,6 @@ class OpenTheSitrepAtSessionStartTest {
     }
 
     private String digestTelling(UUID session, ConsoleOpening sitrep) {
-        return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session).withSitrep(sitrep));
+        return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(session, home.home().root()).withSitrep(sitrep));
     }
 }

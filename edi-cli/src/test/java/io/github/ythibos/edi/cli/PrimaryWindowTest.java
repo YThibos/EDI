@@ -12,7 +12,7 @@ class PrimaryWindowTest {
 
     private static final Path HOME = Path.of("/edi/home");
     private static final PrimaryLaunch LAUNCH = new PrimaryLaunch("edi-261028-0737", Path.of("/edi/home"), Path.of("/edi/home/settings.json"),
-            Path.of("/edi/home/anchor.md"), "launch-key-of-the-primary", null);
+            "launch-key-of-the-primary", null);
 
     @Test
     void opensTheSessionAttachedWithItsHomeAndTheLaunchKeyInItsEnvironmentAndTitlesTheTerminalWithItsName() {
@@ -21,7 +21,7 @@ class PrimaryWindowTest {
         assertThat(outsideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-s", "edi-261028-0737", "-c", "/edi/home",
                 "-e", "EDI_HOME=/edi/home", "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
                 "env", "EDI_PRIMARY_LAUNCH=edi-up",
-                "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
+                "claude", "--settings", "/edi/home/settings.json",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
     }
@@ -33,7 +33,7 @@ class PrimaryWindowTest {
         assertThat(insideTmux.newSession(LAUNCH)).containsExactly("tmux", "new-session", "-d", "-s", "edi-261028-0737", "-c", "/edi/home",
                 "-e", "EDI_HOME=/edi/home", "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
                 "env", "EDI_PRIMARY_LAUNCH=edi-up",
-                "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
+                "claude", "--settings", "/edi/home/settings.json",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");
     }
@@ -46,7 +46,7 @@ class PrimaryWindowTest {
         assertThat(outsideTmux.newSession(LAUNCH.resuming(earlier))).containsExactly("tmux", "new-session", "-s", "edi-261028-0737", "-c", "/edi/home",
                 "-e", "EDI_HOME=/edi/home", "-e", "EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary",
                 "env", "EDI_PRIMARY_LAUNCH=edi-up",
-                "claude", "--settings", "/edi/home/settings.json", "--append-system-prompt-file", "/edi/home/anchor.md",
+                "claude", "--settings", "/edi/home/settings.json",
                 "--resume", "0f6c3b2a-0000-4000-8000-00000000c0de",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles", "on",
                 ";", "set-option", "-t", "edi-261028-0737", "set-titles-string", "#S");

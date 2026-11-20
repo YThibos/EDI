@@ -1,11 +1,13 @@
 package io.github.ythibos.edi.cli;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 final class CoreClient {
@@ -52,6 +54,7 @@ final class CoreClient {
                 .header("Accept", accepted);
         core.session().idIfAny().ifPresent(session -> request.header("EDI-Session", session));
         core.session().pidIfAny().ifPresent(pid -> request.header("EDI-Claude-Pid", pid));
+        core.session().projectDirectoryIfAny().ifPresent(directory -> request.header("EDI-Claude-Project-Dir", URLEncoder.encode(directory, StandardCharsets.UTF_8)));
         core.session().primaryLaunchKeyIfAny().ifPresent(key -> request.header("EDI-Primary-Launch-Key", key));
         return request;
     }

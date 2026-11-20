@@ -191,7 +191,8 @@ class NativeRecoveryIT {
         workerServer().ifPresent(server -> processes.register(server.pid()));
         CommandRun woken = awaitTheWake(primary, "wake-bell#1 needs a decision: (bell) Brass or bronze?");
 
-        assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThis session is the primary",
+        assertThat(started.output()).contains("\"additionalContext\":\"EDI session-start digest\\nThe anchor is not in this session: ",
+                "\\nThis session is the primary",
                 "The console's sitrep page is open in the captain's browser at http://127.0.0.1:");
         assertThat(home.resolve("opened-in-the-browser")).content().startsWith("/c start http://127.0.0.1:").contains("/hand-off/");
         assertThat(shown.output()).contains("\"systemMessage\":", "NEEDS YOUR DECISION", "Which bell?")

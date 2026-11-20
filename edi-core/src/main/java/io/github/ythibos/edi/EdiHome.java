@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -52,6 +53,10 @@ public final class EdiHome {
 
     public Path primaryState() {
         return root.resolve("state").resolve("primary");
+    }
+
+    public Path primaryOutputStyle() {
+        return root.resolve(".claude").resolve("output-styles").resolve(PrimaryOutputStyle.FILE_NAME);
     }
 
     public Path fleetLedger() {

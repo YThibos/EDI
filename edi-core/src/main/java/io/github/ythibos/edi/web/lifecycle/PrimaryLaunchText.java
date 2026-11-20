@@ -19,7 +19,6 @@ class PrimaryLaunchText implements TextPresenter<PrimaryLaunchHandOver> {
         return "session: " + launch.sessionName() + "\n"
                 + "directory: " + launch.directory() + "\n"
                 + "settings: " + launch.settings() + "\n"
-                + "system prompt: " + launch.systemPrompt() + "\n"
                 + "launch key: " + handOver.launchKey() + "\n";
     }
 }

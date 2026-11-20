@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.primary;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -26,6 +27,7 @@ import io.github.ythibos.edi.domain.primary.WeeklyGardening;
 @Service
 public class SessionStartDigestQuery {
 
+    private final CheckTheSessionAnchor anchor;
     private final PrimarySessions roles;
     private final PrimarySessionStore sessions;
     private final FleetSnapshotQuery fleet;
@@ -39,9 +41,10 @@ public class SessionStartDigestQuery {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public SessionStartDigestQuery(PrimarySessions roles, PrimarySessionStore sessions, FleetSnapshotQuery fleet, WorkerListQuery workers,
-            OutageStore outages, WakeStore wakes, PresenceQuery presence, MemoryQuery memory, HomeSetup home, PersonalityQuery personality,
-            Clock clock, TransactionTemplate transaction) {
+    public SessionStartDigestQuery(CheckTheSessionAnchor anchor, PrimarySessions roles, PrimarySessionStore sessions, FleetSnapshotQuery fleet,
+            WorkerListQuery workers, OutageStore outages, WakeStore wakes, PresenceQuery presence, MemoryQuery memory, HomeSetup home,
+            PersonalityQuery personality, Clock clock, TransactionTemplate transaction) {
+        this.anchor = anchor;
         this.roles = roles;
         this.sessions = sessions;
         this.fleet = fleet;
@@ -56,11 +59,11 @@ public class SessionStartDigestQuery {
         this.transaction = transaction;
     }
 
-    public SessionStartDigest digestFor(UUID session) {
-        return new SessionStartDigest(roles.standingOf(session), personality.current(), transaction.execute(_ -> limitStopToTell(session)),
-                fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()), transaction.execute(_ -> wakes.unacknowledged().size()),
-                presence.current(), memory.check(), memory.workarounds(), WeeklyGardening.isDueAt(LocalDateTime.ofInstant(clock.now(), clock.zone())),
-                home.missing(), null);
+    public SessionStartDigest digestFor(UUID session, Path projectDirectory) {
+        return new SessionStartDigest(anchor.forSessionStartedIn(projectDirectory), roles.standingOf(session), personality.current(),
+                transaction.execute(_ -> limitStopToTell(session)), fleet.snapshot(), workers.serving(), transaction.execute(_ -> outages.open()),
+                transaction.execute(_ -> wakes.unacknowledged().size()), presence.current(), memory.check(), memory.workarounds(),
+                WeeklyGardening.isDueAt(LocalDateTime.ofInstant(clock.now(), clock.zone())), home.missing(), null);
     }
 
     private PrimarySession limitStopToTell(UUID session) {
