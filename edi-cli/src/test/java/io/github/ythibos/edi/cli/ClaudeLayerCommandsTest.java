@@ -187,10 +187,21 @@ class ClaudeLayerCommandsTest {
                 session: edi-261017-0930
                 directory: /home/example/.edi
                 settings: /home/example/.edi/state/primary/settings.json
+                launch key: launch-key-of-the-primary
                 """);
 
         assertThat(launch.session()).isEqualTo("edi-261017-0930");
+        assertThat(launch.launchKeyVariable()).isEqualTo("EDI_PRIMARY_LAUNCH_KEY=launch-key-of-the-primary");
         assertThat(launch.claude()).containsExactly("claude", "--settings", "/home/example/.edi/state/primary/settings.json");
+    }
+
+    @Test
+    void refusesToResumeAPrimarySessionNamedByAnythingButASessionIdBeforeReachingTheCore() {
+        int refused = edi("", "up", "--resume", "the-old-primary");
+
+        assertThat(refused).isEqualTo(2);
+        assertThat(err.toString()).contains("--resume", "the-old-primary");
+        assertThat(core.requests()).isEmpty();
     }
 
     @Test

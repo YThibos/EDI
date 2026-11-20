@@ -20,7 +20,8 @@ import picocli.CommandLine;
 @Tag("adapter")
 class UpCommandTest {
 
-    private static final PrimaryLaunch LAUNCH = new PrimaryLaunch("edi-261118-0900", Path.of("/edi/home"), Path.of("/edi/home/settings.json"));
+    private static final PrimaryLaunch LAUNCH = new PrimaryLaunch("edi-261118-0900", Path.of("/edi/home"), Path.of("/edi/home/settings.json"),
+            "launch-key-of-the-primary", null);
 
     @TempDir
     private Path home;

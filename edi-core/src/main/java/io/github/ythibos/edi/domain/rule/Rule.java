@@ -8,6 +8,7 @@ public enum Rule {
     SIGNAL_BY_PATTERN(RuleArea.GUARD, "Processes are signalled by their recorded id, never by a name pattern (I-30)."),
     TMUX_WITHOUT_SOCKET(RuleArea.GUARD, "tmux runs only on a named socket, so the captain's own server is never touched (I-31)."),
     EDI_SERVER_CONTROL(RuleArea.GUARD, "The edi tmux server is never killed, typed into or respawned (I-31)."),
+    TMUX_KILL_SERVER(RuleArea.GUARD, "No tmux server is stopped with kill-server, on any socket; a server is stopped by its own process id."),
     TMUX_INPUT(RuleArea.GUARD, "A worker never types, pastes or runs commands into a tmux pane."),
     FORCED_PUSH(RuleArea.GUARD, "History on a remote is never rewritten by a forced push (I-03)."),
     BASE_BRANCH_PUSH(RuleArea.GUARD, "Nothing is pushed to a base branch, so every change goes through review (I-03)."),
@@ -31,6 +32,8 @@ public enum Rule {
     CONSOLE_HEADER(RuleArea.ACCESS, "The console changes state only with its own header, so no other page submits as the captain."),
     LOOPBACK_HOST(RuleArea.ACCESS, "The core answers only requests addressed to its own loopback host."),
     CALLER_ROLE(RuleArea.ACCESS, "Each command runs only under the role it belongs to: the primary, a worker or the captain."),
+    PRIMARY_SESSION(RuleArea.ACCESS, "Only the session edi up opened starts or feeds a primary session and changes the fleet; the home token alone"
+            + " keeps edi up, edi health, edi down and the reads."),
     WORKER_TOKEN_FILE(RuleArea.ACCESS, "A worker's window calls the core with its own token, never the home token."),
     REQUEST_VALID(RuleArea.REQUEST, "A request to the core carries every value it needs, well formed."),
     CAPTAINS_WORD(RuleArea.AUTHORITY, "Destructive and irreversible acts wait for the captain's word (I-06)."),

@@ -32,7 +32,7 @@ class CaptainController {
 
     @GetMapping("/api/captain/messages")
     CaptainMessages messages(Caller caller) {
-        caller.requirePrimary("edi captain messages");
+        caller.requireThePrimaryOrTheTerminal("edi captain messages");
         return evidence.messages(caller.callingSession());
     }
 }

@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.domain.primary;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -24,5 +25,9 @@ public record PrimaryRole(Optional<PrimarySession> holder) {
 
     public boolean isVacant() {
         return holder.isEmpty();
+    }
+
+    public Instant claimMomentAt(Instant now) {
+        return holder.map(PrimarySession::claimedAt).filter(held -> !now.isAfter(held)).map(held -> held.plusNanos(1)).orElse(now);
     }
 }

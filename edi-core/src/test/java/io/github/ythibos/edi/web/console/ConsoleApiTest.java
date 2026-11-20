@@ -123,7 +123,7 @@ class ConsoleApiTest {
         assertThat(signedIn.headers().firstValue("Set-Cookie")).hasValueSatisfying(cookie -> assertThat(cookie)
                 .startsWith("EDI-Console=").contains("Path=/", "Max-Age=43200", "HttpOnly", "SameSite=Strict"));
         assertThat(usedAgain.statusCode()).isEqualTo(401);
-        assertThat(usedAgain.body()).isEqualTo("This sign-in link was used already or has expired; run edi console for a new one.\n");
+        assertThat(usedAgain.body()).isEqualTo("This sign-in link was used already or has expired: ask the primary session for the console for a new one; edi up opens it first.\n");
     }
 
     @Test
@@ -141,7 +141,7 @@ class ConsoleApiTest {
         assertThat(link).startsWith(console() + "login#");
         assertThat(signIn(tokenOf(link)).statusCode()).isEqualTo(204);
         assertThat(followedAgain.statusCode()).isEqualTo(404);
-        assertThat(followedAgain.body()).isEqualTo("This page was opened already or has expired; run edi console to open the console again.\n");
+        assertThat(followedAgain.body()).isEqualTo("This page was opened already or has expired: ask the primary session for the console to open it again; edi up opens it first.\n");
     }
 
     @Test
@@ -211,7 +211,7 @@ class ConsoleApiTest {
         HttpResponse<String> page = send(HttpRequest.newBuilder(uri("/login")).GET());
 
         assertThat(refused.statusCode()).isEqualTo(403);
-        assertThat(refused.body()).isEqualTo("edi console runs under the EDI home's own token, in the captain's terminal or the primary session.\n");
+        assertThat(refused.body()).isEqualTo("edi console is the primary's to run; a worker reports through edi status and reads edi inbox.\n");
         assertThat(page.statusCode()).isEqualTo(200);
         assertThat(page.body()).contains("<app-root></app-root>");
     }
@@ -489,7 +489,8 @@ class ConsoleApiTest {
     }
 
     private static HttpRequest.Builder withTheHomeToken(String path, String accepted) throws IOException {
-        return withToken(Files.readString(home.resolve("state/core.token")), path, accepted);
+        return withToken(Files.readString(home.resolve("state/core.token")), path, accepted)
+                .header("EDI-Primary-Launch-Key", Files.readString(home.resolve("state/primary-launch.key")).strip());
     }
 
     private static HttpRequest.Builder withToken(String token, String path, String accepted) throws IOException {

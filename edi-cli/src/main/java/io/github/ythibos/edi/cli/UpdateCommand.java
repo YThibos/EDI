@@ -61,6 +61,15 @@ final class UpdateCommand implements Callable<Integer> {
         PrintWriter out = spec.commandLine().getOut();
         out.println("Updated to " + checkout.head() + "; the core runs the new build.");
         out.println("Re-read " + checkout.primaryAnchor() + ": the primary's rules may have changed, and a new session loads them.");
+        ClaudeSession session = edi.claudeSession();
+        if (session.runsWithoutTheLaunchKey()) {
+            out.println(reopeningWithTheLaunchKey(session));
+        }
         out.flush();
+    }
+
+    private static String reopeningWithTheLaunchKey(ClaudeSession session) {
+        return "The running primary session has no launch key, so the core refuses its hooks, its wait and its additions; reopen it with edi up,"
+                + " or edi up --resume " + session.id() + ".";
     }
 }

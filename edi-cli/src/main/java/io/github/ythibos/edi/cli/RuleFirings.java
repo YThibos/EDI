@@ -61,7 +61,7 @@ final class RuleFirings {
     private boolean toldTheCore(JsonBody firing) {
         try {
             return new CoreClient().post(edi.core(), FIRED, firing.text(), "text/plain", CoreClient.PATIENCE).succeeded();
-        } catch (CoreUnavailable unavailable) {
+        } catch (CoreUnavailable | DefaultHomeRefused unavailable) {
             return false;
         }
     }
@@ -77,7 +77,7 @@ final class RuleFirings {
             Path spool = spoolIn(edi.home());
             Files.createDirectories(spool.getParent());
             Files.writeString(spool, line + "\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        } catch (IOException _) {
+        } catch (IOException | DefaultHomeRefused _) {
         }
     }
 

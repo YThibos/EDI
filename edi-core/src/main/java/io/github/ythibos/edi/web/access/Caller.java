@@ -7,6 +7,7 @@ import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.primary.Standing;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -20,13 +21,20 @@ public sealed interface Caller {
 
     default Actor actor() {
         return switch (this) {
-            case Primary _, Standby _ -> Actor.PRIMARY;
+            case Primary _, Standby _, Terminal _ -> Actor.PRIMARY;
             case WorkerCaller caller -> Actor.worker(caller.worker());
             case Captain _ -> Actor.CAPTAIN;
         };
     }
 
     default void requirePrimary(String command) {
+        requireThePrimaryOrTheTerminal(command);
+        if (this instanceof Terminal terminal) {
+            throw terminal.refused(command);
+        }
+    }
+
+    default void requireThePrimaryOrTheTerminal(String command) {
         if (this instanceof WorkerCaller) {
             throw new NotPermitted(command + " is the primary's to run; a worker reports through edi status and reads edi inbox.");
         }
@@ -42,7 +50,7 @@ public sealed interface Caller {
     default WorkerId requireWorker(String command) {
         return switch (this) {
             case WorkerCaller caller -> caller.worker();
-            case Primary _, Standby _, Captain _ ->
+            case Primary _, Standby _, Terminal _, Captain _ ->
                     throw new NotPermitted(command + " is a worker's command: it runs under the token a worker gets at launch.");
         };
     }
@@ -83,7 +91,7 @@ public sealed interface Caller {
         return switch (this) {
             case Primary primary -> Optional.ofNullable(primary.session());
             case Standby standby -> Optional.of(standby.session());
-            case WorkerCaller _, Captain _ -> Optional.empty();
+            case Terminal _, WorkerCaller _, Captain _ -> Optional.empty();
         };
     }
 
@@ -99,6 +107,17 @@ public sealed interface Caller {
     }
 
     record Standby(UUID session) implements Caller {
+    }
+
+    record Terminal() implements Caller {
+
+        public NotPermitted refused(String command) {
+            return new NotPermitted(Rule.PRIMARY_SESSION, command + " is refused: this call holds the EDI home's token but not the launch key edi up"
+                    + " gave the primary session, so it comes from a terminal, a script or a test, never from the primary session or a worker."
+                    + " A test or a validation runs against a throwaway EDI home of its own; the captain uses the primary session or the console."
+                    + " A primary session opened before its launch key existed is reopened with edi up, or resumed with edi up --resume and its"
+                    + " session id.");
+        }
     }
 
     record WorkerCaller(WorkerId worker) implements Caller {

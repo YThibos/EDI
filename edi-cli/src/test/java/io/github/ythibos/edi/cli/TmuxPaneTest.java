@@ -54,7 +54,7 @@ class TmuxPaneTest {
     void stopTheStubCoreAndThePrivateTmuxServer() throws Exception {
         core.close();
         if (socket != null) {
-            run(tmux("kill-server"));
+            serverProcess.destroy();
             TestProcesses.awaitExit(serverProcess);
             Files.deleteIfExists(Path.of(socket));
         }

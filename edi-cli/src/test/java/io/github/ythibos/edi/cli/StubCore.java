@@ -109,6 +109,7 @@ final class StubCore implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("EDI-Session"),
                 exchange.getRequestHeaders().getFirst("EDI-Claude-Pid"),
                 projectDirectoryIn(exchange),
+                exchange.getRequestHeaders().getFirst("EDI-Primary-Launch-Key"),
                 new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         Reply answer = answerTo(request);
         if (answer == null) {
@@ -139,7 +140,7 @@ final class StubCore implements AutoCloseable {
     }
 
     record Request(String method, String target, String authorization, String accepted, String session, String claudePid, String projectDirectory,
-            String body) {
+            String primaryLaunchKey, String body) {
     }
 
     private record Reply(int status, String body, String wakes) {

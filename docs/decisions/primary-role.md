@@ -15,9 +15,11 @@ The kernel counts a process's start in clock ticks since boot (`/proc/<pid>/stat
 
 `primary_session` keeps every session that runs EDI's primary hooks, with its Claude process's pid and start tick, when it claimed the role and its current turn.
 `PrimaryRole` gives the role to the session that claimed it last, among sessions that have not ended and whose Claude process still runs, or whose process is unknown.
-A session claims the role at its start when no live session holds it, and at every prompt `Prompt.isTypedByTheCaptain` accepts, which is neither a background job's notice nor marked by `OperationalText`; a claim takes the role from every other session in the same transaction.
-`ApiTokenFilter` turns the home token with an `EDI-Session` header into `Caller.Standby` when another session holds the role, and `Caller.requirePrimary` refuses a standby caller with one sentence saying how to become primary again; a call without a session header, such as the captain's shell, is a primary caller.
-`SessionEnd` releases the role, and a crashed holder loses it as soon as its process is gone.
+Only a session `edi up` opened, which carries the primary launch key, starts, types or ends a primary session; a session started elsewhere, a hand-run `claude --resume` among them, is refused before anything is stored, so it never takes the role ([api-access](api-access.md)).
+`edi up --resume <session id>` reopens an earlier session in the primary's tmux session with the launch key and the same settings, whose `edi-primary` output style carries the anchor, adding `--resume` to the `claude` command, so a session opened before the launch key existed comes back as the primary; no session is adopted as launched without it.
+A session claims the role at its start when no live session holds it, and at every prompt `Prompt.isTypedByTheCaptain` accepts, which is neither a background job's notice nor marked by `OperationalText`; a claim lands after the holder's (`PrimaryRole.claimMomentAt`), and every session keeps its own claim.
+`ApiTokenFilter` turns the home token and the launch key with an `EDI-Session` header into `Caller.Standby` when another session holds the role, and `Caller.requirePrimary` refuses a standby caller with one sentence saying how to become primary again.
+`SessionEnd` releases the role, and a crashed holder loses it as soon as its process is gone; the role then falls back by itself to the live session that claimed it before, and every wake delivered to it says so first in one line, naming the session that took the role, when it last claimed it, and when it ended or that it lost its process (`RoleReturn`, `PrimarySessions.roleReturnTo`), until the captain types in it and so claims the role afresh; the line rides on a wake and never starts a delivery of its own, so a wait does not return again and again for it.
 `ProcessTable.identify` records the start tick and `ProcessTable.isRunning` reads it again; `SessionProcess.isTheOneStartedAt` treats a running process as the recorded one only when the ticks are equal, or when the start was never read.
 A tmux server's identity keeps its own comparison, since tmux stores its own start time.
 
@@ -30,6 +32,7 @@ The start tick is the kernel's own count, so a process keeps its identity across
 
 - A lock file held by the primary - the old harness's fleet lock, which outlived crashed sessions and needed takeover rules.
 - Claiming on every prompt - a background job's notice would hand the role to an idle session.
+- A claim that clears every other session's claim - when the taker ended, no session held the role, and the one that lost it stayed standby with its wait refused until the captain typed in it.
 - One token per primary session - a second secret per session, while the role, not the secret, is what two primaries contend for.
 - Comparing `ProcessHandle` start instants within a tolerance - two seconds failed on a four-second step, and any wider window still fails on a larger one while widening it for a reused pid.
 - Re-identifying the process at each typed prompt - the role would still be lost from the restart until the captain types again.
@@ -49,3 +52,5 @@ When the core runs outside Linux, or Claude Code stops naming its session and pr
 - 17/10/2026: slice S8 tied the captain's word to the same typed prompts ([captains-word](captains-word.md)).
 - 22/10/2026: a WSL2 clock resync made a live primary read as gone after a core restart, so a process's start is compared within two seconds.
 - 23/10/2026: a four-second clock step dropped the live primary again after a core restart, so a process is known by its start tick (EDI-38).
+- 18/11/2026: a made-up session from a validation's test took the role and ended, leaving the captain's session standby with its wait refused, so only a session `edi up` opened takes the role and the role falls back by itself when its taker leaves (EDI-278).
+- 19/11/2026: on the captain's answer to D138, a primary session opened before the launch key existed is not adopted; the captain reopens it with `edi up` or resumes it with `edi up --resume` (EDI-278).

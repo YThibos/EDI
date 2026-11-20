@@ -6,17 +6,19 @@ import io.github.ythibos.edi.application.primary.PrimaryLaunch;
 import io.github.ythibos.edi.web.text.TextPresenter;
 
 @Component
-class PrimaryLaunchText implements TextPresenter<PrimaryLaunch> {
+class PrimaryLaunchText implements TextPresenter<PrimaryLaunchHandOver> {
 
     @Override
-    public Class<PrimaryLaunch> presents() {
-        return PrimaryLaunch.class;
+    public Class<PrimaryLaunchHandOver> presents() {
+        return PrimaryLaunchHandOver.class;
     }
 
     @Override
-    public String text(PrimaryLaunch launch) {
+    public String text(PrimaryLaunchHandOver handOver) {
+        PrimaryLaunch launch = handOver.launch();
         return "session: " + launch.sessionName() + "\n"
                 + "directory: " + launch.directory() + "\n"
-                + "settings: " + launch.settings() + "\n";
+                + "settings: " + launch.settings() + "\n"
+                + "launch key: " + handOver.launchKey() + "\n";
     }
 }

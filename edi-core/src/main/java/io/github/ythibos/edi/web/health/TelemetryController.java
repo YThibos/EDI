@@ -38,7 +38,7 @@ class TelemetryController {
     @PostMapping("/api/telemetry/recordings")
     @ResponseStatus(HttpStatus.CREATED)
     DumpedRecording dump(Caller caller) {
-        caller.requirePrimary("edi health --dump-recording");
+        caller.requireThePrimaryOrTheTerminal("edi health --dump-recording");
         return new DumpedRecording(recording.dump().toString());
     }
 

@@ -41,6 +41,9 @@ describe('SignInPage', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.sr-notice__title')?.textContent).toBe('This sign-in link no longer works');
+    expect(fixture.nativeElement.querySelector('.sr-notice__detail')?.textContent).toBe(
+      'Each link signs you in once, within two minutes. Ask the primary session for the console for a fresh one; edi up opens it first.',
+    );
     expect(fixture.nativeElement.querySelector('h1.sr-brand__sub')?.textContent).toBe('Sign in');
   });
 });

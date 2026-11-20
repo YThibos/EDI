@@ -361,9 +361,10 @@ class NativeRecoveryIT {
 
     private static void stopTheWorkerServer() throws Exception {
         if (answers("tmux", "-V")) {
-            Optional<ProcessHandle> server = workerServer();
-            run(new ProcessBuilder("tmux", "-L", WORKER_SOCKET, "kill-server").redirectErrorStream(true), "");
-            server.ifPresent(TestProcesses::awaitExit);
+            workerServer().ifPresent(server -> {
+                server.destroy();
+                TestProcesses.awaitExit(server);
+            });
             Files.deleteIfExists(Path.of(System.getenv().getOrDefault("TMUX_TMPDIR", "/tmp"),
                     "tmux-" + Files.getAttribute(Path.of("/proc/self"), "unix:uid"), WORKER_SOCKET));
         }
@@ -394,6 +395,7 @@ class NativeRecoveryIT {
         ProcessBuilder launch = new ProcessBuilder(commandLine).directory(home.toFile()).redirectErrorStream(true);
         Map<String, String> variables = new HashMap<>(environment);
         variables.put("EDI_HOME", home.toString());
+        variables.put("EDI_PRIMARY_LAUNCH_KEY", Files.readString(home.resolve("state/primary-launch.key")).strip());
         launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
         launch.environment().putAll(variables);
         return run(launch, input);

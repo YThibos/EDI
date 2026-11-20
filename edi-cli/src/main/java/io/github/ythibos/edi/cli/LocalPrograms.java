@@ -48,6 +48,7 @@ final class LocalPrograms {
     static void startDetached(List<String> command, Path log, Map<String, String> environment) {
         try {
             ProcessBuilder launch = new ProcessBuilder(command).redirectOutput(Redirect.appendTo(log.toFile())).redirectErrorStream(true);
+            launch.environment().remove(ClaudeSession.PRIMARY_LAUNCH_KEY);
             launch.environment().putAll(environment);
             launch.start().getOutputStream().close();
         } catch (IOException unstartable) {

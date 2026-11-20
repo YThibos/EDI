@@ -38,6 +38,7 @@
         <java.version>25</java.version>
         <argLine>--enable-preview --enable-native-access=ALL-UNNAMED -XX:TieredStopAtLevel=1</argLine>
         <test.excludedGroups>live</test.excludedGroups>
+        <test.captainsVariables>EDI_HOME,EDI_PRIMARY_LAUNCH_KEY,EDI_TOKEN_FILE,EDI_ROLE,EDI_WORKER,EDI_TASK_ID,CLAUDE_CODE_SESSION_ID,CLAUDE_PID</test.captainsVariables>
         <test.junitConfiguration>
             junit.jupiter.execution.timeout.default=3 m
             junit.jupiter.execution.parallel.enabled=true
@@ -107,7 +108,9 @@
                         <environmentVariables>
                             <GIT_CONFIG_GLOBAL>/dev/null</GIT_CONFIG_GLOBAL>
                             <GIT_CONFIG_NOSYSTEM>1</GIT_CONFIG_NOSYSTEM>
+                            <EDI_TEST_RUN>surefire</EDI_TEST_RUN>
                         </environmentVariables>
+                        <excludedEnvironmentVariables>${test.captainsVariables}</excludedEnvironmentVariables>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -118,6 +121,10 @@
                         <properties>
                             <configurationParameters>${test.junitConfiguration}</configurationParameters>
                         </properties>
+                        <environmentVariables>
+                            <EDI_TEST_RUN>failsafe</EDI_TEST_RUN>
+                        </environmentVariables>
+                        <excludedEnvironmentVariables>${test.captainsVariables}</excludedEnvironmentVariables>
                     </configuration>
                 </plugin>
                 <plugin>

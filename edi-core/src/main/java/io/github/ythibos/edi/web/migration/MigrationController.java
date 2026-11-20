@@ -25,7 +25,7 @@ class MigrationController {
 
     @GetMapping("/api/migrations/firstofficer/plan")
     MigrationReport plan(@RequestParam String from, Caller caller) {
-        caller.requirePrimary(COMMAND);
+        caller.requireThePrimaryOrTheTerminal(COMMAND);
         return migration.dryRun(oldHomeNamed(from));
     }
 

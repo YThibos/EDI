@@ -117,7 +117,7 @@ class ProcessSafetyTest {
     class WorkersLiveOnThePrivateSocket {
 
         @Test
-        @DisplayName("AT-31 the guard refuses tmux kill-server, tmux kill-session without a socket, and tmux -L edi kill-server from a worker")
+        @DisplayName("AT-31 the guard refuses tmux kill-server on any socket, tmux kill-session without a socket, and tmux -L edi kill-window from a worker")
         void theGuardRefusesBareSocketTmux() throws IOException {
             prepareAWorker();
 
@@ -125,11 +125,15 @@ class ProcessSafetyTest {
                 assertDenied(forTheWorker(command), "name the socket with -L or -S (I-31)");
                 assertDenied(forThePrimary(command), "name the socket with -L or -S (I-31)");
             }
-            for (String command : List.of("tmux -L edi kill-server", "tmux -L edi kill-window -t @2", "tmux -L edi send-keys -t @2 Enter")) {
+            for (String command : List.of("tmux -L edi kill-session -t workers", "tmux -L edi kill-window -t @2", "tmux -L edi send-keys -t @2 Enter")) {
                 assertDenied(forTheWorker(command), "belong to the core");
                 assertDenied(forThePrimary(command), "belong to the core");
             }
-            assertThat(forTheWorker("tmux -L edi-test-42 kill-server").verdict()).isEqualTo(HookAnswer.Verdict.PROCEED);
+            for (String command : List.of("tmux -L default kill-server", "tmux -L edi-test-42 kill-server", "tmux -S /tmp/junit-42/tmux.sock kill-server")) {
+                assertDenied(forTheWorker(command), "never with kill-server (I-31)");
+                assertDenied(forThePrimary(command), "never with kill-server (I-31)");
+            }
+            assertThat(forTheWorker("tmux -L edi-test-42 kill-session -t probe").verdict()).isEqualTo(HookAnswer.Verdict.PROCEED);
             assertThat(forTheWorker("tmux -L edi list-windows").verdict()).isEqualTo(HookAnswer.Verdict.PROCEED);
         }
     }

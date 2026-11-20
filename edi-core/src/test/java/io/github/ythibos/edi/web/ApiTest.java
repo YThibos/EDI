@@ -121,7 +121,7 @@ class ApiTest {
 
         assertThat(refused.statusCode()).isEqualTo(401);
         assertThat(refused.body()).isEqualTo("This call needs the EDI token from state/core.token in the EDI home, the token a worker got at launch, "
-                + "or a console session opened through edi console.\n");
+                + "or a console session the primary session opened.\n");
         assertThat(send(HttpRequest.newBuilder(uri("/api/health")).GET()).statusCode()).isEqualTo(200);
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("state/core.token")))).isEqualTo("rw-------");
     }
@@ -882,7 +882,7 @@ class ApiTest {
         HttpResponse<String> launch = post("/api/primary/launch", "{}", TEXT);
 
         assertThat(launch.statusCode()).isEqualTo(200);
-        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\n");
+        assertThat(launch.body()).matches("(?s)session: edi-\\d{6}-\\d{4}\ndirectory: .*\nsettings: .*settings\\.json\nlaunch key: [A-Za-z0-9_-]{43}\n");
         assertThat(Files.readString(home.resolve(".claude/output-styles/edi-primary.md"))).contains("\n# EDI: the primary's anchor\n");
     }
 
@@ -1092,6 +1092,7 @@ class ApiTest {
     private static HttpRequest.Builder authorised(String path, String accepted) throws IOException {
         return HttpRequest.newBuilder(uri(path))
                 .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")))
+                .header("EDI-Primary-Launch-Key", Files.readString(home.resolve("state/primary-launch.key")).strip())
                 .header("Accept", accepted);
     }
 

@@ -34,10 +34,11 @@ A worker's `needs-decision` or `blocked` is addressed to EDI, so the sitrep page
 
 ## Guards
 
-- A pre-tool guard refuses pattern kills, tmux without a socket, forced or base-branch pushes and merges, commits, pushes and merges that skip the git hooks, and keeps secrets from a shell and from `Read` ([pre-tool-guard](decisions/pre-tool-guard.md)).
+- A pre-tool guard refuses pattern kills, tmux without a socket, `tmux kill-server` on any socket, forced or base-branch pushes and merges, commits, pushes and merges that skip the git hooks, and keeps secrets from a shell and from `Read` ([pre-tool-guard](decisions/pre-tool-guard.md)).
 - A mechanical task's done counts only once every file it changed is one its dispatch names and the project's `verify` command passes; otherwise an implementation worker takes over in the same copy ([mechanical-tasks](decisions/mechanical-tasks.md)).
 - Each copy's `commit-msg` hook refuses agent trailers and subjects without the work key ([isolated-copies](decisions/isolated-copies.md)).
 - EDI refuses any push from an isolated copy to a repository its project does not register ([forge-adapters](decisions/forge-adapters.md)).
+- `edi` refuses to fall back to the default EDI home inside an isolated copy, a validation's working directory or under a test runner, and the core refuses the home token without the primary's launch key every change to the fleet, so a worker's tests and validations never reach the captain's fleet ([api-access](decisions/api-access.md)); the validation pipeline's agent runs under the same pre-tool guard ([pipeline-agent](decisions/pipeline-agent.md)).
 
 ## Supervision
 

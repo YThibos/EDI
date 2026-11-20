@@ -67,10 +67,13 @@ public final class Edi implements Runnable {
     private static final String WORKER_ROLE = "worker";
     private static final String WORKER_TOKEN_FILE = "access.worker-token-file";
     private static final String COMMAND_ARGUMENTS = "command.arguments";
+    private static final String USER_HOME = "HOME";
+    private static final int REFUSED = 1;
 
     private final Map<String, String> environment;
     private final InputStream input;
     private final StandardOutput output;
+    private final Path workingDirectory;
 
     @Spec
     private CommandSpec spec;
@@ -82,9 +85,14 @@ public final class Edi implements Runnable {
     }
 
     Edi(Map<String, String> environment, InputStream input, StandardOutput output) {
+        this(environment, input, output, Path.of(System.getProperty("user.dir")));
+    }
+
+    Edi(Map<String, String> environment, InputStream input, StandardOutput output, Path workingDirectory) {
         this.environment = environment;
         this.input = input;
         this.output = output;
+        this.workingDirectory = workingDirectory;
     }
 
     public static void main(String[] arguments) {
@@ -98,7 +106,7 @@ public final class Edi implements Runnable {
             int refused = readingFailed.handleParseException(unreadable, arguments);
             RuleFirings.throughTheCore(edi).fired(COMMAND_ARGUMENTS, RuleFirings.REFUSED, unreadableArgumentsOf(unreadable));
             return refused;
-        });
+        }).setExecutionExceptionHandler((failure, failedLine, _) -> refusedOrRethrown(failure, failedLine));
     }
 
     @Override
@@ -133,8 +141,7 @@ public final class Edi implements Runnable {
     }
 
     Path home() {
-        String home = environment.get("EDI_HOME");
-        return home == null ? Path.of(System.getProperty("user.home"), ".edi") : Path.of(home);
+        return isSet(DefaultHome.VARIABLE) ? Path.of(environment.get(DefaultHome.VARIABLE)) : defaultHome().fallenBackToUnder(environment);
     }
 
     boolean runsForAWorker() {
@@ -168,6 +175,19 @@ public final class Edi implements Runnable {
 
     private static String unreadableArgumentsOf(ParameterException unreadable) {
         return unreadable.getCommandLine().getCommandSpec().qualifiedName() + " was given options or parameters it cannot read.";
+    }
+
+    private static int refusedOrRethrown(Exception failure, CommandLine commandLine) throws Exception {
+        if (failure instanceof DefaultHomeRefused refused) {
+            commandLine.getErr().println(refused.getMessage());
+            commandLine.getErr().flush();
+            return REFUSED;
+        }
+        throw failure;
+    }
+
+    private DefaultHome defaultHome() {
+        return new DefaultHome(Path.of(isSet(USER_HOME) ? environment.get(USER_HOME) : System.getProperty("user.home")), workingDirectory);
     }
 
     private void recordTheTokenFileRefusal(String refusal) {

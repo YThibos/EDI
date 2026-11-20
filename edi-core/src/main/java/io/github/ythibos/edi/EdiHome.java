@@ -35,12 +35,20 @@ public final class EdiHome {
         return root.resolve("state").resolve("core.token");
     }
 
+    public Path primaryLaunchKeyFile() {
+        return root.resolve("state").resolve("primary-launch.key");
+    }
+
     public Path spooledRuleFirings() {
         return root.resolve("state").resolve("rules-fired.jsonl");
     }
 
     public Path corePidFile() {
         return root.resolve("state").resolve("core.pid");
+    }
+
+    public Path pipelineAgentSettings() {
+        return root.resolve("state").resolve("pipeline").resolve("settings.json");
     }
 
     public Path primaryState() {
