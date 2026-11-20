@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -42,5 +43,33 @@ class PipelineGuardTest {
 
         assertThat(JSON.readTree(Files.readString(settings)).path("hooks").path("PreToolUse").get(0).path("hooks").get(0).path("command").asString())
                 .isEqualTo("EDI_HOME='" + directory + "/the captain'\\''s home' edi hook pre-tool-use");
+    }
+
+    @Test
+    void leavesSettingsThatAlreadyHoldTheGuardInPlace() throws IOException {
+        EdiHome home = new EdiHome(directory.resolve("edi home"));
+        Path settings = PipelineGuard.settingsWrittenFor(home, JSON);
+        String guard = Files.readString(settings);
+        Files.setPosixFilePermissions(settings, PosixFilePermissions.fromString("r--------"));
+
+        PipelineGuard.settingsWrittenFor(home, JSON);
+
+        assertThat(settings).hasContent(guard);
+    }
+
+    @Test
+    void replacesSettingsThatNoLongerHoldTheGuard() throws IOException {
+        EdiHome home = new EdiHome(directory.resolve("edi home"));
+        Path settings = home.pipelineAgentSettings();
+        Files.createDirectories(settings.getParent());
+        Files.writeString(settings, "{}\n");
+
+        PipelineGuard.settingsWrittenFor(home, JSON);
+
+        assertThat(JSON.readTree(Files.readString(settings)).path("hooks").path("PreToolUse").get(0).path("hooks").get(0).path("command").asString())
+                .isEqualTo("EDI_HOME='" + home.root() + "' edi hook pre-tool-use");
+        try (var leftovers = Files.list(settings.getParent())) {
+            assertThat(leftovers).containsExactly(settings);
+        }
     }
 }

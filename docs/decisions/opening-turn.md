@@ -49,3 +49,4 @@ When the captain wants EDI to speak first, wants `edi up` to switch to a primary
 - 23/10/2026: at the captain's request `edi up` opened the primary with the opening prompt, and the opening turn stopped opening a second sitrep page (EDI-43).
 - 27/10/2026: at the captain's request `edi up` opens the primary with no prompt submitted, so the session waits for the captain to type, and the captain's first typed prompt clears the session-start mark (EDI-101).
 - 13/11/2026: the command line lost its anchor option, since the settings now load the anchor (EDI-268).
+- 19/11/2026: `edi console` needs the primary session's launch key, so a request from a terminal no longer opens the page; only a request that names no session but carries the key does (EDI-278).
