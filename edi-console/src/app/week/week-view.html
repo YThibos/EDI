@@ -25,6 +25,13 @@
         <app-week-table [week]="week" />
         <p class="sr-meta-mono sr-weeknote">Active of wall-clock time per day in {{ week.zone }}; Copy puts a task's days on the clipboard as timesheet lines.</p>
       </section>
+      <section class="sr-section">
+        <div class="sr-section__head">
+          <h2 class="sr-sign">Cost per effort</h2>
+        </div>
+        <app-effort-table [efforts]="week.efforts" />
+        <p class="sr-meta-mono sr-weeknote">The tasks whose cost was counted this week, by the effort their first worker was launched at; tokens are weighted as input-token equivalents, and findings per round count the pipeline's review.</p>
+      </section>
     }
   </app-access-notice>
 </main>

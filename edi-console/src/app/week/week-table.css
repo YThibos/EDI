@@ -36,6 +36,7 @@
 
 .sr-week__task .sr-row__key {
   margin-left: 6px;
+  white-space: nowrap;
 }
 
 .sr-week__booked {

@@ -4,6 +4,7 @@ export interface WorkedWeek {
   zone: string;
   days: string[];
   tasks: WorkedTask[];
+  efforts: YieldAtAnEffort[];
 }
 
 export interface WorkedTask {
@@ -18,6 +19,26 @@ export interface WorkedDay {
   day: string;
   activeMinutes: number;
   wallClockMinutes: number;
+}
+
+export interface YieldAtAnEffort {
+  effort: string | null;
+  tasks: number;
+  weightedWorkerTokens: number;
+  weightedWorkerTokensPerTask: number;
+  weightedPipelineTokens: number;
+  workerTokens: TokenUsage;
+  pipelineTokens: TokenUsage;
+  reviewRounds: number;
+  findings: number;
+  findingsPerReviewRound: number | null;
+}
+
+export interface TokenUsage {
+  input: number;
+  cacheRead: number;
+  cacheWrite: number;
+  output: number;
 }
 
 export function hoursAndMinutes(minutes: number): string {
@@ -53,4 +74,20 @@ export function weekAround(monday: string, weeks: number): string {
   const day = new Date(`${monday}T12:00:00Z`);
   day.setUTCDate(day.getUTCDate() + 7 * weeks);
   return day.toISOString().slice(0, 10);
+}
+
+export function effortName(yieldAtAnEffort: YieldAtAnEffort): string {
+  return yieldAtAnEffort.effort ?? 'no flag';
+}
+
+export function weightedTokens(tokens: number): string {
+  const thousands = Math.round(tokens / 1_000);
+  if (thousands >= 1_000) {
+    return `${(tokens / 1_000_000).toFixed(1)}M`;
+  }
+  return thousands >= 1 ? `${thousands}k` : String(tokens);
+}
+
+export function findingsPerRound(yieldAtAnEffort: YieldAtAnEffort): string {
+  return yieldAtAnEffort.findingsPerReviewRound === null ? '-' : yieldAtAnEffort.findingsPerReviewRound.toFixed(2);
 }
