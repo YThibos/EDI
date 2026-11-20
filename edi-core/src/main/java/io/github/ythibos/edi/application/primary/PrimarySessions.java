@@ -12,6 +12,7 @@ import io.github.ythibos.edi.adapter.store.PrimarySessionStore;
 import io.github.ythibos.edi.domain.primary.PrimaryRole;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.primary.PrimaryTurn;
+import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.primary.Standing;
 
 @Component
@@ -33,6 +34,11 @@ public class PrimarySessions {
 
     public Optional<PrimarySession> holder() {
         return transaction.execute(_ -> role().holder());
+    }
+
+    public Optional<RoleReturn> roleReturnTo(UUID session) {
+        return transaction.execute(_ -> role().holder().filter(holder -> holder.id().equals(session))
+                .flatMap(holder -> RoleReturn.toTheHolder(holder, sessions.all())));
     }
 
     public Optional<Instant> previousReportOf(UUID session) {

@@ -55,6 +55,7 @@ final class CoreClient {
         core.session().idIfAny().ifPresent(session -> request.header("EDI-Session", session));
         core.session().pidIfAny().ifPresent(pid -> request.header("EDI-Claude-Pid", pid));
         core.session().projectDirectoryIfAny().ifPresent(directory -> request.header("EDI-Claude-Project-Dir", URLEncoder.encode(directory, StandardCharsets.UTF_8)));
+        core.session().primaryLaunchKeyIfAny().ifPresent(key -> request.header("EDI-Primary-Launch-Key", key));
         return request;
     }
 

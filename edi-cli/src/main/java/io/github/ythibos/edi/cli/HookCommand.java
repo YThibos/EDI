@@ -43,7 +43,7 @@ final class HookCommand implements Callable<Integer> {
         try {
             CoreReply reply = new CoreClient().post(edi.core(), hookPath(), payload, "application/json");
             return reply.succeeded() ? answered(reply.body()) : unanswered(reply.body().strip(), firingsAfter(reply));
-        } catch (CoreUnavailable unavailable) {
+        } catch (CoreUnavailable | DefaultHomeRefused unavailable) {
             return withoutTheCore(payload, unavailable.getMessage());
         }
     }

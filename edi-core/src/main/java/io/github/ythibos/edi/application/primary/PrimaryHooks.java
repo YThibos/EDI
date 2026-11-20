@@ -161,10 +161,7 @@ public class PrimaryHooks {
     }
 
     private void claim(PrimarySession claimant, Instant now) {
-        sessions.running().stream()
-                .filter(other -> !other.id().equals(claimant.id()) && other.hasClaimedTheRole())
-                .forEach(other -> sessions.save(other.relinquished()));
-        sessions.save(claimant.claimed(now));
+        sessions.save(claimant.claimed(roles.role().claimMomentAt(now)));
     }
 
     private PrimarySession registered(UUID id, Instant now) {

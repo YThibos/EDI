@@ -13,7 +13,7 @@ import io.github.ythibos.edi.application.access.ConsoleHandOffs;
 @Controller
 class ConsolePages {
 
-    private static final String HAND_OFF_SPENT = "This page was opened already or has expired; run edi console to open the console again.\n";
+    private static final String HAND_OFF_SPENT = "This page was opened already or has expired: ask the primary session for the console to open it again; edi up opens it first.\n";
 
     private final ConsoleHandOffs handOffs;
 

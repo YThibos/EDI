@@ -38,6 +38,8 @@ import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
 import jdk.jfr.consumer.RecordingFile;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @Isolated
 @DisplayName("AT-44 the native core starts on a fresh store, answers its health and passes the command's contract")
@@ -46,6 +48,7 @@ class NativeSmokeIT {
     private static final RoundTripBudget ROUND_TRIP_BUDGET = new RoundTripBudget(200);
     private static final RoundTripBudget PROOF_BUDGET = new RoundTripBudget(50);
     private static final Duration MACHINE_SLOWDOWN = Duration.ofMillis(60);
+    private static final JsonMapper JSON = new JsonMapper();
     private static final Pattern ADDED_TASK_ID = Pattern.compile("\"added\":\\{\"id\":\"([^\"]+)\"");
     private static final String REGISTRY = """
             projects:
@@ -124,6 +127,23 @@ class NativeSmokeIT {
             core.descendants().forEach(ProcessHandle::destroyForcibly);
             core.destroyForcibly();
         }
+    }
+
+    @Test
+    void refusesARunWithoutItsHomeBeforeItReachesAnyCore() throws Exception {
+        Path userHome = Files.createDirectories(home.resolve("user-home"));
+        Files.createDirectories(userHome.resolve(".edi/state"));
+        Files.copy(home.resolve("state/core.port"), userHome.resolve(".edi/state/core.port"));
+        Files.copy(home.resolve("state/core.token"), userHome.resolve(".edi/state/core.token"));
+        Path isolatedCopy = Files.createDirectories(userHome.resolve(".edi/worktrees/harness/made-up-task"));
+        String tasksBefore = edi("", "task", "list").output();
+
+        CommandRun refused = ediWithoutItsHome(isolatedCopy, userHome, "task", "add", "--kind", "captain", "--title", "A made-up task");
+
+        assertThat(refused.exitCode()).isEqualTo(1);
+        assertThat(refused.output()).startsWith("edi refuses to fall back to the default EDI home " + userHome.resolve(".edi")
+                + ": it runs inside a worker's isolated copy, " + isolatedCopy).contains("Set EDI_HOME to a throwaway home this run created.");
+        assertThat(edi("", "task", "list").output()).isEqualTo(tasksBefore);
     }
 
     @Test
@@ -448,7 +468,11 @@ class NativeSmokeIT {
         assertThat(dispatched.output()).startsWith("Dispatched native-worker to native-worker#1 (implementation, claude-sonnet-5-5 at high,"
                 + " chosen by the category implementation) on feature/HRN-7");
         assertThat(home.resolve("no-mistakes/config.yaml")).content()
-                .isEqualTo("agent: auto\n\nagent_args_override:\n  claude:\n    - --model\n    - claude-opus-5-5\n    - --effort\n    - high\n");
+                .isEqualTo("agent: auto\n\nagent_args_override:\n  claude:\n    - --model\n    - claude-opus-5-5\n    - --effort\n    - high\n"
+                        + "    - --settings\n    - " + home.resolve("state/pipeline/settings.json") + "\n");
+        JsonNode pipelineGuard = JSON.readTree(Files.readString(home.resolve("state/pipeline/settings.json"))).path("hooks").path("PreToolUse").get(0);
+        assertThat(pipelineGuard.path("matcher").asString()).isEqualTo("Bash|Monitor|Read");
+        assertThat(pipelineGuard.path("hooks").get(0).path("command").asString()).isEqualTo("EDI_HOME='" + home + "' edi hook pre-tool-use");
         assertThat(done.output()).contains("native-worker#1", "done: the stub worker finished");
         assertThat(gitOutput(worktree, "log", "--format=%s", "-1")).isEqualTo("HRN-7 Add the stub file\n");
         assertThat(steered.output()).isEqualTo("Message 1 waits for native-worker#1; its idle prompt was told to run edi inbox.\n");
@@ -553,6 +577,7 @@ class NativeSmokeIT {
         launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
         launch.environment().putAll(primary);
         launch.environment().put("EDI_HOME", home.toString());
+        launch.environment().put("EDI_PRIMARY_LAUNCH_KEY", launchKey());
         return processes.register(launch.start());
     }
 
@@ -574,9 +599,10 @@ class NativeSmokeIT {
 
     private static void stopTheWorkerServer() throws Exception {
         if (answersIn(home, "tmux", "-V")) {
-            Optional<ProcessHandle> server = workerServer();
-            run(new ProcessBuilder("tmux", "-L", WORKER_SOCKET, "kill-server").redirectErrorStream(true), "");
-            server.ifPresent(TestProcesses::awaitExit);
+            workerServer().ifPresent(server -> {
+                server.destroy();
+                TestProcesses.awaitExit(server);
+            });
             Files.deleteIfExists(Path.of(System.getenv().getOrDefault("TMUX_TMPDIR", "/tmp"),
                     "tmux-" + Files.getAttribute(Path.of("/proc/self"), "unix:uid"), WORKER_SOCKET));
         }
@@ -699,7 +725,21 @@ class NativeSmokeIT {
         launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
         launch.environment().putAll(environment);
         launch.environment().put("EDI_HOME", home.toString());
+        launch.environment().put("EDI_PRIMARY_LAUNCH_KEY", launchKey());
         return run(launch, input);
+    }
+
+    private static CommandRun ediWithoutItsHome(Path directory, Path userHome, String... arguments) throws Exception {
+        List<String> commandLine = new ArrayList<>(List.of(binary("edi.cli.binary").toString()));
+        commandLine.addAll(List.of(arguments));
+        ProcessBuilder launch = new ProcessBuilder(commandLine).directory(directory.toFile()).redirectErrorStream(true);
+        launch.environment().keySet().removeIf(variable -> variable.startsWith("TMUX") || variable.startsWith("CLAUDE") || variable.startsWith("EDI_"));
+        launch.environment().put("HOME", userHome.toString());
+        return run(launch, "");
+    }
+
+    private static String launchKey() throws IOException {
+        return Files.readString(home.resolve("state/primary-launch.key")).strip();
     }
 
     private static CommandRun run(ProcessBuilder launch, String input) throws Exception {

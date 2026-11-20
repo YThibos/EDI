@@ -82,8 +82,8 @@ public class WaitForWakes {
                 return Optional.<WakeDelivery>empty();
             }
             wakes.offer(due, stream.id());
-            return Optional.of(new WakeDelivery(due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(), outages.open().size(),
-                    captain, stream.follows()));
+            return Optional.of(new WakeDelivery(sessions.roleReturnTo(stream.session()), due, decisions.open().size(), tasks.inState(TaskState.IN_FLIGHT).size(),
+                    outages.open().size(), captain, stream.follows()));
         });
     }
 

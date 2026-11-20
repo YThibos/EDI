@@ -95,6 +95,7 @@ class HookController {
             case Caller.WorkerCaller worker -> rendered(workerHook(hook, worker.worker(), payload));
             case Caller.Primary _, Caller.Standby _ -> primaryHook(hook, payload,
                     new PrimaryCall(claudePid, projectDirectory, paneWidth, ConsoleAddress.servedTo(request), originOf(launch)));
+            case Caller.Terminal terminal -> rendered(guardedOutsideThePrimarySession(hook, payload, terminal));
             case Caller.Captain _ -> throw new NotPermitted("Hooks come from Claude Code sessions, never from the console.");
         };
     }
@@ -110,6 +111,13 @@ class HookController {
             case NOTIFICATION -> workerHooks.notified(worker, textIn(payload, "notification_type"));
             case SESSION_END -> workerHooks.sessionEnded(worker, textIn(payload, "reason"));
         };
+    }
+
+    private HookAnswer guardedOutsideThePrimarySession(HookEvent hook, JsonNode payload, Caller.Terminal terminal) {
+        if (hook != HookEvent.PRE_TOOL_USE) {
+            throw terminal.refused("The " + hook.word() + " hook");
+        }
+        return guard.checkForPrimary(toolCallIn(payload), CallingSession.UNNAMED);
     }
 
     private ResponseEntity<String> primaryHook(HookEvent hook, JsonNode payload, PrimaryCall call) {

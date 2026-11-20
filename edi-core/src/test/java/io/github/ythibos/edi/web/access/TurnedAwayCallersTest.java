@@ -43,8 +43,8 @@ class TurnedAwayCallersTest {
 
     @Test
     void recordsABurstOfCallsWithoutATokenAsOneFiringAMinute() throws IOException, ServletException {
-        ApiTokenFilter filter = new ApiTokenFilter(ApiToken.issuedInto(directory.resolve("core.token")), home.workerTokens(), home.primarySessions(),
-                home.consoleAccess(), firings);
+        ApiTokenFilter filter = new ApiTokenFilter(ApiToken.issuedInto(directory.resolve("core.token")),
+                PrimaryLaunchKey.keptIn(directory.resolve("primary-launch.key")), home.workerTokens(), home.primarySessions(), home.consoleAccess(), firings);
 
         List<Integer> burst = statusesOf(filter, BURST, TurnedAwayCallersTest::callWithoutAToken);
         long firedInTheBurst = firingsOf(Rule.API_TOKEN);

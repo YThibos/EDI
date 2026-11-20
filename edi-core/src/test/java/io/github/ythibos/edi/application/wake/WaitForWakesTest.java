@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -21,7 +23,9 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.primary.RoleReturn;
 import io.github.ythibos.edi.domain.primary.SessionSource;
+import io.github.ythibos.edi.domain.primary.Standing;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -62,6 +66,39 @@ class WaitForWakesTest {
         assertThat(delivery.ongoing()).isOne();
         assertThat(delivery.streamContinues()).isTrue();
         assertThat(delivery.wakes().getFirst().wake().detail()).isEqualTo("(lamp) Brass or oil?");
+    }
+
+    @Test
+    void givesThePrimaryRoleBackOnceTheSessionThatTookItEndsAndNamesItsLastClaimInEveryWakeUntilTheCaptainTypesThere() {
+        UUID captains = primarySession();
+        home.clock().advance(Duration.ofMinutes(1));
+        UUID taker = primarySession();
+        Standing whileTaken = home.primarySessions().standingOf(captains);
+        home.clock().advance(Duration.ofMinutes(1));
+        Instant lastClaimedAt = home.clock().now();
+        home.primaryHooks().promptSubmitted(taker, "Look again.");
+        home.clock().advance(Duration.ofMinutes(2));
+        Instant endedAt = home.clock().now();
+        home.primaryHooks().sessionEnded(taker);
+        WakeStream stream = followedBy(captains);
+
+        boolean quietWithoutAWake = home.waitForWakes().deliverTo(stream).isEmpty();
+        home.recordStatus().report(worker.id(), StatusState.BLOCKED, new StatusKey("lamp"), null, "The lamp is missing.");
+        WakeDelivery first = home.waitForWakes().deliverTo(stream).orElseThrow();
+        printed(captains, stream, first);
+        home.recordStatus().report(worker.id(), StatusState.FAILED, null, null, "The lamp broke.");
+        WakeDelivery second = home.waitForWakes().deliverTo(stream).orElseThrow();
+        printed(captains, stream, second);
+        home.primaryHooks().promptSubmitted(captains, "Carry on.");
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("socket"), null, "Brass or oil?");
+        WakeDelivery afterTyping = home.waitForWakes().deliverTo(stream).orElseThrow();
+
+        assertThat(whileTaken).isEqualTo(Standing.STANDBY);
+        assertThat(home.primarySessions().standingOf(captains)).isEqualTo(Standing.PRIMARY);
+        assertThat(quietWithoutAWake).isTrue();
+        assertThat(List.of(first, second)).extracting(WakeDelivery::roleReturn)
+                .containsOnly(Optional.of(new RoleReturn(taker, lastClaimedAt, endedAt)));
+        assertThat(afterTyping.roleReturn()).isEmpty();
     }
 
     @Test

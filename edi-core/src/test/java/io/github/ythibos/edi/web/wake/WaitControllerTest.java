@@ -158,6 +158,7 @@ class WaitControllerTest {
     private static HttpRequest.Builder authorised(String path, String accepted) throws IOException {
         return HttpRequest.newBuilder(uri(path))
                 .header("Authorization", "Bearer " + Files.readString(home.resolve("state/core.token")))
+                .header("EDI-Primary-Launch-Key", Files.readString(home.resolve("state/primary-launch.key")).strip())
                 .header("Accept", accepted);
     }
 

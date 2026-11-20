@@ -12,6 +12,7 @@ final class TmuxSockets {
 
     private static final Set<String> OPTIONS_WITH_VALUES = Set.of("-L", "-S", "-f", "-c", "-T");
     private static final List<String> SERVER_CONTROL_PREFIXES = List.of("kill", "send", "respawn");
+    private static final String KILL_SERVER = "kill-server";
     private static final Set<String> INPUT_COMMANDS = Set.of("send-keys", "send-prefix", "paste-buffer", "source-file", "run-shell", "if-shell",
             "pipe-pane", "display-popup", "display-menu", "respawn-pane", "respawn-window", "set-hook", "bind-key", "command-prompt", "confirm-before");
     private static final Map<String, String> WINDOW_OPENERS_AND_THEIR_VALUES = Map.of("new-window", "ceFnt", "split-window", "ceFlpt",
@@ -43,6 +44,11 @@ final class TmuxSockets {
         if (tmux.isOn(ediSocket, socketPaths) && tmux.controlsTheServer()) {
             return Optional.of(new GuardRefusal(Rule.EDI_SERVER_CONTROL, "control of the " + ediSocket + " tmux server",
                     "the " + ediSocket + " tmux server and its windows belong to the core: message a worker with edi steer and never send it keys or kill its windows (I-28, I-31)."));
+        }
+        if (tmux.killsAServer()) {
+            return Optional.of(new GuardRefusal(Rule.TMUX_KILL_SERVER, "tmux kill-server",
+                    "kill-server stops a whole tmux server with every session in it, and a socket that does not resolve as meant is the captain's own,"
+                            + " with the primary session and every worker; stop a server you started by its process id, never with kill-server (I-31)."));
         }
         if (forAWorker && tmux.sendsInput()) {
             return Optional.of(new GuardRefusal(Rule.TMUX_INPUT, "input sent to a tmux pane",
@@ -94,6 +100,10 @@ final class TmuxSockets {
 
         boolean isOn(String ediSocket, SocketPaths socketPaths) {
             return ediSocket.equals(socketName) || socketPath != null && ediSocket.equals(lastSegmentOf(socketPaths.realPathOf(socketPath)));
+        }
+
+        boolean killsAServer() {
+            return calls.stream().flatMap(call -> call.command().stream()).anyMatch(KILL_SERVER::equals);
         }
 
         boolean controlsTheServer() {

@@ -103,7 +103,7 @@ public final class PrivateTmuxServer implements AutoCloseable {
     @Override
     public void close() throws IOException {
         List<ProcessHandle> serverAndPanes = Stream.concat(Stream.of(server), server.descendants()).toList();
-        tmuxOnThisSocket(Map.of(), "kill-server");
+        server.destroy();
         serverAndPanes.forEach(TestProcesses::awaitExit);
         Files.deleteIfExists(socketFile());
     }

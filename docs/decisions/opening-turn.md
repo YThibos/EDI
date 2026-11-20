@@ -16,7 +16,7 @@ A call made inside a Claude Code session names that session to the core, and the
 The session name `edi-<yymmdd-HHmm>` changes every minute, so tmux refuses only a second `edi up` in the same minute; a later `edi up` opens another, new primary session.
 When `OpenTheSitrepAtSessionStart` opens the page, it records the time on the session as `primary_session.sitrep_opened_at` (`V13__the_sitrep_opened_at_session_start.sql`, `PrimarySessionStore`).
 `OpenTheConsoleOnRequest` answers `POST /api/console/open` from a session that carries that mark with `ConsoleOpening.openedAtSessionStart`, which `ConsoleOpeningText` turns into the page's address while nothing opens, and otherwise opens the console through `OpenConsole` as before.
-Every prompt clears the mark, the captain's first included (`PrimarySession.promptSubmitted`), and so do the end of a turn and a resume (`PrimarySession.turnEnded`, `PrimarySession.restarted`), so a `/sitrep board` or `edi console` from the session always opens the page, and so does a request from a terminal, which names no session.
+Every prompt clears the mark, the captain's first included (`PrimarySession.promptSubmitted`), and so do the end of a turn and a resume (`PrimarySession.turnEnded`, `PrimarySession.restarted`), so a `/sitrep board` or `edi console` from the session always opens the page, and so does a request that names no session.
 
 ## Why
 
@@ -49,3 +49,4 @@ When the captain wants EDI to speak first, wants `edi up` to switch to a primary
 - 23/10/2026: at the captain's request `edi up` opened the primary with the opening prompt, and the opening turn stopped opening a second sitrep page (EDI-43).
 - 27/10/2026: at the captain's request `edi up` opens the primary with no prompt submitted, so the session waits for the captain to type, and the captain's first typed prompt clears the session-start mark (EDI-101).
 - 13/11/2026: the command line lost its anchor option, since the settings now load the anchor (EDI-268).
+- 19/11/2026: `edi console` needs the primary session's launch key, so a request from a terminal no longer opens the page; only a request that names no session but carries the key does (EDI-278).

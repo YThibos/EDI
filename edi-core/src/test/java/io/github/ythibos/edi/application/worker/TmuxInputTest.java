@@ -55,13 +55,14 @@ class TmuxInputTest {
         Path ediSocket = Files.createFile(sockets.resolve(home.runtime().socket()));
         Path link = Files.createSymbolicLink(worktree.resolve("harbour"), ediSocket);
 
-        HookAnswer answer = shell("tmux -S " + link + " kill-server");
+        HookAnswer answer = shell("tmux -S " + link + " kill-session -t workers");
         HookAnswer relative = shell("tmux -S harbour kill-window -t @3");
 
         assertThat(answer.verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
         assertThat(answer.reason()).contains("belong to the core");
         assertThat(relative.verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
-        assertThat(home.guardToolCall().checkForPrimary(new ToolCall("Bash", "tmux -S " + link + " kill-server", null, worktree), CallingSession.UNNAMED)
+        assertThat(home.guardToolCall().checkForPrimary(new ToolCall("Bash", "tmux -S " + link + " kill-session -t workers", null, worktree),
+                CallingSession.UNNAMED)
                 .verdict()).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
     }
 
@@ -71,7 +72,7 @@ class TmuxInputTest {
         Path ediSocket = Files.createFile(sockets.resolve(home.runtime().socket()));
         Files.createSymbolicLink(worktree.resolve("harbour"), ediSocket);
 
-        for (String command : List.of("tmux -S \"$PWD/harbour\" kill-server", "tmux -S \"${PWD}/harbour\" kill-window -t @3")) {
+        for (String command : List.of("tmux -S \"$PWD/harbour\" kill-session -t workers", "tmux -S \"${PWD}/harbour\" kill-window -t @3")) {
             HookAnswer answer = shell(command);
             assertThat(answer.verdict()).as(command).isEqualTo(HookAnswer.Verdict.DENY_THE_TOOL);
             assertThat(answer.reason()).as(command).contains("belong to the core");
@@ -80,7 +81,7 @@ class TmuxInputTest {
 
     @Test
     void letsAWorkerReadAnyServerAndControlItsOwnPrivateOne() {
-        for (String command : List.of("tmux -L default list-sessions", "tmux -L edi capture-pane -p -t @3", "tmux -L edi-test-42 kill-server",
+        for (String command : List.of("tmux -L default list-sessions", "tmux -L edi capture-pane -p -t @3", "tmux -L edi-test-42 kill-session -t probe",
                 "tmux -L edi-test-42 new-session -d -s probe")) {
             assertThat(shell(command)).as(command).isEqualTo(HookAnswer.PROCEED);
         }

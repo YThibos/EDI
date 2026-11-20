@@ -66,7 +66,8 @@ helloedi                   # update EDI when the installed build lacks origin/ma
 edi up                     # start the core unless it runs, then open the primary session in tmux
 edi up --no-board          # open the primary session without opening the console's sitrep page
 edi up --core-only         # start only the core
-edi console                # open the EDI console in the browser, signed in
+edi up --resume <session>  # reopen an earlier primary session with its launch key, as edi up opens a new one
+edi console                # open the EDI console in the browser, signed in, from the primary session
 edi health                 # check that the core answers and the primary's wake stream is live
 edi health --metrics       # add the core's own latencies and memory over the last week
 edi rules                  # how often each rule fired over the last week, and which never did
@@ -95,7 +96,7 @@ In the primary session the captain also types these commands, each a skill of th
 
 The permanent EDI dashboard is the EDI console, which the core serves on its own machine at `http://127.0.0.1:<port>/`, where `<port>` is the one `edi health` reports, 5490 by default.
 It shows the sitrep page: what needs a decision, what is ongoing and what is charted next, then what landed this week, kept current as the fleet changes.
-It signs the captain in through a link that works once, so open it with `edi console` rather than from a bookmark.
+It signs the captain in through a link that works once, so ask the primary session for the console, which runs `edi console`, rather than opening a bookmark; `edi up` opens the primary session first.
 It is reachable only on the machine whose core serves it, and only while that core runs.
 Research boards are Lavish pages that `lavish-axi` opens on their own, outside the console.
 [The console and research boards](docs/console-and-boards.md) describes both.

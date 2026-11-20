@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -72,10 +73,34 @@ class CoreRestartTest {
         int updated = edi("update");
 
         assertThat(updated).as(err.toString()).isZero();
-        assertThat(out.toString()).startsWith("Updated to ");
+        assertThat(out.toString()).startsWith("Updated to ").doesNotContain("launch key");
         assertThat(Files.readString(home.resolve("state/logs/core.log"))).doesNotContain("Another EDI core runs on this home");
         assertThat(new LocalCore(home, coreExecutable.toString()).health()).isEqualTo(CoreHealth.UP);
         assertThat(CorePidFile.in(home).recordedProcess()).isNotEqualTo(Long.toString(oldCore));
+    }
+
+    @Test
+    void updateTellsAPrimarySessionWithoutTheLaunchKeyToReopenWithEdiUp() throws Exception {
+        cloneTheEdiRepository();
+        runningCoreThatStopsWithin(FINISHING_ITS_WORK);
+
+        int updated = ediIn(Map.of("CLAUDE_CODE_SESSION_ID", "0f6c3b2a-0000-4000-8000-00000000c0de"), "update");
+
+        assertThat(updated).as(err.toString()).isZero();
+        assertThat(out.toString()).endsWith("\nThe running primary session has no launch key, so the core refuses its hooks, its wait and its additions;"
+                + " reopen it with edi up, or edi up --resume 0f6c3b2a-0000-4000-8000-00000000c0de.\n");
+    }
+
+    @Test
+    void updateLeavesAPrimarySessionThatCarriesItsLaunchKeyAsItIs() throws Exception {
+        cloneTheEdiRepository();
+        runningCoreThatStopsWithin(FINISHING_ITS_WORK);
+
+        int updated = ediIn(Map.of("CLAUDE_CODE_SESSION_ID", "0f6c3b2a-0000-4000-8000-00000000c0de", "EDI_PRIMARY_LAUNCH_KEY",
+                "launch-key-of-the-primary"), "update");
+
+        assertThat(updated).as(err.toString()).isZero();
+        assertThat(out.toString()).startsWith("Updated to ").doesNotContain("launch key");
     }
 
     @Test
@@ -119,8 +144,12 @@ class CoreRestartTest {
     }
 
     private int edi(String... arguments) {
-        Map<String, String> environment = Map.of("EDI_HOME", home.toString(), "EDI_CORE", coreExecutable.toString(), "EDI_CHECKOUT",
-                directory.resolve("EDI").toString());
+        return ediIn(Map.of(), arguments);
+    }
+
+    private int ediIn(Map<String, String> session, String... arguments) {
+        Map<String, String> environment = new HashMap<>(session);
+        environment.putAll(Map.of("EDI_HOME", home.toString(), "EDI_CORE", coreExecutable.toString(), "EDI_CHECKOUT", directory.resolve("EDI").toString()));
         return new CommandLine(new Edi(environment, new ByteArrayInputStream(new byte[0])))
                 .setOut(new PrintWriter(out, true))
                 .setErr(new PrintWriter(err, true))
