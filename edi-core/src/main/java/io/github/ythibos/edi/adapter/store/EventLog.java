@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
@@ -394,6 +395,8 @@ public class EventLog {
     }
 
     private ObjectNode withCost(ObjectNode payload, TaskCost cost) {
+        payload.put("model", cost.routeIfKnown().map(route -> route.model().value()).orElse(null))
+                .put("effort", cost.routeIfKnown().filter(Route::namesAnEffort).map(route -> route.effort().word()).orElse(null));
         withTokens(payload.putObject("workers"), cost.workers());
         cost.pipelineIfKnown().ifPresentOrElse(pipeline -> withTokens(payload.putObject("pipeline"), pipeline), () -> payload.putNull("pipeline"));
         return payload;

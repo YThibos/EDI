@@ -88,7 +88,7 @@ describe('The views', () => {
     harness.detectChanges();
     await harness.fixture.whenStable();
 
-    http.expectOne((request) => request.url === '/api/week').flush({ from: '2026-10-12', thisWeek: '2026-10-12', zone: 'Europe/Brussels', days: [], tasks: [] });
+    http.expectOne((request) => request.url === '/api/week').flush({ from: '2026-10-12', thisWeek: '2026-10-12', zone: 'Europe/Brussels', days: [], tasks: [], efforts: [] });
     harness.detectChanges();
     await harness.fixture.whenStable();
 

@@ -116,11 +116,14 @@ class CleanUpTaskTest {
         assertThat(home.workers().get(worker.id()).orElseThrow().isRetired()).isTrue();
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
         assertThat(home.taskCosts().of(LAMP)).hasValueSatisfying(cost -> {
+            assertThat(cost.route()).isEqualTo(worker.route());
             assertThat(cost.workers()).isEqualTo(new TokenUsage(10, 200, 30, 4));
             assertThat(cost.pipelineIfKnown()).contains(new TokenUsage(1, 2, 3, 4));
         });
         assertThat(home.eventTypesOf(LAMP)).endsWith("WorkerRetired", "StageChanged", "StageChanged", "StageChanged", "TaskCostRecorded", "ReviewCounted",
                 "TaskCleanedUp");
+        assertThat(home.jdbc().sql("select json_extract(payload, '$.model') || ' at ' || json_extract(payload, '$.effort') from event where type = 'TaskCostRecorded'")
+                .query(String.class).single()).isEqualTo("claude-sonnet-5-5 at high");
         assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage, StageReached::reason).endsWith(
                 tuple(TaskStage.MERGED, "merged at " + head),
                 tuple(TaskStage.LANDED, "every commit up to the merged head is in the base"),

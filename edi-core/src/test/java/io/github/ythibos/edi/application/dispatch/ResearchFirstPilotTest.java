@@ -82,7 +82,7 @@ class ResearchFirstPilotTest {
         home.storing(List.of(WorkerFixtures.queuedShip(ship, "harness", "HRN-" + ++lastKey)));
         TaskId researchId = research == null ? null : finishedResearch(research, tokens);
         home.unplannedShips().insert(new UnplannedShip(shipId, CategoryId.IMPLEMENTATION_UNPLANNED, researchId, TestHome.START));
-        home.taskCosts().save(new TaskCost(shipId, new TokenUsage(tokens, 0, 0, 0), TokenUsage.NONE, TestHome.START));
+        home.taskCosts().save(new TaskCost(shipId, null, new TokenUsage(tokens, 0, 0, 0), TokenUsage.NONE, TestHome.START));
         home.reviews().save(shipId, review, TestHome.START);
         home.markDone(shipId);
         WorkEvents.of(home, ship).cleanedUp();
@@ -91,7 +91,7 @@ class ResearchFirstPilotTest {
     private TaskId finishedResearch(String research, long tokens) {
         TaskId researchId = new TaskId(research);
         home.storing(List.of(WorkerFixtures.queued(research, TaskKind.SCOUT, "harness", null)));
-        home.taskCosts().save(new TaskCost(researchId, new TokenUsage(tokens / 2, 0, 0, 0), TokenUsage.NONE, TestHome.START));
+        home.taskCosts().save(new TaskCost(researchId, null, new TokenUsage(tokens / 2, 0, 0, 0), TokenUsage.NONE, TestHome.START));
         home.markDone(researchId);
         return researchId;
     }

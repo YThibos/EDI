@@ -138,8 +138,8 @@ class ConfirmationTextTest {
     @Test
     void confirmsARecountOfTaskCostsWithEachCostItChanged() {
         LocalDate since = LocalDate.parse("2026-11-02");
-        TaskCost inflated = new TaskCost(new TaskId("lantern"), new TokenUsage(1, 2, 3, 4), new TokenUsage(905040, 900000, 5000, 700), Instant.parse("2026-11-02T08:00:00Z"));
-        TaskCost unknown = new TaskCost(new TaskId("lamp"), new TokenUsage(1, 2, 3, 4), null, Instant.parse("2026-11-02T08:00:00Z"));
+        TaskCost inflated = new TaskCost(new TaskId("lantern"), null, new TokenUsage(1, 2, 3, 4), new TokenUsage(905040, 900000, 5000, 700), Instant.parse("2026-11-02T08:00:00Z"));
+        TaskCost unknown = new TaskCost(new TaskId("lamp"), null, new TokenUsage(1, 2, 3, 4), null, Instant.parse("2026-11-02T08:00:00Z"));
         TokenUsage spent = new TokenUsage(40, 900000, 5000, 700);
         List<Recount> changed = List.of(new Recount(inflated, inflated.withPipelineSpend(spent)), new Recount(unknown, unknown.withPipelineSpend(spent)));
 

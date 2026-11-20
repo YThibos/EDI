@@ -25,7 +25,7 @@ class SilentEventSource {
 }
 
 function weekFrom(from: string, thisWeek = '2026-11-02'): WorkedWeek {
-  return { from, thisWeek, zone: 'Europe/Brussels', days: [from], tasks: [] };
+  return { from, thisWeek, zone: 'Europe/Brussels', days: [from], tasks: [], efforts: [] };
 }
 
 describe('WeekView', () => {
@@ -55,7 +55,7 @@ describe('WeekView', () => {
     const view = harness.routeNativeElement as HTMLElement;
 
     expect(asked.request.params.has('from')).toBe(false);
-    expect(view.querySelector('h2.sr-sign')?.textContent).toBe('Week of 2 November 2026');
+    expect(Array.from(view.querySelectorAll('h2.sr-sign')).map((sign) => sign.textContent)).toEqual(['Week of 2 November 2026', 'Cost per effort']);
     expect(steps(view)).toEqual([['Week before', '/week?from=2026-10-26']]);
     expect(document.title).toBe('(1) WEEK · EDI');
   });
