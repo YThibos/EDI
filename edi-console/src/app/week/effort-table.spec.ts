@@ -3,8 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EffortTable } from './effort-table';
 import { YieldAtAnEffort } from './worked-week';
 
-const NO_TOKENS = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
-
 const EFFORTS: YieldAtAnEffort[] = [
   {
     effort: 'high',
@@ -12,8 +10,6 @@ const EFFORTS: YieldAtAnEffort[] = [
     weightedWorkerTokens: 3_000_000,
     weightedWorkerTokensPerTask: 1_500_000,
     weightedPipelineTokens: 500_000,
-    workerTokens: { input: 1_500_000, cacheRead: 10_000_000, cacheWrite: 100_000, output: 75_000 },
-    pipelineTokens: { input: 200_000, cacheRead: 2_000_000, cacheWrite: 0, output: 20_000 },
     reviewRounds: 6,
     findings: 7,
     findingsPerReviewRound: 7 / 6,
@@ -24,8 +20,6 @@ const EFFORTS: YieldAtAnEffort[] = [
     weightedWorkerTokens: 5_600_000,
     weightedWorkerTokensPerTask: 2_800_000,
     weightedPipelineTokens: 0,
-    workerTokens: { input: 2_100_000, cacheRead: 20_000_000, cacheWrite: 400_000, output: 200_000 },
-    pipelineTokens: NO_TOKENS,
     reviewRounds: 1,
     findings: 0,
     findingsPerReviewRound: 0,
@@ -55,11 +49,11 @@ describe('EffortTable', () => {
     expect(rows(table)).toEqual([['no flag', '2', '3.0M', '1.5M', '500k', '0', '0', '-']]);
   });
 
-  it('says so when no task\'s cost was counted in the week', async () => {
+  it('says so when no ship task\'s cost was counted in the week', async () => {
     const table = await shown([]);
 
     expect(table.querySelector('table')).toBeNull();
-    expect(table.textContent?.trim()).toBe('No task\'s cost was counted this week.');
+    expect(table.textContent?.trim()).toBe('No ship task\'s cost was counted this week.');
   });
 
   async function shown(efforts: YieldAtAnEffort[]): Promise<HTMLElement> {

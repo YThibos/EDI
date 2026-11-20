@@ -27,18 +27,9 @@ export interface YieldAtAnEffort {
   weightedWorkerTokens: number;
   weightedWorkerTokensPerTask: number;
   weightedPipelineTokens: number;
-  workerTokens: TokenUsage;
-  pipelineTokens: TokenUsage;
   reviewRounds: number;
   findings: number;
   findingsPerReviewRound: number | null;
-}
-
-export interface TokenUsage {
-  input: number;
-  cacheRead: number;
-  cacheWrite: number;
-  output: number;
 }
 
 export function hoursAndMinutes(minutes: number): string {

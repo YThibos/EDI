@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TrackerFixtures;
@@ -117,8 +118,21 @@ class WeekOfWorkTest {
                 .containsExactly(
                         tuple("high", 1, 2_375_000L, 500_000L, 4, 6, 1.5),
                         tuple("xhigh", 1, 5_500_000L, 0L, 1, 0, 0.0));
-        assertThat(home.weekOfWork().from(MONDAY.plusWeeks(1)).efforts()).extracting(WorkedWeek.YieldAtAnEffort::workerTokens)
-                .containsExactly(new TokenUsage(9, 9, 9, 9));
+        assertThat(home.weekOfWork().from(MONDAY.plusWeeks(1)).efforts()).extracting(WorkedWeek.YieldAtAnEffort::effort, WorkedWeek.YieldAtAnEffort::tasks)
+                .containsExactly(tuple("high", 1));
+    }
+
+    @Test
+    void leavesAScoutsCostOutOfTheYieldPerEffort() {
+        home.storing(List.of(WorkerFixtures.queued("map-reef", TaskKind.SCOUT, "harness", "HRN-6")));
+        countedInTheWeek("fix-lamps", OPUS_HIGH, new TokenUsage(1_000_000, 10_000_000, 100_000, 50_000), TokenUsage.NONE, new PipelineReview(4, 6));
+        countedInTheWeek("map-reef", OPUS_HIGH, new TokenUsage(1_000_000, 0, 0, 0), TokenUsage.NONE, new PipelineReview(0, 0));
+
+        WorkedWeek week = home.weekOfWork().from(MONDAY);
+
+        assertThat(week.efforts()).extracting(WorkedWeek.YieldAtAnEffort::effort, WorkedWeek.YieldAtAnEffort::tasks,
+                WorkedWeek.YieldAtAnEffort::weightedWorkerTokens, WorkedWeek.YieldAtAnEffort::weightedWorkerTokensPerTask)
+                .containsExactly(tuple("high", 1, 2_375_000L, 2_375_000L));
     }
 
     private void countedInTheWeek(String task, Route route, TokenUsage workers, TokenUsage pipeline, PipelineReview review) {

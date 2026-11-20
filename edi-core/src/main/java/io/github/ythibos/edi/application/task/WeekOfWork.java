@@ -24,6 +24,7 @@ import io.github.ythibos.edi.domain.delivery.ReviewedCost;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.WorkMark;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 
@@ -111,10 +112,17 @@ public class WeekOfWork {
     }
 
     private List<WorkedWeek.YieldAtAnEffort> yieldPerEffortIn(List<LocalDate> days, ZoneId zone) {
+        return EffortYield.perEffort(reviewedShipCostsIn(days, zone)).stream().map(WorkedWeek.YieldAtAnEffort::of).toList();
+    }
+
+    private List<ReviewedCost> reviewedShipCostsIn(List<LocalDate> days, ZoneId zone) {
         Instant from = days.getFirst().atStartOfDay(zone).toInstant();
         Instant to = days.getLast().plusDays(1).atStartOfDay(zone).toInstant();
-        List<ReviewedCost> reviewedCosts = costs.countedBetween(from, to).stream().map(this::withItsReview).toList();
-        return EffortYield.perEffort(reviewedCosts).stream().map(WorkedWeek.YieldAtAnEffort::of).toList();
+        return costs.countedBetween(from, to).stream().filter(this::isTheCostOfAShip).map(this::withItsReview).toList();
+    }
+
+    private boolean isTheCostOfAShip(TaskCost cost) {
+        return tasks.get(cost.task()).intake().kind() == TaskKind.SHIP;
     }
 
     private ReviewedCost withItsReview(TaskCost cost) {

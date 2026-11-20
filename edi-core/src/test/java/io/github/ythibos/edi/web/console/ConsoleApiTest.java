@@ -383,10 +383,11 @@ class ConsoleApiTest {
     void servesTheWeeksWorkedTimeToTheConsoleAndThePrimaryAndRefusesAWorker() throws Exception {
         String cookie = signedInCookie();
         String worker = workerTokenFor("lamp-week");
+        post(withTheHomeToken("/api/tasks", TEXT), "{\"id\":\"lamp-ledger\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Tally the lamp oil\",\"key\":\"HRN-9\"}");
         Instant counted = Instant.parse("2026-10-15T09:00:00Z");
-        costs.save(new TaskCost(new TaskId("lamp-week"), new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH), new TokenUsage(1000, 10000, 400, 200),
+        costs.save(new TaskCost(new TaskId("lamp-ledger"), new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH), new TokenUsage(1000, 10000, 400, 200),
                 null, counted));
-        reviews.save(new TaskId("lamp-week"), new PipelineReview(2, 3), counted);
+        reviews.save(new TaskId("lamp-ledger"), new PipelineReview(2, 3), counted);
 
         HttpResponse<String> shown = send(withTheCookie("/api/week?from=2026-10-12", cookie, "application/json").GET());
         HttpResponse<String> toThePrimary = send(withTheHomeToken("/api/week?from=2026-10-12", "application/json").GET());
@@ -397,8 +398,6 @@ class ConsoleApiTest {
         assertThat(shown.statusCode()).isEqualTo(200);
         assertThat(shown.body()).contains("\"from\":\"2026-10-12\"", "\"days\":[\"2026-10-12\",", "\"2026-10-18\"]", "\"tasks\":[",
                 "\"efforts\":[{\"effort\":\"xhigh\",\"tasks\":1,\"weightedWorkerTokens\":3500,\"weightedWorkerTokensPerTask\":3500,\"weightedPipelineTokens\":0,"
-                        + "\"workerTokens\":{\"input\":1000,\"cacheRead\":10000,\"cacheWrite\":400,\"output\":200},"
-                        + "\"pipelineTokens\":{\"input\":0,\"cacheRead\":0,\"cacheWrite\":0,\"output\":0},"
                         + "\"reviewRounds\":2,\"findings\":3,\"findingsPerReviewRound\":1.5}]");
         assertThat(toThePrimary.statusCode()).isEqualTo(200);
         assertThat(toTheWorker.statusCode()).isEqualTo(403);

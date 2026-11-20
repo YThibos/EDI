@@ -8,7 +8,6 @@ import io.github.ythibos.edi.domain.delivery.EffortYield;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.worker.TokenUsage;
 
 public record WorkedWeek(LocalDate from, LocalDate thisWeek, ZoneId zone, List<LocalDate> days, List<WorkedTask> tasks, List<YieldAtAnEffort> efforts) {
 
@@ -29,11 +28,11 @@ public record WorkedWeek(LocalDate from, LocalDate thisWeek, ZoneId zone, List<L
     }
 
     public record YieldAtAnEffort(String effort, int tasks, long weightedWorkerTokens, long weightedWorkerTokensPerTask, long weightedPipelineTokens,
-            TokenUsage workerTokens, TokenUsage pipelineTokens, int reviewRounds, int findings, Double findingsPerReviewRound) {
+            int reviewRounds, int findings, Double findingsPerReviewRound) {
 
         public static YieldAtAnEffort of(EffortYield yield) {
             return new YieldAtAnEffort(wordFor(yield.effort()), yield.tasks(), yield.workers().weighted(), yield.weightedWorkerTokensPerTask(),
-                    yield.pipeline().weighted(), yield.workers(), yield.pipeline(), yield.reviewRounds(), yield.findings(),
+                    yield.pipeline().weighted(), yield.reviewRounds(), yield.findings(),
                     yield.findingsPerReviewRound().isPresent() ? yield.findingsPerReviewRound().getAsDouble() : null);
         }
 
