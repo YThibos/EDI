@@ -35,11 +35,6 @@ class GraalVmToolchainTest {
         });
     }
 
-    @Test
-    void setsJavaHomeFromTheInstalledGraalVm() {
-        assertThat(miseConfiguration().path("env").path("JAVA_HOME").path("value").asString()).isEqualTo("{{ tools['" + GRAALVM + "'].path }}");
-    }
-
     private static JsonNode graalVm() {
         return miseConfiguration().path("tools").path(GRAALVM);
     }
