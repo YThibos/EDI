@@ -4,10 +4,11 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
 
-public record TaskCost(TaskId task, TokenUsage workers, TokenUsage pipeline, Instant countedAt) {
+public record TaskCost(TaskId task, Route route, TokenUsage workers, TokenUsage pipeline, Instant countedAt) {
 
     public TaskCost {
         Objects.requireNonNull(task, "A cost is the cost of a task.");
@@ -16,7 +17,11 @@ public record TaskCost(TaskId task, TokenUsage workers, TokenUsage pipeline, Ins
     }
 
     public TaskCost withPipelineSpend(TokenUsage spentByThePipeline) {
-        return new TaskCost(task, workers, spentByThePipeline, countedAt);
+        return new TaskCost(task, route, workers, spentByThePipeline, countedAt);
+    }
+
+    public Optional<Route> routeIfKnown() {
+        return Optional.ofNullable(route);
     }
 
     public Optional<TokenUsage> pipelineIfKnown() {

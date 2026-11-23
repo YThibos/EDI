@@ -86,7 +86,7 @@ class TaskTextTest {
         Delivery draft = Delivery.of(PresenterFixtures.lantern().id(),
                 new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, null, null), AT);
         TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), null, draft, new PipelineRun("01RUN", "running", "ci", false, "1111", null, false),
-                new TaskCost(PresenterFixtures.lantern().id(), new TokenUsage(1, 20, 3, 4), null, AT),
+                new TaskCost(PresenterFixtures.lantern().id(), null, new TokenUsage(1, 20, 3, 4), null, AT),
                 new WorkedTime(Duration.ofMinutes(139), Duration.ofMinutes(191)), List.of(), List.of());
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).contains("""

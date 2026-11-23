@@ -13,9 +13,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.domain.delivery.PipelineReview;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
+import io.github.ythibos.edi.domain.worker.TokenUsage;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TrackerFixtures;
 import io.github.ythibos.edi.testing.WorkEvents;
@@ -24,6 +31,8 @@ import io.github.ythibos.edi.testing.WorkerFixtures;
 class WeekOfWorkTest {
 
     private static final LocalDate MONDAY = LocalDate.parse("2026-10-12");
+    private static final Route OPUS_HIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH);
+    private static final Route OPUS_XHIGH = new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH);
 
     @TempDir
     private Path directory;
@@ -33,7 +42,8 @@ class WeekOfWorkTest {
     @BeforeEach
     void aLaptopWithATrackedShipAndAnEdiNativeShip() throws IOException {
         home = TrackerFixtures.laptopHome(directory);
-        home.storing(List.of(WorkerFixtures.queuedShip("fix-lamps", "service", "SVC-40"), WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        home.storing(List.of(WorkerFixtures.queuedShip("fix-lamps", "service", "SVC-40"), WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"),
+                WorkerFixtures.queuedShip("chart-reef", "harness", "HRN-5")));
     }
 
     @Test
@@ -90,5 +100,43 @@ class WeekOfWorkTest {
 
         assertThat(home.weekOfWork().from(MONDAY.plusWeeks(1)).tasks()).isEmpty();
         assertThat(home.weekOfWork().from(MONDAY.minusWeeks(1)).tasks()).isEmpty();
+    }
+
+    @Test
+    void showsTheCostAndReviewYieldPerEffortOfTheTasksCountedInTheWeek() {
+        countedInTheWeek("fix-lamps", OPUS_HIGH, new TokenUsage(1_000_000, 10_000_000, 100_000, 50_000), new TokenUsage(200_000, 2_000_000, 0, 20_000),
+                new PipelineReview(4, 6));
+        countedInTheWeek("fit-lamp", OPUS_XHIGH, new TokenUsage(2_000_000, 20_000_000, 400_000, 200_000), TokenUsage.NONE, new PipelineReview(1, 0));
+        home.taskCosts().save(new TaskCost(new TaskId("chart-reef"), OPUS_HIGH, new TokenUsage(9, 9, 9, 9), null,
+                MONDAY.plusWeeks(1).atStartOfDay(home.clock().zone()).toInstant()));
+
+        WorkedWeek week = home.weekOfWork().from(MONDAY);
+
+        assertThat(week.efforts()).extracting(WorkedWeek.YieldAtAnEffort::effort, WorkedWeek.YieldAtAnEffort::tasks,
+                WorkedWeek.YieldAtAnEffort::weightedWorkerTokens, WorkedWeek.YieldAtAnEffort::weightedPipelineTokens,
+                WorkedWeek.YieldAtAnEffort::reviewRounds, WorkedWeek.YieldAtAnEffort::findings, WorkedWeek.YieldAtAnEffort::findingsPerReviewRound)
+                .containsExactly(
+                        tuple("high", 1, 2_375_000L, 500_000L, 4, 6, 1.5),
+                        tuple("xhigh", 1, 5_500_000L, 0L, 1, 0, 0.0));
+        assertThat(home.weekOfWork().from(MONDAY.plusWeeks(1)).efforts()).extracting(WorkedWeek.YieldAtAnEffort::effort, WorkedWeek.YieldAtAnEffort::tasks)
+                .containsExactly(tuple("high", 1));
+    }
+
+    @Test
+    void leavesAScoutsCostOutOfTheYieldPerEffort() {
+        home.storing(List.of(WorkerFixtures.queued("map-reef", TaskKind.SCOUT, "harness", "HRN-6")));
+        countedInTheWeek("fix-lamps", OPUS_HIGH, new TokenUsage(1_000_000, 10_000_000, 100_000, 50_000), TokenUsage.NONE, new PipelineReview(4, 6));
+        countedInTheWeek("map-reef", OPUS_HIGH, new TokenUsage(1_000_000, 0, 0, 0), TokenUsage.NONE, new PipelineReview(0, 0));
+
+        WorkedWeek week = home.weekOfWork().from(MONDAY);
+
+        assertThat(week.efforts()).extracting(WorkedWeek.YieldAtAnEffort::effort, WorkedWeek.YieldAtAnEffort::tasks,
+                WorkedWeek.YieldAtAnEffort::weightedWorkerTokens, WorkedWeek.YieldAtAnEffort::weightedWorkerTokensPerTask)
+                .containsExactly(tuple("high", 1, 2_375_000L, 2_375_000L));
+    }
+
+    private void countedInTheWeek(String task, Route route, TokenUsage workers, TokenUsage pipeline, PipelineReview review) {
+        home.taskCosts().save(new TaskCost(new TaskId(task), route, workers, pipeline, TestHome.START));
+        home.reviews().save(new TaskId(task), review, TestHome.START);
     }
 }

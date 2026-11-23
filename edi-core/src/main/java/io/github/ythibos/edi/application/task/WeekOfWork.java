@@ -14,10 +14,17 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
+import io.github.ythibos.edi.adapter.store.PipelineReviewStore;
+import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.delivery.EffortYield;
+import io.github.ythibos.edi.domain.delivery.PipelineReview;
+import io.github.ythibos.edi.domain.delivery.ReviewedCost;
+import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.WorkMark;
 import io.github.ythibos.edi.domain.task.WorkedTime;
 
@@ -28,14 +35,19 @@ public class WeekOfWork {
     private static final String TOOLING = "tooling";
 
     private final TaskStore tasks;
+    private final TaskCostStore costs;
+    private final PipelineReviewStore reviews;
     private final WorkedTimes workedTimes;
     private final ProjectRegistry registry;
     private final MachineProfile machine;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public WeekOfWork(TaskStore tasks, WorkedTimes workedTimes, ProjectRegistry registry, MachineProfile machine, Clock clock, TransactionTemplate transaction) {
+    public WeekOfWork(TaskStore tasks, TaskCostStore costs, PipelineReviewStore reviews, WorkedTimes workedTimes, ProjectRegistry registry,
+            MachineProfile machine, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
+        this.costs = costs;
+        this.reviews = reviews;
         this.workedTimes = workedTimes;
         this.registry = registry;
         this.machine = machine;
@@ -51,14 +63,18 @@ public class WeekOfWork {
         ZoneId zone = clock.zone();
         List<LocalDate> days = IntStream.range(0, DAYS).mapToObj(first::plusDays).toList();
         Instant now = clock.now();
-        return transaction.execute(_ -> new WorkedWeek(first, mondayOfThisWeek(), zone, days, tasks.ids().stream()
-                .map(tasks::get)
-                .flatMap(task -> workedIn(task, days, zone, now).stream())
-                .toList()));
+        return transaction.execute(_ -> new WorkedWeek(first, mondayOfThisWeek(), zone, days, tasksWorkedIn(days, zone, now), yieldPerEffortIn(days, zone)));
     }
 
     private LocalDate mondayOfThisWeek() {
         return LocalDate.ofInstant(clock.now(), clock.zone()).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    }
+
+    private List<WorkedWeek.WorkedTask> tasksWorkedIn(List<LocalDate> days, ZoneId zone, Instant now) {
+        return tasks.ids().stream()
+                .map(tasks::get)
+                .flatMap(task -> workedIn(task, days, zone, now).stream())
+                .toList();
     }
 
     private Optional<WorkedWeek.WorkedTask> workedIn(Task task, List<LocalDate> days, ZoneId zone, Instant now) {
@@ -93,5 +109,23 @@ public class WeekOfWork {
         return task.intake().projects().stream().findFirst()
                 .map(project -> registry.entryOf(project).tracker().isExternal())
                 .orElse(true);
+    }
+
+    private List<WorkedWeek.YieldAtAnEffort> yieldPerEffortIn(List<LocalDate> days, ZoneId zone) {
+        return EffortYield.perEffort(reviewedShipCostsIn(days, zone)).stream().map(WorkedWeek.YieldAtAnEffort::of).toList();
+    }
+
+    private List<ReviewedCost> reviewedShipCostsIn(List<LocalDate> days, ZoneId zone) {
+        Instant from = days.getFirst().atStartOfDay(zone).toInstant();
+        Instant to = days.getLast().plusDays(1).atStartOfDay(zone).toInstant();
+        return costs.countedBetween(from, to).stream().filter(this::isTheCostOfAShip).map(this::withItsReview).toList();
+    }
+
+    private boolean isTheCostOfAShip(TaskCost cost) {
+        return tasks.get(cost.task()).intake().kind() == TaskKind.SHIP;
+    }
+
+    private ReviewedCost withItsReview(TaskCost cost) {
+        return new ReviewedCost(cost, reviews.of(cost.task()).orElse(PipelineReview.unknown()));
     }
 }

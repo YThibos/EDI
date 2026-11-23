@@ -1,0 +1,34 @@
+<div class="sr-panel">
+  @if (efforts().length) {
+    <table class="sr-effort">
+      <thead>
+        <tr>
+          <th scope="col">Effort</th>
+          <th scope="col" class="sr-effort__figure">Tasks</th>
+          <th scope="col" class="sr-effort__figure">Worker tokens</th>
+          <th scope="col" class="sr-effort__figure">Per task</th>
+          <th scope="col" class="sr-effort__figure">Pipeline tokens</th>
+          <th scope="col" class="sr-effort__figure">Review rounds</th>
+          <th scope="col" class="sr-effort__figure">Findings</th>
+          <th scope="col" class="sr-effort__figure">Per round</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (yieldAtAnEffort of efforts(); track yieldAtAnEffort.effort) {
+          <tr>
+            <th scope="row" class="sr-effort__name">{{ effortName(yieldAtAnEffort) }}</th>
+            <td class="sr-effort__figure">{{ yieldAtAnEffort.tasks }}</td>
+            <td class="sr-effort__figure">{{ weightedTokens(yieldAtAnEffort.weightedWorkerTokens) }}</td>
+            <td class="sr-effort__figure">{{ weightedTokens(yieldAtAnEffort.weightedWorkerTokensPerTask) }}</td>
+            <td class="sr-effort__figure">{{ weightedTokens(yieldAtAnEffort.weightedPipelineTokens) }}</td>
+            <td class="sr-effort__figure">{{ yieldAtAnEffort.reviewRounds }}</td>
+            <td class="sr-effort__figure">{{ yieldAtAnEffort.findings }}</td>
+            <td class="sr-effort__figure sr-effort__yield">{{ findingsPerRound(yieldAtAnEffort) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <div class="sr-empty">No ship task's cost was counted this week.</div>
+  }
+</div>

@@ -29,6 +29,7 @@ const WEEK: WorkedWeek = {
       days: [{ day: '2026-10-13', activeMinutes: 125, wallClockMinutes: 180 }],
     },
   ],
+  efforts: [],
 };
 
 describe('WeekTable', () => {

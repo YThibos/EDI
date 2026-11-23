@@ -565,7 +565,7 @@ public final class TestHome {
     }
 
     public WeekOfWork weekOfWork() {
-        return new WeekOfWork(tasks, workedTimes(), registry, machineProfile(), clock, transaction);
+        return new WeekOfWork(tasks, taskCosts, reviews, workedTimes(), registry, machineProfile(), clock, transaction);
     }
 
     public WorkedTimes workedTimes() {
@@ -822,9 +822,12 @@ public final class TestHome {
     }
 
     public CleanUpTask cleanUpTask() {
-        return new CleanUpTask(tasks, deliveries, taskCosts, reviews, events, workerContext(), landedWork(),
-                new TaskCosts(workers, runtime, pipeline, clock, transaction), pipeline, copyRetirement(), dependantTasks(), taskStages(), clock,
-                transaction);
+        return new CleanUpTask(tasks, deliveries, taskCosts, reviews, events, workerContext(), landedWork(), costCounting(), pipeline, copyRetirement(),
+                dependantTasks(), taskStages(), clock, transaction);
+    }
+
+    public TaskCosts costCounting() {
+        return new TaskCosts(workers, runtime, pipeline, clock, transaction);
     }
 
     public RecountTaskCosts recountTaskCosts() {

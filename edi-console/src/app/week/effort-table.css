@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.sr-panel {
+  overflow-x: auto;
+}
+
+.sr-effort {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.sr-effort th,
+.sr-effort td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.sr-effort thead th {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.sr-effort .sr-effort__figure {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-effort__name {
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-hi);
+}
+
+.sr-effort__yield {
+  font-weight: 600;
+  color: var(--text-hi);
+}

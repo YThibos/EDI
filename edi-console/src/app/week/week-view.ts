@@ -7,12 +7,13 @@ import { AccessNotice } from '../console/access-notice';
 import { ConsoleApi } from '../console/console-api';
 import { ConsoleHeader } from '../console/console-header';
 import { SitrepReading } from '../console/sitrep-reading';
+import { EffortTable } from './effort-table';
 import { WeekTable } from './week-table';
 import { WorkedWeek, weekAround } from './worked-week';
 
 @Component({
   selector: 'app-week-view',
-  imports: [AccessNotice, ConsoleHeader, RouterLink, WeekTable],
+  imports: [AccessNotice, ConsoleHeader, EffortTable, RouterLink, WeekTable],
   templateUrl: './week-view.html',
   styleUrl: './week-view.css',
   providers: [SitrepReading],

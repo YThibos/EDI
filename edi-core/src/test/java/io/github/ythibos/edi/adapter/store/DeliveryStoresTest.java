@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,9 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
+import io.github.ythibos.edi.domain.dispatch.EffortLevel;
+import io.github.ythibos.edi.domain.dispatch.ModelId;
+import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -42,7 +46,8 @@ class DeliveryStoresTest {
     @BeforeEach
     void storeATask() throws IOException {
         home = TestHome.in(directory);
-        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+        home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), WorkerFixtures.queuedShip("paint-buoy", "harness", "HRN-4"),
+                WorkerFixtures.queuedShip("chart-reef", "harness", "HRN-5")));
     }
 
     @Test
@@ -96,7 +101,7 @@ class DeliveryStoresTest {
 
     @Test
     void keepsATasksCostWithAnUnknownPipelineSpend() {
-        TaskCost unknown = new TaskCost(LAMP, new TokenUsage(1, 2, 3, 4), null, TestHome.START);
+        TaskCost unknown = new TaskCost(LAMP, null, new TokenUsage(1, 2, 3, 4), null, TestHome.START);
         home.taskCosts().save(unknown);
 
         assertThat(home.taskCosts().of(LAMP)).contains(unknown);
@@ -105,7 +110,7 @@ class DeliveryStoresTest {
 
     @Test
     void keepsEachCountOfThePipelinesSpendInItsOwnColumn() {
-        TaskCost cost = new TaskCost(LAMP, new TokenUsage(1, 2, 3, 4), new TokenUsage(40, 900000, 5000, 700), TestHome.START);
+        TaskCost cost = new TaskCost(LAMP, null, new TokenUsage(1, 2, 3, 4), new TokenUsage(40, 900000, 5000, 700), TestHome.START);
         home.taskCosts().save(cost);
 
         assertThat(home.jdbc().sql("""
@@ -115,5 +120,40 @@ class DeliveryStoresTest {
                 .query((row, _) -> List.of(row.getLong(1), row.getLong(2), row.getLong(3), row.getLong(4)))
                 .single()).containsExactly(40L, 900000L, 5000L, 700L);
         assertThat(home.taskCosts().of(LAMP)).contains(cost);
+    }
+
+    @Test
+    void keepsTheModelAndEffortTheTasksWorkersWereDispatchedOn() {
+        Route route = new Route(new ModelId("claude-opus-5-5"), EffortLevel.XHIGH);
+        TaskCost cost = new TaskCost(LAMP, route, new TokenUsage(1, 2, 3, 4), null, TestHome.START);
+        home.taskCosts().save(cost);
+
+        assertThat(home.jdbc().sql("select worker_model || ' at ' || worker_effort from task_cost where task_id = :task")
+                .param("task", LAMP.value())
+                .query(String.class)
+                .single()).isEqualTo("claude-opus-5-5 at xhigh");
+        assertThat(home.taskCosts().of(LAMP)).map(TaskCost::route).contains(route);
+    }
+
+    @Test
+    void keepsARouteWithoutAnEffortFlagApartFromAnUnknownRoute() {
+        TaskCost unflagged = new TaskCost(LAMP, new Route(new ModelId("claude-sonnet-5-5"), null), TokenUsage.NONE, null, TestHome.START);
+        TaskCost unknown = new TaskCost(new TaskId("paint-buoy"), null, TokenUsage.NONE, null, TestHome.START);
+        home.taskCosts().save(unflagged);
+        home.taskCosts().save(unknown);
+
+        assertThat(home.taskCosts().of(LAMP)).contains(unflagged);
+        assertThat(home.taskCosts().of(unknown.task()).orElseThrow().routeIfKnown()).isEmpty();
+    }
+
+    @Test
+    void readsTheCostsCountedFromTheStartOfAWindowUpToItsEnd() {
+        Duration week = Duration.ofDays(7);
+        home.taskCosts().save(new TaskCost(LAMP, null, TokenUsage.NONE, null, TestHome.START));
+        home.taskCosts().save(new TaskCost(new TaskId("paint-buoy"), null, TokenUsage.NONE, null, TestHome.START.plus(week).minusSeconds(1)));
+        home.taskCosts().save(new TaskCost(new TaskId("chart-reef"), null, TokenUsage.NONE, null, TestHome.START.plus(week)));
+
+        assertThat(home.taskCosts().countedBetween(TestHome.START, TestHome.START.plus(week))).extracting(TaskCost::task)
+                .containsExactly(LAMP, new TaskId("paint-buoy"));
     }
 }
