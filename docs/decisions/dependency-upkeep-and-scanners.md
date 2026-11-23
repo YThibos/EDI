@@ -12,7 +12,7 @@ Vulnerabilities and quality regressions should show as a red build like any othe
 
 Renovate runs in this repository's GitHub Actions (`renovatebot/github-action`), nightly and on demand, with its policy in `renovate.json`:
 
-- managers for Maven, the wrapper, npm, GitHub Actions, mise and the local SonarQube compose file, plus regex managers for the Node the frontend plugin downloads and the version of GraalVM Community in `mise.toml`, read from its `graal-` release tags, whose archive names and checksums are then moved by hand ([java-toolchain-and-build](java-toolchain-and-build.md));
+- managers for Maven, the wrapper, npm, GitHub Actions, mise and the local SonarQube compose file, plus a regex manager for the Node the frontend plugin downloads; the mise manager reads GraalVM Community's version from its `graal-` release tags through the tool's `version_prefix`, with loose versioning, the only versioning under which Renovate finds updates to its five-part versions ([java-toolchain-and-build](java-toolchain-and-build.md));
 - minor, patch, pin and digest updates share a budget of ten pull requests, while each major is its own pull request within a separate budget of three;
 - Spring Boot, Angular and the console's Node are grouped, and a release must be three days old;
 - every pull request is a draft, nothing is automerged, and subjects and titles start with `EDI-1` ([work-keys-and-branches](work-keys-and-branches.md));
@@ -63,7 +63,7 @@ An image tag and an unnamed mise version move the same way, and a check that rea
 
 ## When to revisit
 
-When CI minutes become a problem, Renovate's mise manager learns GraalVM Community, EDI ships a container image, or coverage becomes a gate.
+When CI minutes become a problem, EDI ships a container image, or coverage becomes a gate.
 
 ## How we got here
 
@@ -78,3 +78,4 @@ When CI minutes become a problem, Renovate's mise manager learns GraalVM Communi
 - 03/11/2026: commonmark joined the core's dependencies, to render a task's report and brief, kept current by Renovate like every Maven dependency (EDI-57).
 - 18/11/2026: `npm audit` failed on every pull request for GHSA-fc5q-39xc-vjpf, a ReDoS in `picomatch`, which every published version, up to 4.0.7, carries and no release fixes, and which the Angular build, Vite and Vitest pull in as build tooling; the check now reads `npm audit --json` and honours exceptions kept in one file, each ending by itself, and the picomatch advisory is the first (EDI-295).
 - 19/11/2026: GitHub withdrew GHSA-fc5q-39xc-vjpf, so `npm audit` no longer reported it and the check asked for its exception to be removed; the exceptions file is an empty list again (EDI-278).
+- 23/11/2026: the GraalVM Community 25.5.5.0.3 update failed every CI job at the tool install, since only its version moved; GraalVM moved to mise's `github` backend, which Renovate's mise manager reads itself, so its regex manager was removed and a package rule sets loose versioning (EDI-1).
