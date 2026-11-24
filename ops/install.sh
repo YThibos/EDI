@@ -9,14 +9,40 @@ installed_build_record="${home}/state/installed-build"
 toolchain="${checkout}/mise.toml"
 
 require_the_pinned_toolchain() {
+  require_mise
+  install_the_missing_pinned_tools
+}
+
+require_mise() {
   if ! command -v mise >/dev/null; then
     refuse "EDI builds with the toolchain ${toolchain} pins, and mise, which runs it, is not on the PATH; install mise, run mise install in ${checkout} and try again."
   fi
+}
+
+install_the_missing_pinned_tools() {
   local missing
-  missing="$(cd "${checkout}" && mise ls --local --missing --no-header)"
-  if [[ -n "${missing}" ]]; then
-    refuse "EDI builds with the toolchain ${toolchain} pins, and part of it is not installed; run mise install in ${checkout} and try again."$'\n'"${missing}"
+  missing="$(missing_pinned_tools)"
+  if [[ -z "${missing}" ]]; then
+    return
   fi
+  echo "Installing the pinned tools this machine lacks: $(listed "${missing}")"
+  if ! (cd "${checkout}" && mise install); then
+    refuse_the_failed_install "${missing}"
+  fi
+}
+
+refuse_the_failed_install() {
+  local still_missing
+  still_missing="$(missing_pinned_tools || true)"
+  refuse "EDI could not install the pinned tools ${toolchain} names: $(listed "${still_missing:-$1}"); mise's output above says why, and the installed EDI is unchanged."
+}
+
+missing_pinned_tools() {
+  (cd "${checkout}" && mise ls --local --missing --no-header) | awk '!named[$1]++ { print $1 }'
+}
+
+listed() {
+  paste -sd, - <<< "$1" | sed 's/,/, /g'
 }
 
 refuse() {
