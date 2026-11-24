@@ -61,7 +61,7 @@ public class CaptainsGo {
         try {
             return decisions.get(answered.decision());
         } catch (UnknownDecision unknown) {
-            throw withoutGo(plan, "its go cites " + answered.decision() + ", which is no decision EDI knows");
+            throw withoutGo(plan, "its go cites " + answered.decision() + ", which is no decision I hold");
         }
     }
 
