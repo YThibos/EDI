@@ -175,7 +175,8 @@ public class SitrepConsolePresenter {
 
     private static Board board(WaitingBoard waiting) {
         Task task = waiting.task();
-        return new Board(task.id().value(), task.intake().title(), projectsOf(task), waiting.board().openQuestions(), waiting.board().link(),
+        return new Board(new CallKey.OfABoard(waiting.board().id()).toString(), task.id().value(), task.intake().title(), projectsOf(task),
+                waiting.board().openQuestions(), waiting.board().link(),
                 waiting.decisions().stream().map(SitrepConsolePresenter::boardDecision).toList());
     }
 

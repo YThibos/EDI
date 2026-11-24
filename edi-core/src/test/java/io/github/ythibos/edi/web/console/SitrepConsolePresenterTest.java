@@ -171,8 +171,8 @@ class SitrepConsolePresenterTest {
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
-        assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK,
-                List.of()));
+        assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("board:3", "lamp-research", "Research the lamp", List.of("harness"), 2,
+                BoardRounds.LINK, List.of()));
         assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(), null,
                 new ConsoleSitrep.AfterLanding(List.of(), null)));
     }

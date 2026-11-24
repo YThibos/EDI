@@ -59,7 +59,7 @@ public record ConsoleSitrep(
     public record Recommendation(String key, String why) {
     }
 
-    public record Board(String task, String title, List<String> projects, int questions, String link, List<BoardDecision> decisions) {
+    public record Board(String call, String task, String title, List<String> projects, int questions, String link, List<BoardDecision> decisions) {
 
         public Board {
             decisions = List.copyOf(decisions);

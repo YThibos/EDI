@@ -70,6 +70,7 @@ describe('SitrepPage', () => {
         sitrepFixture({
           boards: [
             {
+              call: 'board:3',
               task: 'lamp-research',
               title: 'Research the lamp',
               projects: ['harness'],
@@ -96,6 +97,7 @@ describe('SitrepPage', () => {
           decisions: [lamp, { ...lamp, number: 'D59', task: 'bulb-choice', title: 'Which bulb?' }],
           boards: [
             {
+              call: 'board:4',
               task: 'bulb-research',
               title: 'Research the bulb',
               projects: ['harness'],

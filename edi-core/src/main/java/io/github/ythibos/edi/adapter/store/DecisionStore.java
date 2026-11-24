@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -112,9 +113,10 @@ public class DecisionStore {
     public List<Decision> answeredAwaitingTheirTick() {
         return decisions(store.sql(SELECT_DECISIONS + """
                         where answered_at is not null
-                          and number not in (select decision_number from board_decision)
+                          and number not in (select decision_number from board_decision
+                                             where not exists (select 1 from call_tick where call = :board || board_decision.board_id))
                           and not exists (select 1 from call_tick where call = 'D' || decision.number)
-                        order by number"""));
+                        order by number""").param("board", CallKey.BOARD));
     }
 
     private void replaceOptions(Decision decision) {

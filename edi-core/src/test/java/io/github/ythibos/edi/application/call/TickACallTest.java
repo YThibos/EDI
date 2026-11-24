@@ -211,6 +211,21 @@ class TickACallTest {
     }
 
     @Test
+    void listsADecisionAnsweredAfterItsEndedBoardWasTickedAsDealtWithUntilItIsTicked() throws IOException {
+        home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
+        Board armed = home.boards().arm(new TaskId("lantern"), boardFile().toString(), BoardRounds.binding(new DecisionNumber(58)), TestHome.START);
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.ClosedEmpty());
+        home.tickACall().tick(callOf(armed), Actor.CAPTAIN);
+
+        answerTheLampDecision();
+        List<DealtWith.Answered> answered = home.fleetSnapshot().snapshot().dealtWith().decisions();
+        home.tickACall().tick(D58, Actor.CAPTAIN);
+
+        assertThat(answered).extracting(decision -> decision.decision().number()).containsExactly(new DecisionNumber(58));
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().isEmpty()).isTrue();
+    }
+
+    @Test
     void knowsNoCallThatIsNotOnTheList() {
         assertThatThrownBy(() -> home.tickACall().tick(CallKey.parse("board:41"), Actor.CAPTAIN)).isInstanceOf(UnknownCall.class);
         assertThatThrownBy(() -> home.tickACall().tick(CallKey.parse("review:fit-lamp"), Actor.CAPTAIN)).isInstanceOf(UnknownCall.class);

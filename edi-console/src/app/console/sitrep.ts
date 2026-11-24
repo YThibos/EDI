@@ -66,6 +66,7 @@ export interface Recommendation {
 }
 
 export interface WaitingBoard {
+  call: string;
   task: string;
   title: string;
   projects: string[];

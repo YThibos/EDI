@@ -12,6 +12,7 @@ const LAMP = sitrepFixture().decisions[0];
 const STOPPER: DecisionCard = { ...LAMP, number: 'D60', task: 'fit-socket', title: 'Which socket?', stops: 'EDI-31 Fit the lamp', raisedAt: '2026-10-15T04:10:00Z' };
 const URGENT: DecisionCard = { ...LAMP, number: 'D61', task: 'storm-plan', title: 'Reef the sails?', urgent: true };
 const BOARD = {
+  call: 'board:3',
   task: 'lamp-research',
   title: 'Research the lamp',
   projects: ['harness'],
@@ -98,7 +99,7 @@ describe('CaptainsList', () => {
     const list = await listed(everything());
 
     expect(toggleOf(list, 'review:paint-buoy')).toBeNull();
-    expect(toggleOf(list, 'board-of:lamp-research')).toBeNull();
+    expect(toggleOf(list, 'board:3')).toBeNull();
 
     await toggle(list, 'review:fit-lamp');
 

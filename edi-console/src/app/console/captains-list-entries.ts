@@ -60,7 +60,7 @@ function decisionEntry(card: DecisionCard): ListEntry {
 }
 
 function boardEntry(board: WaitingBoard): ListEntry {
-  return { kind: 'board', key: `board-of:${board.task}`, dealtWith: false, board };
+  return { kind: 'board', key: board.call, dealtWith: false, board };
 }
 
 function reviewEntry(review: ReadyForReview): ListEntry {
