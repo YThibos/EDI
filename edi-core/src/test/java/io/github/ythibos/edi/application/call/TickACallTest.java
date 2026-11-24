@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -22,6 +23,7 @@ import io.github.ythibos.edi.application.fleet.DealtWith;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.call.UnknownCall;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
@@ -131,20 +133,19 @@ class TickACallTest {
     }
 
     @Test
-    void listsAListeningBoardAsDealtWithOnceItsRoundIsAnsweredAndAgainOnceALaterRoundIsAnswered() {
+    void listsAListeningBoardAsDealtWithOnceItsRoundIsAnsweredAndAgainOnceALaterRoundIsAnswered() throws IOException {
         home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
-        Board armed = home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.asking(2), TestHome.START);
-        CallKey board = CallKey.parse("board:" + armed.id());
+        Path file = boardFile();
+        Board armed = home.boards().arm(new TaskId("lantern"), file.toString(), BoardRounds.asking(2), TestHome.START);
+        CallKey board = callOf(armed);
 
         assertThatThrownBy(() -> home.tickACall().tick(board, Actor.CAPTAIN)).isInstanceOf(Refusal.class)
                 .hasMessageContaining(board + " still waits on the captain");
-        Board answered = armed.answeredOnceMore();
-        home.boards().update(answered);
+        home.boards().update(armed.answeredOnceMore());
         FleetSnapshot roundAnswered = home.fleetSnapshot().snapshot();
         home.tickACall().tick(board, Actor.CAPTAIN);
         FleetSnapshot ticked = home.fleetSnapshot().snapshot();
-        Board askingAgain = answered.posted(BoardRounds.asking(1));
-        home.boards().update(askingAgain);
+        Board askingAgain = home.postBoardRound().post(file, BoardRounds.LINK, 1, Actor.PRIMARY);
         FleetSnapshot laterRound = home.fleetSnapshot().snapshot();
         home.boards().update(askingAgain.answeredOnceMore());
         FleetSnapshot laterRoundAnswered = home.fleetSnapshot().snapshot();
@@ -156,6 +157,40 @@ class TickACallTest {
         assertThat(laterRound.dealtWith().boards()).isEmpty();
         assertThat(laterRoundAnswered.waiting().boards()).isEmpty();
         assertThat(laterRoundAnswered.dealtWith().boards()).extracting(settled -> settled.board().id()).containsExactly(armed.id());
+    }
+
+    @Test
+    void listsATickedBoardAgainOnceTheDecisionItsLaterRoundBindsIsAnsweredOutsideTheBoard() throws IOException {
+        Board ticked = tickedAfterItsFirstRound(boardFile());
+
+        home.boards().postRound(ticked.posted(BoardRounds.binding(new DecisionNumber(58))));
+        FleetSnapshot laterRound = home.fleetSnapshot().snapshot();
+        answerTheLampDecision();
+
+        assertThat(laterRound.waiting().boards()).extracting(waiting -> waiting.board().id()).containsExactly(ticked.id());
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).extracting(settled -> settled.board().id()).containsExactly(ticked.id());
+    }
+
+    @Test
+    void listsATickedBoardAgainOnceTheCaptainClosesItsLaterRoundUnanswered() throws IOException {
+        Path file = boardFile();
+        Board ticked = tickedAfterItsFirstRound(file);
+
+        home.postBoardRound().post(file, BoardRounds.LINK, 2, Actor.PRIMARY);
+        home.receiveBoardFeedback().receive(ticked.id(), new BoardFeedback.ClosedEmpty());
+
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).extracting(settled -> settled.board().id()).containsExactly(ticked.id());
+    }
+
+    @Test
+    void listsATickedBoardAgainOnceItIsRetiredWhileALaterRoundWaits() throws IOException {
+        Path file = boardFile();
+        Board ticked = tickedAfterItsFirstRound(file);
+
+        Board askingAgain = home.postBoardRound().post(file, BoardRounds.LINK, 2, Actor.PRIMARY);
+        home.boards().update(askingAgain.retired(TestHome.START));
+
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).extracting(settled -> settled.board().id()).containsExactly(ticked.id());
     }
 
     @Test
@@ -184,6 +219,23 @@ class TickACallTest {
     private void answerTheLampDecision() {
         home.answerDecision().answer(new TaskReference.ByDecision(new DecisionNumber(58)),
                 new GivenAnswer("A: the simple way", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+    }
+
+    private Path boardFile() throws IOException {
+        return Files.writeString(directory.resolve("board.html"), "<!doctype html>\n").toRealPath();
+    }
+
+    private static CallKey callOf(Board board) {
+        return new CallKey.OfABoard(board.id());
+    }
+
+    private Board tickedAfterItsFirstRound(Path file) {
+        home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
+        Board answered = home.boards().arm(new TaskId("lantern"), file.toString(), BoardRounds.asking(1), TestHome.START).answeredOnceMore();
+        home.boards().update(answered);
+        home.tickACall().tick(callOf(answered), Actor.CAPTAIN);
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).isEmpty();
+        return answered;
     }
 
     private static MergeRequestView nextRequest() {

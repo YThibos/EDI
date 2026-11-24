@@ -8,7 +8,7 @@ import { ConsoleApi } from './console-api';
 import { DecisionCardView } from './decision-card';
 import { LinkChips } from './link-chips';
 import { projectsOf } from './projects';
-import { AnsweredDecision, TaskLinks, WaitingBoard } from './sitrep';
+import { AnsweredDecision, SettledBoard, TaskLinks, WaitingBoard } from './sitrep';
 import { shipTime } from './stardate';
 import { waitedSince } from './waited';
 
@@ -64,6 +64,10 @@ export class CaptainsList {
   protected boardSummary(board: WaitingBoard): string {
     const projects = projectsOf(board.projects, board.task);
     return board.questions > 0 ? `${questionsWaiting(board.questions)} · ${projects}` : projects;
+  }
+
+  protected badgeOf(board: SettledBoard): string {
+    return board.state === 'round answered' ? 'answered' : 'ended';
   }
 
   protected targetOf(stackedOn: string | null | undefined): string {

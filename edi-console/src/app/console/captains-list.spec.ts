@@ -156,6 +156,7 @@ describe('CaptainsList', () => {
     );
 
     expect(texts(list, '.sr-entry__sub')).toEqual(['round answered · harness', 'the board ended · harness', 'merged · harness']);
+    expect(texts(list, '.sr-entry__line > .sr-badge')).toEqual(['answered', 'ended', 'merged']);
     expect(list.querySelectorAll('.sr-entry--dealt')).toHaveLength(3);
 
     await toggle(list, 'review:fit-lamp');

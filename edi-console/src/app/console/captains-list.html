@@ -73,8 +73,8 @@
             <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>{{ entry.review.state }}</span>
           } @else if (entry.kind === 'answered') {
             <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>answered</span>
-          } @else {
-            <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>ended</span>
+          } @else if (entry.kind === 'settled-board') {
+            <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>{{ badgeOf(entry.board) }}</span>
           }
           @if (opensFurther(entry)) {
             <button

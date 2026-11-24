@@ -125,7 +125,7 @@ export interface SettledBoard {
   title: string;
   projects: string[];
   link: string | null;
-  state: string;
+  state: 'round answered' | 'the board ended';
 }
 
 export interface SettledReview {

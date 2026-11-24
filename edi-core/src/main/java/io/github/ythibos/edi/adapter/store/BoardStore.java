@@ -68,6 +68,11 @@ public class BoardStore {
         bind(board);
     }
 
+    public void postRound(Board posted) {
+        update(posted);
+        store.sql("delete from call_tick where call = :call").param("call", new CallKey.OfABoard(posted.id()).toString()).update();
+    }
+
     public Optional<Board> get(BoardId id) {
         return boards(store.sql(SELECT_BOARDS + "where id = :id").param("id", id.value())).stream().findFirst();
     }
@@ -94,7 +99,7 @@ public class BoardStore {
                           and not (%s and (open_questions > 0 or exists (
                                   select 1 from board_decision join decision on decision.number = board_decision.decision_number
                                   where board_decision.board_id = board.id and decision.answered_at is null)))
-                          and not exists (select 1 from call_tick where call = :call || board.id and subject = cast(board.rounds as text))
+                          and not exists (select 1 from call_tick where call = :call || board.id)
                         order by id""".formatted(LISTENING)).param("call", CallKey.BOARD));
     }
 

@@ -73,7 +73,7 @@ public class TickACall {
         if (waitsOnTheCaptain(board)) {
             throw stillWaiting(call, "its round is not answered yet");
         }
-        return new DealtWithCall(board.task(), String.valueOf(board.rounds()));
+        return new DealtWithCall(board.task(), null);
     }
 
     private boolean waitsOnTheCaptain(Board board) {
