@@ -42,7 +42,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `authority.captains-word` | `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
 | `authority.typed-words` | `CaptainMessages`, `CaptainsWordEvidence` | Only words the captain typed in a known primary session count as the captain's word. |
 | `task.stage` | `AddTask`, `DiscardWork`, `PromoteScout`, `StageTransitions`, `Task` | A task moves only along the stages its kind allows. |
-| `task.hold` | `AnswerDecision`, `DropTask`, `Hold`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A task waits until each of its holds is released and each of its decisions answered, and no hold replaces another. |
+| `task.hold` | `DropTask`, `Hold`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A task waits until each of its holds is released and each of its decisions answered, and no hold replaces another. |
 | `task.intake` | `AddTask`, `NewTask`, `ProjectRegistry` | A new task names a registered project and an id never used before. |
 | `task.plan-intake` | `AddPlan` | A plan is known by an umbrella key no other plan has, and works on no more slices at once than its project. |
 | `task.work-key` | `AdoptForkTask`, `DispatchTask`, `GitHubIssuesTracker`, `NoTracker`, `Task`, `TaskKeys`, `TicketProposals`, `TrackedProject` | A task books its work on one key of its project's tracker. |
