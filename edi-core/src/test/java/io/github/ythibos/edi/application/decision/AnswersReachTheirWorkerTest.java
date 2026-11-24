@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.application.worker.SteerWorker.Steered;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -25,6 +26,7 @@ import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -139,6 +141,44 @@ class AnswersReachTheirWorkerTest {
 
         assertThat(resolving.resolves()).isEqualTo(LAMP_CHOICE);
         assertThat(home.workers().get(worker.id()).orElseThrow().waitsOnThePrimary()).isFalse();
+    }
+
+    @Test
+    void judgesTheFirstDecisionRaisedForAQuestionByItsFirstRaiseNotByARaiseAgain() {
+        DecisionNumber paint = home.raiseDecision().raise(FIT_LAMP, card("Which paint for the mast?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
+        home.clock().advance(Duration.ofMinutes(5));
+        DecisionNumber lamp = home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        home.raiseDecision().raise(FIT_LAMP, Cards.urgent("Which paint for the mast?"), Actor.PRIMARY);
+
+        home.answerDecision().answer(new TaskReference.ByDecision(paint), new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+        InboxMessage plain = home.inbox().get(LAMP, 1).orElseThrow();
+        home.workerInbox().acknowledge(worker.id(), 1);
+
+        assertThat(plain.resolves()).isNull();
+        assertThat(home.workers().get(worker.id()).orElseThrow().waitsOnThePrimary()).isTrue();
+        assertThat(home.undeliveredAnswers().waiting()).isEmpty();
+
+        home.answerDecision().answer(new TaskReference.ByDecision(lamp), new GivenAnswer("B", new OptionKey('B'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+
+        assertThat(home.inbox().get(LAMP, 2).orElseThrow().resolves()).isEqualTo(LAMP_CHOICE);
+    }
+
+    @Test
+    void escalatesAQuestionOnlyByADecisionFirstRaisedSinceItWasAsked() {
+        home.raiseDecision().raise(FIT_LAMP, card("Which paint for the mast?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
+        home.clock().advance(Duration.ofMinutes(5));
+        home.raiseDecision().raise(FIT_LAMP, Cards.urgent("Which paint for the mast?"), Actor.PRIMARY);
+
+        assertThat(home.fleetSnapshot().snapshot().waiting().workerQuestions()).extracting(WorkerQuestion::escalated).containsExactly(false);
+
+        home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
+
+        assertThat(home.fleetSnapshot().snapshot().waiting().workerQuestions()).extracting(WorkerQuestion::escalated).containsExactly(true);
     }
 
     @Test

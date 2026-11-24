@@ -3,7 +3,9 @@ package io.github.ythibos.edi.adapter.store;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -205,6 +207,17 @@ public class EventLog {
                 .param("done", StatusState.DONE.word())
                 .query((row, _) -> row.getBoolean(1))
                 .single();
+    }
+
+    public Map<DecisionNumber, Instant> firstRaisesOn(TaskId task) {
+        Map<DecisionNumber, Instant> firstRaises = new HashMap<>();
+        store.sql("select json_extract(payload, '$.number') as number, at from event where task_id = :task and type = :raised order by sequence")
+                .param("task", task.value())
+                .param("raised", DecisionRaised.class.getSimpleName())
+                .query((row, _) -> Map.entry(DecisionNumber.parse(row.getString("number")), Columns.instant(row.getString("at"))))
+                .list()
+                .forEach(raise -> firstRaises.putIfAbsent(raise.getKey(), raise.getValue()));
+        return firstRaises;
     }
 
     public List<RecordedEvent> timelineOf(TaskId task) {

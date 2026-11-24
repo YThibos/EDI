@@ -13,6 +13,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.decision.DecisionsOfATask;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
@@ -81,7 +82,11 @@ public class SteerWorker {
     }
 
     private StatusKey keySettledBy(Decision answered, WorkerQuestion question) {
-        return answered.answers(question, decisions.everyOneOfTask(answered.task())) ? question.key() : null;
+        return decisionsOf(answered).answers(answered, question) ? question.key() : null;
+    }
+
+    private DecisionsOfATask decisionsOf(Decision answered) {
+        return new DecisionsOfATask(decisions.everyOneOfTask(answered.task()), events.firstRaisesOn(answered.task()));
     }
 
     public record Steered(InboxMessage message, Worker worker, SteerDelivery delivery) {

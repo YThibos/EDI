@@ -996,7 +996,7 @@ public final class TestHome {
     }
 
     public UndeliveredAnswersQuery undeliveredAnswers() {
-        return new UndeliveredAnswersQuery(workers, decisions, inbox, transaction);
+        return new UndeliveredAnswersQuery(workers, decisions, inbox, events, transaction);
     }
 
     public RecordTurnItems recordTurnItems() {

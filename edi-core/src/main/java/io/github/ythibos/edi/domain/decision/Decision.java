@@ -2,16 +2,13 @@ package io.github.ythibos.edi.domain.decision;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
 public record Decision(DecisionNumber number, TaskId task, DecisionCard card, Instant raisedAt, CaptainAnswer answer) {
 
@@ -51,14 +48,6 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
         return answer == null;
     }
 
-    public boolean answers(WorkerQuestion question, List<Decision> decisionsOfItsTask) {
-        return !isOpen() && firstRaisedFor(question, decisionsOfItsTask).filter(first -> first.number().equals(number)).isPresent();
-    }
-
-    public boolean isRaisedFor(WorkerQuestion question) {
-        return task.equals(question.task()) && !question.askedAt().isAfter(raisedAt);
-    }
-
     public String answerForItsWorker() {
         List<String> lines = new ArrayList<>(List.of("Answer to " + number + " " + card.title()));
         if (answer.choosesAnOption()) {
@@ -77,9 +66,5 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     private String alreadyAnswered() {
         return number + " is already answered: \"" + answer.verbatim() + "\"";
-    }
-
-    private static Optional<Decision> firstRaisedFor(WorkerQuestion question, List<Decision> decisionsOfItsTask) {
-        return decisionsOfItsTask.stream().filter(decision -> decision.isRaisedFor(question)).min(Comparator.comparingInt(decision -> decision.number().value()));
     }
 }

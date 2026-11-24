@@ -171,7 +171,7 @@ class CaptainReportPresenterTest {
                         new WorkerLaunch(LaunchKind.DISPATCH, FIRST_DAY, new BootId("boot"), LoginName.DEFAULT))
                 .reported(new StatusReport(StatusState.BLOCKED, new StatusKey("socket"), null, "The socket is missing."), FIRST_DAY);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
-                List.of(new WorkerQuestion(lamp, asking, Duration.ofMinutes(5))));
+                List.of(new WorkerQuestion(lamp, asking, Duration.ofMinutes(5), false)));
 
         String questioned = rendered(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
         String quiet = rendered(new FleetSnapshot(NOTHING_WAITING, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);

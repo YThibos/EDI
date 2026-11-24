@@ -22,10 +22,12 @@ import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.decision.DecisionsOfATask;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.Wait;
@@ -86,12 +88,20 @@ public class FleetSnapshotQuery {
         return inFlight.stream()
                 .flatMap(task -> workers.latestOf(task.id()).filter(not(Worker::isRetired)).filter(Worker::waitsOnThePrimary)
                         .filter(not(this::questionSettledByASteer))
-                        .map(worker -> new WorkerQuestion(task, worker, Duration.between(worker.lastStatus().at(), now))).stream())
+                        .map(worker -> new WorkerQuestion(task, worker, Duration.between(worker.lastStatus().at(), now), isEscalated(worker))).stream())
                 .toList();
     }
 
     private boolean questionSettledByASteer(Worker worker) {
         return worker.openQuestion().filter(question -> question.isResolvedByOneOf(inbox.resolvingOf(question.task()))).isPresent();
+    }
+
+    private boolean isEscalated(Worker worker) {
+        return worker.openQuestion().filter(question -> decisionsRaisedOn(question.task()).escalates(question)).isPresent();
+    }
+
+    private DecisionsOfATask decisionsRaisedOn(TaskId task) {
+        return new DecisionsOfATask(decisions.everyOneOfTask(task), events.firstRaisesOn(task));
     }
 
     private List<OpenDecision> decisionsOf(List<Decision> openDecisions) {
