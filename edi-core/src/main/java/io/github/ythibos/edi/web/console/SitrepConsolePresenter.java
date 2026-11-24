@@ -222,7 +222,7 @@ public class SitrepConsolePresenter {
     }
 
     private static String doingOf(OngoingTask ongoing) {
-        return WaitingWords.offTheBase(ongoing).orElseGet(() -> activityOf(ongoing));
+        return WaitingWords.doing(activityOf(ongoing), ongoing);
     }
 
     private static String activityOf(OngoingTask ongoing) {

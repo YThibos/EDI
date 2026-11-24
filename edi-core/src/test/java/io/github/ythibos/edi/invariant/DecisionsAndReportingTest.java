@@ -409,7 +409,7 @@ class DecisionsAndReportingTest {
             String notLanded = "its request merged into slice/lamps, not the base, so the work has not landed";
             assertThat(merged.replaceAll("\\s*\n║\\s*", " ")).contains("Work on fit-lamp: " + notLanded).doesNotContain("Ready for your review");
             assertThat(mergedBrief).contains("Work on fit-lamp: " + notLanded + "\n");
-            assertThat(mergedOnTheConsole.doing()).isEqualTo(notLanded);
+            assertThat(mergedOnTheConsole.doing()).isEqualTo("Fitted. - " + notLanded);
         }
 
         @Test
@@ -419,6 +419,7 @@ class DecisionsAndReportingTest {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN, "slice/lamps"), new BaseBranch("main"), TestHome.START));
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST, false), TestHome.START);
 
             String report = captainReport(home, Turn.NONE);
             String brief = returnBrief(home);
@@ -428,7 +429,7 @@ class DecisionsAndReportingTest {
             assertThat(onTheConsole.reviews()).isEmpty();
             assertThat(report.replaceAll("\\s*\n║\\s*", " ")).contains("Work on fit-lamp: " + target).doesNotContain("Ready for your review");
             assertThat(brief).contains("Work on fit-lamp: " + target + "\n");
-            assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::doing).containsExactly(target);
+            assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::doing).containsExactly("pipeline review - " + target);
         }
 
         @Test

@@ -32,7 +32,11 @@ public final class WaitingWords {
         return offTheBase(ongoing).map(note -> title + ": " + note).orElse(title);
     }
 
-    public static Optional<String> offTheBase(OngoingTask ongoing) {
+    public static String doing(String activity, OngoingTask ongoing) {
+        return offTheBase(ongoing).map(note -> activity + " - " + note).orElse(activity);
+    }
+
+    private static Optional<String> offTheBase(OngoingTask ongoing) {
         return ongoing.stackedRequest().map(WaitingWords::noteOn);
     }
 
