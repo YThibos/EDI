@@ -268,13 +268,13 @@ class FollowMergesTest {
         assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage).endsWith(TaskStage.CHANGING, TaskStage.MERGED);
         assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DecisionRaised");
         assertThat(home.decisions().everyOneOfTask(LAMP)).singleElement().satisfies(decision -> {
-            assertThat(decision.card().title()).isEqualTo("Deliver the commits fit-lamp made after its merge in a follow-up request?");
+            assertThat(decision.card().title()).isEqualTo("Deliver the commits fit-lamp made after its merge through a follow-up task?");
             assertThat(decision.card().context()).isEqualTo(String.join("\n",
                     "The forge merged " + merged.address() + " at " + mergedHead + ", while fit-lamp went on: 1 commit after the merged head is not in main:",
                     "- " + late.substring(0, 12) + " \"HRN-3 Amend the spec as steered\"",
                     "fit-lamp stays merged, and its clean-up is refused, until they land or are discarded."));
             assertThat(decision.card().options()).extracting(DecisionOption::text).containsExactly(
-                    "Deliver them in a follow-up request from feature/HRN-3 to main",
+                    "Deliver them through a follow-up task that carries them from feature/HRN-3 onto a new branch from main and lands by its own merged head",
                     "Discard them: retire fit-lamp with its copy and branch, and lose those commits");
             assertThat(decision.card().authorises(new OptionKey('B'), CaptainWordAct.DISCARD_WORK)).isTrue();
             assertThat(decision.card().authorises(new OptionKey('A'), CaptainWordAct.DISCARD_WORK)).isFalse();

@@ -27,7 +27,7 @@ public record WorkAfterTheMergedHead(TaskId task, MergeRequestView request, List
     }
 
     public DecisionCard card() {
-        return new DecisionCard("Deliver the commits " + task + " made after its merge in a follow-up request?", context(), options(), recommendation());
+        return new DecisionCard("Deliver the commits " + task + " made after its merge through a follow-up task?", context(), options(), recommendation());
     }
 
     private String context() {
@@ -49,7 +49,8 @@ public record WorkAfterTheMergedHead(TaskId task, MergeRequestView request, List
 
     private List<DecisionOption> options() {
         return List.of(
-                new DecisionOption(FOLLOW_UP, "Deliver them in a follow-up request from " + request.sourceBranch() + " to " + request.targetBranch()),
+                new DecisionOption(FOLLOW_UP, "Deliver them through a follow-up task that carries them from " + request.sourceBranch() + " onto a new branch from "
+                        + request.targetBranch() + " and lands by its own merged head"),
                 new DecisionOption(DISCARD, "Discard them: retire " + task + " with its copy and branch, and lose those commits",
                         CaptainWordAct.DISCARD_WORK));
     }

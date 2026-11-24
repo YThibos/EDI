@@ -19,7 +19,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.task.TaskId;
 
-class WorkAfterTheMergeTest {
+class WorkAfterTheMergedHeadTest {
 
     private static final TaskId LAMP = new TaskId("fit-lamp");
     private static final MergeRequestView MERGED = new MergeRequestView(
@@ -38,6 +38,8 @@ class WorkAfterTheMergeTest {
                 "- b30e15a1c2d3 \"HRN-3 Fit the cap\"",
                 "- d4e5f6a7b8c9 \"HRN-3 Amend the spec\"",
                 "fit-lamp stays merged, and its clean-up is refused, until they land or are discarded."));
+        assertThat(card.options().getFirst().text())
+                .isEqualTo("Deliver them through a follow-up task that carries them from feature/HRN-3 onto a new branch from main and lands by its own merged head");
         assertThat(card.recommendation().key()).isEqualTo(new OptionKey('A'));
         assertThat(card.authorises(new OptionKey('B'), CaptainWordAct.DISCARD_WORK)).isTrue();
         assertThat(card.authorises(new OptionKey('A'), CaptainWordAct.DISCARD_WORK)).isFalse();
