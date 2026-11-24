@@ -86,7 +86,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `publish.registered-forge` | `RegisteredForge` | Work is published only to the repository its project registers. |
 | `publish.workflow-scope` | `PublicationTargets` | A push that changes workflows goes only with the workflow scope the captain granted. |
 | `publish.check-reachable` | `PublishCheckCommand` | A push goes out only once the publish check could run. |
-| `cleanup.landed-before-discard` | `CleanUpTask`, `DropTask` | Unlanded work is never discarded without the captain's word. |
+| `cleanup.landed-before-discard` | `CleanUpTask`, `DropTask`, `FollowUpCarriage` | Unlanded work is never discarded without the captain's word. |
 | `cleanup.scout-report` | `CleanUpTask` | A scout is cleaned up only once its done was accepted and its report exists. |
 | `cleanup.no-worker-at-work` | `CopyRetirement` | A copy is retired only once no worker works in it. |
 | `mechanical.change-matches-its-brief` | `CheckMechanicalChange` | A mechanical change is accepted only when its diff matches its brief and its verify command passes. |
