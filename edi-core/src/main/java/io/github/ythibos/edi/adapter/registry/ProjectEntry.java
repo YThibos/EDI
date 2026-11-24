@@ -25,6 +25,7 @@ public record ProjectEntry(
         Path projectClone,
         Path captainCheckout,
         BaseBranch base,
+        BaseBranch production,
         RegisteredForge forge,
         DeliveryMode delivery,
         Set<BranchKind> branchKinds,

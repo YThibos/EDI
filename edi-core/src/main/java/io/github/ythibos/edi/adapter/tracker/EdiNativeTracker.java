@@ -7,12 +7,15 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.store.WorkKeySequenceStore;
 import io.github.ythibos.edi.application.port.Tracker;
+import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.tracker.ProjectTicket;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketMove;
+import io.github.ythibos.edi.domain.tracker.TicketWalk;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 @Component
@@ -62,6 +65,16 @@ public class EdiNativeTracker implements Tracker {
     @Override
     public TicketMove transition(WorkKey key, String target) {
         return new TicketMove.Untracked();
+    }
+
+    @Override
+    public TicketWalk walk(WorkKey key, String target) {
+        throw NoWorkflow.refusedFor(kind());
+    }
+
+    @Override
+    public List<ProjectTicket> ticketsOf(ProjectKey project) {
+        throw NoWorkflow.refusedFor(kind());
     }
 
     @Override

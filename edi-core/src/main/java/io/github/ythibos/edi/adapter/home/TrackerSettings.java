@@ -11,6 +11,7 @@ import java.util.Set;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.tracker.DriftRules;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.domain.tracker.Workflow;
 
@@ -22,24 +23,34 @@ public record TrackerSettings(
         Workflow workflow,
         String mergedStatus,
         String issueType,
-        String epicLinkField) {
+        String epicLinkField,
+        List<String> reviewStatuses,
+        List<String> implementedStatuses,
+        String doneStatus) {
 
     private static final String LOOPBACK = "127.0.0.1";
-    private static final TrackerSettings NONE = new TrackerSettings(TrackerKind.NONE, null, null, Map.of(), null, null, null, null);
+    private static final TrackerSettings NONE = new TrackerSettings(TrackerKind.NONE, null, null, Map.of(), null, null, null, null, List.of(), List.of(), null);
 
     public TrackerSettings {
         Objects.requireNonNull(kind, "The machine profile names its tracker.");
         evergreenTickets = Map.copyOf(evergreenTickets);
+        reviewStatuses = List.copyOf(reviewStatuses);
+        implementedStatuses = List.copyOf(implementedStatuses);
         if (kind == TrackerKind.EDI || kind == TrackerKind.GITHUB) {
             throw new IllegalArgumentException("tracker.kind is jira or none: EDI-native keys and issue-number keys need no tracker on the machine.");
         }
         if (kind == TrackerKind.JIRA) {
             requireAJiraConnection(baseUrl, credentials);
             requireAWorkflowFor(workflow, mergedStatus);
+            requireStatusesOf(workflow, reviewStatuses, implementedStatuses, doneStatus);
             if (issueType == null || issueType.isBlank()) {
                 throw new IllegalArgumentException("tracker.issueType names the issue type of new tickets, such as Story.");
             }
         }
+    }
+
+    public DriftRules driftRules() {
+        return new DriftRules(workflow, mergedStatus, reviewStatuses, implementedStatuses, doneStatus, evergreen());
     }
 
     public static TrackerSettings none() {
@@ -90,6 +101,14 @@ public record TrackerSettings(
             throw new IllegalArgumentException("tracker.mergedStatus names the status a shipped ticket moves to after its merge.");
         }
         workflow.requireStatus(mergedStatus);
+    }
+
+    private static void requireStatusesOf(Workflow workflow, List<String> reviewStatuses, List<String> implementedStatuses, String doneStatus) {
+        reviewStatuses.forEach(workflow::requireStatus);
+        implementedStatuses.forEach(workflow::requireStatus);
+        if (doneStatus != null && !doneStatus.isBlank()) {
+            workflow.requireStatus(doneStatus);
+        }
     }
 
     public record Credentials(Path keysFile, String section) {

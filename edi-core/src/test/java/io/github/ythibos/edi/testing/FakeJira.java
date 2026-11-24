@@ -9,13 +9,16 @@ import java.util.Optional;
 
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.tracker.ProjectTicket;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketMove;
+import io.github.ythibos.edi.domain.tracker.TicketWalk;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 public final class FakeJira implements Tracker {
@@ -51,7 +54,7 @@ public final class FakeJira implements Tracker {
     public synchronized WorkKey create(TicketDraft draft) {
         failIfAsked();
         WorkKey key = new WorkKey(draft.project(), ++lastNumber);
-        tickets.put(key, new FakeTicket(key, draft.summary(), WORKFLOW.getFirst(), null, new ArrayList<>()));
+        tickets.put(key, new FakeTicket(key, draft.summary(), WORKFLOW.getFirst(), null, new ArrayList<>(), "Story"));
         created.add(draft);
         return key;
     }
@@ -99,6 +102,23 @@ public final class FakeJira implements Tracker {
     }
 
     @Override
+    public synchronized TicketWalk walk(WorkKey key, String target) {
+        failIfAsked();
+        FakeTicket ticket = ticket(key);
+        int from = WORKFLOW.indexOf(ticket.status());
+        int to = WORKFLOW.indexOf(target);
+        List<String> through = from <= to ? WORKFLOW.subList(from + 1, to + 1) : WORKFLOW.subList(to, from).reversed();
+        tickets.put(key, ticket.inStatus(target));
+        return new TicketWalk.Arrived(ticket.status(), through);
+    }
+
+    @Override
+    public synchronized List<ProjectTicket> ticketsOf(ProjectKey project) {
+        failIfAsked();
+        return tickets.values().stream().filter(ticket -> ticket.key().project().equals(project)).map(FakeTicket::asProjectTicket).toList();
+    }
+
+    @Override
     public synchronized SprintPlacement addToCurrentSprint(WorkKey key) {
         failIfAsked();
         FakeTicket ticket = ticket(key);
@@ -119,8 +139,12 @@ public final class FakeJira implements Tracker {
     }
 
     public synchronized FakeJira holding(String key, String summary, String status) {
+        return holdingOfType(key, summary, status, "Story");
+    }
+
+    public synchronized FakeJira holdingOfType(String key, String summary, String status, String issueType) {
         WorkKey workKey = WorkKey.parse(key);
-        tickets.put(workKey, new FakeTicket(workKey, summary, status, null, new ArrayList<>()));
+        tickets.put(workKey, new FakeTicket(workKey, summary, status, null, new ArrayList<>(), issueType));
         return this;
     }
 
@@ -172,18 +196,22 @@ public final class FakeJira implements Tracker {
         return ticket;
     }
 
-    private record FakeTicket(WorkKey key, String summary, String status, String sprint, List<String> links) {
+    private record FakeTicket(WorkKey key, String summary, String status, String sprint, List<String> links, String issueType) {
 
         Ticket asTicket() {
             return new Ticket(key, summary, status);
         }
 
+        ProjectTicket asProjectTicket() {
+            return new ProjectTicket(asTicket(), issueType);
+        }
+
         FakeTicket inStatus(String newStatus) {
-            return new FakeTicket(key, summary, newStatus, sprint, links);
+            return new FakeTicket(key, summary, newStatus, sprint, links, issueType);
         }
 
         FakeTicket inSprint(String newSprint) {
-            return new FakeTicket(key, summary, status, newSprint, links);
+            return new FakeTicket(key, summary, status, newSprint, links, issueType);
         }
     }
 }

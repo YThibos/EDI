@@ -29,6 +29,7 @@ public final class StubJiraServer implements AutoCloseable {
     private static final Pattern SPRINT_ISSUES = Pattern.compile("/rest/agile/1.0/sprint/(\\d+)/issue");
     private static final Pattern PROJECT_CLAUSE = Pattern.compile("project = \"([A-Z0-9]+)\"");
     private static final List<String> WORKFLOW = FakeJira.WORKFLOW;
+    private static final String STORY = "Story";
 
     private final HttpServer server;
     private final String token;
@@ -36,6 +37,8 @@ public final class StubJiraServer implements AutoCloseable {
     private final List<Exchange> exchanges = new ArrayList<>();
     private final Map<String, StubIssue> issues = new LinkedHashMap<>();
     private final Map<Long, String> activeSprints = new LinkedHashMap<>();
+    private final Map<String, List<String>> transitionGraph = new LinkedHashMap<>();
+    private final List<String> refusedTransitionTargets = new ArrayList<>();
     private Answer forced;
     private int lastNumber = 100;
 
@@ -56,7 +59,22 @@ public final class StubJiraServer implements AutoCloseable {
     }
 
     public synchronized StubJiraServer holding(String key, String summary, String status) {
-        issues.put(key, new StubIssue(key, summary, status, null));
+        issues.put(key, new StubIssue(key, summary, status, null, STORY));
+        return this;
+    }
+
+    public synchronized StubJiraServer holdingOfType(String key, String summary, String status, String issueType) {
+        issues.put(key, new StubIssue(key, summary, status, null, issueType));
+        return this;
+    }
+
+    public synchronized StubJiraServer offeringFrom(String status, String... targets) {
+        transitionGraph.put(status, List.of(targets));
+        return this;
+    }
+
+    public synchronized StubJiraServer refusingTransitionsTo(String status) {
+        refusedTransitionTargets.add(status);
         return this;
     }
 
@@ -152,6 +170,10 @@ public final class StubJiraServer implements AutoCloseable {
 
     private Answer found(String query) {
         String project = PROJECT_CLAUSE.matcher(query).results().map(clause -> clause.group(1)).findFirst().orElseThrow();
+        return query.contains("text ~") ? foundByText(project) : listed(project, query);
+    }
+
+    private Answer foundByText(String project) {
         ArrayNode found = json.createArrayNode();
         issues.values().stream()
                 .filter(issue -> issue.key().startsWith(project + "-") && !issue.status().equals("Done"))
@@ -160,9 +182,30 @@ public final class StubJiraServer implements AutoCloseable {
         return ok(json.createObjectNode().set("issues", found));
     }
 
+    private Answer listed(String project, String query) {
+        Map<String, String> parameters = parametersOf(query);
+        int start = Integer.parseInt(parameters.get("startAt"));
+        int size = Integer.parseInt(parameters.get("maxResults"));
+        List<StubIssue> all = issues.values().stream().filter(issue -> issue.key().startsWith(project + "-")).toList();
+        ArrayNode page = json.createArrayNode();
+        all.stream().skip(start).limit(size).forEach(issue -> page.add(issueNode(issue)));
+        ObjectNode body = json.createObjectNode().put("total", all.size());
+        body.set("issues", page);
+        return ok(body);
+    }
+
+    private static Map<String, String> parametersOf(String query) {
+        Map<String, String> parameters = new LinkedHashMap<>();
+        for (String parameter : query.split("&")) {
+            int equals = parameter.indexOf('=');
+            parameters.put(parameter.substring(0, equals), parameter.substring(equals + 1));
+        }
+        return parameters;
+    }
+
     private Answer created(JsonNode body) {
         String key = body.path("fields").path("project").path("key").asString() + "-" + ++lastNumber;
-        issues.put(key, new StubIssue(key, body.path("fields").path("summary").asString(), WORKFLOW.getFirst(), null));
+        issues.put(key, new StubIssue(key, body.path("fields").path("summary").asString(), WORKFLOW.getFirst(), null, STORY));
         return new Answer(201, json.createObjectNode().put("key", key).toString());
     }
 
@@ -181,6 +224,9 @@ public final class StubJiraServer implements AutoCloseable {
     }
 
     private Answer transitionsOf(StubIssue issue) {
+        if (!transitionGraph.isEmpty()) {
+            return offered(issue);
+        }
         ArrayNode transitions = json.createArrayNode();
         int position = WORKFLOW.indexOf(issue.status());
         if (position + 1 < WORKFLOW.size()) {
@@ -192,9 +238,23 @@ public final class StubJiraServer implements AutoCloseable {
         return ok(json.createObjectNode().set("transitions", transitions));
     }
 
+    private Answer offered(StubIssue issue) {
+        ArrayNode transitions = json.createArrayNode();
+        transitionGraph.getOrDefault(issue.status(), List.of()).forEach(target -> {
+            ObjectNode transition = json.createObjectNode().put("id", target).put("name", "To " + target);
+            transition.putObject("to").put("name", target);
+            transitions.add(transition);
+        });
+        return ok(json.createObjectNode().set("transitions", transitions));
+    }
+
     private Answer transitioned(StubIssue issue, JsonNode body) {
-        String next = WORKFLOW.get(Integer.parseInt(body.path("transition").path("id").asString()));
-        issues.put(issue.key(), new StubIssue(issue.key(), issue.summary(), next, issue.sprint()));
+        String id = body.path("transition").path("id").asString();
+        if (refusedTransitionTargets.contains(id)) {
+            return new Answer(400, "{\"errorMessages\":[\"Transition " + id + " is not valid for this issue\"]}");
+        }
+        String next = transitionGraph.isEmpty() ? WORKFLOW.get(Integer.parseInt(id)) : id;
+        issues.put(issue.key(), new StubIssue(issue.key(), issue.summary(), next, issue.sprint(), issue.issueType()));
         return new Answer(204, "");
     }
 
@@ -218,7 +278,7 @@ public final class StubJiraServer implements AutoCloseable {
     private Answer placedInSprint(long sprint, JsonNode body) {
         body.path("issues").valueStream().map(JsonNode::asString).forEach(key -> {
             StubIssue issue = issues.get(key);
-            issues.put(key, new StubIssue(key, issue.summary(), issue.status(), activeSprints.get(sprint)));
+            issues.put(key, new StubIssue(key, issue.summary(), issue.status(), activeSprints.get(sprint), issue.issueType()));
         });
         return new Answer(204, "");
     }
@@ -227,6 +287,7 @@ public final class StubJiraServer implements AutoCloseable {
         ObjectNode node = json.createObjectNode().put("key", issue.key());
         ObjectNode fields = node.putObject("fields").put("summary", issue.summary());
         fields.putObject("status").put("name", issue.status());
+        fields.putObject("issuetype").put("name", issue.issueType());
         return node;
     }
 
@@ -240,6 +301,6 @@ public final class StubJiraServer implements AutoCloseable {
     private record Answer(int status, String body) {
     }
 
-    private record StubIssue(String key, String summary, String status, String sprint) {
+    private record StubIssue(String key, String summary, String status, String sprint, String issueType) {
     }
 }

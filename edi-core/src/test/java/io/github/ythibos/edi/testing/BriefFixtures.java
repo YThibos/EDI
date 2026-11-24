@@ -122,7 +122,7 @@ public final class BriefFixtures {
 
     private static ProjectEntry project(Project project, DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild, boolean ciRuns) {
         return new ProjectEntry(project, TrackerKind.EDI, HOME.resolve("projects/harness"),
-                Path.of("/checkouts/harness"), new BaseBranch("main"), FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
+                Path.of("/checkouts/harness"), new BaseBranch("main"), null, FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
                 "./mvnw -B verify", nativeBuild, true, ciRuns, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS),
                 LoginName.DEFAULT);
     }

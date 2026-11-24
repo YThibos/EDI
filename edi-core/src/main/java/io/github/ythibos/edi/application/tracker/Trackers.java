@@ -12,6 +12,7 @@ import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.tracker.DriftRules;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TrackedProject;
 
@@ -49,6 +50,10 @@ public class Trackers {
 
     public void requireEpicsCanBeSet() {
         machine.tracker().requireEpicLinkField();
+    }
+
+    public DriftRules driftRules() {
+        return machine.tracker().driftRules();
     }
 
     public String mergedStatus() {

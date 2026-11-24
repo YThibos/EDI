@@ -293,7 +293,10 @@ public class MachineProfile {
             List<String> workflow,
             String mergedStatus,
             String issueType,
-            String epicLinkField) {
+            String epicLinkField,
+            List<String> reviewStatuses,
+            List<String> implementedStatuses,
+            String doneStatus) {
 
         TrackerSettings settings() {
             TrackerKind trackerKind = TrackerKind.named(Objects.requireNonNullElse(kind, TrackerKind.NONE.word()));
@@ -302,7 +305,8 @@ public class MachineProfile {
             }
             return new TrackerSettings(trackerKind, baseUrl == null ? null : URI.create(baseUrl.strip()),
                     credentials == null ? null : credentials.asCredentials(), evergreenTickets(), workflow == null ? null : new Workflow(workflow),
-                    mergedStatus, issueType, epicLinkField);
+                    mergedStatus, issueType, epicLinkField, Objects.requireNonNullElse(reviewStatuses, List.<String>of()),
+                    Objects.requireNonNullElse(implementedStatuses, List.<String>of()), doneStatus);
         }
 
         private Map<String, WorkKey> evergreenTickets() {

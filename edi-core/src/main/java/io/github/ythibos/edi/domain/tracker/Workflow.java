@@ -25,6 +25,12 @@ public record Workflow(List<String> forward) {
         }
     }
 
+    public int separation(String status, String target) {
+        int now = positionOf(status);
+        int goal = positionOf(target);
+        return now < 0 || goal < 0 ? Integer.MAX_VALUE : Math.abs(goal - now);
+    }
+
     public boolean hasReached(String status, String target) {
         int now = positionOf(status);
         return now >= 0 && now >= positionOf(target);

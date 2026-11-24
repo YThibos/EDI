@@ -53,6 +53,7 @@ import picocli.CommandLine.Spec;
             SparkCommand.class,
             WorktreeCommand.class,
             MemoryCommand.class,
+            TrackerCommand.class,
             PresenceCommand.class,
             PersonalityCommand.class,
             HookCommand.class,
