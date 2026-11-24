@@ -119,6 +119,7 @@ import io.github.ythibos.edi.application.dispatch.ResearchBeforeImplementation;
 import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.dispatch.ResumeNotes;
 import io.github.ythibos.edi.application.dispatch.RewriteBrief;
+import io.github.ythibos.edi.application.dispatch.RoomForAWorker;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
@@ -139,6 +140,7 @@ import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.plan.AddPlan;
+import io.github.ythibos.edi.application.plan.DispatchEligibleSlices;
 import io.github.ythibos.edi.application.plan.PlanQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -465,6 +467,10 @@ public final class TestHome {
         return new PlanQuery(plans(), tasks, transaction);
     }
 
+    public DispatchEligibleSlices dispatchEligibleSlices() {
+        return new DispatchEligibleSlices(plans(), planQuery(), dispatches, dispatchTask(), roomForAWorker(), events, clock, transaction);
+    }
+
     public TaskLinksQuery taskLinks() {
         return new TaskLinksQuery(home, registry, trackers(), dispatches, deliveries, pipelineRuns, boards, decisions, transaction);
     }
@@ -763,8 +769,11 @@ public final class TestHome {
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), awayLimit(), launchWorker(), cloneRefreshes(), events, clock,
-                transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, roomForAWorker(), launchWorker(), events, clock, transaction);
+    }
+
+    public RoomForAWorker roomForAWorker() {
+        return new RoomForAWorker(registry, workerPlaces(), awayLimit(), cloneRefreshes(), transaction);
     }
 
     public AwayLimit awayLimit() {

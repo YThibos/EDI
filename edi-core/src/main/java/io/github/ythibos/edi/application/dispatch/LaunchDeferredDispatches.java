@@ -6,12 +6,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import io.github.ythibos.edi.adapter.registry.ProjectEntry;
-import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
-import io.github.ythibos.edi.application.delivery.CloneRefreshes;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome.Launched;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
@@ -23,24 +20,18 @@ public class LaunchDeferredDispatches {
 
     private final DispatchStore dispatches;
     private final TaskStore tasks;
-    private final ProjectRegistry registry;
-    private final WorkerPlaces places;
-    private final AwayLimit awayLimit;
+    private final RoomForAWorker room;
     private final LaunchWorker launcher;
-    private final CloneRefreshes refreshes;
     private final EventLog events;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public LaunchDeferredDispatches(DispatchStore dispatches, TaskStore tasks, ProjectRegistry registry, WorkerPlaces places, AwayLimit awayLimit,
-            LaunchWorker launcher, CloneRefreshes refreshes, EventLog events, Clock clock, TransactionTemplate transaction) {
+    public LaunchDeferredDispatches(DispatchStore dispatches, TaskStore tasks, RoomForAWorker room, LaunchWorker launcher, EventLog events, Clock clock,
+            TransactionTemplate transaction) {
         this.dispatches = dispatches;
         this.tasks = tasks;
-        this.registry = registry;
-        this.places = places;
-        this.awayLimit = awayLimit;
+        this.room = room;
         this.launcher = launcher;
-        this.refreshes = refreshes;
         this.events = events;
         this.clock = clock;
         this.transaction = transaction;
@@ -49,20 +40,12 @@ public class LaunchDeferredDispatches {
     public List<Launched> launchWhereThereIsRoom() {
         return transaction.execute(_ -> dispatches.deferred()).stream()
                 .filter(this::hasRoom)
-                .filter(this::hasAFreshClone)
                 .flatMap(dispatch -> attemptedLaunchOf(dispatch).stream())
                 .toList();
     }
 
     private boolean hasRoom(Dispatch dispatch) {
-        return transaction.execute(_ -> {
-            ProjectEntry project = registry.entryOf(tasks.get(dispatch.task()).intake().projects().getFirst());
-            return places.roomOn(project).hasRoom() && awayLimit.hasRoomForAnotherWorker();
-        });
-    }
-
-    private boolean hasAFreshClone(Dispatch dispatch) {
-        return refreshes.isFresh(transaction.execute(_ -> tasks.get(dispatch.task()).intake().projects().getFirst()));
+        return room.on(transaction.execute(_ -> tasks.get(dispatch.task()).intake().projects().getFirst()));
     }
 
     private Optional<Launched> attemptedLaunchOf(Dispatch dispatch) {

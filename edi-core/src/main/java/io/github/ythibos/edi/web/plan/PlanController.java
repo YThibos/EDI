@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.plan.AddPlan;
 import io.github.ythibos.edi.application.plan.PlanQuery;
-import io.github.ythibos.edi.application.plan.PlanStandings;
+import io.github.ythibos.edi.domain.plan.PlanStandings;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.web.Confirmation;
 import io.github.ythibos.edi.web.access.Caller;

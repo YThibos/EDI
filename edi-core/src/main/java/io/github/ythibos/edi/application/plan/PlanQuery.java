@@ -8,6 +8,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.store.PlanStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.domain.plan.Plan;
+import io.github.ythibos.edi.domain.plan.PlanStandings;
 import io.github.ythibos.edi.domain.plan.Slice;
 import io.github.ythibos.edi.domain.plan.SliceStanding;
 import io.github.ythibos.edi.domain.project.WorkKey;

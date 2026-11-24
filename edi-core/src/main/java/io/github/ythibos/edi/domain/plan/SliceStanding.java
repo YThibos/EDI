@@ -18,6 +18,10 @@ public record SliceStanding(Slice slice, Task task, List<Wait> waits) {
         return task.stage() == TaskStage.QUEUED && !task.isHeld() && waits.stream().allMatch(Wait::isMet);
     }
 
+    public boolean isWorking() {
+        return task.stage().isOngoing();
+    }
+
     public List<Wait> unmetWaitsOutside(Plan plan) {
         Optional<TaskId> awaitedInThePlan = plan.taskAwaitedBy(slice);
         return Wait.unmet(waits).stream().filter(wait -> !isOn(awaitedInThePlan, wait)).toList();

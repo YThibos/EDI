@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 
 @Component
 public class PlanStore {
@@ -48,6 +49,17 @@ public class PlanStore {
                 .optional()
                 .orElseThrow(() -> new UnknownPlan(key));
         return new Plan(heading, slicesOf(key));
+    }
+
+    public List<WorkKey> withQueuedSlices() {
+        return store.sql("""
+                        select work_key from plan
+                        where exists (select 1 from plan_slice join task on task.id = plan_slice.task_id
+                                      where plan_slice.plan_key = plan.work_key and task.stage = :queued)
+                        order by added_at, work_key""")
+                .param("queued", TaskStage.QUEUED.word())
+                .query((row, _) -> WorkKey.parse(row.getString("work_key")))
+                .list();
     }
 
     private void insertHeading(PlanHeading heading, Instant addedAt) {
