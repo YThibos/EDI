@@ -109,16 +109,58 @@ class WorkingWorkerLimitTest {
         TestHome home = harnessLimitedTo(1);
         home.storing(tasks("fit-lamp", "fit-horn"));
         Worker lamp = dispatch(home, "fit-lamp").launched().worker();
-        becomesBusy(home, lamp);
-        home.recordStatus().report(lamp.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp-choice"), null, "Which lamp?");
-        stopsItsTurn(home, lamp);
+        asksAQuestionAndEndsItsTurn(home, lamp);
         assertThat(workingOnHarness(home)).isEmpty();
 
-        home.clock().advance(Duration.ofMinutes(5));
-        becomesBusy(home, lamp);
+        isAnsweredWithoutANewStatus(home, lamp);
 
         assertThat(workingOnHarness(home)).containsExactly(lamp.id());
         assertThat(dispatch(home, "fit-horn").deferred().working()).containsExactly(lamp.id());
+    }
+
+    @Test
+    void keepsCountingAnAnsweredWorkerWhoseValidationPipelineRunsAfterItsTurn() throws IOException {
+        TestHome home = harnessLimitedTo(1);
+        home.storing(tasks("fit-lamp"));
+        Worker lamp = dispatch(home, "fit-lamp").launched().worker();
+        asksAQuestionAndEndsItsTurn(home, lamp);
+        isAnsweredWithoutANewStatus(home, lamp);
+        home.pipelineRuns().save(lamp.id().task(), new PipelineRun("01RUN", "running", "test", false, "abc123", null, false), TestHome.START);
+
+        stopsItsTurn(home, lamp);
+
+        assertThat(workingOnHarness(home)).containsExactly(lamp.id());
+    }
+
+    @Test
+    void keepsCountingAnAnsweredWorkerOnABuildRunAfterItsTurn() throws IOException {
+        TestHome home = harnessLimitedTo(1);
+        Process maven = processes.register(new ProcessBuilder("sh", "-c", "sleep 30; :", MAVEN_LAUNCHER, "-B", "verify").start());
+        Worker lamp = WorkerFixtures.servingWorkerIn(home.runtime().openWindowOf(maven.pid(), ProcessHandle.current().pid()), home,
+                WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+        asksAQuestionAndEndsItsTurn(home, lamp);
+        isAnsweredWithoutANewStatus(home, lamp);
+
+        stopsItsTurn(home, lamp);
+
+        assertThat(workingOnHarness(home)).containsExactly(lamp.id());
+        stop(maven);
+    }
+
+    @Test
+    void doesNotCountAWorkerWhoseQuestionIsNewerThanItsLastPromptEvenWithItsPipelineRunning() throws IOException {
+        TestHome home = harnessLimitedTo(1);
+        home.storing(tasks("fit-lamp"));
+        Worker lamp = dispatch(home, "fit-lamp").launched().worker();
+        becomesBusy(home, lamp);
+        home.pipelineRuns().save(lamp.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", null, false), TestHome.START);
+        home.clock().advance(Duration.ofMinutes(5));
+
+        home.recordStatus().report(lamp.id(), StatusState.BLOCKED, new StatusKey("nm-01run-review"), null, "The review asks about the wiring.");
+
+        assertThat(workingOnHarness(home)).isEmpty();
+        stopsItsTurn(home, lamp);
+        assertThat(workingOnHarness(home)).isEmpty();
     }
 
     @Test
@@ -203,6 +245,17 @@ class WorkingWorkerLimitTest {
 
     private static List<WorkerId> workingOnHarness(TestHome home) {
         return home.workerPlaces().roomOn(home.registry().entryOf(HARNESS)).working();
+    }
+
+    private static void asksAQuestionAndEndsItsTurn(TestHome home, Worker worker) {
+        becomesBusy(home, worker);
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp-choice"), null, "Which lamp?");
+        stopsItsTurn(home, worker);
+    }
+
+    private static void isAnsweredWithoutANewStatus(TestHome home, Worker worker) {
+        home.clock().advance(Duration.ofMinutes(5));
+        home.workerHooks().promptSubmitted(worker.id(), "Take the brass lamp.", null);
     }
 
     private static void stop(Process pane) {
