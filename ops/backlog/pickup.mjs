@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {
-    APPROVED, GitHub, Refusal, approverOf, captainOf, claimsOf, inPickupOrder, keyOf, openBlockersOf, plainTitleOf, priorityOf, refusalsReported, stateOf,
+    APPROVED, GitHub, Refusal, approverOf, captainOf, claimsOf, effectivePriorities, inPickupOrder, keyOf, openBlockersOf, plainTitleOf, priorityOf, refusalsReported, stateOf,
 } from './backlog.mjs';
 
 const USAGE = 'Usage: pickup.mjs [--next] [--repo OWNER/NAME] [--captain LOGIN]';
@@ -13,8 +13,9 @@ function print(options) {
     const listed = backlogIssuesOf(github);
     const blockers = openBlockersByIssue(github, listed);
     const issues = inPickupOrder(listed, blockers);
+    const priorities = effectivePriorities(listed, blockers);
     const claims = claimsOf(github.all('pulls?state=open'));
-    console.log(options.next ? nextOf(github, captain, issues, claims) : boardOf(issues, blockers, claims));
+    console.log(options.next ? nextOf(github, captain, issues, claims, priorities) : boardOf(issues, blockers, claims, priorities));
 }
 
 function optionsFrom(args) {
@@ -41,7 +42,7 @@ function openBlockersByIssue(github, issues) {
         github.all(`issues/${issue.number}/dependencies/blocked_by`).filter(blocker => blocker.state === 'open').map(blocker => blocker.number)]));
 }
 
-function nextOf(github, captain, issues, claims) {
+function nextOf(github, captain, issues, claims, priorities) {
     const next = issues
         .filter(issue => stateOf(issue) === 'open')
         .filter(issue => openBlockersOf(issue) === 0)
@@ -50,7 +51,7 @@ function nextOf(github, captain, issues, claims) {
     if (next.length === 0) {
         return 'No open issue may be taken: none is approved by the captain, cloud-ok, unheld, unclaimed and free of open blockers.';
     }
-    return next.map(issue => `#${issue.number} ${issue.title} (${milestoneOf(issue)}) ${issue.html_url}`).join('\n');
+    return next.map(issue => `#${issue.number} ${issue.title} (${milestoneOf(issue)}) ${issue.html_url}${pulledNote(priorities.get(issue.number))}`).join('\n');
 }
 
 function approvedByTheCaptain(github, captain, issue) {
@@ -61,6 +62,14 @@ function approvedByTheCaptain(github, captain, issue) {
     return approver === captain;
 }
 
+function pulledNote(effective) {
+    return effective.by === null ? '' : ` [pulled forward to ${effective.priority.name} by #${effective.by}]`;
+}
+
+function priorityCell(effective, issue) {
+    return effective.by === null ? effective.priority.name : `${priorityOf(issue).name}, pulled to ${effective.priority.name} by #${effective.by}`;
+}
+
 function milestoneOf(issue) {
     if (!issue.milestone) {
         return 'no milestone';
@@ -68,13 +77,13 @@ function milestoneOf(issue) {
     return issue.milestone.due_on ? `${issue.milestone.title}, due ${issue.milestone.due_on.slice(0, 10)}` : issue.milestone.title;
 }
 
-function boardOf(issues, blockers, claims) {
+function boardOf(issues, blockers, claims, priorities) {
     const header = ['Issue', 'Key', 'Title', 'Priority', 'Milestone', 'State', 'Blocked by', 'Claimed by'];
     const rows = issues.map(issue => [
         `#${issue.number}`,
         keyOf(issue.title),
         plainTitleOf(issue.title),
-        priorityOf(issue).name,
+        priorityCell(priorities.get(issue.number), issue),
         milestoneOf(issue),
         stateOf(issue),
         (blockers[issue.number] ?? []).map(number => `#${number}`).join(', ') || '-',

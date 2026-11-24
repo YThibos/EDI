@@ -179,7 +179,7 @@ export function inPickupOrder(issues, blockersOf = {}) {
     const listed = new Set(issues.map(issue => issue.number));
     const waiting = new Map(issues.map(issue => [issue.number, new Set((blockersOf[issue.number] ?? []).filter(number => listed.has(number)))]));
     const ordered = [];
-    let left = [...issues].sort(byPriorityThenDueDateThenNumber);
+    let left = [...issues].sort(byPriorityThenDueDateThenNumber(effectivePriorities(issues, blockersOf)));
     while (left.length > 0) {
         const free = left.find(issue => waiting.get(issue.number).size === 0) ?? left[0];
         ordered.push(free);
@@ -189,8 +189,49 @@ export function inPickupOrder(issues, blockersOf = {}) {
     return ordered;
 }
 
-function byPriorityThenDueDateThenNumber(one, other) {
-    return PRIORITIES.indexOf(priorityOf(one)) - PRIORITIES.indexOf(priorityOf(other)) || dueOf(one) - dueOf(other) || one.number - other.number;
+export function effectivePriorities(issues, blockersOf = {}) {
+    const pulls = pullsOf(issues, blockersOf);
+    return new Map(issues.map(issue => {
+        const own = levelOf(issue);
+        const pull = pulls.get(issue.number);
+        return [issue.number, pull.level < own ? { priority: PRIORITIES[pull.level], by: pull.by } : { priority: PRIORITIES[own], by: null }];
+    }));
+}
+
+function pullsOf(issues, blockersOf) {
+    const pulls = new Map(issues.map(issue => [issue.number, stateOf(issue) === 'open' ? { level: levelOf(issue), by: issue.number } : { level: PRIORITIES.length, by: null }]));
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const issue of issues) {
+            changed = pulledForward(pulls, blockersOf[issue.number] ?? [], pulls.get(issue.number)) || changed;
+        }
+    }
+    return pulls;
+}
+
+function pulledForward(pulls, blockers, pull) {
+    let changed = false;
+    for (const blocker of blockers.filter(number => pulls.has(number))) {
+        if (isMoreUrgent(pull, pulls.get(blocker))) {
+            pulls.set(blocker, pull);
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+function isMoreUrgent(pull, other) {
+    return pull.level < other.level || (pull.level === other.level && other.by !== null && pull.by < other.by);
+}
+
+function levelOf(issue) {
+    return PRIORITIES.indexOf(priorityOf(issue));
+}
+
+function byPriorityThenDueDateThenNumber(effective) {
+    return (one, other) => PRIORITIES.indexOf(effective.get(one.number).priority) - PRIORITIES.indexOf(effective.get(other.number).priority)
+        || dueOf(one) - dueOf(other) || one.number - other.number;
 }
 
 function dueOf(issue) {
