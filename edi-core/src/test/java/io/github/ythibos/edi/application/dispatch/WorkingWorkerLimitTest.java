@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -101,6 +102,23 @@ class WorkingWorkerLimitTest {
         assertThat(workingOnHarness(home)).isEmpty();
         home.recordStatus().report(lamp.id(), StatusState.WORKING, null, null, "The captain chose the brass lamp.");
         assertThat(workingOnHarness(home)).containsExactly(lamp.id());
+    }
+
+    @Test
+    void countsAWorkerAgainOnceAPromptReachesItAfterItsQuestionWithoutANewStatus() throws IOException {
+        TestHome home = harnessLimitedTo(1);
+        home.storing(tasks("fit-lamp", "fit-horn"));
+        Worker lamp = dispatch(home, "fit-lamp").launched().worker();
+        becomesBusy(home, lamp);
+        home.recordStatus().report(lamp.id(), StatusState.NEEDS_DECISION, new StatusKey("lamp-choice"), null, "Which lamp?");
+        stopsItsTurn(home, lamp);
+        assertThat(workingOnHarness(home)).isEmpty();
+
+        home.clock().advance(Duration.ofMinutes(5));
+        becomesBusy(home, lamp);
+
+        assertThat(workingOnHarness(home)).containsExactly(lamp.id());
+        assertThat(dispatch(home, "fit-horn").deferred().working()).containsExactly(lamp.id());
     }
 
     @Test

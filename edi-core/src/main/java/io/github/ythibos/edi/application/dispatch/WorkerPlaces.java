@@ -73,7 +73,7 @@ public class WorkerPlaces {
     }
 
     private boolean isWorking(Worker worker) {
-        return !worker.waitsOnThePrimary() && (worker.isBusy() || hasItsPipelineRunning(worker) || runsAHeavyRun(worker));
+        return !worker.waitsOnItsQuestion() && (worker.isBusy() || hasItsPipelineRunning(worker) || runsAHeavyRun(worker));
     }
 
     private boolean hasItsPipelineRunning(Worker worker) {

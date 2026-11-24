@@ -185,6 +185,10 @@ public record Worker(
         return lastStatus != null && lastStatus.report().isForThePrimary();
     }
 
+    public boolean waitsOnItsQuestion() {
+        return waitsOnThePrimary() && !worksOnSinceItsQuestion();
+    }
+
     public Optional<WorkerQuestion> openQuestion() {
         if (!waitsOnThePrimary() || isRetired()) {
             return Optional.empty();
@@ -225,6 +229,10 @@ public record Worker(
 
     private boolean hasSentNoHook() {
         return startedAt == null && briefedAt == null;
+    }
+
+    private boolean worksOnSinceItsQuestion() {
+        return isBusy() && lastStatus.at().isBefore(activitySince);
     }
 
     public record ReportedStatus(StatusReport report, Instant at) {
