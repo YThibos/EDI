@@ -113,7 +113,7 @@ class TaskTextTest {
                 Choose the lamp
                 Projects: -
                 Since: 2026-10-15
-                Held (decision, until your word): D58 waits for its answer (since 2026-10-15 09:30 UTC)
+                Held (decision, until your word): D58 Which lamp? (since 2026-10-15 09:30 UTC)
 
                 D58  lamp-choice  Which lamp?
                   Both work; one is simpler.

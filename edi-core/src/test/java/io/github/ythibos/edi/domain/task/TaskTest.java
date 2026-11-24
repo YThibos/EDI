@@ -24,7 +24,7 @@ class TaskTest {
     private static final CaptainsWord DROP = new CaptainsWord("Drop it, we fit no lamps this year.");
     private static final DecisionNumber D58 = new DecisionNumber(58);
     private static final DecisionNumber D59 = new DecisionNumber(59);
-    private static final Hold.OpenDecision DECISION = new Hold.OpenDecision(D58, AT);
+    private static final Hold.OpenDecision DECISION = new Hold.OpenDecision(D58, "Which lamp?", AT);
     private static final StageTrigger.DoneReported DONE = new StageTrigger.DoneReported(List.of(), List.of(), List.of(), false, List.of(), true);
 
     @Test
@@ -66,7 +66,7 @@ class TaskTest {
 
     @Test
     void waitsOnTwoDecisionsAndLetsEachAnswerReleaseOnlyItsOwn() {
-        Task waiting = ship().held(DECISION).held(new Hold.OpenDecision(D59, LATER));
+        Task waiting = ship().held(DECISION).held(new Hold.OpenDecision(D59, "Which bulb?", LATER));
 
         assertThat(waiting.decisionAnswered(D58).holds().openDecisions()).containsExactly(D59);
         assertThat(waiting.decisionAnswered(D58).reasonsItWaits()).isEqualTo("D59 waits for its answer");
@@ -74,7 +74,7 @@ class TaskTest {
 
     @Test
     void releasesADecisionHoldOnlyThroughTheAnswer() {
-        Task waiting = ship().held(DECISION).held(new Hold.OpenDecision(D59, LATER));
+        Task waiting = ship().held(DECISION).held(new Hold.OpenDecision(D59, "Which bulb?", LATER));
 
         assertThatThrownBy(waiting::released).isInstanceOf(Refusal.class)
                 .hasMessage("fit-lamp waits only on D58 and D59; answering a decision releases it.");

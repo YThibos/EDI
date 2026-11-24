@@ -3,7 +3,6 @@ package io.github.ythibos.edi.domain.decision;
 import static java.util.function.Predicate.not;
 
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,15 +21,16 @@ public record DecisionsOfATask(List<Decision> decisions, Map<DecisionNumber, Ins
     }
 
     public Optional<Decision> answering(WorkerQuestion question) {
-        return firstRaisedFor(question).filter(not(Decision::isOpen));
+        return theOneRaisedFor(question).filter(not(Decision::isOpen));
     }
 
     public boolean escalates(WorkerQuestion question) {
-        return decisions.stream().filter(Decision::isOpen).anyMatch(open -> isRaisedFor(open, question));
+        return theOneRaisedFor(question).filter(Decision::isOpen).isPresent();
     }
 
-    private Optional<Decision> firstRaisedFor(WorkerQuestion question) {
-        return decisions.stream().filter(decision -> isRaisedFor(decision, question)).min(Comparator.comparingInt(decision -> decision.number().value()));
+    private Optional<Decision> theOneRaisedFor(WorkerQuestion question) {
+        List<Decision> raisedFor = decisions.stream().filter(decision -> isRaisedFor(decision, question)).toList();
+        return raisedFor.size() == 1 ? Optional.of(raisedFor.getFirst()) : Optional.empty();
     }
 
     private boolean isRaisedFor(Decision decision, WorkerQuestion question) {

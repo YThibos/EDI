@@ -246,7 +246,10 @@ public class TaskStore {
     }
 
     private Map<String, List<Hold>> holdsOf(List<String> ids) {
-        return grouped(store.sql("select task_id, kind, decision, outage, why, until, set_at from task_hold where task_id in (:ids) order by task_id, rowid")
+        return grouped(store.sql("""
+                        select task_hold.task_id, kind, decision, outage, coalesce(why, raised.title) as why, until, set_at
+                        from task_hold left join decision raised on raised.number = task_hold.decision
+                        where task_hold.task_id in (:ids) order by task_hold.task_id, task_hold.rowid""")
                 .param("ids", ids)
                 .query((row, _) -> Map.entry(row.getString("task_id"), HoldColumns.read(row).hold()))
                 .list());
@@ -341,7 +344,7 @@ public class TaskStore {
         Hold hold() {
             Instant at = Columns.instant(since);
             return switch (HoldKind.named(kind)) {
-                case DECISION -> new Hold.OpenDecision(new DecisionNumber(decision), at);
+                case DECISION -> new Hold.OpenDecision(new DecisionNumber(decision), why, at);
                 case OUTAGE -> new Hold.Outage(outage, why, at);
                 case DEFERRAL -> new Hold.Deferral(why, Columns.holdUntil(until), at);
                 case APPROVAL -> new Hold.Approval(why, Columns.holdUntil(until), at);

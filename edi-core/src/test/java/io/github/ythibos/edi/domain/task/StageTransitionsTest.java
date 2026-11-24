@@ -292,7 +292,7 @@ class StageTransitionsTest {
 
         @Test
         void refusesWhileAnotherDecisionIsOpen() {
-            CaptainItemAnswered stillOpen = new CaptainItemAnswered(Holds.none().with(new OpenDecision(D59, RAISED)));
+            CaptainItemAnswered stillOpen = new CaptainItemAnswered(Holds.none().with(new OpenDecision(D59, "Which lamp?", RAISED)));
 
             assertThatThrownBy(() -> CAPTAIN_ITEM.move(TaskStage.QUEUED, stillOpen)).isInstanceOf(Refusal.class)
                     .hasMessage("fit-the-lamp stays queued: D59 waits for its answer.");
@@ -364,7 +364,7 @@ class StageTransitionsTest {
         @Test
         void anAnswerToAFinishedScoutsDecisionLeavesItDeliveredAndNotOngoing() {
             TaskStage delivered = SCOUT.move(TaskStage.WORKING, new DoneReported(List.of(), List.of(), List.of(), false, List.of(), true)).to();
-            Holds waitingOnD38 = Holds.none().with(new OpenDecision(new DecisionNumber(38), RAISED));
+            Holds waitingOnD38 = Holds.none().with(new OpenDecision(new DecisionNumber(38), "Which lamp?", RAISED));
 
             Holds afterTheAnswer = waitingOnD38.answered(new DecisionNumber(38));
 

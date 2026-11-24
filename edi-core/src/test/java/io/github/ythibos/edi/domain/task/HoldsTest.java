@@ -61,7 +61,7 @@ class HoldsTest {
     void refusesTheSameDecisionTwice() {
         Holds holds = Holds.none().with(waitingOn(D58));
 
-        assertThatThrownBy(() -> holds.with(new OpenDecision(D58, AT.plusSeconds(60)))).isInstanceOf(Refusal.class)
+        assertThatThrownBy(() -> holds.with(new OpenDecision(D58, "Which lamp?", AT.plusSeconds(60)))).isInstanceOf(Refusal.class)
                 .hasMessage("The task already waits: D58 waits for its answer.");
     }
 
@@ -130,6 +130,6 @@ class HoldsTest {
     }
 
     private static OpenDecision waitingOn(DecisionNumber number) {
-        return new OpenDecision(number, AT);
+        return new OpenDecision(number, "Which lamp?", AT);
     }
 }

@@ -108,7 +108,7 @@ class TaskStoreTest {
         Task lantern = task("lantern", List.of());
         tasks.insert(lantern);
 
-        assertThatThrownBy(() -> tasks.update(lantern.held(new Hold.OpenDecision(new DecisionNumber(9), AT)))).hasMessageContaining("FOREIGN KEY");
+        assertThatThrownBy(() -> tasks.update(lantern.held(new Hold.OpenDecision(new DecisionNumber(9), "Which lamp?", AT)))).hasMessageContaining("FOREIGN KEY");
     }
 
     @Test

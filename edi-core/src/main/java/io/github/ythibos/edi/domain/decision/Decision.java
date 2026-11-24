@@ -61,7 +61,7 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
     }
 
     public Hold.OpenDecision holdOnItsTask() {
-        return new Hold.OpenDecision(number, raisedAt);
+        return new Hold.OpenDecision(number, card.title(), raisedAt);
     }
 
     private String alreadyAnswered() {

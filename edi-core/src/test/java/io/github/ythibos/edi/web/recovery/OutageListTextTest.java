@@ -70,8 +70,8 @@ class OutageListTextTest {
         OutageEntry entry = new OutageEntry(3, new TaskId("tune-horn"), WorkerId.first(new TaskId("tune-horn")), DeathCause.MACHINE_RESTARTED, AT);
         Task task = Task.queued(new TaskId("tune-horn"), new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(), null, null), "", AT)
                 .held(entry.hold())
-                .held(new Hold.OpenDecision(new DecisionNumber(10), AT))
-                .held(new Hold.OpenDecision(new DecisionNumber(11), AT))
+                .held(new Hold.OpenDecision(new DecisionNumber(10), "Which lens?", AT))
+                .held(new Hold.OpenDecision(new DecisionNumber(11), "Which paint?", AT))
                 .decisionAnswered(new DecisionNumber(11));
         Worker worker = Worker.launched(entry.worker(), SESSION, CategoryId.IMPLEMENTATION, new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
                 new WorkerWindow("edi", 7, AT, "@1", 8), new WorkerLaunch(LaunchKind.DISPATCH, AT, null, LoginName.DEFAULT));

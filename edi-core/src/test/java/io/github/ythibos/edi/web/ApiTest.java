@@ -251,12 +251,12 @@ class ApiTest {
         String afterTheAnswer = get("/api/tasks/api-mast", TEXT).body();
 
         assertThat(sail).isNotEqualTo(mast);
-        assertThat(waitingOnBoth).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + mast + " waits for its answer",
-                "Held (decision, until your word): " + sail + " waits for its answer", mast + "  api-mast  Which mast?", sail + "  api-mast  Which sail?");
+        assertThat(waitingOnBoth).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + mast + " Which mast?",
+                "Held (decision, until your word): " + sail + " Which sail?", mast + "  api-mast  Which mast?", sail + "  api-mast  Which sail?");
         assertRefusal(byTheTask, 409, "api-mast waits on " + mast + " and " + sail + "; name one of them by its number.");
         assertThat(answered.statusCode()).isEqualTo(200);
-        assertThat(afterTheAnswer).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + sail + " waits for its answer")
-                .doesNotContain(mast + " waits for its answer");
+        assertThat(afterTheAnswer).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + sail + " Which sail?")
+                .doesNotContain("Held (decision, until your word): " + mast);
         assertThat(get("/api/decisions?open=true", TEXT).body()).contains(sail + "  api-mast").doesNotContain(mast + "  api-mast");
     }
 

@@ -36,7 +36,7 @@ public sealed interface Hold {
         };
     }
 
-    record OpenDecision(DecisionNumber number, Instant since) implements Hold {
+    record OpenDecision(DecisionNumber number, String title, Instant since) implements Hold {
 
         public OpenDecision {
             Objects.requireNonNull(since, () -> number + " holds its task from the moment it is raised.");
@@ -49,7 +49,7 @@ public sealed interface Hold {
 
         @Override
         public String why() {
-            return reason();
+            return number + " " + title;
         }
 
         @Override

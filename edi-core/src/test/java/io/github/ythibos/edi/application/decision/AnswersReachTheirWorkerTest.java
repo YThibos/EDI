@@ -120,11 +120,14 @@ class AnswersReachTheirWorkerTest {
     }
 
     @Test
-    void resolvesTheQuestionOnlyWithTheAnswerToTheFirstDecisionRaisedForIt() {
+    void leavesTheQuestionOpenForThePrimaryWhenTwoDecisionsWereRaisedSinceItWasAsked() {
         home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
-        DecisionNumber lamp = home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
         home.clock().advance(Duration.ofMinutes(5));
         DecisionNumber paint = home.raiseDecision().raise(FIT_LAMP, card("Which paint for the mast?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        DecisionNumber lamp = home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
+
+        assertThat(home.fleetSnapshot().snapshot().waiting().workerQuestions()).extracting(WorkerQuestion::escalated).containsExactly(false);
 
         home.answerDecision().answer(new TaskReference.ByDecision(paint), new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
         InboxMessage plain = home.inbox().get(LAMP, 1).orElseThrow();
@@ -136,11 +139,13 @@ class AnswersReachTheirWorkerTest {
         assertThat(home.undeliveredAnswers().waiting()).isEmpty();
 
         home.answerDecision().answer(new TaskReference.ByDecision(lamp), new GivenAnswer("B", new OptionKey('B'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
-        InboxMessage resolving = home.inbox().get(LAMP, 2).orElseThrow();
+        InboxMessage alsoPlain = home.inbox().get(LAMP, 2).orElseThrow();
         home.workerInbox().acknowledge(worker.id(), 2);
 
-        assertThat(resolving.resolves()).isEqualTo(LAMP_CHOICE);
-        assertThat(home.workers().get(worker.id()).orElseThrow().waitsOnThePrimary()).isFalse();
+        assertThat(alsoPlain.resolves()).isNull();
+        assertThat(alsoPlain.body()).startsWith("Answer to " + lamp + " Brass or oil?");
+        assertThat(home.workers().get(worker.id()).orElseThrow().waitsOnThePrimary()).isTrue();
+        assertThat(home.undeliveredAnswers().waiting()).isEmpty();
     }
 
     @Test

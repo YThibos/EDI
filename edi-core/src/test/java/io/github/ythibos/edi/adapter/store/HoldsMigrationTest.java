@@ -76,7 +76,7 @@ class HoldsMigrationTest {
         Flyway.configure().dataSource(store).load().migrate();
         TaskStore tasks = new TaskStore(jdbc);
 
-        assertThat(tasks.get(new TaskId("choose-oil")).holds().held()).containsExactly(new Hold.OpenDecision(new DecisionNumber(58), Instant.parse(HELD)));
+        assertThat(tasks.get(new TaskId("choose-oil")).holds().held()).containsExactly(new Hold.OpenDecision(new DecisionNumber(58), "Which oil?", Instant.parse(HELD)));
         assertThat(tasks.get(new TaskId("old-bell")).isHeld()).isFalse();
         assertThat(jdbc.sql("select count(*) from sqlite_master where name = 'captain_hold'").query(Integer.class).single()).isZero();
         assertThat(jdbc.sql("pragma foreign_key_check").query((row, _) -> row.getString(1)).list()).isEqualTo(List.of());
