@@ -112,7 +112,7 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case BOARD_ANSWER_REFUSED -> wake.task() + ": a board answer to " + wake.detail();
             case SLICE_DISPATCHED -> wake.task() + ": I dispatched it as slice " + wake.detail() + " under the plan's go, once its wait was met; "
                     + whoTookUp(wake) + ", so you dispatch nothing for it.";
-            case SLICE_NOT_DISPATCHED -> wake.task() + ": I could not dispatch slice " + wake.detail()
+            case SLICE_NOT_DISPATCHED -> wake.task() + ": I could not dispatch slice " + endingItsSentence(wake.detail())
                     + " I try again each round, and tell you again only if the reason changes.";
         };
     }
@@ -137,6 +137,10 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             return "it waits for a place on its project";
         }
         return slice.worker().task().equals(slice.task()) ? slice.worker() + " works on it" : "its research goes first, as " + slice.worker();
+    }
+
+    private static String endingItsSentence(String text) {
+        return text.endsWith(".") ? text : text + ".";
     }
 
     private static String closingAdvice(WakeDelivery delivery) {

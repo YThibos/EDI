@@ -161,9 +161,23 @@ class DispatchEligibleSlicesTest {
         assertThat(stillBeforeIt).isEmpty();
         assertThat(wakesOf(home, WakeKind.SLICE_NOT_DISPATCHED)).extracting(Wake::task, Wake::detail).containsExactly(tuple(FIT_LAMP,
                 "1 of the HRN-40 plan: The plan HRN-40 dispatches no slice by itself, as its go cites D1, which the captain has not answered with an option"
-                        + " that authorises promote; a plan's go is a decision the captain answered with an option that authorises promote, or a message"
-                        + " the captain typed, cited when the plan is entered."));
+                        + " that authorises promote; a plan's go is a decision the captain answered with an option that authorises promote raised on a task"
+                        + " keyed by the plan's umbrella key, or a message the captain typed, cited when the plan is entered."));
         assertThat(afterTheAnswer).extracting(SliceDispatched::task).containsExactly(FIT_LAMP, PAINT_LAMP);
+    }
+
+    @Test
+    void dispatchesNothingUnderAPromoteAnswerToADecisionRaisedOnAnotherKey() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory);
+        DecisionNumber elsewhere = raisedOnAScoutKeyed(home, "survey-pier", "HRN-30");
+        answersPromote(home, elsewhere);
+        home.addPlan().add(threeSlices(2, new PlanGo.AnsweredDecision(elsewhere), NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+
+        List<SliceDispatched> dispatched = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
+
+        assertThat(dispatched).isEmpty();
+        assertThat(wakesOf(home, WakeKind.SLICE_NOT_DISPATCHED)).extracting(Wake::detail).singleElement().asString()
+                .contains("its go cites D1, which was raised on survey-pier, not on a task keyed HRN-40");
     }
 
     @Test
@@ -210,9 +224,12 @@ class DispatchEligibleSlicesTest {
     }
 
     private static DecisionNumber raisedOnTheSurvey(TestHome home) {
-        home.storing(List.of(WorkerFixtures.queued("survey-harbour", TaskKind.SCOUT, "harness", "HRN-39")));
-        return home.raiseDecision().raise(TaskReference.parse("survey-harbour"), Cards.authorising("Ship the harbour plan?", CaptainWordAct.PROMOTE),
-                Actor.PRIMARY);
+        return raisedOnAScoutKeyed(home, "survey-harbour", "HRN-40");
+    }
+
+    private static DecisionNumber raisedOnAScoutKeyed(TestHome home, String scout, String key) {
+        home.storing(List.of(WorkerFixtures.queued(scout, TaskKind.SCOUT, "harness", key)));
+        return home.raiseDecision().raise(TaskReference.parse(scout), Cards.authorising("Ship the plan?", CaptainWordAct.PROMOTE), Actor.PRIMARY);
     }
 
     private static void answersPromote(TestHome home, DecisionNumber go) {

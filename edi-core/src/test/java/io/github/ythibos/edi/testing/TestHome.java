@@ -473,7 +473,7 @@ public final class TestHome {
     }
 
     public CaptainsGo captainsGo() {
-        return new CaptainsGo(decisions, captainsWord(), transaction);
+        return new CaptainsGo(decisions, tasks, captainsWord(), transaction);
     }
 
     public TaskLinksQuery taskLinks() {

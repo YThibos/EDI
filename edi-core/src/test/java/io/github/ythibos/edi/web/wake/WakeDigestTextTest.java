@@ -141,7 +141,8 @@ class WakeDigestTextTest {
                 queued(1, WakeRule.wakeFor(new SliceDispatched(LAMP, plan, 1, WorkerId.first(LAMP)), Actor.CORE).orElseThrow()),
                 queued(2, WakeRule.wakeFor(new SliceDispatched(LAMP, plan, 1, itsResearch), Actor.CORE).orElseThrow()),
                 queued(3, WakeRule.wakeFor(new SliceDispatched(LAMP, plan, 1, null), Actor.CORE).orElseThrow()),
-                queued(4, WakeRule.wakeFor(new SliceNotDispatched(PAINT, plan, 2, "harness takes no chore branches."), Actor.CORE).orElseThrow())),
+                queued(4, WakeRule.wakeFor(new SliceNotDispatched(PAINT, plan, 2, "harness takes no chore branches."), Actor.CORE).orElseThrow()),
+                queued(5, WakeRule.wakeFor(new SliceNotDispatched(PAINT, plan, 2, "java.lang.IllegalStateException: no pane"), Actor.CORE).orElseThrow())),
                 0, 1, 0, PRESENT, true);
 
         assertThat(digest.text(delivery))
@@ -152,7 +153,9 @@ class WakeDigestTextTest {
                 .contains("3. fit-lamp: I dispatched it as slice 1 of the HRN-40 plan under the plan's go, once its wait was met; it waits for a place on"
                         + " its project, so you dispatch nothing for it.\n")
                 .contains("4. paint-tower: I could not dispatch slice 2 of the HRN-40 plan: harness takes no chore branches. I try again each round, and"
-                        + " tell you again only if the reason changes.\n");
+                        + " tell you again only if the reason changes.\n")
+                .contains("5. paint-tower: I could not dispatch slice 2 of the HRN-40 plan: java.lang.IllegalStateException: no pane. I try again each"
+                        + " round, and tell you again only if the reason changes.\n");
     }
 
     @Test
