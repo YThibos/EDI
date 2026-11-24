@@ -13,7 +13,8 @@ Module sprawl is one of the ways complexity creeps in, the command must stay fre
 
 ## Decision
 
-EDI builds and runs on Java 25 with GraalVM Community Edition, set as `java.version` in `pom.xml` and pinned in `mise.toml` to its newest release through mise's `http` backend, `http:graalvm-community`, with each platform's archive and checksum and `JAVA_HOME` set from the installed tool.
+EDI builds and runs on Java 25 with GraalVM Community Edition, set as `java.version` in `pom.xml` and pinned in `mise.toml` to its newest release through mise's `github` backend, `github:graalvm/graalvm-ce-builds`, with `JAVA_HOME` set from the installed tool.
+The version is the release's `graal-` tag without its prefix (`version_prefix`), each platform picks its archive by an `asset_pattern` that names no version, and mise checks the download against the digest GitHub reports for the asset; `GraalVmToolchainTest` keeps the version the only value an update moves.
 The `edi` command is always a native executable, and the core is installed as one; development and tests run on the JVM.
 The Maven profile `native` compiles both executables and runs the native tests ([native-smoke-test](native-smoke-test.md)), with the full optimisation unless the `quick-build` profile asks for GraalVM's quick-build mode ([local-native-builds](local-native-builds.md)); if a native problem blocks a release, the core may run on the JVM until it is fixed, and the command never falls back.
 `--enable-preview` is passed to the compiler, the tests, the Spring Boot plugin and `native-image`, and a preview feature EDI starts to use is recorded here with its JEP, in the change that first uses it; none is in use yet.
@@ -32,7 +33,8 @@ The Maven group is `io.github.ythibos` and the Java namespace `io.github.ythibos
 ## Why
 
 The only open-source native toolchain is on JDK 25, so one JDK for the JVM build, the tests and the native images is the only combination that works ([open-source-tools](open-source-tools.md)).
-The feature releases are stable releases with the newest compiler and Native Image, and the `http` backend installs one with a verified checksum where the `java` plugin cannot.
+The feature releases are stable releases with the newest compiler and Native Image, and the `github` backend installs one with a verified checksum where the `java` plugin cannot.
+A feature release's archive name carries the JDK version, which its tag does not spell out, `graalvm-community-jdk-25i5-25.0.5.0.3` under `graal-25.5.5.0.3`, so an archive named or pinned for one release fails for the next; a pattern without the version and the digest of the release's own asset install every version Renovate proposes.
 Maven 4 removes the repetition model 4.0.0 needs, a parent's coordinates and a sibling's version in every module, and its consumer POM keeps that from leaking to anything that reads the artefacts.
 A repository a dependency declares is one EDI never chose, and probing it slowed every resolution and warned when it asked for credentials.
 A native command starts in milliseconds, so hooks cost nothing noticeable, while JVM tests keep `./mvnw verify` within minutes.
@@ -44,6 +46,9 @@ Three modules keep the boundaries that matter without one module per layer, and 
 - Java 27 on the JVM without native images - every hook would pay a JVM start-up.
 - Oracle GraalVM - not open source, and on JDK 25 too.
 - GraalVM Community 25.0.2 through mise's `java` plugin - the plugin's newest GraalVM, four feature releases behind.
+- mise's `http` backend with each platform's archive address and checksum written out - Renovate moves only the version, so every update failed to install until someone moved them by hand.
+- mise's `http` backend with an address template derived from the version and the release's `.sha256` files as `checksum_url` - mise verifies against `checksum_url` at install only from 2026.11.11, so the mise CI runs would install an unverified archive.
+- A `mise.lock` that Renovate refreshes with each update - Renovate runs `mise lock` only when its self-hosted configuration allows it to execute the repository's configuration.
 - Staying on Maven 3 until Maven 4.0.0 is final - the captain chose to start on Maven 4 now, and the move is cheaper while the build is small.
 - Native everywhere, tests included - minutes per test run.
 - One module per layer, or a shared library module - ceremony, and the command talks to the core over HTTP, so nothing needs sharing.
@@ -54,8 +59,9 @@ Three modules keep the boundaries that matter without one module per layer, and 
 - Bad: ahead-of-time processing fixes the bean graph at build time, which shapes how machine differences are chosen ([machine-and-person-specifics](machine-and-person-specifics.md)) and forbids runtime class loading.
 - Bad: EDI stays two releases behind the newest JDK, and class files that use a preview feature run only on the JDK that compiled them.
 - Bad: every release needs an explicit version change.
-- Bad: a GraalVM upgrade changes each platform's archive name and checksum by hand, since a feature release's archive name carries its JDK version; Renovate proposes the version, and the install fails until the archives match ([dependency-upkeep-and-scanners](dependency-upkeep-and-scanners.md)).
-- Bad: mise installs from a URL and sets `JAVA_HOME` only for a `mise.toml` it trusts, so a clone needs `mise trust` once, and a worker's copy inherits the clone's trust as its git worktree ([worker-sessions](worker-sessions.md)).
+- Bad: the digest comes from the release that serves the archive, so it proves the download intact but not that the release is the one first published; Renovate's three-day minimum release age is the wait before a new release is proposed ([dependency-upkeep-and-scanners](dependency-upkeep-and-scanners.md)).
+- Bad: a release that names its archives another way fails to install until the patterns in `mise.toml` follow it.
+- Bad: mise sets `JAVA_HOME` only for a `mise.toml` it trusts, so a clone needs `mise trust` once, and a worker's copy inherits the clone's trust as its git worktree ([worker-sessions](worker-sessions.md)).
 - Bad: Maven 4 is still a release candidate, and the build is Maven 4 only, so a Maven 3 on the `PATH` cannot build EDI; `./mvnw` always can.
 
 ## When to revisit
@@ -67,3 +73,4 @@ When GraalVM Community Edition publishes a build on a newer JDK that Spring Boot
 - 15/10/2026: the captain chose the newest JDK and native images for fast start-up; the toolchain check found no native toolchain beyond JDK 25, so the specification's fallback to Java 25 applied, and slice S0 set up the modules, the build baseline and the native profile.
 - 27/10/2026: a worker's local native check moved to quick-build mode through the `quick-build` profile, while CI and the install keep the optimised build (EDI-99).
 - 27/10/2026: no GraalVM Community build exists on JDK 27 upstream, so EDI moved to GraalVM Community 25.4.4.1.1 through mise's `http` backend, Maven 4.0.0-rc-7 and model 4.1.0 (EDI-100).
+- 23/11/2026: Renovate's update to GraalVM Community 25.5.5.0.3 failed every CI job at the tool install, since `mise.toml` still named the 25.4.4.1.1 archive and checksum under the new tag; GraalVM moved to mise's `github` backend, which finds each platform's archive by a pattern and verifies it against GitHub's digest, so an update installs as Renovate proposes it (EDI-1).

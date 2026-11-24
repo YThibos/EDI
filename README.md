@@ -54,7 +54,7 @@ mise install
 ops/install.sh
 ```
 
-`mise trust` is needed once per clone: the pinned GraalVM downloads from a URL and sets `JAVA_HOME`, which mise does only for a configuration it trusts.
+`mise trust` is needed once per clone: the pinned GraalVM sets `JAVA_HOME`, which mise does only for a configuration it trusts.
 
 `ops/install.sh` refuses to run until mise and the pinned toolchain are installed; it builds the native executables and runs every test with that toolchain, installs `edi`, `edi-core` and the `helloedi` launcher in `~/.local/bin`, records the commit it built, and links the skills into the EDI home at `~/.edi`.
 Make sure `~/.local/bin` is on the `PATH`.
