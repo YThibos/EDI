@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
 import io.github.ythibos.edi.domain.decision.OptionKey;
@@ -26,8 +27,18 @@ public record WorkAfterTheMergedHead(TaskId task, MergeRequestView request, List
         }
     }
 
+    public static boolean choseTheFollowUp(Decision decision) {
+        return decision.card().title().equals(titleFor(decision.task()))
+                && decision.answer() != null
+                && FOLLOW_UP.equals(decision.answer().option());
+    }
+
     public DecisionCard card() {
-        return new DecisionCard("Deliver the commits " + task + " made after its merge through a follow-up task?", context(), options(), recommendation());
+        return new DecisionCard(titleFor(task), context(), options(), recommendation());
+    }
+
+    private static String titleFor(TaskId task) {
+        return "Deliver the commits " + task + " made after its merge through a follow-up task?";
     }
 
     private String context() {
@@ -50,12 +61,13 @@ public record WorkAfterTheMergedHead(TaskId task, MergeRequestView request, List
     private List<DecisionOption> options() {
         return List.of(
                 new DecisionOption(FOLLOW_UP, "Deliver them through a follow-up task that carries them from " + request.sourceBranch() + " onto a new branch from "
-                        + request.targetBranch() + " and lands by its own merged head"),
+                        + request.targetBranch() + " and lands by its own merged head; " + task + "'s copy of them is discarded once the follow-up task's branch"
+                        + " holds them on the forge", CaptainWordAct.DISCARD_WORK),
                 new DecisionOption(DISCARD, "Discard them: retire " + task + " with its copy and branch, and lose those commits",
                         CaptainWordAct.DISCARD_WORK));
     }
 
     private Recommendation recommendation() {
-        return new Recommendation(FOLLOW_UP, "they are work done for the task after the request was merged, and discarding them cannot be undone");
+        return new Recommendation(FOLLOW_UP, "they are work done for the task after the request was merged, and discarding them outright cannot be undone");
     }
 }

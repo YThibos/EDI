@@ -17,7 +17,6 @@ import io.github.ythibos.edi.adapter.registry.ProjectRegistry;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
-import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.worker.WorkerContext;
@@ -57,13 +56,13 @@ public class FollowMerges {
     private final CleanUpTask cleanUp;
     private final LandedWorkCheck landedWork;
     private final TaskStages stages;
-    private final RaiseDecision decisions;
+    private final FollowUpDecision followUp;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public FollowMerges(TaskStore tasks, DeliveryStore deliveries, EventLog events, ProjectRegistry registry, WorkerContext context, Forges forges,
             DeliveryRecords records, CloneRefreshes refreshes, CleanUpTask cleanUp, LandedWorkCheck landedWork, TaskStages stages,
-            RaiseDecision decisions, Clock clock, TransactionTemplate transaction) {
+            FollowUpDecision followUp, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.deliveries = deliveries;
         this.events = events;
@@ -75,7 +74,7 @@ public class FollowMerges {
         this.cleanUp = cleanUp;
         this.landedWork = landedWork;
         this.stages = stages;
-        this.decisions = decisions;
+        this.followUp = followUp;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -219,13 +218,9 @@ public class FollowMerges {
         StageChange change = task.transitions().move(task.stage(), merge);
         Task merged = stages.changed(task, change, actor, now);
         if (change.raisesAFollowUpDecision()) {
-            askHowToFollowUp(new WorkAfterTheMergedHead(id, view, change.notLanded()));
+            followUp.askAbout(merged, new WorkAfterTheMergedHead(id, view, change.notLanded()), now);
         }
         return merged;
-    }
-
-    private void askHowToFollowUp(WorkAfterTheMergedHead work) {
-        decisions.raise(new TaskReference.ById(work.task()), work.card(), Actor.CORE);
     }
 
     private MergedWork cleanedUpOnceMerged(Delivery merged, Actor actor) {

@@ -103,6 +103,8 @@ import io.github.ythibos.edi.application.delivery.DiscardWork;
 import io.github.ythibos.edi.application.delivery.DoneClaims;
 import io.github.ythibos.edi.application.delivery.DropTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges;
+import io.github.ythibos.edi.application.delivery.FollowUpCarriage;
+import io.github.ythibos.edi.application.delivery.FollowUpDecision;
 import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.application.delivery.LandedWorkCheck;
 import io.github.ythibos.edi.application.delivery.ObservePipelines;
@@ -848,7 +850,11 @@ public final class TestHome {
     }
 
     public DiscardWork discardWork() {
-        return new DiscardWork(tasks, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
+        return new DiscardWork(tasks, events, workerContext(), landedWork(), followUpCarriage(), copyRetirement(), captainsWord(), clock, transaction);
+    }
+
+    public FollowUpCarriage followUpCarriage() {
+        return new FollowUpCarriage(decisions, dispatches, landedWork(), transaction);
     }
 
     public DropFromOutage dropFromOutage() {
@@ -873,7 +879,11 @@ public final class TestHome {
 
     public FollowMerges followMerges() {
         return new FollowMerges(tasks, deliveries, events, registry, workerContext(), forges(), deliveryRecords(), cloneRefreshes(), cleanUpTask(),
-                landedWork(), taskStages(), raiseDecision(), clock, transaction);
+                landedWork(), taskStages(), followUpDecision(), clock, transaction);
+    }
+
+    public FollowUpDecision followUpDecision() {
+        return new FollowUpDecision(raiseDecision(), decisions, events);
     }
 
     public ObservePipelines observePipelines() {

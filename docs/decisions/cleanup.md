@@ -14,7 +14,7 @@ Whether an effort above high pays can only be judged once each cost says which m
 ## Decision
 
 `LandedWorkCheck` fetches the clone's origin and gathers the facts with git; `LandedWork` in the domain decides.
-Work is landed exactly when the copy has nothing uncommitted or untracked beyond EDI's own state, holds no nested repository, every commit `git cherry` lists is in `origin/<base>` by ancestry, by an equal patch, by content (when `merge-tree` of the base and the head gives the base's tree), or by the merge of its request (when the forge shows the task's request merged into the base, the commit that merge landed is in `origin/<base>`, and the commit is the request's merged head or one before it), and, for `local-branch`, the captain's checkout holds the head.
+Work is landed exactly when the copy has nothing uncommitted or untracked beyond EDI's own state, holds no nested repository, every commit `git cherry` lists is in `origin/<base>` by ancestry, by an equal patch, by content (when `merge-tree` of the base and the head gives the base's tree), or by the merge of its request (when the forge shows the task's request merged into the base, the commit that merge landed is in `origin/<base>`, and the commit is the request's merged head, one before it, or the same change by patch as one of them, since the pipeline may have rebuilt them), and, for `local-branch`, the captain's checkout holds the head.
 So every commit up to the merged head lands however the forge merged it, and a commit after it is named.
 When the copy is gone the branch in the clone stands in for it; each failure is a finding naming the path, the repository or the commit.
 `CleanUpTask` refuses a task that is not in flight or is held, a scout without an accepted done and its `report.md`, and a task whose latest worker still works unless its recorded delivery is merged into the base branch, since a merge into the base the forge shows hands the work over as an accepted done does, while a merge into another branch does not ([merge-following](merge-following.md)).
@@ -25,6 +25,7 @@ A landed task is retired by `CopyRetirement`: its cost is counted (`TaskCosts`, 
 `EffortYield` sums the costs of a set of tasks that know their route and their review rounds and findings (`task_review`) per effort, with the tokens weighted as input-token equivalents (`TokenUsage.weighted`: input at 1, cache read at 0.1, cache write at 1.25, output at 5, the measurements' weighting); no dollar figure is given, because the plan is not billed per token.
 The Week view's rows per effort count ship tasks only (`WeekOfWork`), since a scout's research is never reviewed by the pipeline and would skew the cost per task.
 Dropping a task and discarding work share the same retirement steps on the captain's word ([captains-word](captains-word.md)).
+A discard whose word is the answer that chose a follow-up task for the commits after a merged head is refused until the branch of a task dispatched since that decision holds them on the forge, by patch or by content (`FollowUpCarriage`), and the refusal names what is missing, so nothing is lost by the order the two tasks are handled in.
 `edi task recount-costs --since <date>` recounts the pipeline's spend of every task cost counted since that day (`RecountTaskCosts`): it reads the spend of each task's branch again, keeps what the workers spent and when the cost was counted, and saves each cost it changes with `TaskCostRecounted`, the cost before and after; a spend the pipeline no longer knows, because its store is unreadable or holds no run of the branch any more, leaves the recorded one.
 
 ## Why
@@ -41,6 +42,7 @@ A recount through the core keeps the core the only writer of the store and the e
 - Crediting the merged head before the commit the merge landed is in the base - a clone that has not fetched the merge would retire work its base does not hold yet.
 - Trying a refused clean-up only once - a merged task whose late commit landed later, or whose unlanded work was discarded, would stay in flight until someone ran the clean-up by hand.
 - Recording every refusal of every round - the primary would be woken every ten minutes with the same findings.
+- Discarding on the follow-up answer at once - the late commits would be gone if the follow-up task had not yet carried them to the forge.
 - Correcting recorded costs at a start of the core, in a migration or with a script against the store - one-off code that lingers, a migration reaching into the pipeline's store, or a write outside the core with no event.
 - Recording the route in `task_review` as well - the review and the cost share the task, so one copy of the route is enough.
 - Recording the route of the latest worker, or of the one that spent most - a recovery's fallback model would take the credit for the effort the dispatch chose.

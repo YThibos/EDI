@@ -100,6 +100,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case DRAFT_CLOSED -> wake.task() + ": " + wake.detail() + " was closed without a merge; its work waits for the captain's word.";
             case DELIVERY_FAILED -> wake.task() + ": its delivery to the captain's checkout failed: " + wake.detail();
             case CLEANUP_REFUSED -> wake.task() + " was not cleaned up after its merge: " + wake.detail();
+            case FOLLOW_UP_HELD_BACK -> wake.task() + " was merged before these commits: " + wake.detail()
+                    + "; once that is settled, raise the decision to deliver them through a follow-up task or discard them.";
             case DECISION_RAISED -> wake.task() + ": you raised " + wake.detail() + "; put it before the captain.";
             case DECISION_ROUND -> wake.task() + ": " + wake.detail() + " is in the round of decisions due now.";
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";

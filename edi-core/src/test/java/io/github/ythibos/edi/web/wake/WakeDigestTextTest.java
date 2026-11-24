@@ -136,13 +136,16 @@ class WakeDigestTextTest {
                 queued(1, new Wake(WakeKind.DRAFT_MERGED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(2, new Wake(WakeKind.DRAFT_CLOSED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(3, new Wake(WakeKind.DELIVERY_FAILED, LAMP, null, "the captain's checkout has uncommitted work in lamp.txt", null)),
-                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0, PRESENT, true);
+                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null)),
+                queued(5, new Wake(WakeKind.FOLLOW_UP_HELD_BACK, LAMP, null, "b30e15a1c2d3 \"HRN-3 Fit the cap\", while it is held: decision D58 is open", null))),
+                0, 1, 0, PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("""
                 1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; you refresh the clone and clean up.
                 2. fit-lamp: https://github.com/example-owner/harness/pull/7 was closed without a merge; its work waits for the captain's word.
                 3. fit-lamp: its delivery to the captain's checkout failed: the captain's checkout has uncommitted work in lamp.txt
                 4. fit-lamp was not cleaned up after its merge: notes.txt is not committed
+                5. fit-lamp was merged before these commits: b30e15a1c2d3 "HRN-3 Fit the cap", while it is held: decision D58 is open; once that is settled, raise the decision to deliver them through a follow-up task or discard them.
                 """);
     }
 

@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.delivery;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -12,9 +13,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
+import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.landing.CaptainsCopy;
+import io.github.ythibos.edi.domain.landing.FollowUpBranch;
 import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 
@@ -44,9 +47,19 @@ public class LandedWorkCheck {
                 : git.commitAt(workplace.project().projectClone(), BRANCHES + workplace.dispatch().branch());
     }
 
+    public Optional<FollowUpBranch> followUpBranch(Workplace workplace, BranchName branch) {
+        Path repository = repositoryOf(workplace);
+        String ref = "origin/" + branch;
+        Optional<String> head = headOf(workplace);
+        if (head.isEmpty() || git.commitAt(repository, ref).isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new FollowUpBranch(ref, git.commitsBeyond(repository, ref, head.get()), git.holdsTheContentOf(repository, ref, head.get())));
+    }
+
     public List<BranchCommit> commitsAfter(Workplace workplace, String mergedHead) {
         git.fetchOrigin(workplace.project().projectClone());
-        Path repository = Files.isDirectory(workplace.worktree()) ? workplace.worktree() : workplace.project().projectClone();
+        Path repository = repositoryOf(workplace);
         Optional<String> head = headOf(workplace);
         if (head.isEmpty() || git.commitAt(repository, mergedHead).isEmpty()) {
             return List.of();
@@ -54,15 +67,25 @@ public class LandedWorkCheck {
         return git.commitsBeyond(repository, mergedHead, head.get()).stream().filter(commit -> !commit.sameChangeInTheBase()).toList();
     }
 
+    private static Path repositoryOf(Workplace workplace) {
+        return Files.isDirectory(workplace.worktree()) ? workplace.worktree() : workplace.project().projectClone();
+    }
+
     private LandedWork ofTheCopy(Workplace workplace) {
         Path copy = workplace.worktree();
         String base = workplace.baseRef();
         return new LandedWork(base, git.uncommittedPaths(copy), git.nestedRepositories(copy), git.commitsBeyond(copy, base, "HEAD"),
-                commitsUpToTheMergedHead(workplace, copy), git.holdsTheContentOf(copy, base, "HEAD"), captainsCopyOf(workplace, git.head(copy)));
+                commitsUpToTheMergedHead(workplace, copy, "HEAD"), git.holdsTheContentOf(copy, base, "HEAD"), captainsCopyOf(workplace, git.head(copy)));
     }
 
-    private Set<String> commitsUpToTheMergedHead(Workplace workplace, Path repository) {
-        return mergedHeadOf(workplace, repository).map(head -> git.commitIdsBeyond(repository, workplace.baseRef(), head)).orElse(Set.of());
+    private Set<String> commitsUpToTheMergedHead(Workplace workplace, Path repository, String head) {
+        return mergedHeadOf(workplace, repository).map(mergedHead -> commitsUpTo(repository, workplace.baseRef(), mergedHead, head)).orElse(Set.of());
+    }
+
+    private Set<String> commitsUpTo(Path repository, String base, String mergedHead, String head) {
+        Set<String> upToIt = new HashSet<>(git.commitIdsBeyond(repository, base, mergedHead));
+        git.commitsBeyond(repository, mergedHead, head).stream().filter(BranchCommit::sameChangeInTheBase).map(BranchCommit::id).forEach(upToIt::add);
+        return upToIt;
     }
 
     private Optional<String> mergedHeadOf(Workplace workplace, Path repository) {
@@ -80,7 +103,7 @@ public class LandedWorkCheck {
         if (head.isEmpty()) {
             return new LandedWork(base, List.of(), List.of(), List.of(), Set.of(), true, CaptainsCopy.NOT_DELIVERED_THERE);
         }
-        return new LandedWork(base, List.of(), List.of(), git.commitsBeyond(clone, base, head.get()), commitsUpToTheMergedHead(workplace, clone),
+        return new LandedWork(base, List.of(), List.of(), git.commitsBeyond(clone, base, head.get()), commitsUpToTheMergedHead(workplace, clone, head.get()),
                 git.holdsTheContentOf(clone, base, head.get()), captainsCopyOf(workplace, head.get()));
     }
 

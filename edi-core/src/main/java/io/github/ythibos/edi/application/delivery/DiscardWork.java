@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkDiscarded;
+import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 
@@ -30,17 +31,19 @@ public class DiscardWork {
     private final EventLog events;
     private final WorkerContext context;
     private final LandedWorkCheck landedWork;
+    private final FollowUpCarriage followUps;
     private final CopyRetirement retirement;
     private final CaptainsWordEvidence captainsWord;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DiscardWork(TaskStore tasks, EventLog events, WorkerContext context, LandedWorkCheck landedWork, CopyRetirement retirement,
-            CaptainsWordEvidence captainsWord, Clock clock, TransactionTemplate transaction) {
+    public DiscardWork(TaskStore tasks, EventLog events, WorkerContext context, LandedWorkCheck landedWork, FollowUpCarriage followUps,
+            CopyRetirement retirement, CaptainsWordEvidence captainsWord, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.events = events;
         this.context = context;
         this.landedWork = landedWork;
+        this.followUps = followUps;
         this.retirement = retirement;
         this.captainsWord = captainsWord;
         this.clock = clock;
@@ -52,10 +55,11 @@ public class DiscardWork {
         CaptainsWord word = captainsWord.requireOnTask(calling, workplace.task().id(), CaptainWordAct.DISCARD_WORK);
         requireInFlight(workplace);
         retirement.requireNoWorkerAtWork(workplace, STOP_IT_FIRST);
-        List<String> discarded = landedWork.of(workplace).findings();
+        LandedWork landed = landedWork.of(workplace);
+        followUps.requireCarriedWhenFollowedUp(workplace, word, landed.unlandedCommits());
         retirement.retireDiscarding(workplace);
-        recordDiscarded(workplace, word, discarded, actor);
-        return new DiscardedWork(workplace.task().id(), discarded);
+        recordDiscarded(workplace, word, landed.findings(), actor);
+        return new DiscardedWork(workplace.task().id(), landed.findings());
     }
 
     private static void requireInFlight(Workplace workplace) {

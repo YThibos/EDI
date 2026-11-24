@@ -32,6 +32,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
@@ -337,6 +338,7 @@ public class EventLog {
             case ChangeAppliedToCaptain applied -> withEach(payload, "files", applied.files());
             case ChangeNotApplied notApplied -> payload.put("because", notApplied.because());
             case CleanupRefused refused -> withEach(payload, "findings", refused.findings());
+            case FollowUpHeldBack heldBack -> withCommits(payload.put("heldBy", heldBack.heldBy()), heldBack.notLanded());
             case TaskCleanedUp _ -> payload;
             case TaskCostRecorded recorded -> withCost(payload, recorded.cost());
             case TaskCostRecounted recounted -> withRecount(payload, recounted);
@@ -422,9 +424,12 @@ public class EventLog {
     }
 
     private static ObjectNode withChange(ObjectNode payload, StageChange change) {
-        payload.put("from", change.from().word()).put("to", change.to().word()).put("reason", change.reason());
+        return withCommits(payload.put("from", change.from().word()).put("to", change.to().word()).put("reason", change.reason()), change.notLanded());
+    }
+
+    private static ObjectNode withCommits(ObjectNode payload, List<BranchCommit> commits) {
         ArrayNode notLanded = payload.putArray("notLanded");
-        change.notLanded().forEach(commit -> withCommit(notLanded.addObject(), commit));
+        commits.forEach(commit -> withCommit(notLanded.addObject(), commit));
         return payload;
     }
 

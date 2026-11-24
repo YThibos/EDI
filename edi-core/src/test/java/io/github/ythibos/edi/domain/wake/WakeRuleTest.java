@@ -30,6 +30,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
@@ -44,6 +45,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -97,6 +99,9 @@ class WakeRuleTest {
         assertThat(WakeRule.wakeFor(new CleanupRefused(TASK, List.of("lamp.txt is not committed", "a commit is not in origin/main")), Actor.CORE))
                 .contains(new Wake(WakeKind.CLEANUP_REFUSED, TASK, null, "lamp.txt is not committed; a commit is not in origin/main", null));
         assertThat(WakeRule.wakeFor(new CleanupRefused(TASK, List.of("lamp.txt is not committed")), Actor.PRIMARY)).isEmpty();
+        assertThat(WakeRule.wakeFor(new FollowUpHeldBack(TASK, List.of(new BranchCommit("b30e15a1c2d3e4f5", "HRN-3 Fit the cap", false)),
+                "decision D58 is open"), Actor.CORE))
+                .contains(new Wake(WakeKind.FOLLOW_UP_HELD_BACK, TASK, null, "b30e15a1c2d3 \"HRN-3 Fit the cap\", while it is held: decision D58 is open", null));
         assertThat(WakeRule.wakeFor(new DeliveryRefused(TASK, WORKER, List.of("not a draft")), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new DraftRecorded(TASK, draft), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new TaskCleanedUp(TASK), Actor.CORE)).isEmpty();
