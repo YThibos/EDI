@@ -31,19 +31,17 @@ public class DiscardWork {
     private final EventLog events;
     private final WorkerContext context;
     private final LandedWorkCheck landedWork;
-    private final FollowUpCarriage followUps;
     private final CopyRetirement retirement;
     private final CaptainsWordEvidence captainsWord;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public DiscardWork(TaskStore tasks, EventLog events, WorkerContext context, LandedWorkCheck landedWork, FollowUpCarriage followUps,
-            CopyRetirement retirement, CaptainsWordEvidence captainsWord, Clock clock, TransactionTemplate transaction) {
+    public DiscardWork(TaskStore tasks, EventLog events, WorkerContext context, LandedWorkCheck landedWork, CopyRetirement retirement,
+            CaptainsWordEvidence captainsWord, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.events = events;
         this.context = context;
         this.landedWork = landedWork;
-        this.followUps = followUps;
         this.retirement = retirement;
         this.captainsWord = captainsWord;
         this.clock = clock;
@@ -56,8 +54,7 @@ public class DiscardWork {
         requireInFlight(workplace);
         retirement.requireNoWorkerAtWork(workplace, STOP_IT_FIRST);
         LandedWork landed = landedWork.of(workplace);
-        followUps.requireCarriedWhenFollowedUp(workplace, word, landed.unlandedCommits());
-        retirement.retireDiscarding(workplace);
+        retirement.retireDiscarding(workplace, word, landed);
         recordDiscarded(workplace, word, landed.findings(), actor);
         return new DiscardedWork(workplace.task().id(), landed.findings());
     }

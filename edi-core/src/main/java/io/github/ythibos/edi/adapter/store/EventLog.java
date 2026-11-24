@@ -252,8 +252,23 @@ public class EventLog {
                 .optional();
     }
 
+    public Optional<FollowUpHeldBack> latestFollowUpHeldBackOf(TaskId task) {
+        return store.sql("select payload from event where task_id = :task and type = :heldBack order by sequence desc limit 1")
+                .param("task", task.value())
+                .param("heldBack", FollowUpHeldBack.class.getSimpleName())
+                .query((row, _) -> followUpHeldBack(task, json.readTree(row.getString("payload"))))
+                .optional();
+    }
+
     private static List<String> findingsOf(JsonNode payload) {
         return payload.path("findings").valueStream().map(finding -> finding.asString("")).toList();
+    }
+
+    private static FollowUpHeldBack followUpHeldBack(TaskId task, JsonNode payload) {
+        List<BranchCommit> notLanded = payload.path("notLanded").valueStream()
+                .map(commit -> new BranchCommit(commit.path("id").asString(), commit.path("subject").asString(), false))
+                .toList();
+        return new FollowUpHeldBack(task, notLanded, payload.path("heldBy").asString());
     }
 
     private ObjectNode payloadOf(DomainEvent event) {

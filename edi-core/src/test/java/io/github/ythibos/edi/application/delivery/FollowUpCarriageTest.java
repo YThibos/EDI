@@ -73,6 +73,16 @@ class FollowUpCarriageTest {
     }
 
     @Test
+    void refusesToDropTheTaskWithItsWorkOnTheFollowUpAnswerBeforeAFollowUpTasksBranchHoldsTheCommits() throws IOException {
+        FixtureRepository copy = mergedWithALateCommit();
+        CallingSession session = theCaptainChose(new OptionKey('A'));
+
+        assertThatThrownBy(() -> home.dropTask().drop(new TaskReference.ById(LAMP), true, session, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessageStartingWith("fit-lamp's work is not discarded yet: the captain chose to deliver " + copy.head().substring(0, 12));
+        assertThat(copy.root()).isDirectory();
+    }
+
+    @Test
     void discardsTheCommitsAfterTheMergedHeadAtOnceWhenTheCaptainChoseToDiscardThem() throws IOException {
         FixtureRepository copy = mergedWithALateCommit();
         CallingSession session = theCaptainChose(new OptionKey('B'));

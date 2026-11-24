@@ -27,10 +27,12 @@ public record WorkAfterTheMergedHead(TaskId task, MergeRequestView request, List
         }
     }
 
+    public static boolean isTheFollowUp(Decision decision) {
+        return decision.card().title().equals(titleFor(decision.task()));
+    }
+
     public static boolean choseTheFollowUp(Decision decision) {
-        return decision.card().title().equals(titleFor(decision.task()))
-                && decision.answer() != null
-                && FOLLOW_UP.equals(decision.answer().option());
+        return isTheFollowUp(decision) && decision.answer() != null && FOLLOW_UP.equals(decision.answer().option());
     }
 
     public DecisionCard card() {

@@ -837,7 +837,7 @@ public final class TestHome {
     }
 
     public CopyRetirement copyRetirement() {
-        return new CopyRetirement(home, workers, boards, events, git, runtime, boardListeners(), transaction);
+        return new CopyRetirement(home, workers, boards, events, git, runtime, boardListeners(), followUpCarriage(), transaction);
     }
 
     public DropTask dropTask() {
@@ -850,7 +850,7 @@ public final class TestHome {
     }
 
     public DiscardWork discardWork() {
-        return new DiscardWork(tasks, events, workerContext(), landedWork(), followUpCarriage(), copyRetirement(), captainsWord(), clock, transaction);
+        return new DiscardWork(tasks, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
     }
 
     public FollowUpCarriage followUpCarriage() {
@@ -883,7 +883,7 @@ public final class TestHome {
     }
 
     public FollowUpDecision followUpDecision() {
-        return new FollowUpDecision(raiseDecision(), decisions, events);
+        return new FollowUpDecision(raiseDecision(), tasks, decisions, events, transaction);
     }
 
     public ObservePipelines observePipelines() {

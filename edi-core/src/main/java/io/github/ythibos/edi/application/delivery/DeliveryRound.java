@@ -27,6 +27,7 @@ public class DeliveryRound {
     public void watchTheDrafts() {
         attempt("watch the open drafts", merges::watchTheOpenDrafts);
         attempt("finish merges that waited for their clone", merges::finishEarlierMerges);
+        attempt("raise the follow-up decisions held back", merges::raiseTheFollowUpsHeldBack);
     }
 
     private static void attempt(String part, Runnable work) {

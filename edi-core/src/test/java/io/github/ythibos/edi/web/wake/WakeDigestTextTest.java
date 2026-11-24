@@ -145,7 +145,7 @@ class WakeDigestTextTest {
                 2. fit-lamp: https://github.com/example-owner/harness/pull/7 was closed without a merge; its work waits for the captain's word.
                 3. fit-lamp: its delivery to the captain's checkout failed: the captain's checkout has uncommitted work in lamp.txt
                 4. fit-lamp was not cleaned up after its merge: notes.txt is not committed
-                5. fit-lamp was merged before these commits: b30e15a1c2d3 "HRN-3 Fit the cap", while it is held: decision D58 is open; once that is settled, raise the decision to deliver them through a follow-up task or discard them.
+                5. fit-lamp was merged before these commits: b30e15a1c2d3 "HRN-3 Fit the cap", while it is held: decision D58 is open; once nothing holds it, EDI raises the decision to deliver them through a follow-up task or discard them.
                 """);
     }
 

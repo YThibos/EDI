@@ -14,11 +14,13 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.DecisionOption;
@@ -419,6 +421,19 @@ class FollowMergesTest {
         assertThat(home.wakes().unacknowledged()).filteredOn(queued -> queued.wake().kind() == WakeKind.FOLLOW_UP_HELD_BACK).singleElement()
                 .satisfies(queued -> assertThat(queued.wake().detail())
                         .isEqualTo(late.substring(0, 12) + " \"HRN-3 Fit the cap\", while it is held: decision " + open + " is open"));
+
+        home.followMerges().raiseTheFollowUpsHeldBack();
+        assertThat(home.decisions().everyOneOfTask(LAMP)).hasSize(1);
+
+        home.answerDecision().answer(new TaskReference.ById(LAMP), new GivenAnswer(open + " A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+        home.followMerges().raiseTheFollowUpsHeldBack();
+        home.followMerges().raiseTheFollowUpsHeldBack();
+
+        assertThat(home.decisions().everyOneOfTask(LAMP)).hasSize(2).last().satisfies(followUp -> {
+            assertThat(followUp.isOpen()).isTrue();
+            assertThat(followUp.card().title()).isEqualTo("Deliver the commits fit-lamp made after its merge through a follow-up task?");
+            assertThat(followUp.card().context()).contains("- " + late.substring(0, 12) + " \"HRN-3 Fit the cap\"");
+        });
     }
 
     @Test

@@ -68,7 +68,7 @@ public class DropTask {
         Task task = transaction.execute(_ -> tasks.get(reference));
         CaptainsWord word = captainsWord.requireOnTask(calling, task.id(), discardingWork ? CaptainWordAct.DISCARD_WORK : CaptainWordAct.DROP);
         requireNoDecisionButItsTicketWaiting(task);
-        List<String> discarded = wasDispatched(task) ? retiredCopy(transaction.execute(_ -> context.of(task.id())), discardingWork) : List.of();
+        List<String> discarded = wasDispatched(task) ? retiredCopy(transaction.execute(_ -> context.of(task.id())), discardingWork, word) : List.of();
         DroppedTask dropped = dropped(task, new Drop(word, discarded, discardingWork), actor);
         retirement.stopListeningFor(dropped.task().id());
         return dropped;
@@ -88,7 +88,7 @@ public class DropTask {
         return transaction.execute(_ -> dispatches.of(task.id())).isPresent();
     }
 
-    private List<String> retiredCopy(Workplace workplace, boolean discardingWork) {
+    private List<String> retiredCopy(Workplace workplace, boolean discardingWork, CaptainsWord word) {
         retirement.requireNoWorkerAtWork(workplace, STOP_IT_FIRST);
         LandedWork landed = landedWork.of(workplace);
         if (landed.isLanded()) {
@@ -100,7 +100,7 @@ public class DropTask {
                     + String.join("; ", landed.findings())
                     + ". Drop it with --discard-work only on the captain's word to discard that work.");
         }
-        retirement.retireDiscarding(workplace);
+        retirement.retireDiscarding(workplace, word, landed);
         return landed.findings();
     }
 

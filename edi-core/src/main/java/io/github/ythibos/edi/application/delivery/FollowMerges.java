@@ -31,6 +31,7 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.landing.WorkAfterTheMergedHead;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.StageChange;
@@ -107,6 +108,19 @@ public class FollowMerges {
     public void finishEarlierMerges() {
         refreshes.refreshEveryClone();
         cleanUpWhatTheClonesHold(Actor.CORE);
+    }
+
+    public void raiseTheFollowUpsHeldBack() {
+        followUp.heldBackOfFreeTasks().forEach(this::raisedOnItsOwn);
+    }
+
+    private void raisedOnItsOwn(FollowUpHeldBack heldBack) {
+        try {
+            transaction.execute(_ -> deliveries.of(heldBack.task())).filter(Delivery::isLanded)
+                    .ifPresent(merged -> followUp.raise(new WorkAfterTheMergedHead(heldBack.task(), viewOf(merged), heldBack.notLanded())));
+        } catch (Refusal | ProgramFailure unraised) {
+            LOG.warn("Could not raise the follow-up decision of {}: {}", heldBack.task(), unraised.getMessage());
+        }
     }
 
     private Optional<Delivery> deliveryNamedBy(String reference) {
