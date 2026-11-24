@@ -89,8 +89,19 @@ class RaiseAndAnswerDecisionTest {
 
         assertThatThrownBy(() -> home.answerDecision().answer(FIT_LAMP, answer, Actor.PRIMARY))
                 .isInstanceOf(Refusal.class)
-                .hasMessage("fit-lamp waits on D1 and D2; answer one of them by its number.");
+                .hasMessage("fit-lamp waits on D1 and D2; name one of them by its number.");
         assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(new DecisionNumber(1), new DecisionNumber(2));
+    }
+
+    @Test
+    void asksForTheNumberOfTheDecisionToRecheckWhenTheTaskWaitsOnTwo() {
+        home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
+        DecisionNumber bulb = home.raiseDecision().raise(FIT_LAMP, card("Which bulb?"), Actor.PRIMARY);
+
+        assertThatThrownBy(() -> home.askForARecheck().ask(FIT_LAMP, "Is it still open?", Actor.PRIMARY))
+                .isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp waits on D1 and D2; name one of them by its number.");
+        assertThat(home.askForARecheck().ask(new TaskReference.ByDecision(bulb), "Is it still open?", Actor.PRIMARY).number()).isEqualTo(bulb);
     }
 
     @Test

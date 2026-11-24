@@ -64,9 +64,7 @@ class OutageListText implements TextPresenter<OutageList> {
 
     private static String waitsOn(OutageList.Entry listed) {
         List<String> waits = new ArrayList<>();
-        if (listed.openDecision() != null) {
-            waits.add("the captain's answer to " + listed.openDecision());
-        }
+        listed.task().holds().openDecisions().forEach(open -> waits.add("the captain's answer to " + open));
         listed.entry().otherHoldsOf(listed.task()).stream()
                 .filter(not(Hold::isReleasedByItsAnswer))
                 .forEach(hold -> waits.add("its hold: " + hold.why()));

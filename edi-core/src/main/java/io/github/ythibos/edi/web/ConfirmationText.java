@@ -232,6 +232,9 @@ class ConfirmationText implements TextPresenter<Confirmation> {
         if (task.isHeld()) {
             return "Released " + task.id() + "; it still waits: " + task.reasonsItWaits() + ".";
         }
+        if (task.isDone()) {
+            return "Released " + task.id() + "; its question is answered, so it is done.";
+        }
         return "Released " + task.id() + "; it is " + task.state().word() + " again.";
     }
 

@@ -517,7 +517,7 @@ public final class TestHome {
     }
 
     public ReleaseTask releaseTask() {
-        return new ReleaseTask(tasks, events, clock, transaction);
+        return new ReleaseTask(tasks, decisionReleases(), events, clock, transaction);
     }
 
     public RaiseDecision raiseDecision() {
@@ -533,11 +533,11 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), steerWorker(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), decisionReleases(), steerWorker(), clock, transaction);
     }
 
     public DecisionReleases decisionReleases() {
-        return new DecisionReleases(tasks, taskStages());
+        return new DecisionReleases(tasks, decisions, taskStages(), dependantTasks(), events);
     }
 
     public TaskStages taskStages() {
@@ -1041,7 +1041,7 @@ public final class TestHome {
     }
 
     public OutageListQuery outageList() {
-        return new OutageListQuery(outages, tasks, workers, dispatches, decisions, inbox, recoveryCosts,
+        return new OutageListQuery(outages, tasks, workers, dispatches, inbox, recoveryCosts,
                 new CurrentRoutes(dispatchRulesFile(), machineProfile()), git, home, transaction);
     }
 

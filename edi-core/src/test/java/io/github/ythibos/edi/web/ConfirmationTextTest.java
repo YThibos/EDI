@@ -75,6 +75,14 @@ class ConfirmationTextTest {
     }
 
     @Test
+    void confirmsTheReleaseThatRetiresAnAnsweredCaptainItem() {
+        Task retired = Stages.answered(PresenterFixtures.captainItem()
+                .held(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
+
+        assertThat(text.text(new Confirmation.Released(retired))).isEqualTo("Released lamp-choice; its question is answered, so it is done.\n");
+    }
+
+    @Test
     void confirmsAnAnswerAndWhatBecameOfItsTask() {
         Task closed = Stages.answered(PresenterFixtures.captainItem()
                 .held(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));

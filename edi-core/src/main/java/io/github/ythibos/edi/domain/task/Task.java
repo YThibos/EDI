@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.rule.Rule;
 
@@ -69,8 +70,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Hold
             throw new Refusal(Rule.TASK_HOLD, id + " is not held.");
         }
         if (holds.holdsOnlyOpenDecisions()) {
-            throw new Refusal(Rule.TASK_HOLD, id + " waits only on " + String.join(" and ", numbersOf(holds.openDecisions()))
-                    + "; answering a decision releases it.");
+            throw new Refusal(Rule.TASK_HOLD, id + " waits only on " + holds.openDecisionsInWords() + "; answering a decision releases it.");
         }
         return withHolds(holds.released());
     }
@@ -81,6 +81,12 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Hold
 
     public Task decisionAnswered(DecisionNumber number) {
         return withHolds(holds.answered(number));
+    }
+
+    public void requireOneOpenDecisionNamedBy(TaskReference reference) {
+        if (reference instanceof TaskReference.ById && holds.openDecisions().size() > 1) {
+            throw new Refusal(Rule.TASK_HOLD, id + " waits on " + holds.openDecisionsInWords() + "; name one of them by its number.");
+        }
     }
 
     public boolean closesOnItsAnswer() {
@@ -162,9 +168,5 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Hold
 
     private Task withHolds(Holds newHolds) {
         return new Task(id, intake, stage, notes, newHolds, created, closed);
-    }
-
-    private static List<String> numbersOf(List<DecisionNumber> decisions) {
-        return decisions.stream().map(DecisionNumber::toString).toList();
     }
 }

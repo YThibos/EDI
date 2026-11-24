@@ -253,7 +253,7 @@ class ApiTest {
         assertThat(sail).isNotEqualTo(mast);
         assertThat(waitingOnBoth).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + mast + " waits for its answer",
                 "Held (decision, until your word): " + sail + " waits for its answer", mast + "  api-mast  Which mast?", sail + "  api-mast  Which sail?");
-        assertRefusal(byTheTask, 409, "api-mast waits on " + mast + " and " + sail + "; answer one of them by its number.");
+        assertRefusal(byTheTask, 409, "api-mast waits on " + mast + " and " + sail + "; name one of them by its number.");
         assertThat(answered.statusCode()).isEqualTo(200);
         assertThat(afterTheAnswer).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + sail + " waits for its answer")
                 .doesNotContain(mast + " waits for its answer");

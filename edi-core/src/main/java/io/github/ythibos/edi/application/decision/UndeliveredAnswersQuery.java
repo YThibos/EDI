@@ -38,6 +38,8 @@ public class UndeliveredAnswersQuery {
     }
 
     private Optional<UndeliveredAnswer> undeliveredAnswerTo(WorkerQuestion question) {
-        return decisions.ofTask(question.task()).flatMap(decision -> UndeliveredAnswer.of(decision, question, inbox.resolvingOf(question.task())));
+        return decisions.everyOneOfTask(question.task()).reversed().stream()
+                .flatMap(decision -> UndeliveredAnswer.of(decision, question, inbox.resolvingOf(question.task())).stream())
+                .findFirst();
     }
 }

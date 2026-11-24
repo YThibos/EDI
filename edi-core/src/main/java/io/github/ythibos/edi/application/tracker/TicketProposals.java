@@ -81,8 +81,8 @@ public class TicketProposals {
         return raiseDecision.raise(new TaskReference.ById(proposal.task()), proposal.card(), actor);
     }
 
-    public void requireAChoiceIn(TaskId task, OptionKey option) {
-        unsettled(task).ifPresent(proposed -> proposed.proposal().choiceFor(option));
+    public void requireAChoiceIn(Decision answering, OptionKey option) {
+        unsettled(answering.task()).filter(proposed -> asksForItsTicket(answering, proposed)).ifPresent(proposed -> proposed.proposal().choiceFor(option));
     }
 
     public synchronized TicketSettlement settle(TaskId task, Actor actor) {
@@ -106,30 +106,38 @@ public class TicketProposals {
     }
 
     public boolean awaitsItsTicket(TaskId task) {
-        return unsettled(task).isPresent() && openDecisionOf(task).isPresent();
+        return unsettled(task).flatMap(this::openTicketDecisionOf).isPresent();
     }
 
     public Optional<DecisionNumber> closeForTheDrop(TaskId task, CaptainsWord word, Actor actor, Instant at) {
         Optional<ProposedTicket> unsettled = unsettled(task);
         unsettled.ifPresent(proposed -> proposals.update(proposed.settledWithoutATicket(at)));
-        return unsettled.flatMap(_ -> openDecisionOf(task)).map(open -> closed(open, answerOfTheDrop(task, word, at), actor));
+        return unsettled.flatMap(this::openTicketDecisionOf).map(open -> closed(open, answerOfTheDrop(task, word, at), actor));
     }
 
     public Optional<DecisionNumber> closeOnTheKey(TaskId task, WorkKey key, String captainsWords, Actor actor, Instant at) {
         Optional<ProposedTicket> unsettled = unsettled(task);
         unsettled.ifPresent(proposed -> proposals.update(proposed.settledOn(key, at)));
-        return unsettled.flatMap(_ -> openDecisionOf(task)).map(open -> closed(open, answerOfTheKey(open, key, captainsWords, at), actor));
+        return unsettled.flatMap(this::openTicketDecisionOf).map(open -> closed(open, answerOfTheKey(open, key, captainsWords, at), actor));
     }
 
     private Optional<ProposedTicket> unsettled(TaskId task) {
         return proposals.of(task).filter(proposed -> !proposed.isSettled());
     }
 
+    private static boolean asksForItsTicket(Decision decision, ProposedTicket proposed) {
+        return decision.card().asksTheSameAs(proposed.proposal().card());
+    }
+
     private Optional<Choice> chosenAndUnsettled(TaskId task) {
         return unsettled(task)
-                .flatMap(proposed -> decisions.ofTask(task)
+                .flatMap(proposed -> ticketDecisionOf(proposed)
                         .filter(decision -> !decision.isOpen())
                         .map(decision -> new Choice(proposed, proposed.proposal().choiceFor(decision.answer()))));
+    }
+
+    private Optional<Decision> ticketDecisionOf(ProposedTicket proposed) {
+        return decisions.everyOneOfTask(proposed.task()).reversed().stream().filter(decision -> asksForItsTicket(decision, proposed)).findFirst();
     }
 
     private TicketSettlement carriedOut(Choice chosen, Actor actor) {
@@ -229,8 +237,8 @@ public class TicketProposals {
         });
     }
 
-    private Optional<Decision> openDecisionOf(TaskId task) {
-        return decisions.ofTask(task).filter(Decision::isOpen);
+    private Optional<Decision> openTicketDecisionOf(ProposedTicket proposed) {
+        return ticketDecisionOf(proposed).filter(Decision::isOpen);
     }
 
     private DecisionNumber closed(Decision open, CaptainAnswer answer, Actor actor) {

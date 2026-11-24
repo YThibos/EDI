@@ -60,6 +60,10 @@ public record Holds(List<Hold> held) {
         return held.stream().filter(OpenDecision.class::isInstance).map(OpenDecision.class::cast).map(OpenDecision::number).toList();
     }
 
+    public String openDecisionsInWords() {
+        return String.join(" and ", openDecisions().stream().map(DecisionNumber::toString).toList());
+    }
+
     public List<Hold> releasable() {
         return held.stream().filter(not(Hold::isReleasedByItsAnswer)).toList();
     }

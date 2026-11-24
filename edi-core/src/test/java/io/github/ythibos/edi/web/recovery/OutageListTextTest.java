@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore.CountedRecovery;
 import io.github.ythibos.edi.application.supervision.OutageList;
 import io.github.ythibos.edi.application.supervision.OutageList.UnpushedWork;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
@@ -20,6 +21,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -47,7 +49,7 @@ class OutageListTextTest {
                 new WorkerWindow("edi", 7, AT, "@1", 8), new WorkerLaunch(LaunchKind.DISPATCH, AT, null, LoginName.DEFAULT))
                 .reported(new StatusReport(StatusState.WORKING, null, null, "Tests pass."), AT);
         OutageList list = new OutageList(List.of(new OutageList.Entry(entry, task, worker, new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH),
-                null, 1, new UnpushedWork(true, 2, true), Path.of("/home/edi/worktrees/harness/tune-horn"))),
+                1, new UnpushedWork(true, 2, true), Path.of("/home/edi/worktrees/harness/tune-horn"))),
                 List.of(new CountedRecovery(LaunchKind.RESUME, new TokenUsage(1, 2, 3, 4))));
 
         assertThat(new OutageListText().text(list)).isEqualTo("""
@@ -61,5 +63,21 @@ class OutageListTextTest {
                 Answer with one number and resume or fresh, such as edi recover 2 resume or edi recover 4 fresh --effort medium; you act on one number at a time.
                 Recovery so far: 1 relaunches counted (1 resumed, 0 fresh), 10 tokens (input 1, cache read 2, cache write 3, output 4).
                 """);
+    }
+
+    @Test
+    void namesEveryDecisionALostTaskStillWaitsOn() {
+        OutageEntry entry = new OutageEntry(3, new TaskId("tune-horn"), WorkerId.first(new TaskId("tune-horn")), DeathCause.MACHINE_RESTARTED, AT);
+        Task task = Task.queued(new TaskId("tune-horn"), new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(), null, null), "", AT)
+                .held(entry.hold())
+                .held(new Hold.OpenDecision(new DecisionNumber(10), AT))
+                .held(new Hold.OpenDecision(new DecisionNumber(11), AT))
+                .decisionAnswered(new DecisionNumber(11));
+        Worker worker = Worker.launched(entry.worker(), SESSION, CategoryId.IMPLEMENTATION, new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
+                new WorkerWindow("edi", 7, AT, "@1", 8), new WorkerLaunch(LaunchKind.DISPATCH, AT, null, LoginName.DEFAULT));
+        OutageList list = new OutageList(List.of(new OutageList.Entry(entry, task, worker, new Route(new ModelId("claude-sonnet-5-5"), EffortLevel.HIGH),
+                0, new UnpushedWork(true, 0, false), Path.of("/home/edi/worktrees/harness/tune-horn"))), List.of());
+
+        assertThat(new OutageListText().text(list)).contains("       waits on: the captain's answer to D10\n");
     }
 }
