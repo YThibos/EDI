@@ -10,8 +10,8 @@ import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
 public record UndeliveredAnswer(DecisionNumber decision, TaskId task, StatusKey question) {
 
-    public static Optional<UndeliveredAnswer> of(Decision decision, WorkerQuestion question, List<InboxMessage> steers) {
-        if (!decision.answers(question) || question.isResolvedByOneOf(steers)) {
+    public static Optional<UndeliveredAnswer> of(Decision decision, List<Decision> decisionsOfItsTask, WorkerQuestion question, List<InboxMessage> steers) {
+        if (!decision.answers(question, decisionsOfItsTask) || question.isResolvedByOneOf(steers)) {
             return Optional.empty();
         }
         return Optional.of(new UndeliveredAnswer(decision.number(), question.task(), question.key()));

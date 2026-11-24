@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.application.worker.SteerWorker.Steered;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
@@ -114,6 +115,30 @@ class AnswersReachTheirWorkerTest {
         assertThat(acknowledged.waitsOnThePrimary()).isTrue();
         assertThat(acknowledged.lastStatus().report().key()).isEqualTo(REVIEW_GATE);
         assertThat(home.undeliveredAnswers().waiting()).isEmpty();
+    }
+
+    @Test
+    void resolvesTheQuestionOnlyWithTheAnswerToTheFirstDecisionRaisedForIt() {
+        home.recordStatus().report(worker.id(), StatusState.NEEDS_DECISION, LAMP_CHOICE, null, "Brass or oil?");
+        DecisionNumber lamp = home.raiseDecision().raise(FIT_LAMP, card("Brass or oil?"), Actor.PRIMARY);
+        home.clock().advance(Duration.ofMinutes(5));
+        DecisionNumber paint = home.raiseDecision().raise(FIT_LAMP, card("Which paint for the mast?"), Actor.PRIMARY);
+
+        home.answerDecision().answer(new TaskReference.ByDecision(paint), new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+        InboxMessage plain = home.inbox().get(LAMP, 1).orElseThrow();
+        home.workerInbox().acknowledge(worker.id(), 1);
+
+        assertThat(plain.resolves()).isNull();
+        assertThat(plain.body()).startsWith("Answer to " + paint + " Which paint for the mast?");
+        assertThat(home.workers().get(worker.id()).orElseThrow().waitsOnThePrimary()).isTrue();
+        assertThat(home.undeliveredAnswers().waiting()).isEmpty();
+
+        home.answerDecision().answer(new TaskReference.ByDecision(lamp), new GivenAnswer("B", new OptionKey('B'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+        InboxMessage resolving = home.inbox().get(LAMP, 2).orElseThrow();
+        home.workerInbox().acknowledge(worker.id(), 2);
+
+        assertThat(resolving.resolves()).isEqualTo(LAMP_CHOICE);
+        assertThat(home.workers().get(worker.id()).orElseThrow().waitsOnThePrimary()).isFalse();
     }
 
     @Test

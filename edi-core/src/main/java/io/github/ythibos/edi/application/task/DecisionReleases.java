@@ -40,7 +40,7 @@ public class DecisionReleases {
     }
 
     public Task retiredOnceAnswered(Task released, Actor actor, Instant at) {
-        return closesNow(released) && holdsItsAnswer(released) ? retired(released, actor, at) : released;
+        return closesNow(released) && hasAnAnsweredDecision(released) ? retired(released, actor, at) : released;
     }
 
     private static boolean closesNow(Task released) {
@@ -54,7 +54,7 @@ public class DecisionReleases {
         return retired;
     }
 
-    private boolean holdsItsAnswer(Task released) {
+    private boolean hasAnAnsweredDecision(Task released) {
         return decisions.everyOneOfTask(released.id()).stream().anyMatch(not(Decision::isOpen));
     }
 }

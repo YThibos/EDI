@@ -2,7 +2,9 @@ package io.github.ythibos.edi.domain.decision;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
@@ -49,8 +51,8 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
         return answer == null;
     }
 
-    public boolean answers(WorkerQuestion question) {
-        return !isOpen() && isRaisedFor(question);
+    public boolean answers(WorkerQuestion question, List<Decision> decisionsOfItsTask) {
+        return !isOpen() && firstRaisedFor(question, decisionsOfItsTask).filter(first -> first.number().equals(number)).isPresent();
     }
 
     public boolean isRaisedFor(WorkerQuestion question) {
@@ -75,5 +77,9 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
 
     private String alreadyAnswered() {
         return number + " is already answered: \"" + answer.verbatim() + "\"";
+    }
+
+    private static Optional<Decision> firstRaisedFor(WorkerQuestion question, List<Decision> decisionsOfItsTask) {
+        return decisionsOfItsTask.stream().filter(decision -> decision.isRaisedFor(question)).min(Comparator.comparingInt(decision -> decision.number().value()));
     }
 }

@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
@@ -28,16 +29,18 @@ public class SteerWorker {
 
     private final TaskStore tasks;
     private final WorkerStore workers;
+    private final DecisionStore decisions;
     private final InboxStore inbox;
     private final EventLog events;
     private final InboxNotice notice;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public SteerWorker(TaskStore tasks, WorkerStore workers, InboxStore inbox, EventLog events, InboxNotice notice, Clock clock,
+    public SteerWorker(TaskStore tasks, WorkerStore workers, DecisionStore decisions, InboxStore inbox, EventLog events, InboxNotice notice, Clock clock,
             TransactionTemplate transaction) {
         this.tasks = tasks;
         this.workers = workers;
+        this.decisions = decisions;
         this.inbox = inbox;
         this.events = events;
         this.notice = notice;
@@ -77,8 +80,8 @@ public class SteerWorker {
         events.record(new StatusReported(message.task(), worker.id(), resolved), actor, now);
     }
 
-    private static StatusKey keySettledBy(Decision answered, WorkerQuestion question) {
-        return answered.answers(question) ? question.key() : null;
+    private StatusKey keySettledBy(Decision answered, WorkerQuestion question) {
+        return answered.answers(question, decisions.everyOneOfTask(answered.task())) ? question.key() : null;
     }
 
     public record Steered(InboxMessage message, Worker worker, SteerDelivery delivery) {

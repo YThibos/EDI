@@ -9,6 +9,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.ythibos.edi.adapter.store.DecisionStore;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.UndeliveredAnswer;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerQuestion;
@@ -38,8 +39,9 @@ public class UndeliveredAnswersQuery {
     }
 
     private Optional<UndeliveredAnswer> undeliveredAnswerTo(WorkerQuestion question) {
-        return decisions.everyOneOfTask(question.task()).reversed().stream()
-                .flatMap(decision -> UndeliveredAnswer.of(decision, question, inbox.resolvingOf(question.task())).stream())
+        List<Decision> decisionsOfItsTask = decisions.everyOneOfTask(question.task());
+        return decisionsOfItsTask.stream()
+                .flatMap(decision -> UndeliveredAnswer.of(decision, decisionsOfItsTask, question, inbox.resolvingOf(question.task())).stream())
                 .findFirst();
     }
 }

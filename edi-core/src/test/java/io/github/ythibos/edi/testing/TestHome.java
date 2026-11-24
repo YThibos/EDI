@@ -929,7 +929,7 @@ public final class TestHome {
     }
 
     public SteerWorker steerWorker() {
-        return new SteerWorker(tasks, workers, inbox, events, new InboxNotice(runtime), clock, transaction);
+        return new SteerWorker(tasks, workers, decisions, inbox, events, new InboxNotice(runtime), clock, transaction);
     }
 
     public WorkerHooks workerHooks() {
