@@ -62,7 +62,8 @@ class CleanUpTaskTest {
 
         assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
                 .hasMessage("fit-lamp#1 still works on fit-lamp;"
-                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch.");
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch,"
+                        + " or once it is stopped with edi worker stop.");
     }
 
     @Test
@@ -94,7 +95,8 @@ class CleanUpTaskTest {
 
         assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
                 .hasMessage("fit-lamp#1 still works on fit-lamp;"
-                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch.");
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch,"
+                        + " or once it is stopped with edi worker stop.");
         assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isTrue();
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
 
