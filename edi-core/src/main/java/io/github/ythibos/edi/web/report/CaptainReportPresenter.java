@@ -94,7 +94,7 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         }
         List<ReportItem> items = Stream.of(
                         dealtWith.decisions().stream().map(answered -> answeredItem(answered, wording)),
-                        dealtWith.boards().stream().map(ended -> endedBoardItem(ended, wording)),
+                        dealtWith.boards().stream().map(settled -> settledBoardItem(settled, wording)),
                         dealtWith.reviews().stream().map(settled -> settledRequestItem(settled, wording)))
                 .flatMap(Function.identity())
                 .toList();
@@ -106,9 +106,9 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return new ReportItem(wording.projectsOf(answered.task()), new CallKey.OfADecision(decision.number()) + " " + decision.card().title() + " - answered");
     }
 
-    private static ReportItem endedBoardItem(DealtWith.EndedBoard ended, TurnWording wording) {
-        return new ReportItem(wording.projectsOf(ended.task()), new CallKey.OfABoard(ended.board().id()) + " Board for " + wording.textOf(ended.task())
-                + " - ended");
+    private static ReportItem settledBoardItem(DealtWith.SettledBoard settled, TurnWording wording) {
+        return new ReportItem(wording.projectsOf(settled.task()), new CallKey.OfABoard(settled.board().id()) + " Board for "
+                + wording.textOf(settled.task()) + " - " + WaitingWords.settledBoard(settled.board()));
     }
 
     private static ReportItem settledRequestItem(DealtWith.SettledRequest settled, TurnWording wording) {

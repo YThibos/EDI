@@ -82,7 +82,7 @@ public record ConsoleSitrep(
     public record Question(String task, String title, List<String> projects, String question, Instant askedAt) {
     }
 
-    public record DealtWithShown(List<Answer> decisions, List<EndedBoard> boards, List<SettledReview> reviews) {
+    public record DealtWithShown(List<Answer> decisions, List<SettledBoard> boards, List<SettledReview> reviews) {
 
         public DealtWithShown {
             decisions = List.copyOf(decisions);
@@ -95,7 +95,7 @@ public record ConsoleSitrep(
             Instant answeredAt) {
     }
 
-    public record EndedBoard(String call, String task, String title, List<String> projects, String link) {
+    public record SettledBoard(String call, String task, String title, List<String> projects, String link, String state) {
     }
 
     public record SettledReview(String call, String task, String title, List<String> projects, String url, String state, AfterLanding afterLanding) {

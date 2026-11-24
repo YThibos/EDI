@@ -103,7 +103,7 @@ export interface WorkerQuestion {
 
 export interface DealtWith {
   decisions: AnsweredDecision[];
-  boards: EndedBoard[];
+  boards: SettledBoard[];
   reviews: SettledReview[];
 }
 
@@ -119,12 +119,13 @@ export interface AnsweredDecision {
   answeredAt: string;
 }
 
-export interface EndedBoard {
+export interface SettledBoard {
   call: string;
   task: string;
   title: string;
   projects: string[];
   link: string | null;
+  state: string;
 }
 
 export interface SettledReview {

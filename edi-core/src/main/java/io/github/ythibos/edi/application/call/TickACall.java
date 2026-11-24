@@ -48,7 +48,7 @@ public class TickACall {
         return transaction.execute(_ -> {
             DealtWithCall dealtWith = dealtWith(call);
             Instant now = clock.now();
-            ticks.tick(call, dealtWith.request(), now);
+            ticks.tick(call, dealtWith.subject(), now);
             events.record(new CallTicked(dealtWith.task(), call), actor, now);
             return call;
         });
@@ -57,7 +57,7 @@ public class TickACall {
     private DealtWithCall dealtWith(CallKey call) {
         return switch (call) {
             case CallKey.OfADecision decision -> answered(decisions.get(decision.number()), call);
-            case CallKey.OfABoard board -> ended(boards.get(board.board()).orElseThrow(() -> new UnknownCall(call)), call);
+            case CallKey.OfABoard board -> roundAnswered(boards.get(board.board()).orElseThrow(() -> new UnknownCall(call)), call);
             case CallKey.OfAReview review -> settled(deliveries.of(review.task()).orElseThrow(() -> new UnknownCall(call)), call);
         };
     }
@@ -69,11 +69,15 @@ public class TickACall {
         return new DealtWithCall(decision.task(), null);
     }
 
-    private static DealtWithCall ended(Board board, CallKey call) {
-        if (board.isListening()) {
-            throw stillWaiting(call, "the board still listens");
+    private DealtWithCall roundAnswered(Board board, CallKey call) {
+        if (waitsOnTheCaptain(board)) {
+            throw stillWaiting(call, "its round is not answered yet");
         }
-        return new DealtWithCall(board.task(), null);
+        return new DealtWithCall(board.task(), String.valueOf(board.rounds()));
+    }
+
+    private boolean waitsOnTheCaptain(Board board) {
+        return board.waitsOnTheCaptain() || board.isListening() && board.bound().stream().map(decisions::get).anyMatch(Decision::isOpen);
     }
 
     private static DealtWithCall settled(Delivery delivery, CallKey call) {
@@ -87,6 +91,6 @@ public class TickACall {
         return new Refusal(Rule.TICKED_WHEN_DEALT_WITH, call + " still waits on the captain, since " + because + "; it can be ticked once it is dealt with.");
     }
 
-    private record DealtWithCall(TaskId task, String request) {
+    private record DealtWithCall(TaskId task, String subject) {
     }
 }

@@ -20,6 +20,6 @@ public record ReturnBrief(Presence left, WaitingOnTheCaptain waiting, List<Lande
     }
 
     public Optional<ChangingRequest> comingBackOf(OngoingTask ongoing) {
-        return changing.stream().filter(request -> request.task().id().equals(ongoing.task().id())).findFirst();
+        return ChangingRequest.comingBackOf(ongoing.task().id(), changing);
     }
 }

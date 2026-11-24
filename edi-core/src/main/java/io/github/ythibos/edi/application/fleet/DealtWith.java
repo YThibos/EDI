@@ -7,7 +7,7 @@ import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.task.Task;
 
-public record DealtWith(List<Answered> decisions, List<EndedBoard> boards, List<SettledRequest> reviews) {
+public record DealtWith(List<Answered> decisions, List<SettledBoard> boards, List<SettledRequest> reviews) {
 
     public static final DealtWith NOTHING = new DealtWith(List.of(), List.of(), List.of());
 
@@ -28,7 +28,7 @@ public record DealtWith(List<Answered> decisions, List<EndedBoard> boards, List<
     public record Answered(Decision decision, Task task) {
     }
 
-    public record EndedBoard(Board board, Task task) {
+    public record SettledBoard(Board board, Task task) {
     }
 
     public record SettledRequest(Task task, Delivery delivery) {

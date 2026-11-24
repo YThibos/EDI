@@ -248,8 +248,10 @@ class DecisionsAndReportingTest {
             assertThat(postedBrief).contains("Needs your decision (1)\n  Board for Work on survey-lamps: 3 questions waiting at " + BoardRounds.LINK + "\n");
             assertThat(postedOnTheConsole).containsExactly(new ConsoleSitrep.Board("survey-lamps", "Work on survey-lamps", List.of("harness"), 3, BoardRounds.LINK,
                     List.of()));
-            assertThat(answered).contains("nothing open").doesNotContain("Board for");
-            assertThat(postedAgain).contains("NEEDS YOUR DECISION ══ 1 open", "║  Board for Work on survey-lamps: 1 question waiting at " + BoardRounds.LINK);
+            assertThat(answered).contains("nothing open", "board:" + armed.id() + " Board for Work on survey-lamps - round answered")
+                    .doesNotContain("║  Board for");
+            assertThat(postedAgain).contains("NEEDS YOUR DECISION ══ 1 open", "║  Board for Work on survey-lamps: 1 question waiting at " + BoardRounds.LINK)
+                    .doesNotContain("round answered");
         }
 
         @Test

@@ -8,11 +8,16 @@ import java.util.stream.Stream;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.task.Task;
+import io.github.ythibos.edi.domain.task.TaskId;
 
 public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAtWork, PipelineRun changingPipeline, List<Integer> unacknowledgedSteers) {
 
     public ChangingRequest {
         unacknowledgedSteers = List.copyOf(unacknowledgedSteers);
+    }
+
+    public static Optional<ChangingRequest> comingBackOf(TaskId task, List<ChangingRequest> changing) {
+        return changing.stream().filter(request -> request.task().id().equals(task)).findFirst();
     }
 
     public boolean wasMarkedReady() {

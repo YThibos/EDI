@@ -94,7 +94,7 @@ public class FleetSnapshotQuery {
     private DealtWith dealtWith() {
         return new DealtWith(
                 decisions.answeredAwaitingTheirTick().stream().map(decision -> new DealtWith.Answered(decision, tasks.get(decision.task()))).toList(),
-                boards.endedAwaitingTheirTick().stream().map(board -> new DealtWith.EndedBoard(board, tasks.get(board.task()))).toList(),
+                boards.dealtWithAwaitingTheirTick().stream().map(board -> new DealtWith.SettledBoard(board, tasks.get(board.task()))).toList(),
                 deliveries.settledAwaitingTheirTick().stream().map(delivery -> new DealtWith.SettledRequest(tasks.get(delivery.task()), delivery))
                         .toList());
     }

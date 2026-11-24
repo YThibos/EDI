@@ -16,12 +16,12 @@ public class CallTickStore {
         this.store = store;
     }
 
-    public void tick(CallKey call, String request, Instant at) {
+    public void tick(CallKey call, String subject, Instant at) {
         store.sql("""
-                        insert into call_tick (call, request, ticked_at) values (:call, :request, :at)
-                        on conflict (call) do update set request = excluded.request, ticked_at = excluded.ticked_at""")
+                        insert into call_tick (call, subject, ticked_at) values (:call, :subject, :at)
+                        on conflict (call) do update set subject = excluded.subject, ticked_at = excluded.ticked_at""")
                 .param("call", call.toString())
-                .param("request", request)
+                .param("subject", subject)
                 .param("at", Columns.text(at))
                 .update();
     }

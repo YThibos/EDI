@@ -212,15 +212,18 @@ class SitrepConsolePresenterTest {
     }
 
     @Test
-    void listsAnEndedBoardUnderItsCallUntilItIsTicked() {
+    void listsAListeningBoardWithItsRoundAnsweredAndAnEndedBoardUnderTheirCallsUntilTheyAreTicked() {
         Task research = ship("lamp-research", "Research the lamp");
+        Board listening = new Board(new BoardId(2), research.id(), "/tmp/listening.html", BoardRounds.LINK, List.of(), 1, 0, NOW, null, null);
         Board ended = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 1, 0, NOW, NOW, null);
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, new DealtWith(List.of(), List.of(new DealtWith.EndedBoard(ended, research)),
-                List.of()), List.of(), List.of(), List.of(), List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, new DealtWith(List.of(),
+                List.of(new DealtWith.SettledBoard(listening, research), new DealtWith.SettledBoard(ended, research)), List.of()), List.of(), List.of(),
+                List.of(), List.of(), List.of()));
 
-        assertThat(sitrep.dealtWith().boards()).containsExactly(new ConsoleSitrep.EndedBoard("board:3", "lamp-research", "Research the lamp",
-                List.of("harness"), BoardRounds.LINK));
+        assertThat(sitrep.dealtWith().boards()).containsExactly(
+                new ConsoleSitrep.SettledBoard("board:2", "lamp-research", "Research the lamp", List.of("harness"), BoardRounds.LINK, "round answered"),
+                new ConsoleSitrep.SettledBoard("board:3", "lamp-research", "Research the lamp", List.of("harness"), BoardRounds.LINK, "the board ended"));
     }
 
     @Test

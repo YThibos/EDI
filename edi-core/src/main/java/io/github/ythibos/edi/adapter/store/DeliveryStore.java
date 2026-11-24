@@ -68,7 +68,7 @@ public class DeliveryStore {
     public List<Delivery> settledAwaitingTheirTick() {
         return store.sql(SELECT_DELIVERIES + """
                         where state in (:merged, :closed)
-                          and not exists (select 1 from call_tick where call = :call || delivery.task_id and request = delivery.url)
+                          and not exists (select 1 from call_tick where call = :call || delivery.task_id and subject = delivery.url)
                         order by observed_at, task_id""")
                 .param("merged", MergeRequestState.MERGED.word())
                 .param("closed", MergeRequestState.CLOSED.word())

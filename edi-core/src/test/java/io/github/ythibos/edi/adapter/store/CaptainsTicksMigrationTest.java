@@ -37,7 +37,7 @@ class CaptainsTicksMigrationTest {
         DecisionStore decisions = new DecisionStore(jdbc);
 
         assertThat(decisions.answeredAwaitingTheirTick()).isEmpty();
-        assertThat(new BoardStore(jdbc).endedAwaitingTheirTick()).isEmpty();
+        assertThat(new BoardStore(jdbc).dealtWithAwaitingTheirTick()).isEmpty();
         assertThat(new DeliveryStore(jdbc).settledAwaitingTheirTick()).isEmpty();
 
         decisions.save(decisions.get(new DecisionNumber(59)).answered(
@@ -64,6 +64,8 @@ class CaptainsTicksMigrationTest {
                 .param("at", BEFORE).update();
         jdbc.sql("insert into decision_option (decision_number, position, option_key, option_text) values (59, 0, 'A', 'The warm one')").update();
         jdbc.sql("insert into board (task_id, file, rounds, armed_at, ended_at) values ('fit-lamp', '/tmp/board.html', 1, :at, :at)")
+                .param("at", BEFORE).update();
+        jdbc.sql("insert into board (task_id, file, rounds, armed_at) values ('fit-lamp', '/tmp/listening.html', 1, :at)")
                 .param("at", BEFORE).update();
         jdbc.sql("""
                         insert into delivery (task_id, provider, host, path, number, url, draft, state, landed_commit, recorded_at, observed_at)

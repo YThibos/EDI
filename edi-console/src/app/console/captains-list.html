@@ -45,9 +45,9 @@
                   }
                 </ul>
               }
-            } @else if (entry.kind === 'ended-board') {
+            } @else if (entry.kind === 'settled-board') {
               <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.board.task]">Board for {{ entry.board.title }}</a></div>
-              <div class="sr-entry__sub">the board ended · {{ projectsOf(entry.board.projects, entry.board.task) }}</div>
+              <div class="sr-entry__sub">{{ entry.board.state }} · {{ projectsOf(entry.board.projects, entry.board.task) }}</div>
             } @else if (entry.kind === 'review') {
               <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.review.task]">{{ entry.review.title }}</a></div>
               <div class="sr-entry__sub">ready for your review · {{ projectsOf(entry.review.projects, entry.review.task) }}{{ targetOf(entry.review.stackedOn) }}</div>

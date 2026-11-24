@@ -22,6 +22,6 @@ public record FleetSnapshot(WaitingOnTheCaptain waiting, DealtWith dealtWith, Li
     }
 
     public Optional<ChangingRequest> comingBackOf(TaskId task) {
-        return changing.stream().filter(request -> request.task().id().equals(task)).findFirst();
+        return ChangingRequest.comingBackOf(task, changing);
     }
 }

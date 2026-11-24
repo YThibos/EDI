@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import io.github.ythibos.edi.application.fleet.OngoingTask;
+import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 
 public final class WaitingWords {
@@ -18,6 +19,10 @@ public final class WaitingWords {
 
     public static String board(String task, int questions, String link) {
         return "Board for " + task + ": " + waiting(questions) + " at " + link;
+    }
+
+    public static String settledBoard(Board board) {
+        return board.isListening() ? "round answered" : "the board ended";
     }
 
     public static String review(String task, String address, String stackedOn) {

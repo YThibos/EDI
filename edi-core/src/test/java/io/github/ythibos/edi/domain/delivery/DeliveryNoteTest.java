@@ -59,6 +59,28 @@ class DeliveryNoteTest {
     }
 
     @Test
+    void readsAFencedCommentAsAStepRatherThanAsAHeadingThatEndsTheSection() {
+        DeliveryNote note = DeliveryNote.of("""
+                ## Steps that remain after the merge
+
+                - Restart the core:
+
+                ```bash
+                # restart the core
+                edi up
+                ```
+
+                - Tell the crew.
+
+                ## Evidence
+
+                - Tests pass.
+                """);
+
+        assertThat(note.stepsAfterLanding()).containsExactly("Restart the core:", "# restart the core", "edi up", "Tell the crew.");
+    }
+
+    @Test
     void findsNothingInANoteWithoutEitherSection() {
         DeliveryNote note = DeliveryNote.of("# Delivery note\n\n## What changed\n\n- The lamp is fitted.\n\nworked: 2026-11-18T11:00 -> 2026-11-18T11:11 = 0h11m\n");
 

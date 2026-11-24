@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.store.LoggedEvent;
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.fleet.DealtWith;
+import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.call.CallKey;
@@ -122,10 +123,55 @@ class TickACallTest {
         CallKey board = CallKey.parse("board:" + armed.id());
 
         home.boards().update(armed.ended(TestHome.START));
-        List<DealtWith.EndedBoard> ended = home.fleetSnapshot().snapshot().dealtWith().boards();
+        List<DealtWith.SettledBoard> ended = home.fleetSnapshot().snapshot().dealtWith().boards();
         home.tickACall().tick(board, Actor.CAPTAIN);
 
         assertThat(ended).extracting(endedBoard -> endedBoard.board().id()).containsExactly(armed.id());
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).isEmpty();
+    }
+
+    @Test
+    void listsAListeningBoardAsDealtWithOnceItsRoundIsAnsweredAndAgainOnceALaterRoundIsAnswered() {
+        home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
+        Board armed = home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.asking(2), TestHome.START);
+        CallKey board = CallKey.parse("board:" + armed.id());
+
+        assertThatThrownBy(() -> home.tickACall().tick(board, Actor.CAPTAIN)).isInstanceOf(Refusal.class)
+                .hasMessageContaining(board + " still waits on the captain");
+        Board answered = armed.answeredOnceMore();
+        home.boards().update(answered);
+        FleetSnapshot roundAnswered = home.fleetSnapshot().snapshot();
+        home.tickACall().tick(board, Actor.CAPTAIN);
+        FleetSnapshot ticked = home.fleetSnapshot().snapshot();
+        Board askingAgain = answered.posted(BoardRounds.asking(1));
+        home.boards().update(askingAgain);
+        FleetSnapshot laterRound = home.fleetSnapshot().snapshot();
+        home.boards().update(askingAgain.answeredOnceMore());
+        FleetSnapshot laterRoundAnswered = home.fleetSnapshot().snapshot();
+
+        assertThat(roundAnswered.waiting().boards()).isEmpty();
+        assertThat(roundAnswered.dealtWith().boards()).extracting(settled -> settled.board().id()).containsExactly(armed.id());
+        assertThat(ticked.dealtWith().boards()).isEmpty();
+        assertThat(laterRound.waiting().boards()).extracting(waiting -> waiting.board().id()).containsExactly(armed.id());
+        assertThat(laterRound.dealtWith().boards()).isEmpty();
+        assertThat(laterRoundAnswered.waiting().boards()).isEmpty();
+        assertThat(laterRoundAnswered.dealtWith().boards()).extracting(settled -> settled.board().id()).containsExactly(armed.id());
+    }
+
+    @Test
+    void refusesToTickAListeningBoardWhileADecisionItBindsIsOpenAndListsItOnceThatDecisionIsAnswered() {
+        home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
+        Board armed = home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.binding(new DecisionNumber(58)),
+                TestHome.START);
+        CallKey board = CallKey.parse("board:" + armed.id());
+
+        assertThatThrownBy(() -> home.tickACall().tick(board, Actor.CAPTAIN)).isInstanceOf(Refusal.class)
+                .satisfies(refused -> assertThat(((Refusal) refused).rule()).isEqualTo(Rule.TICKED_WHEN_DEALT_WITH));
+        answerTheLampDecision();
+        List<DealtWith.SettledBoard> decided = home.fleetSnapshot().snapshot().dealtWith().boards();
+        home.tickACall().tick(board, Actor.CAPTAIN);
+
+        assertThat(decided).extracting(settled -> settled.board().id()).containsExactly(armed.id());
         assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).isEmpty();
     }
 

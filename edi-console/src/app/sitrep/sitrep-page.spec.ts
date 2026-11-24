@@ -113,7 +113,7 @@ describe('SitrepPage', () => {
     expect(text(page, '.sr-needs .sr-sub')).toBe('2 waiting · 1 dealt with');
   });
 
-  it('keeps the list as tall as its entries, so the page scrolls and never the list', async () => {
+  it('shows the captain\'s list in place of the deck, its card counter and the lines beneath it', async () => {
     const page = (await rendered()).nativeElement as HTMLElement;
 
     expect(page.querySelector('.sr-needs app-captains-list')).not.toBeNull();

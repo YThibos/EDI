@@ -51,7 +51,6 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.BoardDecision;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Card;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Charted;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.DealtWithShown;
-import io.github.ythibos.edi.web.console.ConsoleSitrep.EndedBoard;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Landed;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.LimitStop;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Ongoing;
@@ -59,6 +58,7 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Option;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.PresenceShown;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Recommendation;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Review;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.SettledBoard;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.SettledReview;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Question;
 import io.github.ythibos.edi.web.presence.PresenceWords;
@@ -113,7 +113,7 @@ public class SitrepConsolePresenter {
     }
 
     private static LimitStop limitStopOf(List<OngoingTask> ongoing) {
-        List<OngoingTask> stopped = ongoing.stream().filter(SitrepConsolePresenter::standsOnTheLimit).toList();
+        List<OngoingTask> stopped = ongoing.stream().filter(standing -> standsOnTheLimit(standing.worker())).toList();
         if (stopped.isEmpty()) {
             return null;
         }
@@ -121,13 +121,12 @@ public class SitrepConsolePresenter {
         return new LimitStop(firstReset, stopped.stream().map(standing -> standing.task().id().value()).toList());
     }
 
-    private static boolean standsOnTheLimit(OngoingTask ongoing) {
-        Worker worker = ongoing.worker();
+    private static boolean standsOnTheLimit(Worker worker) {
         return worker != null && !worker.isRetired() && worker.limitPark() != null;
     }
 
     private static Instant limitResetOf(OngoingTask ongoing) {
-        return standsOnTheLimit(ongoing) ? ongoing.worker().limitPark().limit().resetsAt() : null;
+        return standsOnTheLimit(ongoing.worker()) ? ongoing.worker().limitPark().limit().resetsAt() : null;
     }
 
     private static List<Task> tasksShown(FleetSnapshot fleet, List<ChartedTask> charted) {
@@ -136,7 +135,7 @@ public class SitrepConsolePresenter {
                         fleet.waiting().boards().stream().map(WaitingBoard::task),
                         fleet.waiting().reviews().stream().map(ReadyForReview::task),
                         fleet.dealtWith().decisions().stream().map(DealtWith.Answered::task),
-                        fleet.dealtWith().boards().stream().map(DealtWith.EndedBoard::task),
+                        fleet.dealtWith().boards().stream().map(DealtWith.SettledBoard::task),
                         fleet.dealtWith().reviews().stream().map(SettledRequest::task),
                         fleet.ongoing().stream().map(OngoingTask::task),
                         fleet.landed().stream().limit(LANDED_SHOWN).map(LandedTask::task),
@@ -202,7 +201,7 @@ public class SitrepConsolePresenter {
 
     private static DealtWithShown dealtWithShown(DealtWith dealtWith, Map<TaskId, DeliveryNote> notes) {
         return new DealtWithShown(dealtWith.decisions().stream().map(SitrepConsolePresenter::answer).toList(),
-                dealtWith.boards().stream().map(SitrepConsolePresenter::endedBoard).toList(),
+                dealtWith.boards().stream().map(SitrepConsolePresenter::settledBoard).toList(),
                 dealtWith.reviews().stream().map(settled -> settledReview(settled, notes)).toList());
     }
 
@@ -214,10 +213,10 @@ public class SitrepConsolePresenter {
                 answer.channel().word(), answer.answeredAt());
     }
 
-    private static EndedBoard endedBoard(DealtWith.EndedBoard ended) {
-        Task task = ended.task();
-        return new EndedBoard(new CallKey.OfABoard(ended.board().id()).toString(), task.id().value(), task.intake().title(), projectsOf(task),
-                ended.board().link());
+    private static SettledBoard settledBoard(DealtWith.SettledBoard settled) {
+        Task task = settled.task();
+        return new SettledBoard(new CallKey.OfABoard(settled.board().id()).toString(), task.id().value(), task.intake().title(), projectsOf(task),
+                settled.board().link(), WaitingWords.settledBoard(settled.board()));
     }
 
     private static SettledReview settledReview(SettledRequest settled, Map<TaskId, DeliveryNote> notes) {
@@ -273,7 +272,7 @@ public class SitrepConsolePresenter {
         if (worker == null) {
             return WITHOUT_A_WORKER;
         }
-        if (!worker.isRetired() && worker.limitPark() != null) {
+        if (standsOnTheLimit(worker)) {
             return ON_THE_USAGE_LIMIT;
         }
         if (worker.lastStatus() == null) {
@@ -299,7 +298,7 @@ public class SitrepConsolePresenter {
         if (worker == null) {
             return "no worker yet";
         }
-        if (standsOnTheLimit(ongoing)) {
+        if (standsOnTheLimit(worker)) {
             return "stopped on the " + worker.limitPark().limit().name();
         }
         return worker.lastStatus() == null ? worker.activity().word() : reportedDoing(worker.lastStatus().report());

@@ -88,11 +88,13 @@ public class BoardStore {
         return boards(store.sql(SELECT_BOARDS + "where task_id = :task and " + LISTENING + " order by id").param("task", task.value()));
     }
 
-    public List<Board> endedAwaitingTheirTick() {
+    public List<Board> dealtWithAwaitingTheirTick() {
         return boards(store.sql(SELECT_BOARDS + """
-                        where not (%s)
-                          and (rounds > 0 or open_questions > 0 or exists (select 1 from board_decision where board_id = board.id))
-                          and not exists (select 1 from call_tick where call = :call || board.id)
+                        where (rounds > 0 or open_questions > 0 or exists (select 1 from board_decision where board_id = board.id))
+                          and not (%s and (open_questions > 0 or exists (
+                                  select 1 from board_decision join decision on decision.number = board_decision.decision_number
+                                  where board_decision.board_id = board.id and decision.answered_at is null)))
+                          and not exists (select 1 from call_tick where call = :call || board.id and subject = cast(board.rounds as text))
                         order by id""".formatted(LISTENING)).param("call", CallKey.BOARD));
     }
 

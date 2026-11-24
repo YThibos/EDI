@@ -1,4 +1,4 @@
-import { AnsweredDecision, DecisionCard, EndedBoard, ReadyForReview, SettledReview, Sitrep, WaitingBoard } from './sitrep';
+import { AnsweredDecision, DecisionCard, ReadyForReview, SettledBoard, SettledReview, Sitrep, WaitingBoard } from './sitrep';
 import { cardsOffTheBoards } from './waiting';
 
 export type ListEntry =
@@ -6,7 +6,7 @@ export type ListEntry =
   | { kind: 'board'; key: string; dealtWith: false; board: WaitingBoard }
   | { kind: 'review'; key: string; dealtWith: false; review: ReadyForReview }
   | { kind: 'answered'; key: string; dealtWith: true; answer: AnsweredDecision }
-  | { kind: 'ended-board'; key: string; dealtWith: true; board: EndedBoard }
+  | { kind: 'settled-board'; key: string; dealtWith: true; board: SettledBoard }
   | { kind: 'settled-review'; key: string; dealtWith: true; review: SettledReview };
 
 export function entriesOf(sitrep: Sitrep): ListEntry[] {
@@ -17,7 +17,7 @@ export function entriesOf(sitrep: Sitrep): ListEntry[] {
     ...sitrep.boards.map(boardEntry),
     ...sitrep.reviews.map(reviewEntry),
     ...sitrep.dealtWith.decisions.map(answeredEntry),
-    ...sitrep.dealtWith.boards.map(endedBoardEntry),
+    ...sitrep.dealtWith.boards.map(settledBoardEntry),
     ...sitrep.dealtWith.reviews.map(settledReviewEntry),
   ];
 }
@@ -35,7 +35,7 @@ export function opensFurther(entry: ListEntry): boolean {
     case 'settled-review':
       return entry.review.afterLanding.steps.length > 0 || !!entry.review.afterLanding.landingOrder;
     case 'board':
-    case 'ended-board':
+    case 'settled-board':
       return false;
   }
 }
@@ -44,7 +44,7 @@ export function callOf(entry: ListEntry): string | null {
   switch (entry.kind) {
     case 'answered':
       return entry.answer.call;
-    case 'ended-board':
+    case 'settled-board':
       return entry.board.call;
     case 'settled-review':
       return entry.review.call;
@@ -71,8 +71,8 @@ function answeredEntry(answer: AnsweredDecision): ListEntry {
   return { kind: 'answered', key: answer.number, dealtWith: true, answer };
 }
 
-function endedBoardEntry(board: EndedBoard): ListEntry {
-  return { kind: 'ended-board', key: board.call, dealtWith: true, board };
+function settledBoardEntry(board: SettledBoard): ListEntry {
+  return { kind: 'settled-board', key: board.call, dealtWith: true, board };
 }
 
 function settledReviewEntry(review: SettledReview): ListEntry {

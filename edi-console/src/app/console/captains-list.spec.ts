@@ -140,20 +140,23 @@ describe('CaptainsList', () => {
     expect(settled).toBe(0);
   });
 
-  it('lists an ended board and a merged request as dealt with until the captain ticks them', async () => {
+  it('lists an answered round, an ended board and a merged request as dealt with until the captain ticks them', async () => {
     const list = await listed(
       sitrepFixture({
         decisions: [],
         dealtWith: {
           decisions: [],
-          boards: [{ call: 'board:3', task: 'lamp-research', title: 'Research the lamp', projects: ['harness'], link: null }],
+          boards: [
+            { call: 'board:2', task: 'bell-research', title: 'Research the bell', projects: ['harness'], link: null, state: 'round answered' },
+            { call: 'board:3', task: 'lamp-research', title: 'Research the lamp', projects: ['harness'], link: null, state: 'the board ended' },
+          ],
           reviews: [{ ...REVIEW_WITH_STEPS, call: 'review:fit-lamp', state: 'merged' }],
         },
       }),
     );
 
-    expect(texts(list, '.sr-entry__sub')).toEqual(['the board ended · harness', 'merged · harness']);
-    expect(list.querySelectorAll('.sr-entry--dealt')).toHaveLength(2);
+    expect(texts(list, '.sr-entry__sub')).toEqual(['round answered · harness', 'the board ended · harness', 'merged · harness']);
+    expect(list.querySelectorAll('.sr-entry--dealt')).toHaveLength(3);
 
     await toggle(list, 'review:fit-lamp');
 
