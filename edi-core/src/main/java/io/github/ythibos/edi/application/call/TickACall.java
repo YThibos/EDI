@@ -1,7 +1,5 @@
 package io.github.ythibos.edi.application.call;
 
-import static java.util.function.Predicate.not;
-
 import java.time.Instant;
 import java.util.List;
 
@@ -18,6 +16,7 @@ import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.call.UnknownCall;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -77,16 +76,20 @@ public class TickACall {
         if (waitsOnTheCaptain(board)) {
             throw stillWaiting(call, "its round is not answered yet");
         }
-        return new DealtWithCall(board.task(), null, answeredDecisionsBoundBy(board));
+        return new DealtWithCall(board.task(), null, decisionsAnsweredOnTheBoard(board));
     }
 
     private boolean waitsOnTheCaptain(Board board) {
         return board.waitsOnTheCaptain() || board.isListening() && board.bound().stream().map(decisions::get).anyMatch(Decision::isOpen);
     }
 
-    private List<CallKey> answeredDecisionsBoundBy(Board board) {
-        return board.bound().stream().map(decisions::get).filter(not(Decision::isOpen))
+    private List<CallKey> decisionsAnsweredOnTheBoard(Board board) {
+        return board.bound().stream().map(decisions::get).filter(TickACall::isAnsweredOnABoard)
                 .<CallKey>map(decision -> new CallKey.OfADecision(decision.number())).toList();
+    }
+
+    private static boolean isAnsweredOnABoard(Decision decision) {
+        return !decision.isOpen() && decision.answer().channel() == AnswerChannel.BOARD;
     }
 
     private static DealtWithCall settled(Delivery delivery, CallKey call) {

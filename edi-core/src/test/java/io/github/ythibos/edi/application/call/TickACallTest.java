@@ -208,6 +208,8 @@ class TickACallTest {
 
         assertThat(decided).extracting(settled -> settled.board().id()).containsExactly(armed.id());
         assertThat(home.fleetSnapshot().snapshot().dealtWith().boards()).isEmpty();
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().decisions()).extracting(answered -> answered.decision().number())
+                .containsExactly(new DecisionNumber(58));
     }
 
     @Test
@@ -222,6 +224,23 @@ class TickACallTest {
         home.tickACall().tick(D58, Actor.CAPTAIN);
 
         assertThat(answered).extracting(decision -> decision.decision().number()).containsExactly(new DecisionNumber(58));
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().isEmpty()).isTrue();
+    }
+
+    @Test
+    void listsADecisionAnsweredOnThePageAfterItsBoardEndedUnansweredUntilItIsTickedAlthoughTheBoardIsTicked() throws IOException {
+        home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
+        Board armed = home.boards().arm(new TaskId("lantern"), boardFile().toString(), BoardRounds.binding(new DecisionNumber(58)), TestHome.START);
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.ClosedEmpty());
+
+        answerTheLampDecision();
+        List<DealtWith.Answered> beforeTheBoardsTick = home.fleetSnapshot().snapshot().dealtWith().decisions();
+        home.tickACall().tick(callOf(armed), Actor.CAPTAIN);
+        List<DealtWith.Answered> afterTheBoardsTick = home.fleetSnapshot().snapshot().dealtWith().decisions();
+        home.tickACall().tick(D58, Actor.CAPTAIN);
+
+        assertThat(beforeTheBoardsTick).extracting(decision -> decision.decision().number()).containsExactly(new DecisionNumber(58));
+        assertThat(afterTheBoardsTick).extracting(decision -> decision.decision().number()).containsExactly(new DecisionNumber(58));
         assertThat(home.fleetSnapshot().snapshot().dealtWith().isEmpty()).isTrue();
     }
 
