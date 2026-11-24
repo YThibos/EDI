@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -61,7 +62,7 @@ export class GitHub {
     }
 
     static ofTheEdiClone() {
-        const clone = ediClone();
+        const clone = existingEdiClone();
         return new GitHub(repositoryOfTheRemote(clone), ghEnvironment(clone, hostOfTheRemote(clone)));
     }
 
@@ -100,8 +101,12 @@ export class GitHub {
     }
 }
 
-function ediClone() {
-    return join(process.env.EDI_HOME ?? join(homedir(), '.edi'), 'projects', PROJECT);
+function existingEdiClone() {
+    const clone = join(process.env.EDI_HOME ?? join(homedir(), '.edi'), 'projects', PROJECT);
+    if (!existsSync(clone)) {
+        throw new Refusal(`There is no EDI clone at ${clone} to name the EDI upstream: set EDI_HOME to the EDI home that holds it, or name the repository with --repo OWNER/NAME where the script takes one.`);
+    }
+    return clone;
 }
 
 export function repositoryOfTheRemote(directory) {

@@ -75,5 +75,9 @@ function relabel(github, issue, raised) {
 }
 
 function comment(github, issue, marker, headline, finding) {
-    github.post(`issues/${issue.number}/comments`, { body: `${marker} ${headline}\n\n${finding}` });
+    try {
+        github.post(`issues/${issue.number}/comments`, { body: `${marker} ${headline}\n\n${finding}` });
+    } catch (failure) {
+        throw new Refusal(`#${issue.number} is raised, but the finding was not posted: ${failure.message}\nPost the finding on #${issue.number} by hand; bumping it again would raise it a second level.`);
+    }
 }

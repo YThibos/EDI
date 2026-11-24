@@ -53,6 +53,9 @@ function answered(verb, parts, body) {
         return paged(world.events[id] ?? []);
     }
     if (collection === 'issues' && child === 'comments') {
+        if (verb === 'POST' && world.commentWritesRefused) {
+            fail('HTTP 502: Bad Gateway');
+        }
         if (verb === 'POST') {
             const comment = { id: Date.now(), user: { login: actor() }, body: body.body };
             (world.comments[id] ??= []).push(comment);

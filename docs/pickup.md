@@ -113,5 +113,6 @@ node ops/backlog/bump.mjs <issue> < finding.md
 
 The script moves the issue exactly one level towards `priority-1-urgent`, then posts the finding as a comment opening with the session marker, or with `[EDI primary]` under `--primary`.
 It refuses an empty finding, a closed issue and an issue already at `priority-1-urgent`, and then changes nothing.
+When the comment fails after the raise, it says the issue is raised already; post the finding on it by hand, since a second bump would raise it a second level.
 On the captain's machine it goes to the upstream of the EDI clone in the EDI home, as the account the clone is pinned to, whatever directory it runs in; a session with nothing but this repository names it with `--repo <owner>/<name>`, as its `origin` reads.
 Only when no open issue covers the slip is a new item opened, with the priority its cost sets.

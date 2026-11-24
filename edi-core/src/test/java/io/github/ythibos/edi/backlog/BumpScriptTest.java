@@ -170,6 +170,35 @@ class BumpScriptTest {
         assertThat(github.issue(22).get("labels").toString()).isEqualTo("[\"priority-4-low\"]");
     }
 
+    @Test
+    void aFailedCommentSaysTheIssueIsRaisedAlreadySoItIsNotBumpedTwice() throws IOException, InterruptedException {
+        StandInGitHub github = StandInGitHub.serving(directory, """
+                {"owner": {"login": "harbour-master", "type": "User"}, "commentWritesRefused": true,
+                "issues": [%s]}""".formatted(issue(23, "open", "priority-4-low")));
+
+        StandInGitHub.Run run = bump(github, FINDING, "23");
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("#23 is raised, but the finding was not posted:", "HTTP 502",
+                "Post the finding on #23 by hand; bumping it again would raise it a second level.");
+        assertThat(github.issue(23).get("labels").toString()).isEqualTo("[\"priority-3-normal\"]");
+    }
+
+    @Test
+    void anEdiHomeWithoutTheCloneIsRefusedNamingWhereTheCloneIsLookedFor() throws IOException, InterruptedException {
+        StandInGitHub github = serving(issue(24, "open", "priority-4-low"));
+        Path emptyHome = Files.createDirectories(directory.resolve("empty-home"));
+
+        StandInGitHub.Run run = github.run(processes, directory.resolve("lighthouse"), Map.of(
+                "EDI_HOME", emptyHome.toString(),
+                "GIT_CONFIG_GLOBAL", "/dev/null",
+                "GIT_CONFIG_NOSYSTEM", "1"), StandInGitHub.node(SCRIPT, "24"), FINDING);
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("There is no EDI clone at " + emptyHome.resolve("projects/EDI"), "--repo OWNER/NAME");
+        assertThat(github.calls()).isEmpty();
+    }
+
     @BeforeEach
     void anEdiHomeWhoseCloneNamesTheUpstreamBesideAnotherProjectsCheckout() throws IOException {
         assumeTrue(InstalledPrograms.answers("node", "--version"), "node is not installed");
