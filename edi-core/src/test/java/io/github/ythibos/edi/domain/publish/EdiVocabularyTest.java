@@ -39,6 +39,8 @@ class EdiVocabularyTest {
         "Auditing only the decision's entries (Q4 B) was rejected.",
         "Answered Q10 A, then Q15 A.",
         "The plan's PLAN2 A holds.",
+        "For the lamp, see Q15.",
+        "The developer answered Q10 with option A.",
         "D139's option text said otherwise."})
     void refusesTheDecisionAndQuestionCodes(String line) {
         assertThat(EdiVocabulary.findIn("the summary", line)).isNotEmpty().allSatisfy(finding ->
@@ -60,7 +62,7 @@ class EdiVocabularyTest {
         "The fingerprint ends 65:53:D3 as expected.",
         "Pick FED3 for the person.",
         "Booked on JUSTMD-75 and EDI-237.",
-        "Due in Q1 2027, reviewed in Q4.",
+        "Due in Q1 2027.",
         "Drawn with D3.js on an A4 page.",
         "Times follow ISO 8601 and Java 25."})
     void letsPlainProjectWordingThrough(String line) {

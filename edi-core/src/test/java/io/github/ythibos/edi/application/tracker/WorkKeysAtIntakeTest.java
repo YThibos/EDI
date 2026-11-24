@@ -49,6 +49,15 @@ class WorkKeysAtIntakeTest {
     }
 
     @Test
+    void keysUnkeyedWorkOnAnEdiNativeTrackerWhateverItsTitleSays() {
+        AddedTask added = home.addTask().add(TrackerFixtures.ship("fit-lamp", "harness", "Fit the lamp the captain saw, as D103 settled", null),
+                Actor.PRIMARY);
+
+        assertThat(added.ticket()).isEqualTo(Ticket.keyedOnly(WorkKey.parse("HRN-1")));
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).intake().workKey()).isEqualTo(WorkKey.parse("HRN-1"));
+    }
+
+    @Test
     void asksTheCaptainWhichTicketUnkeyedTrackerWorkBooksOn() {
         AddedTask added = home.addTask().add(TrackerFixtures.ship("fix-lamps", "service", "Fix the harbour lamps", null), Actor.PRIMARY);
 

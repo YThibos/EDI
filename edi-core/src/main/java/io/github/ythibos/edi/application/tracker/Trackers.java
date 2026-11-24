@@ -29,7 +29,7 @@ public class Trackers {
     public Tracker serving(ProjectEntry project) {
         requireReachable(project);
         Tracker adapter = adapterFor(project);
-        return project.project().name().isEdiItself() ? adapter : new PlainlyWordedTracker(adapter);
+        return publishesTextOutsideEdi(project) ? new PlainlyWordedTracker(adapter) : adapter;
     }
 
     public Optional<String> browseAddressOf(ProjectEntry project, WorkKey key) {
@@ -72,5 +72,9 @@ public class Trackers {
                 .filter(tracker -> tracker.kind() == project.tracker())
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No adapter serves " + project.tracker().word() + " trackers."));
+    }
+
+    private boolean publishesTextOutsideEdi(ProjectEntry project) {
+        return project.tracker().isExternal() && !project.project().name().isEdiItself();
     }
 }

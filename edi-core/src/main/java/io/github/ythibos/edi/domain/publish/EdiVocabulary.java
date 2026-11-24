@@ -12,7 +12,7 @@ public final class EdiVocabulary {
 
     private static final Pattern ADDRESS_WORD = Pattern.compile("(?<!\\p{Alnum})(?:captain|commander)", Pattern.CASE_INSENSITIVE);
     private static final Pattern INTERNAL_CODE = Pattern.compile(
-            "(?<![\\w:./-])(?:D\\d+(?: [A-Z](?!\\w))?|[A-Z]+\\d+ [A-Z])(?![\\w:/-]|[.,]\\w)");
+            "(?<![\\w:./-])(?:(?:D\\d++|Q\\d++(?! \\d{4}(?!\\d)))(?: [A-Z](?!\\w))?|[A-Z]+\\d+ [A-Z])(?![\\w:/-]|[.,]\\w)");
 
     private EdiVocabulary() {
     }
