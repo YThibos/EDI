@@ -402,13 +402,13 @@ class DecisionsAndReportingTest {
             ConsoleSitrep.Ongoing mergedOnTheConsole = consoleSitrep(home).ongoing().getFirst();
 
             String target = "(targets slice/lamps, not the base: merging it does not land the work)";
-            assertThat(report.replaceAll("\\s*\n║\\s*", " ")).contains("Ready for your review: Work on fit-lamp - " + REQUEST + " " + target);
+            assertThat(report.replaceAll("\n║ *", " ")).contains("Ready for your review: Work on fit-lamp - " + REQUEST + " " + target);
             assertThat(brief).contains("Ready for your review: Work on fit-lamp - " + REQUEST + " " + target + "\n");
             assertThat(digest).contains("review  fit-lamp  " + REQUEST + "  targets slice/lamps, not the base: merging it does not land the work\n");
             assertThat(onTheConsole).extracting(ConsoleSitrep.Review::stackedOn).containsExactly("slice/lamps");
             String notLanded = "its request merged into slice/lamps, so the work did not land through its own request;"
                     + " once slice/lamps lands on the base and its worker is stopped, edi cleanup fit-lamp retires it";
-            assertThat(merged.replaceAll("\\s*\n[║ ]*", " ")).contains("Work on fit-lamp: " + notLanded).doesNotContain("Ready for your review");
+            assertThat(merged.replaceAll("\n[║ ]*", " ")).contains("Work on fit-lamp: " + notLanded).doesNotContain("Ready for your review");
             assertThat(mergedBrief).contains("Work on fit-lamp: " + notLanded + "\n");
             assertThat(mergedOnTheConsole.doing()).isEqualTo("Fitted. - " + notLanded);
         }
@@ -428,7 +428,7 @@ class DecisionsAndReportingTest {
 
             String target = "targets slice/lamps, not the base: merging it does not land the work";
             assertThat(onTheConsole.reviews()).isEmpty();
-            assertThat(report.replaceAll("\\s*\n║\\s*", " ")).contains("Work on fit-lamp: " + target).doesNotContain("Ready for your review");
+            assertThat(report.replaceAll("\n║ *", " ")).contains("Work on fit-lamp: " + target).doesNotContain("Ready for your review");
             assertThat(brief).contains("Work on fit-lamp: " + target + "\n");
             assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::doing).containsExactly("pipeline review - " + target);
         }
