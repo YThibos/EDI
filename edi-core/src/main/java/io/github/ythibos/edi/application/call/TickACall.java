@@ -1,6 +1,9 @@
 package io.github.ythibos.edi.application.call;
 
+import static java.util.function.Predicate.not;
+
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -49,6 +52,7 @@ public class TickACall {
             DealtWithCall dealtWith = dealtWith(call);
             Instant now = clock.now();
             ticks.tick(call, dealtWith.subject(), now);
+            dealtWith.answeredOnTheBoard().forEach(decision -> ticks.tick(decision, null, now));
             events.record(new CallTicked(dealtWith.task(), call), actor, now);
             return call;
         });
@@ -66,31 +70,36 @@ public class TickACall {
         if (decision.isOpen()) {
             throw stillWaiting(call, "it is not answered yet");
         }
-        return new DealtWithCall(decision.task(), null);
+        return new DealtWithCall(decision.task(), null, List.of());
     }
 
     private DealtWithCall roundAnswered(Board board, CallKey call) {
         if (waitsOnTheCaptain(board)) {
             throw stillWaiting(call, "its round is not answered yet");
         }
-        return new DealtWithCall(board.task(), null);
+        return new DealtWithCall(board.task(), null, answeredDecisionsBoundBy(board));
     }
 
     private boolean waitsOnTheCaptain(Board board) {
         return board.waitsOnTheCaptain() || board.isListening() && board.bound().stream().map(decisions::get).anyMatch(Decision::isOpen);
     }
 
+    private List<CallKey> answeredDecisionsBoundBy(Board board) {
+        return board.bound().stream().map(decisions::get).filter(not(Decision::isOpen))
+                .<CallKey>map(decision -> new CallKey.OfADecision(decision.number())).toList();
+    }
+
     private static DealtWithCall settled(Delivery delivery, CallKey call) {
         if (delivery.isOpen()) {
             throw stillWaiting(call, "its request is still open");
         }
-        return new DealtWithCall(delivery.task(), delivery.address().url());
+        return new DealtWithCall(delivery.task(), delivery.address().url(), List.of());
     }
 
     private static Refusal stillWaiting(CallKey call, String because) {
         return new Refusal(Rule.TICKED_WHEN_DEALT_WITH, call + " still waits on the captain, since " + because + "; it can be ticked once it is dealt with.");
     }
 
-    private record DealtWithCall(TaskId task, String subject) {
+    private record DealtWithCall(TaskId task, String subject, List<CallKey> answeredOnTheBoard) {
     }
 }
