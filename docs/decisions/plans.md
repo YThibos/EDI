@@ -27,7 +27,15 @@ A `Slice` is a task with its number in the plan, its dispatch category and one `
 A slice that is not eligible names what holds it back, worded as the backlog words it: its hold, and each unmet wait of its task outside the plan, such as the scout a research-first dispatch queued for it.
 The backlog, `edi task show` and the console name only the waits not yet met, so a task whose waits are all met is never shown as waiting.
 `V29__plans_and_their_waits.sql` adds the `plan` and `plan_slice` tables; a slice's wait refers to an earlier slice of the same plan by a foreign key and a check.
-Entering a plan dispatches nothing: the plan dispatching its eligible slices within its capacity is EDI-89, and one effort word honoured for every slice is EDI-90.
+Each supervision round, after the deferred dispatches, `DispatchEligibleSlices` dispatches the plan's slices itself, so nobody dispatches a slice by hand ([supervision](supervision.md)).
+It takes every plan that still has a queued slice, oldest first, and its eligible slices in their order, and dispatches each through the same `DispatchTask` as a dispatch by hand, with the slice's category, while three things hold: the plan has a free place, its project has room for another worker, and the captain's presence allows one more (`RoomForAWorker`, [dispatch-routing](dispatch-routing.md)).
+A plan's free places are its capacity less its slices at work, those WORKING or CHANGING, so a slice frees its place once it is delivered and takes it again while it is changed.
+A slice dispatched before, such as a ship whose research went first, keeps the category of its dispatch.
+Dispatch stays serialised in `DispatchTask`, so the round and the primary never choose a branch number at once ([work-keys-and-branches](work-keys-and-branches.md)).
+A plan is entered only with the decision that gave its go (`PlanHeading` refuses one without), and that go covers every slice: the core asks no word of the captain per slice, and the wake says the slice went under the plan's go.
+Each slice the round dispatches records `SliceDispatched` and wakes the primary once, telling it which worker took the slice up, or that its research goes first, so it dispatches nothing for it.
+A slice the round cannot dispatch records `SliceNotDispatched` with the refusal and wakes the primary; the round tries again each time, gives the slice's place to the next eligible slice meanwhile, and wakes the primary again only when the reason changes or after the core restarts.
+The effort ceiling stays high for every slice; one effort word honoured for every slice of a plan is EDI-90.
 
 ## Why
 
@@ -35,12 +43,15 @@ The order of a plan's work is stored once, beside the tasks it orders, so nobody
 A slice can wait for a merge rather than a cleanup, which lets the next slice start as soon as the work it builds on is in the base branch.
 One list of waits, read the same way by dispatch, the backlog and the reports, means a wait cannot be honoured in one place and ignored in another.
 Entering the whole plan in one call and one transaction leaves either every slice queued with its wait or nothing at all.
+The captain chose Q9 A: the core dispatches the next slice once its wait is met and the plan has room, so a plan costs one go instead of one captain prompt and one primary turn per slice, and its order no longer depends on the primary remembering it.
 
 ## Alternatives rejected
 
 - A wait on any task, as `--blocked-by` - the plan's order is in slice numbers, and a slice waiting outside its plan would make the plan's order something no plan shows.
 - Several waits per slice - the captain chose one wait per slice (Q8 A), and the plans so far needed no more.
 - Storing a slice's wait as a blocker of its task - a wait on a merge is not a blocker, and closing the awaited task would erase the plan's recorded order.
+- Waking the primary each round a slice's dispatch is refused - the same refusal would reach it every 30 seconds.
+- Holding a slice's place while its dispatch is refused - one slice that cannot start would stall every later slice of its plan.
 - A plan id of its own - the umbrella key already names the plan everywhere the captain reads it, such as "the EDI-52 plan".
 - A wait on a dropped slice that is never met - the plan would stall with no command to change the wait, and a closed task blocks nobody elsewhere in EDI.
 
@@ -48,6 +59,8 @@ Entering the whole plan in one call and one transaction leaves either every slic
 
 - Good: `edi plan show` answers what can start next without reading notes or the forge.
 - Good: the primary's by-hand plan habits, queueing the next step before a merge and reading the forge for merge order, expire with this work.
+- Good: a plan dispatches itself, so the captain's go on it is the last prompt it needs, and the primary only hears of each slice as it starts.
+- Bad: a slice whose dispatch is refused keeps being tried each round until its cause is put right or the slice is held.
 - Bad: a slice's wait and a task's blockers are stored in two tables and joined when they are read.
 - Bad: a plan cannot yet be changed once entered; a wrong slice is dropped and entered again outside the plan.
 
@@ -59,3 +72,4 @@ When a slice needs to wait for more than one earlier slice, or a plan needs to c
 
 - 26/10/2026: the EDI-74 scout found plans kept in notes and in the primary's head, and proposed plans as a first-class domain object; the captain chose Q8 A, Q9 A and Q10 A.
 - 13/11/2026: plans, slices and their waits entered the domain and the store, with `edi plan add` and `edi plan show`, and `--blocked-by` became "after landed" (EDI-88).
+- 24/11/2026: the supervision round began dispatching each eligible slice within the plan's and the project's capacity and the captain's presence, and waking the primary with each (EDI-89).
