@@ -84,7 +84,11 @@ class InternalVocabularyPushTest {
                 .write("docs/stories/HRN-3.md", STORY.formatted("HRN-3", "Fitted on the developer's word."))
                 .commit("HRN-3 Describe the lamp story");
 
-        assertThat(checked(worktree).findings()).isEmpty();
+        PublishVerdict verdict = checked(worktree);
+
+        assertThat(verdict.findings()).isEmpty();
+        assertThat(verdict.conclusion(OUTGOING))
+                .isEqualTo("Clear: no secret, no personal material, no -SNAPSHOT version and no internal vocabulary in origin/main..HEAD");
     }
 
     @Test
@@ -105,7 +109,10 @@ class InternalVocabularyPushTest {
                 .write("docs/stories/EDI-5.md", STORY.formatted("EDI-5", "Fitted on the captain's word, as D58 A settled."))
                 .commit("EDI-5 Address the captain as the commander");
 
-        assertThat(checked(worktree).allowsPush()).isTrue();
+        PublishVerdict verdict = checked(worktree);
+
+        assertThat(verdict.allowsPush()).isTrue();
+        assertThat(verdict.conclusion(OUTGOING)).isEqualTo("Clear: no secret, no personal material and no -SNAPSHOT version in origin/main..HEAD");
     }
 
     private FixtureRepository copyOf(String task, String project, String key) {

@@ -22,7 +22,7 @@ class PublishVerdictTest {
                 PublishFinding.onLine(PublishRule.DENIED_TERM, DENIED_PATH, 4, COMMIT_ID, "deny-list entry 1"),
                 PublishFinding.onLine(PublishRule.SECRET, DENIED_PATH, 7, COMMIT_ID, "gitleaks rule generic-api-key"),
                 PublishFinding.onPath(PublishRule.PERSONAL_PATH, DENIED_PATH, COMMIT_ID, "inside the personal layer"),
-                PublishFinding.onLine(PublishRule.SECRET, CLEAN_PATH, 2, COMMIT_ID, "gitleaks rule generic-api-key")));
+                PublishFinding.onLine(PublishRule.SECRET, CLEAN_PATH, 2, COMMIT_ID, "gitleaks rule generic-api-key")), VocabularyCheck.CHECKED);
 
         PublishVerdict hidden = verdict.hidingPathsDeniedBy(denyList, changes);
 
@@ -33,5 +33,20 @@ class PublishVerdictTest {
                 "path 2 of commit 0123456: inside the personal layer",
                 "docs/readme.md:2 in commit 0123456: gitleaks rule generic-api-key");
         assertThat(hidden.allowsPush()).isFalse();
+    }
+
+    @Test
+    void claimsNoInternalVocabularyOnlyWhereTheCheckRan() {
+        RevisionRange outgoing = new RevisionRange("origin/main..HEAD");
+        List<PublishFinding> secret = List.of(PublishFinding.onLine(PublishRule.SECRET, CLEAN_PATH, 2, COMMIT_ID, "gitleaks rule generic-api-key"));
+
+        assertThat(new PublishVerdict(List.of(), VocabularyCheck.CHECKED).conclusion(outgoing))
+                .isEqualTo("Clear: no secret, no personal material, no -SNAPSHOT version and no internal vocabulary in origin/main..HEAD");
+        assertThat(new PublishVerdict(List.of(), VocabularyCheck.SPARED).conclusion(outgoing))
+                .isEqualTo("Clear: no secret, no personal material and no -SNAPSHOT version in origin/main..HEAD");
+        assertThat(new PublishVerdict(secret, VocabularyCheck.CHECKED).conclusion(outgoing))
+                .isEqualTo("Refused: the outgoing commits carry a secret, personal material, a -SNAPSHOT version or internal vocabulary.");
+        assertThat(new PublishVerdict(secret, VocabularyCheck.SPARED).conclusion(outgoing))
+                .isEqualTo("Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.");
     }
 }

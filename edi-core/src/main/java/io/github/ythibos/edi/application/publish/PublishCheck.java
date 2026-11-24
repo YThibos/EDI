@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 import io.github.ythibos.edi.domain.publish.TextVerdict;
+import io.github.ythibos.edi.domain.publish.VocabularyCheck;
 
 @Service
 public class PublishCheck {
@@ -55,19 +56,26 @@ public class PublishCheck {
 
     private PublishVerdict verdictOn(Path repository, RevisionRange outgoing, OutgoingChanges changes) {
         DenyList denyList = denyList();
+        VocabularyCheck vocabularyCheck = vocabularyCheckOf(repository);
         return PublishVerdict.of(
+                        vocabularyCheck,
                         gitleaks.secretsIn(repository, outgoing),
                         denyList.sparing(targets.ownNamesOf(repository)).findIn(changes),
                         personalPathsOf(repository).findIn(changes),
                         SnapshotVersions.findIn(changes, commit -> git.reactorAt(repository, commit)),
-                        ediVocabularyIn(repository, changes))
+                        ediVocabularyIn(repository, changes, vocabularyCheck))
                 .hidingPathsDeniedBy(denyList, changes);
     }
 
-    private List<PublishFinding> ediVocabularyIn(Path repository, OutgoingChanges changes) {
-        return targets.publishesToAProjectsReaders(repository)
-                ? EdiVocabulary.findIn(changes, (commit, path) -> git.contentAt(repository, commit, path))
-                : List.of();
+    private VocabularyCheck vocabularyCheckOf(Path repository) {
+        return targets.publishesToAProjectsReaders(repository) ? VocabularyCheck.CHECKED : VocabularyCheck.SPARED;
+    }
+
+    private List<PublishFinding> ediVocabularyIn(Path repository, OutgoingChanges changes, VocabularyCheck vocabularyCheck) {
+        return switch (vocabularyCheck) {
+            case CHECKED -> EdiVocabulary.findIn(changes, (commit, path) -> git.contentAt(repository, commit, path));
+            case SPARED -> List.of();
+        };
     }
 
     private DenyList denyList() {
