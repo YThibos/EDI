@@ -255,9 +255,9 @@ public class DispatchTask {
         dispatches.save(deferred);
         ProjectRoom room = dispatching.room();
         int capacity = room.capacity().orElseThrow();
-        events.record(new DispatchDeferred(deferred.task(), room.project(), deferred.category(), room.occupied(), capacity),
+        events.record(new DispatchDeferred(deferred.task(), room.project(), deferred.category(), room.working(), capacity),
                 actor, deferred.deferredAt());
-        return DispatchOutcome.of(new DispatchOutcome.Deferred(deferred.task(), room.project(), room.occupied(), capacity));
+        return DispatchOutcome.of(new DispatchOutcome.Deferred(deferred.task(), room.project(), room.working(), capacity));
     }
 
     private void reserveTheBranchOf(Dispatch dispatch) {

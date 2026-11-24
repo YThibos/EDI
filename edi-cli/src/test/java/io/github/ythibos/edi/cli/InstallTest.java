@@ -19,7 +19,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.testing.FixtureRepository;
-import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.StandInScripts;
 import io.github.ythibos.edi.testing.TestProcesses;
@@ -35,10 +34,25 @@ class InstallTest {
             mkdir -p edi-cli/target edi-core/target
             touch edi-cli/target/edi edi-core/target/edi-core
             """;
-    private static final String UNINSTALLED_TOOLCHAIN = """
+    private static final String PINNED_TOOLCHAIN = """
             [tools]
-            java = "graalvm-community-0.0.1"
+            node = "0.0.1"
             """;
+    private static final String MISE_REPORTING_WHAT_IS_MISSING = """
+            #!/bin/sh
+            state='%1$s'
+            case "$1" in
+            ls) [ -e "$state/installed" ] || printf '%2$s' ;;
+            install)
+                echo "$@" >> "$state/calls"
+                echo 'mise: installing the pinned tools'
+                [ %3$d -eq 0 ] && touch "$state/installed"
+                exit %3$d ;;
+            exec) shift 2; exec "$@" ;;
+            esac
+            """;
+    private static final String NODE_MISSING = "node  0.0.1  mise.toml  0.0.1\n";
+    private static final String NODE_AND_GITLEAKS_MISSING = NODE_MISSING + "aqua:gitleaks/gitleaks  0.0.2  mise.toml  0.0.2\n";
 
     @RegisterExtension
     private final TestProcesses processes = new TestProcesses();
@@ -72,15 +86,53 @@ class InstallTest {
     }
 
     @Test
-    void refusesToBuildWhenThePinnedToolchainIsNotInstalled() throws IOException, InterruptedException {
-        assumeTrue(InstalledPrograms.answers("mise", "--version"), "mise is not installed");
-        Path checkout = checkoutPinning(UNINSTALLED_TOOLCHAIN);
+    void installsTheMissingPinnedToolThenBuilds() throws IOException, InterruptedException {
+        Path checkout = checkoutPinning(PINNED_TOOLCHAIN);
 
-        InstallRun install = install(checkout, System.getenv("PATH"));
+        InstallRun install = install(checkout, withMise(NODE_MISSING, 0));
+
+        assertThat(install.exitCode()).as(install.output()).isZero();
+        assertThat(install.output()).contains("Installing the pinned tools this machine lacks: node" + System.lineSeparator() + "mise: installing the pinned tools");
+        assertThat(miseInstallCalls()).hasContent("install node" + System.lineSeparator());
+        assertThat(javaHomeOfTheBuild(checkout)).exists();
+        assertThat(directory.resolve("bin/edi")).isExecutable();
+    }
+
+    @Test
+    void namesEveryMissingPinnedToolInOneLine() throws IOException, InterruptedException {
+        Path checkout = checkoutPinning(PINNED_TOOLCHAIN);
+
+        InstallRun install = install(checkout, withMise(NODE_AND_GITLEAKS_MISSING, 0));
+
+        assertThat(install.exitCode()).as(install.output()).isZero();
+        assertThat(install.output()).contains("Installing the pinned tools this machine lacks: node, aqua:gitleaks/gitleaks" + System.lineSeparator());
+        assertThat(miseInstallCalls()).hasContent("install node aqua:gitleaks/gitleaks" + System.lineSeparator());
+    }
+
+    @Test
+    void stopsBeforeTheBuildNamingTheToolMiseCouldNotInstall() throws IOException, InterruptedException {
+        Path checkout = checkoutPinning(PINNED_TOOLCHAIN);
+
+        InstallRun install = install(checkout, withMise(NODE_MISSING, 1));
 
         assertThat(install.exitCode()).isEqualTo(1);
-        assertThat(install.output()).contains("part of it is not installed; run mise install in " + checkout).contains("graalvm-community-0.0.1");
+        assertThat(install.output()).contains("mise: installing the pinned tools").contains("could not install the pinned tools").contains(": node;");
+        assertThat(miseInstallCalls()).hasContent("install node" + System.lineSeparator());
         assertThat(javaHomeOfTheBuild(checkout)).doesNotExist();
+        assertThat(directory.resolve("bin")).doesNotExist();
+        assertThat(directory.resolve("home")).doesNotExist();
+    }
+
+    @Test
+    void installsNothingWhenNothingPinnedIsMissing() throws IOException, InterruptedException {
+        Path checkout = checkoutPinning(PINNED_TOOLCHAIN);
+
+        InstallRun install = install(checkout, withMise("", 0));
+
+        assertThat(install.exitCode()).as(install.output()).isZero();
+        assertThat(install.output()).doesNotContain("Installing");
+        assertThat(miseInstallCalls()).doesNotExist();
+        assertThat(javaHomeOfTheBuild(checkout)).exists();
     }
 
     @Test
@@ -90,7 +142,7 @@ class InstallTest {
         InstallRun install = install(checkout, programsWithoutMise().toString());
 
         assertThat(install.exitCode()).isEqualTo(1);
-        assertThat(install.output()).contains("mise, which runs it, is not on the PATH; install mise, run mise install in " + checkout);
+        assertThat(install.output()).contains("EDI builds with the toolchain " + checkout.resolve("mise.toml") + " pins, and mise, which runs it, is not on the PATH; install mise and try again.");
         assertThat(javaHomeOfTheBuild(checkout)).doesNotExist();
     }
 
@@ -136,6 +188,17 @@ class InstallTest {
             throw new IOException("ops/install.sh did not finish within " + Patience.FOR_REAL_WORK.toSeconds() + " seconds");
         }
         return new InstallRun(install.exitValue(), output);
+    }
+
+    private String withMise(String missingListing, int installExitCode) throws IOException {
+        Path state = Files.createDirectories(directory.resolve("mise-state"));
+        Path programs = directory.resolve("stand-in-mise");
+        StandInScripts.installed(programs.resolve("mise"), MISE_REPORTING_WHAT_IS_MISSING.formatted(state, missingListing, installExitCode));
+        return programs + File.pathSeparator + System.getenv("PATH");
+    }
+
+    private Path miseInstallCalls() {
+        return directory.resolve("mise-state/calls");
     }
 
     private static Path javaHomeOfTheBuild(Path checkout) {

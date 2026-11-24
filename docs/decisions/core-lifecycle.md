@@ -21,7 +21,7 @@ Every child the core starts is given its working directory explicitly.
 `edi up` starts `edi-core` detached with `setsid -f`, its output appended to `state/logs/core.log`, waits up to a minute for its health, asks for the primary's launch ([primary-startup-context](primary-startup-context.md)) and opens a tmux session of that name in the EDI home running `claude` with no prompt submitted, so it waits for the captain to type, and sets `set-titles` on and `set-titles-string` to `#S` for that session only, so the terminal's title is the session name (`PrimaryWindow`, [opening-turn](opening-turn.md)); `--core-only` stops after the core, and `--no-board` starts the session without opening the console's sitrep page ([console](console.md)).
 `edi down` asks the core to stop: `StopTheCore` refuses while workers run, or with `--force-stop-workers` needs the captain's word on the home and stops each recorded worker ([captains-word](captains-word.md)); a stopping core takes no new work but lets a running round finish.
 A core counts as stopped once it has let go of `state/core.pid`: `CorePidFile.isHeld` tries the same lock, and `LocalCore.awaitItsStop` waits for it for at most 90 seconds, naming the process and file when it runs out.
-`edi update` refuses a checkout that is not a clean clone, pulls fast-forward only, and runs `ops/install.sh`, which builds with `./mvnw -Pnative verify` through `mise exec` in the checkout, refusing first when mise or a pinned tool is missing, and installs `edi`, `edi-core` and the `helloedi` launcher in `EDI_BIN` and the skills' links into the EDI home, recording the commit it built in `state/installed-build`.
+`edi update` refuses a checkout that is not a clean clone, pulls fast-forward only, and runs `ops/install.sh`, which first refuses when mise is missing and installs the pinned tools the machine lacks with `mise install` in the checkout, saying in one line which, and stops with mise's own output and the tool's name when that fails, then builds with `./mvnw -Pnative verify` through `mise exec` in the checkout, and installs `edi`, `edi-core` and the `helloedi` launcher in `EDI_BIN` and the skills' links into the EDI home, recording the commit it built in `state/installed-build`.
 On success it stops the running core without stopping a worker, waits for it to let go of the home, starts the new core, and names the commit and the anchor to re-read; on failure the installed EDI and the running core stay as they were.
 `helloedi`, from `ops/helloedi`, is the captain's way in: it checks that tmux, the checkout and `edi` are there, fetches the checkout, runs `edi update` from inside it when the recorded build does not yet contain `origin/main`, and ends in `edi up`; a failed fetch or update is reported and the installed EDI starts, and Ctrl-C stops it.
 It updates EDI only, never the machine's own tools.
@@ -31,7 +31,7 @@ It updates EDI only, never the machine's own tools.
 
 The command owns what the core cannot do for itself, starting the core and opening the captain's terminal, while every decision about workers stays in the core.
 The lock is the very thing a new core checks, so waiting on it removes the race between stop and start instead of narrowing it.
-The toolchain belongs to the checkout, so the script that builds the checkout chooses it, wherever it is run from.
+The toolchain belongs to the checkout, so the script that builds the checkout chooses it, wherever it is run from, and installs what it pins and the machine lacks: every toolchain update Renovate lands would otherwise stop each machine's update until someone installed the tool by hand, and a machine's own tool update never reads the checkout's `mise.toml`.
 EDI stands alone, so its launcher ships and installs with it, and the installed build, not the checkout's `HEAD`, says whether EDI is current: a `git pull` without an install leaves the checkout ahead of what runs.
 
 ## Alternatives rejected
@@ -40,7 +40,8 @@ EDI stands alone, so its launcher ships and installs with it, and the installed 
 - The port alone as the one-core guard - a second core on another port would overwrite the token and port files.
 - Waiting until the core stops answering, or until its recorded pid exits - the lock is still held, or the pid may be another program's after a reboot.
 - Building inside the running core, or installing a JVM build only - the core would replace itself, or a broken native image would reach the machine.
-- Letting `mise exec` install a missing tool - the update would download a JDK unasked.
+- Letting `mise exec` install a missing tool while it builds - a download would start unannounced inside the build; the install step names what it installs first and stops before the build when it fails.
+- Refusing and telling the captain to run `mise install` - every Renovate toolchain update stopped `edi update` and `helloedi` on every machine until someone did.
 - A shell function the captain's shell set-up sources - EDI would depend on a repository outside it, and a function works in one shell only.
 - Comparing the checkout's `HEAD` with `origin/main` - a pulled but uninstalled checkout reads as current while an older build runs.
 - Updating whenever the installed build is not exactly `origin/main` - a build from a branch ahead of it would be rebuilt at every start.
@@ -54,6 +55,7 @@ EDI stands alone, so its launcher ships and installs with it, and the installed 
 - Good: one command takes EDI from a merged change to a running core, and a core that does not stop is named with the way back.
 - Good: the core never pins a mount or a checkout as its working directory, and no child it starts inherits one.
 - Bad: the native image needs an experimental Native Image option for one downcall, and Java's own `user.dir` can still name where the core was started, which is why the home is made absolute before the move.
+- Bad: an update downloads each pinned tool the machine lacks, the GraalVM among them, without asking, and fails before the build when it cannot.
 - Bad: a core started without systemd is not restarted after a crash, a restart takes as long as the old core's shutdown, and the native build takes minutes.
 
 ## When to revisit
@@ -71,3 +73,4 @@ When releases are published as built executables, or something other than the co
 - 28/10/2026: at the captain's request the primary's tmux session titles the terminal with its name, so the terminal can tell an EDI session from any other (EDI-108).
 - 13/11/2026: a core restarted from a shell inside a project's checkout kept standing there, so the core moves into its home at start and `edi health` names a core that works elsewhere (EDI-271).
 - 18/11/2026: `edi up` gained `--no-board`, which starts the primary without opening the console's sitrep page (EDI-287).
+- 24/11/2026: the update refused after GraalVM Community 25.5.5.0.3 moved to the `github` backend and left every machine on the old build, so the install now installs the pinned tools the machine lacks (EDI-323).

@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -20,6 +21,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.domain.primary.SessionProcess;
+import io.github.ythibos.edi.domain.worker.HeavyRun;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
 
 @Component
@@ -52,6 +54,15 @@ public class ProcessTable implements AutoCloseable {
     public boolean isStillThePaneOf(WorkerWindow window) {
         OptionalLong parent = parentOf(window.panePid());
         return parent.isPresent() && parent.getAsLong() == window.serverPid();
+    }
+
+    public Optional<HeavyRun> heavyRunIn(WorkerWindow window) {
+        if (!isStillThePaneOf(window)) {
+            return Optional.empty();
+        }
+        return argumentsInTree(window.panePid()).stream()
+                .flatMap(arguments -> HeavyRun.of(arguments).stream())
+                .min(Comparator.naturalOrder());
     }
 
     public List<Long> workingIn(Path directory) {

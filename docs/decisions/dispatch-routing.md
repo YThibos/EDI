@@ -22,12 +22,18 @@ A captain's override above `high` (`DispatchRequest.liftsTheEffortCeiling`) is a
 `edi dispatch` records the category, the spec and the captain's override on the task's `dispatch` row, and every launch resolves the route again from that row and the rules as they are then; the worker row keeps the route it ran on.
 Each category may name its branch kind ([work-keys-and-branches](work-keys-and-branches.md)), and `mechanical` carries its own checks ([mechanical-tasks](mechanical-tasks.md)).
 A project may set `capacity: <n>`; a dispatch beyond it records its deferral and leaves the task queued (`DispatchDeferred`), and each supervision round launches deferred dispatches, oldest first, while their project has room (`WorkerPlaces`, `LaunchDeferredDispatches`), each in its own attempt.
+Capacity counts only the workers of the project that are working: busy or still starting, in their validation pipeline, or on a build or test run (`Worker.isBusy`, `WorkerPlaces`, `ProcessTable.heavyRunIn`).
+A worker that has handed its work in or sits idle at its prompt does not count.
+A worker that waits on a question to the primary or the captain does not count until a prompt reaches it after the question, a steer or the captain's own words in its window (`Worker.waitsOnItsQuestion`).
+The worker row records its last prompt for that, so from then on its turns, its validation pipeline and its build runs count again, even before it reports a new status.
+The deferral names the workers it counts, in its answer and in the `DispatchDeferred` event.
 
 ## Why
 
 A few categories the primary can pick by judgement, one token-saving category made safe by mechanical checks, and overrides that keep a project's named kinds of work on a standing order, as the override's own reason states it.
 An override without `categories` keeps a whole-project standing order a one-line rule.
 A size on the task and on the route makes the cheaper model for a small, fully specified item a rule rather than an override the primary has to remember on each dispatch, and naming the rule in the brief and the answer shows which one fired.
+Capacity protects the machine and the forge's runners, so it counts the work that uses them and never the workers that only exist, and new work never waits behind a worker that does nothing.
 The rules stay a file the captain reads and edits, an edit takes effect at the next launch, and a relaunch never inherits a model from rules that changed.
 The roster's order is the only strength ranking the checks need, so no model family is hard-coded, and deferral is state in the store, so it survives a restart.
 
@@ -51,6 +57,9 @@ The roster's order is the only strength ranking the checks need, so no model fam
 - Bad: the primary's choice of category is judgement, not a rule, and each dispatch reads two small files.
 - Bad: a task added before it had a size, or without one, routes as a large task until it is added again with its size.
 - Bad: a freed place is used up to one supervision round later.
+- Good: a worker answered without a settling steer counts through its validation pipeline and its build runs, not only while its turn lasts.
+- Bad: a worker resumed or steered for a small follow-up counts again as soon as it works, so a project can briefly run above its capacity.
+- Bad: a prompt that reaches a waiting worker without answering its question makes it count again until it reports the question anew.
 
 ## When to revisit
 
@@ -65,3 +74,5 @@ When the research-first pilot reports, a model generation changes, or a cap acro
 - 26/10/2026: the lift now needs the captain's word recorded on the task for that act, `--for effort-above-high`, never a general word on it (EDI-49).
 - 02/11/2026: a dialog answer that opens with `effort-above-high` and names the task lifts it as a recorded word does (EDI-159).
 - 18/11/2026: on 13 November seven EDI items, most of them XS or S with a full specification, ran on Opus and used about 17% of a login's weekly usage; the captain asked for a rule that puts small items on Sonnet instead of Opus, so a task carries its size, a route may name the sizes it covers, and the brief and the dispatch's answer name the rule that chose the model (EDI-286).
+- 24/11/2026: a dispatch on a project with a capacity of three was deferred as "already runs 6 of its 3 workers" while only two were working, the others finished or idle at their prompt; capacity now counts only working workers and the deferral names them (EDI-240).
+- 24/11/2026: a worker answered without a settling steer went uncounted again once its turn ended, while its validation pipeline ran; the captain chose to record a worker's last prompt, so a question keeps it out of the count only until a prompt reaches it after the question (EDI-240).

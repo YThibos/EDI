@@ -45,7 +45,7 @@ class CapacityTest {
         DispatchOutcome second = dispatch(home, "fit-horn");
 
         assertThat(second.wasDeferred()).isTrue();
-        assertThat(second.deferred().running()).isOne();
+        assertThat(second.deferred().working()).containsExactly(first.launched().worker().id());
         assertThat(home.tasks().get(new TaskId("fit-horn")).state()).isEqualTo(TaskState.QUEUED);
         assertThat(home.launchDeferredDispatches().launchWhereThereIsRoom()).isEmpty();
 

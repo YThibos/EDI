@@ -1,10 +1,13 @@
 package io.github.ythibos.edi.web;
 
+import java.util.stream.Collectors;
+
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerId;
 
 final class WorkerSentences {
 
@@ -38,8 +41,9 @@ final class WorkerSentences {
     }
 
     static String deferred(DispatchOutcome.Deferred deferred) {
-        return "Deferred " + deferred.task() + ": " + deferred.project() + " already runs " + deferred.running() + " of its "
-                + deferred.capacity() + " workers, and the task starts when a place comes free.";
+        String working = deferred.working().stream().map(WorkerId::toString).collect(Collectors.joining(", "));
+        return "Deferred " + deferred.task() + ": " + deferred.project() + " has " + deferred.working().size() + " of its " + deferred.capacity()
+                + " workers at work (" + working + "), and the task starts as soon as one of them stops working.";
     }
 
     static String statusRecorded(Worker worker) {

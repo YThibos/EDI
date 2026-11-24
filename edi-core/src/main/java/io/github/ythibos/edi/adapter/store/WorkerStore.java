@@ -36,9 +36,9 @@ public class WorkerStore {
 
     private static final String SELECT_WORKERS = """
             select task_id, incarnation, session_id, launch_kind, boot_id, category, model, effort, tmux_socket, server_pid,
-                   server_started_at, window_id, pane_pid, activity, activity_at, launched_at, started_at, briefed_at, transcript_path,
-                   ended_at, stop_requested_at, launch_failed_at, retired_at, status_state, status_key, status_until, status_text,
-                   status_at, done_check, limit_name, limit_resets_at, limit_parked_at, context_full_since, claude_login
+                   server_started_at, window_id, pane_pid, activity, activity_at, launched_at, started_at, briefed_at, last_prompt_at,
+                   transcript_path, ended_at, stop_requested_at, launch_failed_at, retired_at, status_state, status_key, status_until,
+                   status_text, status_at, done_check, limit_name, limit_resets_at, limit_parked_at, context_full_since, claude_login
             from worker
             """;
 
@@ -84,7 +84,7 @@ public class WorkerStore {
         LimitPark park = worker.limitPark();
         store.sql("""
                         update worker set session_id = :session, activity = :activity, activity_at = :activityAt, started_at = :started,
-                            briefed_at = :briefed, transcript_path = :transcript, ended_at = :ended, stop_requested_at = :stopRequested,
+                            briefed_at = :briefed, last_prompt_at = :lastPrompt, transcript_path = :transcript, ended_at = :ended, stop_requested_at = :stopRequested,
                             launch_failed_at = :launchFailed, retired_at = :retired, status_state = :state, status_key = :key,
                             status_until = :until, status_text = :text, status_at = :statusAt, done_check = :doneCheck,
                             limit_name = :limitName, limit_resets_at = :limitResets, limit_parked_at = :limitParked,
@@ -96,6 +96,7 @@ public class WorkerStore {
                 .param("activityAt", Columns.text(worker.activitySince()))
                 .param("started", Columns.text(worker.startedAt()))
                 .param("briefed", Columns.text(worker.briefedAt()))
+                .param("lastPrompt", Columns.text(worker.lastPromptAt()))
                 .param("transcript", worker.transcript())
                 .param("ended", Columns.text(worker.endedAt()))
                 .param("stopRequested", Columns.text(worker.stopRequestedAt()))
@@ -161,6 +162,7 @@ public class WorkerStore {
                 Columns.instant(row.getString("activity_at")),
                 Columns.instant(row.getString("started_at")),
                 Columns.instant(row.getString("briefed_at")),
+                Columns.instant(row.getString("last_prompt_at")),
                 row.getString("transcript_path"),
                 Columns.instant(row.getString("ended_at")),
                 Columns.instant(row.getString("stop_requested_at")),
