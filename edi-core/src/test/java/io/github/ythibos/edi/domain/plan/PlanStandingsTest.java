@@ -38,11 +38,22 @@ class PlanStandingsTest {
     }
 
     @Test
-    void keepsTheirPlacesForSlicesDispatchedAndStillQueuedWhetherDeferredOrWaitingOnTheirResearch() {
-        SliceStanding dispatchedAndQueued = new SliceStanding(sliceNumbered(1), task(1, TaskStage.QUEUED), List.of(), true);
+    void keepsTheirPlacesForSlicesDispatchedAndStillWaitingOnTheirResearch() {
+        SliceStanding waitingOnItsResearch = new SliceStanding(sliceNumbered(1), task(1, TaskStage.QUEUED),
+                List.of(Wait.afterLanded(new TaskId("plan-work-on-slice-1"), TaskStage.WORKING)), true);
 
-        assertThat(planOf(2, dispatchedAndQueued, at(2, TaskStage.WORKING), queued(3)).freePlaces()).isZero();
+        assertThat(planOf(2, waitingOnItsResearch, at(2, TaskStage.WORKING), queued(3)).freePlaces()).isZero();
         assertThat(planOf(2, queued(1), at(2, TaskStage.WORKING), queued(3)).freePlaces()).isEqualTo(1);
+    }
+
+    @Test
+    void givesASliceDispatchedBeforeAndEligibleAgainAPlaceToBeDispatchedAgain() {
+        SliceStanding dispatchedAndEligible = new SliceStanding(sliceNumbered(1), task(1, TaskStage.QUEUED),
+                List.of(Wait.afterLanded(new TaskId("plan-work-on-slice-1"), TaskStage.LANDED)), true);
+        PlanStandings standings = planOf(1, dispatchedAndEligible, queued(2));
+
+        assertThat(standings.freePlaces()).isEqualTo(1);
+        assertThat(numbers(standings.eligible())).containsExactly(1, 2);
     }
 
     @Test

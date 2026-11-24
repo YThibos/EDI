@@ -146,6 +146,25 @@ class DispatchEligibleSlicesTest {
     }
 
     @Test
+    void triesASliceWhoseLaunchFailedAgainTheNextRoundWithinACapacityOfOne() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory);
+        SliceWait afterTheLamp = new SliceWait.After(1, AwaitedStage.MERGED);
+        home.addPlan().add(threeSlices(1, promoteChosen(home), afterTheLamp, afterTheLamp, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+        DispatchEligibleSlices eligibleSlices = home.dispatchEligibleSlices();
+        home.runtime().duringTheNextLaunch(() -> {
+            throw new IllegalStateException("The terminal multiplexer is gone.");
+        });
+
+        List<SliceDispatched> whenTheLaunchFails = eligibleSlices.dispatchWhereThePlansHaveRoom();
+        List<SliceDispatched> theNextRound = eligibleSlices.dispatchWhereThePlansHaveRoom();
+
+        assertThat(whenTheLaunchFails).isEmpty();
+        assertThat(wakesOf(home, WakeKind.SLICE_NOT_DISPATCHED)).extracting(Wake::task).containsExactly(FIT_LAMP);
+        assertThat(theNextRound).extracting(SliceDispatched::task).containsExactly(FIT_LAMP);
+        assertThat(home.tasks().get(FIT_LAMP).stage()).isEqualTo(TaskStage.WORKING);
+    }
+
+    @Test
     void dispatchesNothingUntilTheCaptainAnswersThePlansDecisionWithPromoteAndSaysWhyOnce() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
         DecisionNumber go = raisedOnTheSurvey(home);

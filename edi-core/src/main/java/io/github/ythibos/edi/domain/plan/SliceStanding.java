@@ -19,7 +19,7 @@ public record SliceStanding(Slice slice, Task task, List<Wait> waits, boolean di
     }
 
     public boolean takesAPlace() {
-        return task.stage().isOngoing() || dispatched && task.stage() == TaskStage.QUEUED;
+        return task.stage().isOngoing() || dispatched && task.stage() == TaskStage.QUEUED && !isEligible();
     }
 
     public List<Wait> unmetWaitsOutside(Plan plan) {
