@@ -74,6 +74,14 @@ class HoldsTest {
     }
 
     @Test
+    void endsTheRefusalOfAReasonStatedAsASentenceWithOneFullStop() {
+        Holds deferred = Holds.none().with(new Deferral("After the frost.", HoldUntil.captainsWord(), AT));
+
+        assertThatThrownBy(() -> deferred.with(new Deferral("until the spring", HoldUntil.captainsWord(), AT))).isInstanceOf(Refusal.class)
+                .hasMessage("The task already waits: deferred: After the frost.");
+    }
+
+    @Test
     void refusesAnAnswerToADecisionThatDoesNotHoldTheTask() {
         assertThatThrownBy(() -> Holds.none().answered(D58)).isInstanceOf(Refusal.class)
                 .hasMessage("The task does not wait: D58 waits for its answer.");

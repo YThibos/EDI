@@ -87,7 +87,7 @@ public sealed interface Hold {
 
         @Override
         public String reason() {
-            return "deferred: " + why;
+            return "deferred: " + asAClause(why);
         }
     }
 
@@ -105,7 +105,7 @@ public sealed interface Hold {
 
         @Override
         public String reason() {
-            return "waits for the captain's approval: " + why;
+            return "waits for the captain's approval: " + asAClause(why);
         }
     }
 
@@ -146,5 +146,9 @@ public sealed interface Hold {
             throw new IllegalArgumentException(whenMissing);
         }
         return stated;
+    }
+
+    private static String asAClause(String why) {
+        return why.endsWith(".") ? why.substring(0, why.length() - 1) : why;
     }
 }

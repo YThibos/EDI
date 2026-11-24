@@ -240,9 +240,15 @@ class ConfirmationText implements TextPresenter<Confirmation> {
 
     private static String answerRecorded(Answered answered) {
         String option = answered.decision().answer().choosesAnOption() ? " (option " + answered.decision().answer().option() + ")" : "";
-        String outcome = answered.task().isDone() ? " is done." : " is " + answered.task().state().word() + " again.";
-        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered)
-                + carriedOf(answered);
+        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcomeFor(answered.task())
+                + ticketOf(answered) + carriedOf(answered);
+    }
+
+    private static String outcomeFor(Task answered) {
+        if (answered.isHeld()) {
+            return " still waits: " + answered.reasonsItWaits() + ".";
+        }
+        return answered.isDone() ? " is done." : " is " + answered.state().word() + " again.";
     }
 
     private static String ticketOf(Answered answered) {

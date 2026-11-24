@@ -43,7 +43,9 @@ import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -89,6 +91,14 @@ class ConfirmationTextTest {
 
         assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), closed, TicketSettlement.none(), Optional.empty())))
                 .isEqualTo("Recorded the answer to D58 (option A); lamp-choice is done.\n");
+    }
+
+    @Test
+    void confirmsAnAnswerThatLeavesItsTaskWaitingOnAnotherHold() {
+        Task stillDeferred = PresenterFixtures.lantern().held(new Hold.Deferral("After the frost.", HoldUntil.day(LocalDate.of(2026, 12, 15)), PresenterFixtures.AT));
+
+        assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), stillDeferred, TicketSettlement.none(), Optional.empty())))
+                .isEqualTo("Recorded the answer to D58 (option A); lantern still waits: deferred: After the frost.\n");
     }
 
     @Test
