@@ -24,7 +24,8 @@ Its done counts only once its merge request is open, as a draft or ready for rev
 ## Drafts and merges
 
 EDI records a task's merge request as soon as a pipeline run or a worker's status finds it on the forge, whether it is a draft, ready for review or already merged ([merge-following](decisions/merge-following.md)).
-EDI watches every open merge request, draft or ready for review, follows a merge the forge reports by refreshing the clone before any follow-up work, and cleans up the task once its work is landed ([merge-following](decisions/merge-following.md), [cleanup](decisions/cleanup.md)).
+EDI watches every open merge request, draft or ready for review, follows a merge into the base branch the forge reports by refreshing the clone before any follow-up work, and cleans up the task once its work is landed ([merge-following](decisions/merge-following.md), [cleanup](decisions/cleanup.md)).
+A request that targets another branch, such as a slice branch, is named with its target on every surface, and its merge does not land the work, so the task stays in flight ([merge-following](decisions/merge-following.md)).
 
 ```sh
 edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14 --delivery local-apply
