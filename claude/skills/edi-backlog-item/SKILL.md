@@ -57,16 +57,7 @@ Restate the captain's answers as requirements, name no particular person, accoun
 A research report too long for the issue goes to `docs/research` in its own pull request, and the spec links it.
 A wait that is no dependency, such as "after a week of use", is a blocker on a marker issue the captain closes.
 
-The priority says what the item wins, how urgent it is, how much it annoys and how critical a bug is:
-
-| Priority | When it applies |
-|---|---|
-| `priority-1-urgent` | something is broken now, or a hard rule of the captain is being broken, and work is harmed until it is fixed |
-| `priority-2-high` | it costs the captain or the fleet every day, as a repeated slip, a daily annoyance or a bug with a workaround |
-| `priority-3-normal` | a clear gain in efficiency or quality, with no daily cost while it waits |
-| `priority-4-low` | worth doing, with no cost while it waits |
-| `priority-5-someday` | an idea kept for later |
-
+The priority says what the item wins, how urgent it is, how much it annoys and how critical a bug is; the [label table](../../../docs/pickup.md#labels) says when each of the five applies.
 A priority is no approval; `captain-approved` stays the captain's word alone.
 
 ## The command
