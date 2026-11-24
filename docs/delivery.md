@@ -42,7 +42,7 @@ A cleanup that finds unlanded work lists every uncommitted path and unlanded com
 
 ## The publish check
 
-The publish check refuses outgoing commits that carry a secret, a term of the publish deny-list, a personal path or a `-SNAPSHOT` version in a `pom.xml` ([publish-guard](decisions/publish-guard.md)).
+The publish check refuses outgoing commits that carry a secret, a term of the publish deny-list, a personal path or a `-SNAPSHOT` version in a `pom.xml`, and, for a project other than EDI, internal vocabulary in a commit message, a story file or a decision record ([publish-guard](decisions/publish-guard.md)).
 
 ```sh
 edi publish-check --range origin/main..HEAD                                    # the publish guard over outgoing commits

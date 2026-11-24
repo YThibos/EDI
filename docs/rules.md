@@ -80,7 +80,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `delivery.not-merged-yet` | `DeliverDraft` | A merged request is followed, never delivered again. |
 | `delivery.recorded` | `DeliverDraft`, `DeliveryRecords`, `FollowMerges` | Only a recorded delivery is followed. |
 | `delivery.request-followed` | `FollowMerges` | A merge is followed only in the registered repository, and only once the forge shows it merged. |
-| `publish.outgoing-clean` | `DeliverDraft`, `PublishCheckController` | Nothing outgoing carries a secret, a denied term, a personal path, a network address or a SNAPSHOT version. |
+| `publish.outgoing-clean` | `DeliverDraft`, `PublishCheckController` | Nothing outgoing carries a secret, a denied term, a personal path, a network address, a SNAPSHOT version or, for a project other than EDI, internal vocabulary. |
 | `publish.request-text-clean` | `DeliverDraft` | A merge request's title and description pass the publish check, as a commit does. |
 | `publish.checkable-target` | `PublicationTargets` | The publish check runs only in a registered clone or the caller's own isolated copy. |
 | `publish.registered-forge` | `RegisteredForge` | Work is published only to the repository its project registers. |
@@ -101,6 +101,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `tracker.configured` | `JiraTracker`, `KeysFile`, `TrackedProject`, `TrackerSettings`, `Trackers` | A tracker is reached only with the settings and keys this machine names for it. |
 | `tracker.answered` | `JiraCalls`, `JiraTracker`, `NothingFound` | A tracker call that is refused or finds nothing is reported, never taken as done. |
 | `tracker.ticket-update` | `FollowTickets`, `TicketProposals` | A ticket update the tracker refuses is recorded, and the work goes on without it. |
+| `tracker.text-clean` | `PlainlyWordedTracker` | Text written to a project's tracker never carries internal vocabulary. |
 | `wake.one-wake-stream` | `StreamPoll`, `WaitController`, `WaitForWakes`, `WakeStreams` | The primary session has exactly one live wake stream. |
 | `wake.wait-read` | `WaitCommand` | edi wait runs only where its output is read. |
 | `memory.budget` | `DailyMemoryCheck`, `MemoryController` | The memory loaded at start stays within its token budget, with no heading twice. |

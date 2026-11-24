@@ -5,5 +5,6 @@ public enum PublishRule {
     DENIED_TERM,
     PERSONAL_PATH,
     SNAPSHOT_VERSION,
-    NETWORK_ADDRESS
+    NETWORK_ADDRESS,
+    EDI_VOCABULARY
 }

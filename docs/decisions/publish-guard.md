@@ -9,16 +9,18 @@ Personal material includes an employer's hostnames and account names, which the 
 A finding must name its place, never the matched value, since reports and logs are read and kept.
 An employer's project names its own forge host, tracker host and keys file in its tracked files.
 No pushed `pom.xml` may carry a SNAPSHOT version (I-11), and a ship's done, which checks for one, comes after the push that published it.
+A project's business team reads its tracker's stories and tasks and its wiki, where the project's story files and decision records are published, and on 9 November 2026 one project's story files held 73 references to the captain, copied from briefs that quote him; EDI's own way of addressing the captain, and its internal decision and question codes, must stay invisible to those readers, while in EDI's own repository they are part of the domain.
 A pull request's or merge request's title and description are published too, and the review of 29 October 2026 found internal addresses, hostnames, an account, home paths and work keys in 17 of 87 descriptions whose every commit had passed the guard.
 
 ## Decision
 
-Before any push, `PublishCheck` checks the outgoing commits of a revision range four ways:
+Before any push, `PublishCheck` checks the outgoing commits of a revision range five ways:
 
 - a secret scan with gitleaks and its standard rules only, which a repository cannot weaken with its own configuration, ignore file or allow comments, read from a redacted report (`Gitleaks`);
 - the captain's deny-list `config/publish-denylist`, matched as case-insensitive literals in every added line, every added or changed path, every message and every author and committer identity, and reported by entry number (`DenyList`);
 - a path check refusing the gitignored `personal/` layer and anything under the EDI home (`PersonalPaths`);
-- a build-file check refusing every line an outgoing commit adds to a `pom.xml` with a `-SNAPSHOT` word, the rule a ship's done applies to its branch (`SnapshotVersions.findIn`), except a line inside a module's `<parent>` element that names a `pom.xml` of the same repository, at the commit, by its groupId and artifactId and that pom's own version (`Reactor`); the poms are read, with a parser that refuses a DOCTYPE, only for a commit that adds a SNAPSHOT line (`Git.reactorAt`).
+- a build-file check refusing every line an outgoing commit adds to a `pom.xml` with a `-SNAPSHOT` word, the rule a ship's done applies to its branch (`SnapshotVersions.findIn`), except a line inside a module's `<parent>` element that names a `pom.xml` of the same repository, at the commit, by its groupId and artifactId and that pom's own version (`Reactor`); the poms are read, with a parser that refuses a DOCTYPE, only for a commit that adds a SNAPSHOT line (`Git.reactorAt`);
+- for a project other than EDI, an internal-vocabulary check refusing "captain" and "commander" in any case, at the start of a word, and EDI's internal decision and question codes, such as `D103`, `D139 B`, `Q15`, `Q10 A` or `PLAN2 A`, though not a quarter followed by its year such as `Q1 2027`, in every outgoing commit's message and in every line it adds to a story file or a decision record (`EdiVocabulary`): a story file is a Markdown file that holds a `key: <work key>` line at that commit, read with `Git.contentAt`, and a decision record a Markdown file under a `decisions`, `adr` or `adrs` directory or named `adr-` (`PublishedDocument`).
 
 The list a push is checked against leaves out every term equal, whatever its case, to one of the pushing project's own names: its forge host and account from the registry and, when it books on the machine's JIRA, the tracker's host and keys-file name (`DenyList.sparing`, `OwnNames`).
 `PublicationTargets.ownNamesOf` finds the project only from the repository's top level, its isolated copy or its registered clone, never from a remote URL; any other repository spares nothing.
@@ -34,9 +36,12 @@ A request's title and description pass the same guard before EDI posts or accept
 - the gitleaks scan, over the title and the description written to a scan workspace (`Gitleaks.secretsIn(RequestText)`);
 - the deny-list, sparing the project's own names as for a push, on the title and every line of the description;
 - a home path, such as `/home/<name>`, `/Users/<name>`, `/root`, `/mnt/<drive>/Users/<name>` or `C:\Users\<name>` (`HomePaths`);
-- an IP address outside the documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 and 2001:db8::/32), loopback and private ranges included, and any host given with its port, such as `localhost:5490`, whatever the deny-list names (`NetworkAddresses`); a file name with its line number, such as `ApiTest.java:192`, is not a host.
+- an IP address outside the documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 and 2001:db8::/32), loopback and private ranges included, and any host given with its port, such as `localhost:5490`, whatever the deny-list names (`NetworkAddresses`); a file name with its line number, such as `ApiTest.java:192`, is not a host;
+- for a project other than EDI, the internal-vocabulary check on the title and every line of the description.
 
 A finding names its place, `the title` or `line 3 of the description`, and its rule or deny-list entry, never the value.
+An internal-vocabulary finding is the exception: it names the word or code it found, which is never personal, and says to write "developer" instead, or to leave the code out and say the question and its answer in plain words.
+The check applies to a repository that `PublicationTargets.publishesToAProjectsReaders` finds as the isolated copy or registered clone of a project other than the one named `EDI` (`ProjectName.isEdiItself`), so EDI's own repository, and a repository EDI does not know, such as CI's checkout of EDI's own, keep the words.
 `edi deliver` checks the draft it would open and refuses to post it, and checks a request the pipeline already opened before it records it; a ship's done is refused while its request's text fails the check, so the request never shows as ready for review, and the refusal tells the worker to rewrite the text on the forge (`DoneClaims`).
 The forges read a request's text through `Forge.textOf`; EDI posts no comment and edits no request, and once EDI's own Publish slice (EDI-147, issue 91) posts the pipeline's descriptions, the check sits in that slice's posting path.
 
@@ -47,6 +52,7 @@ A SNAPSHOT version is stopped at the push that would publish it, not at a done t
 A module must name its parent's version, and the parent of a module in the same reactor is released together with it, so that reference is no SNAPSHOT dependency (D82 A).
 The registry and the profile already state each project's own names, so sparing them needs no new configuration, while every other term and every secret is refused as before.
 Git reads a repository's own configuration, which can name programs to run, so the core runs it only in the repositories EDI keeps for its registered projects.
+A sentence in memory did not keep the captain out of a project's story files, since every brief quotes him and every worker copies the phrasing, so a refusal that cannot be skipped does; story files and decision records are checked because a project's own sync script and wiki publish them, while its code may name a commander or a code-like word for its own reasons.
 
 ## Alternatives rejected
 
@@ -54,6 +60,9 @@ Git reads a repository's own configuration, which can name programs to run, so t
 - A list that applies whole to every project - refuses an employer's own commits for naming their own hosts.
 - A per-project exemption list, or sparing a term that contains an own name - more configuration, or a broader term such as an employer's domain let through.
 - gitleaks alone, regular expressions in the list, or honouring a repository's gitleaks configuration - no personal terms, patterns mistyped into matching nothing, or a branch that switches the scan off.
+- The internal-vocabulary check on every added line of a project - refuses a project's own code, such as a field or a library named for a commander, which no tracker or wiki reader sees.
+- A story file known by its path - each project keeps its stories where it likes, while the `key:` line is what its sync script reads.
+- Checking the internal vocabulary in EDI's own repository too - the words are its domain there, in its code, its records and its backlog.
 - Checking only what the range adds as a whole, as the done does - a SNAPSHOT version added in one outgoing commit and removed in a later one would still be published.
 - Judging a push from the remote branch's head alone - a merge of a base that gained a refused line brings the base's commits into the range, and the push is stranded, since force-pushing and skipping the hook are refused.
 - Judging a push from the base alone - the branch's commits already pushed are judged again after a rule tightens, and stranded the same way.
@@ -62,6 +71,9 @@ Git reads a repository's own configuration, which can name programs to run, so t
 
 - Good: one guard for EDI and every project, and the guard CI runs is the guard the test proves.
 - Good: a request's text can no longer carry what a commit could not, so the cleaning of the descriptions stays done.
+- Good: a worker on any other project learns to write "developer" from the refusal at its push, with the file and line, before a sync script can carry the word to the tracker.
+- Bad: a project's word or code that looks like an internal code, such as `PHASE2 A`, a lone `D3` in prose or a quarter `Q4` written without its year, is refused and must be written another way; a code inside a word, a path, a fingerprint or `D3.js` is not one.
+- Bad: a story file is known from its content, so each outgoing commit's Markdown files are read once at that commit, and a story file without a `key:` line is not checked.
 - Bad: a description that names the core's loopback address and port, or any host with a port, is refused and must say it in words or with a documentation address.
 - Bad: the pipeline posts its description before EDI sees it, so a refused text stays on the forge until the worker rewrites it; EDI only keeps the request from counting as ready.
 - Bad: `edi publish-check` runs only in a registered clone or an isolated copy, from its top level, so a checkout outside EDI's home, the captain's own checkout included, is checked through its push's hook only once it is registered; and a listed term equal to a project's own name no longer guards that project.
@@ -85,3 +97,4 @@ When the deny-list is reworked, which the captain has asked for, or EDI pushes f
 - 30/10/2026: the publish-check endpoint ran git in any absolute path from any caller, so it now checks only registered clones and isolated copies, a worker only its own copy, and never for the console (EDI-130).
 - 03/11/2026: a new module's parent reference to its own reactor's SNAPSHOT version was refused at done and push, though every sibling module carries the same line, so the captain allowed it (D82 A) and the guard and the done admit it (EDI-167).
 - 04/11/2026: gitleaks reported nothing for a generated AWS key that spelt FALSE, since its global allowlist matches a value that starts with true, holds false or ends in null, whatever the case, so a generated secret is drawn again until that allowlist no longer lets it through (EDI-177).
+- 24/11/2026: a project's story files carried the captain into its tracker, copied from the briefs, so a push, a request's text and a tracker write of any project but EDI are refused when they carry "captain", "commander" or an internal decision or question code, on the captain's word of 9 November 2026 (EDI-237).

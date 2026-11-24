@@ -11,8 +11,6 @@ import io.github.ythibos.edi.domain.task.TaskSize;
 
 public record DispatchRules(List<ProjectOverride> projectOverrides, List<DispatchCategory> categories, PipelineAgent pipelineAgent) {
 
-    private static final ProjectName EDI = new ProjectName("EDI");
-
     public DispatchRules {
         projectOverrides = List.copyOf(projectOverrides);
         categories = List.copyOf(categories);
@@ -178,6 +176,6 @@ public record DispatchRules(List<ProjectOverride> projectOverrides, List<Dispatc
     }
 
     private static boolean isEdiItself(List<ProjectName> projects) {
-        return projects.contains(EDI);
+        return projects.stream().anyMatch(ProjectName::isEdiItself);
     }
 }

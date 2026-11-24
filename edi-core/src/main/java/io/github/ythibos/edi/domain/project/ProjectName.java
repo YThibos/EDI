@@ -4,6 +4,8 @@ import io.github.ythibos.edi.domain.AsciiCharacters;
 
 public record ProjectName(String value) {
 
+    public static final ProjectName EDI = new ProjectName("EDI");
+
     private static final int LONGEST = 64;
     private static final String SEPARATORS = "._-";
 
@@ -12,6 +14,10 @@ public record ProjectName(String value) {
             throw new IllegalArgumentException("A project name starts with a letter or digit and holds only letters, digits,"
                     + " dots, dashes and underscores, at most " + LONGEST + " of them: " + value);
         }
+    }
+
+    public boolean isEdiItself() {
+        return equals(EDI);
     }
 
     private static boolean isRegistryName(String value) {

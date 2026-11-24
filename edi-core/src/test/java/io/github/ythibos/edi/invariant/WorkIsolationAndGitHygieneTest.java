@@ -314,7 +314,7 @@ class WorkIsolationAndGitHygieneTest {
 
             assertThat(refused.refused()).isTrue();
             assertThat(refused.output()).contains("pom.xml:6 in commit " + worktree.head().substring(0, 7) + ": a -SNAPSHOT version")
-                    .contains("Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.");
+                    .contains("Refused: the outgoing commits carry a secret, personal material, a -SNAPSHOT version or internal vocabulary.");
         }
 
         @Test
@@ -336,7 +336,7 @@ class WorkIsolationAndGitHygieneTest {
             HookRun push = PrePushHook.pushesOnto(pushedHead, worktree, home.home().root(), "feature/HRN-3", HARNESS_REMOTE, processes);
 
             assertThat(push.refused()).as(push.output()).isFalse();
-            assertThat(push.output()).contains("Clear: no secret, no personal material and no -SNAPSHOT version in origin/main.."
+            assertThat(push.output()).contains("Clear: no secret, no personal material, no -SNAPSHOT version and no internal vocabulary in origin/main.."
                     + worktree.head() + " excluding " + pushedHead);
         }
 

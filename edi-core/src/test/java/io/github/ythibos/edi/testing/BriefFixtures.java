@@ -95,6 +95,13 @@ public final class BriefFixtures {
                 false);
     }
 
+    public static BriefFacts shipOnEdiItself() {
+        Task task = Task.queued(TASK, intake(TaskKind.SHIP), "Fit the lamp in the hall.", TestHome.START);
+        ProjectEntry edi = project(new Project(ProjectName.EDI, new ProjectKey("EDI")), DeliveryMode.DRAFT_REVIEW, AiScaffolding.COMMITTED, null, true);
+        return new BriefFacts(task, WorkerId.first(TASK), edi, dispatch(CategoryId.IMPLEMENTATION, ""), ROUTE, new BaseBranch("main"), worktree(),
+                taskDirectory(), "edi", WorkerFixtures.CRAFT_RULES, null, false);
+    }
+
     private static BriefFacts facts(TaskKind kind, DeliveryMode delivery, CategoryId category, String spec, AiScaffolding aiScaffolding) {
         Task task = Task.queued(TASK, intake(kind), "Fit the lamp in the hall; offline verification is accepted.", TestHome.START);
         return new BriefFacts(task, WorkerId.first(TASK), project(delivery, aiScaffolding, null), dispatch(category, spec), ROUTE, new BaseBranch("main"),
@@ -110,7 +117,11 @@ public final class BriefFixtures {
     }
 
     private static ProjectEntry project(DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild, boolean ciRuns) {
-        return new ProjectEntry(new Project(new ProjectName("harness"), new ProjectKey("HRN")), TrackerKind.EDI, HOME.resolve("projects/harness"),
+        return project(new Project(new ProjectName("harness"), new ProjectKey("HRN")), delivery, aiScaffolding, nativeBuild, ciRuns);
+    }
+
+    private static ProjectEntry project(Project project, DeliveryMode delivery, AiScaffolding aiScaffolding, String nativeBuild, boolean ciRuns) {
+        return new ProjectEntry(project, TrackerKind.EDI, HOME.resolve("projects/harness"),
                 Path.of("/checkouts/harness"), new BaseBranch("main"), FORGE, delivery, EnumSet.allOf(BranchKind.class), true, aiScaffolding, null,
                 "./mvnw -B verify", nativeBuild, true, ciRuns, List.of(ShipBriefRule.DECISION_LOG_ADR, ShipBriefRule.NO_EXPLANATORY_COMMENTS),
                 LoginName.DEFAULT);

@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.adapter.tracker.PlainlyWordedTracker;
 import io.github.ythibos.edi.adapter.registry.ProjectEntry;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
@@ -27,10 +28,8 @@ public class Trackers {
 
     public Tracker serving(ProjectEntry project) {
         requireReachable(project);
-        return trackers.stream()
-                .filter(tracker -> tracker.kind() == project.tracker())
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No adapter serves " + project.tracker().word() + " trackers."));
+        Tracker adapter = adapterFor(project);
+        return publishesTextOutsideEdi(project) ? new PlainlyWordedTracker(adapter) : adapter;
     }
 
     public Optional<String> browseAddressOf(ProjectEntry project, WorkKey key) {
@@ -66,5 +65,16 @@ public class Trackers {
                     + ", but this machine's profile names no "
                     + project.tracker().word() + " tracker; register the project with EDI-native keys on this machine.");
         }
+    }
+
+    private Tracker adapterFor(ProjectEntry project) {
+        return trackers.stream()
+                .filter(tracker -> tracker.kind() == project.tracker())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No adapter serves " + project.tracker().word() + " trackers."));
+    }
+
+    private boolean publishesTextOutsideEdi(ProjectEntry project) {
+        return project.tracker().isExternal() && !project.project().name().isEdiItself();
     }
 }

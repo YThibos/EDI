@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
@@ -13,12 +14,15 @@ import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.publish.DenyList;
+import io.github.ythibos.edi.domain.publish.EdiVocabulary;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.PersonalPaths;
+import io.github.ythibos.edi.domain.publish.PublishFinding;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
 import io.github.ythibos.edi.domain.publish.TextVerdict;
+import io.github.ythibos.edi.domain.publish.VocabularyCheck;
 
 @Service
 public class PublishCheck {
@@ -42,7 +46,8 @@ public class PublishCheck {
     }
 
     public TextVerdict checkText(Path repository, RequestText text) {
-        return TextVerdict.of(text, denyList().sparing(targets.ownNamesOf(repository)), gitleaks.secretsIn(text));
+        TextVerdict verdict = TextVerdict.of(text, denyList().sparing(targets.ownNamesOf(repository)), gitleaks.secretsIn(text));
+        return targets.publishesToAProjectsReaders(repository) ? verdict.andEdiVocabularyIn(text) : verdict;
     }
 
     public PublishVerdict check(Path repository, RevisionRange outgoing) {
@@ -51,12 +56,26 @@ public class PublishCheck {
 
     private PublishVerdict verdictOn(Path repository, RevisionRange outgoing, OutgoingChanges changes) {
         DenyList denyList = denyList();
+        VocabularyCheck vocabularyCheck = vocabularyCheckOf(repository);
         return PublishVerdict.of(
+                        vocabularyCheck,
                         gitleaks.secretsIn(repository, outgoing),
                         denyList.sparing(targets.ownNamesOf(repository)).findIn(changes),
                         personalPathsOf(repository).findIn(changes),
-                        SnapshotVersions.findIn(changes, commit -> git.reactorAt(repository, commit)))
+                        SnapshotVersions.findIn(changes, commit -> git.reactorAt(repository, commit)),
+                        ediVocabularyIn(repository, changes, vocabularyCheck))
                 .hidingPathsDeniedBy(denyList, changes);
+    }
+
+    private VocabularyCheck vocabularyCheckOf(Path repository) {
+        return targets.publishesToAProjectsReaders(repository) ? VocabularyCheck.CHECKED : VocabularyCheck.SPARED;
+    }
+
+    private List<PublishFinding> ediVocabularyIn(Path repository, OutgoingChanges changes, VocabularyCheck vocabularyCheck) {
+        return switch (vocabularyCheck) {
+            case CHECKED -> EdiVocabulary.findIn(changes, (commit, path) -> git.contentAt(repository, commit, path));
+            case SPARED -> List.of();
+        };
     }
 
     private DenyList denyList() {

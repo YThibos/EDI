@@ -15,6 +15,10 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 final class BriefSections {
 
     private static final String AI_FILES = "(`CLAUDE.md`, `AGENTS.md`, `.claude/`, skills)";
+    private static final String PLAIN_WORDING = "Text bound for the project or its tracker, such as a commit, a merge request's title and body,"
+            + " a story file or a decision record, never says \"captain\" or \"commander\" in any case and never carries an internal decision"
+            + " or question code such as D103 or Q10 A: write \"developer\" instead, and say a question and its answer in plain words;"
+            + " the publish check refuses both.";
 
     private BriefSections() {
     }
@@ -36,6 +40,9 @@ final class BriefSections {
         List<String> rules = new ArrayList<>();
         rules.add("Read the project's `AGENTS.md` or `CLAUDE.md`, and the skills it names, before you change anything.");
         rules.add(aiScaffoldingRule(facts));
+        if (isReadByAProjectsTeam(facts)) {
+            rules.add(PLAIN_WORDING);
+        }
         facts.project().shipBriefRules().forEach(rule -> rules.add(shipBriefRule(rule)));
         if (isAShip(facts)) {
             rules.add("Below version 1.0.0 nothing legacy lingers: no deprecation shims and no \"previously\" prose.");
@@ -160,6 +167,10 @@ final class BriefSections {
                     + "` holds it.\n"
                     + "Write each change you made and the check that verified it to `" + facts.reportPath() + "`.";
         };
+    }
+
+    private static boolean isReadByAProjectsTeam(BriefFacts facts) {
+        return !facts.project().project().name().isEdiItself();
     }
 
     private static String aiScaffoldingRule(BriefFacts facts) {

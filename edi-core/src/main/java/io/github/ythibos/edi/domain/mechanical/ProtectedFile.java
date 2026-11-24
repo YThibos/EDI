@@ -29,6 +29,10 @@ public enum ProtectedFile {
         return Arrays.stream(values()).filter(kind -> kind.recognises.test(path)).findFirst();
     }
 
+    public boolean covers(String file) {
+        return recognises.test(RepositoryPath.of(file));
+    }
+
     public String description() {
         return description;
     }

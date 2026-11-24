@@ -13,6 +13,10 @@ public record TextVerdict(List<TextFinding> findings) {
         return new TextVerdict(Stream.concat(secrets.stream(), text.lines().stream().flatMap(line -> findingsOn(line, denyList))).toList());
     }
 
+    public TextVerdict andEdiVocabularyIn(RequestText text) {
+        return new TextVerdict(Stream.concat(findings.stream(), text.lines().stream().flatMap(EdiVocabulary::findingsOn)).toList());
+    }
+
     public boolean allowsPosting() {
         return findings.isEmpty();
     }

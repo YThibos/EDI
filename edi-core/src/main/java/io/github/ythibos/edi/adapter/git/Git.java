@@ -167,6 +167,10 @@ public class Git {
         return path.equals(BUILD_FILE) || path.endsWith("/" + BUILD_FILE);
     }
 
+    public String contentAt(Path repository, String commit, String path) {
+        return git(repository, "show", commit + ":" + path);
+    }
+
     public List<String> uncommittedPaths(Path worktree) {
         return statusEntries(worktree).stream().filter(path -> !path.endsWith(NESTED_REPOSITORY_MARK)).toList();
     }
