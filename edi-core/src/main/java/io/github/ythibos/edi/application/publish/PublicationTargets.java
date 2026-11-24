@@ -64,6 +64,12 @@ public class PublicationTargets {
         return projectCopiedTo(repository).or(() -> projectClonedTo(repository)).map(this::ownNamesOf).orElseGet(OwnNames::none);
     }
 
+    public boolean publishesToAProjectsReaders(Path repository) {
+        return projectCopiedTo(repository).or(() -> projectClonedTo(repository))
+                .filter(project -> !project.project().name().isEdiItself())
+                .isPresent();
+    }
+
     private Optional<ProjectName> projectWithACopyAt(Path real) {
         Path copies = realPathOf(home.worktrees());
         if (!real.startsWith(copies) || copies.relativize(real).getNameCount() != PROJECT_AND_TASK) {

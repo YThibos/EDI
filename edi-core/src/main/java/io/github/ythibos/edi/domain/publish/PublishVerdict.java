@@ -10,8 +10,8 @@ public record PublishVerdict(List<PublishFinding> findings) {
     }
 
     public static PublishVerdict of(List<PublishFinding> secrets, List<PublishFinding> deniedTerms, List<PublishFinding> personalPaths,
-            List<PublishFinding> snapshotVersions) {
-        return new PublishVerdict(Stream.of(secrets, deniedTerms, personalPaths, snapshotVersions).flatMap(List::stream).toList());
+            List<PublishFinding> snapshotVersions, List<PublishFinding> ediVocabulary) {
+        return new PublishVerdict(Stream.of(secrets, deniedTerms, personalPaths, snapshotVersions, ediVocabulary).flatMap(List::stream).toList());
     }
 
     public PublishVerdict hidingPathsDeniedBy(DenyList denyList, OutgoingChanges changes) {
@@ -24,7 +24,7 @@ public record PublishVerdict(List<PublishFinding> findings) {
 
     public String conclusion(RevisionRange outgoing) {
         return allowsPush()
-                ? "Clear: no secret, no personal material and no -SNAPSHOT version in " + outgoing
-                : "Refused: the outgoing commits carry a secret, personal material or a -SNAPSHOT version.";
+                ? "Clear: no secret, no personal material, no -SNAPSHOT version and no internal vocabulary in " + outgoing
+                : "Refused: the outgoing commits carry a secret, personal material, a -SNAPSHOT version or internal vocabulary.";
     }
 }

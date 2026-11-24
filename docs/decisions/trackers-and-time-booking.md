@@ -16,6 +16,7 @@ The time-booking tool books worklogs from the old harness's activity ledger, one
 Each registry entry names its tracker with `tracker.kind` (`jira`, `edi`, `github` or `none`), and `Trackers` refuses a project on an external tracker the machine profile does not name.
 The profile's `tracker` section holds everything a JIRA instance differs in, such as its URL, credentials, evergreen tickets, workflow statuses, merged status and issue type.
 `JiraTracker` speaks REST version 2 and the agile API through `JiraCalls`, with the proxies the environment names (`EnvironmentProxies`); `EdiNativeTracker` issues keys and keeps no tickets; `NoTracker` issues none.
+`Trackers.serving` hands every project but EDI its tracker wrapped in `PlainlyWordedTracker`, which refuses under `tracker.text-clean`, before the call, a ticket's summary, a line of its description or a link's title that carries "captain", "commander" or an internal decision or question code, naming each place and saying to write "developer" instead, by the check the publish guard applies to a push ([publish-guard](publish-guard.md)); a refused creation raises the ticket decision again with the refusal in its context, and a refused link is recorded as a refused ticket update.
 `JiraCalls` reads the token from the keys file at every call, sends it only in the `Authorization` header, and writes `[secret]` for it in any message (`KeysFile`).
 At intake `AddTask` asks `TaskKeys`: a given key must belong to the project and exist; unkeyed work on an EDI-native project gets the next key; unkeyed work on a project keyed by its GitHub issues is refused, since its key is its issue's number and comes with `--key`; on JIRA, `TicketProposals` raises a decision with up to three matching tickets and a drafted new one.
 The answer settles the ticket outside the transaction: an existing ticket keys the task; a new one is created after the attempt is recorded, then filled; an interrupted creation first adopts an open ticket with exactly the drafted summary; a refused choice raises a new decision on the task with the refusal in its context, the answered one kept ([captain-decisions](captain-decisions.md)); an unreachable tracker is retried every supervision round.
@@ -41,6 +42,7 @@ Measuring from the event log, which already records every status with its time, 
 
 ## Alternatives rejected
 
+- Checking the tracker text at each use case that writes it - a later writer, such as a comment or a worklog, would have to remember the check.
 - JIRA's Java client library - a large dependency with reflection for the eight calls EDI makes.
 - A workflow walk hard-coded to one JIRA instance - would name an employer's workflow in tracked code.
 - Creating the ticket at intake and asking afterwards - against asking first.
@@ -50,6 +52,7 @@ Measuring from the event log, which already records every status with its time, 
 
 ## Consequences
 
+- Bad: a ticket drafted from a task whose title or notes quote the captain is not created until the text says "developer", since the draft is taken from them.
 - Good: a new tracker, such as the future work board, is one adapter and one registry word, and a renewed token takes effect at the next call.
 - Good: a stretch runs from what sets the worker going, a working status, a received message, a relaunch or a limit resume, until its turn ends or another stop EDI records.
 - Bad: a worker that wakes on its own background job's completion, with neither a message nor a status, books nothing until its next status.
@@ -70,3 +73,4 @@ When EDI talks to a second external tracker, JIRA retires REST version 2, or the
 - 04/11/2026: EDI's own backlog moved into GitHub issues, so the `github` tracker kind keys a project's work by its issue numbers, served by `GitHubIssuesTracker`, which never allocates a key (EDI-176).
 - 06/11/2026: the Week view shows each task's active time per local day against the ticket it books on, an EDI-native task against the profile's tooling ticket, and copies a task's days as minute-exact timesheet lines in JIRA's notation, on the captain's answers to EDI-62's questions (EDI-62).
 - 20/11/2026: `GET /api/week` also serves the week's cost and review yield per effort of its ship tasks ([cleanup](cleanup.md), EDI-97).
+- 24/11/2026: text EDI writes to a project's tracker never carries "captain", "commander" or an internal decision or question code, on the captain's word of 9 November 2026 (EDI-237).

@@ -46,6 +46,17 @@ class WorkerBriefsTest {
     }
 
     @Test
+    void tellsTheWorkerOfAnotherProjectToWriteDeveloperAndLeaveTheInternalCodesOut() {
+        String rule = "- Text bound for the project or its tracker, such as a commit, a merge request's title and body, a story file or a decision record,"
+                + " never says \"captain\" or \"commander\" in any case and never carries an internal decision or question code such as D103 or Q10 A:"
+                + " write \"developer\" instead, and say a question and its answer in plain words; the publish check refuses both.\n";
+
+        assertThat(briefs.briefFor(BriefFixtures.shipFollowing(null, "", false))).contains(rule);
+        assertThat(briefs.briefFor(BriefFixtures.scout())).contains(rule);
+        assertThat(briefs.briefFor(BriefFixtures.shipOnEdiItself())).doesNotContain("Text bound for the project or its tracker");
+    }
+
+    @Test
     void leavesTheFullBuildAndTheNativeBuildToCiWhereTheProjectsCiRuns() {
         String brief = briefs.briefFor(BriefFixtures.shipWhereCi(true));
 

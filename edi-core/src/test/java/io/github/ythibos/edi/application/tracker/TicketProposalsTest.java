@@ -103,6 +103,22 @@ class TicketProposalsTest {
     }
 
     @Test
+    void asksAgainRatherThanCreateATicketWhoseTextCarriesInternalVocabulary() {
+        TaskId seen = new TaskId("fix-seen-lamps");
+        home.addTask().add(TrackerFixtures.ship("fix-seen-lamps", "service", "Fix the harbour lamps the captain saw", null), Actor.PRIMARY);
+
+        AnsweredDecision answered = home.answerDecision().answer(new TaskReference.ById(seen),
+                new GivenAnswer("D59 B", OptionKey.parse("B"), "", AnswerChannel.CHAT), Actor.PRIMARY);
+
+        assertThat(answered.ticket()).isEqualTo(new TicketSettlement.AskedAgain(
+                "Text bound for the project's tracker carries internal vocabulary, which the project's readers never see:"
+                        + " the summary: \"captain\" is internal vocabulary; write \"developer\" instead;"
+                        + " line 1 of the description: \"captain\" is internal vocabulary; write \"developer\" instead."));
+        assertThat(home.jira().created()).isEmpty();
+        assertThat(home.decisions().ofTask(seen).orElseThrow().isOpen()).isTrue();
+    }
+
+    @Test
     void settlesTheTicketLaterWhenTheTrackerCannotBeReached() {
         home.jira().failsNextWith(new TrackerUnavailable("JIRA at tracker.example.org cannot be reached for the new ticket: ConnectException."));
 

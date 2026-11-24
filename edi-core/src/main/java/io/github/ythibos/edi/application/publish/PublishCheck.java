@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
@@ -13,8 +14,10 @@ import io.github.ythibos.edi.adapter.git.Git;
 import io.github.ythibos.edi.adapter.gitleaks.Gitleaks;
 import io.github.ythibos.edi.domain.delivery.SnapshotVersions;
 import io.github.ythibos.edi.domain.publish.DenyList;
+import io.github.ythibos.edi.domain.publish.EdiVocabulary;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.PersonalPaths;
+import io.github.ythibos.edi.domain.publish.PublishFinding;
 import io.github.ythibos.edi.domain.publish.PublishVerdict;
 import io.github.ythibos.edi.domain.publish.RequestText;
 import io.github.ythibos.edi.domain.publish.RevisionRange;
@@ -42,7 +45,8 @@ public class PublishCheck {
     }
 
     public TextVerdict checkText(Path repository, RequestText text) {
-        return TextVerdict.of(text, denyList().sparing(targets.ownNamesOf(repository)), gitleaks.secretsIn(text));
+        TextVerdict verdict = TextVerdict.of(text, denyList().sparing(targets.ownNamesOf(repository)), gitleaks.secretsIn(text));
+        return targets.publishesToAProjectsReaders(repository) ? verdict.andEdiVocabularyIn(text) : verdict;
     }
 
     public PublishVerdict check(Path repository, RevisionRange outgoing) {
@@ -55,8 +59,15 @@ public class PublishCheck {
                         gitleaks.secretsIn(repository, outgoing),
                         denyList.sparing(targets.ownNamesOf(repository)).findIn(changes),
                         personalPathsOf(repository).findIn(changes),
-                        SnapshotVersions.findIn(changes, commit -> git.reactorAt(repository, commit)))
+                        SnapshotVersions.findIn(changes, commit -> git.reactorAt(repository, commit)),
+                        ediVocabularyIn(repository, changes))
                 .hidingPathsDeniedBy(denyList, changes);
+    }
+
+    private List<PublishFinding> ediVocabularyIn(Path repository, OutgoingChanges changes) {
+        return targets.publishesToAProjectsReaders(repository)
+                ? EdiVocabulary.findIn(changes, (commit, path) -> git.contentAt(repository, commit, path))
+                : List.of();
     }
 
     private DenyList denyList() {
