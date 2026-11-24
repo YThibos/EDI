@@ -122,7 +122,7 @@ public class FollowMerges {
         }
         if (!landsOnTheBase(delivery.task(), view)) {
             keptAsTheForgeShowsIt(delivery, view);
-            throw mergedIntoAnotherBranch(view);
+            throw mergedIntoAnotherBranch(delivery.task(), view);
         }
         return followed(delivery, view, actor);
     }
@@ -175,13 +175,14 @@ public class FollowMerges {
         return transaction.execute(_ -> records.landsOnTheBase(task, view));
     }
 
-    private static Refusal notLanded(MergeRequestView view) {
-        return view.isMerged() ? mergedIntoAnotherBranch(view) : notMerged(view);
+    private static Refusal notLanded(TaskId task, MergeRequestView view) {
+        return view.isMerged() ? mergedIntoAnotherBranch(task, view) : notMerged(view);
     }
 
-    private static Refusal mergedIntoAnotherBranch(MergeRequestView view) {
+    private static Refusal mergedIntoAnotherBranch(TaskId task, MergeRequestView view) {
         return new Refusal(Rule.REQUEST_FOLLOWED, "The forge shows " + view.address() + " merged into " + view.targetBranch()
-                + ", not into the base branch, so the work has not landed and the task stays in flight.");
+                + ", not into the base branch, so the work did not land through its own request and the task stays in flight;"
+                + " once " + view.targetBranch() + " lands on the base, edi cleanup " + task + " retires it.");
     }
 
     private static Refusal notMerged(MergeRequestView view) {
@@ -255,7 +256,7 @@ public class FollowMerges {
     private MergedWork requestFollowedOnTheCaptainsWord(TaskId task, MergeRequestView request, Actor actor) {
         if (!landsOnTheBase(task, request)) {
             recordedUnlessHeld(task, request, actor);
-            throw notLanded(request);
+            throw notLanded(task, request);
         }
         return recordedAndFollowed(task, request, actor);
     }

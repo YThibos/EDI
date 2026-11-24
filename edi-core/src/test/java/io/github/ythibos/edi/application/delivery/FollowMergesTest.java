@@ -160,8 +160,9 @@ class FollowMergesTest {
         home.forge().merges(delivery.address(), squashedOntoMain(copy));
 
         assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
-                .hasMessage("The forge shows " + delivery.address() + " merged into slice/lamps, not into the base branch, so the work has not landed"
-                        + " and the task stays in flight.");
+                .hasMessage("The forge shows " + delivery.address() + " merged into slice/lamps, not into the base branch,"
+                        + " so the work did not land through its own request and the task stays in flight;"
+                        + " once slice/lamps lands on the base, edi cleanup fit-lamp retires it.");
         assertThat(home.eventTypesOf(LAMP)).doesNotContain("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
         assertThat(home.deliveries().of(LAMP).orElseThrow().isLanded()).isFalse();

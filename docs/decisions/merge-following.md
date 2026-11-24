@@ -18,6 +18,7 @@ Each view of an open request saves its head, draft flag and head checks as the f
 A request counts as the task landing only when the forge shows it merged into the task's base branch (`MergeRequestView.isMergedIntoTheBase`).
 Each request is saved with the branch it targets when that is not the base (`Delivery.stackedOn`, null otherwise), and a merge into any other branch is saved as merged but not landed (`Delivery.isLanded`): no `DraftMerged`, no stage move, no clone refresh and no wake, so the task stays in flight and its isolated copy stays.
 `edi merged` refuses such a merge, naming the branch it landed on, and `edi deliver` opens a fresh draft to the base past it, refusing only a request already merged into the base.
+EDI does not watch that branch reach the base, so the refusal and every surface say the work did not land through its own request and name `edi cleanup <task>` as the next step once that branch lands on the base, where the clean-up's landed-work test decides.
 Like a closed request, a request merged elsewhere is no longer the task's followed delivery (`DeliveryRecords.followedDeliveryOf`), so the task's next request from its branch is recorded as soon as it exists, while the merged one, unchanged on the forge, is not recorded again.
 A followed merge into the base moves the task to MERGED ([task-lifecycle](task-lifecycle.md)) and names the branch's commits after the merged head as not landed.
 A merge records `DraftMerged` with the commit it landed and a `CloneRefresh`; a closed request records `DraftClosed`; both wake the primary.

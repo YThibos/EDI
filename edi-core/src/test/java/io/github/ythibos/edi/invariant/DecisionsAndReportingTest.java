@@ -406,8 +406,9 @@ class DecisionsAndReportingTest {
             assertThat(brief).contains("Ready for your review: Work on fit-lamp - " + REQUEST + " " + target + "\n");
             assertThat(digest).contains("review  fit-lamp  " + REQUEST + "  targets slice/lamps, not the base: merging it does not land the work\n");
             assertThat(onTheConsole).extracting(ConsoleSitrep.Review::stackedOn).containsExactly("slice/lamps");
-            String notLanded = "its request merged into slice/lamps, not the base, so the work has not landed";
-            assertThat(merged.replaceAll("\\s*\n║\\s*", " ")).contains("Work on fit-lamp: " + notLanded).doesNotContain("Ready for your review");
+            String notLanded = "its request merged into slice/lamps, so the work did not land through its own request;"
+                    + " once slice/lamps lands on the base, edi cleanup fit-lamp retires it";
+            assertThat(merged.replaceAll("\\s*\n[║ ]*", " ")).contains("Work on fit-lamp: " + notLanded).doesNotContain("Ready for your review");
             assertThat(mergedBrief).contains("Work on fit-lamp: " + notLanded + "\n");
             assertThat(mergedOnTheConsole.doing()).isEqualTo("Fitted. - " + notLanded);
         }

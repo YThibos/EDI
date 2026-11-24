@@ -49,11 +49,12 @@ public final class WaitingWords {
     }
 
     private static String noteOn(Delivery stackedRequest) {
-        return stackedRequest.isMerged() ? mergedElsewhere(stackedRequest.stackedOn()) : target(stackedRequest.stackedOn());
+        return stackedRequest.isMerged() ? mergedElsewhere(stackedRequest) : target(stackedRequest.stackedOn());
     }
 
-    private static String mergedElsewhere(String stackedOn) {
-        return "its request merged into " + stackedOn + ", not the base, so the work has not landed";
+    private static String mergedElsewhere(Delivery stackedRequest) {
+        return "its request merged into " + stackedRequest.stackedOn() + ", so the work did not land through its own request;"
+                + " once " + stackedRequest.stackedOn() + " lands on the base, edi cleanup " + stackedRequest.task() + " retires it";
     }
 
     public static String inTheRound(String closesAt) {
