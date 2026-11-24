@@ -254,10 +254,18 @@ public class FollowMerges {
 
     private MergedWork requestFollowedOnTheCaptainsWord(TaskId task, MergeRequestView request, Actor actor) {
         if (!landsOnTheBase(task, request)) {
-            transaction.executeWithoutResult(_ -> records.recorded(task, request, actor));
+            recordedUnlessHeld(task, request, actor);
             throw notLanded(request);
         }
         return recordedAndFollowed(task, request, actor);
+    }
+
+    private void recordedUnlessHeld(TaskId task, MergeRequestView request, Actor actor) {
+        transaction.executeWithoutResult(_ -> {
+            if (!records.holdsAsTheForgeShowsIt(task, request)) {
+                records.recorded(task, request, actor);
+            }
+        });
     }
 
     private MergedWork recordedAndFollowed(TaskId task, MergeRequestView request, Actor actor) {
@@ -279,7 +287,7 @@ public class FollowMerges {
         if (landsOnTheBase(task, request)) {
             recordedAndFollowed(task, request, actor);
         } else {
-            transaction.executeWithoutResult(_ -> records.recorded(task, request, actor));
+            recordedUnlessHeld(task, request, actor);
         }
     }
 

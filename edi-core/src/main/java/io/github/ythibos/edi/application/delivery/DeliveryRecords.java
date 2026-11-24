@@ -48,7 +48,11 @@ public class DeliveryRecords {
     }
 
     public Optional<Delivery> followedDeliveryOf(TaskId task) {
-        return deliveries.of(task).filter(delivery -> !delivery.isClosed());
+        return deliveries.of(task).filter(DeliveryRecords::isStillFollowed);
+    }
+
+    private static boolean isStillFollowed(Delivery delivery) {
+        return delivery.isOpen() || delivery.isLanded();
     }
 
     public Optional<MergeRequestView> requestFrom(Workplace workplace) {
@@ -84,6 +88,11 @@ public class DeliveryRecords {
         deliveries.save(delivery);
         events.record(event, actor, now);
         return delivery;
+    }
+
+    public boolean holdsAsTheForgeShowsIt(TaskId task, MergeRequestView request) {
+        return deliveries.of(task).filter(recorded -> recorded.address().equals(request.address())).filter(recorded -> !recorded.changesWith(request))
+                .isPresent();
     }
 
     public Delivery observed(Delivery delivery, MergeRequestView view, Instant at) {

@@ -118,6 +118,39 @@ class FollowMergesTest {
     }
 
     @Test
+    void followsTheNextRequestOfATaskWhoseRequestMergedIntoAnotherBranchThroughToItsLanding() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        Delivery stacked = home.deliveries().of(LAMP).orElseThrow();
+        home.forge().retargets(stacked.address(), "slice/lamps");
+        home.forge().merges(stacked.address(), "3333");
+        home.followMerges().watchTheOpenDrafts();
+        long recordedBefore = home.eventTypesOf(LAMP).stream().filter("DraftRecorded"::equals).count();
+
+        home.followMerges().followTheRequestOf(LAMP);
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.eventTypesOf(LAMP).stream().filter("DraftRecorded"::equals).count()).isEqualTo(recordedBefore);
+        RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
+        MergeRequestView next = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), copy.head());
+
+        home.followMerges().followTheRequestOf(LAMP);
+
+        Delivery recorded = home.deliveries().of(LAMP).orElseThrow();
+        assertThat(recorded.address()).isEqualTo(next.address());
+        assertThat(recorded.isOpen()).isTrue();
+        assertThat(recorded.stackedOn()).isNull();
+
+        home.forge().merges(next.address(), squashedOntoMain(copy));
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.deliveries().of(LAMP).orElseThrow().isLanded()).isTrue();
+        assertThat(home.eventTypesOf(LAMP)).containsSubsequence("DraftRecorded", "DraftMerged");
+        assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage).contains(TaskStage.MERGED);
+    }
+
+    @Test
     void refusesTheCaptainsWordForAMergeIntoAnotherBranchAndNamesTheBranch() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
