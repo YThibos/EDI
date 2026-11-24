@@ -4,6 +4,7 @@ import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -107,7 +108,7 @@ public class FollowMerges {
 
     public void finishEarlierMerges() {
         refreshes.refreshEveryClone();
-        cleanUpWhatTheClonesHold(Actor.CORE);
+        cleanUpWhatTheClonesHold(_ -> Actor.CORE);
     }
 
     public void raiseTheFollowUpsHeldBack() {
@@ -239,8 +240,13 @@ public class FollowMerges {
 
     private MergedWork cleanedUpOnceMerged(Delivery merged, Actor actor) {
         refreshes.refreshEveryClone();
-        CleanUp cleanUp = cleanUpWhatTheClonesHold(actor).getOrDefault(merged.task(), CleanUp.awaitingTheRefresh());
+        CleanUp cleanUp = cleanUpWhatTheClonesHold(task -> cleanerOf(task, merged.task(), actor))
+                .getOrDefault(merged.task(), CleanUp.awaitingTheRefresh());
         return new MergedWork(merged.task(), merged, cleanUp);
+    }
+
+    private static Actor cleanerOf(TaskId task, TaskId merged, Actor actor) {
+        return task.equals(merged) ? actor : Actor.CORE;
     }
 
     private MergedWork requestFollowedFromTheForge(String reference, Actor actor) {
@@ -353,8 +359,9 @@ public class FollowMerges {
         }
     }
 
-    private Map<TaskId, CleanUp> cleanUpWhatTheClonesHold(Actor actor) {
-        return refreshes.awaitingCleanUp().stream().collect(Collectors.toMap(CloneRefresh::task, refresh -> cleanedUpAfterTheRefresh(refresh, actor)));
+    private Map<TaskId, CleanUp> cleanUpWhatTheClonesHold(Function<TaskId, Actor> cleaner) {
+        return refreshes.awaitingCleanUp().stream()
+                .collect(Collectors.toMap(CloneRefresh::task, refresh -> cleanedUpAfterTheRefresh(refresh, cleaner.apply(refresh.task()))));
     }
 
     private CleanUp cleanedUpAfterTheRefresh(CloneRefresh refresh, Actor actor) {

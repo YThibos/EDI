@@ -81,7 +81,7 @@ public class CopyRetirement {
     }
 
     public void retireDiscarding(Workplace workplace, CaptainsWord word, LandedWork landed) {
-        followUps.requireCarriedWhenFollowedUp(workplace, word, landed.unlandedCommits());
+        followUps.requireCarriedWhenFollowedUp(workplace, word, landed);
         retire(workplace, true);
     }
 

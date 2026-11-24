@@ -643,6 +643,29 @@ class FollowMergesTest {
     }
 
     @Test
+    void wakesThePrimaryWithTheChangedFindingsOfAnotherTasksCleanUpRefusedWhileItSaidATaskWasMerged() throws IOException {
+        DispatchOutcome horn = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"));
+        FixtureRepository hornCopy = DeliveryFixtures.committedIn(horn, "horn.txt", "loud\n", "HRN-4 Fit the horn");
+        DeliveryFixtures.deliveredAsADraft(home, horn);
+        home.forge().merges(home.deliveries().of(HORN).orElseThrow().address(), squashedOntoMain(hornCopy));
+        hornCopy.write("notes.txt", "left behind\n");
+        home.followMerges().watchTheOpenDrafts();
+        Files.delete(hornCopy.root().resolve("notes.txt"));
+        hornCopy.write("draft.txt", "half done\n");
+        home.clock().advance(Duration.ofMinutes(1));
+        DispatchOutcome lamp = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository lampCopy = DeliveryFixtures.committedIn(lamp, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, lamp);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(lampCopy));
+
+        home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(home.eventTypesOf(HORN)).filteredOn("CleanupRefused"::equals).hasSize(2);
+        assertThat(home.wakes().unacknowledged()).filteredOn(queued -> queued.wake().kind() == WakeKind.CLEANUP_REFUSED)
+                .extracting(queued -> queued.wake().detail()).containsExactly("notes.txt is not committed", "draft.txt is not committed");
+    }
+
+    @Test
     void cleansUpAWorkDeliveredLocallyOnTheCaptainsWordOnceItIsLanded() throws IOException {
         FixtureRepository checkout = upstream.clonedInto(directory.resolve("checkouts/harness"));
         home.registering("""

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.UUID;
@@ -69,6 +70,29 @@ class FollowUpCarriageTest {
         DiscardedWork discarded = home.discardWork().discard(new TaskReference.ById(LAMP), session, Actor.PRIMARY);
 
         assertThat(discarded.discarded()).containsExactly("commit " + late.substring(0, 12) + " \"HRN-3 Fit the cap\" is not in origin/main");
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void refusesToDiscardWhatTheFollowUpCardNeverNamedOnTheFollowUpAnswerEvenOnceTheFollowUpTasksBranchHoldsTheCommits() throws IOException {
+        FixtureRepository copy = mergedWithALateCommit();
+        String late = copy.head();
+        CallingSession session = theCaptainChose(new OptionKey('A'));
+        home.clock().advance(Duration.ofMinutes(5));
+        FixtureRepository followUp = FixtureRepository.at(
+                DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("carry-cap", "harness", "HRN-4")).launched().worktree());
+        followUp.run("cherry-pick", late);
+        upstream.run("fetch", "--quiet", followUp.root().toString(), "feature/HRN-4:feature/HRN-4");
+        copy.write("notes.txt", "unfinished\n");
+
+        assertThatThrownBy(() -> home.discardWork().discard(new TaskReference.ById(LAMP), session, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp's work is not discarded yet: the captain's answer discards only the commits after its merged head,"
+                        + " and the copy also holds notes.txt is not committed. Discarding that needs the captain's own word.");
+        assertThat(copy.root()).isDirectory();
+
+        Files.delete(copy.root().resolve("notes.txt"));
+        home.discardWork().discard(new TaskReference.ById(LAMP), session, Actor.PRIMARY);
+
         assertThat(copy.root()).doesNotExist();
     }
 

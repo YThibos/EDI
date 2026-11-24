@@ -26,6 +26,7 @@ A landed task is retired by `CopyRetirement`: its cost is counted (`TaskCosts`, 
 The Week view's rows per effort count ship tasks only (`WeekOfWork`), since a scout's research is never reviewed by the pipeline and would skew the cost per task.
 Dropping a task and discarding work share the same retirement steps on the captain's word ([captains-word](captains-word.md)).
 A discard, or a drop with its work, whose word is the answer that chose a follow-up task for the commits after a merged head is refused until the branch of a task dispatched since that decision holds them on the forge, by patch or by content (`FollowUpCarriage`, in the retirement step both share), and the refusal names what is missing, so nothing is lost by the order the two tasks are handled in.
+That answer discards only what the card named, the commits after the merged head, so the discard is also refused while the copy holds an uncommitted path or a nested repository, which needs the captain's own word.
 `edi task recount-costs --since <date>` recounts the pipeline's spend of every task cost counted since that day (`RecountTaskCosts`): it reads the spend of each task's branch again, keeps what the workers spent and when the cost was counted, and saves each cost it changes with `TaskCostRecounted`, the cost before and after; a spend the pipeline no longer knows, because its store is unreadable or holds no run of the branch any more, leaves the recorded one.
 
 ## Why

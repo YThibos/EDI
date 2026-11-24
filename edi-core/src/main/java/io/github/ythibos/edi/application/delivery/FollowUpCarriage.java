@@ -3,6 +3,7 @@ package io.github.ythibos.edi.application.delivery;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -15,6 +16,7 @@ import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.dispatch.Dispatch;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.landing.FollowUpBranch;
+import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.landing.WorkAfterTheMergedHead;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
@@ -34,11 +36,8 @@ public class FollowUpCarriage {
         this.transaction = transaction;
     }
 
-    public void requireCarriedWhenFollowedUp(Workplace workplace, CaptainsWord word, List<BranchCommit> unlanded) {
-        if (unlanded.isEmpty()) {
-            return;
-        }
-        followUpChosenBy(workplace, word).ifPresent(followUp -> requireCarried(workplace, unlanded, followUp.raisedAt()));
+    public void requireCarriedWhenFollowedUp(Workplace workplace, CaptainsWord word, LandedWork landed) {
+        followUpChosenBy(workplace, word).ifPresent(followUp -> requireOnlyTheNamedCommitsCarried(workplace, landed, followUp.raisedAt()));
     }
 
     private Optional<Decision> followUpChosenBy(Workplace workplace, CaptainsWord word) {
@@ -46,6 +45,28 @@ public class FollowUpCarriage {
                 .filter(WorkAfterTheMergedHead::choseTheFollowUp)
                 .filter(decision -> decision.answer().verbatim().equals(word.verbatim()))
                 .findFirst();
+    }
+
+    private void requireOnlyTheNamedCommitsCarried(Workplace workplace, LandedWork landed, Instant raisedAt) {
+        requireNothingUnnamed(workplace, landed);
+        if (!landed.unlandedCommits().isEmpty()) {
+            requireCarried(workplace, landed.unlandedCommits(), raisedAt);
+        }
+    }
+
+    private static void requireNothingUnnamed(Workplace workplace, LandedWork landed) {
+        List<String> unnamed = unnamedBy(landed);
+        if (!unnamed.isEmpty()) {
+            throw new Refusal(Rule.LANDED_BEFORE_DISCARD, workplace.task().id() + "'s work is not discarded yet: the captain's answer discards only"
+                    + " the commits after its merged head, and the copy also holds " + String.join("; ", unnamed)
+                    + ". Discarding that needs the captain's own word.");
+        }
+    }
+
+    private static List<String> unnamedBy(LandedWork landed) {
+        return Stream.concat(
+                landed.uncommittedPaths().stream().map(path -> path + " is not committed"),
+                landed.nestedRepositories().stream().map(repository -> repository + " is a repository nested in the copy")).toList();
     }
 
     private void requireCarried(Workplace workplace, List<BranchCommit> unlanded, Instant raisedAt) {
