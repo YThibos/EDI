@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
-import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
@@ -87,13 +86,9 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
         return fleet.ongoing().stream()
-                .map(ongoing -> new ReportItem(wording.projectsOf(ongoing.task()), ongoingText(ongoing, wording)))
+                .map(ongoing -> new ReportItem(wording.projectsOf(ongoing.task()),
+                        WaitingWords.ongoing(wording.textWithStateOf(ongoing.task()), ongoing)))
                 .toList();
-    }
-
-    private static String ongoingText(OngoingTask ongoing, TurnWording wording) {
-        String text = wording.textWithStateOf(ongoing.task());
-        return ongoing.mergedElsewhereOn().map(branch -> text + ": " + WaitingWords.mergedElsewhere(branch)).orElse(text);
     }
 
     private static List<String> section(String heading, List<String> body) {

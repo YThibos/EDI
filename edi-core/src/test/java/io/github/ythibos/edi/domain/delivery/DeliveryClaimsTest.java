@@ -120,7 +120,7 @@ class DeliveryClaimsTest {
     }
 
     @Test
-    void aMergeIntoAnotherBranchThanTheBaseIsMergedElsewhereAndNeverLanded() {
+    void aMergeIntoAnotherBranchThanTheBaseIsNeverLanded() {
         Instant recorded = Instant.parse("2026-10-16T09:00:00Z");
         MergeRequestView stackedMerge = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "slice/lamps", HEAD, HeadChecks.PASSED,
                 "3333", MERGED_AT);
@@ -133,11 +133,10 @@ class DeliveryClaimsTest {
         assertThat(stackedMerge.isMergedIntoTheBase(MAIN)).isFalse();
         assertThat(baseMerge.isMergedIntoTheBase(MAIN)).isTrue();
         assertThat(stacked.stackedOn()).isEqualTo("slice/lamps");
-        assertThat(stacked.isMergedElsewhere()).isTrue();
+        assertThat(stacked.isMerged()).isTrue();
         assertThat(stacked.isLanded()).isFalse();
         assertThat(landed.stackedOn()).isNull();
         assertThat(landed.isLanded()).isTrue();
-        assertThat(landed.isMergedElsewhere()).isFalse();
     }
 
     @Test

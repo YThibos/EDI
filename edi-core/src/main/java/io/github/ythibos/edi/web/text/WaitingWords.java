@@ -3,6 +3,10 @@ package io.github.ythibos.edi.web.text;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+
+import io.github.ythibos.edi.application.fleet.OngoingTask;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 
 public final class WaitingWords {
 
@@ -24,12 +28,28 @@ public final class WaitingWords {
         return "Changing, hold the merge: " + task + " (" + why + ") - " + address + targeting(stackedOn);
     }
 
-    public static String mergedElsewhere(String stackedOn) {
-        return "its request merged into " + stackedOn + ", not the base, so the work has not landed";
+    public static String ongoing(String title, OngoingTask ongoing) {
+        return offTheBase(ongoing).map(note -> title + ": " + note).orElse(title);
+    }
+
+    public static Optional<String> offTheBase(OngoingTask ongoing) {
+        return ongoing.stackedRequest().map(WaitingWords::noteOn);
+    }
+
+    public static String target(String stackedOn) {
+        return "targets " + stackedOn + ", not the base: merging it does not land the work";
     }
 
     private static String targeting(String stackedOn) {
-        return stackedOn == null ? "" : " (targets " + stackedOn + ", not the base: merging it does not land the work)";
+        return stackedOn == null ? "" : " (" + target(stackedOn) + ")";
+    }
+
+    private static String noteOn(Delivery stackedRequest) {
+        return stackedRequest.isMerged() ? mergedElsewhere(stackedRequest.stackedOn()) : target(stackedRequest.stackedOn());
+    }
+
+    private static String mergedElsewhere(String stackedOn) {
+        return "its request merged into " + stackedOn + ", not the base, so the work has not landed";
     }
 
     public static String inTheRound(String closesAt) {

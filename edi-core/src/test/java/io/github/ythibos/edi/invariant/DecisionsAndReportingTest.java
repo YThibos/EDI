@@ -414,6 +414,25 @@ class DecisionsAndReportingTest {
 
         @Test
         @Tag("adapter")
+        @DisplayName("AT-19 an ongoing task whose open request targets another branch than the base names that branch before its done")
+        void anOngoingTaskNamesTheTargetOfItsOpenStackedRequest() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN, "slice/lamps"), new BaseBranch("main"), TestHome.START));
+
+            String report = captainReport(home, Turn.NONE);
+            String brief = returnBrief(home);
+            ConsoleSitrep onTheConsole = consoleSitrep(home);
+
+            String target = "targets slice/lamps, not the base: merging it does not land the work";
+            assertThat(onTheConsole.reviews()).isEmpty();
+            assertThat(report.replaceAll("\\s*\n║\\s*", " ")).contains("Work on fit-lamp: " + target).doesNotContain("Ready for your review");
+            assertThat(brief).contains("Work on fit-lamp: " + target + "\n");
+            assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::doing).containsExactly(target);
+        }
+
+        @Test
+        @Tag("adapter")
         @DisplayName("AT-19 a request whose pipeline still runs or whose steer waits unacknowledged after its done shows as changing with the reason,"
                 + " never as ready")
         void aRequestStillChangingAfterItsDoneShowsAsChanging() throws IOException {

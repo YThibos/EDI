@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.application.delivery;
 
+import static java.util.function.Predicate.not;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -63,12 +65,11 @@ public class DeliverDraft {
         RegisteredForge forge = requireADraftReviewShip(workplace);
         String head = requireTheCopy(workplace);
         requireACleanPublication(workplace);
-        Optional<MergeRequestView> found = records.requestFrom(workplace);
-        requireNoMergeYet(workplace, found);
-        MergeRequestView request = found.orElseGet(() -> forges.serving(forge).openDraft(forge, aCleanProposalFor(workplace)));
-        found.ifPresent(posted -> requireACleanText(workplace, forges.serving(forge).textOf(forge, posted.address())));
+        Optional<MergeRequestView> open = openRequestOf(workplace);
+        MergeRequestView request = open.orElseGet(() -> forges.serving(forge).openDraft(forge, aCleanProposalFor(workplace)));
+        open.ifPresent(posted -> requireACleanText(workplace, forges.serving(forge).textOf(forge, posted.address())));
         requireTheDeliveryOf(workplace, request, head);
-        return recorded(workplace, request, found.isEmpty(), actor);
+        return recorded(workplace, request, open.isEmpty(), actor);
     }
 
     private static RegisteredForge requireADraftReviewShip(Workplace workplace) {
@@ -95,8 +96,14 @@ public class DeliverDraft {
         }
     }
 
-    private static void requireNoMergeYet(Workplace workplace, Optional<MergeRequestView> found) {
-        found.filter(MergeRequestView::isMerged).ifPresent(merged -> {
+    private Optional<MergeRequestView> openRequestOf(Workplace workplace) {
+        Optional<MergeRequestView> found = records.requestFrom(workplace);
+        requireNoLandingYet(workplace, found);
+        return found.filter(not(MergeRequestView::isMerged));
+    }
+
+    private static void requireNoLandingYet(Workplace workplace, Optional<MergeRequestView> found) {
+        found.filter(request -> request.isMergedIntoTheBase(workplace.base())).ifPresent(merged -> {
             throw new Refusal(Rule.NOT_MERGED_YET, merged.address() + " is merged already; edi merged " + workplace.task().id() + " follows its merge.");
         });
     }

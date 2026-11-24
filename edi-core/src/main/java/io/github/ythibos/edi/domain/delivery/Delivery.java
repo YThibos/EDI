@@ -63,10 +63,6 @@ public record Delivery(
         return stackedOn != null;
     }
 
-    public boolean isMergedElsewhere() {
-        return isMerged() && isStacked();
-    }
-
     public boolean isLanded() {
         return isMerged() && !isStacked();
     }

@@ -106,7 +106,7 @@ class FollowMergesTest {
         home.followMerges().watchTheOpenDrafts();
 
         Delivery merged = home.deliveries().of(LAMP).orElseThrow();
-        assertThat(merged.isMergedElsewhere()).isTrue();
+        assertThat(merged.isMerged()).isTrue();
         assertThat(merged.isLanded()).isFalse();
         assertThat(merged.stackedOn()).isEqualTo("slice/lamps");
         assertThat(home.eventTypesOf(LAMP)).doesNotContain("DraftMerged", "CloneRefreshed", "TaskCleanedUp");

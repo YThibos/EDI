@@ -28,6 +28,7 @@ import io.github.ythibos.edi.web.personality.PersonalityText;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.WaitingWords;
 import io.github.ythibos.edi.web.text.Words;
 import io.github.ythibos.edi.web.worker.HealthWords;
 import io.github.ythibos.edi.web.worker.WorkerListText;
@@ -214,7 +215,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String targeting(Delivery delivery) {
-        return delivery.isStacked() ? "  targets " + delivery.stackedOn() + ", not the base: merging it does not land the work" : "";
+        return delivery.isStacked() ? "  " + WaitingWords.target(delivery.stackedOn()) : "";
     }
 
     private static List<String> parked(FleetSnapshot fleet) {

@@ -105,7 +105,6 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     }
 
     private static String runningLine(OngoingTask ongoing) {
-        String title = ongoing.task().intake().title();
-        return ongoing.mergedElsewhereOn().map(branch -> title + ": " + WaitingWords.mergedElsewhere(branch)).orElse(title);
+        return WaitingWords.ongoing(ongoing.task().intake().title(), ongoing);
     }
 }

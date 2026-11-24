@@ -7,7 +7,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -223,10 +222,10 @@ public class SitrepConsolePresenter {
     }
 
     private static String doingOf(OngoingTask ongoing) {
-        Optional<String> mergedElsewhereOn = ongoing.mergedElsewhereOn();
-        if (mergedElsewhereOn.isPresent()) {
-            return WaitingWords.mergedElsewhere(mergedElsewhereOn.get());
-        }
+        return WaitingWords.offTheBase(ongoing).orElseGet(() -> activityOf(ongoing));
+    }
+
+    private static String activityOf(OngoingTask ongoing) {
         PipelineRun run = ongoing.pipelineRun();
         if (run != null && run.isRunning()) {
             return "pipeline " + run.currentStep();
