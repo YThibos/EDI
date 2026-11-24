@@ -242,7 +242,7 @@ Each row is read from its real source on 24 November 2026: `origin/main` for mer
 | EDI-150, EDI-237 request texts pass the guard | merged | `PublishCheck.checkText` on a request's title and description, at `edi deliver` and at the done | [publish-guard](../decisions/publish-guard.md) |
 | EDI-251 full builds in CI | merged | the brief leaves the full build to CI where `ciRuns`; EDI's pipeline test step runs the fast suite | `BriefSections.fullBuildLeftToCi`, issue 251 |
 | EDI-96 decision rounds | merged | a running ship's decisions gather into five-minute rounds | [decision-rounds](../decisions/decision-rounds.md) |
-| EDI-330 the captain's list | in review, pull request 334 | a changing request is ongoing work, not an entry; a review is an entry until ticked | `git diff origin/main...origin/feature/EDI-330 -- docs/decisions/captains-list.md` |
+| EDI-330 the captain's list | in review, pull request 334 | a changing request is ongoing work, not an entry; a review is an entry until ticked | `git diff origin/main...origin/feature/EDI-330 -- docs/decisions/`, its new record of the captain's list |
 
 Parts of the design that rest on work not yet merged are marked in the text as [EDI-86], [EDI-67], [EDI-70], [EDI-87] or [EDI-89], so they can be checked when that work lands.
 
