@@ -52,11 +52,10 @@ class DeliveryStoresTest {
 
     @Test
     void keepsADeliveryAndFindsItByTaskUrlAndState() {
-        Delivery open = Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null),
-                TestHome.START);
+        Delivery open = Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), TestHome.START);
         home.deliveries().save(open);
         Delivery merged = open.observed(new MergeRequestView(DRAFT, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "2222", HeadChecks.PASSED, "3333",
-                TestHome.START.plusSeconds(600)), TestHome.START.plusSeconds(600));
+                TestHome.START.plusSeconds(600)), new BaseBranch("main"), TestHome.START.plusSeconds(600));
         home.deliveries().save(merged);
 
         assertThat(home.deliveries().of(LAMP)).contains(merged);
@@ -66,9 +65,23 @@ class DeliveryStoresTest {
     }
 
     @Test
+    void keepsTheBranchARequestIsStackedOnAndNothingForARequestOnTheBase() {
+        MergeRequestView stacked = new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "slice/lamps", "2222", HeadChecks.UNDECIDED, null, null);
+        Delivery onASlice = Delivery.of(LAMP, stacked, new BaseBranch("main"), TestHome.START);
+        home.deliveries().save(onASlice);
+        Delivery retargeted = onASlice.observed(new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null,
+                null), new BaseBranch("main"), TestHome.START.plusSeconds(60));
+
+        assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(stored -> assertThat(stored.stackedOn()).isEqualTo("slice/lamps"));
+
+        home.deliveries().save(retargeted);
+
+        assertThat(home.deliveries().of(LAMP)).hasValueSatisfying(stored -> assertThat(stored.stackedOn()).isNull());
+    }
+
+    @Test
     void refusesADeliveryWhosePartsDoNotRebuildItsUrl() {
-        home.deliveries().save(Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null),
-                TestHome.START));
+        home.deliveries().save(Delivery.of(LAMP, new MergeRequestView(DRAFT, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "2222", HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), TestHome.START));
         home.jdbc().sql("update delivery set url = 'https://forge.example.org/elsewhere/-/merge_requests/5'").update();
 
         assertThatIllegalStateException().isThrownBy(() -> home.deliveries().of(LAMP)).withMessageContaining("the record is refused");

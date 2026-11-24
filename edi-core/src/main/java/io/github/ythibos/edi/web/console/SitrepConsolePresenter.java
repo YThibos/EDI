@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +55,7 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Recommendation;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Review;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Question;
 import io.github.ythibos.edi.web.presence.PresenceWords;
+import io.github.ythibos.edi.web.text.WaitingWords;
 
 @Component
 public class SitrepConsolePresenter {
@@ -143,12 +145,13 @@ public class SitrepConsolePresenter {
 
     private static Review review(ReadyForReview ready) {
         Task task = ready.task();
-        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url());
+        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url(), ready.delivery().stackedOn());
     }
 
     private static Changing changing(ChangingRequest changing) {
         Task task = changing.task();
-        return new Changing(task.id().value(), task.intake().title(), projectsOf(task), changing.delivery().address().url(), changing.whyChanging());
+        return new Changing(task.id().value(), task.intake().title(), projectsOf(task), changing.delivery().address().url(), changing.whyChanging(),
+                changing.delivery().stackedOn());
     }
 
     private static Question workerQuestion(WorkerQuestion waiting) {
@@ -220,6 +223,10 @@ public class SitrepConsolePresenter {
     }
 
     private static String doingOf(OngoingTask ongoing) {
+        Optional<String> mergedElsewhereOn = ongoing.mergedElsewhereOn();
+        if (mergedElsewhereOn.isPresent()) {
+            return WaitingWords.mergedElsewhere(mergedElsewhereOn.get());
+        }
         PipelineRun run = ongoing.pipelineRun();
         if (run != null && run.isRunning()) {
             return "pipeline " + run.currentStep();

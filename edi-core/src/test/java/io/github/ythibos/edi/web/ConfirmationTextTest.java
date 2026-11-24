@@ -42,6 +42,7 @@ import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -204,12 +205,13 @@ class ConfirmationTextTest {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         MergeRequestView merged = new MergeRequestView(address, MergeRequestState.MERGED, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, "3333", Instant.parse("2026-10-16T10:00:00Z"));
         Delivery delivery = Delivery.of(LANTERN, new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, null, null),
+                new BaseBranch("main"),
                 Instant.parse("2026-10-16T09:00:00Z"));
 
         assertThat(text.text(new Confirmation.DraftDelivered(new DeliveredDraft(delivery, true)))).isEqualTo(
                 "Opened the draft https://github.com/example-owner/harness/pull/7 for lantern; you watch it until the captain merges it.\n");
         assertThat(text.text(new Confirmation.DraftDelivered(new DeliveredDraft(delivery, false)))).startsWith("Recorded the open draft ");
-        assertThat(text.text(new Confirmation.MergedWorkFollowedUp(new MergedWork(LANTERN, delivery.observed(merged, Instant.parse("2026-10-16T10:00:00Z")), new CleanUp(true, null, false))))).isEqualTo(
+        assertThat(text.text(new Confirmation.MergedWorkFollowedUp(new MergedWork(LANTERN, delivery.observed(merged, new BaseBranch("main"), Instant.parse("2026-10-16T10:00:00Z")), new CleanUp(true, null, false))))).isEqualTo(
                 "Recorded the merge of https://github.com/example-owner/harness/pull/7 as 3333; lantern is cleaned up and done.\n");
         assertThat(text.text(new Confirmation.MergedWorkFollowedUp(new MergedWork(LANTERN, null, new CleanUp(false, "a commit is not landed", false)))))
                 .isEqualTo("The captain merged lantern locally; lantern is not cleaned up yet: a commit is not landed\n");

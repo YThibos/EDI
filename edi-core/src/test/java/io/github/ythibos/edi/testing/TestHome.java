@@ -793,7 +793,7 @@ public final class TestHome {
     }
 
     public DeliveryRecords deliveryRecords() {
-        return new DeliveryRecords(forges(), deliveries, events, clock);
+        return new DeliveryRecords(forges(), workerContext(), deliveries, events, clock);
     }
 
     public DoneClaims doneClaims() {

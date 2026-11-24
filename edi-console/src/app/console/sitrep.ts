@@ -78,6 +78,7 @@ export interface ReadyForReview {
   title: string;
   projects: string[];
   url: string;
+  stackedOn?: string | null;
 }
 
 export interface ChangingRequest {
@@ -86,6 +87,7 @@ export interface ChangingRequest {
   projects: string[];
   url: string;
   why: string;
+  stackedOn?: string | null;
 }
 
 export interface WorkerQuestion {

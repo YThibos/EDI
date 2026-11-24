@@ -24,6 +24,7 @@ import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -84,7 +85,7 @@ class TaskTextTest {
     void showsAShipsDraftItsPipelineRunItsCostAndItsWorkedTime() {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         Delivery draft = Delivery.of(PresenterFixtures.lantern().id(),
-                new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, null, null), AT);
+                new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), AT);
         TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), null, draft, new PipelineRun("01RUN", "running", "ci", false, "1111", null, false),
                 new TaskCost(PresenterFixtures.lantern().id(), null, new TokenUsage(1, 20, 3, 4), null, AT),
                 new WorkedTime(Duration.ofMinutes(139), Duration.ofMinutes(191)), List.of(), List.of());

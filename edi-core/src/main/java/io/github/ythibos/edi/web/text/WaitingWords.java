@@ -16,12 +16,20 @@ public final class WaitingWords {
         return "Board for " + task + ": " + waiting(questions) + " at " + link;
     }
 
-    public static String review(String task, String address) {
-        return "Ready for your review: " + task + " - " + address;
+    public static String review(String task, String address, String stackedOn) {
+        return "Ready for your review: " + task + " - " + address + targeting(stackedOn);
     }
 
-    public static String changing(String task, String address, String why) {
-        return "Changing, hold the merge: " + task + " (" + why + ") - " + address;
+    public static String changing(String task, String address, String why, String stackedOn) {
+        return "Changing, hold the merge: " + task + " (" + why + ") - " + address + targeting(stackedOn);
+    }
+
+    public static String mergedElsewhere(String stackedOn) {
+        return "its request merged into " + stackedOn + ", not the base, so the work has not landed";
+    }
+
+    private static String targeting(String stackedOn) {
+        return stackedOn == null ? "" : " (targets " + stackedOn + ", not the base: merging it does not land the work)";
     }
 
     public static String inTheRound(String closesAt) {

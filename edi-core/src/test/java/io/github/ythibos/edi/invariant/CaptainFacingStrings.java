@@ -38,6 +38,7 @@ import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -182,7 +183,7 @@ final class CaptainFacingStrings {
         home.workers().update(home.workers().get(lamp.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), NOW));
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         home.deliveries().save(Delivery.of(lamp.id().task(),
-                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, null, null), NOW));
+                new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), NOW));
     }
 
     @FunctionalInterface

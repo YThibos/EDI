@@ -41,6 +41,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
@@ -179,12 +180,12 @@ class FleetSnapshotQueryTest {
     void putsAnOpenRequestBeforeTheCaptainOnceItsDoneIsAcceptedUntilItIsMerged() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         Worker worker = WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
-        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
 
         WaitingOnTheCaptain beforeDone = home.fleetSnapshot().snapshot().waiting();
         home.workers().update(worker.reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), TestHome.START));
         WaitingOnTheCaptain afterDone = home.fleetSnapshot().snapshot().waiting();
-        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(requestIn(MergeRequestState.MERGED), TestHome.START));
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(requestIn(MergeRequestState.MERGED), new BaseBranch("main"), TestHome.START));
         WaitingOnTheCaptain afterTheMerge = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(beforeDone.reviews()).isEmpty();
@@ -267,10 +268,10 @@ class FleetSnapshotQueryTest {
     void holdsAHandedOverRequestAsChangingWhileTheForgeShowsFailedChecksOnItsHead() {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), endedInItsCiStep("failed"), TestHome.START);
-        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.FAILED), TestHome.START));
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.FAILED), new BaseBranch("main"), TestHome.START));
         WaitingOnTheCaptain red = home.fleetSnapshot().snapshot().waiting();
 
-        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.UNDECIDED), TestHome.START));
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.UNDECIDED), new BaseBranch("main"), TestHome.START));
         WaitingOnTheCaptain undecided = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(red.reviews()).isEmpty();
@@ -306,7 +307,7 @@ class FleetSnapshotQueryTest {
     void putsAHandedOverRequestBeforeTheCaptainOnChecksTheForgeShowsPassedAfterItsPipelineFailed() {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", false, "2222", REQUEST.url(), false), TestHome.START);
-        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.PASSED), TestHome.START));
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.PASSED), new BaseBranch("main"), TestHome.START));
 
         WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
 
@@ -317,7 +318,7 @@ class FleetSnapshotQueryTest {
     @Test
     void holdsAHandedOverRequestAsChangingWhileItIsStillADraft() {
         Task lamp = handedOverWithAnOpenRequest();
-        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(stillADraft(), TestHome.START));
+        home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(stillADraft(), new BaseBranch("main"), TestHome.START));
 
         WaitingOnTheCaptain draft = home.fleetSnapshot().snapshot().waiting();
 
@@ -360,7 +361,7 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         Task shade = WorkerFixtures.queuedShip("hang-shade", "harness", "HRN-4");
         WorkerFixtures.servingWorkerOn(home, shade, CategoryId.IMPLEMENTATION);
-        home.deliveries().save(Delivery.of(shade.id(), firstPassDraft(), TestHome.START));
+        home.deliveries().save(Delivery.of(shade.id(), firstPassDraft(), new BaseBranch("main"), TestHome.START));
         home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
         home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
         report(lamp, StatusState.WORKING);
@@ -382,7 +383,7 @@ class FleetSnapshotQueryTest {
     void keepsARequestWhoseMechanicalDoneAwaitsItsCheckOutOfTheZone() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.MECHANICAL);
-        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
         report(lamp, StatusState.DONE);
 
         WaitingOnTheCaptain checking = home.fleetSnapshot().snapshot().waiting();
@@ -395,7 +396,7 @@ class FleetSnapshotQueryTest {
     void remembersAnAcceptedMechanicalDoneWhileItsWorkerIsCheckedAgainAndRefused() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.MECHANICAL);
-        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
         report(lamp, StatusState.DONE);
         checkTheMechanicalDone(lamp, true);
 
@@ -530,7 +531,7 @@ class FleetSnapshotQueryTest {
     private Task handedOverWithAnOpenRequest() {
         Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
-        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
+        home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
         report(lamp, StatusState.DONE);
         return lamp;
     }

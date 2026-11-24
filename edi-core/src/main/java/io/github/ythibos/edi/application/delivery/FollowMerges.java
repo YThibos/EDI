@@ -112,13 +112,17 @@ public class FollowMerges {
     }
 
     private MergedWork deliveryFollowed(Delivery delivery, Actor actor) {
-        if (delivery.isMerged()) {
+        if (delivery.isLanded()) {
             return followedBefore(delivery, actor);
         }
         MergeRequestView view = viewOf(delivery);
         if (!view.isMerged()) {
             noticeAClosure(delivery, view, actor);
             throw notMerged(view);
+        }
+        if (!landsOnTheBase(delivery.task(), view)) {
+            keptAsTheForgeShowsIt(delivery, view);
+            throw mergedIntoAnotherBranch(view);
         }
         return followed(delivery, view, actor);
     }
@@ -162,9 +166,22 @@ public class FollowMerges {
         }
         transaction.executeWithoutResult(_ -> {
             Instant now = clock.now();
-            deliveries.save(delivery.observed(view, now));
+            records.observed(delivery, view, now);
             events.record(new DraftClosed(delivery.task(), delivery.address()), actor, now);
         });
+    }
+
+    private boolean landsOnTheBase(TaskId task, MergeRequestView view) {
+        return transaction.execute(_ -> records.landsOnTheBase(task, view));
+    }
+
+    private static Refusal notLanded(MergeRequestView view) {
+        return view.isMerged() ? mergedIntoAnotherBranch(view) : notMerged(view);
+    }
+
+    private static Refusal mergedIntoAnotherBranch(MergeRequestView view) {
+        return new Refusal(Rule.REQUEST_FOLLOWED, "The forge shows " + view.address() + " merged into " + view.targetBranch()
+                + ", not into the base branch, so the work has not landed and the task stays in flight.");
     }
 
     private static Refusal notMerged(MergeRequestView view) {
@@ -184,8 +201,7 @@ public class FollowMerges {
 
     private Delivery recordedAsMerged(Delivery delivery, MergeRequestView view, RequestMerged merge, Actor actor) {
         Instant now = clock.now();
-        Delivery merged = delivery.observed(view, now);
-        deliveries.save(merged);
+        Delivery merged = records.observed(delivery, view, now);
         events.record(new DraftMerged(delivery.task(), view.address(), view.landedCommit()), actor, now);
         Task task = stages.moved(tasks.get(delivery.task()), merge, actor, now);
         refreshes.awaitTheMergeOf(task, view, now);
@@ -237,9 +253,9 @@ public class FollowMerges {
     }
 
     private MergedWork requestFollowedOnTheCaptainsWord(TaskId task, MergeRequestView request, Actor actor) {
-        if (!request.isMerged()) {
+        if (!landsOnTheBase(task, request)) {
             transaction.executeWithoutResult(_ -> records.recorded(task, request, actor));
-            throw notMerged(request);
+            throw notLanded(request);
         }
         return recordedAndFollowed(task, request, actor);
     }
@@ -260,7 +276,7 @@ public class FollowMerges {
     }
 
     private void followedOnceFound(TaskId task, MergeRequestView request, Actor actor) {
-        if (request.isMerged()) {
+        if (landsOnTheBase(task, request)) {
             recordedAndFollowed(task, request, actor);
         } else {
             transaction.executeWithoutResult(_ -> records.recorded(task, request, actor));
@@ -268,9 +284,9 @@ public class FollowMerges {
     }
 
     private void followedOnceAccepted(Delivery recorded, MergeRequestView request) {
-        if (recorded.isMerged()) {
+        if (recorded.isLanded()) {
             followedBefore(recorded, Actor.CORE);
-        } else if (request.isMerged()) {
+        } else if (landsOnTheBase(recorded.task(), request)) {
             followed(recorded, request, Actor.CORE);
         } else {
             keptAsTheForgeShowsIt(recorded, request);
@@ -278,7 +294,7 @@ public class FollowMerges {
     }
 
     private void keptAsTheForgeShowsIt(Delivery recorded, MergeRequestView request) {
-        transaction.executeWithoutResult(_ -> deliveries.save(recorded.observed(request, clock.now())));
+        transaction.executeWithoutResult(_ -> records.observed(recorded, request, clock.now()));
     }
 
     private void observedOnItsOwn(Delivery delivery) {
@@ -291,7 +307,7 @@ public class FollowMerges {
 
     private void observed(Delivery delivery) {
         MergeRequestView view = viewOf(delivery);
-        if (view.isMerged()) {
+        if (landsOnTheBase(delivery.task(), view)) {
             followed(delivery, view, Actor.CORE);
         } else if (view.state() == MergeRequestState.CLOSED) {
             noticeAClosure(delivery, view, Actor.CORE);

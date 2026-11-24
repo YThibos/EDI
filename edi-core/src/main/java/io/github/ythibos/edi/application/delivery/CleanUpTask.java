@@ -92,13 +92,13 @@ public class CleanUpTask {
     }
 
     private void requireTheWorkHandedOver(Workplace workplace) {
-        if (!isMerged(workplace)) {
+        if (!isLandedByItsRequest(workplace)) {
             retirement.requireNoWorkerAtWork(workplace, HANDED_OVER);
         }
     }
 
-    private boolean isMerged(Workplace workplace) {
-        return transaction.execute(_ -> deliveries.of(workplace.task().id())).filter(Delivery::isMerged).isPresent();
+    private boolean isLandedByItsRequest(Workplace workplace) {
+        return transaction.execute(_ -> deliveries.of(workplace.task().id())).filter(Delivery::isLanded).isPresent();
     }
 
     private void requireTheReportOfAScout(Workplace workplace) {

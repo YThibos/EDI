@@ -19,6 +19,7 @@ import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.application.primary.SessionAnchor;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.memory.WorkaroundCount;
 import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
@@ -204,11 +205,16 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String reviewLine(ReadyForReview ready) {
-        return "review  " + ready.task().id() + "  " + ready.delivery().address().url();
+        return "review  " + ready.task().id() + "  " + ready.delivery().address().url() + targeting(ready.delivery());
     }
 
     private static String changingLine(ChangingRequest changing) {
-        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + "  hold the merge: " + changing.whyChanging();
+        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + targeting(changing.delivery()) + "  hold the merge: "
+                + changing.whyChanging();
+    }
+
+    private static String targeting(Delivery delivery) {
+        return delivery.isStacked() ? "  targets " + delivery.stackedOn() + ", not the base: merging it does not land the work" : "";
     }
 
     private static List<String> parked(FleetSnapshot fleet) {

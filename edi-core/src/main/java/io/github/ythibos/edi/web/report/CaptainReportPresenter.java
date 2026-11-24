@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.WaitingWords;
 
 @Component
 public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
@@ -86,9 +87,13 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
         return fleet.ongoing().stream()
-                .map(OngoingTask::task)
-                .map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task)))
+                .map(ongoing -> new ReportItem(wording.projectsOf(ongoing.task()), ongoingText(ongoing, wording)))
                 .toList();
+    }
+
+    private static String ongoingText(OngoingTask ongoing, TurnWording wording) {
+        String text = wording.textWithStateOf(ongoing.task());
+        return ongoing.mergedElsewhereOn().map(branch -> text + ": " + WaitingWords.mergedElsewhere(branch)).orElse(text);
     }
 
     private static List<String> section(String heading, List<String> body) {

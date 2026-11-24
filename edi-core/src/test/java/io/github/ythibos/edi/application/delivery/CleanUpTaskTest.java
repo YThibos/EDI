@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -72,7 +73,7 @@ class CleanUpTaskTest {
         upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
         upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
         MergeRequestView merged = home.forge().merges(draft.address(), upstream.commit("Fit the lamp, squashed").head());
-        home.deliveries().save(Delivery.of(LAMP, merged, home.clock().now()));
+        home.deliveries().save(Delivery.of(LAMP, merged, new BaseBranch("main"), home.clock().now()));
 
         cleanUp("fit-lamp");
 

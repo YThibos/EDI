@@ -15,7 +15,10 @@ The captain may mark a request ready and merge it before the worker reports done
 Once it is recorded, each such run change and status report views the open request again, so EDI keeps its draft flag as the forge shows it and follows a merge or a closure it finds (`FollowMerges.followTheRequestOf`).
 `DeliveryRound` asks `FollowMerges` every `edi.delivery.drafts` (PT10M by default) to view each open delivery of a task in flight, on the account its project binds now; only an exact `merged` state counts.
 Each view of an open request saves its head, draft flag and head checks as the forge shows them, so the request stays current after the done as before it.
-A followed merge moves the task to MERGED ([task-lifecycle](task-lifecycle.md)) and names the branch's commits after the merged head as not landed.
+A request counts as the task landing only when the forge shows it merged into the task's base branch (`MergeRequestView.isMergedIntoTheBase`).
+Each request is saved with the branch it targets when that is not the base (`Delivery.stackedOn`, null otherwise), and a merge into any other branch is saved as merged elsewhere (`Delivery.isMergedElsewhere`): no `DraftMerged`, no stage move, no clone refresh and no wake, so the task stays in flight and its isolated copy stays.
+`edi merged` refuses such a merge, naming the branch it landed on.
+A followed merge into the base moves the task to MERGED ([task-lifecycle](task-lifecycle.md)) and names the branch's commits after the merged head as not landed.
 A merge records `DraftMerged` with the commit it landed and a `CloneRefresh`; a closed request records `DraftClosed`; both wake the primary.
 `edi merged <task|url>` asks the forge at once, so the captain's word is followed the same way and never taken alone; a task delivered to the captain's checkout goes straight to its clean-up, whose landed-work test decides.
 `CloneRefreshes` fetches the clone and verifies a refresh once the merge commit is an ancestor of `origin/<base>`; `DispatchTask` refreshes the project before it launches anything there, refuses while a refresh is unverified, and keeps a deferred dispatch deferred.
@@ -25,7 +28,7 @@ Nothing in the domain names a merge as an act: `MergeRequestView`, `DraftMerged`
 
 ## Why
 
-Neither the captain's word nor a stale view can make EDI treat unmerged work as merged, because every merge it follows is one the forge reports, whatever order the pipeline, the captain and the worker act in.
+Neither the captain's word nor a stale view can make EDI treat unmerged work as merged, and no merge into a slice or any other branch passes for work on the base, because every merge it follows is one the forge reports, whatever order the pipeline, the captain and the worker act in.
 No brief is written on a base that lacks the work just merged, however the merge was noticed.
 
 ## Alternatives rejected
@@ -33,6 +36,7 @@ No brief is written on a base that lacks the work just merged, however the merge
 - The captain's word only, or without asking the forge - forgotten merges leave clones stale, and a mistyped task id would retire live work.
 - Forge webhooks - a service reachable from the forge.
 - Asking the forge about every task in each round - one call per task every ten minutes, when a run change or a status already says when to look.
+- Taking any merged request as the landing and leaving the target to the clone refresh - the task would be marked merged, and the sitrep would call a request landed on a slice branch, as happened on 6 November 2026.
 - Fetching on every dispatch and trusting it - a fetch can succeed while the merge has not reached the base.
 
 ## Consequences
@@ -53,3 +57,4 @@ When the forges offer a cheap local notification of a new or merged request.
 - 09/11/2026: a request began reading as ready for review only out of draft ([fleet-snapshot](fleet-snapshot.md)), so a recorded open request is viewed again on each run change and status report, not only every ten minutes (EDI-238).
 - 12/11/2026: a followed merge moves the task to MERGED and names the branch's commits after the merged head as not landed (EDI-85).
 - 18/11/2026: a view saves the checks the forge shows on the request's head, so a request whose run ended before it saw them reads as ready and failed checks hold it ([fleet-snapshot](fleet-snapshot.md), EDI-265).
+- 24/11/2026: a request targeting another branch than the base is saved with that branch, and its merge is no landing of the task (EDI-244).

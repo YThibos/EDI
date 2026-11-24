@@ -56,6 +56,15 @@ describe('WaitingList', () => {
     expect(texts(list, '.sr-badge')).toEqual(['board', 'review']);
   });
 
+  it('names the branch a stacked request targets, since merging it does not land the work on the base', async () => {
+    const list = await listed([], [{ ...BUOY_REVIEW, stackedOn: 'slice/buoys' }], [{ ...LAMP_CHANGING, stackedOn: 'slice/lamps' }]);
+
+    expect(texts(list, '.sr-row__sub')).toEqual([
+      'ready for your review · paint-buoy · targets slice/buoys, not the base: merging it does not land the work',
+      'changing, hold the merge: pipeline review; steer 2 not acknowledged · harness · targets slice/lamps, not the base: merging it does not land the work',
+    ]);
+  });
+
   it('lists each decision the board answers as one line under it, with its number and title only', async () => {
     const list = await listed([{ ...LAMP_BOARD, decisions: [{ number: 'D58', title: 'Which lamp?' }, { number: 'D60', title: 'Which bulb?' }] }], []);
 

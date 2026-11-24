@@ -105,10 +105,10 @@ class DeliveryClaimsTest {
     @Test
     void recordsADeliveryAndFollowsItsState() {
         Instant recorded = Instant.parse("2026-10-16T09:00:00Z");
-        Delivery delivery = Delivery.of(new TaskId("fit-lamp"), view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD), recorded);
+        Delivery delivery = Delivery.of(new TaskId("fit-lamp"), view(MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD), new BaseBranch("main"), recorded);
         MergeRequestView merged = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, true, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, "3333", MERGED_AT);
 
-        Delivery observed = delivery.observed(merged, recorded.plusSeconds(600));
+        Delivery observed = delivery.observed(merged, new BaseBranch("main"), recorded.plusSeconds(600));
 
         assertThat(delivery.state()).isEqualTo(MergeRequestState.OPEN);
         assertThat(delivery.changesWith(merged)).isTrue();
@@ -116,7 +116,28 @@ class DeliveryClaimsTest {
         assertThat(observed.landedCommit()).isEqualTo("3333");
         assertThat(observed.recordedAt()).isEqualTo(recorded);
         assertThatIllegalArgumentException().isThrownBy(() -> delivery.observed(new MergeRequestView(new MergeRequestAddress(REPOSITORY, 8),
-                MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, null, null), recorded));
+                MergeRequestState.OPEN, true, "feature/HRN-3", "main", HEAD, HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), recorded));
+    }
+
+    @Test
+    void aMergeIntoAnotherBranchThanTheBaseIsMergedElsewhereAndNeverLanded() {
+        Instant recorded = Instant.parse("2026-10-16T09:00:00Z");
+        MergeRequestView stackedMerge = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "slice/lamps", HEAD, HeadChecks.PASSED,
+                "3333", MERGED_AT);
+        MergeRequestView baseMerge = new MergeRequestView(ADDRESS, MergeRequestState.MERGED, false, "feature/HRN-3", "main", HEAD, HeadChecks.PASSED, "3333",
+                MERGED_AT);
+
+        Delivery stacked = Delivery.of(new TaskId("fit-lamp"), stackedMerge, MAIN, recorded);
+        Delivery landed = Delivery.of(new TaskId("fit-lamp"), baseMerge, MAIN, recorded);
+
+        assertThat(stackedMerge.isMergedIntoTheBase(MAIN)).isFalse();
+        assertThat(baseMerge.isMergedIntoTheBase(MAIN)).isTrue();
+        assertThat(stacked.stackedOn()).isEqualTo("slice/lamps");
+        assertThat(stacked.isMergedElsewhere()).isTrue();
+        assertThat(stacked.isLanded()).isFalse();
+        assertThat(landed.stackedOn()).isNull();
+        assertThat(landed.isLanded()).isTrue();
+        assertThat(landed.isMergedElsewhere()).isFalse();
     }
 
     @Test
@@ -296,7 +317,7 @@ class DeliveryClaimsTest {
 
     private static Delivery request(boolean checksPassed) {
         return Delivery.of(new TaskId("fit-lamp"), new MergeRequestView(ADDRESS, MergeRequestState.OPEN, false, BRANCH.toString(), MAIN.name(), HEAD,
-                checksPassed ? HeadChecks.PASSED : HeadChecks.UNDECIDED, null, null), MERGED_AT);
+                checksPassed ? HeadChecks.PASSED : HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), MERGED_AT);
     }
 
     private static MergeRequestView view(MergeRequestState state, boolean draft, String source, String target, String head) {

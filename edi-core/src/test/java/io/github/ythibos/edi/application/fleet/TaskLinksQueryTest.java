@@ -23,6 +23,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BoardRounds;
@@ -62,7 +63,7 @@ class TaskLinksQueryTest {
         WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
         MergeRequestAddress request = new MergeRequestAddress(HARNESS, 13);
         home.deliveries().save(Delivery.of(lamp.id(), new MergeRequestView(request, MergeRequestState.OPEN, true, "feature/SVC-7", "main", "2222", HeadChecks.UNDECIDED, null,
-                null), TestHome.START));
+                null), new BaseBranch("main"), TestHome.START));
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", false, "2222", request.url(), false), TestHome.START);
 
         TaskLinks links = linksOf(lamp);
