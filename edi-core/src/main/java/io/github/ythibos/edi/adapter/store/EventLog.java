@@ -118,6 +118,7 @@ import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeRule;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
+import io.github.ythibos.edi.domain.worker.WorkerId;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -255,10 +256,10 @@ public class EventLog {
                     .put("opened", Columns.text(closed.opened()));
             case TaskReleased _, TaskDone _ -> payload;
             case StageChanged changed -> withChange(payload, changed.change());
-            case DispatchDeferred deferred -> payload.put("project", deferred.project().value())
+            case DispatchDeferred deferred -> withEach(payload.put("project", deferred.project().value())
                     .put("category", deferred.category().value())
-                    .put("running", deferred.running())
-                    .put("capacity", deferred.capacity());
+                    .put("running", deferred.working().size())
+                    .put("capacity", deferred.capacity()), "workers", deferred.working().stream().map(WorkerId::toString).toList());
             case DeferredLaunchFailed failed -> payload.put("because", failed.because());
             case TaskDispatched dispatched -> payload.put("worker", dispatched.worker().toString())
                     .put("category", dispatched.category().value())

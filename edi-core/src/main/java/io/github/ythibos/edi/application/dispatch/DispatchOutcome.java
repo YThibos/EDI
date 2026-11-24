@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.dispatch;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 import io.github.ythibos.edi.domain.branch.BranchName;
@@ -8,6 +9,7 @@ import io.github.ythibos.edi.domain.dispatch.ChosenRoute;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.domain.worker.WorkerId;
 
 public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plannedShip) {
 
@@ -51,6 +53,6 @@ public record DispatchOutcome(Launched launched, Deferred deferred, TaskId plann
         }
     }
 
-    public record Deferred(TaskId task, ProjectName project, int running, int capacity) {
+    public record Deferred(TaskId task, ProjectName project, List<WorkerId> working, int capacity) {
     }
 }

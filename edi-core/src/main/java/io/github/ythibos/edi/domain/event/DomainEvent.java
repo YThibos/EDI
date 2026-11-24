@@ -73,7 +73,7 @@ public sealed interface DomainEvent {
         }
     }
 
-    record DispatchDeferred(TaskId task, ProjectName project, CategoryId category, int running, int capacity) implements DomainEvent {
+    record DispatchDeferred(TaskId task, ProjectName project, CategoryId category, List<WorkerId> working, int capacity) implements DomainEvent {
     }
 
     record DeferredLaunchFailed(TaskId task, String because) implements DomainEvent {

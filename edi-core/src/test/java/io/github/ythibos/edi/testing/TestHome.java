@@ -731,7 +731,7 @@ public final class TestHome {
     }
 
     public WorkerPlaces workerPlaces() {
-        return new WorkerPlaces(workers, tasks, runtime);
+        return new WorkerPlaces(workers, tasks, pipelineRuns, runtime, processes);
     }
 
     public WorkerTokens workerTokens() {
@@ -744,7 +744,7 @@ public final class TestHome {
 
     public LaunchWorker launchWorkerOn(WorkerRuntime workerRuntime) {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, leaveTheOutageList(), events, registry, machineProfile(), dispatchRulesFile(),
-                isolatedCopies(), new WorkerPlaces(workers, tasks, workerRuntime), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
+                isolatedCopies(), new WorkerPlaces(workers, tasks, pipelineRuns, workerRuntime, processes), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
                 workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), meters, clock, transaction);
     }

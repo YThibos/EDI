@@ -161,6 +161,10 @@ public record Worker(
         return !isRetired() && doneCheck != DoneCheck.ACCEPTED;
     }
 
+    public boolean isBusy() {
+        return !failedItsLaunch() && (activity != WorkerActivity.IDLE || briefedAt == null);
+    }
+
     public boolean hadItsDoneAccepted() {
         return doneCheck == DoneCheck.ACCEPTED;
     }
