@@ -2,7 +2,6 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,9 +109,12 @@ public class DecisionStore {
         return decisions(store.sql(SELECT_DECISIONS + "where answered_at is null order by number"));
     }
 
-    public List<Decision> answeredSince(Instant since) {
-        return decisions(store.sql(SELECT_DECISIONS + "where answered_at >= :since order by answered_at desc, number desc")
-                .param("since", Columns.text(since)));
+    public List<Decision> answeredAwaitingTheirTick() {
+        return decisions(store.sql(SELECT_DECISIONS + """
+                        where answered_at is not null
+                          and number not in (select decision_number from board_decision)
+                          and not exists (select 1 from call_tick where call = 'D' || decision.number)
+                        order by number"""));
     }
 
     private void replaceOptions(Decision decision) {

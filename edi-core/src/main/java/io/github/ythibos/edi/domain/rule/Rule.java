@@ -47,6 +47,7 @@ public enum Rule {
     ANSWERED_ONCE(RuleArea.DECISION, "A decision is answered once, and a new question is a new decision."),
     CAPTAIN_VOICE(RuleArea.DECISION, "What reaches the captain speaks in outcomes, not in internal labels (I-22)."),
     TICKET_CHOICE(RuleArea.DECISION, "The captain's ticket choice is one of the options offered."),
+    TICKED_WHEN_DEALT_WITH(RuleArea.DECISION, "An entry leaves the captain's list only when ticked, and is ticked only once it no longer waits."),
     WAITS_MET(RuleArea.DISPATCH, "A task is dispatched only once each task it waits for is merged or landed, as its wait names."),
     ONE_PROJECT(RuleArea.DISPATCH, "A worker works in the isolated copy of exactly one project."),
     CATEGORY(RuleArea.DISPATCH, "A dispatch names a category from the dispatch rules."),

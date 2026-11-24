@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.board.BoardAnswer;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.board.BoardRound;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -85,6 +86,14 @@ public class BoardStore {
 
     public List<Board> listeningOf(TaskId task) {
         return boards(store.sql(SELECT_BOARDS + "where task_id = :task and " + LISTENING + " order by id").param("task", task.value()));
+    }
+
+    public List<Board> endedAwaitingTheirTick() {
+        return boards(store.sql(SELECT_BOARDS + """
+                        where not (%s)
+                          and (rounds > 0 or open_questions > 0 or exists (select 1 from board_decision where board_id = board.id))
+                          and not exists (select 1 from call_tick where call = :call || board.id)
+                        order by id""".formatted(LISTENING)).param("call", CallKey.BOARD));
     }
 
     public void save(BoardAnswer answer) {

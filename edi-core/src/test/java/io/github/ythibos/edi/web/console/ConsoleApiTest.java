@@ -175,7 +175,26 @@ class ConsoleApiTest {
         assertThat(answered.statusCode()).isEqualTo(200);
         assertThat(answered.body()).isEqualTo("Recorded the answer to " + number + " (option A); console-lamp is done.\n");
         assertThat(recorded).contains("\"verbatim\":\"A, and keep \\\"one\\\" oil lamp\\non the bridge\"", "\"channel\":\"console\"");
-        assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body()).contains("\"answered\":[{\"number\":\"" + number + "\"");
+        assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body())
+                .contains("\"dealtWith\":{\"decisions\":[{\"call\":\"" + number + "\",\"number\":\"" + number + "\"");
+    }
+
+    @Test
+    void ticksAnAnsweredDecisionOffTheListFromTheConsoleOnlyWithTheConsolesHeader() throws Exception {
+        String cookie = signedInCookie();
+        String number = raisedDecision("console-bell");
+        send(withTheCookie("/api/decisions/" + number + "/answer", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"option\":\"A\",\"text\":\"A\"}")));
+
+        HttpResponse<String> withoutHeader = send(withTheCookie("/api/calls/" + number + "/tick", cookie).POST(BodyPublishers.noBody()));
+        HttpResponse<String> ticked = send(withTheCookie("/api/calls/" + number + "/tick", cookie).header(CONSOLE_HEADER, "1").POST(BodyPublishers.noBody()));
+        HttpResponse<String> again = send(withTheCookie("/api/calls/board:41/tick", cookie).header(CONSOLE_HEADER, "1").POST(BodyPublishers.noBody()));
+
+        assertThat(withoutHeader.statusCode()).isEqualTo(403);
+        assertThat(ticked.statusCode()).isEqualTo(200);
+        assertThat(ticked.body()).isEqualTo("Ticked " + number + " off the captain's list; it leaves the sitrep page and the reports.\n");
+        assertThat(again.statusCode()).isEqualTo(404);
+        assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body()).doesNotContain("\"call\":\"" + number + "\"");
     }
 
     @Test

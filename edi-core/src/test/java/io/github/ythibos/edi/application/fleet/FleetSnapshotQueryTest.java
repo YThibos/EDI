@@ -185,14 +185,14 @@ class FleetSnapshotQueryTest {
         home.workers().update(worker.reported(new StatusReport(StatusState.DONE, null, null, "The lamp is fitted."), TestHome.START));
         WaitingOnTheCaptain afterDone = home.fleetSnapshot().snapshot().waiting();
         home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(requestIn(MergeRequestState.MERGED), TestHome.START));
-        WaitingOnTheCaptain afterTheMerge = home.fleetSnapshot().snapshot().waiting();
+        WaitingOnTheCaptain afterLanding = home.fleetSnapshot().snapshot().waiting();
 
         assertThat(beforeDone.reviews()).isEmpty();
         assertThat(afterDone.reviews()).singleElement().satisfies(ready -> {
             assertThat(ready.task().id()).isEqualTo(lamp.id());
             assertThat(ready.delivery().address().url()).isEqualTo(REQUEST.url());
         });
-        assertThat(afterTheMerge.reviews()).isEmpty();
+        assertThat(afterLanding.reviews()).isEmpty();
     }
 
     @Test
@@ -200,19 +200,21 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST.url(), false), TestHome.START);
 
-        WaitingOnTheCaptain running = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot running = home.fleetSnapshot().snapshot();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST.url(), false), TestHome.START);
-        WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot finished = home.fleetSnapshot().snapshot();
 
-        assertThat(running.reviews()).isEmpty();
+        assertThat(running.waiting().reviews()).isEmpty();
         assertThat(running.changing()).singleElement().satisfies(changing -> {
             assertThat(changing.task().id()).isEqualTo(lamp.id());
             assertThat(changing.delivery().address().url()).isEqualTo(REQUEST.url());
             assertThat(changing.whyChanging()).isEqualTo("pipeline review");
         });
-        assertThat(running.count()).isEqualTo(1);
+        assertThat(running.waiting().count()).isZero();
+        assertThat(running.ongoing()).extracting(ongoing -> ongoing.task().id()).containsExactly(lamp.id());
+        assertThat(running.comingBackOf(lamp.id())).isPresent();
         assertThat(finished.changing()).isEmpty();
-        assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(finished.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -220,10 +222,10 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
 
-        WaitingOnTheCaptain watching = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot watching = home.fleetSnapshot().snapshot();
 
         assertThat(watching.changing()).isEmpty();
-        assertThat(watching.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(watching.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -232,9 +234,9 @@ class FleetSnapshotQueryTest {
         home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
         home.pipelineRuns().save(lamp.id(), watchingTheChecks(false), TestHome.START.plusSeconds(60));
 
-        WaitingOnTheCaptain fixing = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot fixing = home.fleetSnapshot().snapshot();
 
-        assertThat(fixing.reviews()).isEmpty();
+        assertThat(fixing.waiting().reviews()).isEmpty();
         assertThat(fixing.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline ci"));
     }
 
@@ -243,10 +245,10 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "handed_off", null, false, "2222", REQUEST.url(), true), TestHome.START);
 
-        WaitingOnTheCaptain handedOff = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot handedOff = home.fleetSnapshot().snapshot();
 
         assertThat(handedOff.changing()).isEmpty();
-        assertThat(handedOff.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(handedOff.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -256,10 +258,10 @@ class FleetSnapshotQueryTest {
                 new PipelineRun("01RUN", "ci_monitor_interrupted", null, false, "2222", REQUEST.url(), false))) {
             home.pipelineRuns().save(lamp.id(), ended, TestHome.START);
 
-            WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
+            FleetSnapshot waiting = home.fleetSnapshot().snapshot();
 
             assertThat(waiting.changing()).as(ended.status()).isEmpty();
-            assertThat(waiting.reviews()).as(ended.status()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+            assertThat(waiting.waiting().reviews()).as(ended.status()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
         }
     }
 
@@ -268,15 +270,15 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), endedInItsCiStep("failed"), TestHome.START);
         home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.FAILED), TestHome.START));
-        WaitingOnTheCaptain red = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot red = home.fleetSnapshot().snapshot();
 
         home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.UNDECIDED), TestHome.START));
-        WaitingOnTheCaptain undecided = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot undecided = home.fleetSnapshot().snapshot();
 
-        assertThat(red.reviews()).isEmpty();
+        assertThat(red.waiting().reviews()).isEmpty();
         assertThat(red.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("checks failing on its head"));
         assertThat(undecided.changing()).isEmpty();
-        assertThat(undecided.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(undecided.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -284,9 +286,9 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "test", false, "2222", REQUEST.url(), false), TestHome.START);
 
-        WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot failed = home.fleetSnapshot().snapshot();
 
-        assertThat(failed.reviews()).isEmpty();
+        assertThat(failed.waiting().reviews()).isEmpty();
         assertThat(failed.changing()).singleElement()
                 .satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("pipeline failed in its test step"));
     }
@@ -296,10 +298,10 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "failed", "review", true, "2222", REQUEST.url(), false), TestHome.START);
 
-        WaitingOnTheCaptain stopped = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot stopped = home.fleetSnapshot().snapshot();
 
         assertThat(stopped.changing()).isEmpty();
-        assertThat(stopped.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(stopped.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -308,10 +310,10 @@ class FleetSnapshotQueryTest {
         home.pipelineRuns().save(lamp.id(), new PipelineRun("01RUN", "cancelled", "review", false, "2222", REQUEST.url(), false), TestHome.START);
         home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(withChecks(HeadChecks.PASSED), TestHome.START));
 
-        WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot green = home.fleetSnapshot().snapshot();
 
         assertThat(green.changing()).isEmpty();
-        assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(green.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -319,9 +321,9 @@ class FleetSnapshotQueryTest {
         Task lamp = handedOverWithAnOpenRequest();
         home.deliveries().save(home.deliveries().of(lamp.id()).orElseThrow().observed(stillADraft(), TestHome.START));
 
-        WaitingOnTheCaptain draft = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot draft = home.fleetSnapshot().snapshot();
 
-        assertThat(draft.reviews()).isEmpty();
+        assertThat(draft.waiting().reviews()).isEmpty();
         assertThat(draft.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("still a draft"));
     }
 
@@ -331,9 +333,9 @@ class FleetSnapshotQueryTest {
         home.pipelineRuns().save(lamp.id(), watchingTheChecks(true), TestHome.START);
         home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
 
-        WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot steered = home.fleetSnapshot().snapshot();
 
-        assertThat(steered.reviews()).isEmpty();
+        assertThat(steered.waiting().reviews()).isEmpty();
         assertThat(steered.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("steer 1 not acknowledged"));
     }
 
@@ -343,16 +345,16 @@ class FleetSnapshotQueryTest {
         home.steerWorker().steer(new TaskReference.ById(lamp.id()), "Amend the lamp's record too.", null, Actor.PRIMARY);
         home.steerWorker().steer(new TaskReference.ById(lamp.id()), "And its history line.", null, Actor.PRIMARY);
 
-        WaitingOnTheCaptain steered = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot steered = home.fleetSnapshot().snapshot();
         Worker worker = home.workers().latestOf(lamp.id()).orElseThrow();
         home.workerInbox().acknowledge(worker.id(), 1);
         home.workerInbox().acknowledge(worker.id(), 2);
-        WaitingOnTheCaptain acknowledged = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot acknowledged = home.fleetSnapshot().snapshot();
 
-        assertThat(steered.reviews()).isEmpty();
+        assertThat(steered.waiting().reviews()).isEmpty();
         assertThat(steered.changing()).singleElement().satisfies(changing -> assertThat(changing.whyChanging()).isEqualTo("steers 1, 2 not acknowledged"));
         assertThat(acknowledged.changing()).isEmpty();
-        assertThat(acknowledged.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(acknowledged.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -365,17 +367,17 @@ class FleetSnapshotQueryTest {
         home.workerInbox().acknowledge(home.workers().latestOf(lamp.id()).orElseThrow().id(), 1);
         report(lamp, StatusState.WORKING);
 
-        WaitingOnTheCaptain backAtWork = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot backAtWork = home.fleetSnapshot().snapshot();
         report(lamp, StatusState.DONE);
-        WaitingOnTheCaptain doneAgain = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot doneAgain = home.fleetSnapshot().snapshot();
 
-        assertThat(backAtWork.reviews()).isEmpty();
+        assertThat(backAtWork.waiting().reviews()).isEmpty();
         assertThat(backAtWork.changing()).singleElement().satisfies(changing -> {
             assertThat(changing.task().id()).isEqualTo(lamp.id());
             assertThat(changing.whyChanging()).isEqualTo("worker back at work");
         });
         assertThat(doneAgain.changing()).isEmpty();
-        assertThat(doneAgain.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
+        assertThat(doneAgain.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
     }
 
     @Test
@@ -385,9 +387,9 @@ class FleetSnapshotQueryTest {
         home.deliveries().save(Delivery.of(lamp.id(), requestIn(MergeRequestState.OPEN), TestHome.START));
         report(lamp, StatusState.DONE);
 
-        WaitingOnTheCaptain checking = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot checking = home.fleetSnapshot().snapshot();
 
-        assertThat(checking.reviews()).isEmpty();
+        assertThat(checking.waiting().reviews()).isEmpty();
         assertThat(checking.changing()).isEmpty();
     }
 
@@ -402,15 +404,31 @@ class FleetSnapshotQueryTest {
         WaitingOnTheCaptain accepted = home.fleetSnapshot().snapshot().waiting();
         report(lamp, StatusState.WORKING);
         report(lamp, StatusState.DONE);
-        WaitingOnTheCaptain checkedAgain = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot checkedAgain = home.fleetSnapshot().snapshot();
         checkTheMechanicalDone(lamp, false);
-        WaitingOnTheCaptain refused = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot refused = home.fleetSnapshot().snapshot();
 
         assertThat(accepted.reviews()).extracting(ready -> ready.task().id()).containsExactly(lamp.id());
-        assertThat(checkedAgain.reviews()).isEmpty();
+        assertThat(checkedAgain.waiting().reviews()).isEmpty();
         assertThat(checkedAgain.changing()).extracting(ChangingRequest::whyChanging).containsExactly("worker back at work");
-        assertThat(refused.reviews()).isEmpty();
+        assertThat(refused.waiting().reviews()).isEmpty();
         assertThat(refused.changing()).extracting(ChangingRequest::whyChanging).containsExactly("worker back at work");
+    }
+
+    @Test
+    void marksTheDecisionRaisedForAWorkersOpenQuestionAsStoppingThatWorkerAndNoOther() {
+        Task lamp = WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3");
+        WorkerFixtures.servingWorkerOn(home, lamp, CategoryId.IMPLEMENTATION);
+        add(captainItem("lamp-choice", "Choose the lamp"));
+        ask(lamp, "Which socket does the lamp take?");
+        home.clock().advance(Duration.ofMinutes(1));
+        raise("fit-lamp");
+        raise("lamp-choice");
+
+        FleetSnapshot fleet = home.fleetSnapshot().snapshot();
+
+        assertThat(fleet.waiting().decisions()).extracting(open -> open.task().id(), OpenDecision::stopsItsWorker)
+                .containsExactly(tuple(lamp.id(), true), tuple(new TaskId("lamp-choice"), false));
     }
 
     @Test
@@ -474,7 +492,7 @@ class FleetSnapshotQueryTest {
     }
 
     @Test
-    void carriesWhatEachOngoingTaskIsDoingTheWorkThatLandedThisWeekAndWhatTheCaptainAnsweredToday() {
+    void carriesWhatEachOngoingTaskIsDoingTheWorkThatLandedThisWeekAndEveryAnswerUntilTheCaptainTicksIt() {
         add(ship("horn", "Tune the horn"));
         add(ship("lantern", "Rework the lantern"));
         add(ship("anchor", "Raise the anchor"));
@@ -496,14 +514,15 @@ class FleetSnapshotQueryTest {
             assertThat(horn.delivery()).isNull();
         });
         assertThat(fleet.landed()).extracting(landed -> landed.task().id()).containsExactly(new TaskId("lantern"));
-        assertThat(fleet.answered()).singleElement().satisfies(answered -> {
+        assertThat(fleet.dealtWith().decisions()).singleElement().satisfies(answered -> {
             assertThat(answered.decision().answer().verbatim()).isEqualTo("A: the simple way");
             assertThat(answered.task().id()).isEqualTo(new TaskId("lamp-choice"));
         });
 
-        home.clock().advance(Duration.ofHours(25));
+        home.clock().advance(Duration.ofDays(3));
 
-        assertThat(home.fleetSnapshot().snapshot().answered()).isEmpty();
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().decisions()).extracting(answered -> answered.decision().number())
+                .containsExactly(new DecisionNumber(58));
     }
 
     private static MergeRequestView requestIn(MergeRequestState state) {

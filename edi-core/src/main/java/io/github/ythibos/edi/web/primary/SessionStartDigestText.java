@@ -66,6 +66,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         lines.addAll(setupOf(digest.missingFromTheHome()));
         lines.addAll(limitStop(digest.previousLimitStop()));
         lines.addAll(waitingOnTheCaptain(digest.fleet()));
+        lines.addAll(comingBack(digest.fleet()));
         lines.add(workers.text(digest.workers()).stripTrailing());
         lines.addAll(parked(digest.fleet()));
         lines.add("Queued: " + digest.fleet().queued().size() + ".");
@@ -181,7 +182,6 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         waiting.decisions().forEach(open -> lines.add("  " + decisionLine(open)));
         waiting.boards().forEach(board -> lines.addAll(boardLines(board)));
         waiting.reviews().forEach(ready -> lines.add("  " + reviewLine(ready)));
-        waiting.changing().forEach(changing -> lines.add("  " + changingLine(changing)));
         return lines;
     }
 
@@ -207,8 +207,17 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
         return "review  " + ready.task().id() + "  " + ready.delivery().address().url();
     }
 
+    private static List<String> comingBack(FleetSnapshot fleet) {
+        if (fleet.changing().isEmpty()) {
+            return List.of();
+        }
+        List<String> lines = new ArrayList<>(List.of(Words.counted("Ongoing, back to the captain when ready", fleet.changing().size())));
+        fleet.changing().forEach(changing -> lines.add("  " + changingLine(changing)));
+        return lines;
+    }
+
     private static String changingLine(ChangingRequest changing) {
-        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + "  hold the merge: " + changing.whyChanging();
+        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + "  " + changing.whyChanging();
     }
 
     private static List<String> parked(FleetSnapshot fleet) {

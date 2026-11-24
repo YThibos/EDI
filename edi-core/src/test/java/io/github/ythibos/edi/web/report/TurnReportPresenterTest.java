@@ -78,9 +78,9 @@ class TurnReportPresenterTest {
         Task paint = captainItem("paint-choice", "garden");
         Task fitting = captainItem("fit-lamp", "harness");
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(
-                new OpenDecision(raised(41, lamp, "Which lamp?", NOW.minus(Duration.ofDays(9))), lamp),
-                new OpenDecision(raised(44, bell, "Which bell rings the hour, the brass one or the iron one by the gate?", NOW.minus(Duration.ofDays(2))), bell),
-                new OpenDecision(raised(58, paint, "Which paint?", NOW), paint)),
+                new OpenDecision(raised(41, lamp, "Which lamp?", NOW.minus(Duration.ofDays(9))), lamp, false),
+                new OpenDecision(raised(44, bell, "Which bell rings the hour, the brass one or the iron one by the gate?", NOW.minus(Duration.ofDays(2))), bell, false),
+                new OpenDecision(raised(58, paint, "Which paint?", NOW), paint, false)),
                 List.of(), List.of(readyForReview(fitting)), List.of());
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(new TurnItem(List.of(), "Choose the paint")),
                 Map.of());
@@ -139,7 +139,7 @@ class TurnReportPresenterTest {
 
         String boardsOnly = presenter.text(new TurnReport(new WaitingOnTheCaptain(List.of(), boards, List.of(), List.of()), Turn.NONE, WIDTH, null,
                 PREVIOUS_REPORT, null));
-        String besideADecision = presenter.text(new TurnReport(new WaitingOnTheCaptain(List.of(new OpenDecision(raised(58, lamp, "Which lamp?", NOW), lamp)),
+        String besideADecision = presenter.text(new TurnReport(new WaitingOnTheCaptain(List.of(new OpenDecision(raised(58, lamp, "Which lamp?", NOW), lamp, false)),
                 boards, List.of(), List.of()), Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 
         assertThat(boardsOnly).startsWith("╔══ NEEDS YOUR DECISION ══ 2 open ══").contains("║        D59   Which bulb?\n", "║        D60   Which horn?\n");
@@ -149,7 +149,7 @@ class TurnReportPresenterTest {
     @Test
     void drawsEveryCardInFullWhenTheCaptainSawNoEarlierReport() {
         Task lamp = captainItem("lamp-choice", "harness");
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", NOW.minus(Duration.ofDays(9))), lamp)),
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", NOW.minus(Duration.ofDays(9))), lamp, false)),
                 List.of(), List.of(), List.of());
 
         String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, null, null));
@@ -160,7 +160,7 @@ class TurnReportPresenterTest {
     @Test
     void drawsADecisionRaisedAtThePreviousReportOnOneLine() {
         Task lamp = captainItem("lamp-choice", "harness");
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", PREVIOUS_REPORT), lamp)),
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp, "Which lamp?", PREVIOUS_REPORT), lamp, false)),
                 List.of(), List.of(), List.of());
 
         String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
@@ -176,8 +176,8 @@ class TurnReportPresenterTest {
         Decision wentOut = raised(59, lamp, "Which lamp?", NOW.minus(Duration.ofMinutes(10)));
         Decision gathering = raised(60, paint, "Which paint?", NOW.minus(Duration.ofMinutes(1)));
         Decision urgent = urgent(raised(61, bell, "Which bell?", NOW));
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(wentOut, lamp), new OpenDecision(gathering, paint),
-                new OpenDecision(urgent, bell)), List.of(), List.of(), List.of());
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(wentOut, lamp, false), new OpenDecision(gathering, paint, false),
+                new OpenDecision(urgent, bell, false)), List.of(), List.of(), List.of());
         DecisionRound round = new DecisionRound(gathering.raisedAt(), List.of(gathering.number()));
 
         String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, NOW.minus(Duration.ofMinutes(30)), round));
@@ -206,7 +206,7 @@ class TurnReportPresenterTest {
     void drawsAWorkerQuestionAsALineWaitingOnEdiAndNeverSaysNothingWaits() {
         Task lamp = Task.queued(new TaskId("fit-lamp"), new Intake(TaskKind.SHIP, "Fit the lamp", List.of(new ProjectName("harness")), null, null, List.of(), null, null),
                 "", NOW);
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
                 List.of(new WorkerQuestion(lamp, asking(lamp, "Which socket does the lamp take, the bayonet one or the screw one the old lamp used?"),
                         Duration.ofMinutes(65))));
 

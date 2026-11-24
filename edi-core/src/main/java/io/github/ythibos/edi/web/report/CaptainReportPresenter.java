@@ -7,18 +7,22 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.fleet.DealtWith;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.WaitingWords;
 
 @Component
 public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
@@ -45,6 +49,7 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         int width = report.width().columns();
         List<String> lines = new ArrayList<>(presenceOf(report, width));
         lines.addAll(DecisionZone.lines(WaitingEntries.of(fleet.waiting(), wording, EVERY_CARD), width));
+        lines.addAll(dealtWithSection(fleet.dealtWith(), wording, width));
         lines.addAll(countedSection("DONE THIS TURN", ReportLines.turnItems(report.turn().done()), "Nothing finished this turn", width));
         lines.addAll(countedSection("ONGOING", ongoingItems(fleet, wording), "Nothing running", width));
         lines.addAll(section("NEXT", ProjectColumn.lines(ReportLines.turnItems(report.turn().next()), "Nothing planned", width)));
@@ -84,11 +89,45 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
         return afterABlankLine(ReportLines.countedSection(title, items, placeholder, width));
     }
 
+    private static List<String> dealtWithSection(DealtWith dealtWith, TurnWording wording, int width) {
+        if (dealtWith.isEmpty()) {
+            return List.of();
+        }
+        List<ReportItem> items = Stream.of(
+                        dealtWith.decisions().stream().map(answered -> answeredItem(answered, wording)),
+                        dealtWith.boards().stream().map(ended -> endedBoardItem(ended, wording)),
+                        dealtWith.reviews().stream().map(settled -> settledRequestItem(settled, wording)))
+                .flatMap(Function.identity())
+                .toList();
+        return countedSection("DEALT WITH, WAITING FOR YOUR TICK", items, "", width);
+    }
+
+    private static ReportItem answeredItem(DealtWith.Answered answered, TurnWording wording) {
+        Decision decision = answered.decision();
+        return new ReportItem(wording.projectsOf(answered.task()), new CallKey.OfADecision(decision.number()) + " " + decision.card().title() + " - answered");
+    }
+
+    private static ReportItem endedBoardItem(DealtWith.EndedBoard ended, TurnWording wording) {
+        return new ReportItem(wording.projectsOf(ended.task()), new CallKey.OfABoard(ended.board().id()) + " Board for " + wording.textOf(ended.task())
+                + " - ended");
+    }
+
+    private static ReportItem settledRequestItem(DealtWith.SettledRequest settled, TurnWording wording) {
+        return new ReportItem(wording.projectsOf(settled.task()), new CallKey.OfAReview(settled.task().id()) + " " + wording.textOf(settled.task())
+                + " - " + settled.delivery().state().word() + " " + settled.delivery().address().url());
+    }
+
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
         return fleet.ongoing().stream()
                 .map(OngoingTask::task)
-                .map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task)))
+                .map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task) + comingBack(fleet, task)))
                 .toList();
+    }
+
+    private static String comingBack(FleetSnapshot fleet, Task task) {
+        return fleet.comingBackOf(task.id())
+                .map(changing -> " - " + WaitingWords.comingBack(changing.delivery().address().url(), changing.whyChanging()))
+                .orElse("");
     }
 
     private static List<String> section(String heading, List<String> body) {

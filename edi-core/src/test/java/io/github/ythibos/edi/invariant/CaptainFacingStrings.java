@@ -93,7 +93,7 @@ final class CaptainFacingStrings {
         List<String> views = new ArrayList<>(presences().stream().map(presence -> PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE,
                 ReportWidth.standard(), presence, new UnreadableCalendar(NOW, "Outlook did not answer."), null))).toList());
         views.add(PresenterFixtures.returnBriefText().text(new ReturnBrief(Presence.presentSince(TestHome.START).quiet(TestHome.START),
-                fleet.waiting(), fleet.landed(), List.of(), fleet.ongoing())));
+                fleet.waiting(), fleet.landed(), List.of(), fleet.ongoing(), fleet.changing())));
         views.add(PresenterFixtures.captainReportPresenter().text(new CaptainReport(fleet, Turn.NONE, ReportWidth.standard(),
                 Presence.presentSince(TestHome.START), null, null)));
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(),
@@ -104,7 +104,7 @@ final class CaptainFacingStrings {
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), Turn.NONE,
                 ReportWidth.standard(), null, NOW, null)));
         views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
-                Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))), _ -> Map.of())));
+                Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))), _ -> Map.of(), _ -> Map.of())));
         return views;
     }
 

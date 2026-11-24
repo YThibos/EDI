@@ -230,6 +230,8 @@ final class BriefSections {
     private static String shipDone(BriefFacts facts) {
         return switch (facts.delivery()) {
             case DRAFT_REVIEW -> evidenceOfTheMergeRequest(facts) + "\n"
+                    + "In that note, put any steps that remain after the merge under `## Steps that remain after the merge`, and any order the merge"
+                    + " must keep under `## Merge order`; the sitrep page shows both with the review.\n"
                     + "Then run `edi status done -- <the merge request's full URL>`.\n"
                     + "EDI accepts it only when the merge request from `" + facts.dispatch().branch() + "` to `" + facts.base()
                     + "` is open, as a draft or ready for review, or merged, at your last commit, and the branch adds no `-SNAPSHOT` version.";

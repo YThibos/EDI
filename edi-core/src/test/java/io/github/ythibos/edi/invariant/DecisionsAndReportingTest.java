@@ -377,15 +377,16 @@ class DecisionsAndReportingTest {
 
             assertThat(report).contains("NEEDS YOUR DECISION ══ 1 open", "║  Ready for your review: Work on fit-lamp - " + REQUEST + "\n");
             assertThat(brief).contains("Needs your decision (1)\n  Ready for your review: Work on fit-lamp - " + REQUEST + "\n");
-            assertThat(onTheConsole).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST));
+            assertThat(onTheConsole).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST,
+                    new ConsoleSitrep.AfterLanding(List.of(), null)));
             assertThat(merged).contains("nothing open").doesNotContain("Ready for your review");
         }
 
         @Test
         @Tag("adapter")
-        @DisplayName("AT-19 a request whose pipeline still runs or whose steer waits unacknowledged after its done shows as changing with the reason,"
-                + " never as ready")
-        void aRequestStillChangingAfterItsDoneShowsAsChanging() throws IOException {
+        @DisplayName("AT-19 a request whose pipeline still runs or whose steer waits unacknowledged after its done reads as ongoing, coming back"
+                + " to the captain with the reason, never as ready or as waiting on the captain")
+        void aRequestStillChangingAfterItsDoneReadsAsOngoing() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
@@ -397,20 +398,21 @@ class DecisionsAndReportingTest {
             String brief = returnBrief(home);
             ConsoleSitrep onTheConsole = consoleSitrep(home);
             String digest = digestOf(home);
+            String turn = turnReport(home, UUID.randomUUID());
             home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "completed", null, false, "abc123", REQUEST, false), TestHome.START);
             home.workerInbox().acknowledge(worker.id(), 1);
             String settled = captainReport(home, Turn.NONE);
 
-            String changing = "Changing, hold the merge: Work on fit-lamp (pipeline review; steer 1 not acknowledged) - " + REQUEST;
-            assertThat(report).contains("NEEDS YOUR DECISION ══ 1 open",
-                    "║  Changing, hold the merge: Work on fit-lamp (pipeline review; steer 1 not acknowledged) -\n║        " + REQUEST + "\n")
-                    .doesNotContain("Ready for your review");
-            assertThat(brief).contains("Needs your decision (1)\n  " + changing + "\n");
-            assertThat(digest).contains("Waiting on the captain (1)\n  changing  fit-lamp  " + REQUEST
-                    + "  hold the merge: pipeline review; steer 1 not acknowledged\n");
+            String comingBack = "changing, back to you when it is ready (pipeline review; steer 1 not acknowledged) - " + REQUEST;
+            assertThat(report).contains("nothing open").doesNotContain("Ready for your review").doesNotContain("hold the merge");
+            assertThat(onlyTheOngoingOf(report)).contains("Work on fit-lamp").contains("changing, back to you when it is ready");
+            assertThat(turn).doesNotContain("fit-lamp").doesNotContain(REQUEST);
+            assertThat(brief).contains("Needs your decision (0)\n").contains("Running (1)\n  Work on fit-lamp: " + comingBack + "\n");
+            assertThat(digest).contains("Waiting on the captain (0)\n")
+                    .contains("Ongoing, back to the captain when ready (1)\n  changing  fit-lamp  " + REQUEST + "  pipeline review; steer 1 not acknowledged\n");
             assertThat(onTheConsole.reviews()).isEmpty();
-            assertThat(onTheConsole.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST,
-                    "pipeline review; steer 1 not acknowledged"));
+            assertThat(onTheConsole.ongoing()).singleElement()
+                    .satisfies(ongoing -> assertThat(ongoing.comingBack()).isEqualTo("pipeline review; steer 1 not acknowledged"));
             assertThat(settled).contains("║  Ready for your review: Work on fit-lamp - " + REQUEST + "\n").doesNotContain("Changing");
         }
 
@@ -437,17 +439,17 @@ class DecisionsAndReportingTest {
             String fixingDigest = digestOf(home);
 
             String ready = "Ready for your review: Work on fit-lamp - " + REQUEST;
-            assertThat(report).contains("║  " + ready + "\n").doesNotContain("Changing");
-            assertThat(brief).contains("  " + ready + "\n").doesNotContain("Changing");
-            assertThat(onTheConsole.changing()).isEmpty();
+            assertThat(report).contains("║  " + ready + "\n").doesNotContain("changing, back to you");
+            assertThat(brief).contains("  " + ready + "\n").doesNotContain("changing, back to you");
+            assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::comingBack).containsOnlyNulls();
             assertThat(onTheConsole.reviews()).extracting(ConsoleSitrep.Review::url).containsExactly(REQUEST);
-            assertThat(digest).contains("  review  fit-lamp  " + REQUEST + "\n").doesNotContain("hold the merge");
-            String changing = "Changing, hold the merge: Work on fit-lamp (pipeline ci) - " + REQUEST;
-            assertThat(fixing).contains("║  " + changing + "\n").doesNotContain("Ready for your review");
-            assertThat(fixingBrief).contains("  " + changing + "\n").doesNotContain("Ready for your review");
+            assertThat(digest).contains("  review  fit-lamp  " + REQUEST + "\n").doesNotContain("Ongoing, back to the captain");
+            assertThat(fixing).doesNotContain("Ready for your review").contains("changing, back to you when it is ready (pipeline ci)");
+            assertThat(fixingBrief).contains("Work on fit-lamp: changing, back to you when it is ready (pipeline ci) - " + REQUEST + "\n")
+                    .doesNotContain("Ready for your review");
             assertThat(fixingOnTheConsole.reviews()).isEmpty();
-            assertThat(fixingOnTheConsole.changing()).extracting(ConsoleSitrep.Changing::why).containsExactly("pipeline ci");
-            assertThat(fixingDigest).contains("changing  fit-lamp  " + REQUEST + "  hold the merge: pipeline ci\n");
+            assertThat(fixingOnTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::comingBack).containsExactly("pipeline ci");
+            assertThat(fixingDigest).contains("changing  fit-lamp  " + REQUEST + "  pipeline ci\n");
         }
 
         private static String digestOf(TestHome home) {
@@ -499,7 +501,9 @@ class DecisionsAndReportingTest {
             assertThat(recorded.interpretation()).isEqualTo("Fit the simple lamp; the oil lamp stays in the store.");
             assertThat(recorded.answeredAt()).isEqualTo(TestHome.START.plus(Duration.ofMinutes(5)));
             assertThat(home.decisionList().open().decisions()).isEmpty();
-            assertThat(captainReport(home, Turn.NONE)).doesNotContain(number.toString(), "Which lamp?").contains("nothing open");
+            String report = captainReport(home, Turn.NONE);
+            assertThat(onlyTheDecisionZoneOf(report)).doesNotContain(number.toString(), "Which lamp?").contains("nothing open");
+            assertThat(report).contains("DEALT WITH, WAITING FOR YOUR TICK  (1)", number + " Which lamp? - answered");
         }
 
         @Test
@@ -518,7 +522,7 @@ class DecisionsAndReportingTest {
             assertThat(recorded.channel()).isEqualTo(AnswerChannel.CONSOLE);
             assertThat(home.jdbc().sql("select actor from event where type = 'DecisionAnswered'").query(String.class).single()).isEqualTo("captain");
             assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsExactly(WakeKind.DECISION_ANSWERED);
-            assertThat(captainReport(home, Turn.NONE)).doesNotContain(number.toString()).contains("nothing open");
+            assertThat(onlyTheDecisionZoneOf(captainReport(home, Turn.NONE))).doesNotContain(number.toString()).contains("nothing open");
         }
     }
 
@@ -610,6 +614,14 @@ class DecisionsAndReportingTest {
                 null, null));
     }
 
+    private static String onlyTheDecisionZoneOf(String report) {
+        return report.substring(0, report.indexOf("╚"));
+    }
+
+    private static String onlyTheOngoingOf(String report) {
+        return report.substring(report.indexOf("ONGOING"));
+    }
+
     private static String turnReport(TestHome home, UUID session) {
         TurnReport report = new TurnReport(home.fleetSnapshot().snapshot().waiting(), Turn.NONE, ReportWidth.standard(), null,
                 home.primarySessions().previousReportOf(session).orElse(null), null);
@@ -619,7 +631,7 @@ class DecisionsAndReportingTest {
 
     private static ConsoleSitrep consoleSitrep(TestHome home) {
         return PresenterFixtures.sitrepConsolePresenter().present(home.fleetSnapshot().snapshot(), TestHome.START, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
-                Presence.presentSince(TestHome.START), _ -> Map.of());
+                Presence.presentSince(TestHome.START), _ -> Map.of(), _ -> Map.of());
     }
 
     private static String returnBrief(TestHome home) {

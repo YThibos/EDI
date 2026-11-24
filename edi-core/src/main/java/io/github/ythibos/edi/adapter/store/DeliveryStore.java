@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
@@ -60,6 +61,18 @@ public class DeliveryStore {
 
     public Optional<Delivery> at(String url) {
         return store.sql(SELECT_DELIVERIES + "where url = :url").param("url", url).query((row, _) -> deliveryOf(row)).optional();
+    }
+
+    public List<Delivery> settledAwaitingTheirTick() {
+        return store.sql(SELECT_DELIVERIES + """
+                        where state in (:merged, :closed)
+                          and not exists (select 1 from call_tick where call = :call || delivery.task_id)
+                        order by observed_at, task_id""")
+                .param("merged", MergeRequestState.MERGED.word())
+                .param("closed", MergeRequestState.CLOSED.word())
+                .param("call", CallKey.REVIEW)
+                .query((row, _) -> deliveryOf(row))
+                .list();
     }
 
     public List<Delivery> inState(MergeRequestState state) {

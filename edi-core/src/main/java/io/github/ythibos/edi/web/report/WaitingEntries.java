@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
@@ -23,7 +22,6 @@ final class WaitingEntries {
                         waiting.decisions().stream().map(open -> call(open, wording, showing)),
                         waiting.boards().stream().map(board -> boardQuestions(board, wording)),
                         waiting.reviews().stream().map(ready -> review(ready, wording)),
-                        waiting.changing().stream().map(changing -> changing(changing, wording)),
                         waiting.workerQuestions().stream().map(question -> workerWaiting(question, wording)))
                 .flatMap(Function.identity())
                 .toList();
@@ -51,11 +49,6 @@ final class WaitingEntries {
 
     private static DecisionZone.Entry review(ReadyForReview ready, TurnWording wording) {
         return new DecisionZone.Review(wording.projectsOf(ready.task()), wording.textOf(ready.task()), ready.delivery().address().url());
-    }
-
-    private static DecisionZone.Entry changing(ChangingRequest changing, TurnWording wording) {
-        return new DecisionZone.Changing(wording.projectsOf(changing.task()), wording.textOf(changing.task()), changing.delivery().address().url(),
-                changing.whyChanging());
     }
 
     private static DecisionZone.Entry workerWaiting(WorkerQuestion question, TurnWording wording) {

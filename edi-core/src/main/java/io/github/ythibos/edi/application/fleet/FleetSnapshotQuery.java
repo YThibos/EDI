@@ -38,7 +38,6 @@ import io.github.ythibos.edi.domain.worker.Worker;
 public class FleetSnapshotQuery {
 
     private static final Duration LANDED_RECENTLY = Duration.ofDays(7);
-    private static final Duration ANSWERED_RECENTLY = Duration.ofHours(24);
 
     private final TaskStore tasks;
     private final DecisionStore decisions;
@@ -72,8 +71,9 @@ public class FleetSnapshotQuery {
             List<Task> queued = tasks.inState(TaskState.QUEUED);
             Map<TaskId, Decision> openDecisions = openDecisionsByTask();
             List<Task> openWork = Stream.concat(inFlight.stream(), queued.stream()).toList();
-            return new FleetSnapshot(waitingOnTheCaptain(openDecisions, inFlight, now), ongoing(unheld(inFlight)), parkedAmong(openWork, openDecisions),
-                    unheld(queued), landedSince(now.minus(LANDED_RECENTLY)), answeredSince(now.minus(ANSWERED_RECENTLY)));
+            List<HandedOverRequest> handedOver = handedOverRequestsAmong(inFlight);
+            return new FleetSnapshot(waitingOnTheCaptain(openDecisions, inFlight, handedOver, now), dealtWith(), ongoing(unheld(inFlight)),
+                    stillChangingAmong(handedOver), parkedAmong(openWork, openDecisions), unheld(queued), landedSince(now.minus(LANDED_RECENTLY)));
         });
     }
 
@@ -83,12 +83,20 @@ public class FleetSnapshotQuery {
         return byTask;
     }
 
-    private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight, Instant now) {
+    private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight, List<HandedOverRequest> handedOver,
+            Instant now) {
         List<OpenDecision> open = decisionsOf(openDecisions);
         List<WaitingBoard> waitingBoards = waitingBoards(open);
-        List<HandedOverRequest> handedOver = handedOverRequestsAmong(inFlight);
         return new WaitingOnTheCaptain(boundToNoWaitingBoard(open, waitingBoards), waitingBoards, readyForReviewAmong(handedOver),
-                stillChangingAmong(handedOver), questionsOfWorkersAmong(inFlight, now));
+                questionsOfWorkersAmong(inFlight, now));
+    }
+
+    private DealtWith dealtWith() {
+        return new DealtWith(
+                decisions.answeredAwaitingTheirTick().stream().map(decision -> new DealtWith.Answered(decision, tasks.get(decision.task()))).toList(),
+                boards.endedAwaitingTheirTick().stream().map(board -> new DealtWith.EndedBoard(board, tasks.get(board.task()))).toList(),
+                deliveries.settledAwaitingTheirTick().stream().map(delivery -> new DealtWith.SettledRequest(tasks.get(delivery.task()), delivery))
+                        .toList());
     }
 
     private List<WorkerQuestion> questionsOfWorkersAmong(List<Task> inFlight, Instant now) {
@@ -104,7 +112,20 @@ public class FleetSnapshotQuery {
     }
 
     private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {
-        return openDecisions.values().stream().map(decision -> new OpenDecision(decision, tasks.get(decision.task()))).toList();
+        return openDecisions.values().stream().map(this::openDecision).toList();
+    }
+
+    private OpenDecision openDecision(Decision decision) {
+        Task task = tasks.get(decision.task());
+        return new OpenDecision(decision, task, stopsItsWorker(decision, task));
+    }
+
+    private boolean stopsItsWorker(Decision decision, Task task) {
+        return isInFlightAndHeldForADecision(task) || workers.latestOf(task.id()).flatMap(Worker::openQuestion).filter(decision::isRaisedFor).isPresent();
+    }
+
+    private static boolean isInFlightAndHeldForADecision(Task task) {
+        return task.state() == TaskState.IN_FLIGHT && task.isHeld() && task.hold().awaitsADecision();
     }
 
     private List<WaitingBoard> waitingBoards(List<OpenDecision> open) {
@@ -180,10 +201,6 @@ public class FleetSnapshotQuery {
 
     private static boolean isWork(Task task) {
         return task.intake().kind() != TaskKind.CAPTAIN;
-    }
-
-    private List<RecentAnswer> answeredSince(Instant since) {
-        return decisions.answeredSince(since).stream().map(decision -> new RecentAnswer(decision, tasks.get(decision.task()))).toList();
     }
 
     private List<ParkedTask> parkedAmong(List<Task> openWork, Map<TaskId, Decision> openDecisions) {

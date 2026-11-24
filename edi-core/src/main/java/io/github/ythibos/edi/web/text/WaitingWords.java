@@ -20,8 +20,8 @@ public final class WaitingWords {
         return "Ready for your review: " + task + " - " + address;
     }
 
-    public static String changing(String task, String address, String why) {
-        return "Changing, hold the merge: " + task + " (" + why + ") - " + address;
+    public static String comingBack(String address, String why) {
+        return "changing, back to you when it is ready (" + why + ") - " + address;
     }
 
     public static String inTheRound(String closesAt) {

@@ -51,8 +51,7 @@ public record TurnReport(WaitingOnTheCaptain waiting, Turn turn, ReportWidth wid
     private boolean namesEveryWaitingEntry(Reply reply) {
         return waiting.decisions().stream().allMatch(open -> reply.namesTheDecision(open.decision().number()))
                 && waiting.boards().stream().allMatch(board -> namesTheBoard(board, reply))
-                && waiting.reviews().stream().allMatch(ready -> reply.namesTheAddress(ready.delivery().address().url()))
-                && waiting.changing().stream().allMatch(changing -> reply.namesTheAddress(changing.delivery().address().url()));
+                && waiting.reviews().stream().allMatch(ready -> reply.namesTheAddress(ready.delivery().address().url()));
     }
 
     private static boolean namesTheBoard(WaitingBoard board, Reply reply) {
