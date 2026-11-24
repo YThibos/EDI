@@ -54,6 +54,7 @@ import io.github.ythibos.edi.domain.status.CaptainAddress;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -366,19 +367,70 @@ class DecisionsAndReportingTest {
         void aRequestReadyForReviewWaitsOnTheCaptain() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
-            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
 
             String report = captainReport(home, Turn.NONE);
             String brief = returnBrief(home);
             List<ConsoleSitrep.Review> onTheConsole = consoleSitrep(home).reviews();
-            home.deliveries().save(home.deliveries().of(worker.id().task()).orElseThrow().observed(request(MergeRequestState.MERGED), TestHome.START));
+            home.deliveries().save(home.deliveries().of(worker.id().task()).orElseThrow().observed(request(MergeRequestState.MERGED), new BaseBranch("main"), TestHome.START));
             String merged = captainReport(home, Turn.NONE);
 
             assertThat(report).contains("NEEDS YOUR DECISION ══ 1 open", "║  Ready for your review: Work on fit-lamp - " + REQUEST + "\n");
             assertThat(brief).contains("Needs your decision (1)\n  Ready for your review: Work on fit-lamp - " + REQUEST + "\n");
-            assertThat(onTheConsole).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST));
+            assertThat(onTheConsole).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST, null));
             assertThat(merged).contains("nothing open").doesNotContain("Ready for your review");
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-19 a request that targets another branch than the base names that branch on every surface, and its merge is no landing")
+        void aStackedRequestNamesItsTargetUntilItLandsOnTheBase() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN, "slice/lamps"), new BaseBranch("main"), TestHome.START));
+            home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
+
+            String report = captainReport(home, Turn.NONE);
+            String brief = returnBrief(home);
+            String digest = digestOf(home);
+            List<ConsoleSitrep.Review> onTheConsole = consoleSitrep(home).reviews();
+            home.deliveries().save(home.deliveries().of(worker.id().task()).orElseThrow().observed(request(MergeRequestState.MERGED, "slice/lamps"),
+                    new BaseBranch("main"), TestHome.START));
+            String merged = captainReport(home, Turn.NONE);
+            String mergedBrief = returnBrief(home);
+            ConsoleSitrep.Ongoing mergedOnTheConsole = consoleSitrep(home).ongoing().getFirst();
+
+            String target = "(targets slice/lamps, not the base: merging it does not land the work)";
+            assertThat(report.replaceAll("\n║ *", " ")).contains("Ready for your review: Work on fit-lamp - " + REQUEST + " " + target);
+            assertThat(brief).contains("Ready for your review: Work on fit-lamp - " + REQUEST + " " + target + "\n");
+            assertThat(digest).contains("review  fit-lamp  " + REQUEST + "  targets slice/lamps, not the base: merging it does not land the work\n");
+            assertThat(onTheConsole).extracting(ConsoleSitrep.Review::stackedOn).containsExactly("slice/lamps");
+            String notLanded = "its request merged into slice/lamps, so the work did not land through its own request;"
+                    + " once slice/lamps lands on the base and its worker is stopped, edi cleanup fit-lamp retires it";
+            assertThat(merged.replaceAll("\n[║ ]*", " ")).contains("Work on fit-lamp: " + notLanded).doesNotContain("Ready for your review");
+            assertThat(mergedBrief).contains("Work on fit-lamp: " + notLanded + "\n");
+            assertThat(mergedOnTheConsole.doing()).isEqualTo("Fitted. - " + notLanded);
+        }
+
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-19 an ongoing task whose open request targets another branch than the base names that branch before its done")
+        void anOngoingTaskNamesTheTargetOfItsOpenStackedRequest() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN, "slice/lamps"), new BaseBranch("main"), TestHome.START));
+            home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST, false), TestHome.START);
+
+            String report = captainReport(home, Turn.NONE);
+            String brief = returnBrief(home);
+            ConsoleSitrep onTheConsole = consoleSitrep(home);
+
+            String target = "targets slice/lamps, not the base: merging it does not land the work";
+            assertThat(onTheConsole.reviews()).isEmpty();
+            assertThat(report.replaceAll("\n║ *", " ")).contains("Work on fit-lamp: " + target).doesNotContain("Ready for your review");
+            assertThat(brief).contains("Work on fit-lamp: " + target + "\n");
+            assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::doing).containsExactly("pipeline review - " + target);
         }
 
         @Test
@@ -388,7 +440,7 @@ class DecisionsAndReportingTest {
         void aRequestStillChangingAfterItsDoneShowsAsChanging() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
-            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
             home.pipelineRuns().save(worker.id().task(), new PipelineRun("01RUN", "running", "review", false, "abc123", REQUEST, false), TestHome.START);
             home.steerWorker().steer(TaskReference.parse("fit-lamp"), "Amend the record too.", null, Actor.PRIMARY);
@@ -410,7 +462,7 @@ class DecisionsAndReportingTest {
                     + "  hold the merge: pipeline review; steer 1 not acknowledged\n");
             assertThat(onTheConsole.reviews()).isEmpty();
             assertThat(onTheConsole.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Work on fit-lamp", List.of("harness"), REQUEST,
-                    "pipeline review; steer 1 not acknowledged"));
+                    "pipeline review; steer 1 not acknowledged", null));
             assertThat(settled).contains("║  Ready for your review: Work on fit-lamp - " + REQUEST + "\n").doesNotContain("Changing");
         }
 
@@ -421,7 +473,7 @@ class DecisionsAndReportingTest {
         void aRequestWhosePipelineOnlyWatchesPassedChecksShowsAsReady() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
-            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), TestHome.START));
+            home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
             home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
             PipelineRun watching = new PipelineRun("01RUN", "running", "ci", false, "abc123", REQUEST, true);
             home.pipelineRuns().save(worker.id().task(), watching, TestHome.START);
@@ -455,9 +507,13 @@ class DecisionsAndReportingTest {
         }
 
         private static MergeRequestView request(MergeRequestState state) {
+            return request(state, "main");
+        }
+
+        private static MergeRequestView request(MergeRequestState state, String target) {
             MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
             boolean merged = state == MergeRequestState.MERGED;
-            return new MergeRequestView(address, state, false, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, merged ? "def456" : null, merged ? TestHome.START : null);
+            return new MergeRequestView(address, state, false, "feature/HRN-3", target, "abc123", HeadChecks.UNDECIDED, merged ? "def456" : null, merged ? TestHome.START : null);
         }
 
         private static CallingSession captainSays(TestHome home, String words, String task) {

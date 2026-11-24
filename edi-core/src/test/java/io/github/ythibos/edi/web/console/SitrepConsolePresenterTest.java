@@ -168,7 +168,7 @@ class SitrepConsolePresenterTest {
 
         assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK,
                 List.of()));
-        assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url()));
+        assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(), null));
     }
 
     @Test
@@ -182,7 +182,7 @@ class SitrepConsolePresenterTest {
 
         assertThat(sitrep.reviews()).isEmpty();
         assertThat(sitrep.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(),
-                "still a draft; pipeline running; steer 2 not acknowledged"));
+                "still a draft; pipeline running; steer 2 not acknowledged", null));
     }
 
     @Test
@@ -279,7 +279,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static Delivery delivery(Task task) {
-        return new Delivery(task.id(), DRAFT, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW);
+        return new Delivery(task.id(), DRAFT, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, null, NOW, NOW);
     }
 
     private static LandedTask landed(String id) {

@@ -12,13 +12,13 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
-import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.WaitingWords;
 
 @Component
 public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
@@ -86,8 +86,8 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
         return fleet.ongoing().stream()
-                .map(OngoingTask::task)
-                .map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task)))
+                .map(ongoing -> new ReportItem(wording.projectsOf(ongoing.task()),
+                        WaitingWords.ongoing(wording.textWithStateOf(ongoing.task()), ongoing)))
                 .toList();
     }
 

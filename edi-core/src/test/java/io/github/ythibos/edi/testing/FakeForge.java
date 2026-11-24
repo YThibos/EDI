@@ -121,6 +121,12 @@ public final class FakeForge implements Forge {
                 request.targetBranch(), request.headCommit(), checks, request.landedCommit(), request.mergedAt()));
     }
 
+    public synchronized void retargets(MergeRequestAddress address, String targetBranch) {
+        MergeRequestView request = mergeRequests.get(address.number());
+        mergeRequests.put(address.number(), new MergeRequestView(address, request.state(), request.draft(), request.sourceBranch(), targetBranch,
+                request.headCommit(), request.checks(), request.landedCommit(), request.mergedAt()));
+    }
+
     public synchronized MergeRequestView merges(MergeRequestAddress address, String landedCommit) {
         return changed(address, MergeRequestState.MERGED, landedCommit, clock.now());
     }

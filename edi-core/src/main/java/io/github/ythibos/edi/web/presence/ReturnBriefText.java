@@ -83,11 +83,12 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     }
 
     private static String reviewLine(ReadyForReview ready) {
-        return WaitingWords.review(ready.task().intake().title(), ready.delivery().address().url());
+        return WaitingWords.review(ready.task().intake().title(), ready.delivery().address().url(), ready.delivery().stackedOn());
     }
 
     private static String changingLine(ChangingRequest changing) {
-        return WaitingWords.changing(changing.task().intake().title(), changing.delivery().address().url(), changing.whyChanging());
+        return WaitingWords.changing(changing.task().intake().title(), changing.delivery().address().url(), changing.whyChanging(),
+                changing.delivery().stackedOn());
     }
 
     private static String setbackLine(Setback setback) {
@@ -104,6 +105,6 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     }
 
     private static String runningLine(OngoingTask ongoing) {
-        return ongoing.task().intake().title();
+        return WaitingWords.ongoing(ongoing.task().intake().title(), ongoing);
     }
 }

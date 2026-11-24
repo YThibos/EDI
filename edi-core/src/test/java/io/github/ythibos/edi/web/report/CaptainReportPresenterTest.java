@@ -127,7 +127,7 @@ class CaptainReportPresenterTest {
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 1, FIRST_DAY, null, null);
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of())),
-                List.of(new ReadyForReview(lamp, new Delivery(lamp.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, FIRST_DAY, FIRST_DAY))), List.of());
+                List.of(new ReadyForReview(lamp, new Delivery(lamp.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, null, FIRST_DAY, FIRST_DAY))), List.of());
 
         String report = rendered(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE);
 

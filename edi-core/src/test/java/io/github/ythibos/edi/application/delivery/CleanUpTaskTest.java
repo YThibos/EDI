@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -61,7 +62,8 @@ class CleanUpTaskTest {
 
         assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
                 .hasMessage("fit-lamp#1 still works on fit-lamp;"
-                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged.");
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch,"
+                        + " or once it is stopped with edi worker stop.");
     }
 
     @Test
@@ -72,11 +74,36 @@ class CleanUpTaskTest {
         upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
         upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
         MergeRequestView merged = home.forge().merges(draft.address(), upstream.commit("Fit the lamp, squashed").head());
-        home.deliveries().save(Delivery.of(LAMP, merged, home.clock().now()));
+        home.deliveries().save(Delivery.of(LAMP, merged, new BaseBranch("main"), home.clock().now()));
 
         cleanUp("fit-lamp");
 
         assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isFalse();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void waitsForTheWorkerWhoseRequestMergedIntoAnotherBranchToStopBeforeRetiringTheLandedWork() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().retargets(draft.address(), "slice/lamps");
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+        MergeRequestView mergedElsewhere = home.forge().merges(draft.address(), upstream.commit("Land slice/lamps, squashed").head());
+        home.deliveries().save(Delivery.of(LAMP, mergedElsewhere, new BaseBranch("main"), home.clock().now()));
+
+        assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp#1 still works on fit-lamp;"
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch,"
+                        + " or once it is stopped with edi worker stop.");
+        assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isTrue();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+
+        home.runtime().close(dispatched.launched().worker().window());
+        cleanUp("fit-lamp");
+
+        assertThat(copy.root()).doesNotExist();
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
     }
 

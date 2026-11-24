@@ -64,10 +64,10 @@ public record ConsoleSitrep(
     public record BoardDecision(String number, String title) {
     }
 
-    public record Review(String task, String title, List<String> projects, String url) {
+    public record Review(String task, String title, List<String> projects, String url, String stackedOn) {
     }
 
-    public record Changing(String task, String title, List<String> projects, String url, String why) {
+    public record Changing(String task, String title, List<String> projects, String url, String why, String stackedOn) {
     }
 
     public record Question(String task, String title, List<String> projects, String question, Instant askedAt) {

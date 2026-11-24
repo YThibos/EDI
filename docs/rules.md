@@ -79,7 +79,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `delivery.delivered-from-the-copy` | `DeliverDraft` | A delivery comes from an isolated copy that still exists. |
 | `delivery.not-merged-yet` | `DeliverDraft` | A merged request is followed, never delivered again. |
 | `delivery.recorded` | `DeliverDraft`, `DeliveryRecords`, `FollowMerges` | Only a recorded delivery is followed. |
-| `delivery.request-followed` | `FollowMerges` | A merge is followed only in the registered repository, and only once the forge shows it merged. |
+| `delivery.request-followed` | `FollowMerges` | A merge is followed only in the registered repository, and only once the forge shows it merged into the base branch. |
 | `publish.outgoing-clean` | `DeliverDraft`, `PublishCheckController` | Nothing outgoing carries a secret, a denied term, a personal path, a network address, a SNAPSHOT version or, for a project other than EDI, internal vocabulary. |
 | `publish.request-text-clean` | `DeliverDraft` | A merge request's title and description pass the publish check, as a commit does. |
 | `publish.checkable-target` | `PublicationTargets` | The publish check runs only in a registered clone or the caller's own isolated copy. |

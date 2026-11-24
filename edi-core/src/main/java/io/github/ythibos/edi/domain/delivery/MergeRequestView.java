@@ -51,6 +51,18 @@ public record MergeRequestView(
         return state == MergeRequestState.MERGED;
     }
 
+    public boolean targets(BaseBranch base) {
+        return base.name().equals(targetBranch);
+    }
+
+    public boolean isMergedIntoTheBase(BaseBranch base) {
+        return isMerged() && targets(base);
+    }
+
+    public String stackedOn(BaseBranch base) {
+        return targets(base) ? null : targetBranch;
+    }
+
     public boolean mergedSince(Instant moment) {
         return isMerged() && !mergedAt.isBefore(moment);
     }
@@ -63,7 +75,7 @@ public record MergeRequestView(
         if (!branch.toString().equals(sourceBranch)) {
             gaps.add(address + " comes from " + sourceBranch + ", not from " + branch);
         }
-        if (!base.name().equals(targetBranch)) {
+        if (!targets(base)) {
             gaps.add(address + " targets " + targetBranch + ", not " + base);
         }
         if (!head.equals(headCommit)) {

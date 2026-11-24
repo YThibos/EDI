@@ -71,8 +71,8 @@ final class DecisionZone {
             case Reminder reminder -> reminderLines(reminder, boxWidth);
             case InTheRound inTheRound -> inTheRoundLines(inTheRound, boxWidth);
             case BoardQuestions board -> boardLines(board, boxWidth);
-            case Review review -> singleLine(WaitingWords.review(review.title(), review.url()), boxWidth);
-            case Changing changing -> singleLine(WaitingWords.changing(changing.title(), changing.url(), changing.why()), boxWidth);
+            case Review review -> singleLine(WaitingWords.review(review.title(), review.url(), review.stackedOn()), boxWidth);
+            case Changing changing -> singleLine(WaitingWords.changing(changing.title(), changing.url(), changing.why(), changing.stackedOn()), boxWidth);
             case WorkerWaiting worker -> singleLine(WaitingWords.workerQuestion(worker.title(), worker.question(), worker.waited()), boxWidth);
         };
     }
@@ -177,10 +177,10 @@ final class DecisionZone {
     record BoardDecision(DecisionNumber number, String title) {
     }
 
-    record Review(ProjectSet projects, String title, String url) implements Entry {
+    record Review(ProjectSet projects, String title, String url, String stackedOn) implements Entry {
     }
 
-    record Changing(ProjectSet projects, String title, String url, String why) implements Entry {
+    record Changing(ProjectSet projects, String title, String url, String why, String stackedOn) implements Entry {
     }
 
     record WorkerWaiting(ProjectSet projects, String title, String question, Duration waited) implements Entry {

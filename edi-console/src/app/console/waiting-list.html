@@ -22,7 +22,7 @@
       <div class="sr-row sr-waiting">
         <div class="sr-row__main">
           <div class="sr-row__title"><a class="sr-row__open" [routerLink]="['/task', review.task]">{{ review.title }}</a></div>
-          <div class="sr-row__sub">ready for your review · {{ projectsOf(review.projects, review.task) }}</div>
+          <div class="sr-row__sub">ready for your review · {{ projectsOf(review.projects, review.task) }}{{ targetOf(review.stackedOn) }}</div>
           <a class="sr-waiting__link" [href]="review.url" target="_blank" rel="noopener">{{ review.url }}</a>
           <app-link-chips [links]="links()[review.task]" />
         </div>
@@ -33,7 +33,7 @@
       <div class="sr-row sr-waiting">
         <div class="sr-row__main">
           <div class="sr-row__title"><a class="sr-row__open" [routerLink]="['/task', request.task]">{{ request.title }}</a></div>
-          <div class="sr-row__sub">changing, hold the merge: {{ request.why }} · {{ projectsOf(request.projects, request.task) }}</div>
+          <div class="sr-row__sub">changing, hold the merge: {{ request.why }} · {{ projectsOf(request.projects, request.task) }}{{ targetOf(request.stackedOn) }}</div>
           <a class="sr-waiting__link" [href]="request.url" target="_blank" rel="noopener">{{ request.url }}</a>
           <app-link-chips [links]="links()[request.task]" />
         </div>
