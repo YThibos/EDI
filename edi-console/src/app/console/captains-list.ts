@@ -66,6 +66,10 @@ export class CaptainsList {
     return board.questions > 0 ? `${questionsWaiting(board.questions)} · ${projects}` : projects;
   }
 
+  protected targetOf(stackedOn: string | null | undefined): string {
+    return stackedOn ? ` · targets ${stackedOn}, not the base: merging it does not land the work` : '';
+  }
+
   protected given(answer: AnsweredDecision): string {
     const option = answer.option ? `option ${answer.option}, ` : '';
     return `${option}in the ${answer.channel} at ${shipTime(answer.answeredAt, this.zone())}`;

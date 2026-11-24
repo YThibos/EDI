@@ -8,7 +8,6 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.ChangingRequest;
-import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
@@ -82,7 +81,7 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     }
 
     private static String reviewLine(ReadyForReview ready) {
-        return WaitingWords.review(ready.task().intake().title(), ready.delivery().address().url());
+        return WaitingWords.review(ready.task().intake().title(), ready.delivery().address().url(), ready.delivery().stackedOn());
     }
 
     private static String setbackLine(Setback setback) {
@@ -99,11 +98,11 @@ public class ReturnBriefText implements TextPresenter<ReturnBrief> {
     }
 
     private static String runningLine(OngoingTask ongoing, ReturnBrief brief) {
-        String title = ongoing.task().intake().title();
+        String title = WaitingWords.ongoing(ongoing.task().intake().title(), ongoing);
         return brief.comingBackOf(ongoing).map(changing -> title + ": " + comingBack(changing)).orElse(title);
     }
 
     private static String comingBack(ChangingRequest changing) {
-        return WaitingWords.comingBack(changing.delivery().address().url(), changing.whyChanging());
+        return WaitingWords.comingBack(changing.delivery().address().url(), changing.whyChanging(), changing.delivery().stackedOn());
     }
 }

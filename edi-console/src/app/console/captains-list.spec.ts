@@ -106,6 +106,12 @@ describe('CaptainsList', () => {
     expect(text(list, '.sr-entry__order')).toBe('Merges after #12.');
   });
 
+  it('names the branch a stacked review targets, since merging it does not land the work on the base', async () => {
+    const list = await listed(sitrepFixture({ decisions: [], reviews: [{ ...REVIEW_WITHOUT_STEPS, stackedOn: 'slice/buoys' }] }));
+
+    expect(texts(list, '.sr-entry__sub')[0]).toBe('ready for your review · harness · targets slice/buoys, not the base: merging it does not land the work');
+  });
+
   it('lets the captain tick only what is dealt with, and tells the page once the tick is stored', async () => {
     const list = await listed(everything());
     const ticks = Array.from(list.querySelectorAll<HTMLInputElement>('.sr-entry__tick'));

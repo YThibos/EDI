@@ -173,7 +173,7 @@ class SitrepConsolePresenterTest {
 
         assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK,
                 List.of()));
-        assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(),
+        assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(), null,
                 new ConsoleSitrep.AfterLanding(List.of(), null)));
     }
 
@@ -192,7 +192,7 @@ class SitrepConsolePresenterTest {
     void carriesTheStepsAfterLandingAndTheMergeOrderFromEachReviewsDeliveryNote() {
         Task lamp = ship("fit-lamp", "Fit the lamp");
         Task bell = ship("bell", "Polish the bell");
-        Delivery merged = new Delivery(bell.id(), DRAFT, false, "abc123", HeadChecks.PASSED, MergeRequestState.MERGED, "def456", NOW, NOW);
+        Delivery merged = new Delivery(bell.id(), DRAFT, false, "abc123", HeadChecks.PASSED, MergeRequestState.MERGED, "def456", null, NOW, NOW);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(new ReadyForReview(lamp, delivery(lamp))), List.of());
         DealtWith settled = new DealtWith(List.of(), List.of(), List.of(new DealtWith.SettledRequest(bell, merged)));
         DeliveryNote note = new DeliveryNote(List.of("Run edi up."), "Merges after #329.");
@@ -352,7 +352,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static Delivery delivery(Task task) {
-        return new Delivery(task.id(), DRAFT, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW);
+        return new Delivery(task.id(), DRAFT, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, null, NOW, NOW);
     }
 
     private static LandedTask landed(String id) {

@@ -69,7 +69,7 @@ public record ConsoleSitrep(
     public record BoardDecision(String number, String title) {
     }
 
-    public record Review(String task, String title, List<String> projects, String url, AfterLanding afterLanding) {
+    public record Review(String task, String title, List<String> projects, String url, String stackedOn, AfterLanding afterLanding) {
     }
 
     public record AfterLanding(List<String> steps, String landingOrder) {

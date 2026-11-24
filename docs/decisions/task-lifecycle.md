@@ -20,7 +20,7 @@ A task can wait on the captain, be parked for the night and have a dead worker a
 | WORKING, CHANGING | DELIVERED | the worker's `edi status done` (`DoneReported`) | the copy is clean, no SNAPSHOT is added, no message waits unacknowledged, no pipeline run is running; a ship's request is open at the copy's head; a scout's `report.md` exists |
 | DELIVERED | READY | the core, observing the forge (`ForgeObserved`) | a ship's request, out of draft, its latest run passed, and its head is the delivered head |
 | DELIVERED, READY | CHANGING | the core: a steer is sent, a pipeline run starts, the worker reports working, the request's head or the base moves, or the request is closed (`Change`, `ChangeCause`) | none |
-| WORKING, DELIVERED, CHANGING, READY | MERGED | the core following the forge, or `edi merged` (`RequestMerged`) | the forge reports the request merged; the merged head is recorded, with the commits after it |
+| WORKING, DELIVERED, CHANGING, READY | MERGED | the core following the forge, or `edi merged` (`RequestMerged`) | the forge reports the request merged into the base branch; the merged head is recorded, with the commits after it |
 | MERGED | LANDED | the core (`LandingObserved`) | the commit the merge landed is in the base and no commit follows the merged head; a commit after it keeps the task MERGED and is named |
 | LANDED | RETIRED | the core's cleanup, retried each delivery round until it holds (`CleanUp`) | the copy, branch, workers and boards are retired (`Leftover`) |
 | DELIVERED (a scout) | RETIRED | `edi cleanup` (`CleanUp`) | the report exists, and the copy, branch, workers and boards are retired |
@@ -69,3 +69,4 @@ When a delivery mode appears whose work is neither merged nor reported, or when 
 - 27/10/2026: the captain widened Q6 A so a merge while the task was still working also asks: any merge with commits after the merged head raises the follow-up decision, whatever the stage before it (EDI-84).
 - 12/11/2026: `task.stage` replaced `task.state`, derived once for every task; every service moved it through `StageTransitions` with a `StageChanged` event, and `ObservePipelines` and `FollowMerges` kept observing a delivered task's runs, head and draft flag (EDI-85).
 - 13/11/2026: waits read the stages: a blocker is waited for until it has landed and a plan's slice as its plan names, and the QUEUED to WORKING guard cites the `plans` record (EDI-88).
+- 24/11/2026: only a merge into the base branch moves a task to MERGED, so a request merged into a slice branch keeps its task in flight ([merge-following](merge-following.md), EDI-244).

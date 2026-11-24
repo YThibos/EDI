@@ -101,7 +101,7 @@ class TurnReportNamingTest {
 
     private TurnReport report(Turn turn, List<WorkerQuestion> questions) {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
-        ReadyForReview ready = new ReadyForReview(fitting, new Delivery(fitting.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, NOW, NOW));
+        ReadyForReview ready = new ReadyForReview(fitting, new Delivery(fitting.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, null, NOW, NOW));
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp), lamp, false)), List.of(), List.of(ready), questions);
         return new TurnReport(waiting, turn, WIDTH, null, null, null);
     }

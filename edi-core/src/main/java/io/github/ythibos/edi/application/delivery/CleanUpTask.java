@@ -40,7 +40,8 @@ import io.github.ythibos.edi.domain.task.TaskStage;
 @Service
 public class CleanUpTask {
 
-    private static final String HANDED_OVER = "it is cleaned up once its done is accepted or the forge shows its merge request merged.";
+    private static final String HANDED_OVER = "it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch,"
+            + " or once it is stopped with edi worker stop.";
 
     private final TaskStore tasks;
     private final DeliveryStore deliveries;
@@ -92,13 +93,13 @@ public class CleanUpTask {
     }
 
     private void requireTheWorkHandedOver(Workplace workplace) {
-        if (!isMerged(workplace)) {
+        if (!isLandedByItsRequest(workplace)) {
             retirement.requireNoWorkerAtWork(workplace, HANDED_OVER);
         }
     }
 
-    private boolean isMerged(Workplace workplace) {
-        return transaction.execute(_ -> deliveries.of(workplace.task().id())).filter(Delivery::isMerged).isPresent();
+    private boolean isLandedByItsRequest(Workplace workplace) {
+        return transaction.execute(_ -> deliveries.of(workplace.task().id())).filter(Delivery::isLanded).isPresent();
     }
 
     private void requireTheReportOfAScout(Workplace workplace) {

@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.delivery;
 import java.time.Instant;
 import java.util.Objects;
 
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 public record Delivery(
@@ -13,6 +14,7 @@ public record Delivery(
         HeadChecks checks,
         MergeRequestState state,
         String landedCommit,
+        String stackedOn,
         Instant recordedAt,
         Instant observedAt) {
 
@@ -24,15 +26,17 @@ public record Delivery(
         Objects.requireNonNull(observedAt, () -> "The delivery of " + task + " records when it was last looked at.");
     }
 
-    public static Delivery of(TaskId task, MergeRequestView view, Instant at) {
-        return new Delivery(task, view.address(), view.draft(), view.headCommit(), view.checks(), view.state(), view.landedCommit(), at, at);
+    public static Delivery of(TaskId task, MergeRequestView view, BaseBranch base, Instant at) {
+        return new Delivery(task, view.address(), view.draft(), view.headCommit(), view.checks(), view.state(), view.landedCommit(),
+                view.stackedOn(base), at, at);
     }
 
-    public Delivery observed(MergeRequestView view, Instant at) {
+    public Delivery observed(MergeRequestView view, BaseBranch base, Instant at) {
         if (!view.address().equals(address)) {
             throw new IllegalArgumentException("The delivery of " + task + " is " + address + ", not " + view.address() + ".");
         }
-        return new Delivery(task, address, view.draft(), view.headCommit(), view.checks(), view.state(), view.landedCommit(), recordedAt, at);
+        return new Delivery(task, address, view.draft(), view.headCommit(), view.checks(), view.state(), view.landedCommit(),
+                view.stackedOn(base), recordedAt, at);
     }
 
     public boolean checksPassed() {
@@ -53,6 +57,14 @@ public record Delivery(
 
     public boolean isMerged() {
         return state == MergeRequestState.MERGED;
+    }
+
+    public boolean isStacked() {
+        return stackedOn != null;
+    }
+
+    public boolean isLanded() {
+        return isMerged() && !isStacked();
     }
 
     public boolean changesWith(MergeRequestView view) {

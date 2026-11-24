@@ -62,6 +62,7 @@ import io.github.ythibos.edi.web.console.ConsoleSitrep.Review;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.SettledReview;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Question;
 import io.github.ythibos.edi.web.presence.PresenceWords;
+import io.github.ythibos.edi.web.text.WaitingWords;
 
 @Component
 public class SitrepConsolePresenter {
@@ -185,7 +186,8 @@ public class SitrepConsolePresenter {
 
     private static Review review(ReadyForReview ready, Map<TaskId, DeliveryNote> notes) {
         Task task = ready.task();
-        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url(), afterLanding(task, notes));
+        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url(), ready.delivery().stackedOn(),
+                afterLanding(task, notes));
     }
 
     private static AfterLanding afterLanding(Task task, Map<TaskId, DeliveryNote> notes) {
@@ -285,6 +287,10 @@ public class SitrepConsolePresenter {
     }
 
     private static String doingOf(OngoingTask ongoing) {
+        return WaitingWords.doing(activityOf(ongoing), ongoing);
+    }
+
+    private static String activityOf(OngoingTask ongoing) {
         PipelineRun run = ongoing.pipelineRun();
         if (run != null && run.isRunning()) {
             return "pipeline " + run.currentStep();

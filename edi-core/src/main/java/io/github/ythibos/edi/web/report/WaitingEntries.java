@@ -48,7 +48,8 @@ final class WaitingEntries {
     }
 
     private static DecisionZone.Entry review(ReadyForReview ready, TurnWording wording) {
-        return new DecisionZone.Review(wording.projectsOf(ready.task()), wording.textOf(ready.task()), ready.delivery().address().url());
+        return new DecisionZone.Review(wording.projectsOf(ready.task()), wording.textOf(ready.task()), ready.delivery().address().url(),
+                ready.delivery().stackedOn());
     }
 
     private static DecisionZone.Entry workerWaiting(WorkerQuestion question, TurnWording wording) {

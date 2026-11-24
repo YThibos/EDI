@@ -173,6 +173,25 @@ class DeliverDraftTest {
     }
 
     @Test
+    void opensADraftToTheBaseOnceItsRequestMergedIntoAnotherBranch() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = pushed(dispatched);
+        home.forge().pushed(dispatched.launched().branch(), copy.head());
+        MergeRequestView stacked = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), copy.head());
+        home.forge().retargets(stacked.address(), "slice/lamps");
+        home.forge().merges(stacked.address(), "3333");
+
+        DeliveredDraft delivered = home.deliverDraft().deliver(LAMP, Actor.PRIMARY);
+
+        assertThat(delivered.opened()).isTrue();
+        assertThat(home.forge().openedDrafts()).singleElement().satisfies(proposal -> assertThat(proposal.base()).isEqualTo(new BaseBranch("main")));
+        assertThat(delivered.delivery().address()).isNotEqualTo(stacked.address());
+        assertThat(delivered.delivery().isOpen()).isTrue();
+        assertThat(delivered.delivery().stackedOn()).isNull();
+        assertThat(home.eventTypesOf(new TaskId("fit-lamp"))).endsWith("DraftOpened");
+    }
+
+    @Test
     void opensDraftsOnlyForShipsDeliveredForReview() throws IOException {
         DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3", DeliveryMode.LOCAL_BRANCH));
 

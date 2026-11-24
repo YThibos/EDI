@@ -80,6 +80,95 @@ class FollowMergesTest {
     }
 
     @Test
+    void recordsARequestStackedOnAnotherBranchWithItsTargetAndKeepsWatchingTheTask() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        assertThat(home.deliveries().of(LAMP).orElseThrow().stackedOn()).isNull();
+        home.forge().retargets(home.deliveries().of(LAMP).orElseThrow().address(), "slice/lamps");
+
+        home.followMerges().watchTheOpenDrafts();
+
+        Delivery stacked = home.deliveries().of(LAMP).orElseThrow();
+        assertThat(stacked.stackedOn()).isEqualTo("slice/lamps");
+        assertThat(stacked.isOpen()).isTrue();
+    }
+
+    @Test
+    void doesNotRecordAMergeIntoAnotherBranchAsTheTaskLanding() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        Delivery delivery = home.deliveries().of(LAMP).orElseThrow();
+        home.forge().retargets(delivery.address(), "slice/lamps");
+        home.forge().merges(delivery.address(), squashedOntoMain(copy));
+
+        home.followMerges().watchTheOpenDrafts();
+
+        Delivery merged = home.deliveries().of(LAMP).orElseThrow();
+        assertThat(merged.isMerged()).isTrue();
+        assertThat(merged.isLanded()).isFalse();
+        assertThat(merged.stackedOn()).isEqualTo("slice/lamps");
+        assertThat(home.eventTypesOf(LAMP)).doesNotContain("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
+        assertThat(home.tasks().get(LAMP).stage()).isNotIn(TaskStage.MERGED, TaskStage.LANDED, TaskStage.RETIRED);
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+        assertThat(home.cloneRefreshes().after(LAMP)).isEmpty();
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).doesNotContain(WakeKind.DRAFT_MERGED);
+        assertThat(copy.root()).exists();
+    }
+
+    @Test
+    void followsTheNextRequestOfATaskWhoseRequestMergedIntoAnotherBranchThroughToItsLanding() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        Delivery stacked = home.deliveries().of(LAMP).orElseThrow();
+        home.forge().retargets(stacked.address(), "slice/lamps");
+        home.forge().merges(stacked.address(), "3333");
+        home.followMerges().watchTheOpenDrafts();
+        long recordedBefore = home.eventTypesOf(LAMP).stream().filter("DraftRecorded"::equals).count();
+
+        home.followMerges().followTheRequestOf(LAMP);
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.eventTypesOf(LAMP).stream().filter("DraftRecorded"::equals).count()).isEqualTo(recordedBefore);
+        RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
+        MergeRequestView next = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), copy.head());
+
+        home.followMerges().followTheRequestOf(LAMP);
+
+        Delivery recorded = home.deliveries().of(LAMP).orElseThrow();
+        assertThat(recorded.address()).isEqualTo(next.address());
+        assertThat(recorded.isOpen()).isTrue();
+        assertThat(recorded.stackedOn()).isNull();
+
+        home.forge().merges(next.address(), squashedOntoMain(copy));
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.deliveries().of(LAMP).orElseThrow().isLanded()).isTrue();
+        assertThat(home.eventTypesOf(LAMP)).containsSubsequence("DraftRecorded", "DraftMerged");
+        assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage).contains(TaskStage.MERGED);
+    }
+
+    @Test
+    void refusesTheCaptainsWordForAMergeIntoAnotherBranchAndNamesTheBranch() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        Delivery delivery = home.deliveries().of(LAMP).orElseThrow();
+        home.forge().retargets(delivery.address(), "slice/lamps");
+        home.forge().merges(delivery.address(), squashedOntoMain(copy));
+
+        assertThatThrownBy(() -> home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("The forge shows " + delivery.address() + " merged into slice/lamps, not into the base branch,"
+                        + " so the work did not land through its own request and the task stays in flight;"
+                        + " once slice/lamps lands on the base and its worker is stopped, edi cleanup fit-lamp retires it.");
+        assertThat(home.eventTypesOf(LAMP)).doesNotContain("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+        assertThat(home.deliveries().of(LAMP).orElseThrow().isLanded()).isFalse();
+    }
+
+    @Test
     void namesACommitAfterTheMergedHeadAsNotLandedAndKeepsTheTaskMerged() throws IOException {
         DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
         FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");

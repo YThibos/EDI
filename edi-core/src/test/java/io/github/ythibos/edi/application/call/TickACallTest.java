@@ -36,6 +36,7 @@ import io.github.ythibos.edi.domain.delivery.MergeRequestState;
 import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.testing.BoardRounds;
 import io.github.ythibos.edi.testing.Intakes;
@@ -46,6 +47,7 @@ class TickACallTest {
 
     private static final CallKey D58 = CallKey.parse("D58");
     private static final TaskId LAMP = new TaskId("fit-lamp");
+    private static final BaseBranch MAIN = new BaseBranch("main");
     private static final MergeRequestAddress REQUEST =
             new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
 
@@ -88,12 +90,12 @@ class TickACallTest {
     @Test
     void keepsAMergedOrClosedRequestDealtWithUntilItIsTicked() {
         home.addTask().add(ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
-        home.deliveries().save(Delivery.of(LAMP, request(MergeRequestState.OPEN), TestHome.START));
+        home.deliveries().save(Delivery.of(LAMP, request(MergeRequestState.OPEN), MAIN, TestHome.START));
         CallKey review = CallKey.parse("review:fit-lamp");
 
         assertThatThrownBy(() -> home.tickACall().tick(review, Actor.CAPTAIN)).isInstanceOf(Refusal.class);
 
-        home.deliveries().save(home.deliveries().of(LAMP).orElseThrow().observed(request(MergeRequestState.MERGED), TestHome.START));
+        home.deliveries().save(home.deliveries().of(LAMP).orElseThrow().observed(request(MergeRequestState.MERGED), MAIN, TestHome.START));
         List<DealtWith.SettledRequest> merged = home.fleetSnapshot().snapshot().dealtWith().reviews();
         home.tickACall().tick(review, Actor.PRIMARY);
 

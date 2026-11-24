@@ -19,6 +19,7 @@ import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.application.memory.MemoryCheck;
 import io.github.ythibos.edi.application.primary.SessionAnchor;
 import io.github.ythibos.edi.application.primary.SessionStartDigest;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.memory.WorkaroundCount;
 import io.github.ythibos.edi.domain.primary.PrimaryOutputStyle;
 import io.github.ythibos.edi.domain.primary.PrimarySession;
@@ -27,6 +28,7 @@ import io.github.ythibos.edi.web.personality.PersonalityText;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.Moments;
 import io.github.ythibos.edi.web.text.TextPresenter;
+import io.github.ythibos.edi.web.text.WaitingWords;
 import io.github.ythibos.edi.web.text.Words;
 import io.github.ythibos.edi.web.worker.HealthWords;
 import io.github.ythibos.edi.web.worker.WorkerListText;
@@ -204,7 +206,7 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String reviewLine(ReadyForReview ready) {
-        return "review  " + ready.task().id() + "  " + ready.delivery().address().url();
+        return "review  " + ready.task().id() + "  " + ready.delivery().address().url() + targeting(ready.delivery());
     }
 
     private static List<String> comingBack(FleetSnapshot fleet) {
@@ -217,7 +219,12 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String changingLine(ChangingRequest changing) {
-        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + "  " + changing.whyChanging();
+        return "changing  " + changing.task().id() + "  " + changing.delivery().address().url() + targeting(changing.delivery()) + "  "
+                + changing.whyChanging();
+    }
+
+    private static String targeting(Delivery delivery) {
+        return delivery.isStacked() ? "  " + WaitingWords.target(delivery.stackedOn()) : "";
     }
 
     private static List<String> parked(FleetSnapshot fleet) {

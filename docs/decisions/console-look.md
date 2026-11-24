@@ -12,17 +12,21 @@ On the captain's 1920 by 1080 laptop screen, at 100% and 125% scaling, the first
 
 The console uses the approved skin: deep-space navy, an ion-blue signal colour, amber for anything waiting on the captain, green for nominal and red for trouble, with Exo 2, Inter and JetBrains Mono; dark only, its colour tokens fixed in `edi-console/src/styles.css`.
 Dark-proofing is the `color-scheme` and `darkreader-lock` meta tags, `data-theme="dark"` and `:root { color-scheme: dark }`, and nothing more.
-The console is a zoneless Angular application of standalone components driven by signals; the sitrep page is composed of `ConsoleHeader`, `AccessNotice`, `HudStrip`, `DecisionDeck` with `DecisionCardView` and `AnsweredCard`, `OngoingList`, `ChartedList`, `LandedList`, the waiting list and `PersonalityDesk`, with `TaskPanel` routed over it, every class prefixed `sr-`.
-The header's subtitle beside the EDI wordmark names the view on screen, as wide as its longest name, Sign in; the Sitrep, Fleet and Week tabs follow it in the mono face, the active one in ion and the Sitrep tab with the waiting count in an amber pill, while the presence sits beside the clock, so the tabs keep their place across views and on signing in.
+The console is a zoneless Angular application of standalone components driven by signals; the sitrep page is composed of `ConsoleHeader`, `AccessNotice`, `HudStrip`, `CaptainsList` with `DecisionCardView`, `OngoingList`, `ChartedList`, two `ColumnBorderHandle`s and `PersonalityDesk`, with `TaskPanel` routed over it, every class prefixed `sr-`.
+The header's subtitle beside the EDI wordmark names the view on screen, as wide as its longest name, Sign in; the Sitrep, Fleet, Week and Landed tabs follow it in the mono face, the active one in ion, the Sitrep tab with the waiting count in an amber pill and the Landed tab with the count of what landed in a calm pill, while the presence sits beside the clock, so the tabs keep their place across views and on signing in.
 Fleet is an `EmptyView` under the same header and `AccessNotice` until its items fill it; Week is `WeekView`, a `WeekTable` of each task's active of wall-clock time per day, its week total and a Copy control, headed by the week's Monday with Week before and Week after steps that never pass the current week, then an `EffortTable` headed Cost per effort: a row per effort of the ship tasks whose cost was counted in the week, a note naming them ship tasks, a worker launched without an effort flag first as `no flag`, with its tasks, weighted worker tokens in total and per task, weighted pipeline tokens, review rounds, findings and findings per round, the figures right-aligned in tabular digits ([cleanup](cleanup.md)).
 The personality desk opens from a Personality latch beside the presence buttons, on the Sitrep view only, and sits above the HUD strip while it is open, pushing the glance down the page; its sliders take the ion-blue fill up to the thumb's centre over a line-coloured track, and below 761 pixels its sample moves under the sliders.
 The browser tab shows EDI's mainframe hologram as an original drawing: a dotted sphere on a stem that flares to its base, with a flat ring just under the sphere, glowing ion-blue on a deep-navy tile.
 `edi-console/public/favicon.svg` is the one drawing, sized to read at 16 pixels, whose dotted texture, latitude bands and stem rows are faint enough to merge into the glow there and show only at larger sizes.
 Before every build `edi-console/render-icons.mjs` renders it with resvg into `favicon-32.png` and the 180-pixel `apple-touch-icon.png`, which `index.html` names beside the SVG; research boards stay in Lavish ([research-boards](research-boards.md)), so only the console's pages carry the icon.
 The three font families are bundled from the open-source `@fontsource` packages, latin subsets of the weights used, and served by the core.
-The page shows the HUD strip, then three columns side by side, needs your decision, ongoing and charted next, with recently landed below at full width; from 1200 CSS pixels wide the strip and columns fit the viewport's height, and a column taller than its share scrolls inside itself.
-From 1200 CSS pixels wide the task panel covers the ongoing and charted columns and leaves the decision column beside it, the three columns placed explicitly so the panel overlaps them; narrower, the panel takes the whole page.
-Narrower, the deck takes the left column and the lists stack on the right; below 761 pixels everything is one column, and at phone width the gutters drop to 16 pixels with no horizontal scroll.
+The page shows, while workers stand still on the usage limit, a notice in the ion-blue tone naming the moment the limit resets, then the HUD strip, then three columns side by side, needs your decision, ongoing and charted next; recently landed is the `LandedView` at `/landed`.
+Every column is as tall as its content and none scrolls inside itself, so the page scrolls instead.
+From 1200 CSS pixels wide the columns sit on a grid of five tracks, `--needs-track`, a border, the ongoing column, a border and `--charted-track`: needs your decision starts at 36% of the row and charted next at 21%, about two thirds of its former share, and ongoing takes the rest.
+Dragging a border (`ColumnBorderHandle`, a separator that the arrow keys also move) resizes the two columns beside it within bounds that leave ongoing at least a fifth of the row; `ColumnLayout` keeps the shares and whether charted next is folded in the browser's local storage under `edi.console.sitrep-columns`, a double click on a border restores its default, and the page renders with the defaults when the storage cannot be read or written.
+Charted next folds into a 52-pixel strip that shows its count, and needs your decision becomes such a strip, saying everything is ticked off, when nothing waits and nothing is left to tick ([captains-list](captains-list.md)).
+From 1200 CSS pixels wide the task panel covers the ongoing and charted tracks and leaves the decision column beside it, at least as tall as most of the viewport; narrower, the panel takes the whole page.
+Narrower, the list takes the left column and the other two stack on the right, and the borders are hidden; below 761 pixels everything is one column, and at phone width the gutters drop to 16 pixels with no horizontal scroll.
 The charted list has no dispatch picker, because the console's only writes are answers, re-checks, presence and the personality ([console](console.md)).
 
 ## Why
@@ -36,7 +40,8 @@ The captain reads the sitrep to see what waits on them and what is underway, so 
 - The other prototype's look - not chosen.
 - Fonts from the public font service - a third-party request on every load, and fallback fonts behind a proxy that blocks it.
 - Hiding sections until asked for, or equal-height panels - hidden work is easy to miss, and a short list would sit in an empty panel.
-- One component for the whole page - the deck and the lists would not be testable on their own.
+- One component for the whole page - the list and the columns would not be testable on their own.
+- Columns capped to the viewport's height, each scrolling inside itself - the captain had to scroll inside the block he decides from.
 - The game's own hologram image - a game asset, which no file of EDI may carry.
 - PNG fallbacks exported by hand and committed - they drift from the drawing at its first change.
 - A transparent icon without the tile - the ion-blue glow fades on a light browser tab.
@@ -45,7 +50,7 @@ The captain reads the sitrep to see what waits on them and what is underway, so 
 ## Consequences
 
 - Good: one visual identity for the console and the research boards, and each part of the page has its own tests.
-- Bad: no light theme, about twenty font files in the build, and a long decision scrolls inside its card.
+- Bad: no light theme, about twenty font files in the build, and a long list makes the page scroll.
 - Bad: the console's build depends on resvg, a native binary per platform, for two small images.
 
 ## When to revisit
@@ -65,3 +70,4 @@ When the captain asks for a different look, reads the sitrep on a screen of anot
 - 04/11/2026: the task panel opens over the ongoing and charted columns from 1200 pixels wide, keeping the decision column in sight, and takes the page below that (EDI-59).
 - 06/11/2026: the Week view fills its tab with the week's table and its steps between weeks (EDI-62).
 - 20/11/2026: the Week view gained the cost and review yield per effort of the week's ship tasks below the week's table, and a work key in that table no longer breaks at its dash (EDI-97).
+- 24/11/2026: the captain scrolled inside the decision block and could not see what stops a worker, so the deck became one list sized to its content, the columns lost their height cap and gained draggable borders whose widths the browser remembers, charted next narrowed and folds into a strip, and recently landed moved to its own LANDED tab; checked at 1280, 1920, 900 and 390 CSS pixels (EDI-330).

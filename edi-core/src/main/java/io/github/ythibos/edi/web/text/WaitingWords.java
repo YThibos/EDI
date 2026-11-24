@@ -3,6 +3,10 @@ package io.github.ythibos.edi.web.text;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+
+import io.github.ythibos.edi.application.fleet.OngoingTask;
+import io.github.ythibos.edi.domain.delivery.Delivery;
 
 public final class WaitingWords {
 
@@ -16,12 +20,41 @@ public final class WaitingWords {
         return "Board for " + task + ": " + waiting(questions) + " at " + link;
     }
 
-    public static String review(String task, String address) {
-        return "Ready for your review: " + task + " - " + address;
+    public static String review(String task, String address, String stackedOn) {
+        return "Ready for your review: " + task + " - " + address + targeting(stackedOn);
     }
 
-    public static String comingBack(String address, String why) {
-        return "changing, back to you when it is ready (" + why + ") - " + address;
+    public static String comingBack(String address, String why, String stackedOn) {
+        return "changing, back to you when it is ready (" + why + ") - " + address + targeting(stackedOn);
+    }
+
+    public static String ongoing(String title, OngoingTask ongoing) {
+        return offTheBase(ongoing).map(note -> title + ": " + note).orElse(title);
+    }
+
+    public static String doing(String activity, OngoingTask ongoing) {
+        return offTheBase(ongoing).map(note -> activity + " - " + note).orElse(activity);
+    }
+
+    private static Optional<String> offTheBase(OngoingTask ongoing) {
+        return ongoing.stackedRequest().map(WaitingWords::noteOn);
+    }
+
+    public static String target(String stackedOn) {
+        return "targets " + stackedOn + ", not the base: merging it does not land the work";
+    }
+
+    private static String targeting(String stackedOn) {
+        return stackedOn == null ? "" : " (" + target(stackedOn) + ")";
+    }
+
+    private static String noteOn(Delivery stackedRequest) {
+        return stackedRequest.isMerged() ? mergedElsewhere(stackedRequest) : target(stackedRequest.stackedOn());
+    }
+
+    private static String mergedElsewhere(Delivery stackedRequest) {
+        return "its request merged into " + stackedRequest.stackedOn() + ", so the work did not land through its own request;"
+                + " once " + stackedRequest.stackedOn() + " lands on the base and its worker is stopped, edi cleanup " + stackedRequest.task() + " retires it";
     }
 
     public static String inTheRound(String closesAt) {

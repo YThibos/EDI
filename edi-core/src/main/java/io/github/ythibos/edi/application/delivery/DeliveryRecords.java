@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.adapter.store.DeliveryStore;
 import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.worker.WorkerContext;
 import io.github.ythibos.edi.application.worker.WorkerContext.Workplace;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.delivery.Delivery;
@@ -18,18 +19,21 @@ import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 
 @Component
 public class DeliveryRecords {
 
     private final Forges forges;
+    private final WorkerContext context;
     private final DeliveryStore deliveries;
     private final EventLog events;
     private final Clock clock;
 
-    public DeliveryRecords(Forges forges, DeliveryStore deliveries, EventLog events, Clock clock) {
+    public DeliveryRecords(Forges forges, WorkerContext context, DeliveryStore deliveries, EventLog events, Clock clock) {
         this.forges = forges;
+        this.context = context;
         this.deliveries = deliveries;
         this.events = events;
         this.clock = clock;
@@ -44,7 +48,11 @@ public class DeliveryRecords {
     }
 
     public Optional<Delivery> followedDeliveryOf(TaskId task) {
-        return deliveries.of(task).filter(delivery -> !delivery.isClosed());
+        return deliveries.of(task).filter(DeliveryRecords::isStillFollowed);
+    }
+
+    private static boolean isStillFollowed(Delivery delivery) {
+        return delivery.isOpen() || delivery.isLanded();
     }
 
     public Optional<MergeRequestView> requestFrom(Workplace workplace) {
@@ -76,9 +84,28 @@ public class DeliveryRecords {
 
     public Delivery recorded(TaskId task, MergeRequestView request, DomainEvent event, Actor actor) {
         Instant now = clock.now();
-        Delivery delivery = Delivery.of(task, request, now);
+        Delivery delivery = Delivery.of(task, request, baseOf(task), now);
         deliveries.save(delivery);
         events.record(event, actor, now);
         return delivery;
+    }
+
+    public boolean holdsAsTheForgeShowsIt(TaskId task, MergeRequestView request) {
+        return deliveries.of(task).filter(recorded -> recorded.address().equals(request.address())).filter(recorded -> !recorded.changesWith(request))
+                .isPresent();
+    }
+
+    public Delivery observed(Delivery delivery, MergeRequestView view, Instant at) {
+        Delivery seen = delivery.observed(view, baseOf(delivery.task()), at);
+        deliveries.save(seen);
+        return seen;
+    }
+
+    public boolean landsOnTheBase(TaskId task, MergeRequestView request) {
+        return request.isMergedIntoTheBase(baseOf(task));
+    }
+
+    private BaseBranch baseOf(TaskId task) {
+        return context.of(task).base();
     }
 }

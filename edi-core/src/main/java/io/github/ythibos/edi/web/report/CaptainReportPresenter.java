@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.application.fleet.DealtWith;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
-import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.Decision;
@@ -119,14 +118,15 @@ public class CaptainReportPresenter implements TextPresenter<CaptainReport> {
 
     private static List<ReportItem> ongoingItems(FleetSnapshot fleet, TurnWording wording) {
         return fleet.ongoing().stream()
-                .map(OngoingTask::task)
-                .map(task -> new ReportItem(wording.projectsOf(task), wording.textWithStateOf(task) + comingBack(fleet, task)))
+                .map(ongoing -> new ReportItem(wording.projectsOf(ongoing.task()),
+                        WaitingWords.ongoing(wording.textWithStateOf(ongoing.task()), ongoing) + comingBack(fleet, ongoing.task())))
                 .toList();
     }
 
     private static String comingBack(FleetSnapshot fleet, Task task) {
         return fleet.comingBackOf(task.id())
-                .map(changing -> " - " + WaitingWords.comingBack(changing.delivery().address().url(), changing.whyChanging()))
+                .map(changing -> " - " + WaitingWords.comingBack(changing.delivery().address().url(), changing.whyChanging(),
+                        changing.delivery().stackedOn()))
                 .orElse("");
     }
 

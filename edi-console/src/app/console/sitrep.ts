@@ -84,6 +84,7 @@ export interface ReadyForReview {
   title: string;
   projects: string[];
   url: string;
+  stackedOn?: string | null;
   afterLanding: AfterLanding;
 }
 

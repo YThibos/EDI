@@ -50,7 +50,7 @@
               <div class="sr-entry__sub">the board ended · {{ projectsOf(entry.board.projects, entry.board.task) }}</div>
             } @else if (entry.kind === 'review') {
               <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.review.task]">{{ entry.review.title }}</a></div>
-              <div class="sr-entry__sub">ready for your review · {{ projectsOf(entry.review.projects, entry.review.task) }}</div>
+              <div class="sr-entry__sub">ready for your review · {{ projectsOf(entry.review.projects, entry.review.task) }}{{ targetOf(entry.review.stackedOn) }}</div>
               <a class="sr-entry__link" [href]="entry.review.url" target="_blank" rel="noopener">{{ entry.review.url }}</a>
               <app-link-chips [links]="links()[entry.review.task]" />
             } @else if (entry.kind === 'settled-review') {

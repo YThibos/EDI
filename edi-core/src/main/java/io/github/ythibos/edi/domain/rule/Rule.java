@@ -77,7 +77,7 @@ public enum Rule {
     DELIVERED_FROM_THE_COPY(RuleArea.DELIVERY, "A delivery comes from an isolated copy that still exists."),
     NOT_MERGED_YET(RuleArea.DELIVERY, "A merged request is followed, never delivered again."),
     DELIVERY_RECORDED(RuleArea.DELIVERY, "Only a recorded delivery is followed."),
-    REQUEST_FOLLOWED(RuleArea.DELIVERY, "A merge is followed only in the registered repository, and only once the forge shows it merged."),
+    REQUEST_FOLLOWED(RuleArea.DELIVERY, "A merge is followed only in the registered repository, and only once the forge shows it merged into the base branch."),
     OUTGOING_CLEAN(RuleArea.PUBLISH, "Nothing outgoing carries a secret, a denied term, a personal path, a network address, a SNAPSHOT version or, for a project other than EDI, internal vocabulary."),
     REQUEST_TEXT_CLEAN(RuleArea.PUBLISH, "A merge request's title and description pass the publish check, as a commit does."),
     CHECKABLE_TARGET(RuleArea.PUBLISH, "The publish check runs only in a registered clone or the caller's own isolated copy."),

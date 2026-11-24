@@ -21,7 +21,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 public class DeliveryStore {
 
     private static final String SELECT_DELIVERIES = "select task_id, provider, host, path, number, url, draft, head_commit, checks, state,"
-            + " landed_commit, recorded_at, observed_at from delivery ";
+            + " landed_commit, stacked_on, recorded_at, observed_at from delivery ";
 
     private final JdbcClient store;
 
@@ -33,12 +33,13 @@ public class DeliveryStore {
         ForgeRepository repository = delivery.address().repository();
         store.sql("""
                         insert into delivery (task_id, provider, host, path, number, url, draft, head_commit, checks, state, landed_commit,
-                                              recorded_at, observed_at)
-                        values (:task, :provider, :host, :path, :number, :url, :draft, :head, :checks, :state, :landed, :recorded, :observed)
+                                              stacked_on, recorded_at, observed_at)
+                        values (:task, :provider, :host, :path, :number, :url, :draft, :head, :checks, :state, :landed, :stackedOn, :recorded,
+                                :observed)
                         on conflict (task_id) do update set provider = excluded.provider, host = excluded.host, path = excluded.path,
                             number = excluded.number, url = excluded.url, draft = excluded.draft, head_commit = excluded.head_commit,
                             checks = excluded.checks, state = excluded.state, landed_commit = excluded.landed_commit,
-                            observed_at = excluded.observed_at""")
+                            stacked_on = excluded.stacked_on, observed_at = excluded.observed_at""")
                 .param("task", delivery.task().value())
                 .param("provider", repository.kind().word())
                 .param("host", repository.host())
@@ -50,6 +51,7 @@ public class DeliveryStore {
                 .param("checks", delivery.checks().word())
                 .param("state", delivery.state().word())
                 .param("landed", delivery.landedCommit())
+                .param("stackedOn", delivery.stackedOn())
                 .param("recorded", Columns.text(delivery.recordedAt()))
                 .param("observed", Columns.text(delivery.observedAt()))
                 .update();
@@ -95,6 +97,7 @@ public class DeliveryStore {
                 HeadChecks.named(row.getString("checks")),
                 MergeRequestState.named(row.getString("state")),
                 row.getString("landed_commit"),
+                row.getString("stacked_on"),
                 Columns.instant(row.getString("recorded_at")),
                 Columns.instant(row.getString("observed_at")));
     }
