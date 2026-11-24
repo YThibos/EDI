@@ -2,7 +2,7 @@
 name: Backlog item
 about: One piece of EDI work, its full spec on the issue
 title: ''
-labels: ''
+labels: priority-4-low
 assignees: ''
 ---
 

@@ -185,6 +185,7 @@ kind: ship
 branch: feature
 source: Introspection of ${iso(run.until).slice(0, 10)}, after ${flag.kind}${flag.task === '-' ? ' in the primary session' : ' on ' + flag.task}
 size: S
+priority: priority-3-normal
 milestone: -
 blocked-by: -
 status: open

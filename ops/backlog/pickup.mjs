@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {
-    APPROVED, GitHub, Refusal, approverOf, captainOf, claimsOf, inPickupOrder, keyOf, openBlockersOf, plainTitleOf, refusalsReported, stateOf,
+    APPROVED, GitHub, Refusal, approverOf, captainOf, claimsOf, inPickupOrder, keyOf, openBlockersOf, plainTitleOf, priorityOf, refusalsReported, stateOf,
 } from './backlog.mjs';
 
 const USAGE = 'Usage: pickup.mjs [--next] [--repo OWNER/NAME] [--captain LOGIN]';
@@ -69,11 +69,12 @@ function milestoneOf(issue) {
 }
 
 function boardOf(issues, blockers, claims) {
-    const header = ['Issue', 'Key', 'Title', 'Milestone', 'State', 'Blocked by', 'Claimed by'];
+    const header = ['Issue', 'Key', 'Title', 'Priority', 'Milestone', 'State', 'Blocked by', 'Claimed by'];
     const rows = issues.map(issue => [
         `#${issue.number}`,
         keyOf(issue.title),
         plainTitleOf(issue.title),
+        priorityOf(issue).name,
         milestoneOf(issue),
         stateOf(issue),
         (blockers[issue.number] ?? []).map(number => `#${number}`).join(', ') || '-',

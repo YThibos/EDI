@@ -12,6 +12,19 @@ Work on the EDI project goes to the backlog of its upstream repository, one GitH
 `backlog-item.mjs`, beside this file, does every step; never open the issue, set its fields or queue its task by hand.
 The pickup protocol the issue is taken by is [docs/pickup.md](../../../docs/pickup.md).
 
+## Search the open issues first
+
+A slip, a failure or a repeated annoyance is never backlogged blindly.
+Search the open issues first, by the slip's words and its cause: `gh issue list --state open --search "<words>"`.
+When an open issue covers the slip or its cause, add the finding to it and raise it one level, and open no new item:
+
+```sh
+node <the repository>/ops/backlog/bump.mjs <issue> < finding.md
+```
+
+The finding on standard input becomes the issue's comment, opening with `[EDI session]`, or with `[EDI primary]` under `--primary`, and the issue moves exactly one priority level towards `priority-1-urgent`; the script refuses an empty finding, a closed issue and an issue already at the highest level.
+Only when no open issue covers it, draft a new item.
+
 ## Sparks first
 
 An idea that is not thought through yet is no backlog item: catch it as a spark with `edi spark "<idea>"`, adding `--task` or `--project` when the task you acted on last is not what it is about.
@@ -30,6 +43,7 @@ Write one draft per item in a scratch file outside the repository: the fields be
 | `branch` | `feature`, `chore` or `research`; `feature` for a ship and `research` for a scout when left out |
 | `source` | where the work comes from, such as `The captain's word of 29 October 2026` |
 | `size` | `XS`, `S`, `M` or `L`: under two hours, about half a day, about a day, several days of research |
+| `priority` | `priority-1-urgent`, `priority-2-high`, `priority-3-normal`, `priority-4-low` or `priority-5-someday`; `priority-4-low` when left out |
 | `milestone` | the title of an open milestone, the big improvement the item belongs to, or `-` |
 | `parent` | the item this one is a slice of, as a key such as `EDI-105` or an issue such as `#155`; only where one item splits into slices |
 | `blocked-by` | the items this one waits for, as keys or issues separated by commas, or `-` |
@@ -43,12 +57,24 @@ Restate the captain's answers as requirements, name no particular person, accoun
 A research report too long for the issue goes to `docs/research` in its own pull request, and the spec links it.
 A wait that is no dependency, such as "after a week of use", is a blocker on a marker issue the captain closes.
 
+The priority says what the item wins, how urgent it is, how much it annoys and how critical a bug is:
+
+| Priority | When it applies |
+|---|---|
+| `priority-1-urgent` | something is broken now, or a hard rule of the captain is being broken, and work is harmed until it is fixed |
+| `priority-2-high` | it costs the captain or the fleet every day, as a repeated slip, a daily annoyance or a bug with a workaround |
+| `priority-3-normal` | a clear gain in efficiency or quality, with no daily cost while it waits |
+| `priority-4-low` | worth doing, with no cost while it waits |
+| `priority-5-someday` | an idea kept for later |
+
+A priority is no approval; `captain-approved` stays the captain's word alone.
+
 ## The command
 
 1. Run `node <this skill's directory>/backlog-item.mjs --dry-run <draft>...` and read every action it would take, including the issue body it would open.
 2. Run it again without `--dry-run`.
 
-It refuses a draft with a missing field or section, a spec that still holds a `TODO:` line, a milestone no open milestone carries, or a parent or blocker no issue carries, before it changes anything.
+It refuses a draft with a missing field or section, a priority that is none of the five or is given among the `labels`, a spec that still holds a `TODO:` line, a milestone no open milestone carries, or a parent or blocker no issue carries, before it changes anything.
 It opens the issue with its body, labels and milestone, titles it `EDI-<the issue's number> <title>`, makes it a sub-issue of its parent and marks it blocked by its blockers, and opens no pull request.
 It adds `captain-approved` only when the draft names the captain's word; add that field only on his word, never on your own judgement, since the pickup counts an issue only when the captain's account added the label.
 It queues the local task on the issue's key and with the item's size when none exists, so the dispatch rules can route it by its size, and holds it for a deferral whose reason names the issue, so this machine never dispatches it.

@@ -1,12 +1,22 @@
 import { execFileSync } from 'node:child_process';
 
+export const SESSION_MARKER = '[EDI session]';
 export const PRIMARY_MARKER = '[EDI primary]';
 export const APPROVED = 'captain-approved';
 export const CLOUD = 'cloud-ok';
 export const MACHINE = 'needs-captain-machine';
 export const HELD = 'held';
 export const SECURITY = 'security';
+export const PRIORITIES = [
+    { name: 'priority-1-urgent', description: 'Broken now, or a hard rule of the captain is broken, and work is harmed until it is fixed' },
+    { name: 'priority-2-high', description: 'Costs the captain or the fleet daily: a repeated slip, a daily annoyance or a bug with a workaround' },
+    { name: 'priority-3-normal', description: 'A clear gain in efficiency or quality, with no daily cost while it waits' },
+    { name: 'priority-4-low', description: 'Worth doing, with no cost while it waits' },
+    { name: 'priority-5-someday', description: 'An idea kept for later' },
+];
+export const DEFAULT_PRIORITY = PRIORITIES[3];
 export const LABEL_DESCRIPTIONS = {
+    ...Object.fromEntries(PRIORITIES.map(priority => [priority.name, priority.description])),
     [APPROVED]: "Approved on the captain's word; only the captain's account adds it",
     [CLOUD]: 'A cloud session may take it',
     [MACHINE]: "Needs the captain's machine",
@@ -118,6 +128,20 @@ export function labelsOf(issue) {
     return issue.labels.map(label => (typeof label === 'string' ? label : label.name));
 }
 
+export function priorityLabelsOf(issue) {
+    return labelsOf(issue).filter(label => PRIORITIES.some(priority => priority.name === label));
+}
+
+export function priorityOf(issue) {
+    const held = priorityLabelsOf(issue).map(label => PRIORITIES.findIndex(priority => priority.name === label));
+    return held.length === 0 ? DEFAULT_PRIORITY : PRIORITIES[Math.min(...held)];
+}
+
+export function nextHigherPriorityOf(issue) {
+    const level = PRIORITIES.indexOf(priorityOf(issue));
+    return level === 0 ? null : PRIORITIES[level - 1];
+}
+
 export function approverOf(events) {
     let approver = null;
     for (const event of events) {
@@ -155,7 +179,7 @@ export function inPickupOrder(issues, blockersOf = {}) {
     const listed = new Set(issues.map(issue => issue.number));
     const waiting = new Map(issues.map(issue => [issue.number, new Set((blockersOf[issue.number] ?? []).filter(number => listed.has(number)))]));
     const ordered = [];
-    let left = [...issues].sort(byDueDateThenNumber);
+    let left = [...issues].sort(byPriorityThenDueDateThenNumber);
     while (left.length > 0) {
         const free = left.find(issue => waiting.get(issue.number).size === 0) ?? left[0];
         ordered.push(free);
@@ -165,8 +189,8 @@ export function inPickupOrder(issues, blockersOf = {}) {
     return ordered;
 }
 
-function byDueDateThenNumber(one, other) {
-    return dueOf(one) - dueOf(other) || one.number - other.number;
+function byPriorityThenDueDateThenNumber(one, other) {
+    return PRIORITIES.indexOf(priorityOf(one)) - PRIORITIES.indexOf(priorityOf(other)) || dueOf(one) - dueOf(other) || one.number - other.number;
 }
 
 function dueOf(issue) {

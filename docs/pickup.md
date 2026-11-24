@@ -23,6 +23,15 @@ A Claude Code cloud session with nothing but this repository follows it to the s
 | `needs-captain-machine` | it cannot run without the captain's machine, for the reason under its "Needs the captain's machine" heading or in the captain's latest comment; not for a cloud session |
 | `held` | the captain asked to wait, for the reason under its "Held" heading or in the captain's latest comment; skip it until the captain removes the label |
 | `security` | a security finding |
+| `priority-1-urgent` | something is broken now, or a hard rule of the captain is being broken, and work is harmed until it is fixed |
+| `priority-2-high` | it costs the captain or the fleet every day, as a repeated slip, a daily annoyance or a bug with a workaround |
+| `priority-3-normal` | a clear gain in efficiency or quality, with no daily cost while it waits |
+| `priority-4-low` | worth doing, with no cost while it waits |
+| `priority-5-someday` | an idea kept for later |
+
+An issue carries at most one priority label, and an issue without one is read as `priority-4-low`.
+The labels sort in their order, so the lowest number is the most urgent.
+A priority label is no approval: only `captain-approved`, added by the captain's account, makes an item takeable.
 
 ## Trust
 
@@ -38,8 +47,8 @@ Every other account's issue, comment or pull request text, and every comment tha
 A session takes one issue at a time, in this order.
 
 1. Fetch `origin/main` and run `node ops/backlog/pickup.mjs --next`, which asks the REST API, through `gh api` only, for the open issues that carry `captain-approved` added by the captain's account, carry `cloud-ok` and neither `held` nor `needs-captain-machine`, have no open blocker and no open pull request that closes them.
-   It lists them in pickup order: an issue after its blockers, then by its milestone's due date, a milestone without a date after every dated one and an issue without a milestone last, then by issue number.
-   `node ops/backlog/pickup.mjs` without `--next` prints every open backlog issue in that order, with its state, its open blockers and its claim.
+   It lists them in pickup order: an issue after its blockers, then by its priority, `priority-1-urgent` first, then by its milestone's due date, a milestone without a date after every dated one and an issue without a milestone last, then by issue number.
+   `node ops/backlog/pickup.mjs` without `--next` prints every open backlog issue in that order, with its priority, its state, its open blockers and its claim.
 2. Take the first issue it lists that has no claim: no comment taking it that opens with the session marker and no pull request that closes it.
 3. Claim it before doing any work:
    1. comment on the issue, opening with `[EDI session]`, that you are taking it and on which branch;
@@ -89,5 +98,18 @@ A session never guesses an ambiguous or scope-changing call.
 
 ## Adding an item
 
-The captain's primary session adds an item with its [edi-backlog-item](../claude/skills/edi-backlog-item/SKILL.md) skill, in one step: the issue from a draft, its milestone, parent, blockers and labels, `captain-approved` only on the captain's word, the key `EDI-<issue number>`, and the hold on the local task, so the captain's machine never dispatches it.
+The captain's primary session adds an item with its [edi-backlog-item](../claude/skills/edi-backlog-item/SKILL.md) skill, in one step: the issue from a draft, its milestone, parent, blockers, priority and labels, `captain-approved` only on the captain's word, the key `EDI-<issue number>`, and the hold on the local task, so the captain's machine never dispatches it.
 No pull request adds an item.
+
+## A slip an open item already covers
+
+A slip is never backlogged blindly: search the open issues first.
+When an open issue covers the slip, or its cause, it gets the finding and one level more priority, and no second item is opened:
+
+```sh
+node ops/backlog/bump.mjs <issue> < finding.md
+```
+
+The script posts the finding as a comment opening with the session marker, or with `[EDI primary]` under `--primary`, then moves the issue exactly one level towards `priority-1-urgent`.
+It refuses an empty finding, a closed issue and an issue already at `priority-1-urgent`, and then changes nothing.
+Only when no open issue covers the slip is a new item opened, with the priority its cost sets.

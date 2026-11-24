@@ -117,6 +117,56 @@ class PickupScriptTest {
     }
 
     @Test
+    void nextOrdersByPriorityBeforeTheMilestoneAndTheIssueNumber() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s, %s, %s, %s, %s],
+                "events": {%s}""".formatted(
+                issue(70, "EDI-70 The idea is kept", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(71, "EDI-71 The low one, later milestone", "open", 1, "captain-approved", "cloud-ok", "priority-4-low"),
+                issue(72, "EDI-72 The unlabelled one, earlier milestone", "open", 2, "captain-approved", "cloud-ok"),
+                issue(73, "EDI-73 The normal one", "open", null, "captain-approved", "cloud-ok", "priority-3-normal"),
+                issue(74, "EDI-74 The high one", "open", 3, "captain-approved", "cloud-ok", "priority-2-high"),
+                issue(75, "EDI-75 The urgent one", "open", null, "captain-approved", "cloud-ok", "priority-1-urgent"),
+                issue(76, "EDI-76 The low one, no milestone", "open", null, "captain-approved", "cloud-ok", "priority-4-low"),
+                approvals(70, 71, 72, 73, 74, 75, 76)));
+
+        StandInGitHub.Run run = pickup(github, "--next");
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(run.output().lines()).extracting(line -> line.split(" ")[0]).containsExactly("#75", "#74", "#73", "#72", "#71", "#76", "#70");
+    }
+
+    @Test
+    void anIssueWithTwoPriorityLabelsIsReadAtTheMoreUrgentOne() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s],
+                "events": {%s}""".formatted(
+                issue(77, "EDI-77 The doubly labelled", "open", null, "captain-approved", "cloud-ok", "priority-5-someday", "priority-2-high"),
+                issue(78, "EDI-78 The normal one", "open", null, "captain-approved", "cloud-ok", "priority-3-normal"),
+                approvals(77, 78)));
+
+        StandInGitHub.Run run = pickup(github);
+
+        assertThat(run.output().lines().skip(2)).extracting(row -> row.split(" \\| ")[0] + " " + row.split(" \\| ")[3]).containsExactly("| #77 priority-2-high", "| #78 priority-3-normal");
+    }
+
+    @Test
+    void aBlockerComesBeforeTheIssueItBlocksWhateverItsPriority() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s],
+                "blockedBy": {"80": [81]},
+                "events": {%s}""".formatted(
+                issue(80, "EDI-80 The urgent roof", "open", null, "captain-approved", "cloud-ok", "priority-1-urgent"),
+                issue(81, "EDI-81 The someday walls", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(82, "EDI-82 The high door", "open", null, "captain-approved", "cloud-ok", "priority-2-high"),
+                approvals(80, 81, 82)));
+
+        StandInGitHub.Run run = pickup(github);
+
+        assertThat(run.output().lines().skip(2)).extracting(row -> row.split(" \\| ")[0]).containsExactly("| #82", "| #81", "| #80");
+    }
+
+    @Test
     void theBoardPutsAnIssueAfterItsOpenBlockersAndOnlyReads() throws IOException, InterruptedException {
         StandInGitHub github = serving("""
                 "issues": [%s, %s, %s],
@@ -131,9 +181,9 @@ class PickupScriptTest {
 
         assertThat(run.exitCode()).as(run.all()).isZero();
         assertThat(run.output().lines().skip(2)).containsExactly(
-                "| #62 | EDI-62 | The door is hung | The lighthouse, due 2026-12-18 | held | - | - |",
-                "| #63 | EDI-63 | The walls stand | The lighthouse, due 2026-12-18 | open | - | - |",
-                "| #61 | EDI-61 | The roof is tiled | The harbour wall, due 2026-11-13 | open | #63 | - |");
+                "| #62 | EDI-62 | The door is hung | priority-4-low | The lighthouse, due 2026-12-18 | held | - | - |",
+                "| #63 | EDI-63 | The walls stand | priority-4-low | The lighthouse, due 2026-12-18 | open | - | - |",
+                "| #61 | EDI-61 | The roof is tiled | priority-4-low | The harbour wall, due 2026-11-13 | open | #63 | - |");
         assertThat(github.writes()).isEmpty();
     }
 
