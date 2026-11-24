@@ -22,10 +22,11 @@ EDI does not watch that branch reach the base, so the refusal and every surface 
 Only a merge into the base hands the work over, so the clean-up refuses while the worker still works, and the worker's done stays refused while its request targets another branch.
 Like a closed request, a request merged elsewhere is no longer the task's followed delivery (`DeliveryRecords.followedDeliveryOf`), so the task's next request from its branch is recorded as soon as it exists, while the merged one, unchanged on the forge, is not recorded again.
 A followed merge into the base moves the task to MERGED ([task-lifecycle](task-lifecycle.md)) and names the branch's commits after the merged head as not landed.
+When there are any, whatever the stage before the merge, the core raises one decision on the task naming them (`WorkAfterTheMergedHead`): deliver them in a follow-up request from the same branch, or discard them, the option that authorises `discard-work`.
 A merge records `DraftMerged` with the commit it landed and a `CloneRefresh`; a closed request records `DraftClosed`; both wake the primary.
 `edi merged <task|url>` asks the forge at once, so the captain's word is followed the same way and never taken alone; a task delivered to the captain's checkout goes straight to its clean-up, whose landed-work test decides.
 `CloneRefreshes` fetches the clone and verifies a refresh once the merge commit is an ancestor of `origin/<base>`; `DispatchTask` refreshes the project before it launches anything there, refuses while a refresh is unverified, and keeps a deferred dispatch deferred.
-Once its refresh is verified, a merge's clean-up is tried exactly once, at once or in a later round ([cleanup](cleanup.md)); a clean-up a failing program stops is retried, and a refused one wakes the primary with its findings.
+Once its refresh is verified, a merge's clean-up is tried at once and again in every round while its task is in flight ([cleanup](cleanup.md)); a refused one wakes the primary with its findings whenever they differ from the last refusal's.
 Each delivery and each clone is followed on its own, so one the forge or git cannot answer is logged while the others go on.
 Nothing in the domain names a merge as an act: `MergeRequestView`, `DraftMerged` and `MergedWork` observe, and `NameAMergeOperation` keeps it so ([ports-and-architecture-rules](ports-and-architecture-rules.md)).
 
@@ -61,3 +62,4 @@ When the forges offer a cheap local notification of a new or merged request.
 - 12/11/2026: a followed merge moves the task to MERGED and names the branch's commits after the merged head as not landed (EDI-85).
 - 18/11/2026: a view saves the checks the forge shows on the request's head, so a request whose run ended before it saw them reads as ready and failed checks hold it ([fleet-snapshot](fleet-snapshot.md), EDI-265).
 - 24/11/2026: a request targeting another branch than the base is saved with that branch, and its merge is no landing of the task (EDI-244).
+- 24/11/2026: a merge with commits after its head raises the follow-up decision, and a refused clean-up is tried again every round instead of once (EDI-70).

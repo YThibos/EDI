@@ -243,6 +243,18 @@ public class EventLog {
                 .single();
     }
 
+    public Optional<CleanupRefused> latestCleanupRefusalOf(TaskId task) {
+        return store.sql("select payload from event where task_id = :task and type = :refused order by sequence desc limit 1")
+                .param("task", task.value())
+                .param("refused", CleanupRefused.class.getSimpleName())
+                .query((row, _) -> new CleanupRefused(task, findingsOf(json.readTree(row.getString("payload")))))
+                .optional();
+    }
+
+    private static List<String> findingsOf(JsonNode payload) {
+        return payload.path("findings").valueStream().map(finding -> finding.asString("")).toList();
+    }
+
     private ObjectNode payloadOf(DomainEvent event) {
         ObjectNode payload = json.createObjectNode();
         return switch (event) {

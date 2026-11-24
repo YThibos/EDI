@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.delivery;
 
 import java.nio.file.Files;
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -129,10 +130,18 @@ public class CleanUpTask {
         if (landed.isLanded()) {
             return;
         }
-        transaction.executeWithoutResult(_ -> events.record(new CleanupRefused(workplace.task().id(), landed.findings()), actor, clock.now()));
+        recordUnlessItRepeatsTheLastRefusal(new CleanupRefused(workplace.task().id(), landed.findings()), actor);
         throw new Refusal(Rule.LANDED_BEFORE_DISCARD, workplace.task().id() + " is not cleaned up, because its work is not landed: "
                 + String.join("; ", landed.findings())
                 + ". Nothing is discarded without the captain's word.");
+    }
+
+    private void recordUnlessItRepeatsTheLastRefusal(CleanupRefused refusal, Actor actor) {
+        transaction.executeWithoutResult(_ -> {
+            if (!events.latestCleanupRefusalOf(refusal.task()).equals(Optional.of(refusal))) {
+                events.record(refusal, actor, clock.now());
+            }
+        });
     }
 
     private PipelineReview reviewOf(Workplace workplace) {

@@ -818,7 +818,7 @@ public final class TestHome {
     }
 
     public LandedWorkCheck landedWork() {
-        return new LandedWorkCheck(git);
+        return new LandedWorkCheck(git, deliveries, transaction);
     }
 
     public CleanUpTask cleanUpTask() {
@@ -873,7 +873,7 @@ public final class TestHome {
 
     public FollowMerges followMerges() {
         return new FollowMerges(tasks, deliveries, events, registry, workerContext(), forges(), deliveryRecords(), cloneRefreshes(), cleanUpTask(),
-                landedWork(), taskStages(), clock, transaction);
+                landedWork(), taskStages(), raiseDecision(), clock, transaction);
     }
 
     public ObservePipelines observePipelines() {
