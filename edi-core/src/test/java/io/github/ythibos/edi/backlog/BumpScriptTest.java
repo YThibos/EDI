@@ -4,15 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.testing.FixtureRepository;
 import io.github.ythibos.edi.testing.InstalledPrograms;
 import io.github.ythibos.edi.testing.StandInGitHub;
 import io.github.ythibos.edi.testing.TestProcesses;
@@ -133,18 +136,58 @@ class BumpScriptTest {
         assertThat(github.writes()).isEmpty();
     }
 
-    private StandInGitHub serving(String issue) throws IOException {
+    @Test
+    void aBumpGoesToTheUpstreamOfTheEdiCloneWhicheverCheckoutItRunsIn() throws IOException, InterruptedException {
+        StandInGitHub github = serving(issue(20, "open", "priority-4-low"));
+
+        StandInGitHub.Run run = bump(github, FINDING, "20");
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(github.calls()).isNotEmpty().allSatisfy(call -> assertThat(call).contains(" repos/example/edi/issues/20"));
+    }
+
+    @Test
+    void aSessionWithOnlyTheRepositoryNamesItWithRepo() throws IOException, InterruptedException {
+        StandInGitHub github = serving(issue(21, "open", "priority-4-low"));
+
+        StandInGitHub.Run run = bump(github, FINDING, "--repo", "harbour-office/beacons", "21");
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(github.calls()).isNotEmpty().allSatisfy(call -> assertThat(call).contains(" repos/harbour-office/beacons/issues/21"));
+    }
+
+    @Test
+    void aRefusedRelabelLeavesNoCommentSayingTheIssueWasRaised() throws IOException, InterruptedException {
+        StandInGitHub github = StandInGitHub.serving(directory, """
+                {"owner": {"login": "harbour-master", "type": "User"}, "labelWritesRefused": true,
+                "issues": [%s]}""".formatted(issue(22, "open", "priority-4-low")));
+
+        StandInGitHub.Run run = bump(github, FINDING, "22");
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("HTTP 403");
+        assertThat(github.world().get("comments").get("22")).isNull();
+        assertThat(github.issue(22).get("labels").toString()).isEqualTo("[\"priority-4-low\"]");
+    }
+
+    @BeforeEach
+    void anEdiHomeWhoseCloneNamesTheUpstreamBesideAnotherProjectsCheckout() throws IOException {
         assumeTrue(InstalledPrograms.answers("node", "--version"), "node is not installed");
+        FixtureRepository.initialise(Files.createDirectories(directory.resolve("home/projects/EDI"))).configure("remote.origin.url", "https://github.com/example/edi");
+        FixtureRepository.initialise(Files.createDirectories(directory.resolve("lighthouse"))).configure("remote.origin.url", "https://github.com/lighthouse-keepers/fog-horn");
+    }
+
+    private StandInGitHub serving(String issue) throws IOException {
         return StandInGitHub.serving(directory, """
                 {"owner": {"login": "harbour-master", "type": "User"},
                 "issues": [%s]}""".formatted(issue));
     }
 
     private StandInGitHub.Run bump(StandInGitHub github, String finding, String... arguments) throws IOException, InterruptedException {
-        String[] withTheRepository = Arrays.copyOf(arguments, arguments.length + 2);
-        withTheRepository[arguments.length] = "--repo";
-        withTheRepository[arguments.length + 1] = "example/edi";
-        return github.run(processes, directory, Map.of(), StandInGitHub.node(SCRIPT, withTheRepository), finding);
+        return github.run(processes, directory.resolve("lighthouse"), Map.of(
+                "EDI_HOME", directory.resolve("home").toString(),
+                "GIT_CONFIG_GLOBAL", "/dev/null",
+                "GIT_CONFIG_NOSYSTEM", "1"), StandInGitHub.node(SCRIPT, arguments), finding);
     }
 
     private static String issue(int number, String state, String... labels) {

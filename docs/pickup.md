@@ -111,6 +111,7 @@ When an open issue covers the slip, or its cause, it gets the finding and one le
 node ops/backlog/bump.mjs <issue> < finding.md
 ```
 
-The script posts the finding as a comment opening with the session marker, or with `[EDI primary]` under `--primary`, then moves the issue exactly one level towards `priority-1-urgent`.
+The script moves the issue exactly one level towards `priority-1-urgent`, then posts the finding as a comment opening with the session marker, or with `[EDI primary]` under `--primary`.
 It refuses an empty finding, a closed issue and an issue already at `priority-1-urgent`, and then changes nothing.
+On the captain's machine it goes to the upstream of the EDI clone in the EDI home, as the account the clone is pinned to, whatever directory it runs in; a session with nothing but this repository names it with `--repo <owner>/<name>`, as its `origin` reads.
 Only when no open issue covers the slip is a new item opened, with the priority its cost sets.

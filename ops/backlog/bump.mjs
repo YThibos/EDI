@@ -9,12 +9,12 @@ refusalsReported(() => bump(optionsFrom(process.argv.slice(2))));
 
 function bump(options) {
     const finding = findingFrom(readFileSync(0, 'utf8'));
-    const github = GitHub.ofTheCheckout(options.repo);
+    const github = upstreamOf(options);
     const issue = bumpableIssue(github, options.issue);
     const raised = raisedPriorityOf(issue);
     const current = priorityOf(issue);
-    comment(github, issue, options.primary ? PRIMARY_MARKER : SESSION_MARKER, `Raised from ${current.name} to ${raised.name}.`, finding);
     relabel(github, issue, raised);
+    comment(github, issue, options.primary ? PRIMARY_MARKER : SESSION_MARKER, `Raised from ${current.name} to ${raised.name}.`, finding);
     console.log(`#${issue.number} raised from ${current.name} to ${raised.name}.`);
 }
 
@@ -44,6 +44,10 @@ function findingFrom(text) {
     return text.trim();
 }
 
+function upstreamOf(options) {
+    return options.repo ? new GitHub(options.repo) : GitHub.ofTheEdiClone();
+}
+
 function bumpableIssue(github, number) {
     const issue = github.get(`issues/${number}`);
     if (issue.pull_request) {
@@ -63,13 +67,13 @@ function raisedPriorityOf(issue) {
     return raised;
 }
 
-function comment(github, issue, marker, headline, finding) {
-    github.post(`issues/${issue.number}/comments`, { body: `${marker} ${headline}\n\n${finding}` });
-}
-
 function relabel(github, issue, raised) {
     github.post(`issues/${issue.number}/labels`, { labels: [raised.name] });
     for (const held of priorityLabelsOf(issue).filter(name => name !== raised.name)) {
         github.delete(`issues/${issue.number}/labels/${encodeURIComponent(held)}`);
     }
+}
+
+function comment(github, issue, marker, headline, finding) {
+    github.post(`issues/${issue.number}/comments`, { body: `${marker} ${headline}\n\n${finding}` });
 }

@@ -15,14 +15,15 @@ The pickup protocol the issue is taken by is [docs/pickup.md](../../../docs/pick
 ## Search the open issues first
 
 A slip, a failure or a repeated annoyance is never backlogged blindly.
-Search the open issues first, by the slip's words and its cause: `gh issue list --state open --search "<words>"`.
+Search the open issues first, by the slip's words and its cause: `gh issue list --repo "$(git -C "${EDI_HOME:-$HOME/.edi}/projects/EDI" remote get-url origin)" --state open --search "<words>"`, which reads the upstream of the EDI clone whatever directory it runs in.
 When an open issue covers the slip or its cause, add the finding to it and raise it one level, and open no new item:
 
 ```sh
 node <the repository>/ops/backlog/bump.mjs <issue> < finding.md
 ```
 
-The finding on standard input becomes the issue's comment, opening with `[EDI session]`, or with `[EDI primary]` under `--primary`, and the issue moves exactly one priority level towards `priority-1-urgent`; the script refuses an empty finding, a closed issue and an issue already at the highest level.
+The issue moves exactly one priority level towards `priority-1-urgent`, and the finding on standard input becomes its comment, opening with `[EDI session]`, or with `[EDI primary]` under `--primary`; the script refuses an empty finding, a closed issue and an issue already at the highest level.
+Like `backlog-item.mjs`, it goes to the upstream of the EDI clone, as the account the clone is pinned to, whatever directory it runs in.
 Only when no open issue covers it, draft a new item.
 
 ## Sparks first

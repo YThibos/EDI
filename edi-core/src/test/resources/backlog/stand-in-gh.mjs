@@ -44,6 +44,9 @@ function answered(verb, parts, body) {
         return verb === 'PATCH' ? shown(patched(issue(id), body)) : shown(issue(id));
     }
     if (collection === 'issues' && child === 'labels') {
+        if (world.labelWritesRefused) {
+            fail('HTTP 403: Must have admin rights to Repository.');
+        }
         return verb === 'DELETE' ? unlabelled(issue(id), decodeURIComponent(grandchild)) : labelled(issue(id), body.labels);
     }
     if (collection === 'issues' && child === 'events') {

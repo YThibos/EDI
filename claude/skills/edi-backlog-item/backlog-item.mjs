@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 
 import {
-    APPROVED, CLOUD, DEFAULT_PRIORITY, GitHub, HELD, LABEL_DESCRIPTIONS, MACHINE, PRIORITIES, Refusal, command, keyOf, labelsOf, missingSectionsOf, plainTitleOf, refusalsReported,
-    repositoryOfTheRemote,
+    APPROVED, CLOUD, DEFAULT_PRIORITY, GitHub, HELD, LABEL_DESCRIPTIONS, MACHINE, PRIORITIES, PROJECT, Refusal, command, keyOf, labelsOf, missingSectionsOf, plainTitleOf,
+    refusalsReported,
 } from '../../../ops/backlog/backlog.mjs';
 
 const USAGE = 'Usage: backlog-item.mjs [--dry-run] DRAFT...';
-const PROJECT = 'EDI';
 const DRAFT_FIELDS = ['task', 'title', 'kind', 'branch', 'source', 'size', 'priority', 'milestone', 'parent', 'blocked-by', 'status', 'labels', 'captain-approved'];
 const SIZES = ['XS', 'S', 'M', 'L'];
 const STATUSES = /^(open|(held|needs-captain-machine): \S.*)$/;
@@ -17,7 +14,7 @@ const REFERENCE = /^(EDI-\d+|#\d+)$/;
 
 function backlog(run) {
     const drafts = run.draftPaths.map(draftAt);
-    const github = upstreamOf(ediClone());
+    const github = GitHub.ofTheEdiClone();
     const known = new KnownIssues(github);
     const items = drafts.map(draft => specifiedItem(draft, known));
     for (const item of items) {
@@ -65,30 +62,6 @@ function fieldsOf(path, block) {
         fields[name.trim()] = value.join(':').trim();
     }
     return fields;
-}
-
-function ediClone() {
-    return join(process.env.EDI_HOME ?? join(homedir(), '.edi'), 'projects', PROJECT);
-}
-
-function upstreamOf(clone) {
-    const repository = repositoryOfTheRemote(clone);
-    const host = /^(?:https?:\/\/|git@)([^/:]+)/.exec(command('git', ['-C', clone, 'remote', 'get-url', 'origin']).trim())?.[1] ?? 'github.com';
-    return new GitHub(repository, ghEnvironment(clone, host));
-}
-
-function ghEnvironment(clone, host) {
-    const account = pinnedAccount(clone, host);
-    const prompts = { GH_PROMPT_DISABLED: '1' };
-    return account ? { ...prompts, GH_TOKEN: command('gh', ['auth', 'token', '--hostname', host, '--user', account]).trim() } : prompts;
-}
-
-function pinnedAccount(clone, host) {
-    try {
-        return command('git', ['-C', clone, 'config', '--local', '--get', `credential.https://${host}.ghPinUser`]).trim();
-    } catch {
-        return null;
-    }
 }
 
 function specifiedItem(draft, known) {

@@ -1,4 +1,8 @@
 import { execFileSync } from 'node:child_process';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
+export const PROJECT = 'EDI';
 
 export const SESSION_MARKER = '[EDI session]';
 export const PRIMARY_MARKER = '[EDI primary]';
@@ -56,6 +60,11 @@ export class GitHub {
         return new GitHub(named ?? process.env.GH_REPO ?? repositoryOfTheRemote(directory));
     }
 
+    static ofTheEdiClone() {
+        const clone = ediClone();
+        return new GitHub(repositoryOfTheRemote(clone), ghEnvironment(clone, hostOfTheRemote(clone)));
+    }
+
     get(path) {
         return this.call('GET', path);
     }
@@ -91,6 +100,10 @@ export class GitHub {
     }
 }
 
+function ediClone() {
+    return join(process.env.EDI_HOME ?? join(homedir(), '.edi'), 'projects', PROJECT);
+}
+
 export function repositoryOfTheRemote(directory) {
     const origin = command('git', ['-C', directory, 'remote', 'get-url', 'origin']).trim();
     const path = /([^/:]+)\/([^/]+?)(?:\.git)?\/?$/.exec(origin);
@@ -98,6 +111,24 @@ export function repositoryOfTheRemote(directory) {
         throw new Refusal(`The origin ${origin} names no owner and repository; pass --repo OWNER/NAME.`);
     }
     return `${path[1]}/${path[2]}`;
+}
+
+function ghEnvironment(clone, host) {
+    const account = pinnedAccount(clone, host);
+    const prompts = { GH_PROMPT_DISABLED: '1' };
+    return account ? { ...prompts, GH_TOKEN: command('gh', ['auth', 'token', '--hostname', host, '--user', account]).trim() } : prompts;
+}
+
+function hostOfTheRemote(clone) {
+    return /^(?:https?:\/\/|git@)([^/:]+)/.exec(command('git', ['-C', clone, 'remote', 'get-url', 'origin']).trim())?.[1] ?? 'github.com';
+}
+
+function pinnedAccount(clone, host) {
+    try {
+        return command('git', ['-C', clone, 'config', '--local', '--get', `credential.https://${host}.ghPinUser`]).trim();
+    } catch {
+        return null;
+    }
 }
 
 export function command(program, args, input, environment = {}) {
