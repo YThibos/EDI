@@ -14,7 +14,7 @@ The captain chose Q8 A in round 1 of the EDI-74 research: each slice names its w
 ## Decision
 
 `domain/plan/Plan` is a `PlanHeading` and its slices.
-The heading holds the plan's title, its umbrella work key, which is the plan's name, the project its slices work on, the report it came from, the decision that gave the go, its capacity, the slices working at once, and, when the captain gives it, an effort word.
+The heading holds the plan's title, its umbrella work key, which is the plan's name, the project its slices work on, the report it came from, its go (`PlanGo`), its capacity, the slices working at once, and, when the captain gives it, an effort word.
 A `Slice` is a task with its number in the plan, its dispatch category and one `SliceWait`: `After` a slice number reaching an `AwaitedStage`, MERGED or LANDED, or `None`.
 `PlanDraft` is the plan as it is entered: it orders the slices by number, gives a slice that names no wait "after N merged" on the slice before it, and refuses a number used twice, a key shared by two slices and a wait on a slice that is not earlier in the plan.
 `domain/task/Wait` is any wait of one task on another, read against the stages of [task-lifecycle](task-lifecycle.md): it names the task waited for, the stage awaited and the stage that task is at, and it is met once that task reaches the stage awaited or closes, since a closed task blocks nobody ([task-intake](task-intake.md)).
