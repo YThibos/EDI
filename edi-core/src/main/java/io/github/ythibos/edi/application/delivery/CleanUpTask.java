@@ -40,7 +40,7 @@ import io.github.ythibos.edi.domain.task.TaskStage;
 @Service
 public class CleanUpTask {
 
-    private static final String HANDED_OVER = "it is cleaned up once its done is accepted or the forge shows its merge request merged.";
+    private static final String HANDED_OVER = "it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch.";
 
     private final TaskStore tasks;
     private final DeliveryStore deliveries;

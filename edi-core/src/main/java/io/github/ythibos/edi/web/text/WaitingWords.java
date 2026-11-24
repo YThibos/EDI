@@ -54,7 +54,7 @@ public final class WaitingWords {
 
     private static String mergedElsewhere(Delivery stackedRequest) {
         return "its request merged into " + stackedRequest.stackedOn() + ", so the work did not land through its own request;"
-                + " once " + stackedRequest.stackedOn() + " lands on the base, edi cleanup " + stackedRequest.task() + " retires it";
+                + " once " + stackedRequest.stackedOn() + " lands on the base and its worker is stopped, edi cleanup " + stackedRequest.task() + " retires it";
     }
 
     public static String inTheRound(String closesAt) {

@@ -182,7 +182,7 @@ public class FollowMerges {
     private static Refusal mergedIntoAnotherBranch(TaskId task, MergeRequestView view) {
         return new Refusal(Rule.REQUEST_FOLLOWED, "The forge shows " + view.address() + " merged into " + view.targetBranch()
                 + ", not into the base branch, so the work did not land through its own request and the task stays in flight;"
-                + " once " + view.targetBranch() + " lands on the base, edi cleanup " + task + " retires it.");
+                + " once " + view.targetBranch() + " lands on the base and its worker is stopped, edi cleanup " + task + " retires it.");
     }
 
     private static Refusal notMerged(MergeRequestView view) {

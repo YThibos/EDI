@@ -62,7 +62,7 @@ class CleanUpTaskTest {
 
         assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
                 .hasMessage("fit-lamp#1 still works on fit-lamp;"
-                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged.");
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch.");
     }
 
     @Test
@@ -78,6 +78,30 @@ class CleanUpTaskTest {
         cleanUp("fit-lamp");
 
         assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isFalse();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+    }
+
+    @Test
+    void waitsForTheWorkerWhoseRequestMergedIntoAnotherBranchToStopBeforeRetiringTheLandedWork() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        MergeRequestView draft = WorkerFixtures.opensTheDraftOf(home, dispatched.launched().worker());
+        home.forge().retargets(draft.address(), "slice/lamps");
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("merge", "--quiet", "--squash", "FETCH_HEAD");
+        MergeRequestView mergedElsewhere = home.forge().merges(draft.address(), upstream.commit("Land slice/lamps, squashed").head());
+        home.deliveries().save(Delivery.of(LAMP, mergedElsewhere, new BaseBranch("main"), home.clock().now()));
+
+        assertThatThrownBy(() -> cleanUp("fit-lamp")).isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp#1 still works on fit-lamp;"
+                        + " it is cleaned up once its done is accepted or the forge shows its merge request merged into the base branch.");
+        assertThat(home.runtime().isRunning(dispatched.launched().worker().window())).isTrue();
+        assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+
+        home.runtime().close(dispatched.launched().worker().window());
+        cleanUp("fit-lamp");
+
+        assertThat(copy.root()).doesNotExist();
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
     }
 
