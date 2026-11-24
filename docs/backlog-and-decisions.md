@@ -21,9 +21,10 @@ A task's size lets the dispatch rules route it, such as EDI's small implementati
 A plan is a titled set of slices, each a task with its own key, its number in the plan and one wait: "after N merged", the default on the slice before, "after N landed", or "none" ([plans](decisions/plans.md)).
 The primary enters it as JSON on standard input, and EDI shows each slice's stage, its wait and whether it is eligible to start.
 Once a plan is entered, EDI dispatches each slice itself as soon as its wait is met, while the plan, its project and the captain's presence have room, and tells the primary of each.
+It does so only under the captain's go: `decision` names a decision the captain answered with an option that authorises promote, such as D44, or `message` cites the number of a message the captain typed in the primary session.
 
 ```sh
-edi plan add --from - < plan.json   # {key, title, project, report, decision, capacity, effort, slices: [{number, title, category, key, body, wait}]}
+edi plan add --from - < plan.json   # {key, title, project, report, decision, message, capacity, effort, slices: [{number, title, category, key, body, wait}]}
 edi plan show EDI-52                # the plan's slices, their stages and waits, and which are eligible
 ```
 

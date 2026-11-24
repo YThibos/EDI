@@ -39,7 +39,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `access.primary-session` | `Caller` | Only the session edi up opened starts or feeds a primary session and changes the fleet; the home token alone keeps edi up, edi health, edi down and the reads. |
 | `access.worker-token-file` | `Edi` | A worker's window calls the core with its own token, never the home token. |
 | `request.valid` | `ApiRefusals` | A request to the core carries every value it needs, well formed. |
-| `authority.captains-word` | `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
+| `authority.captains-word` | `CaptainsGo`, `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
 | `authority.typed-words` | `CaptainMessages`, `CaptainsWordEvidence` | Only words the captain typed in a known primary session count as the captain's word. |
 | `task.stage` | `AddTask`, `DiscardWork`, `PromoteScout`, `StageTransitions`, `Task` | A task moves only along the stages its kind allows. |
 | `task.hold` | `DropTask`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A held task stays held until its hold is released or its decision answered. |

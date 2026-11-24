@@ -81,3 +81,4 @@ When the console gains its own promote, drop or discard actions, the captain wan
 - 03/11/2026: the guard refuses the primary's shell any `edi hook` command, so only Claude Code stores the captain's messages and dialog answers (EDI-159).
 - 04/11/2026: the captain's drop word no longer waits on a task's open ticket decision but drops the task and answers that decision, after a stray task could not be dropped (EDI-179).
 - 09/11/2026: the hook that stores the captain's messages also catches a typed message that opens with `Spark:` as the captain's spark (EDI-166).
+- 24/11/2026: a plan dispatches its slices by itself only under a go that cites the captain's stored word, a decision he answered with an option that authorises `promote` or a message he typed, checked each supervision round ([plans](plans.md), EDI-89).

@@ -54,6 +54,7 @@ The captain chose Q9 A: the core dispatches the next slice once its wait is met 
 - Storing a slice's wait as a blocker of its task - a wait on a merge is not a blocker, and closing the awaited task would erase the plan's recorded order.
 - Waking the primary each round a slice's dispatch is refused - the same refusal would reach it every 30 seconds.
 - Holding a slice's place while its dispatch is refused - one slice that cannot start would stall every later slice of its plan.
+- Trusting the go as the line of text the plan was entered with - authority is checked in code against the captain's stored word, never taken from a line any session can write.
 - A plan id of its own - the umbrella key already names the plan everywhere the captain reads it, such as "the EDI-52 plan".
 - A wait on a dropped slice that is never met - the plan would stall with no command to change the wait, and a closed task blocks nobody elsewhere in EDI.
 
@@ -63,6 +64,7 @@ The captain chose Q9 A: the core dispatches the next slice once its wait is met 
 - Good: the primary's by-hand plan habits, queueing the next step before a merge and reading the forge for merge order, expire with this work.
 - Good: a plan dispatches itself, so the captain's go on it is the last prompt it needs, and the primary only hears of each slice as it starts.
 - Bad: a slice whose dispatch is refused keeps being tried each round until its cause is put right or the slice is held.
+- Bad: a plan entered with a go that cites no stored word of the captain never dispatches itself, and as a plan cannot yet be changed, its slices are dispatched by hand or the plan is entered again.
 - Bad: a slice's wait and a task's blockers are stored in two tables and joined when they are read.
 - Bad: a plan cannot yet be changed once entered; a wrong slice is dropped and entered again outside the plan.
 
@@ -74,4 +76,4 @@ When a slice needs to wait for more than one earlier slice, or a plan needs to c
 
 - 26/10/2026: the EDI-74 scout found plans kept in notes and in the primary's head, and proposed plans as a first-class domain object; the captain chose Q8 A, Q9 A and Q10 A.
 - 13/11/2026: plans, slices and their waits entered the domain and the store, with `edi plan add` and `edi plan show`, and `--blocked-by` became "after landed" (EDI-88).
-- 24/11/2026: the supervision round began dispatching each eligible slice within the plan's and the project's capacity and the captain's presence, and waking the primary with each (EDI-89).
+- 24/11/2026: the supervision round began dispatching each eligible slice within the plan's and the project's capacity and the captain's presence, and waking the primary with each, only under a go that cites the captain's stored word; a slice dispatched but still queued keeps its place (EDI-89).

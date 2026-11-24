@@ -18,6 +18,7 @@ description: >-
 4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, the issue's number on a project keyed by its GitHub issues, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without the captain's answer.
    A key the captain gives after intake goes on with `edi task key <task> <KEY>`, citing the captain's words with `--message <n>` when it answers an open ticket decision.
 5. A task blocked by another waits in the queue until that task's work lands (`--blocked-by`); a plan of slices goes in with `edi plan add --from -`, each slice waiting as the plan names (`edi plan show <key>`).
+   The plan's go cites the captain's stored word: `decision` is a decision he answered with an option that authorises `promote`, or `message` is the number of the message he typed with the go (`edi captain messages`).
    Your core dispatches each eligible slice itself, within the plan's capacity, and wakes you with each: never dispatch a slice by hand, and when a wake says a slice could not be dispatched, put its cause right or hold the slice.
 6. An unregistered project cannot receive a ship: ask the captain to register it, and confirm delivery, tracker, base branch and AI scaffolding with the captain.
 
