@@ -15,7 +15,7 @@ require_the_pinned_toolchain() {
 
 require_mise() {
   if ! command -v mise >/dev/null; then
-    refuse "EDI builds with the toolchain ${toolchain} pins, and mise, which runs it, is not on the PATH; install mise, run mise install in ${checkout} and try again."
+    refuse "EDI builds with the toolchain ${toolchain} pins, and mise, which runs it, is not on the PATH; install mise and try again."
   fi
 }
 
@@ -26,15 +26,11 @@ install_the_missing_pinned_tools() {
     return
   fi
   echo "Installing the pinned tools this machine lacks: $(listed "${missing}")"
-  if ! (cd "${checkout}" && mise install); then
+  local tools
+  mapfile -t tools <<< "${missing}"
+  if ! (cd "${checkout}" && mise install "${tools[@]}"); then
     refuse_the_failed_install "${missing}"
   fi
-}
-
-refuse_the_failed_install() {
-  local still_missing
-  still_missing="$(missing_pinned_tools || true)"
-  refuse "EDI could not install the pinned tools ${toolchain} names: $(listed "${still_missing:-$1}"); mise's output above says why, and the installed EDI is unchanged."
 }
 
 missing_pinned_tools() {
@@ -43,6 +39,12 @@ missing_pinned_tools() {
 
 listed() {
   paste -sd, - <<< "$1" | sed 's/,/, /g'
+}
+
+refuse_the_failed_install() {
+  local still_missing
+  still_missing="$(missing_pinned_tools || true)"
+  refuse "EDI could not install the pinned tools ${toolchain} names: $(listed "${still_missing:-$1}"); mise's output above says why, and the installed EDI is unchanged."
 }
 
 refuse() {

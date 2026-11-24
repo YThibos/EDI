@@ -45,7 +45,7 @@ class InstallTest {
             case "$1" in
             ls) [ -e "$state/installed" ] || printf '%2$s' ;;
             install)
-                echo install >> "$state/calls"
+                echo "$@" >> "$state/calls"
                 echo 'mise: installing the pinned tools'
                 [ %3$d -eq 0 ] && touch "$state/installed"
                 exit %3$d ;;
@@ -94,7 +94,7 @@ class InstallTest {
 
         assertThat(install.exitCode()).as(install.output()).isZero();
         assertThat(install.output()).contains("Installing the pinned tools this machine lacks: node" + System.lineSeparator() + "mise: installing the pinned tools");
-        assertThat(miseInstallCalls()).hasContent("install" + System.lineSeparator());
+        assertThat(miseInstallCalls()).hasContent("install node" + System.lineSeparator());
         assertThat(javaHomeOfTheBuild(checkout)).exists();
         assertThat(directory.resolve("bin/edi")).isExecutable();
     }
@@ -107,6 +107,7 @@ class InstallTest {
 
         assertThat(install.exitCode()).as(install.output()).isZero();
         assertThat(install.output()).contains("Installing the pinned tools this machine lacks: node, aqua:gitleaks/gitleaks" + System.lineSeparator());
+        assertThat(miseInstallCalls()).hasContent("install node aqua:gitleaks/gitleaks" + System.lineSeparator());
     }
 
     @Test
@@ -117,7 +118,7 @@ class InstallTest {
 
         assertThat(install.exitCode()).isEqualTo(1);
         assertThat(install.output()).contains("mise: installing the pinned tools").contains("could not install the pinned tools").contains(": node;");
-        assertThat(miseInstallCalls()).hasContent("install" + System.lineSeparator());
+        assertThat(miseInstallCalls()).hasContent("install node" + System.lineSeparator());
         assertThat(javaHomeOfTheBuild(checkout)).doesNotExist();
         assertThat(directory.resolve("bin")).doesNotExist();
         assertThat(directory.resolve("home")).doesNotExist();
@@ -142,7 +143,7 @@ class InstallTest {
         InstallRun install = install(checkout, programsWithoutMise().toString());
 
         assertThat(install.exitCode()).isEqualTo(1);
-        assertThat(install.output()).contains("mise, which runs it, is not on the PATH; install mise, run mise install in " + checkout);
+        assertThat(install.output()).contains("EDI builds with the toolchain " + checkout.resolve("mise.toml") + " pins, and mise, which runs it, is not on the PATH; install mise and try again.");
         assertThat(javaHomeOfTheBuild(checkout)).doesNotExist();
     }
 
