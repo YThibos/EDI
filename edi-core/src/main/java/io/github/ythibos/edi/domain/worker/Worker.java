@@ -26,6 +26,7 @@ public record Worker(
         Instant activitySince,
         Instant startedAt,
         Instant briefedAt,
+        Instant lastPromptAt,
         String transcript,
         Instant endedAt,
         Instant stopRequestedAt,
@@ -48,7 +49,7 @@ public record Worker(
 
     public static Worker launched(WorkerId id, UUID session, CategoryId category, Route route, WorkerWindow window, WorkerLaunch launch) {
         return new Worker(id, session, category, route, window, launch, WorkerActivity.STARTING, launch.at(),
-                null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public Instant launchedAt() {
@@ -59,19 +60,19 @@ public record Worker(
         boolean firstHook = activity == WorkerActivity.STARTING;
         return new Worker(id, reportedSession == null ? session : reportedSession, category, route, window, launch,
                 firstHook ? WorkerActivity.IDLE : activity, firstHook ? at : activitySince,
-                Objects.requireNonNullElse(startedAt, at), briefedAt, reportedTranscript == null ? transcript : reportedTranscript,
+                Objects.requireNonNullElse(startedAt, at), briefedAt, lastPromptAt, reportedTranscript == null ? transcript : reportedTranscript,
                 endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, limitPark, contextFullSince);
     }
 
     public Worker promptSubmitted(Instant at) {
         return new Worker(id, session, category, route, window, launch, WorkerActivity.BUSY, at,
-                Objects.requireNonNullElse(startedAt, at), Objects.requireNonNullElse(briefedAt, at), transcript,
+                Objects.requireNonNullElse(startedAt, at), Objects.requireNonNullElse(briefedAt, at), at, transcript,
                 endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, null, null);
     }
 
     public Worker transcribedIn(String reportedTranscript) {
         return reportedTranscript == null ? this : new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt,
-                briefedAt, reportedTranscript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, limitPark,
+                briefedAt, lastPromptAt, reportedTranscript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, limitPark,
                 contextFullSince);
     }
 
@@ -93,13 +94,13 @@ public record Worker(
 
     public Worker stopRequested(Instant at) {
         refuseWhenRetired();
-        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt, lastPromptAt,
                 transcript, endedAt, at, launchFailedAt, retiredAt, lastStatus, doneCheck, limitPark, contextFullSince);
     }
 
     public Worker reported(StatusReport report, Instant at) {
         refuseWhenRetired();
-        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt, lastPromptAt,
                 transcript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, new ReportedStatus(report, at), doneCheckFor(report), limitPark,
                 contextFullSince);
     }
@@ -109,7 +110,7 @@ public record Worker(
             return this;
         }
         ReportedStatus settled = new ReportedStatus(StatusReport.resolvedBy(message.resolves(), message.number()), at);
-        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt, lastPromptAt,
                 transcript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, settled, doneCheck, limitPark, contextFullSince);
     }
 
@@ -117,19 +118,19 @@ public record Worker(
         if (doneCheck != DoneCheck.CHECKING) {
             throw new Refusal(Rule.WORKER_LIVE, id + " has no done waiting for its check.");
         }
-        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt, lastPromptAt,
                 transcript, endedAt, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, accepted ? DoneCheck.ACCEPTED : DoneCheck.REFUSED, limitPark,
                 contextFullSince);
     }
 
     public Worker launchFailed(Instant at) {
-        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt, lastPromptAt,
                 transcript, endedAt, stopRequestedAt, at, retiredAt, lastStatus, doneCheck, limitPark, contextFullSince);
     }
 
     public Worker retired(Instant at) {
         refuseWhenRetired();
-        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt,
+        return new Worker(id, session, category, route, window, launch, activity, activitySince, startedAt, briefedAt, lastPromptAt,
                 transcript, endedAt, stopRequestedAt, launchFailedAt, at, lastStatus, doneCheck, limitPark, contextFullSince);
     }
 
@@ -161,6 +162,10 @@ public record Worker(
         return !isRetired() && doneCheck != DoneCheck.ACCEPTED;
     }
 
+    public boolean isBusy() {
+        return !failedItsLaunch() && (activity != WorkerActivity.IDLE || briefedAt == null);
+    }
+
     public boolean hadItsDoneAccepted() {
         return doneCheck == DoneCheck.ACCEPTED;
     }
@@ -179,6 +184,10 @@ public record Worker(
 
     public boolean waitsOnThePrimary() {
         return lastStatus != null && lastStatus.report().isForThePrimary();
+    }
+
+    public boolean waitsOnItsQuestion() {
+        return waitsOnThePrimary() && !wasPromptedSinceItsQuestion();
     }
 
     public Optional<WorkerQuestion> openQuestion() {
@@ -203,7 +212,8 @@ public record Worker(
     private Worker idleSince(Instant at, LimitPark park, Instant fullSince, Instant ended) {
         boolean changes = activity != WorkerActivity.IDLE;
         return new Worker(id, session, category, route, window, launch, WorkerActivity.IDLE, changes ? at : activitySince,
-                startedAt, briefedAt, transcript, ended, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, park, fullSince);
+                startedAt, briefedAt, lastPromptAt, transcript, ended, stopRequestedAt, launchFailedAt, retiredAt, lastStatus, doneCheck, park,
+                fullSince);
     }
 
     private DoneCheck doneCheckFor(StatusReport report) {
@@ -221,6 +231,10 @@ public record Worker(
 
     private boolean hasSentNoHook() {
         return startedAt == null && briefedAt == null;
+    }
+
+    private boolean wasPromptedSinceItsQuestion() {
+        return lastPromptAt != null && lastPromptAt.isAfter(lastStatus.at());
     }
 
     public record ReportedStatus(StatusReport report, Instant at) {

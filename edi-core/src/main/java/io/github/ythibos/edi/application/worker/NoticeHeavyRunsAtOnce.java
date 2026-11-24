@@ -1,6 +1,5 @@
 package io.github.ythibos.edi.application.worker;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,7 +12,6 @@ import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.HeavyRunsAtOnce;
-import io.github.ythibos.edi.domain.worker.HeavyRun;
 import io.github.ythibos.edi.domain.worker.HeavyRuns;
 import io.github.ythibos.edi.domain.worker.HeavyRuns.WorkerRun;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -51,15 +49,8 @@ public class NoticeHeavyRunsAtOnce {
 
     private HeavyRuns heavyRunsOf(List<Worker> serving) {
         return new HeavyRuns(serving.stream()
-                .filter(worker -> processes.isStillThePaneOf(worker.window()))
-                .flatMap(worker -> heaviestRunOf(worker).map(run -> new WorkerRun(worker.id(), run)).stream())
+                .flatMap(worker -> processes.heavyRunIn(worker.window()).map(run -> new WorkerRun(worker.id(), run)).stream())
                 .toList());
-    }
-
-    private Optional<HeavyRun> heaviestRunOf(Worker worker) {
-        return processes.argumentsInTree(worker.window().panePid()).stream()
-                .flatMap(arguments -> HeavyRun.of(arguments).stream())
-                .min(Comparator.naturalOrder());
     }
 
     private void recordStartedBeside(WorkerRun started, HeavyRuns now) {
