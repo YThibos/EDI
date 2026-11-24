@@ -75,10 +75,15 @@ public class DispatchEligibleSlices {
     }
 
     private Optional<SliceDispatched> attemptedDispatchOf(Plan plan, Slice slice) {
+        return outcomeOfDispatching(plan, slice)
+                .map(outcome -> recorded(new SliceDispatched(slice.task(), plan.key(), slice.number(), workerOf(outcome))));
+    }
+
+    private Optional<DispatchOutcome> outcomeOfDispatching(Plan plan, Slice slice) {
         try {
             DispatchOutcome outcome = dispatchTask.dispatch(new TaskReference.ById(slice.task()), requestFor(slice), CallingSession.UNNAMED, Actor.CORE);
             refusalsTold.remove(slice.task());
-            return Optional.of(recorded(new SliceDispatched(slice.task(), plan.key(), slice.number(), workerOf(outcome))));
+            return Optional.of(outcome);
         } catch (RuntimeException refused) {
             tellOnce(new SliceNotDispatched(slice.task(), plan.key(), slice.number(), reasonOf(refused)));
             return Optional.empty();
@@ -93,15 +98,6 @@ public class DispatchEligibleSlices {
         return transaction.execute(_ -> dispatches.of(slice.task())).isPresent() ? null : slice.category();
     }
 
-    private static WorkerId workerOf(DispatchOutcome outcome) {
-        return outcome.wasDeferred() ? null : outcome.launched().worker().id();
-    }
-
-    private <E extends DomainEvent> E recorded(E event) {
-        transaction.executeWithoutResult(_ -> events.record(event, Actor.CORE, clock.now()));
-        return event;
-    }
-
     private static String reasonOf(RuntimeException refused) {
         return Objects.requireNonNullElse(refused.getMessage(), refused.toString());
     }
@@ -110,5 +106,14 @@ public class DispatchEligibleSlices {
         if (!refusal.because().equals(refusalsTold.put(refusal.task(), refusal.because()))) {
             recorded(refusal);
         }
+    }
+
+    private <E extends DomainEvent> E recorded(E event) {
+        transaction.executeWithoutResult(_ -> events.record(event, Actor.CORE, clock.now()));
+        return event;
+    }
+
+    private static WorkerId workerOf(DispatchOutcome outcome) {
+        return outcome.wasDeferred() ? null : outcome.launched().worker().id();
     }
 }
