@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,8 +24,9 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.BaseBranch;
-import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -83,7 +85,7 @@ public class TaskStore {
                 .update();
         insertProjects(task);
         insertBlockers(task);
-        replaceHold(task);
+        insertHolds(task);
     }
 
     public void update(Task task) {
@@ -95,7 +97,7 @@ public class TaskStore {
                 .param("closed", Columns.text(task.closed()))
                 .update();
         replaceBlockers(task);
-        replaceHold(task);
+        replaceHolds(task);
     }
 
     public Task get(TaskReference reference) {
@@ -182,18 +184,17 @@ public class TaskStore {
                         .update());
     }
 
-    private void replaceHold(Task task) {
-        store.sql("delete from captain_hold where task_id = :task").param("task", task.id().value()).update();
-        if (task.isHeld()) {
-            CaptainHold hold = task.hold();
-            store.sql("insert into captain_hold (task_id, kind, reason, until, set_at) values (:task, :kind, :reason, :until, :setAt)")
-                    .param("task", task.id().value())
-                    .param("kind", hold.kind().word())
-                    .param("reason", hold.reason())
-                    .param("until", Columns.text(hold.until()))
-                    .param("setAt", Columns.text(hold.setAt()))
-                    .update();
-        }
+    private void insertHolds(Task task) {
+        task.holds().held().forEach(hold ->
+                store.sql("insert into task_hold (task_id, kind, decision, outage, why, until, set_at) values (:task, :kind, :decision, :outage, :why, :until, :since)")
+                        .param("task", task.id().value())
+                        .params(HoldColumns.of(hold).asParameters())
+                        .update());
+    }
+
+    private void replaceHolds(Task task) {
+        store.sql("delete from task_hold where task_id = :task").param("task", task.id().value()).update();
+        insertHolds(task);
     }
 
     private TaskId taskDecidedBy(DecisionNumber number) {
@@ -244,17 +245,11 @@ public class TaskStore {
                 .list());
     }
 
-    private Map<String, CaptainHold> holdsOf(List<String> ids) {
-        return store.sql("select task_id, kind, reason, until, set_at from captain_hold where task_id in (:ids)")
+    private Map<String, List<Hold>> holdsOf(List<String> ids) {
+        return grouped(store.sql("select task_id, kind, decision, outage, why, until, set_at from task_hold where task_id in (:ids) order by task_id, rowid")
                 .param("ids", ids)
-                .query((row, _) -> Map.entry(row.getString("task_id"), new CaptainHold(
-                        HoldKind.named(row.getString("kind")),
-                        row.getString("reason"),
-                        Columns.holdUntil(row.getString("until")),
-                        Columns.instant(row.getString("set_at")))))
-                .list()
-                .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .query((row, _) -> Map.entry(row.getString("task_id"), HoldColumns.read(row).hold()))
+                .list());
     }
 
     private static <T> Map<String, List<T>> grouped(List<Map.Entry<String, T>> entries) {
@@ -265,7 +260,7 @@ public class TaskStore {
         return Arrays.stream(TaskStage.values()).filter(stage -> stage.state() == state).map(TaskStage::word).toList();
     }
 
-    private record TaskParts(Map<String, List<ProjectName>> projects, Map<String, List<TaskId>> blockers, Map<String, CaptainHold> holds) {
+    private record TaskParts(Map<String, List<ProjectName>> projects, Map<String, List<TaskId>> blockers, Map<String, List<Hold>> holds) {
     }
 
     private record TaskRow(
@@ -296,9 +291,61 @@ public class TaskStore {
                     intake,
                     TaskStage.named(stage),
                     notes,
-                    parts.holds().get(id),
+                    new Holds(parts.holds().getOrDefault(id, List.of())),
                     Columns.instant(created),
                     Columns.instant(closed));
+        }
+    }
+
+    private record HoldColumns(String kind, Integer decision, Integer outage, String why, String until, String since) {
+
+        static HoldColumns of(Hold hold) {
+            return switch (hold) {
+                case Hold.OpenDecision decision -> new HoldColumns(hold, decision.number().value(), null, null);
+                case Hold.Outage outage -> new HoldColumns(hold, null, outage.entry(), outage.lostWhen());
+                case Hold.Deferral deferral -> new HoldColumns(hold, null, null, deferral.why());
+                case Hold.Approval approval -> new HoldColumns(hold, null, null, approval.why());
+            };
+        }
+
+        static HoldColumns read(ResultSet row) throws SQLException {
+            return new HoldColumns(
+                    row.getString("kind"),
+                    numberIn(row, "decision"),
+                    numberIn(row, "outage"),
+                    row.getString("why"),
+                    row.getString("until"),
+                    row.getString("set_at"));
+        }
+
+        private HoldColumns(Hold hold, Integer decision, Integer outage, String why) {
+            this(hold.kind().word(), decision, outage, why, Columns.text(hold.until()), Columns.text(hold.since()));
+        }
+
+        private static Integer numberIn(ResultSet row, String column) throws SQLException {
+            int number = row.getInt(column);
+            return row.wasNull() ? null : number;
+        }
+
+        Map<String, Object> asParameters() {
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("kind", kind);
+            parameters.put("decision", decision);
+            parameters.put("outage", outage);
+            parameters.put("why", why);
+            parameters.put("until", until);
+            parameters.put("since", since);
+            return parameters;
+        }
+
+        Hold hold() {
+            Instant at = Columns.instant(since);
+            return switch (HoldKind.named(kind)) {
+                case DECISION -> new Hold.OpenDecision(new DecisionNumber(decision), at);
+                case OUTAGE -> new Hold.Outage(outage, why, at);
+                case DEFERRAL -> new Hold.Deferral(why, Columns.holdUntil(until), at);
+                case APPROVAL -> new Hold.Approval(why, Columns.holdUntil(until), at);
+            };
         }
     }
 }

@@ -11,7 +11,7 @@ import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskHeld;
-import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
@@ -34,9 +34,10 @@ public class HoldTask {
     public Task hold(TaskReference reference, HoldKind kind, String reason, HoldUntil until, Actor actor) {
         return transaction.execute(_ -> {
             Instant now = clock.now();
-            Task held = tasks.get(reference).held(new CaptainHold(kind, reason, until, now));
+            Hold hold = Hold.setByTheCaptain(kind, reason, until, now);
+            Task held = tasks.get(reference).held(hold);
             tasks.update(held);
-            events.record(new TaskHeld(held.id(), held.hold()), actor, now);
+            events.record(new TaskHeld(held.id(), hold), actor, now);
             return held;
         });
     }

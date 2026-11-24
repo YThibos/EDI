@@ -7,9 +7,7 @@ import java.util.List;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.rule.Rule;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
-import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
@@ -71,8 +69,8 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
         return String.join("\n", lines);
     }
 
-    public CaptainHold holdOnItsTask() {
-        return new CaptainHold(HoldKind.DECISION, number + " " + card.title(), HoldUntil.captainsWord(), raisedAt);
+    public Hold.OpenDecision holdOnItsTask() {
+        return new Hold.OpenDecision(number, raisedAt);
     }
 
     private String alreadyAnswered() {

@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.application.decision;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -15,12 +17,15 @@ import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.SteerWorker.StoredSteer;
+import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
+import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 
@@ -63,14 +68,23 @@ public class AnswerDecision {
         Decision decided = decisionOf(reference, task).answered(given.recordedAt(now));
         decisions.save(decided);
         events.record(new DecisionAnswered(task.id(), decided.number(), decided.answer()), actor, now);
-        Task released = releases.released(task, actor, now);
+        Task released = releases.released(task, decided.number(), actor, now);
         releaseTheDependantsOfADoneTask(released);
         recordTheDone(released, actor, now);
         return new RecordedAnswer(decided, released, steering.carryTheAnswerOf(decided, actor));
     }
 
     private Decision decisionOf(TaskReference reference, Task task) {
+        requireOneDecisionNamed(reference, task);
         return decisions.namedBy(reference).orElseThrow(() -> new UnknownDecision(task.id()));
+    }
+
+    private static void requireOneDecisionNamed(TaskReference reference, Task task) {
+        List<DecisionNumber> open = task.holds().openDecisions();
+        if (reference instanceof TaskReference.ById && open.size() > 1) {
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " waits on " + open.stream().map(DecisionNumber::toString).collect(Collectors.joining(" and "))
+                    + "; answer one of them by its number.");
+        }
     }
 
     private void releaseTheDependantsOfADoneTask(Task released) {

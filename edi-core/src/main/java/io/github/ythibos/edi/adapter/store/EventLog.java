@@ -109,7 +109,7 @@ import io.github.ythibos.edi.domain.event.ReachesTheCaptain;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
-import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.StageChange;
 import io.github.ythibos.edi.domain.task.StageReached;
@@ -254,7 +254,8 @@ public class EventLog {
             case DecisionAnswered answered -> withAnswer(payload.put("number", answered.number().toString()), answered.answer());
             case DecisionRoundClosed closed -> payload.put("number", closed.number().toString()).put("title", closed.title())
                     .put("opened", Columns.text(closed.opened()));
-            case TaskReleased _, TaskDone _ -> payload;
+            case TaskReleased released -> withEachHold(payload, released.released());
+            case TaskDone _ -> payload;
             case StageChanged changed -> withChange(payload, changed.change());
             case DispatchDeferred deferred -> withEach(payload.put("project", deferred.project().value())
                     .put("category", deferred.category().value())
@@ -454,8 +455,14 @@ public class EventLog {
         return payload;
     }
 
-    private static ObjectNode withHold(ObjectNode payload, CaptainHold hold) {
-        return payload.put("kind", hold.kind().word()).put("reason", hold.reason()).put("until", Columns.text(hold.until()));
+    private static ObjectNode withHold(ObjectNode payload, Hold hold) {
+        return payload.put("kind", hold.kind().word()).put("reason", hold.why()).put("until", Columns.text(hold.until()));
+    }
+
+    private static ObjectNode withEachHold(ObjectNode payload, List<Hold> holds) {
+        ArrayNode released = payload.putArray("released");
+        holds.forEach(hold -> withHold(released.addObject(), hold));
+        return payload;
     }
 
     private static ObjectNode withAnswer(ObjectNode payload, CaptainAnswer answer) {

@@ -50,14 +50,12 @@ class TaskDetailText implements TextPresenter<TaskDetail> {
         if (!unmet.isEmpty()) {
             lines.add(capitalised(Words.waits(unmet)));
         }
-        if (detail.task().isHeld()) {
-            lines.add(capitalised(Words.hold(detail.task().hold())) + " (since " + moments.minute(detail.task().hold().setAt()) + ")");
-        }
+        detail.task().holds().held().forEach(hold -> lines.add(capitalised(Words.hold(hold)) + " (since " + moments.minute(hold.since()) + ")"));
         lines.addAll(deliveryLinesOf(detail));
-        if (detail.decision() != null) {
+        detail.decisions().forEach(decision -> {
             lines.add("");
-            lines.addAll(decisionLines.of(detail.decision()));
-        }
+            lines.addAll(decisionLines.of(decision));
+        });
         if (!detail.task().notes().isEmpty()) {
             lines.add("");
             lines.add("Notes");

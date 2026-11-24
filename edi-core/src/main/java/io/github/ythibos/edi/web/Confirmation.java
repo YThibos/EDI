@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.plan.Plan;
+import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
@@ -34,7 +35,7 @@ public sealed interface Confirmation {
     record Noted(TaskId task) implements Confirmation {
     }
 
-    record Held(Task task) implements Confirmation {
+    record Held(Task task, HoldKind kind) implements Confirmation {
     }
 
     record Released(Task task) implements Confirmation {

@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -25,8 +26,10 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.TestHome;
 
@@ -47,17 +50,59 @@ class RaiseAndAnswerDecisionTest {
     }
 
     @Test
-    void holdsTheTaskWhileItsDecisionIsOpenAndReleasesItToItsStateOnTheAnswer() {
+    void keepsADeferredTaskDeferredAfterTheAnswerToADecisionRaisedOnIt() {
         home.holdTask().hold(FIT_LAMP, HoldKind.DEFERRAL, "after the storm", HoldUntil.day(LocalDate.of(2026, 11, 1)), Actor.PRIMARY);
 
         DecisionNumber number = home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
+        Task waiting = home.tasks().get(new TaskId("fit-lamp"));
         AnsweredDecision answered = home.answerDecision().answer(FIT_LAMP, new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
 
         assertThat(number).isEqualTo(new DecisionNumber(1));
+        assertThat(waiting.reasonsItWaits()).isEqualTo("deferred: after the storm; D1 waits for its answer");
         assertThat(answered.task().state()).isEqualTo(TaskState.QUEUED);
-        assertThat(answered.task().isHeld()).isFalse();
+        assertThat(answered.task().reasonsItWaits()).isEqualTo("deferred: after the storm");
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).reasonsItWaits()).isEqualTo("deferred: after the storm");
         assertThat(home.events().timelineOf(new TaskId("fit-lamp"))).extracting(RecordedEvent::type)
                 .containsExactly("TaskAdded", "TaskHeld", "DecisionRaised", "DecisionAnswered");
+    }
+
+    @Test
+    void raisesASecondQuestionAsASecondOpenDecisionAndAnswersEachOnItsOwn() {
+        DecisionNumber ladder = home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
+        DecisionNumber bulb = home.raiseDecision().raise(FIT_LAMP, card("Which bulb?"), Actor.PRIMARY);
+
+        AnsweredDecision answered = home.answerDecision().answer(new TaskReference.ByDecision(ladder),
+                new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+
+        assertThat(List.of(ladder, bulb)).containsExactly(new DecisionNumber(1), new DecisionNumber(2));
+        assertThat(home.decisions().get(ladder).card().title()).isEqualTo("Which ladder?");
+        assertThat(answered.task().holds().openDecisions()).containsExactly(bulb);
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).holds().openDecisions()).containsExactly(bulb);
+        assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(bulb);
+    }
+
+    @Test
+    void asksForTheNumberWhenTheTaskWaitsOnTwoDecisions() {
+        home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
+        home.raiseDecision().raise(FIT_LAMP, card("Which bulb?"), Actor.PRIMARY);
+        GivenAnswer answer = new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT);
+
+        assertThatThrownBy(() -> home.answerDecision().answer(FIT_LAMP, answer, Actor.PRIMARY))
+                .isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp waits on D1 and D2; answer one of them by its number.");
+        assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(new DecisionNumber(1), new DecisionNumber(2));
+    }
+
+    @Test
+    void raisesTheSameQuestionAgainUnderItsOpenNumber() {
+        DecisionNumber first = home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
+        home.raiseDecision().raise(FIT_LAMP, card("Which bulb?"), Actor.PRIMARY);
+
+        DecisionNumber again = home.raiseDecision().raise(FIT_LAMP, Cards.urgent("Which ladder?"), Actor.PRIMARY);
+
+        assertThat(again).isEqualTo(first);
+        assertThat(home.decisions().get(first).card().urgent()).isTrue();
+        assertThat(home.tasks().get(new TaskId("fit-lamp")).holds().openDecisions()).containsExactly(new DecisionNumber(1), new DecisionNumber(2));
     }
 
     @Test
@@ -74,17 +119,30 @@ class RaiseAndAnswerDecisionTest {
     }
 
     @Test
-    void raisesByTheNumberOfAnAnsweredDecisionTheOpenOneItsTaskHoldsUnderItsOwnNumber() {
+    void answersTheOneOpenDecisionOfATaskByItsIdAfterALaterOneWasAnswered() {
+        DecisionNumber ladder = home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
+        DecisionNumber bulb = home.raiseDecision().raise(FIT_LAMP, card("Which bulb?"), Actor.PRIMARY);
+        home.answerDecision().answer(new TaskReference.ByDecision(bulb), new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+
+        AnsweredDecision answered = home.answerDecision().answer(FIT_LAMP, new GivenAnswer("B", new OptionKey('B'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+
+        assertThat(answered.decision().number()).isEqualTo(ladder);
+        assertThat(answered.task().isHeld()).isFalse();
+    }
+
+    @Test
+    void raisesByTheNumberOfAnAnsweredDecisionANewDecisionUnlessItsTaskAlreadyAsksTheSame() {
         DecisionNumber earlier = home.raiseDecision().raise(FIT_LAMP, card("Which ladder?"), Actor.PRIMARY);
         home.answerDecision().answer(FIT_LAMP, new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
         DecisionNumber later = home.raiseDecision().raise(FIT_LAMP, card("Which bulb?"), Actor.PRIMARY);
 
-        DecisionNumber raised = home.raiseDecision().raise(new TaskReference.ByDecision(earlier), card("Which bulb now?"), Actor.PRIMARY);
+        DecisionNumber sameQuestion = home.raiseDecision().raise(new TaskReference.ByDecision(earlier), Cards.urgent("Which bulb?"), Actor.PRIMARY);
+        DecisionNumber newQuestion = home.raiseDecision().raise(new TaskReference.ByDecision(earlier), card("Which ladder now?"), Actor.PRIMARY);
 
-        assertThat(raised).isEqualTo(later);
-        assertThat(home.decisions().get(later).card().title()).isEqualTo("Which bulb now?");
+        assertThat(sameQuestion).isEqualTo(later);
+        assertThat(newQuestion).isEqualTo(new DecisionNumber(3));
         assertThat(home.decisions().get(earlier).answer().verbatim()).isEqualTo("A");
-        assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(later);
+        assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(later, newQuestion);
     }
 
     @Test

@@ -341,7 +341,7 @@ class GardeningSkillTest {
     }
 
     private void hold(String task, String reason, String setAt) {
-        home.jdbc().sql("insert into captain_hold (task_id, kind, reason, until, set_at) values (:task, 'deferral', :reason, null, :setAt)")
+        home.jdbc().sql("insert into task_hold (task_id, kind, why, until, set_at) values (:task, 'deferral', :reason, null, :setAt)")
                 .param("task", task).param("reason", reason).param("setAt", setAt)
                 .update();
     }

@@ -39,7 +39,7 @@ public enum Rule {
     CAPTAINS_WORD(RuleArea.AUTHORITY, "Destructive and irreversible acts wait for the captain's word (I-06)."),
     TYPED_WORDS(RuleArea.AUTHORITY, "Only words the captain typed in a known primary session count as the captain's word."),
     TASK_STAGE(RuleArea.TASK, "A task moves only along the stages its kind allows."),
-    TASK_HOLD(RuleArea.TASK, "A held task stays held until its hold is released or its decision answered."),
+    TASK_HOLD(RuleArea.TASK, "A task waits until each of its holds is released and each of its decisions answered, and no hold replaces another."),
     TASK_INTAKE(RuleArea.TASK, "A new task names a registered project and an id never used before."),
     PLAN_INTAKE(RuleArea.TASK, "A plan is known by an umbrella key no other plan has, and works on no more slices at once than its project."),
     WORK_KEY(RuleArea.TASK, "A task books its work on one key of its project's tracker."),

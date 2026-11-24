@@ -1,12 +1,12 @@
 package io.github.ythibos.edi.domain.recovery;
 
+import static java.util.function.Predicate.not;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
-import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.DeathCause;
@@ -28,16 +28,19 @@ public record OutageEntry(int number, TaskId task, WorkerId worker, DeathCause c
         return open.stream().mapToInt(OutageEntry::number).max().orElse(0) + 1;
     }
 
-    public CaptainHold hold() {
-        return new CaptainHold(HoldKind.APPROVAL, "lost when " + cause.sentence() + "; number " + number
-                + " on the outage hold list waits for the captain to resume it or start it fresh", HoldUntil.captainsWord(), listedAt);
+    public Hold.Outage hold() {
+        return new Hold.Outage(number, "lost when " + cause.sentence(), listedAt);
     }
 
-    public boolean holds(CaptainHold taskHold) {
-        return hold().equals(taskHold);
+    public boolean holds(Task held) {
+        return held.holds().held().stream().anyMatch(hold()::repeats);
     }
 
-    public Task withoutItsHold(Task task) {
-        return task.isHeld() && holds(task.hold()) ? task.released() : task;
+    public List<Hold> otherHoldsOf(Task held) {
+        return held.holds().held().stream().filter(not(hold()::repeats)).toList();
+    }
+
+    public Task withoutItsHold(Task held) {
+        return holds(held) ? held.releasedFrom(hold()) : held;
     }
 }

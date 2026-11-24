@@ -11,9 +11,9 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -45,8 +45,8 @@ class SliceStandingTest {
 
     @Test
     void aSliceAlreadyAtWorkOrHeldIsNotEligibleAndADroppedSliceHoldsNobodyBack() {
-        Task working = new Task(PAINT_LAMP, paintLamp().intake(), TaskStage.WORKING, "", null, AT, null);
-        Task held = paintLamp().held(new CaptainHold(HoldKind.APPROVAL, "needs a yes", HoldUntil.captainsWord(), AT));
+        Task working = new Task(PAINT_LAMP, paintLamp().intake(), TaskStage.WORKING, "", Holds.none(), AT, null);
+        Task held = paintLamp().held(new Hold.Approval("needs a yes", HoldUntil.captainsWord(), AT));
 
         assertThat(standing(working).isEligible()).isFalse();
         assertThat(standing(held).isEligible()).isFalse();

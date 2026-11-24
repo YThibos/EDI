@@ -60,9 +60,7 @@ class PlanStandingsText implements TextPresenter<PlanStandings> {
 
     private static String whatHoldsItBack(SliceStanding standing, Plan plan) {
         List<String> reasons = new ArrayList<>();
-        if (standing.task().isHeld()) {
-            reasons.add(Words.hold(standing.task().hold()));
-        }
+        standing.task().holds().held().forEach(hold -> reasons.add(Words.hold(hold)));
         List<Wait> outsideThePlan = standing.unmetWaitsOutside(plan);
         if (!outsideThePlan.isEmpty()) {
             reasons.add(Words.waits(outsideThePlan));

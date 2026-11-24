@@ -21,9 +21,8 @@ import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
-import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
@@ -61,7 +60,7 @@ class TaskStoreTest {
         tasks.insert(task("lantern", List.of()));
         Task stored = task("fog-horn", List.of(new TaskId("lantern")))
                 .noted("Tune it to the old pitch.")
-                .held(new CaptainHold(HoldKind.APPROVAL, "needs the keeper's yes", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
+                .held(new Hold.Approval("needs the keeper's yes", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
 
         tasks.insert(stored);
 
@@ -69,25 +68,53 @@ class TaskStoreTest {
     }
 
     @Test
+    void keepsEveryReasonATaskWaitsInTheOrderTheyCame() {
+        Task lantern = task("lantern", List.of());
+        tasks.insert(lantern);
+        Decision whichLamp = Decision.raised(new DecisionNumber(7), lantern.id(), Cards.card("Which lamp?"), AT);
+        Decision whichOil = Decision.raised(new DecisionNumber(8), lantern.id(), Cards.card("Which oil?"), AT.plusSeconds(60));
+        decisions.save(whichLamp);
+        decisions.save(whichOil);
+        Task waiting = lantern.held(new Hold.Deferral("after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT))
+                .held(whichLamp.holdOnItsTask())
+                .held(new Hold.Outage(2, "lost when the machine restarted", AT.plusSeconds(30)))
+                .held(whichOil.holdOnItsTask());
+
+        tasks.update(waiting);
+
+        assertThat(tasks.get(lantern.id()).holds()).isEqualTo(waiting.holds());
+        assertThat(tasks.get(lantern.id()).holds().openDecisions()).containsExactly(new DecisionNumber(7), new DecisionNumber(8));
+    }
+
+    @Test
     void keepsTheChangesToAState() {
         Task captainItem = Task.queued(new TaskId("lamp-choice"), new Intake(TaskKind.CAPTAIN, "Choose", List.of(), null, null, List.of(), null, null), "", AT);
         tasks.insert(captainItem);
-        CaptainHold decisionHold = new CaptainHold(HoldKind.DECISION, "D1 Which lamp?", HoldUntil.captainsWord(), AT);
+        Decision whichLamp = Decision.raised(new DecisionNumber(1), captainItem.id(), Cards.card("Which lamp?"), AT);
+        decisions.save(whichLamp);
 
-        tasks.update(captainItem.heldForDecision(decisionHold));
+        tasks.update(captainItem.held(whichLamp.holdOnItsTask()));
         Task held = tasks.get(captainItem.id());
         tasks.update(Stages.answered(held, AT.plusSeconds(60)));
 
-        assertThat(held.hold()).isEqualTo(decisionHold);
+        assertThat(held.holds().held()).containsExactly(whichLamp.holdOnItsTask());
         assertThat(tasks.get(captainItem.id()).state()).isEqualTo(TaskState.DONE);
         assertThat(tasks.get(captainItem.id()).closed()).isEqualTo(AT.plusSeconds(60));
         assertThat(tasks.get(captainItem.id()).isHeld()).isFalse();
     }
 
     @Test
+    void refusesToHoldATaskForADecisionThatDoesNotExist() {
+        Task lantern = task("lantern", List.of());
+        tasks.insert(lantern);
+
+        assertThatThrownBy(() -> tasks.update(lantern.held(new Hold.OpenDecision(new DecisionNumber(9), AT)))).hasMessageContaining("FOREIGN KEY");
+    }
+
+    @Test
     void keepsADroppedTaskWithItsClosingTime() {
         Task held = task("lantern", List.of())
-                .held(new CaptainHold(HoldKind.DEFERRAL, "after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
+                .held(new Hold.Deferral("after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
         tasks.insert(held);
 
         tasks.update(Stages.dropped(held, new CaptainsWord("Drop the lantern."), AT.plusSeconds(60)));

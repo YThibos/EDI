@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.decision;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -39,18 +40,32 @@ public class RaiseDecision {
             Instant now = clock.now();
             Task task = tasks.get(reference);
             Decision decision = decisionOn(reference, task, card, now);
-            tasks.update(task.heldForDecision(decision.holdOnItsTask()));
             decisions.save(decision);
+            tasks.update(heldUntilItIsAnswered(task, decision));
             events.record(new DecisionRaised(task.id(), decision.number(), card), actor, now);
             return decision.number();
         });
     }
 
     private Decision decisionOn(TaskReference reference, Task task, DecisionCard card, Instant now) {
-        return decisions.namedBy(reference)
-                .filter(Decision::isOpen)
-                .or(() -> decisions.ofTask(task.id()).filter(Decision::isOpen))
+        return openDecisionNamedBy(reference)
+                .or(() -> openDecisionAskingTheSameAs(card, task))
                 .map(waiting -> waiting.reraised(card, now))
                 .orElseGet(() -> Decision.raised(decisions.nextNumber(), task.id(), card, now));
+    }
+
+    private Optional<Decision> openDecisionNamedBy(TaskReference reference) {
+        return reference instanceof TaskReference.ByDecision byNumber ? Optional.of(decisions.get(byNumber.number())).filter(Decision::isOpen) : Optional.empty();
+    }
+
+    private Optional<Decision> openDecisionAskingTheSameAs(DecisionCard card, Task task) {
+        return decisions.everyOneOfTask(task.id()).stream()
+                .filter(Decision::isOpen)
+                .filter(open -> open.card().asksTheSameAs(card))
+                .findFirst();
+    }
+
+    private static Task heldUntilItIsAnswered(Task task, Decision decision) {
+        return task.holds().openDecisions().contains(decision.number()) ? task : task.held(decision.holdOnItsTask());
     }
 }

@@ -43,6 +43,7 @@ import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.Ticket;
@@ -67,7 +68,7 @@ class ConfirmationTextTest {
     void confirmsEachChangeInOneLine() {
         assertThat(text.text(new Confirmation.Queued(new AddedTask(new TaskId("lantern"), null, null)))).isEqualTo("Queued lantern.\n");
         assertThat(text.text(new Confirmation.Noted(new TaskId("lantern")))).isEqualTo("Noted on lantern.\n");
-        assertThat(text.text(new Confirmation.Held(PresenterFixtures.heldHorn())))
+        assertThat(text.text(new Confirmation.Held(PresenterFixtures.heldHorn(), HoldKind.DEFERRAL)))
                 .isEqualTo("Held fog-horn (deferral, until 2026-11-01): after the storm\n");
         assertThat(text.text(new Confirmation.Released(PresenterFixtures.lantern()))).isEqualTo("Released lantern; it is queued again.\n");
         assertThat(text.text(new Confirmation.Raised(new DecisionNumber(58)))).isEqualTo("D58\n");
@@ -76,7 +77,7 @@ class ConfirmationTextTest {
     @Test
     void confirmsAnAnswerAndWhatBecameOfItsTask() {
         Task closed = Stages.answered(PresenterFixtures.captainItem()
-                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
+                .held(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
 
         assertThat(text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), closed, TicketSettlement.none(), Optional.empty())))
                 .isEqualTo("Recorded the answer to D58 (option A); lamp-choice is done.\n");
@@ -221,7 +222,7 @@ class ConfirmationTextTest {
 
     private String answerWith(TicketSettlement ticket) {
         Task released = Stages.answered(PresenterFixtures.captainItem()
-                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
+                .held(PresenterFixtures.openDecision().holdOnItsTask()), Instant.parse("2026-10-15T10:00:00Z"));
         return text.text(new Confirmation.Answered(PresenterFixtures.answeredDecision(), released, ticket, Optional.empty()));
     }
 

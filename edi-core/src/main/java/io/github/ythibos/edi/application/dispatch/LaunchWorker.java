@@ -39,7 +39,6 @@ import io.github.ythibos.edi.application.port.WorkerRuntime;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Launch;
 import io.github.ythibos.edi.application.port.WorkerRuntime.Login;
 import io.github.ythibos.edi.application.supervision.LeaveTheOutageList;
-import io.github.ythibos.edi.application.task.TaskHolds;
 import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.application.worker.WorkerTokens.IssuedToken;
@@ -99,7 +98,6 @@ public class LaunchWorker {
     private final Pipeline pipeline;
     private final ProcessTable processes;
     private final MachineBoot boot;
-    private final TaskHolds holds;
     private final TaskStages stages;
     private final CoreMeters meters;
     private final Clock clock;
@@ -108,7 +106,7 @@ public class LaunchWorker {
     public LaunchWorker(EdiHome home, TaskStore tasks, DispatchStore dispatches, WorkerStore workers, AdoptionStore adoptions, LeaveTheOutageList outageList,
             EventLog events, ProjectRegistry registry, MachineProfile machine, DispatchRulesFile rulesFile, IsolatedCopies copies,
             WorkerPlaces places, WorkerBriefs briefs, WrittenBriefs writtenBriefs, GatherBriefFacts briefFacts, ResumeNotes resumeNotes,
-            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot, TaskHolds holds,
+            Handovers handovers, WorkerTokens tokens, WorkerRuntime runtime, Pipeline pipeline, ProcessTable processes, MachineBoot boot,
             TaskStages stages, CoreMeters meters, Clock clock, TransactionTemplate transaction) {
         this.home = home;
         this.tasks = tasks;
@@ -132,7 +130,6 @@ public class LaunchWorker {
         this.pipeline = pipeline;
         this.processes = processes;
         this.boot = boot;
-        this.holds = holds;
         this.stages = stages;
         this.meters = meters;
         this.clock = clock;
@@ -211,7 +208,7 @@ public class LaunchWorker {
 
     private StageTrigger.Dispatch dispatchOf(Task task, ProjectEntry project) {
         List<TaskId> unmetWaits = tasks.waitsOf(task).stream().filter(wait -> !wait.isMet()).map(Wait::task).toList();
-        return new StageTrigger.Dispatch(holds.of(task), unmetWaits, places.roomOn(project).hasRoom());
+        return new StageTrigger.Dispatch(task.holds(), unmetWaits, places.roomOn(project).hasRoom());
     }
 
     private Dispatch dispatchToRelaunch(TaskId task, CaptainOverride captainsOverride) {

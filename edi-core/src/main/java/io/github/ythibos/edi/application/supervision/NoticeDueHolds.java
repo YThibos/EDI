@@ -16,6 +16,7 @@ import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -43,26 +44,27 @@ public class NoticeDueHolds {
             Instant now = clock.now();
             LocalDate today = LocalDate.ofInstant(now, ZoneOffset.UTC);
             List<DueHold> due = Stream.concat(tasks.inState(TaskState.QUEUED).stream(), tasks.inState(TaskState.IN_FLIGHT).stream())
-                    .flatMap(task -> dueBy(task, today).stream())
-                    .filter(hold -> !notices.wasNoticed(hold.task().id(), hold.task().hold()))
+                    .flatMap(task -> dueBy(task, today))
+                    .filter(hold -> !notices.wasNoticed(hold.task(), hold.hold()))
                     .toList();
             due.forEach(hold -> noticed(hold, now));
-            return due.stream().map(hold -> hold.task().id()).toList();
+            return due.stream().map(DueHold::task).distinct().toList();
         });
     }
 
-    private static Optional<DueHold> dueBy(Task task, LocalDate today) {
-        if (task.isHeld() && task.hold().until() instanceof HoldUntil.Day day && !day.date().isAfter(today)) {
-            return Optional.of(new DueHold(task, day.date()));
-        }
-        return Optional.empty();
+    private static Stream<DueHold> dueBy(Task task, LocalDate today) {
+        return task.holds().held().stream().flatMap(hold -> dayArrivedOf(hold, today).map(day -> new DueHold(task.id(), hold, day)).stream());
+    }
+
+    private static Optional<LocalDate> dayArrivedOf(Hold hold, LocalDate today) {
+        return hold.until() instanceof HoldUntil.Day day && !day.date().isAfter(today) ? Optional.of(day.date()) : Optional.empty();
     }
 
     private void noticed(DueHold hold, Instant now) {
-        notices.notice(hold.task().id(), hold.task().hold(), now);
-        events.record(new HoldDateArrived(hold.task().id(), hold.day()), Actor.CORE, now);
+        notices.notice(hold.task(), hold.hold(), now);
+        events.record(new HoldDateArrived(hold.task(), hold.day()), Actor.CORE, now);
     }
 
-    private record DueHold(Task task, LocalDate day) {
+    private record DueHold(TaskId task, Hold hold, LocalDate day) {
     }
 }

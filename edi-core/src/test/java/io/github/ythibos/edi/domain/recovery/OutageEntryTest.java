@@ -8,9 +8,14 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.ythibos.edi.domain.project.ProjectName;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Intake;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.DeathCause;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -28,12 +33,24 @@ class OutageEntryTest {
     @Test
     void holdsItsTaskForTheCaptainsWordAndKnowsItsOwnHold() {
         OutageEntry entry = entry(2, "tune-horn");
+        Task lost = horn().held(entry.hold());
 
-        assertThat(entry.hold().kind()).isEqualTo(HoldKind.APPROVAL);
+        assertThat(entry.hold().kind()).isEqualTo(HoldKind.OUTAGE);
         assertThat(entry.hold().until()).isEqualTo(HoldUntil.captainsWord());
         assertThat(entry.hold().reason()).isEqualTo("lost when the machine restarted; number 2 on the outage hold list waits for the captain to resume it or start it fresh");
-        assertThat(entry.holds(entry.hold())).isTrue();
-        assertThat(entry(3, "tune-horn").holds(entry.hold())).isFalse();
+        assertThat(entry.holds(lost)).isTrue();
+        assertThat(entry.holds(horn())).isFalse();
+    }
+
+    @Test
+    void releasesOnlyItsOwnHoldAndNamesTheOthers() {
+        OutageEntry entry = entry(2, "tune-horn");
+        Hold.Deferral deferral = new Hold.Deferral("after the season", HoldUntil.captainsWord(), LISTED);
+        Task lost = horn().held(deferral).held(entry.hold());
+
+        assertThat(entry.otherHoldsOf(lost)).containsExactly(deferral);
+        assertThat(entry.withoutItsHold(lost).holds().held()).containsExactly(deferral);
+        assertThat(entry.withoutItsHold(horn())).isEqualTo(horn());
     }
 
     @Test
@@ -41,6 +58,11 @@ class OutageEntryTest {
         assertThat(RecoveryAction.named("resume")).isEqualTo(RecoveryAction.RESUME);
         assertThat(RecoveryAction.named("fresh")).isEqualTo(RecoveryAction.FRESH);
         assertThatIllegalArgumentException().isThrownBy(() -> RecoveryAction.named("drop")).withMessageContaining("resume or fresh");
+    }
+
+    private static Task horn() {
+        return Task.queued(new TaskId("tune-horn"),
+                new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(), null, null), "", LISTED);
     }
 
     private static OutageEntry entry(int number, String task) {

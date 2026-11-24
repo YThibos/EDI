@@ -23,8 +23,8 @@
       @if (waitsOf(detail); as waits) {
         <div><dt>Waits for</dt><dd>{{ waits }}</dd></div>
       }
-      @if (detail.task.hold; as hold) {
-        <div><dt>Held</dt><dd>{{ hold.reason }}, until {{ hold.until ?? 'released' }}</dd></div>
+      @if (holdsOf(detail); as holds) {
+        <div><dt>Held</dt><dd>{{ holds }}</dd></div>
       }
       @if (detail.delivery; as delivery) {
         <div><dt>Request</dt><dd>#{{ delivery.address.number }} · {{ delivery.state }}{{ delivery.draft ? ' · draft' : '' }}</dd></div>
@@ -60,7 +60,7 @@
         <app-live-pane [task]="task()" [detail]="detail().value" />
       }
       @case ('decisions') {
-        @if (detail().value?.decision; as decision) {
+        @for (decision of detail().value?.decisions ?? []; track decision.number) {
           <article class="sr-task__decision">
             <h3><span class="sr-row__key">{{ decision.number }}</span> {{ decision.card.title }}</h3>
             @if (decision.card.context) {
@@ -80,7 +80,7 @@
               <p class="sr-row__sub">Waiting on your answer since {{ shipMoment(decision.raisedAt, zone()) }}</p>
             }
           </article>
-        } @else {
+        } @empty {
           <div class="sr-empty">This task has no decision.</div>
         }
         @if ((links()?.decisions ?? []).length > 1) {

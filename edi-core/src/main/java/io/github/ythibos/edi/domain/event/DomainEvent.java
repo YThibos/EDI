@@ -23,7 +23,7 @@ import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
-import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.StageChange;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -47,10 +47,10 @@ public sealed interface DomainEvent {
     record TaskNoted(TaskId task, String note) implements DomainEvent {
     }
 
-    record TaskHeld(TaskId task, CaptainHold hold) implements DomainEvent {
+    record TaskHeld(TaskId task, Hold hold) implements DomainEvent {
     }
 
-    record TaskReleased(TaskId task) implements DomainEvent {
+    record TaskReleased(TaskId task, List<Hold> released) implements DomainEvent {
     }
 
     record DecisionRaised(TaskId task, DecisionNumber number, DecisionCard card) implements DomainEvent {

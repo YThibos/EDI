@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.StageTrigger;
@@ -31,7 +32,11 @@ public final class Stages {
     }
 
     public static Task answered(Task captainItem, Instant at) {
-        return moved(captainItem.decisionAnswered(), new StageTrigger.CaptainItemAnswered(Holds.none()), at);
+        Task released = captainItem;
+        for (DecisionNumber open : captainItem.holds().openDecisions()) {
+            released = released.decisionAnswered(open);
+        }
+        return moved(released, new StageTrigger.CaptainItemAnswered(Holds.none()), at);
     }
 
     public static Task dropped(Task task, CaptainsWord word, Instant at) {

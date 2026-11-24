@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.web.recovery;
 
+import static java.util.function.Predicate.not;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,6 +12,7 @@ import io.github.ythibos.edi.application.supervision.OutageList;
 import io.github.ythibos.edi.application.supervision.OutageList.UnpushedWork;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -64,9 +67,9 @@ class OutageListText implements TextPresenter<OutageList> {
         if (listed.openDecision() != null) {
             waits.add("the captain's answer to " + listed.openDecision());
         }
-        if (listed.task().isHeld() && !listed.entry().holds(listed.task().hold())) {
-            waits.add("its hold: " + listed.task().hold().reason());
-        }
+        listed.entry().otherHoldsOf(listed.task()).stream()
+                .filter(not(Hold::isReleasedByItsAnswer))
+                .forEach(hold -> waits.add("its hold: " + hold.why()));
         Worker worker = listed.worker();
         if (worker.lastReported(StatusState.NEEDS_DECISION) || worker.lastReported(StatusState.BLOCKED) || worker.lastReported(StatusState.PAUSED)) {
             waits.add("its last status, " + worker.lastStatus().report().state().word());

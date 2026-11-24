@@ -19,6 +19,8 @@ import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.task.Hold;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -75,9 +77,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Queued queued -> queued(queued.added());
             case Planned planned -> planned(planned.plan());
             case Noted noted -> "Noted on " + noted.task() + ".";
-            case Held held -> "Held " + held.task().id() + " (" + held.task().hold().kind().word() + ", "
-                    + Moments.until(held.task().hold().until()) + "): " + held.task().hold().reason();
-            case Released released -> "Released " + released.task().id() + "; it is " + released.task().state().word() + " again.";
+            case Held held -> held(held);
+            case Released released -> released(released.task());
             case Raised raised -> raised.number().toString();
             case Answered answered -> answerRecorded(answered);
             case Dispatched dispatched -> WorkerSentences.dispatched(dispatched.launched());
@@ -220,6 +221,18 @@ class ConfirmationText implements TextPresenter<Confirmation> {
         return "Planned " + plan.key() + ": queued " + Words.quantity(plan.slices().size(), "slice") + ", "
                 + String.join(", ", plan.tasks().stream().map(TaskId::value).toList()) + "; edi plan show " + plan.key()
                 + " prints their stages and waits.";
+    }
+
+    private static String held(Held held) {
+        Hold hold = held.task().holds().ofKind(held.kind()).orElseThrow();
+        return "Held " + held.task().id() + " (" + hold.kind().word() + ", " + Moments.until(hold.until()) + "): " + hold.why();
+    }
+
+    private static String released(Task task) {
+        if (task.isHeld()) {
+            return "Released " + task.id() + "; it still waits: " + task.reasonsItWaits() + ".";
+        }
+        return "Released " + task.id() + "; it is " + task.state().word() + " again.";
     }
 
     private static String answerRecorded(Answered answered) {

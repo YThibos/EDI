@@ -28,9 +28,10 @@ public class ReleaseTask {
 
     public Task release(TaskReference reference, Actor actor) {
         return transaction.execute(_ -> {
-            Task released = tasks.get(reference).released();
+            Task held = tasks.get(reference);
+            Task released = held.released();
             tasks.update(released);
-            events.record(new TaskReleased(released.id()), actor, clock.now());
+            events.record(new TaskReleased(released.id(), held.holds().releasable()), actor, clock.now());
             return released;
         });
     }

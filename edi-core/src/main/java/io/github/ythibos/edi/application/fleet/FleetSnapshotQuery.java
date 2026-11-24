@@ -4,9 +4,7 @@ import static java.util.function.Predicate.not;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -28,7 +26,6 @@ import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.task.Task;
-import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.task.Wait;
@@ -70,20 +67,14 @@ public class FleetSnapshotQuery {
             Instant now = clock.now();
             List<Task> inFlight = tasks.inState(TaskState.IN_FLIGHT);
             List<Task> queued = tasks.inState(TaskState.QUEUED);
-            Map<TaskId, Decision> openDecisions = openDecisionsByTask();
+            List<Decision> openDecisions = decisions.open();
             List<Task> openWork = Stream.concat(inFlight.stream(), queued.stream()).toList();
             return new FleetSnapshot(waitingOnTheCaptain(openDecisions, inFlight, now), ongoing(unheld(inFlight)), parkedAmong(openWork, openDecisions),
                     unheld(queued), landedSince(now.minus(LANDED_RECENTLY)), answeredSince(now.minus(ANSWERED_RECENTLY)));
         });
     }
 
-    private Map<TaskId, Decision> openDecisionsByTask() {
-        Map<TaskId, Decision> byTask = new LinkedHashMap<>();
-        decisions.open().forEach(decision -> byTask.put(decision.task(), decision));
-        return byTask;
-    }
-
-    private WaitingOnTheCaptain waitingOnTheCaptain(Map<TaskId, Decision> openDecisions, List<Task> inFlight, Instant now) {
+    private WaitingOnTheCaptain waitingOnTheCaptain(List<Decision> openDecisions, List<Task> inFlight, Instant now) {
         List<OpenDecision> open = decisionsOf(openDecisions);
         List<WaitingBoard> waitingBoards = waitingBoards(open);
         List<HandedOverRequest> handedOver = handedOverRequestsAmong(inFlight);
@@ -103,8 +94,8 @@ public class FleetSnapshotQuery {
         return worker.openQuestion().filter(question -> question.isResolvedByOneOf(inbox.resolvingOf(question.task()))).isPresent();
     }
 
-    private List<OpenDecision> decisionsOf(Map<TaskId, Decision> openDecisions) {
-        return openDecisions.values().stream().map(decision -> new OpenDecision(decision, tasks.get(decision.task()))).toList();
+    private List<OpenDecision> decisionsOf(List<Decision> openDecisions) {
+        return openDecisions.stream().map(decision -> new OpenDecision(decision, tasks.get(decision.task()))).toList();
     }
 
     private List<WaitingBoard> waitingBoards(List<OpenDecision> open) {
@@ -186,20 +177,24 @@ public class FleetSnapshotQuery {
         return decisions.answeredSince(since).stream().map(decision -> new RecentAnswer(decision, tasks.get(decision.task()))).toList();
     }
 
-    private List<ParkedTask> parkedAmong(List<Task> openWork, Map<TaskId, Decision> openDecisions) {
+    private List<ParkedTask> parkedAmong(List<Task> openWork, List<Decision> openDecisions) {
         return openWork.stream()
                 .filter(Task::isHeld)
-                .map(task -> parked(task, openDecisions.get(task.id())))
+                .map(task -> parked(task, firstOpenDecisionOf(task, openDecisions)))
                 .flatMap(Optional::stream)
                 .toList();
     }
 
     private Optional<ParkedTask> parked(Task heldTask, Decision openDecision) {
         List<Task> blockers = unresolvedBlockersOf(heldTask);
-        if (waitsOnlyForItsDecision(heldTask, blockers)) {
+        if (waitsOnlyForItsDecisions(heldTask, blockers)) {
             return Optional.empty();
         }
         return Optional.of(new ParkedTask(heldTask, openDecision, blockers));
+    }
+
+    private static Decision firstOpenDecisionOf(Task task, List<Decision> openDecisions) {
+        return openDecisions.stream().filter(decision -> decision.task().equals(task.id())).findFirst().orElse(null);
     }
 
     private List<Task> unresolvedBlockersOf(Task task) {
@@ -209,8 +204,8 @@ public class FleetSnapshotQuery {
                 .toList();
     }
 
-    private static boolean waitsOnlyForItsDecision(Task heldTask, List<Task> unresolvedBlockers) {
-        return heldTask.hold().awaitsADecision() && unresolvedBlockers.isEmpty();
+    private static boolean waitsOnlyForItsDecisions(Task heldTask, List<Task> unresolvedBlockers) {
+        return heldTask.holds().holdsOnlyOpenDecisions() && unresolvedBlockers.isEmpty();
     }
 
     private record HandedOverRequest(Task task, Delivery delivery, boolean doneStands, PipelineRun changingPipeline, List<Integer> unacknowledgedSteers) {

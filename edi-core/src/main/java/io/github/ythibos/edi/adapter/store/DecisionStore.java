@@ -93,9 +93,15 @@ public class DecisionStore {
 
     public Optional<Decision> namedBy(TaskReference reference) {
         return switch (reference) {
-            case TaskReference.ById byId -> ofTask(byId.id());
+            case TaskReference.ById byId -> latestOpenOf(byId.id()).or(() -> ofTask(byId.id()));
             case TaskReference.ByDecision byDecision -> Optional.of(get(byDecision.number()));
         };
+    }
+
+    private Optional<Decision> latestOpenOf(TaskId task) {
+        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task and answered_at is null order by number desc limit 1").param("task", task.value()))
+                .stream()
+                .findFirst();
     }
 
     public List<Decision> everyOneOfTask(TaskId task) {

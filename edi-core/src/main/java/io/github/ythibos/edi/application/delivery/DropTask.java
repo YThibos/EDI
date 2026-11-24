@@ -2,6 +2,7 @@ package io.github.ythibos.edi.application.delivery;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -75,8 +76,10 @@ public class DropTask {
     }
 
     private void requireNoDecisionButItsTicketWaiting(Task task) {
-        if (task.isHeld() && task.hold().awaitsADecision() && !awaitsItsTicket(task)) {
-            throw new Refusal(Rule.TASK_HOLD, task.id() + " waits on " + task.hold().reason() + "; it is dropped once that decision is answered.");
+        List<DecisionNumber> open = task.holds().openDecisions();
+        if (!open.isEmpty() && !awaitsItsTicket(task)) {
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " waits on " + open.stream().map(DecisionNumber::toString).collect(Collectors.joining(" and "))
+                    + "; it is dropped once " + (open.size() == 1 ? "that decision is" : "those decisions are") + " answered.");
         }
     }
 

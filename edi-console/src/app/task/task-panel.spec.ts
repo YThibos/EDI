@@ -17,11 +17,11 @@ const LAMP: TaskDetail = {
     intake: { kind: 'ship', title: 'Fit the lamp', projects: ['harness'], workKey: 'EDI-31', base: 'main', blockedBy: [], delivery: null },
     stage: 'working',
     notes: '',
-    hold: null,
+    holds: [],
     created: '2026-10-15T06:00:00Z',
   },
   waits: [{ task: 'build-tower', awaited: 'landed', stage: 'merged', met: false }, { task: 'pave-quay', awaited: 'merged', stage: 'retired', met: true }],
-  decision: {
+  decisions: [{
     number: 'D58',
     card: {
       title: 'Which lamp?',
@@ -32,7 +32,7 @@ const LAMP: TaskDetail = {
     raisedAt: '2026-10-15T06:10:00Z',
     answer: { verbatim: 'D58 A', option: 'A', answeredAt: '2026-10-15T07:00:00Z', channel: 'console' },
     open: false,
-  },
+  }],
   delivery: { address: { number: 12 }, draft: true, state: 'open' },
   worked: { active: 'PT1H5M', wallClock: 'PT3H' },
   cost: null,
@@ -103,6 +103,32 @@ describe('TaskPanel', () => {
 
     const panel = page.querySelector('app-task-panel') as HTMLElement;
     expect(Object.keys(facts(panel))).not.toContain('Waits for');
+  });
+
+  it('names every reason the task waits and shows each of its open decisions on their tab', async () => {
+    const waiting: TaskDetail = {
+      ...LAMP,
+      task: {
+        ...LAMP.task,
+        holds: [
+          { kind: 'deferral', why: 'after the storm', until: '2026-11-01', since: '2026-10-15T06:05:00Z' },
+          { kind: 'decision', why: 'D58 waits for its answer', until: "captain's word", since: '2026-10-15T06:10:00Z' },
+          { kind: 'decision', why: 'D59 waits for its answer', until: "captain's word", since: '2026-10-15T06:20:00Z' },
+        ],
+      },
+      decisions: [
+        { ...LAMP.decisions[0], answer: null, open: true },
+        { ...LAMP.decisions[0], number: 'D59', card: { ...LAMP.decisions[0].card, title: 'Which bulb?' }, answer: null, open: true },
+      ],
+    };
+    const page = await opened('/task/fit-lamp', waiting);
+    const panel = page.querySelector('app-task-panel') as HTMLElement;
+
+    tab(panel, 'Decisions').click();
+    await settled();
+
+    expect(facts(panel)['Held']).toBe("after the storm, until 2026-11-01; D58 waits for its answer, until captain's word; D59 waits for its answer, until captain's word");
+    expect(texts(panel, '.sr-task__decision h3')).toEqual(['D58 Which lamp?', 'D59 Which bulb?']);
   });
 
   it('shows the timeline first and the decision with its answer on its tab', async () => {

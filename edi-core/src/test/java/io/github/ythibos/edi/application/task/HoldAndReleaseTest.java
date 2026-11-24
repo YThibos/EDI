@@ -39,7 +39,7 @@ class HoldAndReleaseTest {
         Task held = home.holdTask().hold(FIT_LAMP, HoldKind.DEFERRAL, "after the storm", HoldUntil.day(LocalDate.of(2026, 11, 1)), Actor.PRIMARY);
         Task released = home.releaseTask().release(FIT_LAMP, Actor.PRIMARY);
 
-        assertThat(held.hold().reason()).isEqualTo("after the storm");
+        assertThat(held.reasonsItWaits()).isEqualTo("deferred: after the storm");
         assertThat(released.isHeld()).isFalse();
         assertThat(home.tasks().get(new TaskId("fit-lamp")).isHeld()).isFalse();
         assertThat(home.events().timelineOf(new TaskId("fit-lamp"))).extracting(RecordedEvent::type)

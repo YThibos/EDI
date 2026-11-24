@@ -184,7 +184,6 @@ import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.PromoteScout;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
-import io.github.ythibos.edi.application.task.TaskHolds;
 import io.github.ythibos.edi.application.task.TaskListQuery;
 import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.task.WeekOfWork;
@@ -218,6 +217,7 @@ import io.github.ythibos.edi.application.worker.WorkerInbox;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
@@ -391,7 +391,7 @@ public final class TestHome {
     public void putAt(TaskId id, TaskStage stage) {
         transaction.executeWithoutResult(_ -> {
             Task task = tasks.get(id);
-            tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), stage.isClosed() ? null : task.hold(), task.created(),
+            tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), stage.isClosed() ? Holds.none() : task.holds(), task.created(),
                     stage.isClosed() ? clock.now() : null));
         });
     }
@@ -537,11 +537,7 @@ public final class TestHome {
     }
 
     public DecisionReleases decisionReleases() {
-        return new DecisionReleases(tasks, taskHolds(), taskStages());
-    }
-
-    public TaskHolds taskHolds() {
-        return new TaskHolds(decisions);
+        return new DecisionReleases(tasks, taskStages());
     }
 
     public TaskStages taskStages() {
@@ -746,7 +742,7 @@ public final class TestHome {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, leaveTheOutageList(), events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), new WorkerPlaces(workers, tasks, pipelineRuns, workerRuntime, processes), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), meters, clock, transaction);
+                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskStages(), meters, clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {

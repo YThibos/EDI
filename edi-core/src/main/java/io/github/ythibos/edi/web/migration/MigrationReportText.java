@@ -94,7 +94,8 @@ public class MigrationReportText implements TextPresenter<MigrationReport> {
     private static String holdsOf(List<Task> tasks) {
         List<Task> held = tasks.stream().filter(Task::isHeld).toList();
         Table table = new Table(INDENT).line(Words.counted("Captain holds", held.size()));
-        held.forEach(task -> table.row(task.id().value(), task.state().word(), task.hold().kind().word() + ", " + Moments.until(task.hold().until())));
+        held.forEach(task -> task.holds().held().forEach(hold ->
+                table.row(task.id().value(), task.state().word(), hold.kind().word() + ", " + Moments.until(hold.until()))));
         return table.text();
     }
 

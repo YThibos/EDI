@@ -17,8 +17,7 @@ import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
@@ -96,7 +95,7 @@ public final class PresenterFixtures {
         return Task.queued(new TaskId("fog-horn"),
                         new Intake(TaskKind.SHIP, "Tune the horn", List.of(new ProjectName("harness")), null, null, List.of(new TaskId("lantern")), null, null),
                         "", AT)
-                .held(new CaptainHold(HoldKind.DEFERRAL, "after the storm", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
+                .held(new Hold.Deferral("after the storm", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT));
     }
 
     public static Task captainItem() {

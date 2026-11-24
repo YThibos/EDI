@@ -225,7 +225,9 @@ public class SessionStartDigestText implements TextPresenter<SessionStartDigest>
     }
 
     private static String parkedLine(ParkedTask parked) {
-        return parked.task().id() + "  " + parked.task().hold().reason() + "  " + Moments.until(parked.task().hold().until());
+        return parked.task().id() + "  " + parked.task().holds().held().stream()
+                .map(hold -> hold.why() + "  " + Moments.until(hold.until()))
+                .collect(Collectors.joining("; "));
     }
 
     private static List<String> outage(SessionStartDigest digest) {
