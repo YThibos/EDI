@@ -5,12 +5,12 @@ export interface Sitrep {
   machine: string;
   address: string;
   presence: PresenceShown;
+  usageLimit: LimitStop | null;
   decisions: DecisionCard[];
   boards: WaitingBoard[];
   reviews: ReadyForReview[];
-  changing: ChangingRequest[];
   workerQuestions: WorkerQuestion[];
-  answered: AnsweredDecision[];
+  dealtWith: DealtWith;
   ongoing: OngoingTask[];
   landed: LandedTask[];
   landedTotal: number;
@@ -37,6 +37,11 @@ export interface PresenceShown {
 
 export type PresenceChoice = 'present' | 'quiet' | 'demo' | 'demo-off';
 
+export interface LimitStop {
+  resetsAt: string | null;
+  tasks: string[];
+}
+
 export interface DecisionCard {
   number: string;
   task: string;
@@ -47,6 +52,7 @@ export interface DecisionCard {
   recommended: Recommendation;
   urgent: boolean;
   raisedAt: string;
+  stops: string | null;
 }
 
 export interface DecisionOption {
@@ -78,14 +84,12 @@ export interface ReadyForReview {
   title: string;
   projects: string[];
   url: string;
+  afterLanding: AfterLanding;
 }
 
-export interface ChangingRequest {
-  task: string;
-  title: string;
-  projects: string[];
-  url: string;
-  why: string;
+export interface AfterLanding {
+  steps: string[];
+  landingOrder: string | null;
 }
 
 export interface WorkerQuestion {
@@ -96,7 +100,14 @@ export interface WorkerQuestion {
   askedAt: string;
 }
 
+export interface DealtWith {
+  decisions: AnsweredDecision[];
+  boards: EndedBoard[];
+  reviews: SettledReview[];
+}
+
 export interface AnsweredDecision {
+  call: string;
   number: string;
   task: string;
   projects: string[];
@@ -105,6 +116,24 @@ export interface AnsweredDecision {
   option: string | null;
   channel: string;
   answeredAt: string;
+}
+
+export interface EndedBoard {
+  call: string;
+  task: string;
+  title: string;
+  projects: string[];
+  link: string | null;
+}
+
+export interface SettledReview {
+  call: string;
+  task: string;
+  title: string;
+  projects: string[];
+  url: string;
+  state: string;
+  afterLanding: AfterLanding;
 }
 
 export interface OngoingTask {
@@ -116,6 +145,8 @@ export interface OngoingTask {
   state: string;
   doing: string;
   draft: string | null;
+  comingBack: string | null;
+  limitResetsAt: string | null;
 }
 
 export interface LandedTask {

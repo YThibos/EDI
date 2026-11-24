@@ -31,8 +31,9 @@ describe('ConsoleHeader', () => {
     expect(header.querySelector('.sr-clock__day')).toBeNull();
   });
 
-  it('offers the three views as tabs, the Sitrep tab counting what waits on the captain', async () => {
+  it('offers the four views as tabs, the Sitrep tab counting what waits on the captain and the Landed tab what landed', async () => {
     fixture.componentRef.setInput('waiting', 3);
+    fixture.componentRef.setInput('landed', 7);
     await fixture.whenStable();
     const header: HTMLElement = fixture.nativeElement;
 
@@ -40,8 +41,10 @@ describe('ConsoleHeader', () => {
       ['Sitrep3', '/'],
       ['Fleet', '/fleet'],
       ['Week', '/week'],
+      ['Landed7', '/landed'],
     ]);
     expect(header.querySelector('.sr-view__count')?.textContent).toBe('3');
+    expect(header.querySelector('.sr-view__count--calm')?.textContent).toBe('7');
   });
 
   it('names the view on screen beside the wordmark', async () => {

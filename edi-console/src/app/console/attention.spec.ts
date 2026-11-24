@@ -16,6 +16,7 @@ const BULB: DecisionCard = {
   recommended: { key: 'A', why: 'it is enough' },
   urgent: false,
   raisedAt: '2026-10-15T06:10:00Z',
+  stops: null,
 };
 
 class StubNotification {
@@ -81,7 +82,7 @@ describe('Attention', () => {
     attention.follow(opened, 1);
     const withMore: Sitrep = sitrepFixture({
       decisions: [...opened.decisions, BULB],
-      reviews: [{ task: 'paint-buoy', title: 'Paint the buoy', projects: [], url: 'https://github.com/example-owner/harness/pull/14' }],
+      reviews: [{ task: 'paint-buoy', title: 'Paint the buoy', projects: [], url: 'https://github.com/example-owner/harness/pull/14', afterLanding: { steps: [], landingOrder: null } }],
     });
     attention.follow(withMore, 3);
     attention.follow(withMore, 3);

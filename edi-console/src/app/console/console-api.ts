@@ -45,6 +45,10 @@ export class ConsoleApi {
     return this.http.post(`/api/decisions/${decision}/recheck`, { note }, { headers: CONSOLE_REQUEST, responseType: 'text' });
   }
 
+  tick(call: string): Observable<string> {
+    return this.http.post(`/api/calls/${encodeURIComponent(call)}/tick`, null, { headers: CONSOLE_REQUEST, responseType: 'text' });
+  }
+
   choosePresence(mode: PresenceChoice): Observable<string> {
     return this.http.post('/api/presence', { mode }, { headers: CONSOLE_REQUEST, responseType: 'text' });
   }
