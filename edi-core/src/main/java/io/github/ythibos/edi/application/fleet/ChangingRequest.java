@@ -15,6 +15,10 @@ public record ChangingRequest(Task task, Delivery delivery, boolean workerBackAt
         unacknowledgedSteers = List.copyOf(unacknowledgedSteers);
     }
 
+    public boolean wasMarkedReady() {
+        return !delivery.draft();
+    }
+
     public String whyChanging() {
         return Stream.of(workerStillAtWork(), stillADraft(), pipelineStillChanging(), checksFailing(), steersStillWaiting()).flatMap(Optional::stream).collect(Collectors.joining("; "));
     }

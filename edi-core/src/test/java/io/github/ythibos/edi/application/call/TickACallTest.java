@@ -104,6 +104,18 @@ class TickACallTest {
     }
 
     @Test
+    void listsTheNextRequestOfATaskAgainOnceItSettlesAlthoughTheEarlierOneWasTicked() {
+        home.addTask().add(ship("fit-lamp", "Fit the lamp"), Actor.PRIMARY);
+        home.deliveries().save(Delivery.of(LAMP, request(MergeRequestState.CLOSED), MAIN, TestHome.START));
+        home.tickACall().tick(CallKey.parse("review:fit-lamp"), Actor.CAPTAIN);
+
+        home.deliveries().save(Delivery.of(LAMP, nextRequest(), MAIN, TestHome.START.plus(Duration.ofHours(1))));
+
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().reviews()).extracting(settled -> settled.delivery().address().number())
+                .containsExactly(8);
+    }
+
+    @Test
     void keepsAnEndedBoardDealtWithUntilItIsTicked() {
         home.addTask().add(ship("lantern", "Rework the lantern"), Actor.PRIMARY);
         Board armed = home.boards().arm(new TaskId("lantern"), directory.resolve("board.html").toString(), BoardRounds.asking(2), TestHome.START);
@@ -126,6 +138,12 @@ class TickACallTest {
     private void answerTheLampDecision() {
         home.answerDecision().answer(new TaskReference.ByDecision(new DecisionNumber(58)),
                 new GivenAnswer("A: the simple way", new OptionKey('A'), "", AnswerChannel.CONSOLE), Actor.CAPTAIN);
+    }
+
+    private static MergeRequestView nextRequest() {
+        MergeRequestAddress next = new MergeRequestAddress(REQUEST.repository(), 8);
+        return new MergeRequestView(next, MergeRequestState.MERGED, false, "feature/HRN-3", "main", "abc124", HeadChecks.PASSED, "def457",
+                TestHome.START.plus(Duration.ofHours(1)));
     }
 
     private static MergeRequestView request(MergeRequestState state) {

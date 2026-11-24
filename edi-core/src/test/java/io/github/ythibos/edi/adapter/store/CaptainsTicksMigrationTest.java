@@ -45,7 +45,7 @@ class CaptainsTicksMigrationTest {
 
         assertThat(decisions.answeredAwaitingTheirTick()).extracting(decision -> decision.number().toString()).containsExactly("D59");
 
-        new CallTickStore(jdbc).tick(new CallKey.OfADecision(new DecisionNumber(59)), Instant.parse("2026-11-25T09:05:00Z"));
+        new CallTickStore(jdbc).tick(new CallKey.OfADecision(new DecisionNumber(59)), null, Instant.parse("2026-11-25T09:05:00Z"));
 
         assertThat(decisions.answeredAwaitingTheirTick()).isEmpty();
     }

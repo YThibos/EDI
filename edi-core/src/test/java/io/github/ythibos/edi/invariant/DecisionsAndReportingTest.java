@@ -436,9 +436,9 @@ class DecisionsAndReportingTest {
 
         @Test
         @Tag("adapter")
-        @DisplayName("AT-19 a request whose pipeline still runs or whose steer waits unacknowledged after its done reads as ongoing, coming back"
-                + " to the captain with the reason, never as ready or as waiting on the captain")
-        void aRequestStillChangingAfterItsDoneReadsAsOngoing() throws IOException {
+        @DisplayName("AT-19 a request marked ready whose pipeline runs again or whose steer waits unacknowledged after its done reads as ongoing,"
+                + " coming back to the captain with the reason, and the turn report alone tells the captain to hold its merge")
+        void aRequestChangingAgainAfterItsDoneReadsAsOngoingAndHoldsTheMergeInTheTurnReport() throws IOException {
             TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
             Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
             home.deliveries().save(Delivery.of(worker.id().task(), request(MergeRequestState.OPEN), new BaseBranch("main"), TestHome.START));
@@ -458,7 +458,8 @@ class DecisionsAndReportingTest {
             String comingBack = "changing, back to you when it is ready (pipeline review; steer 1 not acknowledged) - " + REQUEST;
             assertThat(report).contains("nothing open").doesNotContain("Ready for your review").doesNotContain("hold the merge");
             assertThat(onlyTheOngoingOf(report)).contains("Work on fit-lamp").contains("changing, back to you when it is ready");
-            assertThat(turn).doesNotContain("fit-lamp").doesNotContain(REQUEST);
+            assertThat(turn.replaceAll("\n║ *", " ")).contains("Hold the merge, changing again: Work on fit-lamp (pipeline review; steer 1 not acknowledged) - "
+                    + REQUEST).contains("nothing open");
             assertThat(brief).contains("Needs your decision (0)\n").contains("Running (1)\n  Work on fit-lamp: " + comingBack + "\n");
             assertThat(digest).contains("Waiting on the captain (0)\n")
                     .contains("Ongoing, back to the captain when ready (1)\n  changing  fit-lamp  " + REQUEST + "  pipeline review; steer 1 not acknowledged\n");
@@ -504,12 +505,33 @@ class DecisionsAndReportingTest {
             assertThat(fixingDigest).contains("changing  fit-lamp  " + REQUEST + "  pipeline ci\n");
         }
 
+        @Test
+        @Tag("adapter")
+        @DisplayName("AT-19 a request still a draft after its done was never shown as ready, so it reads as ongoing and stays out of the turn report")
+        void aDraftStillChangingAfterItsDoneStaysOutOfTheTurnReport() throws IOException {
+            TestHome home = TestHome.in(directory).registering(Intakes.REGISTRY);
+            Worker worker = WorkerFixtures.servingWorkerOn(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"), CategoryId.IMPLEMENTATION);
+            home.deliveries().save(Delivery.of(worker.id().task(), draftRequest(), new BaseBranch("main"), TestHome.START));
+            home.workers().update(home.workers().get(worker.id()).orElseThrow().reported(new StatusReport(StatusState.DONE, null, null, "Fitted."), TestHome.START));
+
+            String turn = turnReport(home, UUID.randomUUID());
+            ConsoleSitrep onTheConsole = consoleSitrep(home);
+
+            assertThat(turn).doesNotContain("fit-lamp").doesNotContain(REQUEST);
+            assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::comingBack).containsExactly("still a draft");
+        }
+
         private static String digestOf(TestHome home) {
             return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
         }
 
         private static MergeRequestView request(MergeRequestState state) {
             return request(state, "main");
+        }
+
+        private static MergeRequestView draftRequest() {
+            MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
+            return new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "abc123", HeadChecks.UNDECIDED, null, null);
         }
 
         private static MergeRequestView request(MergeRequestState state, String target) {

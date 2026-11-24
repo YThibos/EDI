@@ -46,15 +46,15 @@ public class TickACall {
 
     public CallKey tick(CallKey call, Actor actor) {
         return transaction.execute(_ -> {
-            TaskId task = taskOfTheDealtWith(call);
+            DealtWithCall dealtWith = dealtWith(call);
             Instant now = clock.now();
-            ticks.tick(call, now);
-            events.record(new CallTicked(task, call), actor, now);
+            ticks.tick(call, dealtWith.request(), now);
+            events.record(new CallTicked(dealtWith.task(), call), actor, now);
             return call;
         });
     }
 
-    private TaskId taskOfTheDealtWith(CallKey call) {
+    private DealtWithCall dealtWith(CallKey call) {
         return switch (call) {
             case CallKey.OfADecision decision -> answered(decisions.get(decision.number()), call);
             case CallKey.OfABoard board -> ended(boards.get(board.board()).orElseThrow(() -> new UnknownCall(call)), call);
@@ -62,28 +62,31 @@ public class TickACall {
         };
     }
 
-    private static TaskId answered(Decision decision, CallKey call) {
+    private static DealtWithCall answered(Decision decision, CallKey call) {
         if (decision.isOpen()) {
             throw stillWaiting(call, "it is not answered yet");
         }
-        return decision.task();
+        return new DealtWithCall(decision.task(), null);
     }
 
-    private static TaskId ended(Board board, CallKey call) {
+    private static DealtWithCall ended(Board board, CallKey call) {
         if (board.isListening()) {
             throw stillWaiting(call, "the board still listens");
         }
-        return board.task();
+        return new DealtWithCall(board.task(), null);
     }
 
-    private static TaskId settled(Delivery delivery, CallKey call) {
+    private static DealtWithCall settled(Delivery delivery, CallKey call) {
         if (delivery.isOpen()) {
             throw stillWaiting(call, "its request is still open");
         }
-        return delivery.task();
+        return new DealtWithCall(delivery.task(), delivery.address().url());
     }
 
     private static Refusal stillWaiting(CallKey call, String because) {
         return new Refusal(Rule.TICKED_WHEN_DEALT_WITH, call + " still waits on the captain, since " + because + "; it can be ticked once it is dealt with.");
+    }
+
+    private record DealtWithCall(TaskId task, String request) {
     }
 }

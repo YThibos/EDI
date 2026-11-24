@@ -89,7 +89,7 @@ class TurnReportNamingTest {
     @Test
     void isNamedOnlyWhenTheReplySaysEveryRecordedItemInItsOwnWords() {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(new TurnItem(List.of(), "Choose the paint")), Map.of());
-        TurnReport report = new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), turn, WIDTH, null, null, null);
+        TurnReport report = new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(), List.of()), turn, WIDTH, null, null, null);
 
         assertThat(report.isNamedIn(Reply.of("I **fitted the  lamp bracket**.\nNext: choose the paint."))).isTrue();
         assertThat(report.isNamedIn(Reply.of("I fitted the lamp bracket."))).isFalse();
@@ -102,7 +102,7 @@ class TurnReportNamingTest {
     private TurnReport report(Turn turn, List<WorkerQuestion> questions) {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
         ReadyForReview ready = new ReadyForReview(fitting, new Delivery(fitting.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, null, NOW, NOW));
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp), lamp, false)), List.of(), List.of(ready), questions);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp), lamp, false)), List.of(), List.of(ready), questions, List.of());
         return new TurnReport(waiting, turn, WIDTH, null, null, null);
     }
 

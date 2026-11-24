@@ -57,6 +57,10 @@ public final class WaitingWords {
                 + " once " + stackedRequest.stackedOn() + " lands on the base and its worker is stopped, edi cleanup " + stackedRequest.task() + " retires it";
     }
 
+    public static String changingAgain(String task, String address, String why, String stackedOn) {
+        return "Hold the merge, changing again: " + task + " (" + why + ") - " + address + targeting(stackedOn);
+    }
+
     public static String inTheRound(String closesAt) {
         return "waits in the console for your round at " + closesAt;
     }

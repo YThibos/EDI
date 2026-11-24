@@ -102,7 +102,7 @@ final class CaptainFacingStrings {
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(), null, NOW, null)));
         views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(fleet.waiting(), Turn.NONE, ReportWidth.standard(), null, NOW,
                 new DecisionRound(NOW, fleet.waiting().decisions().stream().map(open -> open.decision().number()).toList()))));
-        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), Turn.NONE,
+        views.add(PresenterFixtures.turnReportPresenter().text(new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(), List.of()), Turn.NONE,
                 ReportWidth.standard(), null, NOW, null)));
         views.add(JSON.writeValueAsString(PresenterFixtures.sitrepConsolePresenter().present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT,
                 Presence.presentSince(NOW).demo(NOW, NOW.plus(Duration.ofHours(1))), _ -> Map.of(), _ -> Map.of())));

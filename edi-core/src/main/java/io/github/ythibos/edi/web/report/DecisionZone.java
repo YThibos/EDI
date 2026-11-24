@@ -72,6 +72,8 @@ final class DecisionZone {
             case InTheRound inTheRound -> inTheRoundLines(inTheRound, boxWidth);
             case BoardQuestions board -> boardLines(board, boxWidth);
             case Review review -> singleLine(WaitingWords.review(review.title(), review.url(), review.stackedOn()), boxWidth);
+            case ChangingAgain changing -> singleLine(WaitingWords.changingAgain(changing.title(), changing.url(), changing.why(), changing.stackedOn()),
+                    boxWidth);
             case WorkerWaiting worker -> singleLine(WaitingWords.workerQuestion(worker.title(), worker.question(), worker.waited()), boxWidth);
         };
     }
@@ -177,6 +179,14 @@ final class DecisionZone {
     }
 
     record Review(ProjectSet projects, String title, String url, String stackedOn) implements Entry {
+    }
+
+    record ChangingAgain(ProjectSet projects, String title, String url, String why, String stackedOn) implements Entry {
+
+        @Override
+        public int open() {
+            return 0;
+        }
     }
 
     record WorkerWaiting(ProjectSet projects, String title, String question, Duration waited) implements Entry {

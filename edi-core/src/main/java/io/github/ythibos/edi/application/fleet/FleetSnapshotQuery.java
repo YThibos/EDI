@@ -88,7 +88,7 @@ public class FleetSnapshotQuery {
         List<OpenDecision> open = decisionsOf(openDecisions);
         List<WaitingBoard> waitingBoards = waitingBoards(open);
         return new WaitingOnTheCaptain(boundToNoWaitingBoard(open, waitingBoards), waitingBoards, readyForReviewAmong(handedOver),
-                questionsOfWorkersAmong(inFlight, now));
+                questionsOfWorkersAmong(inFlight, now), changingAgainAmong(handedOver));
     }
 
     private DealtWith dealtWith() {
@@ -175,6 +175,10 @@ public class FleetSnapshotQuery {
 
     private static List<ReadyForReview> readyForReviewAmong(List<HandedOverRequest> handedOver) {
         return handedOver.stream().filter(HandedOverRequest::isSettled).map(HandedOverRequest::readyForReview).toList();
+    }
+
+    private static List<ChangingRequest> changingAgainAmong(List<HandedOverRequest> handedOver) {
+        return stillChangingAmong(handedOver).stream().filter(ChangingRequest::wasMarkedReady).toList();
     }
 
     private static List<ChangingRequest> stillChangingAmong(List<HandedOverRequest> handedOver) {

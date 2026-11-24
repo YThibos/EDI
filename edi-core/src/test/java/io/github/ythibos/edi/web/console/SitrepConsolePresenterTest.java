@@ -69,7 +69,7 @@ class SitrepConsolePresenterTest {
     private static final Instant NOW = PresenterFixtures.AT.plusSeconds(3_600);
     private static final MergeRequestAddress DRAFT = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 12);
 
-    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of());
+    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(), List.of());
 
     private final SitrepConsolePresenter presenter = PresenterFixtures.sitrepConsolePresenter();
 
@@ -167,7 +167,7 @@ class SitrepConsolePresenterTest {
         Task lamp = ship("fit-lamp", "Fit the lamp");
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 2, NOW, null, null);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of())),
-                List.of(new ReadyForReview(lamp, delivery(lamp))), List.of());
+                List.of(new ReadyForReview(lamp, delivery(lamp))), List.of(), List.of());
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
@@ -181,7 +181,7 @@ class SitrepConsolePresenterTest {
     void namesTheWorkADecisionStopsWhenItsWorkerWaitsForIt() {
         Task horn = keyed(ship("horn", "EDI-31 Tune the horn"), "EDI-31");
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), horn, true)), List.of(),
-                List.of(), List.of());
+                List.of(), List.of(), List.of());
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
@@ -193,7 +193,7 @@ class SitrepConsolePresenterTest {
         Task lamp = ship("fit-lamp", "Fit the lamp");
         Task bell = ship("bell", "Polish the bell");
         Delivery merged = new Delivery(bell.id(), DRAFT, false, "abc123", HeadChecks.PASSED, MergeRequestState.MERGED, "def456", null, NOW, NOW);
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(new ReadyForReview(lamp, delivery(lamp))), List.of());
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(new ReadyForReview(lamp, delivery(lamp))), List.of(), List.of());
         DealtWith settled = new DealtWith(List.of(), List.of(), List.of(new DealtWith.SettledRequest(bell, merged)));
         DeliveryNote note = new DeliveryNote(List.of("Run edi up."), "Merges after #329.");
         List<TaskId> asked = new ArrayList<>();
@@ -264,7 +264,7 @@ class SitrepConsolePresenterTest {
         Instant asked = NOW.minus(Duration.ofMinutes(20));
         Worker gated = workerOn(horn).reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("pitch"), null, "Which pitch?"), asked);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
-                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20))));
+                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20))), List.of());
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
@@ -326,7 +326,7 @@ class SitrepConsolePresenterTest {
     }
 
     private static WaitingOnTheCaptain theLampDecision() {
-        return new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem(), false)), List.of(), List.of(), List.of());
+        return new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem(), false)), List.of(), List.of(), List.of(), List.of());
     }
 
     private ConsoleSitrep presented(FleetSnapshot fleet) {
