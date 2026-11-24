@@ -37,7 +37,7 @@ class PlanStandingsText implements TextPresenter<PlanStandings> {
         table.line(heading.key() + " plan: " + heading.title())
                 .line("Project: " + heading.project())
                 .line("Report: " + heading.report())
-                .line("Go: " + heading.go())
+                .line("Go: " + heading.go().words())
                 .line("Capacity: " + Words.quantity(heading.capacity(), "slice") + " at once");
         if (heading.effort() != null) {
             table.line("Effort: " + heading.effort().word());

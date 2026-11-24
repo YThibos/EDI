@@ -6,20 +6,31 @@ import static org.assertj.core.api.Assertions.tuple;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.decision.GivenAnswer;
+import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
+import io.github.ythibos.edi.domain.authority.Citation;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
 import io.github.ythibos.edi.domain.plan.PlanDraft;
+import io.github.ythibos.edi.domain.plan.PlanGo;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.SliceDraft;
 import io.github.ythibos.edi.domain.plan.SliceWait;
 import io.github.ythibos.edi.domain.presence.Mandate;
 import io.github.ythibos.edi.domain.presence.Presence;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -28,10 +39,12 @@ import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -49,7 +62,7 @@ class DispatchEligibleSlicesTest {
     @Test
     void dispatchesTwoOfThreeEligibleSlicesWithinACapacityOfTwoAndTheThirdOnceOneIsDelivered() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
-        home.addPlan().add(threeSlices(2, NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+        home.addPlan().add(threeSlices(2, promoteChosen(home), NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
 
         List<SliceDispatched> firstRound = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
         List<SliceDispatched> whileBothWork = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
@@ -70,7 +83,7 @@ class DispatchEligibleSlicesTest {
     @Test
     void dispatchesNeitherAHeldSliceNorOneWhoseWaitIsNotMet() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
-        home.addPlan().add(threeSlices(2, new SliceWait.After(1, AwaitedStage.MERGED), NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+        home.addPlan().add(threeSlices(2, promoteChosen(home), new SliceWait.After(1, AwaitedStage.MERGED), NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
         home.tasks().update(home.tasks().get(OIL_GATE).held(new CaptainHold(HoldKind.APPROVAL, "the gate needs a yes", HoldUntil.captainsWord(),
                 TestHome.START)));
 
@@ -93,7 +106,7 @@ class DispatchEligibleSlicesTest {
                     base: main
                     capacity: 1
                 """);
-        home.addPlan().add(threeSlices(1, NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+        home.addPlan().add(threeSlices(1, promoteChosen(home), NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
         WorkerFixtures.dispatchedShip(home, "fit-horn", "HRN-3");
 
         List<SliceDispatched> whileTheProjectIsFull = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
@@ -107,7 +120,7 @@ class DispatchEligibleSlicesTest {
     @Test
     void dispatchesNothingWhileTheCaptainIsAwayAndTheWorkersAreAtTheirCap() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
-        home.addPlan().add(threeSlices(2, NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+        home.addPlan().add(threeSlices(2, promoteChosen(home), NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
         home.presenceStore().save(Presence.presentSince(TestHome.START).away(new Mandate("Carry on with the lamp.", 0), TestHome.START));
 
         List<SliceDispatched> whileAway = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
@@ -120,7 +133,7 @@ class DispatchEligibleSlicesTest {
     @Test
     void tellsThePrimaryOnceOfASliceItCannotDispatchAndGivesItsPlaceToTheNextEligibleSlice() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
-        home.addPlan().add(threeSlices(2, NONE, NONE, new CategoryId("tidying")), Actor.PRIMARY);
+        home.addPlan().add(threeSlices(2, promoteChosen(home), NONE, NONE, new CategoryId("tidying")), Actor.PRIMARY);
         DispatchEligibleSlices eligibleSlices = home.dispatchEligibleSlices();
 
         List<SliceDispatched> firstRound = eligibleSlices.dispatchWhereThePlansHaveRoom();
@@ -132,13 +145,79 @@ class DispatchEligibleSlicesTest {
         assertThat(wakesOf(home, WakeKind.SLICE_NOT_DISPATCHED)).extracting(Wake::task).containsExactly(PAINT_LAMP);
     }
 
-    private static PlanDraft threeSlices(int capacity, SliceWait paintWaits, SliceWait gateWaits, CategoryId paintCategory) {
+    @Test
+    void dispatchesNothingUntilTheCaptainAnswersThePlansDecisionWithPromoteAndSaysWhyOnce() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory);
+        DecisionNumber go = raisedOnTheSurvey(home);
+        home.addPlan().add(threeSlices(2, new PlanGo.AnsweredDecision(go), NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+        DispatchEligibleSlices eligibleSlices = home.dispatchEligibleSlices();
+
+        List<SliceDispatched> beforeTheAnswer = eligibleSlices.dispatchWhereThePlansHaveRoom();
+        List<SliceDispatched> stillBeforeIt = eligibleSlices.dispatchWhereThePlansHaveRoom();
+        answersPromote(home, go);
+        List<SliceDispatched> afterTheAnswer = eligibleSlices.dispatchWhereThePlansHaveRoom();
+
+        assertThat(beforeTheAnswer).isEmpty();
+        assertThat(stillBeforeIt).isEmpty();
+        assertThat(wakesOf(home, WakeKind.SLICE_NOT_DISPATCHED)).extracting(Wake::task, Wake::detail).containsExactly(tuple(FIT_LAMP,
+                "1 of the HRN-40 plan: The plan HRN-40 dispatches no slice by itself, as its go cites D1, which the captain has not answered with an option"
+                        + " that authorises promote; a plan's go is a decision the captain answered with an option that authorises promote, or a message"
+                        + " the captain typed, cited when the plan is entered."));
+        assertThat(afterTheAnswer).extracting(SliceDispatched::task).containsExactly(FIT_LAMP, PAINT_LAMP);
+    }
+
+    @Test
+    void dispatchesNothingForAPlanWhoseGoCitesNoStoredWordOfTheCaptain() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory);
+        home.addPlan().add(threeSlices(2, PlanGo.named("Q13 A, in chat"), NONE, NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
+
+        List<SliceDispatched> dispatched = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
+
+        assertThat(dispatched).isEmpty();
+        assertThat(home.dispatches().of(FIT_LAMP)).isEmpty();
+        assertThat(wakesOf(home, WakeKind.SLICE_NOT_DISPATCHED)).extracting(Wake::detail).singleElement().asString()
+                .contains("its go, \"Q13 A, in chat\", cites no stored word of the captain");
+    }
+
+    @Test
+    void dispatchesAPlanWhoseGoIsAMessageTheCaptainTyped() throws IOException {
+        TestHome home = WorkerFixtures.homeWithProjects(directory);
+        UUID session = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(session, "Ship the harbour plan, every slice of it.");
+        home.addPlan().add(threeSlices(2, PlanGo.named("the captain's go in chat"), NONE, NONE, CategoryId.IMPLEMENTATION), new Citation.WholeMessage(1),
+                new CallingSession(session), Actor.PRIMARY);
+
+        List<SliceDispatched> dispatched = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();
+
+        assertThat(home.plans().get(WorkKey.parse("HRN-40")).heading().go()).isEqualTo(new PlanGo.CitedMessage(session, 1, "the captain's go in chat"));
+        assertThat(dispatched).extracting(SliceDispatched::task).containsExactly(FIT_LAMP, PAINT_LAMP);
+    }
+
+    private static PlanDraft threeSlices(int capacity, PlanGo go, SliceWait paintWaits, SliceWait gateWaits, CategoryId paintCategory) {
         PlanHeading heading = new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"), "docs/research/HRN-40-plan.md",
-                "D44", capacity, null);
+                go, capacity, null);
         return new PlanDraft(heading, List.of(
                 new SliceDraft(1, "Fit the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-41"), "Use the brass fittings.", NONE),
                 new SliceDraft(2, "Paint the lamp", paintCategory, WorkKey.parse("HRN-42"), "", paintWaits),
                 new SliceDraft(3, "Oil the gate", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-43"), "", gateWaits)));
+    }
+
+    private static PlanGo promoteChosen(TestHome home) {
+        DecisionNumber go = raisedOnTheSurvey(home);
+        answersPromote(home, go);
+        return new PlanGo.AnsweredDecision(go);
+    }
+
+    private static DecisionNumber raisedOnTheSurvey(TestHome home) {
+        home.storing(List.of(WorkerFixtures.queued("survey-harbour", TaskKind.SCOUT, "harness", "HRN-39")));
+        return home.raiseDecision().raise(TaskReference.parse("survey-harbour"), Cards.authorising("Ship the harbour plan?", CaptainWordAct.PROMOTE),
+                Actor.PRIMARY);
+    }
+
+    private static void answersPromote(TestHome home, DecisionNumber go) {
+        home.answerDecision().answer(new TaskReference.ByDecision(go), new GivenAnswer("A: ship the plan", new OptionKey('A'), "", AnswerChannel.CONSOLE),
+                Actor.CAPTAIN);
     }
 
     private static void delivers(TestHome home, TaskId slice) throws IOException {

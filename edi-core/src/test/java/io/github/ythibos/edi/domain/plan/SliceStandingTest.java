@@ -56,7 +56,7 @@ class SliceStandingTest {
     @Test
     void namesTheUnmetWaitsOfItsTaskBesideThePlansOwnWait() {
         Plan plan = new Plan(new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"), "docs/research/HRN-40-plan.md",
-                "D44", 2, null), List.of(new Slice(1, FIT_LAMP, CategoryId.IMPLEMENTATION, new SliceWait.None()), PAINT));
+                PlanGo.named("D44"), 2, null), List.of(new Slice(1, FIT_LAMP, CategoryId.IMPLEMENTATION, new SliceWait.None()), PAINT));
         Wait onItsScout = Wait.afterLanded(PLAN_THE_PAINT, TaskStage.QUEUED);
         Wait onALandedTask = Wait.afterLanded(new TaskId("oil-gate"), TaskStage.RETIRED);
 
@@ -75,6 +75,6 @@ class SliceStandingTest {
     }
 
     private static SliceStanding standing(Task task, Wait... waits) {
-        return new SliceStanding(PAINT, task, List.of(waits));
+        return new SliceStanding(PAINT, task, List.of(waits), false);
     }
 }

@@ -25,6 +25,7 @@ import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.plan.PlanDraft;
+import io.github.ythibos.edi.domain.plan.PlanGo;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.SliceDraft;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -203,7 +204,7 @@ class DispatchTaskTest {
     @Test
     void refusesASliceUntilTheSliceItWaitsForIsMergedAndThenLaunchesIt() throws IOException {
         home.addPlan().add(new PlanDraft(new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"),
-                "docs/research/HRN-40-plan.md", "D44", 1, null), List.of(
+                "docs/research/HRN-40-plan.md", PlanGo.named("D44"), 1, null), List.of(
                         new SliceDraft(1, "Fit the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-41"), "", null),
                         new SliceDraft(2, "Paint the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-42"), "", null))), Actor.PRIMARY);
 

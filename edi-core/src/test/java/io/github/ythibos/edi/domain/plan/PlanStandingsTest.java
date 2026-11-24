@@ -38,18 +38,26 @@ class PlanStandingsTest {
     }
 
     @Test
+    void keepsTheirPlacesForSlicesDispatchedAndStillQueuedWhetherDeferredOrWaitingOnTheirResearch() {
+        SliceStanding dispatchedAndQueued = new SliceStanding(sliceNumbered(1), task(1, TaskStage.QUEUED), List.of(), true);
+
+        assertThat(planOf(2, dispatchedAndQueued, at(2, TaskStage.WORKING), queued(3)).freePlaces()).isZero();
+        assertThat(planOf(2, queued(1), at(2, TaskStage.WORKING), queued(3)).freePlaces()).isEqualTo(1);
+    }
+
+    @Test
     void namesTheEligibleSlicesInTheirOrderAndNeverAHeldSliceOrOneWhoseWaitIsNotMet() {
         SliceStanding held = new SliceStanding(sliceNumbered(1), task(1, TaskStage.QUEUED)
-                .held(new CaptainHold(HoldKind.APPROVAL, "needs a yes", HoldUntil.captainsWord(), AT)), List.of());
+                .held(new CaptainHold(HoldKind.APPROVAL, "needs a yes", HoldUntil.captainsWord(), AT)), List.of(), false);
         SliceStanding waiting = new SliceStanding(sliceNumbered(2), task(2, TaskStage.QUEUED),
-                List.of(new Wait(new TaskId("slice-1"), AwaitedStage.MERGED, TaskStage.QUEUED)));
+                List.of(new Wait(new TaskId("slice-1"), AwaitedStage.MERGED, TaskStage.QUEUED)), false);
 
         assertThat(numbers(planOf(3, held, waiting, queued(3), at(4, TaskStage.WORKING), queued(5)).eligible())).containsExactly(3, 5);
     }
 
     private static PlanStandings planOf(int capacity, SliceStanding... slices) {
         PlanHeading heading = new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"), "docs/research/HRN-40-plan.md",
-                "D44", capacity, null);
+                PlanGo.named("D44"), capacity, null);
         List<SliceStanding> standings = List.of(slices);
         return new PlanStandings(new Plan(heading, standings.stream().map(SliceStanding::slice).toList()), standings);
     }
@@ -59,7 +67,7 @@ class PlanStandingsTest {
     }
 
     private static SliceStanding at(int number, TaskStage stage) {
-        return new SliceStanding(sliceNumbered(number), task(number, stage), List.of());
+        return new SliceStanding(sliceNumbered(number), task(number, stage), List.of(), false);
     }
 
     private static Slice sliceNumbered(int number) {

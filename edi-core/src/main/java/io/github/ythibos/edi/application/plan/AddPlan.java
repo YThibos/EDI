@@ -15,6 +15,8 @@ import io.github.ythibos.edi.application.task.AddTask;
 import io.github.ythibos.edi.application.task.CheckedTask;
 import io.github.ythibos.edi.application.task.NewTask;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.SlicePlanned;
 import io.github.ythibos.edi.domain.plan.Plan;
@@ -32,19 +34,26 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 public class AddPlan {
 
     private final AddTask addTask;
+    private final CaptainsGo captainsGo;
     private final PlanStore plans;
     private final EventLog events;
     private final ProjectRegistry registry;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public AddPlan(AddTask addTask, PlanStore plans, EventLog events, ProjectRegistry registry, Clock clock, TransactionTemplate transaction) {
+    public AddPlan(AddTask addTask, CaptainsGo captainsGo, PlanStore plans, EventLog events, ProjectRegistry registry, Clock clock,
+            TransactionTemplate transaction) {
         this.addTask = addTask;
+        this.captainsGo = captainsGo;
         this.plans = plans;
         this.events = events;
         this.registry = registry;
         this.clock = clock;
         this.transaction = transaction;
+    }
+
+    public Plan add(PlanDraft draft, Citation goMessage, CallingSession calling, Actor actor) {
+        return add(draft.goingBy(captainsGo.citedBy(goMessage, calling, draft.heading().go())), actor);
     }
 
     public Plan add(PlanDraft draft, Actor actor) {

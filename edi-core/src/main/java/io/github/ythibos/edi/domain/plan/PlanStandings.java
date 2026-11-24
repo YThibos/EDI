@@ -13,6 +13,6 @@ public record PlanStandings(Plan plan, List<SliceStanding> slices) {
     }
 
     public long freePlaces() {
-        return Math.max(0, plan.heading().capacity() - slices.stream().filter(SliceStanding::isWorking).count());
+        return Math.max(0, plan.heading().capacity() - slices.stream().filter(SliceStanding::takesAPlace).count());
     }
 }

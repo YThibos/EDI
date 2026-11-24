@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.github.ythibos.edi.adapter.store.DispatchStore;
 import io.github.ythibos.edi.adapter.store.PlanStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.domain.plan.Plan;
@@ -19,11 +20,13 @@ public class PlanQuery {
 
     private final PlanStore plans;
     private final TaskStore tasks;
+    private final DispatchStore dispatches;
     private final TransactionTemplate transaction;
 
-    public PlanQuery(PlanStore plans, TaskStore tasks, TransactionTemplate transaction) {
+    public PlanQuery(PlanStore plans, TaskStore tasks, DispatchStore dispatches, TransactionTemplate transaction) {
         this.plans = plans;
         this.tasks = tasks;
+        this.dispatches = dispatches;
         this.transaction = transaction;
     }
 
@@ -40,6 +43,6 @@ public class PlanQuery {
 
     private SliceStanding standingOf(Slice slice) {
         Task task = tasks.get(slice.task());
-        return new SliceStanding(slice, task, tasks.waitsOf(task));
+        return new SliceStanding(slice, task, tasks.waitsOf(task), dispatches.of(task.id()).isPresent());
     }
 }
