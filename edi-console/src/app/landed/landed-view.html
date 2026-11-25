@@ -1,0 +1,25 @@
+<app-console-header
+  view="Landed"
+  [generated]="reading.sitrep()?.generated ?? null"
+  [zone]="reading.sitrep()?.zone ?? null"
+  [machine]="reading.sitrep()?.machine ?? null"
+  [presence]="reading.sitrep()?.presence ?? null"
+  [waiting]="reading.waiting()"
+  [landed]="reading.sitrep()?.landedTotal ?? 0"
+  [showsPersonality]="false"
+  (presenceChosen)="reading.choosePresence($event)"
+  (awayChosen)="reading.goAway($event)"
+/>
+<main class="sr-main">
+  <app-access-notice [access]="reading.access()">
+    @if (reading.sitrep(); as sitrep) {
+      <section class="sr-section">
+        <div class="sr-section__head">
+          <h2 class="sr-sign">Recently landed</h2>
+          <span class="sr-sub">the last seven days</span>
+        </div>
+        <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" />
+      </section>
+    }
+  </app-access-notice>
+</main>

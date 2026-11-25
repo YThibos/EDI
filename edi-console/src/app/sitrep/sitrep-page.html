@@ -6,6 +6,7 @@
   [presence]="reading.sitrep()?.presence ?? null"
   [personalityOpen]="personalityOpen()"
   [waiting]="reading.waiting()"
+  [landed]="reading.sitrep()?.landedTotal ?? 0"
   (presenceChosen)="reading.choosePresence($event)"
   (awayChosen)="reading.goAway($event)"
   (personalityToggled)="personalityOpen.set(!personalityOpen())"
@@ -16,53 +17,76 @@
     @if (personalityOpen()) {
       <app-personality-desk [demoHolds]="sitrep.presence.demo" (closed)="personalityOpen.set(false)" />
     }
+    @if (limitNotice(); as notice) {
+      <div class="sr-panel sr-notice sr-limit-stop" role="status">
+        <div class="sr-notice__pad">
+          <p class="sr-notice__detail">{{ notice }}</p>
+        </div>
+      </div>
+    }
     <div class="sr-glance">
       <app-hud-strip [needYou]="reading.waiting()" [ongoing]="sitrep.ongoing.length" [landed]="sitrep.landedTotal" [charted]="sitrep.chartedTotal" />
-      <div class="sr-cols">
-        <section class="sr-section">
-          <div class="sr-section__head">
-            <h2 class="sr-sign sr-sign--amber"><span class="sr-sign__no">01</span>Needs your decision</h2>
-            <span class="sr-sub">{{ waitingOnTheCaptain() }}</span>
-          </div>
-          <div class="sr-section__body sr-waiting-on-you">
-            @if (showsTheDeck()) {
-              <app-decision-deck class="sr-section__body" [cards]="deckCards()" [answered]="sitrep.answered" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" (settled)="reading.refresh()" />
-            }
-            @if (sitrep.boards.length || sitrep.reviews.length || sitrep.changing.length || sitrep.workerQuestions.length) {
-              <app-waiting-list
-                class="sr-section__body"
-                [boards]="sitrep.boards"
-                [reviews]="sitrep.reviews"
-                [changing]="sitrep.changing"
-                [workerQuestions]="sitrep.workerQuestions"
-                [generated]="sitrep.generated"
-                [links]="sitrep.links ?? {}"
-              />
-            }
-          </div>
+      <div #cols class="sr-cols" [style.--needs-track]="needsTrack()" [style.--charted-track]="chartedTrack()">
+        <section class="sr-section sr-needs" [class.sr-section--strip]="nothingListed()">
+          @if (nothingListed()) {
+            <div class="sr-strip sr-strip--clear" role="status">
+              <span class="sr-sign sr-sign--amber"><span class="sr-sign__no">01</span></span>
+              <span class="sr-strip__ring">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </span>
+              <span class="sr-strip__words">All ticked off · nothing needs you</span>
+            </div>
+          } @else {
+            <div class="sr-section__head">
+              <h2 class="sr-sign sr-sign--amber"><span class="sr-sign__no">01</span>Needs your decision</h2>
+              <span class="sr-sub">{{ listCount() }}</span>
+            </div>
+            <app-captains-list
+              [entries]="entries()"
+              [zone]="sitrep.zone"
+              [generated]="sitrep.generated"
+              [links]="sitrep.links ?? {}"
+              (settled)="reading.refresh()"
+            />
+          }
         </section>
-        <section class="sr-section">
+        <app-column-border border="needs" label="Resize the decision and ongoing columns" [layout]="columns" [track]="cols" />
+        <section class="sr-section sr-ongoing">
           <div class="sr-section__head">
             <h2 class="sr-sign"><span class="sr-sign__no">02</span>Ongoing</h2>
           </div>
-          <app-ongoing-list class="sr-section__body" [tasks]="sitrep.ongoing" [links]="sitrep.links ?? {}" />
+          <app-ongoing-list
+            [tasks]="sitrep.ongoing"
+            [workerQuestions]="sitrep.workerQuestions"
+            [zone]="sitrep.zone"
+            [generated]="sitrep.generated"
+            [links]="sitrep.links ?? {}"
+          />
         </section>
-        <section class="sr-section">
-          <div class="sr-section__head">
-            <h2 class="sr-sign"><span class="sr-sign__no">03</span>Charted next</h2>
-            <span class="sr-sub">{{ chartedShown() }}</span>
-          </div>
-          <app-charted-list class="sr-section__body" [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" [links]="sitrep.links ?? {}" />
+        <app-column-border border="charted" label="Resize the ongoing and charted columns" [layout]="columns" [track]="cols" />
+        <section class="sr-section sr-charted" [class.sr-section--strip]="columns.chartedFolded()">
+          @if (columns.chartedFolded()) {
+            <button type="button" class="sr-strip sr-strip--fold" aria-label="Show what is charted next" (click)="columns.foldCharted(false)">
+              <span class="sr-sign"><span class="sr-sign__no">03</span></span>
+              <span class="sr-strip__count">{{ sitrep.chartedTotal }}</span>
+              <span class="sr-strip__words">Charted next</span>
+            </button>
+          } @else {
+            <div class="sr-section__head">
+              <h2 class="sr-sign"><span class="sr-sign__no">03</span>Charted next</h2>
+              <span class="sr-section__tools">
+                <span class="sr-sub">{{ chartedShown() }}</span>
+                <button type="button" class="sr-fold" aria-label="Fold what is charted next into a strip" (click)="columns.foldCharted(true)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                </button>
+              </span>
+            </div>
+            <app-charted-list [tasks]="sitrep.charted" [total]="sitrep.chartedTotal" [links]="sitrep.links ?? {}" />
+          }
         </section>
         <router-outlet />
       </div>
     </div>
-    <section class="sr-section">
-      <div class="sr-section__head">
-        <h2 class="sr-sign"><span class="sr-sign__no">04</span>Recently landed</h2>
-      </div>
-      <app-landed-list [tasks]="sitrep.landed" [total]="sitrep.landedTotal" [zone]="sitrep.zone" [links]="sitrep.links ?? {}" />
-    </section>
     <footer class="sr-foot">
       <span class="sr-meta-mono">{{ sitrep.schema }} · {{ shipMoment(sitrep.generated, sitrep.zone) }}</span>
       <span class="sr-meta-mono">{{ reading.live() ? 'live · answers go straight to me' : 'reconnecting · answers go straight to me' }}</span>

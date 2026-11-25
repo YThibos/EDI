@@ -7,6 +7,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,20 +17,23 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.application.fleet.ChangingRequest;
+import io.github.ythibos.edi.application.fleet.DealtWith;
+import io.github.ythibos.edi.application.fleet.DealtWith.SettledRequest;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
-import io.github.ythibos.edi.application.fleet.RecentAnswer;
 import io.github.ythibos.edi.application.fleet.TaskLinks;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WorkerQuestion;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.DeliveryNote;
 import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -40,18 +45,22 @@ import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.AfterLanding;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Answer;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Board;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.BoardDecision;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Card;
-import io.github.ythibos.edi.web.console.ConsoleSitrep.Changing;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Charted;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.DealtWithShown;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Landed;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.LimitStop;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Ongoing;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Option;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.PresenceShown;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Recommendation;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Review;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.SettledBoard;
+import io.github.ythibos.edi.web.console.ConsoleSitrep.SettledReview;
 import io.github.ythibos.edi.web.console.ConsoleSitrep.Question;
 import io.github.ythibos.edi.web.presence.PresenceWords;
 import io.github.ythibos.edi.web.text.WaitingWords;
@@ -63,6 +72,8 @@ public class SitrepConsolePresenter {
     static final int CHARTED_SHOWN = 20;
     private static final String WITHOUT_A_WORKER = "waiting";
     private static final String WITH_ME = "with me";
+    private static final String ON_THE_USAGE_LIMIT = "usage limit";
+    private static final String CHANGING = "changing";
     private static final String AFTER_A_LEADING_KEY = "\\b[\\s:|-]*";
 
     private final PresenceWords presenceWords;
@@ -72,9 +83,10 @@ public class SitrepConsolePresenter {
     }
 
     public ConsoleSitrep present(FleetSnapshot fleet, Instant generated, ZoneId zone, String machine, CaptainAddress address, Presence presence,
-            Function<Collection<Task>, Map<TaskId, TaskLinks>> linksOf) {
+            Function<Collection<Task>, Map<TaskId, TaskLinks>> linksOf, Function<Collection<TaskId>, Map<TaskId, DeliveryNote>> notesOf) {
         List<ChartedTask> chartedTasks = chartedTasksOf(fleet);
         List<Charted> charted = chartedTasks.stream().map(ChartedTask::row).toList();
+        Map<TaskId, DeliveryNote> notes = notesOf.apply(reviewedTasks(fleet));
         return new ConsoleSitrep(
                 ConsoleSitrep.EDI_SITREP_V1,
                 generated,
@@ -82,13 +94,13 @@ public class SitrepConsolePresenter {
                 machine,
                 address.word(),
                 presenceShown(presence, generated),
+                limitStopOf(fleet.ongoing()),
                 fleet.waiting().decisions().stream().map(SitrepConsolePresenter::card).toList(),
                 fleet.waiting().boards().stream().map(SitrepConsolePresenter::board).toList(),
-                fleet.waiting().reviews().stream().map(SitrepConsolePresenter::review).toList(),
-                fleet.waiting().changing().stream().map(SitrepConsolePresenter::changing).toList(),
+                fleet.waiting().reviews().stream().map(ready -> review(ready, notes)).toList(),
                 fleet.waiting().workerQuestions().stream().map(SitrepConsolePresenter::workerQuestion).toList(),
-                fleet.answered().stream().map(SitrepConsolePresenter::answer).toList(),
-                fleet.ongoing().stream().map(SitrepConsolePresenter::ongoing).toList(),
+                dealtWithShown(fleet.dealtWith(), notes),
+                fleet.ongoing().stream().map(ongoing -> ongoing(ongoing, fleet)).toList(),
                 fleet.landed().stream().limit(LANDED_SHOWN).map(SitrepConsolePresenter::landed).toList(),
                 fleet.landed().size(),
                 charted.stream().limit(CHARTED_SHOWN).toList(),
@@ -96,12 +108,37 @@ public class SitrepConsolePresenter {
                 linksShown(linksOf.apply(tasksShown(fleet, chartedTasks))));
     }
 
+    private static List<TaskId> reviewedTasks(FleetSnapshot fleet) {
+        return Stream.concat(fleet.waiting().reviews().stream().map(ReadyForReview::task), fleet.dealtWith().reviews().stream().map(SettledRequest::task))
+                .map(Task::id)
+                .toList();
+    }
+
+    private static LimitStop limitStopOf(List<OngoingTask> ongoing) {
+        List<OngoingTask> stopped = ongoing.stream().filter(standing -> standsOnTheLimit(standing.worker())).toList();
+        if (stopped.isEmpty()) {
+            return null;
+        }
+        Instant firstReset = stopped.stream().map(SitrepConsolePresenter::limitResetOf).filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
+        return new LimitStop(firstReset, stopped.stream().map(standing -> standing.task().id().value()).toList());
+    }
+
+    private static boolean standsOnTheLimit(Worker worker) {
+        return worker != null && !worker.isRetired() && worker.limitPark() != null;
+    }
+
+    private static Instant limitResetOf(OngoingTask ongoing) {
+        return standsOnTheLimit(ongoing.worker()) ? ongoing.worker().limitPark().limit().resetsAt() : null;
+    }
+
     private static List<Task> tasksShown(FleetSnapshot fleet, List<ChartedTask> charted) {
         return Stream.of(
                         fleet.waiting().decisions().stream().map(OpenDecision::task),
                         fleet.waiting().boards().stream().map(WaitingBoard::task),
                         fleet.waiting().reviews().stream().map(ReadyForReview::task),
-                        fleet.waiting().changing().stream().map(ChangingRequest::task),
+                        fleet.dealtWith().decisions().stream().map(DealtWith.Answered::task),
+                        fleet.dealtWith().boards().stream().map(DealtWith.SettledBoard::task),
+                        fleet.dealtWith().reviews().stream().map(SettledRequest::task),
                         fleet.ongoing().stream().map(OngoingTask::task),
                         fleet.landed().stream().limit(LANDED_SHOWN).map(LandedTask::task),
                         charted.stream().limit(CHARTED_SHOWN).map(ChartedTask::task))
@@ -129,12 +166,19 @@ public class SitrepConsolePresenter {
         DecisionCard card = open.decision().card();
         return new Card(open.decision().number().toString(), open.task().id().value(), projectsOf(open.task()), card.title(), card.context(),
                 card.options().stream().map(option -> new Option(option.key().toString(), option.text())).toList(),
-                new Recommendation(card.recommendation().key().toString(), card.recommendation().why()), card.urgent(), open.decision().raisedAt());
+                new Recommendation(card.recommendation().key().toString(), card.recommendation().why()), card.urgent(), open.decision().raisedAt(),
+                open.stopsItsWorker() ? workOf(open.task()) : null);
+    }
+
+    private static String workOf(Task task) {
+        String key = keyOf(task.intake());
+        return key == null ? task.intake().title() : key + " " + titleAfterItsKey(task.intake());
     }
 
     private static Board board(WaitingBoard waiting) {
         Task task = waiting.task();
-        return new Board(task.id().value(), task.intake().title(), projectsOf(task), waiting.board().openQuestions(), waiting.board().link(),
+        return new Board(new CallKey.OfABoard(waiting.board().id()).toString(), task.id().value(), task.intake().title(), projectsOf(task),
+                waiting.board().openQuestions(), waiting.board().link(),
                 waiting.decisions().stream().map(SitrepConsolePresenter::boardDecision).toList());
     }
 
@@ -142,15 +186,15 @@ public class SitrepConsolePresenter {
         return new BoardDecision(open.decision().number().toString(), open.decision().card().title());
     }
 
-    private static Review review(ReadyForReview ready) {
+    private static Review review(ReadyForReview ready, Map<TaskId, DeliveryNote> notes) {
         Task task = ready.task();
-        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url(), ready.delivery().stackedOn());
+        return new Review(task.id().value(), task.intake().title(), projectsOf(task), ready.delivery().address().url(), ready.delivery().stackedOn(),
+                afterLanding(task, notes));
     }
 
-    private static Changing changing(ChangingRequest changing) {
-        Task task = changing.task();
-        return new Changing(task.id().value(), task.intake().title(), projectsOf(task), changing.delivery().address().url(), changing.whyChanging(),
-                changing.delivery().stackedOn());
+    private static AfterLanding afterLanding(Task task, Map<TaskId, DeliveryNote> notes) {
+        DeliveryNote note = notes.getOrDefault(task.id(), DeliveryNote.BLANK);
+        return new AfterLanding(note.stepsAfterLanding(), note.landingOrder());
     }
 
     private static Question workerQuestion(WorkerQuestion waiting) {
@@ -158,17 +202,38 @@ public class SitrepConsolePresenter {
         return new Question(task.id().value(), task.intake().title(), projectsOf(task), waiting.question(), waiting.worker().lastStatus().at());
     }
 
-    private static Answer answer(RecentAnswer recent) {
-        Decision decision = recent.decision();
-        CaptainAnswer answer = decision.answer();
-        return new Answer(decision.number().toString(), recent.task().id().value(), projectsOf(recent.task()), decision.card().title(), answer.verbatim(),
-                answer.choosesAnOption() ? answer.option().toString() : null, answer.channel().word(), answer.answeredAt());
+    private static DealtWithShown dealtWithShown(DealtWith dealtWith, Map<TaskId, DeliveryNote> notes) {
+        return new DealtWithShown(dealtWith.decisions().stream().map(SitrepConsolePresenter::answer).toList(),
+                dealtWith.boards().stream().map(SitrepConsolePresenter::settledBoard).toList(),
+                dealtWith.reviews().stream().map(settled -> settledReview(settled, notes)).toList());
     }
 
-    private static Ongoing ongoing(OngoingTask ongoing) {
+    private static Answer answer(DealtWith.Answered answered) {
+        Decision decision = answered.decision();
+        CaptainAnswer answer = decision.answer();
+        return new Answer(new CallKey.OfADecision(decision.number()).toString(), decision.number().toString(), answered.task().id().value(),
+                projectsOf(answered.task()), decision.card().title(), answer.verbatim(), answer.choosesAnOption() ? answer.option().toString() : null,
+                answer.channel().word(), answer.answeredAt());
+    }
+
+    private static SettledBoard settledBoard(DealtWith.SettledBoard settled) {
+        Task task = settled.task();
+        return new SettledBoard(new CallKey.OfABoard(settled.board().id()).toString(), task.id().value(), task.intake().title(), projectsOf(task),
+                settled.board().link(), WaitingWords.settledBoard(settled.board()));
+    }
+
+    private static SettledReview settledReview(SettledRequest settled, Map<TaskId, DeliveryNote> notes) {
+        Task task = settled.task();
+        return new SettledReview(new CallKey.OfAReview(task.id()).toString(), task.id().value(), task.intake().title(), projectsOf(task),
+                settled.delivery().address().url(), settled.delivery().state().word(), afterLanding(task, notes));
+    }
+
+    private static Ongoing ongoing(OngoingTask ongoing, FleetSnapshot fleet) {
         Task task = ongoing.task();
+        Optional<ChangingRequest> comingBack = fleet.comingBackOf(task.id());
         return new Ongoing(task.id().value(), keyOf(task.intake()), titleAfterItsKey(task.intake()), task.intake().kind().word(), projectsOf(task),
-                stateOf(ongoing.worker()), doingOf(ongoing), draftOf(ongoing.delivery()));
+                stateOf(ongoing.worker(), comingBack), doingOf(ongoing), draftOf(ongoing.delivery()),
+                comingBack.map(ChangingRequest::whyChanging).orElse(null), limitResetOf(ongoing));
     }
 
     private static Landed landed(LandedTask landed) {
@@ -207,9 +272,16 @@ public class SitrepConsolePresenter {
         return Pattern.compile(Pattern.quote(key.toString()) + AFTER_A_LEADING_KEY, Pattern.CASE_INSENSITIVE);
     }
 
+    private static String stateOf(Worker worker, Optional<ChangingRequest> comingBack) {
+        return comingBack.isPresent() ? CHANGING : stateOf(worker);
+    }
+
     private static String stateOf(Worker worker) {
         if (worker == null) {
             return WITHOUT_A_WORKER;
+        }
+        if (standsOnTheLimit(worker)) {
+            return ON_THE_USAGE_LIMIT;
         }
         if (worker.lastStatus() == null) {
             return worker.activity().word();
@@ -233,6 +305,9 @@ public class SitrepConsolePresenter {
         Worker worker = ongoing.worker();
         if (worker == null) {
             return "no worker yet";
+        }
+        if (standsOnTheLimit(worker)) {
+            return "stopped on the " + worker.limitPark().limit().name();
         }
         return worker.lastStatus() == null ? worker.activity().word() : reportedDoing(worker.lastStatus().report());
     }

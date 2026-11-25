@@ -1,0 +1,37 @@
+:host {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  :host {
+    position: relative;
+    display: block;
+    align-self: stretch;
+    cursor: col-resize;
+    touch-action: none;
+    border-radius: var(--radius-xs);
+  }
+
+  :host:focus-visible {
+    outline: none;
+  }
+
+  .sr-border__line {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: transparent;
+    transition: background 120ms, box-shadow 120ms;
+  }
+
+  :host(:hover) .sr-border__line,
+  :host(:focus-visible) .sr-border__line,
+  :host(.sr-border--dragging) .sr-border__line {
+    width: 2px;
+    background: var(--ion-line);
+    box-shadow: 0 0 10px var(--ion-soft);
+  }
+}

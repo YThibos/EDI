@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -60,6 +61,9 @@ public sealed interface DomainEvent {
     }
 
     record DecisionRoundClosed(TaskId task, DecisionNumber number, String title, Instant opened) implements DomainEvent {
+    }
+
+    record CallTicked(TaskId task, CallKey call) implements DomainEvent {
     }
 
     record TaskDone(TaskId task) implements DomainEvent {

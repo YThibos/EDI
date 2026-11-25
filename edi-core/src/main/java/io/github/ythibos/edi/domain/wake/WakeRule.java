@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.CallTicked;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
@@ -146,7 +147,7 @@ public final class WakeRule {
                     sliceOf(dispatched.number(), dispatched.plan()));
             case SliceNotDispatched refused -> wake(WakeKind.SLICE_NOT_DISPATCHED, refused, null,
                     sliceOf(refused.number(), refused.plan()) + ": " + refused.because());
-            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, TaskDone _, StageChanged _, DispatchDeferred _,
+            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, CallTicked _, TaskDone _, StageChanged _, DispatchDeferred _,
                     TaskDispatched _, WorkerStarted _, WorkerRetired _, SteerSent _, SteerReceived _, SteerAcknowledged _, SteerNotReceived _,
                     ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
                     WorkerNotified _, WorkerSessionEnded _, WorkerTurnEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _, RecoveryFailed _,

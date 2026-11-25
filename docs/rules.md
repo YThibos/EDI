@@ -50,6 +50,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `decision.answered-once` | `ArmBoard`, `Decision` | A decision is answered once, and a new question is a new decision. |
 | `decision.captain-voice` | `CaptainVoice` | What reaches the captain speaks in outcomes, not in internal labels (I-22). |
 | `decision.ticket-choice` | `TicketProposal`, `TicketProposals` | The captain's ticket choice is one of the options offered. |
+| `decision.ticked-when-dealt-with` | `TickACall` | An entry leaves the captain's list only when ticked, and is ticked only once it no longer waits. |
 | `dispatch.waits-met` | `DispatchTask` | A task is dispatched only once each task it waits for is merged or landed, as its wait names. |
 | `dispatch.one-project` | `AdoptForkTask`, `DispatchTask` | A worker works in the isolated copy of exactly one project. |
 | `dispatch.category` | `DispatchTask` | A dispatch names a category from the dispatch rules. |

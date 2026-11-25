@@ -12,6 +12,10 @@
 ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+DEALT WITH, WAITING FOR YOUR TICK  (1)
+──────────────────────────────────────
+  Gatehouse         • D1 First open call - answered
+
 DONE THIS TURN  (0)
 ───────────────────
   Nothing finished this turn

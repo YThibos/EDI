@@ -34,6 +34,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.CallTicked;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
@@ -256,6 +257,7 @@ public class EventLog {
             case DecisionAnswered answered -> withAnswer(payload.put("number", answered.number().toString()), answered.answer());
             case DecisionRoundClosed closed -> payload.put("number", closed.number().toString()).put("title", closed.title())
                     .put("opened", Columns.text(closed.opened()));
+            case CallTicked ticked -> payload.put("call", ticked.call().toString());
             case TaskReleased _, TaskDone _ -> payload;
             case StageChanged changed -> withChange(payload, changed.change());
             case DispatchDeferred deferred -> withEach(payload.put("project", deferred.project().value())

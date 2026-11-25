@@ -21,7 +21,7 @@ class ConsolePages {
         this.handOffs = handOffs;
     }
 
-    @GetMapping({"/login", "/fleet", "/week", "/task/*"})
+    @GetMapping({"/login", "/fleet", "/week", "/landed", "/task/*"})
     String consolePage() {
         return "forward:/index.html";
     }

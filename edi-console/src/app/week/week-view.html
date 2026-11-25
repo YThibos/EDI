@@ -5,6 +5,7 @@
   [machine]="reading.sitrep()?.machine ?? null"
   [presence]="reading.sitrep()?.presence ?? null"
   [waiting]="reading.waiting()"
+  [landed]="reading.sitrep()?.landedTotal ?? 0"
   [showsPersonality]="false"
   (presenceChosen)="reading.choosePresence($event)"
   (awayChosen)="reading.goAway($event)"

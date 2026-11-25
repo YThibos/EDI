@@ -4,6 +4,7 @@ Each file is the exact output of the old harness's renderer, `bin/fm-captain-rep
 `invariant.ReportGoldenCases` builds the same input in EDI's store, and AT-42 compares EDI's captain report with the file byte for byte.
 The decision record [captain-report](../../../../../docs/decisions/captain-report.md) says which inputs had to be adapted and why.
 Since everything waiting on the captain joined the decision zone ([fleet-snapshot](../../../../../docs/decisions/fleet-snapshot.md)), `parked-calls` and `wrapping` also show a blocked call's card in the decision zone and count it, where the old renderer showed it only under PARKED.
+Since an answered decision stays on the captain's list until it is ticked ([captains-list](../../../../../docs/decisions/captains-list.md)), `cumulative-answered` and `retired-number` also list it under `DEALT WITH, WAITING FOR YOUR TICK`, a section the old renderer did not have.
 
 | File | Old test case |
 |---|---|
