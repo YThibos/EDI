@@ -34,7 +34,7 @@ final class JiraWalk {
         try {
             return walked(new Walk(settings, key, target, start, through));
         } catch (Refusal | TrackerUnavailable failed) {
-            return new TicketWalk.Stopped(start.status(), through, failed.getMessage());
+            return new TicketWalk.Stopped(start.status(), through, reasonOf(failed));
         }
     }
 
@@ -57,6 +57,11 @@ final class JiraWalk {
             status = transitions.statusAfter(walk.settings(), walk.key(), transitionTo(offered, next.get()));
             walk.through().add(status);
         }
+    }
+
+    private static String reasonOf(RuntimeException failure) {
+        String sentence = failure.getMessage();
+        return sentence.endsWith(".") ? sentence.substring(0, sentence.length() - 1) : sentence;
     }
 
     private WorkflowGraph learned(Walk walk, String status, List<AvailableTransition> offered) {

@@ -113,8 +113,8 @@ class TrackerApiTest {
         HttpResponse<String> stopped = post("/api/tracker/walk", "{\"key\":\"SVC-40\",\"state\":\"Ready For Prd\"}", TEXT);
 
         assertThat(stopped.statusCode()).isEqualTo(409);
-        assertThat(stopped.body()).startsWith("SVC-40 stopped at Doing after the steps Done -> Reopened -> Backlog -> Selected -> Doing on its way to Ready For Prd: "
-                + "JIRA refused the transition of SVC-40 to Peer Review (HTTP 400)");
+        assertThat(stopped.body()).isEqualTo("SVC-40 stopped at Doing after the steps Done -> Reopened -> Backlog -> Selected -> Doing on its way to Ready For Prd: "
+                + "JIRA refused the transition of SVC-40 to Peer Review (HTTP 400): Transition Peer Review is not valid for this issue.\n");
         assertThat(jira.statusOf("SVC-40")).isEqualTo("Doing");
     }
 

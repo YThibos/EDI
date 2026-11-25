@@ -126,7 +126,7 @@ class JiraWalkTest {
         assertThat(walk).isInstanceOfSatisfying(TicketWalk.Stopped.class, stopped -> {
             assertThat(stopped.from()).isEqualTo("Done");
             assertThat(stopped.through()).containsExactly("Reopened", "Backlog", "Selected", "Doing", "Peer Review");
-            assertThat(stopped.because()).contains("JIRA refused the transition of SVC-41 to Merged (HTTP 400)", "Transition Merged is not valid for this issue");
+            assertThat(stopped.because()).isEqualTo("JIRA refused the transition of SVC-41 to Merged (HTTP 400): Transition Merged is not valid for this issue");
         });
         assertThat(jira.statusOf("SVC-41")).isEqualTo("Peer Review");
     }
