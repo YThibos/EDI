@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,15 +19,18 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.adapter.store.WorkflowCache;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.tracker.ProjectTicket;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketMove;
 import io.github.ythibos.edi.testing.StubJiraServer;
+import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.StubJiraServer.Exchange;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -38,6 +42,9 @@ class JiraTrackerTest {
 
     @TempDir
     private Path home;
+
+    @TempDir
+    private Path storeHome;
 
     private StubJiraServer jira;
     private JiraCalls calls;
@@ -59,7 +66,12 @@ class JiraTrackerTest {
                   epicLinkField: customfield_10008
                 """.formatted(jira.address(), keys));
         calls = new JiraCalls(new JsonMapper());
-        tracker = new JiraTracker(new MachineProfile(new EdiHome(home)), calls, new JsonMapper());
+        tracker = new JiraTracker(new MachineProfile(new EdiHome(home)), calls, new JsonMapper(), workflowCache());
+    }
+
+    private WorkflowCache workflowCache() throws IOException {
+        TestHome store = TestHome.in(storeHome);
+        return new WorkflowCache(store.jdbc(), store.transaction());
     }
 
     @AfterEach
@@ -128,6 +140,22 @@ class JiraTrackerTest {
         assertThat(jira.statusOf("SVC-40")).isEqualTo("Testing");
         assertThat(tracker.transition(LAMPS, "Testing")).isEqualTo(new TicketMove.AlreadyThere("Testing"));
         assertThat(tracker.transition(WorkKey.parse("SVC-41"), "Testing")).isEqualTo(new TicketMove.AlreadyBeyond("Done"));
+    }
+
+    @Test
+    void listsEveryTicketOfAProjectPageByPageWithItsIssueType() {
+        jira.holdingOfType("SVC-42", "Harbour fog", "In Progress", "Bug");
+        IntStream.rangeClosed(200, 429).forEach(number -> jira.holding("SVC-" + number, "Buoy " + number, "To Do"));
+        jira.holding("OTHER-1", "Elsewhere", "To Do");
+
+        List<ProjectTicket> tickets = tracker.ticketsOf(new ProjectKey("SVC"));
+
+        assertThat(tickets).hasSize(233);
+        assertThat(tickets).extracting(ticket -> ticket.ticket().key()).doesNotHaveDuplicates().doesNotContain(WorkKey.parse("OTHER-1"));
+        assertThat(tickets).contains(new ProjectTicket(new Ticket(WorkKey.parse("SVC-42"), "Harbour fog", "In Progress"), "Bug"));
+        assertThat(jira.exchanges().stream().filter(exchange -> exchange.path().equals("/rest/api/2/search")).map(Exchange::query))
+                .hasSize(3)
+                .allMatch(query -> query.contains("jql=project = \"SVC\" ORDER BY key ASC") && query.contains("fields=summary,status,issuetype"));
     }
 
     @Test

@@ -11,17 +11,19 @@ import org.springframework.stereotype.Component;
 
 import io.github.ythibos.edi.adapter.home.MachineProfile;
 import io.github.ythibos.edi.adapter.home.TrackerSettings;
+import io.github.ythibos.edi.adapter.store.WorkflowCache;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.rule.Rule;
-import io.github.ythibos.edi.domain.tracker.AvailableTransition;
+import io.github.ythibos.edi.domain.tracker.ProjectTicket;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketMove;
+import io.github.ythibos.edi.domain.tracker.TicketWalk;
 import io.github.ythibos.edi.domain.tracker.TicketProposal;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 import io.github.ythibos.edi.domain.tracker.Workflow;
@@ -36,15 +38,20 @@ public class JiraTracker implements Tracker {
     private static final String API = "/rest/api/2";
     private static final String AGILE = "/rest/agile/1.0";
     private static final String TICKET_FIELDS = "summary,status";
+    private static final int TICKETS_PER_PAGE = 100;
 
     private final MachineProfile machine;
     private final JiraCalls calls;
     private final JsonMapper json;
+    private final JiraTransitions transitions;
+    private final JiraWalk walks;
 
-    public JiraTracker(MachineProfile machine, JiraCalls calls, JsonMapper json) {
+    public JiraTracker(MachineProfile machine, JiraCalls calls, JsonMapper json, WorkflowCache workflows) {
         this.machine = machine;
         this.calls = calls;
         this.json = json;
+        this.transitions = new JiraTransitions(calls, json);
+        this.walks = new JiraWalk(transitions, workflows);
     }
 
     @Override
@@ -117,15 +124,37 @@ public class JiraTracker implements Tracker {
     @Override
     public TicketMove transition(WorkKey key, String target) {
         TrackerSettings settings = settings();
-        String from = statusOf(settings, key);
+        String from = transitions.statusOf(settings, key);
         List<String> through = new ArrayList<>();
         WorkflowStep step = nextStep(settings, key, target, from);
         while (step instanceof WorkflowStep.Take take) {
             requireAStepLeftInTheWorkflow(settings.workflow(), key, target, through);
-            through.add(statusAfter(settings, key, take.transition()));
+            through.add(transitions.statusAfter(settings, key, take.transition()));
             step = nextStep(settings, key, target, through.getLast());
         }
         return outcomeOf(step, key, target, from, through);
+    }
+
+    @Override
+    public TicketWalk walk(WorkKey key, String target) {
+        return walks.walk(settings(), key, target);
+    }
+
+    @Override
+    public List<ProjectTicket> ticketsOf(ProjectKey project) {
+        TrackerSettings settings = settings();
+        List<ProjectTicket> tickets = new ArrayList<>();
+        int total;
+        do {
+            JsonNode page = calls.read(settings, API + "/search", Map.of("jql", Jql.allTicketsOf(project), "fields", TICKET_FIELDS + ",issuetype",
+                    "startAt", String.valueOf(tickets.size()), "maxResults", String.valueOf(TICKETS_PER_PAGE)), "the tickets of " + project);
+            page.path("issues").valueStream().map(JiraTracker::projectTicketOf).forEach(tickets::add);
+            total = page.path("total").asInt(0);
+            if (page.path("issues").isEmpty() && tickets.size() < total) {
+                throw new TrackerUnavailable("JIRA ended its list of " + project + " tickets at " + tickets.size() + " of " + total + ".");
+            }
+        } while (tickets.size() < total);
+        return List.copyOf(tickets);
     }
 
     @Override
@@ -160,33 +189,14 @@ public class JiraTracker implements Tracker {
         return body;
     }
 
-    private String statusOf(TrackerSettings settings, WorkKey key) {
-        return ticketOf(calls.read(settings, API + "/issue/" + key, Map.of("fields", "status"), "the status of " + key)).status();
-    }
-
     private WorkflowStep nextStep(TrackerSettings settings, WorkKey key, String target, String current) {
-        return settings.workflow().stepToward(target, current, transitionsOf(settings, key));
-    }
-
-    private List<AvailableTransition> transitionsOf(TrackerSettings settings, WorkKey key) {
-        return calls.read(settings, API + "/issue/" + key + "/transitions", Map.of(), "the transitions of " + key)
-                .path("transitions").valueStream()
-                .map(transition -> new AvailableTransition(transition.path("id").asString(), transition.path("name").asString(""),
-                        transition.path("to").path("name").asString("")))
-                .toList();
+        return settings.workflow().stepToward(target, current, transitions.offeredTo(settings, key));
     }
 
     private static void requireAStepLeftInTheWorkflow(Workflow workflow, WorkKey key, String target, List<String> through) {
         if (through.size() >= workflow.forward().size()) {
             throw new Refusal(Rule.TRACKER_ANSWERED, key + " took more steps toward " + target + " than its workflow has statuses.");
         }
-    }
-
-    private String statusAfter(TrackerSettings settings, WorkKey key, AvailableTransition transition) {
-        ObjectNode body = json.createObjectNode();
-        body.putObject("transition").put("id", transition.id());
-        calls.write(settings, "POST", API + "/issue/" + key + "/transitions", body, "the transition of " + key + " to " + transition.to());
-        return statusOf(settings, key);
     }
 
     private static TicketMove outcomeOf(WorkflowStep step, WorkKey key, String target, String from, List<String> through) {
@@ -233,6 +243,10 @@ public class JiraTracker implements Tracker {
         body.putArray("issues").add(key.toString());
         calls.write(settings, "POST", AGILE + "/sprint/" + sprint.path("id").asLong() + "/issue", body, "the sprint " + nameOf(sprint));
         return new SprintPlacement.Added(nameOf(sprint));
+    }
+
+    private static ProjectTicket projectTicketOf(JsonNode issue) {
+        return new ProjectTicket(ticketOf(issue), issue.path("fields").path("issuetype").path("name").asString(""));
     }
 
     private static Ticket ticketOf(JsonNode issue) {

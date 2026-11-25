@@ -7,7 +7,9 @@ import java.util.stream.Stream;
 
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.tracker.ProjectTicket;
 import io.github.ythibos.edi.domain.publish.EdiVocabulary;
 import io.github.ythibos.edi.domain.publish.TextFinding;
 import io.github.ythibos.edi.domain.rule.Rule;
@@ -16,6 +18,7 @@ import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketMove;
+import io.github.ythibos.edi.domain.tracker.TicketWalk;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 public final class PlainlyWordedTracker implements Tracker {
@@ -70,6 +73,16 @@ public final class PlainlyWordedTracker implements Tracker {
     @Override
     public TicketMove transition(WorkKey key, String target) {
         return tracker.transition(key, target);
+    }
+
+    @Override
+    public TicketWalk walk(WorkKey key, String target) {
+        return tracker.walk(key, target);
+    }
+
+    @Override
+    public List<ProjectTicket> ticketsOf(ProjectKey project) {
+        return tracker.ticketsOf(project);
     }
 
     @Override

@@ -26,7 +26,7 @@ class DenyListImportTest {
             new RegisteredForge(new ForgeRepository(ForgeKind.GITHUB, "github.com", "example-owner/EDI"), "example-owner"));
     private static final TrackerSettings TRACKER = new TrackerSettings(TrackerKind.JIRA, URI.create("https://tracker.example.org"),
             new TrackerSettings.Credentials(Path.of("/secure/tracker-keys.yml"), "TRACKER"), Map.of(), new Workflow(List.of("To Do", "Done")), "Done",
-            "Story", null);
+            "Story", null, List.of(), List.of(), null);
 
     @Test
     void seedsANewListWithThePrivateHostsAccountsAndKeysFileTheHomesKnow() {

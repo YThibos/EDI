@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 
 final class Jql {
@@ -21,6 +22,10 @@ final class Jql {
         }
         return Optional.of("project = " + quoted(context.project().value()) + " AND statusCategory != Done AND text ~ " + quoted(words)
                 + " ORDER BY updated DESC");
+    }
+
+    static String allTicketsOf(ProjectKey project) {
+        return "project = " + quoted(project.value()) + " ORDER BY key ASC";
     }
 
     private static String searchWordsOf(String text) {

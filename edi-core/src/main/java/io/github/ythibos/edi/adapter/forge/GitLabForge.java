@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.adapter.forge;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ public class GitLabForge implements Forge {
 
     private static final String PASSED_PIPELINE = "success";
     private static final String FAILED_PIPELINE = "failed";
+    private static final int REQUESTS_PER_PAGE = 100;
 
     private final ForgeCalls calls;
     private final JsonMapper json;
@@ -53,6 +55,18 @@ public class GitLabForge implements Forge {
                 .map(request -> viewOf(forge, request))
                 .map(request -> withTheChecksOnItsHead(forge, request))
                 .toList();
+    }
+
+    @Override
+    public List<MergeRequestView> openMergeRequests(RegisteredForge forge) {
+        List<MergeRequestView> open = new ArrayList<>();
+        List<MergeRequestView> page;
+        int number = 0;
+        do {
+            page = openPage(forge, ++number);
+            open.addAll(page);
+        } while (page.size() == REQUESTS_PER_PAGE);
+        return List.copyOf(open);
     }
 
     @Override
@@ -87,6 +101,12 @@ public class GitLabForge implements Forge {
     @Override
     public Optional<String> credentialHelperFor(RegisteredForge forge) {
         return Optional.empty();
+    }
+
+    private List<MergeRequestView> openPage(RegisteredForge forge, int number) {
+        String listed = calls.run(ForgeCommand.GLAB_MR_LIST, List.of("-R", forge.repository().url(), "-F", "json",
+                "--per-page", String.valueOf(REQUESTS_PER_PAGE), "--page", String.valueOf(number)), Map.of(), null);
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(request -> viewOf(forge, request)).toList();
     }
 
     private MergeRequestView withTheChecksOnItsHead(RegisteredForge forge, MergeRequestView listed) {

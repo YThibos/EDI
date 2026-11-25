@@ -3,13 +3,17 @@ package io.github.ythibos.edi.adapter.tracker;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.EdiHome;
 import io.github.ythibos.edi.adapter.home.MachineProfile;
+import io.github.ythibos.edi.adapter.store.WorkflowCache;
+import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
@@ -22,11 +26,13 @@ class JiraLiveCheckTest {
     private static final String TICKET = System.getenv("EDI_LIVE_TICKET");
 
     @Test
-    void readsARealTicketAndFindsItByItsOwnWordsWithoutChangingAnything() {
+    void readsARealTicketAndFindsItByItsOwnWordsWithoutChangingAnything(@TempDir Path store) throws IOException {
         assumeTrue(HOME != null && TICKET != null, "EDI_LIVE_HOME and EDI_LIVE_TICKET name an EDI home with a JIRA tracker and one of its tickets");
         WorkKey key = WorkKey.parse(TICKET);
         try (JiraCalls calls = new JiraCalls(new JsonMapper())) {
-            JiraTracker tracker = new JiraTracker(new MachineProfile(new EdiHome(Path.of(HOME))), calls, new JsonMapper());
+            TestHome scratch = TestHome.in(store);
+            JiraTracker tracker = new JiraTracker(new MachineProfile(new EdiHome(Path.of(HOME))), calls, new JsonMapper(),
+                    new WorkflowCache(scratch.jdbc(), scratch.transaction()));
 
             Ticket ticket = tracker.verified(key);
 

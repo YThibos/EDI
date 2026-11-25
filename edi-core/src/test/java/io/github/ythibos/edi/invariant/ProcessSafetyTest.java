@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.tracker.JiraCalls;
+import io.github.ythibos.edi.adapter.store.WorkflowCache;
 import io.github.ythibos.edi.adapter.tracker.JiraTracker;
 import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.worker.HookAnswer;
@@ -152,7 +153,7 @@ class ProcessSafetyTest {
                     JiraCalls calls = new JiraCalls(new JsonMapper());
                     CapturedLogs logs = CapturedLogs.ofEveryLogger()) {
                 TestHome home = homeReachingThe(jira, canary);
-                home.trackingWith(new JiraTracker(home.machineProfile(), calls, new JsonMapper()));
+                home.trackingWith(new JiraTracker(home.machineProfile(), calls, new JsonMapper(), new WorkflowCache(home.jdbc(), home.transaction())));
 
                 runEveryTrackerCall(home, jira, canary, said);
 

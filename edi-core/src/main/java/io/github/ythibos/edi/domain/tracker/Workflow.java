@@ -20,9 +20,19 @@ public record Workflow(List<String> forward) {
     }
 
     public void requireStatus(String status) {
-        if (positionOf(status) < 0) {
+        if (!lists(status)) {
             throw new IllegalArgumentException(status + " is not a status of the workflow " + forward + ".");
         }
+    }
+
+    public boolean lists(String status) {
+        return positionOf(status) >= 0;
+    }
+
+    public int separation(String status, String target) {
+        int now = positionOf(status);
+        int goal = positionOf(target);
+        return now < 0 || goal < 0 ? Integer.MAX_VALUE : Math.abs(goal - now);
     }
 
     public boolean hasReached(String status, String target) {

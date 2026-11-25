@@ -55,6 +55,22 @@ class TrackerStoresTest {
     }
 
     @Test
+    void replacesWhatAStatusOffersWhenTheWorkflowCacheSeesItAgain() {
+        WorkflowCache cache = new WorkflowCache(home.jdbc(), home.transaction());
+        ProjectKey service = new ProjectKey("SVC");
+        cache.remember(service, "Story", "Open", List.of("Doing"));
+        cache.remember(service, "Story", "Doing", List.of("Review", "Open"));
+        cache.remember(service, "Story", "Review", List.of("Done", "Doing"));
+        assertThat(cache.graphOf(service, "Story").pathBetween("Open", "Done")).contains(List.of("Doing", "Review", "Done"));
+
+        cache.remember(service, "Story", "Review", List.of("Doing"));
+
+        assertThat(cache.graphOf(service, "Story").pathBetween("Open", "Done")).isEmpty();
+        assertThat(cache.graphOf(service, "Story").pathBetween("Review", "Open")).contains(List.of("Doing", "Open"));
+        assertThat(cache.graphOf(service, "Bug").seenStatuses()).isEmpty();
+    }
+
+    @Test
     void keepsAProposedTicketWithItsCandidatesAndItsProgress() {
         TicketDraft draft = new TicketDraft(new ProjectKey("SVC"), "Story", "Fit the lamp", "Brass.", WorkKey.parse("SVC-9"), List.of("a", "b"), "Major");
         TicketProposal proposal = new TicketProposal(LAMP, draft, List.of(new Ticket(WorkKey.parse("SVC-40"), "Harbour lamps", "To Do")));

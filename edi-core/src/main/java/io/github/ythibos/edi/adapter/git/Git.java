@@ -22,6 +22,7 @@ import io.github.ythibos.edi.domain.delivery.ChangedPath;
 import io.github.ythibos.edi.domain.delivery.LocalChange;
 import io.github.ythibos.edi.domain.delivery.Reactor;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.OutgoingCommit;
@@ -139,6 +140,12 @@ public class Git {
 
     public boolean isAncestor(Path repository, String commit, String ref) {
         return run(repository, "merge-base", "--is-ancestor", commit, ref).succeeded();
+    }
+
+    public Set<WorkKey> workKeysOpeningCommitsOn(Path repository, String ref) {
+        return git(repository, "log", "--format=%s", ref, "--").lines()
+                .flatMap(subject -> WorkKey.opening(subject).stream())
+                .collect(Collectors.toSet());
     }
 
     public Optional<String> fetchUrlOf(Path repository, String remote) {

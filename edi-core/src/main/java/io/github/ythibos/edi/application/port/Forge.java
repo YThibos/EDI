@@ -17,6 +17,8 @@ public interface Forge {
 
     List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch);
 
+    List<MergeRequestView> openMergeRequests(RegisteredForge forge);
+
     MergeRequestView view(RegisteredForge forge, MergeRequestAddress address);
 
     MergeRequestView openDraft(RegisteredForge forge, DraftProposal proposal);

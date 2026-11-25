@@ -21,7 +21,7 @@ public record NewProject(ProjectName name, RegisteredForge forge, BaseBranch bas
     }
 
     RegisteredProject asRegistered() {
-        return new RegisteredProject(name.value(), trackerEntry(), forgeEntry(), null, null, base == null ? null : base.name(), delivery.word(), null,
+        return new RegisteredProject(name.value(), trackerEntry(), forgeEntry(), null, null, base == null ? null : base.name(), null, delivery.word(), null,
                 craftRules ? Boolean.TRUE : null, null, null, null, null, null, null, null, null);
     }
 

@@ -33,6 +33,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class GitHubForge implements Forge {
 
     private static final String FIELDS = "number,url,state,isDraft,headRefName,baseRefName,headRefOid,statusCheckRollup,mergeCommit,mergedAt";
+    private static final String MOST_OPEN_REQUESTS = "1000";
     private static final String TEXT_FIELDS = "title,body";
     private static final String WORKFLOW_SCOPE = "workflow";
     private static final Set<String> PASSING_CHECK = Set.of("SUCCESS", "NEUTRAL", "SKIPPED");
@@ -56,6 +57,13 @@ public class GitHubForge implements Forge {
     public List<MergeRequestView> mergeRequestsFrom(RegisteredForge forge, BranchName branch) {
         String listed = asTheBoundAccount(forge, ForgeCommand.GH_PR_LIST,
                 List.of("--repo", repositoryOf(forge), "--head", branch.toString(), "--state", "all", "--json", FIELDS), null);
+        return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(pull -> viewOf(forge, pull)).toList();
+    }
+
+    @Override
+    public List<MergeRequestView> openMergeRequests(RegisteredForge forge) {
+        String listed = asTheBoundAccount(forge, ForgeCommand.GH_PR_LIST,
+                List.of("--repo", repositoryOf(forge), "--state", "open", "--limit", MOST_OPEN_REQUESTS, "--json", FIELDS), null);
         return StreamSupport.stream(json.readTree(listed).spliterator(), false).map(pull -> viewOf(forge, pull)).toList();
     }
 

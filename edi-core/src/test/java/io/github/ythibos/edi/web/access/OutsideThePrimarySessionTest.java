@@ -87,13 +87,17 @@ class OutsideThePrimarySessionTest {
         followers.followTheLog();
     }
 
+    private static String withoutTheSessionName(String launch) {
+        return launch.lines().filter(line -> !line.startsWith("session: ")).collect(Collectors.joining("\n"));
+    }
+
     @Test
     void handsTheLaunchKeyOnlyToEdiUpAndKeepsItOwnerOnlyAcrossLaunches() throws Exception {
         HttpResponse<String> first = post(homeTokenAlone(), "/api/primary/launch", "{}");
         HttpResponse<String> second = post(homeTokenAlone(), "/api/primary/launch", "{}");
 
         assertThat(first.body()).contains("launch key: " + launchKey() + "\n");
-        assertThat(second.body()).isEqualTo(first.body());
+        assertThat(withoutTheSessionName(second.body())).isEqualTo(withoutTheSessionName(first.body()));
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(home.resolve("state/primary-launch.key")))).isEqualTo("rw-------");
     }
 

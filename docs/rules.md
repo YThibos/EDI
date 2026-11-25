@@ -99,8 +99,8 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `board.answer` | `SettleBoardAnswers` | A board's answer settles a decision only when it answers that decision's card. |
 | `spark.shape` | `CatchSpark`, `Spark` | A spark says its idea, about one task or one registered project at most. |
 | `spark.sorted-once` | `Spark`, `SparkSorting` | A spark is sorted once, and a dropped spark says why. |
-| `tracker.configured` | `JiraTracker`, `KeysFile`, `TrackedProject`, `TrackerSettings`, `Trackers` | A tracker is reached only with the settings and keys this machine names for it. |
-| `tracker.answered` | `JiraCalls`, `JiraTracker`, `NothingFound` | A tracker call that is refused or finds nothing is reported, never taken as done. |
+| `tracker.configured` | `JiraProjects`, `JiraTracker`, `KeysFile`, `NoWorkflow`, `TrackedProject`, `TrackerSettings`, `Trackers` | A tracker is reached only with the settings and keys this machine names for it. |
+| `tracker.answered` | `JiraCalls`, `JiraTracker`, `NothingFound`, `WalkTicket` | A tracker call that is refused or finds nothing is reported, never taken as done. |
 | `tracker.ticket-update` | `FollowTickets`, `TicketProposals` | A ticket update the tracker refuses is recorded, and the work goes on without it. |
 | `tracker.text-clean` | `PlainlyWordedTracker` | Text written to a project's tracker never carries internal vocabulary. |
 | `wake.one-wake-stream` | `StreamPoll`, `WaitController`, `WaitForWakes`, `WakeStreams` | The primary session has exactly one live wake stream. |

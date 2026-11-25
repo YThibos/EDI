@@ -25,6 +25,24 @@ class WorkKeyTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"EDI-13", "EDI-13 Fit the lamp", "EDI-13: fit the lamp", "EDI-13, EDI-14 together"})
+    void readsTheKeyThatOpensAText(String text) {
+        assertThat(WorkKey.opening(text)).contains(WorkKey.parse("EDI-13"));
+    }
+
+    @Test
+    void readsTheKeyOfTheLongestProjectKeyThatOpensAText() {
+        assertThat(WorkKey.opening("ABCDEFGHIJKLMNOP-1 fit")).contains(WorkKey.parse("ABCDEFGHIJKLMNOP-1"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "Fit the lamp", "Merge EDI-13", "edi-13 fit", "EDI-1234567890 fit", "EDI-130x", "EDI-13a", "EDI- 13",
+        "REL-0 prepare", "REL-00 prepare", "ABCDEFGHIJKLMNOPQ-1 fit"})
+    void readsNoKeyFromATextThatDoesNotOpenWithOne(String text) {
+        assertThat(WorkKey.opening(text)).isEmpty();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"HarbourMaster", "tide-tables", "lamp-ci", "Front.UI_2"})
     void acceptsRegistryProjectNames(String name) {
         assertThat(new ProjectName(name).value()).isEqualTo(name);

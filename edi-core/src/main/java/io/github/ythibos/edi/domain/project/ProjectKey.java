@@ -4,7 +4,7 @@ import io.github.ythibos.edi.domain.AsciiCharacters;
 
 public record ProjectKey(String value) {
 
-    private static final int LONGEST = 16;
+    static final int LONGEST = 16;
 
     public ProjectKey {
         if (!isKeyPrefix(value)) {

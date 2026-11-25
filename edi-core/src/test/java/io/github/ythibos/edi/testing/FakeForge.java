@@ -56,6 +56,15 @@ public final class FakeForge implements Forge {
     }
 
     @Override
+    public synchronized List<MergeRequestView> openMergeRequests(RegisteredForge forge) {
+        return mergeRequests.values().stream()
+                .filter(request -> request.address().repository().equals(forge.repository()))
+                .filter(request -> request.state() == MergeRequestState.OPEN)
+                .sorted(Comparator.comparingInt((MergeRequestView request) -> request.address().number()).reversed())
+                .toList();
+    }
+
+    @Override
     public synchronized MergeRequestView view(RegisteredForge forge, MergeRequestAddress address) {
         if (unreachable.contains(address)) {
             throw new ProgramFailure("gh pr view " + address.number() + " failed: the repository is unreachable");

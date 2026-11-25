@@ -3,12 +3,15 @@ package io.github.ythibos.edi.application.port;
 import java.util.List;
 import java.util.Optional;
 
+import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.WorkKey;
+import io.github.ythibos.edi.domain.tracker.ProjectTicket;
 import io.github.ythibos.edi.domain.tracker.SprintPlacement;
 import io.github.ythibos.edi.domain.tracker.Ticket;
 import io.github.ythibos.edi.domain.tracker.TicketContext;
 import io.github.ythibos.edi.domain.tracker.TicketDraft;
 import io.github.ythibos.edi.domain.tracker.TicketMove;
+import io.github.ythibos.edi.domain.tracker.TicketWalk;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 public interface Tracker {
@@ -28,6 +31,10 @@ public interface Tracker {
     Optional<String> browseAddressOf(WorkKey key);
 
     TicketMove transition(WorkKey key, String target);
+
+    TicketWalk walk(WorkKey key, String target);
+
+    List<ProjectTicket> ticketsOf(ProjectKey project);
 
     SprintPlacement addToCurrentSprint(WorkKey key);
 
