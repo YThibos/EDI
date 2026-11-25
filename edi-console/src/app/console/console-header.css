@@ -103,6 +103,11 @@
   background: var(--amber);
 }
 
+.sr-view__count--calm {
+  color: var(--text);
+  background: var(--line-bright);
+}
+
 .sr-presence {
   display: inline-flex;
   align-items: center;

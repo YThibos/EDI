@@ -147,7 +147,7 @@ public class ArmBoard {
             throw new Refusal(Rule.BOARD_FILE, listening.file() + " is already armed for " + listening.task() + ".");
         }
         Board posted = listening.posted(round.carryingForward(openBindingsOf(listening)));
-        boards.update(posted);
+        boards.postRound(posted);
         return posted;
     }
 

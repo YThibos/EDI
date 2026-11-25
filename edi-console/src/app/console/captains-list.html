@@ -1,0 +1,123 @@
+<div class="sr-panel sr-list">
+  @if (refusal(); as sentence) {
+    <p class="sr-list__refusal" role="alert">{{ sentence }}</p>
+  }
+  <ul class="sr-list__entries">
+    @for (entry of entries(); track entry.key) {
+      <li class="sr-entry" [class.sr-entry--stops]="stopsAWorker(entry)" [class.sr-entry--dealt]="entry.dealtWith" [class.sr-entry--open]="expanded() === entry.key">
+        <div class="sr-entry__line">
+          <input
+            class="sr-entry__tick"
+            type="checkbox"
+            [checked]="ticking() === entry.key"
+            [disabled]="!entry.dealtWith || ticking() !== null"
+            [attr.aria-label]="entry.dealtWith ? 'Tick ' + entry.key + ' off the list' : entry.key + ' waits on you; it ticks off once dealt with'"
+            [attr.title]="entry.dealtWith ? 'Tick it off the list' : 'Ticks off once dealt with'"
+            (change)="tick(entry)"
+          />
+          <div class="sr-entry__main">
+            @if (entry.kind === 'decision') {
+              <div class="sr-entry__title">
+                <span class="sr-row__key">{{ entry.card.number }}</span>{{ ' ' }}
+                <button type="button" class="sr-entry__name" (click)="toggle(entry)">{{ entry.card.title }}</button>
+              </div>
+              <div class="sr-entry__sub">
+                @if (entry.card.stops; as stops) {
+                  <span class="sr-entry__stops">stops {{ stops }}</span> ·
+                }
+                waiting {{ waited(entry.card.raisedAt) }} · {{ projectsOf(entry.card.projects, entry.card.task) }}
+              </div>
+            } @else if (entry.kind === 'answered') {
+              <div class="sr-entry__title">
+                <span class="sr-row__key">{{ entry.answer.number }}</span>{{ ' ' }}
+                <button type="button" class="sr-entry__name" (click)="toggle(entry)">{{ entry.answer.title }}</button>
+              </div>
+              <div class="sr-entry__sub">answered {{ given(entry.answer) }} · {{ projectsOf(entry.answer.projects, entry.answer.task) }}</div>
+            } @else if (entry.kind === 'board') {
+              <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.board.task]">Board for {{ entry.board.title }}</a></div>
+              <div class="sr-entry__sub">{{ boardSummary(entry.board) }}</div>
+              <a class="sr-entry__link" [href]="entry.board.link" target="_blank" rel="noopener">{{ entry.board.link }}</a>
+              <app-link-chips [links]="links()[entry.board.task]" />
+              @if (entry.board.decisions.length) {
+                <ul class="sr-entry__decisions">
+                  @for (decision of entry.board.decisions; track decision.number) {
+                    <li class="sr-entry__decision"><span class="sr-row__key">{{ decision.number }}</span><span>{{ decision.title }}</span></li>
+                  }
+                </ul>
+              }
+            } @else if (entry.kind === 'settled-board') {
+              <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.board.task]">Board for {{ entry.board.title }}</a></div>
+              <div class="sr-entry__sub">{{ entry.board.state }} · {{ projectsOf(entry.board.projects, entry.board.task) }}</div>
+            } @else if (entry.kind === 'review') {
+              <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.review.task]">{{ entry.review.title }}</a></div>
+              <div class="sr-entry__sub">ready for your review · {{ projectsOf(entry.review.projects, entry.review.task) }}{{ targetOf(entry.review.stackedOn) }}</div>
+              <a class="sr-entry__link" [href]="entry.review.url" target="_blank" rel="noopener">{{ entry.review.url }}</a>
+              <app-link-chips [links]="links()[entry.review.task]" />
+            } @else if (entry.kind === 'settled-review') {
+              <div class="sr-entry__title"><a class="sr-row__open" [routerLink]="['/task', entry.review.task]">{{ entry.review.title }}</a></div>
+              <div class="sr-entry__sub">{{ entry.review.state }} · {{ projectsOf(entry.review.projects, entry.review.task) }}</div>
+              <a class="sr-entry__link" [href]="entry.review.url" target="_blank" rel="noopener">{{ entry.review.url }}</a>
+            }
+          </div>
+          @if (entry.kind === 'decision') {
+            @if (entry.card.urgent) {
+              <span class="sr-badge sr-badge--danger"><span class="sr-badge__dot"></span>urgent</span>
+            } @else {
+              <span class="sr-badge sr-badge--solid"><span class="sr-badge__dot"></span>decision</span>
+            }
+          } @else if (entry.kind === 'board') {
+            <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>board</span>
+          } @else if (entry.kind === 'review') {
+            <span class="sr-badge sr-badge--warn"><span class="sr-badge__dot"></span>review</span>
+          } @else if (entry.kind === 'settled-review') {
+            <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>{{ entry.review.state }}</span>
+          } @else if (entry.kind === 'answered') {
+            <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>answered</span>
+          } @else if (entry.kind === 'settled-board') {
+            <span class="sr-badge sr-badge--online"><span class="sr-badge__dot"></span>{{ badgeOf(entry.board) }}</span>
+          }
+          @if (opensFurther(entry)) {
+            <button
+              type="button"
+              class="sr-entry__toggle"
+              [attr.aria-expanded]="expanded() === entry.key"
+              [attr.aria-label]="(expanded() === entry.key ? 'Collapse ' : 'Expand ') + entry.key"
+              (click)="toggle(entry)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+          } @else {
+            <span class="sr-entry__toggle sr-entry__toggle--none" aria-hidden="true"></span>
+          }
+        </div>
+        @if (expanded() === entry.key && opensFurther(entry)) {
+          <div class="sr-entry__body">
+            @if (entry.kind === 'decision') {
+              <app-decision-card [card]="entry.card" [links]="links()[entry.card.task]" (settled)="settled.emit()" />
+            } @else if (entry.kind === 'answered') {
+              <div class="sr-ctx">
+                <div class="sr-ctx__row">
+                  <span class="sr-ctx__k">answer</span>
+                  <span class="sr-ctx__v">{{ entry.answer.verbatim }}</span>
+                </div>
+              </div>
+            } @else if (entry.kind === 'review' || entry.kind === 'settled-review') {
+              @if (entry.review.afterLanding.steps.length) {
+                <div class="sr-entry__k">Steps that remain after the merge</div>
+                <ol class="sr-entry__steps">
+                  @for (step of entry.review.afterLanding.steps; track $index) {
+                    <li>{{ step }}</li>
+                  }
+                </ol>
+              }
+              @if (entry.review.afterLanding.landingOrder; as order) {
+                <div class="sr-entry__k">Merge order</div>
+                <p class="sr-entry__order">{{ order }}</p>
+              }
+            }
+          </div>
+        }
+      </li>
+    }
+  </ul>
+</div>

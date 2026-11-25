@@ -35,6 +35,7 @@ import picocli.CommandLine.Spec;
             BacklogCommand.class,
             HoldCommand.class,
             ReleaseCommand.class,
+            TickCommand.class,
             DecisionCommand.class,
             ProjectCommand.class,
             DispatchCommand.class,

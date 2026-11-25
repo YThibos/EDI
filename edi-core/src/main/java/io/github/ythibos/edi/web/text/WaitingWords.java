@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import io.github.ythibos.edi.application.fleet.OngoingTask;
+import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 
 public final class WaitingWords {
@@ -20,12 +21,16 @@ public final class WaitingWords {
         return "Board for " + task + ": " + waiting(questions) + " at " + link;
     }
 
+    public static String settledBoard(Board board) {
+        return board.isListening() ? "round answered" : "the board ended";
+    }
+
     public static String review(String task, String address, String stackedOn) {
         return "Ready for your review: " + task + " - " + address + targeting(stackedOn);
     }
 
-    public static String changing(String task, String address, String why, String stackedOn) {
-        return "Changing, hold the merge: " + task + " (" + why + ") - " + address + targeting(stackedOn);
+    public static String comingBack(String address, String why, String stackedOn) {
+        return "changing, back to you when it is ready (" + why + ") - " + address + targeting(stackedOn);
     }
 
     public static String ongoing(String title, OngoingTask ongoing) {
@@ -55,6 +60,10 @@ public final class WaitingWords {
     private static String mergedElsewhere(Delivery stackedRequest) {
         return "its request merged into " + stackedRequest.stackedOn() + ", so the work did not land through its own request;"
                 + " once " + stackedRequest.stackedOn() + " lands on the base and its worker is stopped, edi cleanup " + stackedRequest.task() + " retires it";
+    }
+
+    public static String changingAgain(String task, String address, String why, String stackedOn) {
+        return "Hold the merge, changing again: " + task + " (" + why + ") - " + address + targeting(stackedOn);
     }
 
     public static String inTheRound(String closesAt) {
