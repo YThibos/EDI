@@ -184,10 +184,22 @@ class ResearchBoardsTest {
 
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please."), choice), false));
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Thank you.")), false));
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Warmer light."), typed("Fewer lamps.")), false));
 
-        assertThat(home.boardHost().replies()).containsExactly("Received 2 answers in round 1. They go to " + decision + ".",
-                "Received 1 answer in round 2. None of them answers a decision.");
+        assertThat(home.boardHost().replies()).containsExactly("Received 2 answers in round 1. 1 of them goes to " + decision + ".",
+                "Received 1 answer in round 2. It answers no decision.", "Received 2 answers in round 3. None of them answers a decision.");
         assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).doesNotContain(WakeKind.BOARD_RECEIPT_NOT_SENT);
+    }
+
+    @Test
+    void namesTheDecisionInTheReceiptOfARoundWhoseOnlyAnswerAnswersIt() {
+        Board board = armQuietly(boardFile, decision);
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "B"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(choice), false));
+
+        assertThat(home.boardHost().replies()).containsExactly("Received 1 answer in round 1. It goes to " + decision + ".");
     }
 
     @Test
@@ -211,6 +223,19 @@ class ResearchBoardsTest {
         assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_RECEIPT_NOT_SENT).singleElement()
                 .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board " + board.id() + " at " + boardFile + " round 1: "
                         + "lavish-axi reply exited with 1: the session is not open"));
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardReceiptNotSent");
+    }
+
+    @Test
+    void tellsThePrimaryWhichBoardGotNoReceiptWhenTheReplyIsStoppedHalfway() {
+        Board board = armQuietly(boardFile, decision);
+        home.boardHost().isStoppedWhileReplying("lavish-axi was interrupted.");
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please.")), false));
+
+        assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_RECEIPT_NOT_SENT).singleElement()
+                .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board " + board.id() + " at " + boardFile + " round 1: "
+                        + "lavish-axi was interrupted."));
         assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardReceiptNotSent");
     }
 

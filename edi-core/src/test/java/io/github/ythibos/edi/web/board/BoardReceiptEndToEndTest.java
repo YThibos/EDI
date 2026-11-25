@@ -11,6 +11,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -113,7 +114,7 @@ class BoardReceiptEndToEndTest {
         endTheScout();
         String before = Files.readString(home.resolve("board-state"));
 
-        Files.writeString(home.resolve("answers.toon"), answersOn(board));
+        Files.move(Files.writeString(home.resolve("answers.toon.part"), answersOn(board)), home.resolve("answers.toon"), StandardCopyOption.ATOMIC_MOVE);
 
         String after = PrivateTmuxServer.awaitContent(home.resolve("board-state"), "Replied");
         assertThat(before).isEqualTo(WORKING);

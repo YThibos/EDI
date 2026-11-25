@@ -19,6 +19,7 @@ public final class FakeBoardHost implements ResearchBoardHost {
     private final List<Path> boards = new ArrayList<>();
     private final List<String> replies = new ArrayList<>();
     private String replyFailure;
+    private String replyStop;
     private boolean holding;
     private CountDownLatch polled = new CountDownLatch(1);
     private final CountDownLatch neverOpens = new CountDownLatch(1);
@@ -42,6 +43,9 @@ public final class FakeBoardHost implements ResearchBoardHost {
 
     @Override
     public synchronized BoardReply reply(Path board, String words) {
+        if (replyStop != null) {
+            throw new IllegalStateException(replyStop);
+        }
         if (replyFailure != null) {
             return new BoardReply.NotSent(replyFailure);
         }
@@ -51,6 +55,10 @@ public final class FakeBoardHost implements ResearchBoardHost {
 
     public synchronized void failsToReply(String because) {
         replyFailure = because;
+    }
+
+    public synchronized void isStoppedWhileReplying(String because) {
+        replyStop = because;
     }
 
     public synchronized List<String> replies() {

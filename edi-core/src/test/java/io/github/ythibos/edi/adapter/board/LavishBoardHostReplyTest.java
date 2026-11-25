@@ -27,10 +27,10 @@ class LavishBoardHostReplyTest {
         Path arguments = directory.resolve("arguments");
         Path lavish = StandInScripts.installed(directory.resolve("bin/lavish-axi"), "#!/bin/sh\nprintf '%s\\n' \"$@\" > '" + arguments + "'\n");
 
-        BoardReply reply = hostRunning(lavish).reply(board, "Received 2 answers in round 1. They go to D58.");
+        BoardReply reply = hostRunning(lavish).reply(board, "Received 2 answers in round 1. 2 of them go to D58, D61.");
 
         assertThat(reply).isEqualTo(new BoardReply.Sent());
-        assertThat(Files.readAllLines(arguments)).containsExactly("reply", board.toString(), "--agent-reply", "Received 2 answers in round 1. They go to D58.");
+        assertThat(Files.readAllLines(arguments)).containsExactly("reply", board.toString(), "--agent-reply", "Received 2 answers in round 1. 2 of them go to D58, D61.");
     }
 
     @Test
@@ -38,7 +38,7 @@ class LavishBoardHostReplyTest {
         Path board = Files.writeString(directory.resolve("board.html"), "<!doctype html>\n");
         Path lavish = StandInScripts.installed(directory.resolve("bin/lavish-axi"), "#!/bin/sh\necho 'no open session' >&2\nexit 3\n");
 
-        BoardReply reply = hostRunning(lavish).reply(board, "Received 1 answer in round 1. None of them answers a decision.");
+        BoardReply reply = hostRunning(lavish).reply(board, "Received 1 answer in round 1. It answers no decision.");
 
         assertThat(reply).isEqualTo(new BoardReply.NotSent("lavish-axi reply exited with 3: no open session"));
     }
@@ -47,7 +47,7 @@ class LavishBoardHostReplyTest {
     void reportsAReplyWhoseCommandCannotStart() {
         Path board = directory.resolve("board.html");
 
-        BoardReply reply = hostRunning(directory.resolve("bin/missing-lavish-axi")).reply(board, "Received 1 answer in round 1. None of them answers a decision.");
+        BoardReply reply = hostRunning(directory.resolve("bin/missing-lavish-axi")).reply(board, "Received 1 answer in round 1. It answers no decision.");
 
         assertThat(reply).isInstanceOfSatisfying(BoardReply.NotSent.class, notSent -> assertThat(notSent.reason()).contains("could not run"));
     }

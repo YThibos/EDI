@@ -75,9 +75,16 @@ public class ReceiveBoardFeedback {
 
     private void acknowledged(RecordedRound round, BoardFeedback.Answered answered) {
         Board board = round.board();
-        BoardReply reply = host.reply(Path.of(board.file()), BoardReceiptWords.of(board, answered, round.answers()));
-        if (reply instanceof BoardReply.NotSent unsent) {
+        if (receiptTo(board, BoardReceiptWords.of(board, answered, round.answers())) instanceof BoardReply.NotSent unsent) {
             receiptNotSent(board, unsent.reason());
+        }
+    }
+
+    private BoardReply receiptTo(Board board, String words) {
+        try {
+            return host.reply(Path.of(board.file()), words);
+        } catch (RuntimeException stopped) {
+            return new BoardReply.NotSent(stopped.getMessage());
         }
     }
 
