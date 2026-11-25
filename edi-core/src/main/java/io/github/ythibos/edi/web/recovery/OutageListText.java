@@ -85,7 +85,8 @@ class OutageListText implements TextPresenter<OutageList> {
             case NotVerified notVerified when !unpushed.uncommittedChanges() -> "not verified, because " + notVerified.reason();
             case NotVerified notVerified -> "uncommitted changes, and commits not verified, because " + notVerified.reason();
             case Counted counted when counted.areAllOnTheForge() && !unpushed.uncommittedChanges() -> "none" + staleness(counted);
-            case Counted counted when counted.areAllOnTheForge() -> "uncommitted changes" + staleness(counted);
+            case Counted counted when counted.areAllOnTheForge() ->
+                    "uncommitted changes, and no commits missing on " + counted.remote() + staleness(counted);
             case Counted counted -> Words.quantity(counted.missing(), "commit") + " not on " + counted.remote() + staleness(counted)
                     + (unpushed.uncommittedChanges() ? " and uncommitted changes" : "");
         };

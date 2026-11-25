@@ -102,6 +102,8 @@ class OutageListTextTest {
                 .isEqualTo("none (the copy last fetched from the forge 3 days ago)");
         assertThat(unpushedLine(new UnpushedWork(new Counted("origin", 2, Optional.empty()), false)))
                 .isEqualTo("2 commits not on origin (the copy records no fetch from the forge)");
+        assertThat(unpushedLine(new UnpushedWork(new Counted("origin", 0, Optional.empty()), true)))
+                .isEqualTo("uncommitted changes, and no commits missing on origin (the copy records no fetch from the forge)");
     }
 
     @Test
