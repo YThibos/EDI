@@ -19,6 +19,8 @@ import io.github.ythibos.edi.application.decision.DecisionList;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.voice.CaptainVoice;
@@ -61,10 +63,10 @@ class DecisionController {
 
     @PostMapping("/api/decisions/{reference}/answer")
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
-        LOG.info("Received an answer to {} from the {}, option {}", reference, caller.actor(), request.option());
+        LOG.info("Received an answer to {} from the {}{}", reference, caller.actor(), optionNamed(request.option()));
         try {
             Confirmation.Answered stored = answered(reference, request, caller);
-            LOG.info("Stored the answer to {}, option {}, through the {}", stored.decision().number(), request.option(), stored.decision().answer().channel().word());
+            logStored(stored.decision());
             return stored;
         } catch (RuntimeException refused) {
             LOG.warn("Refused the answer to {} from the {}: {}", reference, caller.actor(), refused.getMessage());
@@ -72,11 +74,20 @@ class DecisionController {
         }
     }
 
+    private static String optionNamed(Object option) {
+        return option == null ? "" : ", option " + option;
+    }
+
     private Confirmation.Answered answered(String reference, AnswerRequest request, Caller caller) {
         AnswerChannel channel = caller.answeringChannel("edi decision answer");
         String verbatim = channel == AnswerChannel.CHAT ? captainsWord.requireCited(caller.callingSession(), request.citation()) : request.verbatim();
         AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel, verbatim), caller.actor());
         return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket(), answered.carriedToItsWorker());
+    }
+
+    private static void logStored(Decision decision) {
+        CaptainAnswer answer = decision.answer();
+        LOG.info("Stored the answer to {} through the {}{}", decision.number(), answer.channel().word(), optionNamed(answer.option()));
     }
 
     @PostMapping("/api/decisions/{reference}/recheck")

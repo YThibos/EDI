@@ -17,9 +17,7 @@ describe('AccessNotice', () => {
     const shown = await noticeFor('signed-out');
 
     expect(shown.querySelector('.sr-notice__title')?.textContent).toBe('Sign in to see the sitrep');
-    expect(shown.querySelector('.sr-notice__detail')?.textContent).toBe(
-      'Ask the primary session for the console, or run /sitrep board there, for a link that signs you in; edi up opens the primary session first.',
-    );
+    expect(shown.querySelector('.sr-notice__detail')?.textContent).toBe('Run edi console in the primary session to sign in again.');
     expect(shown.querySelector('.view')).toBeNull();
   });
 

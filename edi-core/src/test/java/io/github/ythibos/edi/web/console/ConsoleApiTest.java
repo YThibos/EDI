@@ -231,8 +231,24 @@ class ConsoleApiTest {
 
         assertThat(logged).contains(
                 "Received an answer to " + number + " from the captain, option A",
-                "Stored the answer to " + number + ", option A, through the console");
+                "Stored the answer to " + number + " through the console, option A");
         assertThat(logged).anyMatch(line -> line.startsWith("Refused the answer to " + number + " from the captain: " + number + " is already answered"));
+    }
+
+    @Test
+    void logsAnAnswerInTheCaptainsOwnWordsWithoutAnOption() throws Exception {
+        String cookie = signedInCookie();
+        String number = raisedDecision("console-logged-words");
+
+        List<String> logged;
+        try (CapturedLogs logs = CapturedLogs.ofEveryLogger()) {
+            sendAnswer(number, cookie, "{\"option\":null,\"text\":\"Neither, keep the old lamp\"}");
+            logged = logs.lines();
+        }
+
+        assertThat(logged).contains(
+                "Received an answer to " + number + " from the captain",
+                "Stored the answer to " + number + " through the console");
     }
 
     @Test

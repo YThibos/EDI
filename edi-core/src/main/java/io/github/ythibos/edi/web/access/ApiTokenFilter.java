@@ -68,7 +68,7 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         String bearer = bearerTokenOf(request);
         Optional<Caller> caller = bearer == null ? captainSignedInBy(request) : callerHolding(bearer, request);
         if (caller.isEmpty()) {
-            String refusal = refusalOfAnUnknownCaller(request);
+            String refusal = refusalOfAnUnknownCaller(bearer, request);
             firings.turnedAway(Rule.API_TOKEN, request, refusal);
             refuse(request, response, HttpStatus.UNAUTHORIZED, refusal);
         } else if (isAConsoleChangeWithoutItsHeader(caller.get(), request)) {
@@ -80,8 +80,8 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         }
     }
 
-    private static String refusalOfAnUnknownCaller(HttpServletRequest request) {
-        return bearerTokenOf(request) == null && ConsoleSessionCookie.presentedIn(request).isPresent() ? CONSOLE_SESSION_REFUSAL : REFUSAL;
+    private static String refusalOfAnUnknownCaller(String bearer, HttpServletRequest request) {
+        return bearer == null && ConsoleSessionCookie.presentedIn(request).isPresent() ? CONSOLE_SESSION_REFUSAL : REFUSAL;
     }
 
     private Optional<Caller> callerHolding(String presented, HttpServletRequest request) {

@@ -118,7 +118,7 @@ describe('DecisionCardView', () => {
     http.expectOne('/api/decisions/D58/answer').error(new ProgressEvent('error'));
     await fixture.whenStable();
 
-    expect(card.querySelector('.sr-limit')?.textContent).toBe('Not stored. My core did not answer, so try again in a moment.');
+    expect(card.querySelector('.sr-limit')?.textContent).toBe('Not stored. I did not answer; my core may be restarting, so try again in a moment.');
     expect(settled).toBe(0);
   });
 
