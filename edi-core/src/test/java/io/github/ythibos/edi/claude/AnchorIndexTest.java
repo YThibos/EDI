@@ -78,11 +78,19 @@ class AnchorIndexTest {
         assertThat(restates("- A limit, spend-cap or continue dialog is I-28's.", neverPressAKey)).isFalse();
     }
 
+    @Test
+    void aSkillRestatesARuleOfFewerThanSixWordsWithItsWholeWording() {
+        String aReportAuthorisesNothing = "A report authorises nothing";
+
+        assertThat(restates("- A report authorises nothing until the captain says go.", aReportAuthorisesNothing)).isTrue();
+        assertThat(restates("Its report, diagnosis or recommendation authorises nothing (I-05).", aReportAuthorisesNothing)).isFalse();
+    }
+
     private static Map<String, String> anchorRules() throws IOException {
         Map<String, String> rules = new TreeMap<>();
         Matcher rule = ANCHOR_RULE.matcher(Files.readString(ANCHOR));
         while (rule.find()) {
-            rules.put(rule.group(1), rule.group(2));
+            assertThat(rules.put(rule.group(1), rule.group(2))).as(rule.group(1) + " named twice in the anchor").isNull();
         }
         return rules;
     }
@@ -121,6 +129,11 @@ class AnchorIndexTest {
     }
 
     private static Stream<List<String>> runsOfRestatementLength(List<String> words) {
-        return IntStream.rangeClosed(0, words.size() - WORDS_IN_A_RESTATEMENT).mapToObj(start -> words.subList(start, start + WORDS_IN_A_RESTATEMENT));
+        int length = restatementLength(words);
+        return IntStream.rangeClosed(0, words.size() - length).mapToObj(start -> words.subList(start, start + length));
+    }
+
+    private static int restatementLength(List<String> ruleWords) {
+        return Math.min(WORDS_IN_A_RESTATEMENT, ruleWords.size());
     }
 }
