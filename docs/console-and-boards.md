@@ -55,6 +55,7 @@ edi board show <task-id> [--round 2]                                  # what the
 
 The core runs one `lavish-axi poll` per armed board and starts it again within 30 seconds if it stops ([research-boards](decisions/research-boards.md)).
 Each round of feedback becomes one message in the scout's inbox, and a prompt that names a bound decision, in its context data as `decision` or by its card's `question` (with `option` or `answer`), or in words that begin with the decision's number such as `D58 A, ...`, answers that decision as the captain's word ([research-boards](decisions/research-boards.md)).
+In the same step the core replies on the board with how many answers arrived and which decisions they name, so the board stops showing Working... even when the scout has ended; when it cannot, the primary is woken with the board's name and file, and an answer the core cannot record wakes the primary with the board, the round and the captain's words ([research-boards](decisions/research-boards.md)).
 A board stops listening when the captain ends its session or its task is cleaned up.
 
 ## The terminal background

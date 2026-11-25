@@ -176,6 +176,87 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void sendsTheBoardAReceiptNamingTheAnswersAndTheirDecisionsWhetherOrNotItsScoutIsStillThere() {
+        Board board = armQuietly(boardFile, decision);
+        home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "B"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please."), choice), false));
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Thank you.")), false));
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Warmer light."), typed("Fewer lamps.")), false));
+
+        assertThat(home.boardHost().replies()).containsExactly(
+                "Received 2 answers in round 1. 1 of them names " + decision + ". If I cannot record one of them, I tell you in the session.",
+                "Received 1 answer in round 2. It names no decision. If I cannot record it, I tell you in the session.",
+                "Received 2 answers in round 3. None of them names a decision. If I cannot record one of them, I tell you in the session.");
+        assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).doesNotContain(WakeKind.BOARD_RECEIPT_NOT_SENT);
+    }
+
+    @Test
+    void namesTheDecisionInTheReceiptOfARoundWhoseOnlyAnswerAnswersIt() {
+        Board board = armQuietly(boardFile, decision);
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "B"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(choice), false));
+
+        assertThat(home.boardHost().replies()).containsExactly("Received 1 answer in round 1. It names " + decision + ". If I cannot record it, I tell you in the session.");
+    }
+
+    @Test
+    void countsEachAnswerToADecisionInTheReceiptAndSaysTheLastOneCountsWhenTheCaptainAnsweredItTwice() {
+        Board board = armQuietly(boardFile, decision);
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=A", decision + ": option=A", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "A"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(),
+                new BoardFeedback.Answered(List.of(choice, typed("Brighter, please."), typed(decision + " B, simpler")), false));
+
+        assertThat(home.boardHost().replies()).containsExactly(
+                "Received 3 answers in round 1. 2 of them name " + decision + ". The last one counts for " + decision + "."
+                        + " If I cannot record one of them, I tell you in the session.");
+        assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('B'));
+    }
+
+    @Test
+    void sendsNoReceiptToABoardWhoseSessionTheCaptainEnded() {
+        Board board = armQuietly(boardFile);
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(farewell()), true));
+
+        assertThat(home.boardHost().replies()).isEmpty();
+    }
+
+    @Test
+    void tellsThePrimaryWhichBoardGotNoReceiptWhenTheReplyFailsAndStillDeliversTheRound() {
+        Board board = armQuietly(boardFile, decision);
+        home.boardHost().failsToReply("lavish-axi reply exited with 1: the session is not open");
+
+        boolean pollAgain = home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please.")), false));
+
+        assertThat(pollAgain).isTrue();
+        assertThat(message(1).body()).contains("Brighter, please.");
+        assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_RECEIPT_NOT_SENT).singleElement()
+                .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board " + board.id() + " at " + boardFile + " round 1: "
+                        + "lavish-axi reply exited with 1: the session is not open"));
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardReceiptNotSent");
+    }
+
+    @Test
+    void tellsThePrimaryWhichBoardGotNoReceiptWhenTheBoardHostBreaksDownWhileReplying() {
+        Board board = armQuietly(boardFile, decision);
+        home.boardHost().breaksDownWhileReplying("the board host broke down");
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please.")), false));
+
+        assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_RECEIPT_NOT_SENT).singleElement()
+                .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board " + board.id() + " at " + boardFile + " round 1: "
+                        + "the board host broke down"));
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardReceiptNotSent");
+    }
+
+    @Test
     void showsEachAnsweredRoundToThePrimaryWithoutDeliveringItToTheScout() {
         Board board = armQuietly(boardFile, decision);
         BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",
@@ -436,7 +517,9 @@ class ResearchBoardsTest {
         assertThat(home.decisions().get(decision).answer().channel()).isEqualTo(AnswerChannel.CHAT);
         assertThat(home.boards().answersOf(board.id())).singleElement()
                 .satisfies(answer -> assertThat(answer.refusedBecause()).startsWith(decision + " is already answered"));
-        assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).contains(WakeKind.BOARD_ANSWER_REFUSED);
+        assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_ANSWER_REFUSED).singleElement()
+                .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board %s round 1: %s (\"%s B\"): %s is already answered: \"%s A\""
+                        .formatted(board.id(), decision, decision, decision, decision)));
     }
 
     @Test

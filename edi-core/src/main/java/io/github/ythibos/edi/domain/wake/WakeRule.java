@@ -9,6 +9,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardReceiptNotSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRoundPosted;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
@@ -144,7 +145,8 @@ public final class WakeRule {
                     answered.number() + " in the " + answered.answer().channel().word() + ": " + answered.answer().verbatim());
             case RecheckAsked asked -> wake(WakeKind.RECHECK_ASKED, asked, null, recheckOf(asked));
             case BoardAnswered answered -> wake(WakeKind.BOARD_ANSWERED, answered, null, roundOf(answered));
-            case BoardAnswerRefused refused -> wake(WakeKind.BOARD_ANSWER_REFUSED, refused, null, refused.number() + ": " + refused.because());
+            case BoardAnswerRefused refused -> wake(WakeKind.BOARD_ANSWER_REFUSED, refused, null, refusalOf(refused));
+            case BoardReceiptNotSent unsent -> wake(WakeKind.BOARD_RECEIPT_NOT_SENT, unsent, null, receiptOf(unsent));
             case SliceDispatched dispatched -> wake(WakeKind.SLICE_DISPATCHED, dispatched, dispatched.worker(),
                     sliceOf(dispatched.number(), dispatched.plan()));
             case SliceNotDispatched refused -> wake(WakeKind.SLICE_NOT_DISPATCHED, refused, null,
@@ -184,6 +186,14 @@ public final class WakeRule {
         String ending = answered.sessionEnded() ? ", and the captain ended the session" : "";
         return "board " + answered.board() + " round " + answered.round() + ": " + answered.prompts() + " prompt" + (answered.prompts() == 1 ? "" : "s")
                 + ending;
+    }
+
+    private static String refusalOf(BoardAnswerRefused refused) {
+        return "board " + refused.board() + " round " + refused.round() + ": " + refused.number() + " (\"" + refused.verbatim() + "\"): " + refused.because();
+    }
+
+    private static String receiptOf(BoardReceiptNotSent unsent) {
+        return "board " + unsent.board() + " at " + unsent.file() + " round " + unsent.round() + ": " + unsent.because();
     }
 
     private static String sliceOf(int number, WorkKey plan) {

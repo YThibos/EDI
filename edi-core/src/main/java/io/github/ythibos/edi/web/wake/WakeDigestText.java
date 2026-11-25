@@ -111,7 +111,10 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case RECHECK_ASKED -> wake.task() + ": the captain asks to re-check " + wake.detail()
                     + "; verify the latest state against reality, then close it with evidence or keep it open with a note.";
             case BOARD_ANSWERED -> wake.task() + ": the captain answered on " + wake.detail() + "; its worker has them in its inbox.";
-            case BOARD_ANSWER_REFUSED -> wake.task() + ": a board answer to " + wake.detail();
+            case BOARD_ANSWER_REFUSED -> wake.task() + ": I could not record the captain's answer on " + endingItsSentence(wake.detail())
+                    + " Put it before the captain once more.";
+            case BOARD_RECEIPT_NOT_SENT -> wake.task() + ": the captain's answers were taken but the board got no receipt, " + wake.detail()
+                    + "; it may keep showing Working... until you reply on it with lavish-axi reply <file> --agent-reply.";
             case SLICE_DISPATCHED -> wake.task() + ": I dispatched it as slice " + wake.detail() + " under the plan's go, once its wait was met; "
                     + whoTookUp(wake) + ", so you dispatch nothing for it.";
             case SLICE_NOT_DISPATCHED -> wake.task() + ": I could not dispatch slice " + endingItsSentence(wake.detail())

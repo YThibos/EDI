@@ -13,6 +13,7 @@ import io.github.ythibos.edi.adapter.process.ProgramFailure;
 import io.github.ythibos.edi.adapter.process.ProgramRun;
 import io.github.ythibos.edi.application.port.ResearchBoardHost;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
+import io.github.ythibos.edi.domain.board.BoardReply;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
@@ -40,9 +41,27 @@ public class LavishBoardHost implements ResearchBoardHost {
         }
     }
 
+    @Override
+    public BoardReply reply(Path board, String words) {
+        try {
+            return replyIn(replied(board, words));
+        } catch (ProgramFailure unable) {
+            return new BoardReply.NotSent(unable.getMessage());
+        }
+    }
+
     private ProgramRun polled(Path board, String listener) {
         return programs.runUntilItEnds(ProgramCall.of(Program.LAVISH, executable, board.getParent(),
                 List.of("poll", board.toString(), "--owner", listener, "--takeover")));
+    }
+
+    private ProgramRun replied(Path board, String words) {
+        return programs.run(ProgramCall.of(Program.LAVISH, executable, board.getParent(), List.of("reply", board.toString(), "--agent-reply", words)));
+    }
+
+    private BoardReply replyIn(ProgramRun reply) {
+        return reply.succeeded() ? new BoardReply.Sent()
+                : new BoardReply.NotSent("lavish-axi reply exited with " + reply.exitCode() + ": " + reply.errors().strip());
     }
 
     private BoardFeedback feedbackOf(ProgramRun poll) {

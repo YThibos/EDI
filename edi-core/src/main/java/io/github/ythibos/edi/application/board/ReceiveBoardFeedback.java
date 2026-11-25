@@ -1,5 +1,6 @@
 package io.github.ythibos.edi.application.board;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,14 +14,17 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.InboxStore;
 import io.github.ythibos.edi.adapter.store.WorkerStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.application.port.ResearchBoardHost;
 import io.github.ythibos.edi.application.worker.InboxNotice;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardAnswer;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.board.BoardId;
+import io.github.ythibos.edi.domain.board.BoardReply;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardReceiptNotSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerSent;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -35,11 +39,12 @@ public class ReceiveBoardFeedback {
     private final EventLog events;
     private final InboxNotice notice;
     private final SettleBoardAnswers settlement;
+    private final ResearchBoardHost host;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public ReceiveBoardFeedback(BoardStore boards, DecisionStore decisions, InboxStore inbox, WorkerStore workers, EventLog events,
-            InboxNotice notice, SettleBoardAnswers settlement, Clock clock, TransactionTemplate transaction) {
+            InboxNotice notice, SettleBoardAnswers settlement, ResearchBoardHost host, Clock clock, TransactionTemplate transaction) {
         this.boards = boards;
         this.decisions = decisions;
         this.inbox = inbox;
@@ -47,6 +52,7 @@ public class ReceiveBoardFeedback {
         this.events = events;
         this.notice = notice;
         this.settlement = settlement;
+        this.host = host;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -61,9 +67,30 @@ public class ReceiveBoardFeedback {
 
     private boolean answeredRound(BoardId board, BoardFeedback.Answered answered) {
         Optional<RecordedRound> recorded = transaction.execute(_ -> listening(board).map(listening -> recorded(listening, answered)));
+        recorded.filter(_ -> !answered.sessionEnded()).ifPresent(round -> acknowledged(round, answered));
         recorded.filter(RecordedRound::reachesAWorker).ifPresent(round -> notice.deliver(round.worker(), round.message()));
         settlement.settleEveryUnsettled();
         return recorded.isPresent() && !answered.sessionEnded();
+    }
+
+    private void acknowledged(RecordedRound round, BoardFeedback.Answered answered) {
+        Board board = round.board();
+        if (receiptTo(board, BoardReceiptWords.of(board, answered)) instanceof BoardReply.NotSent unsent) {
+            receiptNotSent(board, unsent.reason());
+        }
+    }
+
+    private BoardReply receiptTo(Board board, String words) {
+        try {
+            return host.reply(Path.of(board.file()), words);
+        } catch (RuntimeException stopped) {
+            return new BoardReply.NotSent(stopped.getMessage());
+        }
+    }
+
+    private void receiptNotSent(Board board, String because) {
+        transaction.executeWithoutResult(_ -> events.record(new BoardReceiptNotSent(board.task(), board.id(), board.file(), board.rounds(), because),
+                Actor.CORE, clock.now()));
     }
 
     private Optional<Board> listening(BoardId board) {
@@ -82,7 +109,7 @@ public class ReceiveBoardFeedback {
         events.record(new SteerSent(saved.task(), message.number(), null), Actor.CORE, now);
         events.record(new BoardAnswered(saved.task(), saved.id(), saved.rounds(), answered.prompts().size(), answered.sessionEnded()), Actor.CAPTAIN,
                 now);
-        return new RecordedRound(message, workers.latestOf(saved.task()).filter(worker -> !worker.isRetired()).orElse(null));
+        return new RecordedRound(saved, message, workers.latestOf(saved.task()).filter(worker -> !worker.isRetired()).orElse(null));
     }
 
     private boolean closedWithoutNews(BoardId board) {
@@ -94,7 +121,7 @@ public class ReceiveBoardFeedback {
         return false;
     }
 
-    private record RecordedRound(InboxMessage message, Worker worker) {
+    private record RecordedRound(Board board, InboxMessage message, Worker worker) {
 
         boolean reachesAWorker() {
             return worker != null;

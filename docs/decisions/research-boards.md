@@ -21,9 +21,10 @@ The primary may post a new round on a listening board with `edi board post` (`Po
 `BoardListeners` runs one listener per listening board on a virtual thread, polling again after an answered round; a round every `edi.boards.round` (PT30S) restarts any missing listener and stops those of boards that no longer listen; cleanup retires a task's boards.
 `ToonReader` reads TOON by its grammar into a JSON tree, refusing any malformed or short read with its line, and `LavishResult` maps it to a `BoardFeedback`: answered, closed empty, disconnected or failed.
 `ReceiveBoardFeedback` records an answered round in one transaction: the round counted, its answers to bound decisions saved as `board_answer` rows, one inbox message with every prompt for the task's worker, and `BoardAnswered`, which wakes the primary.
+In the same step the core sends the board a receipt, `lavish-axi reply <html> --agent-reply` through `ResearchBoardHost.reply`, saying how many answers arrived, which bound decisions they name and that an answer it cannot record is told in the session, never that one was recorded, whether the scout runs, is idle or has ended, so the board leaves its working state at once and a later reply of the scout or the primary still shows; a round in which the captain ended the session gets none, and a receipt that cannot be sent records `BoardReceiptNotSent`, which wakes the primary with the board, its file and the reason.
 `edi board show <task> [--round N]` reads every answered round back read-only, from `GET /api/tasks/<task>/board` (`BoardRoundsQuery`), for the primary and the captain's console session alone: each round's message, found as the `SteerSent` the round's `BoardAnswered` follows, with how each bound answer settled; it never marks the message received and records nothing, so the scout's `edi inbox` still delivers it.
 A prompt answers a bound decision when its context names it as `decision`, or names the binding's question as `question`, or when its words begin with the decision's number as in the chat (`D58 B, simpler`); the option is the context's `option` or `answer` when it is a single capital letter, or the capital letter that follows the number when the card offers it; `SettleBoardAnswers` then answers each through `AnswerDecision` on the `board` channel as the captain, with the prompt's words verbatim, once, even across a crash, so it authorises exactly the act its chosen option names ([captain-decisions](captain-decisions.md), [captains-word](captains-word.md)).
-Settlement is the only judge of a board answer: the round's message only says which decisions its prompts answer, and whenever settlement refuses one, for any reason, it records `BoardAnswerRefused`, which wakes the primary, and sends the board's task worker one inbox message naming the decision, the reason and the captain's words.
+Settlement is the only judge of a board answer: the round's message only says which decisions its prompts answer, and whenever settlement refuses one, for any reason, it records `BoardAnswerRefused`, which wakes the primary with the board, the round, the decision and the captain's words, and sends the board's task worker one inbox message naming the decision, the reason and the captain's words.
 A board waits on the captain while it listens and holds open questions or binds an open decision, which puts it in the decision zone with its link and each open decision it binds as one line beneath it ([fleet-snapshot](fleet-snapshot.md)).
 
 ## Why
@@ -42,6 +43,7 @@ The core raising the card makes raising and binding one step a scout can take, s
 - Counting questions in the board's HTML, or asking Lavish on every read - no element marks a question, and a program per page load.
 - `edi board arm` refusing a board whose round carries an unraised card - the core cannot see a card in the scout's own markup, and a scout cannot raise one.
 - Letting a worker run `edi decision raise` - binding would still be a second step, and a worker could raise cards on any task.
+- The scout replying on the board - a scout whose session has ended never replies, so the board spins without end although every answer arrived.
 - Having the scout write the D number into the board after arming - the board is open in the captain's browser by then, and a forgotten edit loses the answer.
 - Applying a board answer to a card the primary raises afterwards - the captain chose among the options the board showed, which need not be the card's.
 - Foreseeing settlement's refusals when the round arrives - a second copy of the rules that drifts from the one that decides.
@@ -50,6 +52,7 @@ The core raising the card makes raising and binding one step a scout can take, s
 
 ## Consequences
 
+- Good: the captain sees his answers taken within seconds, even when no scout is left to reply.
 - Good: a board answer reaches its decision even when the scout is dead, and a board with questions reaches the captain with its link.
 - Good: a choice the captain makes on a scout's board is his word for the card it answers, promote included, and he never retypes it in chat.
 - Bad: one `lavish-axi poll` runs per listening board, a message starting with a bound decision's number answers it, and a scout that forgets to arm a new round leaves it out of the zone.
@@ -68,3 +71,5 @@ When Lavish offers JSON output, reports a board's unanswered prompts itself or m
 - 26/10/2026: a scout re-armed its board with an answered card whose context it had extended, which raised a duplicate decision, so a card is answered when an answered decision of its task carries its title (EDI-51).
 - 03/11/2026: two steers had existed only to ask a scout whether every answer had arrived, since a round's full text lived only in its inbox, so `edi board show` reads the rounds without consuming them (EDI-66).
 - 24/11/2026: a task waits on several decisions at once, so a card is checked against each of its open decisions rather than its latest one (EDI-87).
+- 25/11/2026: a board kept showing Working... after its answers were taken because only a scout that was still running replied, so the core sends the receipt itself and wakes the primary when it cannot (EDI-322).
+- 25/11/2026: the receipt goes out before settlement, so it says which decisions the answers name rather than that they were recorded, and a refused board answer wakes the primary with its board, round and words, so it reaches the captain once more (EDI-322).

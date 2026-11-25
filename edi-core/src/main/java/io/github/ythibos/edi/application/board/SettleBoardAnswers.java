@@ -88,7 +88,7 @@ public class SettleBoardAnswers {
     }
 
     private RefusalNotice refusalRecorded(Board board, BoardAnswer answer, String because, Instant now) {
-        events.record(new BoardAnswerRefused(board.task(), answer.decision(), board.id(), because), Actor.CORE, now);
+        events.record(new BoardAnswerRefused(board.task(), answer.decision(), board.id(), answer.round(), answer.verbatim(), because), Actor.CORE, now);
         firings.record(RuleFired.refused(Rule.BOARD_ANSWER, Actor.CAPTAIN, board.task(), because), now);
         InboxMessage message = InboxMessage.sent(board.task(), inbox.nextNumber(board.task()), refusalWords(answer, because), null, now);
         inbox.save(message);
