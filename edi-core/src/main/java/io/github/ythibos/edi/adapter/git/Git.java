@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -45,6 +46,7 @@ public class Git {
     private static final int STATUS_MARKS = 3;
     private static final String LITERAL_PATH = ":(literal)";
     private static final String FETCH_RECORD = "FETCH_HEAD";
+    private static final String FETCHED_FROM = " of ";
 
     private final ExternalPrograms programs;
 
@@ -130,10 +132,10 @@ public class Git {
         return git(repository, "remote").lines().toList();
     }
 
-    public Optional<Instant> lastFetchOf(Path worktree) {
+    public Optional<Instant> lastFetchFrom(Path worktree, Predicate<String> source) {
         return Stream.of(Path.of(git(worktree, "rev-parse", "--path-format=absolute", "--git-path", FETCH_RECORD).strip()),
                 commonDirectory(worktree).resolve(FETCH_RECORD))
-                .flatMap(record -> modifiedAt(record).stream())
+                .flatMap(record -> fetchedAt(record, source).stream())
                 .max(Comparator.naturalOrder());
     }
 
@@ -308,12 +310,20 @@ public class Git {
         return programs.run(ProgramCall.of(Program.GIT, null, repository, commandLineOf(arguments)).withInput(input));
     }
 
-    private static Optional<Instant> modifiedAt(Path file) {
+    private static Optional<Instant> fetchedAt(Path record, Predicate<String> source) {
         try {
-            return Optional.of(Files.getLastModifiedTime(file).toInstant());
+            return Files.readAllLines(record).stream().map(Git::fetchedSourceOf).anyMatch(source)
+                    ? Optional.of(Files.getLastModifiedTime(record).toInstant())
+                    : Optional.empty();
         } catch (IOException unreadable) {
             return Optional.empty();
         }
+    }
+
+    private static String fetchedSourceOf(String fetched) {
+        String described = fetched.substring(fetched.lastIndexOf('\t') + 1);
+        int source = described.lastIndexOf(FETCHED_FROM);
+        return source < 0 ? described : described.substring(source + FETCHED_FROM.length());
     }
 
     private static Set<String> nulSeparated(String output) {

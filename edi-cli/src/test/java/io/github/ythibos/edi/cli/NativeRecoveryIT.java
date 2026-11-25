@@ -42,6 +42,8 @@ class NativeRecoveryIT {
                 tracker: { kind: edi, projectKey: HRN }
                 base: main
             """;
+    private static final String FORGE = "    forge: { kind: github, path: example-owner/harness, account: example-owner }\n";
+    private static final String FORGE_ADDRESS = "https://github.com/example-owner/harness.git";
     private static final String MACHINE_PROFILE = """
             workers:
               models:
@@ -132,11 +134,13 @@ class NativeRecoveryIT {
         git(copy, "commit", "--quiet", "--message", "HRN-17 Latch the gate");
         git(copy, "remote", "add", "no-mistakes", validation.toString());
         git(copy, "push", "--quiet", "--no-verify", "no-mistakes", "HEAD:refs/heads/restart-gate");
+        harnessRegistersItsForgeWithoutReachingIt(copy);
 
         simulateAMachineRestart();
         CommandRun listed = edi(Map.of(), "", "recover");
 
-        assertThat(listed.output()).contains("unpushed work: not verified, because harness registers no forge").doesNotContain("unpushed work: none");
+        assertThat(listed.output()).contains("unpushed work: 1 commit not on origin (the copy records no fetch)",
+                "unpushed work: none (the copy records no fetch)");
     }
 
     @Test
@@ -255,6 +259,12 @@ class NativeRecoveryIT {
         stopTheWorkerServer();
         Files.writeString(bootIdFile(), UUID.randomUUID().toString());
         core = startedCore();
+    }
+
+    private static void harnessRegistersItsForgeWithoutReachingIt(Path copy) throws Exception {
+        Files.writeString(home.resolve("config/projects.yaml"), REGISTRY + FORGE);
+        git(copy, "remote", "set-url", "origin", FORGE_ADDRESS);
+        git(copy, "config", "protocol.https.allow", "never");
     }
 
     private static void deleteTheTranscriptOf(String session) throws IOException {

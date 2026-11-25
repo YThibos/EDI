@@ -1083,7 +1083,7 @@ public final class TestHome {
 
     public OutageListQuery outageList() {
         return new OutageListQuery(outages, tasks, workers, dispatches, inbox, recoveryCosts,
-                new CurrentRoutes(dispatchRulesFile(), machineProfile()), registry, new PushedWorkCheck(git, clock), git, home, transaction);
+                new CurrentRoutes(dispatchRulesFile(), machineProfile()), new PushedWorkCheck(registry, git, clock), git, home, transaction);
     }
 
     public NoticeFullContexts noticeFullContexts() {
