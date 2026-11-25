@@ -35,7 +35,7 @@ description: >-
 
 - Keep the wake stream live as your anchor's Ending a turn section says, and act on each wake.
 - `edi worker list`, `edi worker show <task>` (its whole last status and open question, from the store) and `edi worker peek <task>` (its pane) show a worker; `edi steer <task> [--resolves <key>]` sends it a message on standard input, and the steer counts once it acknowledges it (I-27).
-- The worker runs the validation pipeline and answers its gates; you never answer a worker's gate (I-01).
+- The worker runs the validation pipeline and answers its gates; you never answer a worker's gate.
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
 - Such a decision waits in the console for its round of decisions, and the core wakes you when the round is due: never put it to the captain on its own before then.
 - Only a decision that blocks the captain's current work gets `"urgent": true` on its card, which puts it before them at once.
