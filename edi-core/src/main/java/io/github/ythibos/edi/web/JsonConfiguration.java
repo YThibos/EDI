@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.plan.PlanGo;
 import io.github.ythibos.edi.domain.plan.SliceWait;
 import io.github.ythibos.edi.domain.project.ProjectKey;
 import io.github.ythibos.edi.domain.project.ProjectName;
@@ -85,6 +86,7 @@ class JsonConfiguration {
                 .addSerializer(TaskStage.class, new AsText<>(TaskStage.class, TaskStage::word))
                 .addSerializer(AwaitedStage.class, new AsText<>(AwaitedStage.class, AwaitedStage::word))
                 .addSerializer(SliceWait.class, new AsText<>(SliceWait.class, SliceWait::words))
+                .addSerializer(PlanGo.class, new AsText<>(PlanGo.class, PlanGo::words))
                 .addSerializer(HoldKind.class, new AsText<>(HoldKind.class, HoldKind::word))
                 .addSerializer(AnswerChannel.class, new AsText<>(AnswerChannel.class, AnswerChannel::word))
                 .addSerializer(SparkAuthor.class, new AsText<>(SparkAuthor.class, SparkAuthor::word))

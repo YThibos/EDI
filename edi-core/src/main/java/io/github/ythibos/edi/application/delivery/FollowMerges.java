@@ -4,6 +4,7 @@ import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -31,7 +32,10 @@ import io.github.ythibos.edi.domain.delivery.RegisteredForge;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
+import io.github.ythibos.edi.domain.landing.WorkAfterTheMergedHead;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.task.StageChange;
 import io.github.ythibos.edi.domain.task.StageTrigger.RequestMerged;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -54,12 +58,13 @@ public class FollowMerges {
     private final CleanUpTask cleanUp;
     private final LandedWorkCheck landedWork;
     private final TaskStages stages;
+    private final FollowUpDecision followUp;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public FollowMerges(TaskStore tasks, DeliveryStore deliveries, EventLog events, ProjectRegistry registry, WorkerContext context, Forges forges,
-            DeliveryRecords records, CloneRefreshes refreshes, CleanUpTask cleanUp, LandedWorkCheck landedWork, TaskStages stages, Clock clock,
-            TransactionTemplate transaction) {
+            DeliveryRecords records, CloneRefreshes refreshes, CleanUpTask cleanUp, LandedWorkCheck landedWork, TaskStages stages,
+            FollowUpDecision followUp, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.deliveries = deliveries;
         this.events = events;
@@ -71,6 +76,7 @@ public class FollowMerges {
         this.cleanUp = cleanUp;
         this.landedWork = landedWork;
         this.stages = stages;
+        this.followUp = followUp;
         this.clock = clock;
         this.transaction = transaction;
     }
@@ -102,7 +108,20 @@ public class FollowMerges {
 
     public void finishEarlierMerges() {
         refreshes.refreshEveryClone();
-        cleanUpWhatTheClonesHold(Actor.CORE);
+        cleanUpWhatTheClonesHold(_ -> Actor.CORE);
+    }
+
+    public void raiseTheFollowUpsHeldBack() {
+        followUp.heldBackOfFreeTasks().forEach(this::raisedOnItsOwn);
+    }
+
+    private void raisedOnItsOwn(FollowUpHeldBack heldBack) {
+        try {
+            transaction.execute(_ -> deliveries.of(heldBack.task())).filter(Delivery::isLanded)
+                    .ifPresent(merged -> followUp.raise(new WorkAfterTheMergedHead(heldBack.task(), viewOf(merged), heldBack.notLanded())));
+        } catch (Refusal | ProgramFailure unraised) {
+            LOG.warn("Could not raise the follow-up decision of {}: {}", heldBack.task(), unraised.getMessage());
+        }
     }
 
     private Optional<Delivery> deliveryNamedBy(String reference) {
@@ -137,7 +156,7 @@ public class FollowMerges {
             return CleanUp.finished();
         }
         return refreshes.after(delivery.task()).filter(refresh -> !refresh.isPending())
-                .map(refresh -> cleanedUpOnce(refresh, actor))
+                .map(refresh -> cleanedUpAfterTheRefresh(refresh, actor))
                 .orElseGet(CleanUp::awaitingTheRefresh);
     }
 
@@ -204,15 +223,30 @@ public class FollowMerges {
         Instant now = clock.now();
         Delivery merged = records.observed(delivery, view, now);
         events.record(new DraftMerged(delivery.task(), view.address(), view.landedCommit()), actor, now);
-        Task task = stages.moved(tasks.get(delivery.task()), merge, actor, now);
+        Task task = movedToMerged(delivery.task(), view, merge, actor, now);
         refreshes.awaitTheMergeOf(task, view, now);
+        return merged;
+    }
+
+    private Task movedToMerged(TaskId id, MergeRequestView view, RequestMerged merge, Actor actor, Instant now) {
+        Task task = tasks.get(id);
+        StageChange change = task.transitions().move(task.stage(), merge);
+        Task merged = stages.changed(task, change, actor, now);
+        if (change.raisesAFollowUpDecision()) {
+            followUp.askAbout(merged, new WorkAfterTheMergedHead(id, view, change.notLanded()), now);
+        }
         return merged;
     }
 
     private MergedWork cleanedUpOnceMerged(Delivery merged, Actor actor) {
         refreshes.refreshEveryClone();
-        CleanUp cleanUp = cleanUpWhatTheClonesHold(actor).getOrDefault(merged.task(), CleanUp.awaitingTheRefresh());
+        CleanUp cleanUp = cleanUpWhatTheClonesHold(task -> cleanerOf(task, merged.task(), actor))
+                .getOrDefault(merged.task(), CleanUp.awaitingTheRefresh());
         return new MergedWork(merged.task(), merged, cleanUp);
+    }
+
+    private static Actor cleanerOf(TaskId task, TaskId merged, Actor actor) {
+        return task.equals(merged) ? actor : Actor.CORE;
     }
 
     private MergedWork requestFollowedFromTheForge(String reference, Actor actor) {
@@ -325,16 +359,13 @@ public class FollowMerges {
         }
     }
 
-    private Map<TaskId, CleanUp> cleanUpWhatTheClonesHold(Actor actor) {
-        return refreshes.awaitingCleanUp().stream().collect(Collectors.toMap(CloneRefresh::task, refresh -> cleanedUpOnce(refresh, actor)));
+    private Map<TaskId, CleanUp> cleanUpWhatTheClonesHold(Function<TaskId, Actor> cleaner) {
+        return refreshes.awaitingCleanUp().stream()
+                .collect(Collectors.toMap(CloneRefresh::task, refresh -> cleanedUpAfterTheRefresh(refresh, cleaner.apply(refresh.task()))));
     }
 
-    private CleanUp cleanedUpOnce(CloneRefresh refresh, Actor actor) {
-        CleanUp outcome = cleanedUpAfter(new TaskReference.ById(refresh.task()), actor);
-        if (outcome.countsAsTheAttempt()) {
-            refreshes.cleanUpTried(refresh);
-        }
-        return outcome.triedAgainInTheNextRound();
+    private CleanUp cleanedUpAfterTheRefresh(CloneRefresh refresh, Actor actor) {
+        return cleanedUpAfter(new TaskReference.ById(refresh.task()), actor).triedAgainInTheNextRound();
     }
 
     private CleanUp cleanedUpAfter(TaskReference task, Actor actor) {
@@ -371,10 +402,6 @@ public class FollowMerges {
 
         static CleanUp awaitingTheRefresh() {
             return new CleanUp(false, "the clone has not fetched the merge yet; the cleanup follows once it has", false);
-        }
-
-        boolean countsAsTheAttempt() {
-            return !stopped;
         }
 
         CleanUp triedAgainInTheNextRound() {

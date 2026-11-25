@@ -21,6 +21,7 @@ const BULB: DecisionCard = {
   recommended: { key: 'A', why: 'it is enough' },
   urgent: false,
   raisedAt: '2026-10-15T06:10:00Z',
+  stops: null,
 };
 
 class StubNotification {
@@ -94,7 +95,7 @@ describe('The views', () => {
 
     expect((harness.routeNativeElement as HTMLElement).querySelector('.sr-notice__title')).toBeNull();
     expect((harness.routeNativeElement as HTMLElement).querySelector('h2.sr-sign')?.textContent).toBe('Week of 12 October 2026');
-    expect(page.querySelector('.sr-view__count')).toBeNull();
+    expect(page.querySelector('.sr-view__count:not(.sr-view__count--calm)')).toBeNull();
   });
 
   it('moves between the views by their tabs, and back returns to the view before', async () => {

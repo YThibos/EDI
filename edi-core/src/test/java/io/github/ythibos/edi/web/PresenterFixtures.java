@@ -114,7 +114,7 @@ public final class PresenterFixtures {
         Task research = Task.queued(new TaskId(subject + "-research"),
                 new Intake(TaskKind.SCOUT, "Research the " + subject, List.of(new ProjectName("harness")), null, null, List.of(), null, null), "", AT);
         List<OpenDecision> decisions = IntStream.range(firstNumber, firstNumber + bound)
-                .mapToObj(number -> new OpenDecision(Decision.raised(new DecisionNumber(number), research.id(), Cards.card("Which " + subject + "?"), AT), research))
+                .mapToObj(number -> new OpenDecision(Decision.raised(new DecisionNumber(number), research.id(), Cards.card("Which " + subject + "?"), AT), research, false))
                 .toList();
         List<BoardBinding> bindings = decisions.stream().map(open -> BoardBinding.byNumber(open.decision().number())).toList();
         return new WaitingBoard(new Board(new BoardId(firstNumber), research.id(), "board.html", BoardRounds.LINK, bindings, 0, 1, AT, null, null), research,

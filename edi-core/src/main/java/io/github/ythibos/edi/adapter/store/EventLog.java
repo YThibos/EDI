@@ -34,8 +34,10 @@ import io.github.ythibos.edi.domain.event.DomainEvent.CaptainSaid;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeAppliedToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.CallTicked;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
@@ -63,6 +65,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.SlicePlanned;
 import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
@@ -256,6 +260,33 @@ public class EventLog {
                 .single();
     }
 
+    public Optional<CleanupRefused> latestCleanupRefusalOf(TaskId task) {
+        return store.sql("select payload from event where task_id = :task and type = :refused order by sequence desc limit 1")
+                .param("task", task.value())
+                .param("refused", CleanupRefused.class.getSimpleName())
+                .query((row, _) -> new CleanupRefused(task, findingsOf(json.readTree(row.getString("payload")))))
+                .optional();
+    }
+
+    public Optional<FollowUpHeldBack> latestFollowUpHeldBackOf(TaskId task) {
+        return store.sql("select payload from event where task_id = :task and type = :heldBack order by sequence desc limit 1")
+                .param("task", task.value())
+                .param("heldBack", FollowUpHeldBack.class.getSimpleName())
+                .query((row, _) -> followUpHeldBack(task, json.readTree(row.getString("payload"))))
+                .optional();
+    }
+
+    private static List<String> findingsOf(JsonNode payload) {
+        return payload.path("findings").valueStream().map(finding -> finding.asString("")).toList();
+    }
+
+    private static FollowUpHeldBack followUpHeldBack(TaskId task, JsonNode payload) {
+        List<BranchCommit> notLanded = payload.path("notLanded").valueStream()
+                .map(commit -> new BranchCommit(commit.path("id").asString(), commit.path("subject").asString(), false))
+                .toList();
+        return new FollowUpHeldBack(task, notLanded, payload.path("heldBy").asString());
+    }
+
     private ObjectNode payloadOf(DomainEvent event) {
         ObjectNode payload = json.createObjectNode();
         return switch (event) {
@@ -267,6 +298,7 @@ public class EventLog {
             case DecisionAnswered answered -> withAnswer(payload.put("number", answered.number().toString()), answered.answer());
             case DecisionRoundClosed closed -> payload.put("number", closed.number().toString()).put("title", closed.title())
                     .put("opened", Columns.text(closed.opened()));
+            case CallTicked ticked -> payload.put("call", ticked.call().toString());
             case TaskReleased released -> withEachHold(payload, released.released());
             case TaskDone _ -> payload;
             case StageChanged changed -> withChange(payload, changed.change());
@@ -339,6 +371,7 @@ public class EventLog {
             case ChangeAppliedToCaptain applied -> withEach(payload, "files", applied.files());
             case ChangeNotApplied notApplied -> payload.put("because", notApplied.because());
             case CleanupRefused refused -> withEach(payload, "findings", refused.findings());
+            case FollowUpHeldBack heldBack -> withCommits(payload.put("heldBy", heldBack.heldBy()), heldBack.notLanded());
             case TaskCleanedUp _ -> payload;
             case TaskCostRecorded recorded -> withCost(payload, recorded.cost());
             case TaskCostRecounted recounted -> withRecount(payload, recounted);
@@ -373,6 +406,12 @@ public class EventLog {
             case CaptainSaid said -> payload.put("verbatim", said.verbatim());
             case ScoutPromoted promoted -> payload.put("ship", promoted.ship().value());
             case SlicePlanned planned -> payload.put("plan", planned.plan().toString()).put("number", planned.number()).put("wait", planned.awaits().words());
+            case SliceDispatched dispatched -> payload.put("plan", dispatched.plan().toString())
+                    .put("number", dispatched.number())
+                    .put("worker", Columns.textOf(dispatched.worker()));
+            case SliceNotDispatched refused -> payload.put("plan", refused.plan().toString())
+                    .put("number", refused.number())
+                    .put("because", refused.because());
             case TaskDropped dropped -> withEach(payload.put("captainsWord", dropped.captainsWord()), "discarded", dropped.discarded());
             case WorkDiscarded discarded -> withEach(payload.put("captainsWord", discarded.captainsWord()), "discarded", discarded.discarded());
             case TaskImported imported -> payload.put("oldHome", imported.oldHome());
@@ -424,9 +463,12 @@ public class EventLog {
     }
 
     private static ObjectNode withChange(ObjectNode payload, StageChange change) {
-        payload.put("from", change.from().word()).put("to", change.to().word()).put("reason", change.reason());
+        return withCommits(payload.put("from", change.from().word()).put("to", change.to().word()).put("reason", change.reason()), change.notLanded());
+    }
+
+    private static ObjectNode withCommits(ObjectNode payload, List<BranchCommit> commits) {
         ArrayNode notLanded = payload.putArray("notLanded");
-        change.notLanded().forEach(commit -> withCommit(notLanded.addObject(), commit));
+        commits.forEach(commit -> withCommit(notLanded.addObject(), commit));
         return payload;
     }
 

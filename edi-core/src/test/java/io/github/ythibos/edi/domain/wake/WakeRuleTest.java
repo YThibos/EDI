@@ -30,11 +30,14 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DeliveryRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
 import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecheckAsked;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
@@ -44,6 +47,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.UsageLimitReached;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -97,6 +102,9 @@ class WakeRuleTest {
         assertThat(WakeRule.wakeFor(new CleanupRefused(TASK, List.of("lamp.txt is not committed", "a commit is not in origin/main")), Actor.CORE))
                 .contains(new Wake(WakeKind.CLEANUP_REFUSED, TASK, null, "lamp.txt is not committed; a commit is not in origin/main", null));
         assertThat(WakeRule.wakeFor(new CleanupRefused(TASK, List.of("lamp.txt is not committed")), Actor.PRIMARY)).isEmpty();
+        assertThat(WakeRule.wakeFor(new FollowUpHeldBack(TASK, List.of(new BranchCommit("b30e15a1c2d3e4f5", "HRN-3 Fit the cap", false)),
+                "decision D58 is open"), Actor.CORE))
+                .contains(new Wake(WakeKind.FOLLOW_UP_HELD_BACK, TASK, null, "b30e15a1c2d3 \"HRN-3 Fit the cap\", while it is held: decision D58 is open", null));
         assertThat(WakeRule.wakeFor(new DeliveryRefused(TASK, WORKER, List.of("not a draft")), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new DraftRecorded(TASK, draft), Actor.CORE)).isEmpty();
         assertThat(WakeRule.wakeFor(new TaskCleanedUp(TASK), Actor.CORE)).isEmpty();
@@ -106,6 +114,16 @@ class WakeRuleTest {
     void wakesThePrimaryForEveryDecisionInARoundThatCloses() {
         assertThat(WakeRule.wakeFor(new DecisionRoundClosed(TASK, D58, "Which lamp?", RESET), Actor.CORE))
                 .contains(new Wake(WakeKind.DECISION_ROUND, TASK, null, "D58 Which lamp?", null));
+    }
+
+    @Test
+    void wakesThePrimaryOnceForEachSliceTheCoreDispatchedOrCouldNotDispatch() {
+        WorkKey plan = WorkKey.parse("HRN-40");
+
+        assertThat(WakeRule.wakeFor(new SliceDispatched(TASK, plan, 2, WORKER), Actor.CORE))
+                .contains(new Wake(WakeKind.SLICE_DISPATCHED, TASK, WORKER, "2 of the HRN-40 plan", null));
+        assertThat(WakeRule.wakeFor(new SliceNotDispatched(TASK, plan, 2, "The lamp has no brief."), Actor.CORE))
+                .contains(new Wake(WakeKind.SLICE_NOT_DISPATCHED, TASK, null, "2 of the HRN-40 plan: The lamp has no brief.", null));
     }
 
     @Test

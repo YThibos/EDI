@@ -35,12 +35,20 @@ import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.branch.BranchKind;
 import io.github.ythibos.edi.domain.branch.BranchName;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.delivery.ForgeRepository;
+import io.github.ythibos.edi.domain.delivery.HeadChecks;
+import io.github.ythibos.edi.domain.delivery.MergeRequestAddress;
+import io.github.ythibos.edi.domain.delivery.MergeRequestState;
+import io.github.ythibos.edi.domain.delivery.MergeRequestView;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusState;
+import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.DoneCheck;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -58,6 +66,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 @DisplayName("4.2 Work isolation and git hygiene")
 class WorkIsolationAndGitHygieneTest {
+
+    private static final MergeRequestAddress REQUEST =
+            new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, "github.com", "example-owner/harness"), 1);
 
     @TempDir
     private Path directory;
@@ -400,6 +411,31 @@ class WorkIsolationAndGitHygieneTest {
             assertThat(rebuilt.isLanded()).as("the pipeline rebuilt the commit on a newer base").isTrue();
             assertThat(rebuilt.contentInTheBase()).isFalse();
             assertThat(rebuilt.commitsBeyondTheBase()).singleElement().extracting(BranchCommit::sameChangeInTheBase).isEqualTo(true);
+        }
+
+        @Test
+        @DisplayName("AT-12 a request merged into the base lands every commit up to its merged head however the base moved, and names a commit after it")
+        @Tag("adapter")
+        void aMergedRequestLandsEveryCommitUpToItsMergedHead() throws IOException {
+            TestHome home = WorkerFixtures.homeWithProjects(directory);
+            FixtureRepository upstream = FixtureRepository.at(directory.resolve("upstream/harness"));
+            home.storing(List.of(WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3")));
+            FixtureRepository lamp = FixtureRepository.at(dispatch(home, "fit-lamp").launched().worktree());
+            Workplace lampPlace = home.workerContext().of(new TaskId("fit-lamp"));
+            String mergedHead = lamp.write("lamp.txt", "brass\n").commit("HRN-3 Fit the lamp")
+                    .write("lamp.txt", "brass\nglass\n").commit("HRN-3 Glaze the lamp").head();
+            upstream.run("fetch", "--quiet", lamp.root().toString(), "feature/HRN-3:feature/HRN-3");
+            upstream.run("merge", "--quiet", "--squash", "feature/HRN-3");
+            String squashed = upstream.commit("Fit the lamp, squashed").head();
+            upstream.write("lamp.txt", "chrome\n").commit("Chrome the lamp");
+            String late = lamp.write("cap.txt", "brass\n").commit("HRN-3 Fit the cap").head();
+            assertThat(home.landedWork().of(lampPlace).unlandedCommits()).as("by patch and content alone").hasSize(3);
+
+            home.deliveries().save(Delivery.of(new TaskId("fit-lamp"), new MergeRequestView(REQUEST, MergeRequestState.MERGED, false, "feature/HRN-3",
+                    "main", mergedHead, HeadChecks.PASSED, squashed, TestHome.START), new BaseBranch("main"), TestHome.START));
+
+            assertThat(home.landedWork().of(lampPlace).findings())
+                    .containsExactly("commit " + late.substring(0, 12) + " \"HRN-3 Fit the cap\" is not in origin/main");
         }
     }
 

@@ -39,7 +39,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `access.primary-session` | `Caller` | Only the session edi up opened starts or feeds a primary session and changes the fleet; the home token alone keeps edi up, edi health, edi down and the reads. |
 | `access.worker-token-file` | `Edi` | A worker's window calls the core with its own token, never the home token. |
 | `request.valid` | `ApiRefusals` | A request to the core carries every value it needs, well formed. |
-| `authority.captains-word` | `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
+| `authority.captains-word` | `CaptainsGo`, `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
 | `authority.typed-words` | `CaptainMessages`, `CaptainsWordEvidence` | Only words the captain typed in a known primary session count as the captain's word. |
 | `task.stage` | `AddTask`, `DiscardWork`, `PromoteScout`, `StageTransitions`, `Task` | A task moves only along the stages its kind allows. |
 | `task.hold` | `DropTask`, `Hold`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A task waits until each of its holds is released and each of its decisions answered, and no hold replaces another. |
@@ -50,6 +50,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `decision.answered-once` | `ArmBoard`, `Decision` | A decision is answered once, and a new question is a new decision. |
 | `decision.captain-voice` | `CaptainVoice` | What reaches the captain speaks in outcomes, not in internal labels (I-22). |
 | `decision.ticket-choice` | `TicketProposal`, `TicketProposals` | The captain's ticket choice is one of the options offered. |
+| `decision.ticked-when-dealt-with` | `TickACall` | An entry leaves the captain's list only when ticked, and is ticked only once it no longer waits. |
 | `dispatch.waits-met` | `DispatchTask` | A task is dispatched only once each task it waits for is merged or landed, as its wait names. |
 | `dispatch.one-project` | `AdoptForkTask`, `DispatchTask` | A worker works in the isolated copy of exactly one project. |
 | `dispatch.category` | `DispatchTask` | A dispatch names a category from the dispatch rules. |
@@ -86,7 +87,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `publish.registered-forge` | `RegisteredForge` | Work is published only to the repository its project registers. |
 | `publish.workflow-scope` | `PublicationTargets` | A push that changes workflows goes only with the workflow scope the captain granted. |
 | `publish.check-reachable` | `PublishCheckCommand` | A push goes out only once the publish check could run. |
-| `cleanup.landed-before-discard` | `CleanUpTask`, `DropTask` | Unlanded work is never discarded without the captain's word. |
+| `cleanup.landed-before-discard` | `CleanUpTask`, `DropTask`, `FollowUpCarriage` | Unlanded work is never discarded without the captain's word. |
 | `cleanup.scout-report` | `CleanUpTask` | A scout is cleaned up only once its done was accepted and its report exists. |
 | `cleanup.no-worker-at-work` | `CopyRetirement` | A copy is retired only once no worker works in it. |
 | `mechanical.change-matches-its-brief` | `CheckMechanicalChange` | A mechanical change is accepted only when its diff matches its brief and its verify command passes. |

@@ -71,6 +71,10 @@ public class CaptainsWordEvidence {
         });
     }
 
+    public CitedWords requireTyped(CallingSession calling, Citation citation) {
+        return typedIn(exchangeOf(calling), citation);
+    }
+
     public String requireCited(CallingSession calling, Citation citation) {
         return messagesOf(exchangeOf(calling)).cite(citation).verbatim();
     }

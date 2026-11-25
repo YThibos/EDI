@@ -18,6 +18,8 @@ description: >-
 4. The work key comes at intake: the next EDI-native key, a ticket the captain chose, the issue's number on a project keyed by its GitHub issues, or a ticket proposal raised as a decision on a JIRA project; never create a ticket without the captain's answer.
    A key the captain gives after intake goes on with `edi task key <task> <KEY>`, citing the captain's words with `--message <n>` when it answers an open ticket decision.
 5. A task blocked by another waits in the queue until that task's work lands (`--blocked-by`); a plan of slices goes in with `edi plan add --from -`, each slice waiting as the plan names (`edi plan show <key>`).
+   The plan's go cites the captain's stored word: `decision` is a decision raised on a task keyed by the plan's umbrella key that he answered with an option that authorises `promote`, or `message` is the number of the message he typed with the go (`edi captain messages`).
+   Your core dispatches each eligible slice itself, within the plan's capacity, and wakes you with each: never dispatch a slice by hand, and when a wake says a slice could not be dispatched, put its cause right or hold the slice.
 6. An unregistered project cannot receive a ship: ask the captain to register it, and confirm delivery, tracker, base branch and AI scaffolding with the captain.
 
 ## Dispatch
@@ -49,7 +51,7 @@ description: >-
 ## Done, delivery and landing
 
 - A ship's done counts once its merge request is open, as a draft or ready for review, or already merged, at the copy's head, and its branch adds no SNAPSHOT version.
-- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green, or once the pipeline passes on a project whose CI does not run, with the local verification as the evidence; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report, as "Changing, hold the merge" while its pipeline still runs, a steer waits unacknowledged, or its worker is back at work after a done.
+- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green, or once the pipeline passes on a project whose CI does not run, with the local verification as the evidence; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report; while its pipeline still runs, a steer waits unacknowledged, or its worker is back at work after a done, it is listed as ongoing work coming back to the captain when it is ready, and once it merges or closes it stays on the captain's list until the captain ticks it, on the page or with `edi tick review:<task>` on the captain's cited word.
 - You record a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
 - `local-branch`: you fetch the ready branch into the captain's checkout by ref only.
 - `local-apply`: on the captain's request only, you apply the change to the captain's checkout without a commit.

@@ -14,10 +14,19 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import io.github.ythibos.edi.application.decision.GivenAnswer;
 import io.github.ythibos.edi.application.delivery.FollowMerges.MergedWork;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.DecisionCard;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.DecisionOption;
+import io.github.ythibos.edi.domain.decision.OptionKey;
+import io.github.ythibos.edi.domain.decision.Recommendation;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.delivery.CloneRefresh;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.MergeRequestState;
@@ -185,7 +194,99 @@ class FollowMergesTest {
                 .isEqualTo("merged at " + mergedHead + "; 1 commit not landed: " + steered.substring(0, 12));
         assertThat(home.jdbc().sql("select json_extract(payload, '$.notLanded[0].subject') from event where type = 'StageChanged' and "
                 + "json_extract(payload, '$.to') = 'merged'").query(String.class).single()).isEqualTo("HRN-3 Fit the cap the steer asked for");
-        assertThat(home.eventTypesOf(LAMP)).contains("CleanupRefused").doesNotContain("TaskCleanedUp");
+        assertThat(home.eventTypesOf(LAMP)).doesNotContain("TaskCleanedUp");
+        assertThat(home.decisions().everyOneOfTask(LAMP)).singleElement().satisfies(decision -> assertThat(decision.card().context())
+                .contains("- " + steered.substring(0, 12) + " \"HRN-3 Fit the cap the steer asked for\""));
+    }
+
+    @Test
+    void cleansUpARequestSquashMergedBeforeTheBaseRewroteTheSameLines() throws IOException {
+        FixtureRepository copy = twoCommitsDeliveredAsADraft();
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(copy));
+        upstream.write("lamp.txt", "chrome\n").commit("Chrome the lamp");
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage).endsWith(TaskStage.MERGED, TaskStage.LANDED, TaskStage.RETIRED);
+        assertThat(home.decisions().everyOneOfTask(LAMP)).isEmpty();
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void refusesAndNamesACommitAddedAfterTheHeadOfARequestSquashMergedBeforeTheBaseRewroteTheSameLines() throws IOException {
+        FixtureRepository copy = twoCommitsDeliveredAsADraft();
+        String landed = squashedOntoMain(copy);
+        upstream.write("lamp.txt", "chrome\n").commit("Chrome the lamp");
+        String late = copy.write("cap.txt", "brass\n").commit("HRN-3 Fit the cap").head();
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), landed);
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.MERGED);
+        assertThat(home.landedWork().of(home.workerContext().of(LAMP)).findings())
+                .containsExactly("commit " + late.substring(0, 12) + " \"HRN-3 Fit the cap\" is not in origin/main");
+        assertThat(copy.root()).isDirectory();
+    }
+
+    @Test
+    void cleansUpARequestTheForgeMergedWithAMergeCommitBeforeTheBaseRewroteTheSameLines() throws IOException {
+        FixtureRepository copy = twoCommitsDeliveredAsADraft();
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("merge", "--quiet", "--no-ff", "-m", "Merge feature/HRN-3", "FETCH_HEAD");
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), upstream.head());
+        upstream.write("lamp.txt", "chrome\n").commit("Chrome the lamp");
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.RETIRED);
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void cleansUpARequestTheForgeRebasedOntoAMovedBaseBeforeTheBaseRewroteTheSameLines() throws IOException {
+        FixtureRepository copy = twoCommitsDeliveredAsADraft();
+        upstream.write("bell.txt", "bronze\n").commit("Hang the bell");
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("cherry-pick", "main..FETCH_HEAD");
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), upstream.head());
+        upstream.write("lamp.txt", "chrome\n").commit("Chrome the lamp");
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.RETIRED);
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void asksOnceHowToFollowUpTheCommitMadeAfterTheHeadMergedWhileTheTaskWasChanging() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        Worker worker = DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        String mergedHead = copy.head();
+        home.recordStatus().report(worker.id(), StatusState.WORKING, null, null, "Amending the spec as steered.");
+        String late = copy.write("spec.md", "amended\n").commit("HRN-3 Amend the spec as steered").head();
+        MergeRequestView merged = home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(copy));
+
+        home.followMerges().watchTheOpenDrafts();
+        home.followMerges().finishEarlierMerges();
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.events().stagesOf(LAMP)).extracting(StageReached::stage).endsWith(TaskStage.CHANGING, TaskStage.MERGED);
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DecisionRaised");
+        assertThat(home.decisions().everyOneOfTask(LAMP)).singleElement().satisfies(decision -> {
+            assertThat(decision.card().title()).isEqualTo("Deliver the commits fit-lamp made after its merge through a follow-up task?");
+            assertThat(decision.card().context()).isEqualTo(String.join("\n",
+                    "The forge merged " + merged.address() + " at " + mergedHead + ", while fit-lamp went on: 1 commit after the merged head is not in main:",
+                    "- " + late.substring(0, 12) + " \"HRN-3 Amend the spec as steered\"",
+                    "fit-lamp stays merged, and its clean-up is refused, until they land or are discarded."));
+            assertThat(decision.card().options()).extracting(DecisionOption::text).containsExactly(
+                    "Deliver them through a follow-up task that carries them from feature/HRN-3 onto a new branch from main and lands by its own merged head;"
+                            + " fit-lamp's copy of them is discarded once the follow-up task's branch holds them on the forge",
+                    "Discard them: retire fit-lamp with its copy and branch, and lose those commits");
+            assertThat(decision.card().authorises(new OptionKey('B'), CaptainWordAct.DISCARD_WORK)).isTrue();
+            assertThat(decision.card().authorises(new OptionKey('A'), CaptainWordAct.DISCARD_WORK)).isTrue();
+        });
+        assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsOnlyOnce(WakeKind.DECISION_RAISED);
     }
 
     @Test
@@ -259,7 +360,6 @@ class FollowMergesTest {
         assertThat(merged.cleanUp().done()).isTrue();
         assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("DraftMerged", "CloneRefreshed", "TaskCleanedUp");
         assertThat(home.wakes().unacknowledged()).extracting(queued -> queued.wake().kind()).containsOnlyOnce(WakeKind.DRAFT_MERGED);
-        assertThat(home.cloneRefreshes().after(LAMP)).hasValueSatisfying(refresh -> assertThat(refresh.cleanUpTriedAt()).isNotNull());
     }
 
     @Test
@@ -291,12 +391,96 @@ class FollowMergesTest {
         MergedWork stopped = home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
         assertThat(stopped.cleanUp().refusal()).startsWith("the clean-up stopped: ").endsWith("; the next round tries again");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
-        assertThat(home.cloneRefreshes().after(LAMP)).hasValueSatisfying(refresh -> assertThat(refresh.cleanUpTriedAt()).isNull());
 
         clone.run("worktree", "unlock", copy.root().toString());
         home.followMerges().finishEarlierMerges();
 
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.DONE);
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void holdsTheFollowUpDecisionBackWhileAnotherDecisionIsOpenOnTheTaskAndWakesThePrimaryWithTheCommits() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        String landed = squashedOntoMain(copy);
+        String late = copy.write("cap.txt", "brass\n").commit("HRN-3 Fit the cap").head();
+        DecisionNumber open = home.raiseDecision().raise(new TaskReference.ById(LAMP), new DecisionCard("Brass or chrome for the cap?", "",
+                List.of(new DecisionOption(new OptionKey('A'), "Brass"), new DecisionOption(new OptionKey('B'), "Chrome")),
+                new Recommendation(new OptionKey('A'), "it matches the lamp")), Actor.CORE);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), landed);
+
+        home.followMerges().watchTheOpenDrafts();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.MERGED);
+        assertThat(home.decisions().everyOneOfTask(LAMP)).singleElement().satisfies(decision -> {
+            assertThat(decision.number()).isEqualTo(open);
+            assertThat(decision.card().title()).isEqualTo("Brass or chrome for the cap?");
+        });
+        assertThat(home.wakes().unacknowledged()).filteredOn(queued -> queued.wake().kind() == WakeKind.FOLLOW_UP_HELD_BACK).singleElement()
+                .satisfies(queued -> assertThat(queued.wake().detail())
+                        .isEqualTo(late.substring(0, 12) + " \"HRN-3 Fit the cap\", while it is held: decision " + open + " is open"));
+
+        home.followMerges().raiseTheFollowUpsHeldBack();
+        assertThat(home.decisions().everyOneOfTask(LAMP)).hasSize(1);
+
+        home.answerDecision().answer(new TaskReference.ById(LAMP), new GivenAnswer(open + " A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+        home.followMerges().raiseTheFollowUpsHeldBack();
+        home.followMerges().raiseTheFollowUpsHeldBack();
+
+        assertThat(home.decisions().everyOneOfTask(LAMP)).hasSize(2).last().satisfies(followUp -> {
+            assertThat(followUp.isOpen()).isTrue();
+            assertThat(followUp.card().title()).isEqualTo("Deliver the commits fit-lamp made after its merge through a follow-up task?");
+            assertThat(followUp.card().context()).contains("- " + late.substring(0, 12) + " \"HRN-3 Fit the cap\"");
+        });
+    }
+
+    @Test
+    void cleansUpARequestWhoseMergedHeadThePipelineRebuiltBeforeTheBaseRewroteTheSameLines() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\nglass\n", "HRN-3 Glaze the lamp");
+        String before = upstream.head();
+        upstream.write("bell.txt", "bronze\n").commit("Hang the bell");
+        upstream.run("fetch", "--quiet", copy.root().toString(), "HEAD");
+        upstream.run("checkout", "--quiet", "-b", "feature/HRN-3");
+        upstream.run("cherry-pick", before + "..FETCH_HEAD");
+        String rebuiltHead = upstream.head();
+        upstream.run("checkout", "--quiet", "main");
+        upstream.run("merge", "--quiet", "--squash", "feature/HRN-3");
+        String landed = upstream.commit("Fit the lamp, squashed").head();
+        upstream.write("lamp.txt", "chrome\n").commit("Chrome the lamp");
+        RegisteredForge forge = home.registry().entryOf(new ProjectName("harness")).requireForge();
+        MergeRequestView rebuilt = home.forge().opensADraft(forge, dispatched.launched().branch(), new BaseBranch("main"), rebuiltHead);
+        home.clock().advance(Duration.ofMinutes(1));
+        home.forge().merges(rebuilt.address(), landed);
+
+        home.followMerges().followTheRequestOf(LAMP);
+
+        assertThat(home.decisions().everyOneOfTask(LAMP)).isEmpty();
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.RETIRED);
+        assertThat(copy.root()).doesNotExist();
+    }
+
+    @Test
+    void triesARefusedCleanUpAgainInEveryRoundUntilItHoldsWithoutWakingThePrimaryAgain() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(copy));
+        copy.write("notes.txt", "left behind\n");
+        home.followMerges().watchTheOpenDrafts();
+
+        home.followMerges().finishEarlierMerges();
+        home.followMerges().finishEarlierMerges();
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.MERGED);
+        assertThat(home.eventTypesOf(LAMP)).containsOnlyOnce("CleanupRefused");
+
+        Files.delete(copy.root().resolve("notes.txt"));
+        home.followMerges().finishEarlierMerges();
+
+        assertThat(home.tasks().get(LAMP).stage()).isEqualTo(TaskStage.RETIRED);
         assertThat(copy.root()).doesNotExist();
     }
 
@@ -459,6 +643,29 @@ class FollowMergesTest {
     }
 
     @Test
+    void wakesThePrimaryWithTheChangedFindingsOfAnotherTasksCleanUpRefusedWhileItSaidATaskWasMerged() throws IOException {
+        DispatchOutcome horn = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-horn", "harness", "HRN-4"));
+        FixtureRepository hornCopy = DeliveryFixtures.committedIn(horn, "horn.txt", "loud\n", "HRN-4 Fit the horn");
+        DeliveryFixtures.deliveredAsADraft(home, horn);
+        home.forge().merges(home.deliveries().of(HORN).orElseThrow().address(), squashedOntoMain(hornCopy));
+        hornCopy.write("notes.txt", "left behind\n");
+        home.followMerges().watchTheOpenDrafts();
+        Files.delete(hornCopy.root().resolve("notes.txt"));
+        hornCopy.write("draft.txt", "half done\n");
+        home.clock().advance(Duration.ofMinutes(1));
+        DispatchOutcome lamp = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        FixtureRepository lampCopy = DeliveryFixtures.committedIn(lamp, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, lamp);
+        home.forge().merges(home.deliveries().of(LAMP).orElseThrow().address(), squashedOntoMain(lampCopy));
+
+        home.followMerges().mergedSaysTheCaptain("fit-lamp", Actor.PRIMARY);
+
+        assertThat(home.eventTypesOf(HORN)).filteredOn("CleanupRefused"::equals).hasSize(2);
+        assertThat(home.wakes().unacknowledged()).filteredOn(queued -> queued.wake().kind() == WakeKind.CLEANUP_REFUSED)
+                .extracting(queued -> queued.wake().detail()).containsExactly("notes.txt is not committed", "draft.txt is not committed");
+    }
+
+    @Test
     void cleansUpAWorkDeliveredLocallyOnTheCaptainsWordOnceItIsLanded() throws IOException {
         FixtureRepository checkout = upstream.clonedInto(directory.resolve("checkouts/harness"));
         home.registering("""
@@ -508,6 +715,14 @@ class FollowMergesTest {
         assertThat(stopped.cleanUp().refusal()).startsWith("the clean-up stopped: ")
                 .endsWith("; run edi merged or edi cleanup again once the failure clears");
         assertThat(home.tasks().get(LAMP).state()).isEqualTo(TaskState.IN_FLIGHT);
+    }
+
+    private FixtureRepository twoCommitsDeliveredAsADraft() throws IOException {
+        DispatchOutcome dispatched = DeliveryFixtures.dispatched(home, WorkerFixtures.queuedShip("fit-lamp", "harness", "HRN-3"));
+        DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\n", "HRN-3 Fit the lamp");
+        FixtureRepository copy = DeliveryFixtures.committedIn(dispatched, "lamp.txt", "brass\nglass\n", "HRN-3 Glaze the lamp");
+        DeliveryFixtures.deliveredAsADraft(home, dispatched);
+        return copy;
     }
 
     private String squashedOntoMain(FixtureRepository copy) throws IOException {

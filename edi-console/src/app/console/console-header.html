@@ -15,6 +15,9 @@
       </a>
       <a class="sr-view" routerLink="/fleet" routerLinkActive="sr-view--on">Fleet</a>
       <a class="sr-view" routerLink="/week" routerLinkActive="sr-view--on">Week</a>
+      <a class="sr-view" routerLink="/landed" routerLinkActive="sr-view--on">
+        Landed@if (landed() > 0) {<span class="sr-view__count sr-view__count--calm">{{ landed() }}</span>}
+      </a>
     </nav>
     @if (mode(); as mode) {
       <span class="sr-presence">

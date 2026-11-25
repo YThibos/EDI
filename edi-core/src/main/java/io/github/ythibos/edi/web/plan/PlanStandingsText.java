@@ -5,9 +5,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
-import io.github.ythibos.edi.application.plan.PlanStandings;
 import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
+import io.github.ythibos.edi.domain.plan.PlanStandings;
 import io.github.ythibos.edi.domain.plan.SliceStanding;
 import io.github.ythibos.edi.domain.task.Wait;
 import io.github.ythibos.edi.web.text.Table;
@@ -37,7 +37,7 @@ class PlanStandingsText implements TextPresenter<PlanStandings> {
         table.line(heading.key() + " plan: " + heading.title())
                 .line("Project: " + heading.project())
                 .line("Report: " + heading.report())
-                .line("Go: " + heading.go())
+                .line("Go: " + heading.go().words())
                 .line("Capacity: " + Words.quantity(heading.capacity(), "slice") + " at once");
         if (heading.effort() != null) {
             table.line("Effort: " + heading.effort().word());

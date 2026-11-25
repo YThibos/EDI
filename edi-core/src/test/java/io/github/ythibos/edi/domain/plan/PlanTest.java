@@ -17,7 +17,7 @@ import io.github.ythibos.edi.domain.task.AwaitedStage;
 class PlanTest {
 
     private static final PlanHeading HEADING = new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"),
-            "docs/research/HRN-40-plan.md", "D44", 2, EffortLevel.XHIGH);
+            "docs/research/HRN-40-plan.md", PlanGo.named("D44"), 2, EffortLevel.XHIGH);
 
     @Test
     void readsAWaitFromItsWords() {
@@ -53,9 +53,9 @@ class PlanTest {
 
     @Test
     void refusesAPlanWithoutItsGoOrRoomForASlice() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new PlanHeading(HEADING.key(), "Light the harbour", HEADING.project(), "report.md", " ", 2,
+        assertThatIllegalArgumentException().isThrownBy(() -> new PlanHeading(HEADING.key(), "Light the harbour", HEADING.project(), "report.md", PlanGo.named(" "), 2,
                 null)).withMessage("The plan HRN-40 names the decision that gave the go.");
-        assertThatIllegalArgumentException().isThrownBy(() -> new PlanHeading(HEADING.key(), "Light the harbour", HEADING.project(), "report.md", "D44", 0,
+        assertThatIllegalArgumentException().isThrownBy(() -> new PlanHeading(HEADING.key(), "Light the harbour", HEADING.project(), "report.md", PlanGo.named("D44"), 0,
                 null)).withMessage("The plan HRN-40 works on at least one slice at a time: 0");
     }
 

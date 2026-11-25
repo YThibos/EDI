@@ -13,7 +13,13 @@
             }
             {{ '' }}<a class="sr-row__open" [routerLink]="['/task', ongoing.task]">{{ ongoing.title }}</a>
           </div>
-          <div class="sr-row__sub">{{ ongoing.doing }} · {{ ongoing.kind }} · {{ projectsOf(ongoing.projects, ongoing.task) }}</div>
+          <div class="sr-row__sub">{{ doing(ongoing) }} · {{ ongoing.kind }} · {{ projectsOf(ongoing.projects, ongoing.task) }}</div>
+          @if (ongoing.comingBack; as why) {
+            <div class="sr-row__sub sr-row__back">changing, back to you when it is ready: {{ why }}</div>
+          }
+          @if (questionOf().get(ongoing.task); as question) {
+            <div class="sr-row__sub sr-row__asked">{{ askedOfMe(question) }}</div>
+          }
           <app-link-chips [links]="links()[ongoing.task]" [showsKey]="false" />
         </div>
         @if (!links()[ongoing.task]?.request && ongoing.draft; as draft) {

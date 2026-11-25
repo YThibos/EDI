@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
 import io.github.ythibos.edi.domain.event.DomainEvent.CleanupRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.CloneRefreshed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ContextLimitReached;
+import io.github.ythibos.edi.domain.event.DomainEvent.CallTicked;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRaised;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionRoundClosed;
@@ -30,6 +31,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.HeavyRunsAtOnce;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
@@ -46,6 +48,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.SlicePlanned;
 import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
@@ -90,6 +94,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -129,6 +134,7 @@ public final class WakeRule {
             case BranchDeliveryFailed failed -> wake(WakeKind.DELIVERY_FAILED, failed, null, failed.because());
             case ChangeNotApplied notApplied -> wake(WakeKind.DELIVERY_FAILED, notApplied, null, notApplied.because());
             case CleanupRefused refused -> wake(WakeKind.CLEANUP_REFUSED, refused, null, String.join("; ", refused.findings()));
+            case FollowUpHeldBack heldBack -> wake(WakeKind.FOLLOW_UP_HELD_BACK, heldBack, null, heldBackOf(heldBack));
             case DecisionRaised raised -> wake(WakeKind.DECISION_RAISED, raised, null, raised.number() + " " + raised.card().title());
             case DecisionRoundClosed closed -> wake(WakeKind.DECISION_ROUND, closed, null, closed.number() + " " + closed.title());
             case TicketUpdateRefused refused -> wake(WakeKind.TICKET_REFUSED, refused, null,
@@ -139,7 +145,11 @@ public final class WakeRule {
             case RecheckAsked asked -> wake(WakeKind.RECHECK_ASKED, asked, null, recheckOf(asked));
             case BoardAnswered answered -> wake(WakeKind.BOARD_ANSWERED, answered, null, roundOf(answered));
             case BoardAnswerRefused refused -> wake(WakeKind.BOARD_ANSWER_REFUSED, refused, null, refused.number() + ": " + refused.because());
-            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, TaskDone _, StageChanged _, DispatchDeferred _,
+            case SliceDispatched dispatched -> wake(WakeKind.SLICE_DISPATCHED, dispatched, dispatched.worker(),
+                    sliceOf(dispatched.number(), dispatched.plan()));
+            case SliceNotDispatched refused -> wake(WakeKind.SLICE_NOT_DISPATCHED, refused, null,
+                    sliceOf(refused.number(), refused.plan()) + ": " + refused.because());
+            case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, CallTicked _, TaskDone _, StageChanged _, DispatchDeferred _,
                     TaskDispatched _, WorkerStarted _, WorkerRetired _, SteerSent _, SteerReceived _, SteerAcknowledged _, SteerNotReceived _,
                     ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
                     WorkerNotified _, WorkerSessionEnded _, WorkerTurnEnded _, WorkerStoppedOnAnError _, LimitResumeTyped _, RecoveryChosen _, RecoveryFailed _,
@@ -161,6 +171,11 @@ public final class WakeRule {
                 .collect(Collectors.joining(" and "));
     }
 
+    private static String heldBackOf(FollowUpHeldBack heldBack) {
+        return heldBack.notLanded().stream().map(commit -> commit.shortId() + " \"" + commit.subject() + "\"").collect(Collectors.joining(", "))
+                + ", while it is held: " + heldBack.heldBy();
+    }
+
     private static String recheckOf(RecheckAsked asked) {
         return asked.note().isEmpty() ? asked.number().toString() : asked.number() + " (\"" + asked.note() + "\")";
     }
@@ -169,6 +184,10 @@ public final class WakeRule {
         String ending = answered.sessionEnded() ? ", and the captain ended the session" : "";
         return "board " + answered.board() + " round " + answered.round() + ": " + answered.prompts() + " prompt" + (answered.prompts() == 1 ? "" : "s")
                 + ending;
+    }
+
+    private static String sliceOf(int number, WorkKey plan) {
+        return number + " of the " + plan + " plan";
     }
 
     private static Optional<Wake> statusWake(StatusReported reported) {

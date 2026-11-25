@@ -1,11 +1,14 @@
 package io.github.ythibos.edi.web.plan;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.plan.PlanDraft;
+import io.github.ythibos.edi.domain.plan.PlanGo;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.SliceDraft;
 import io.github.ythibos.edi.domain.plan.SliceWait;
@@ -15,16 +18,20 @@ import tools.jackson.databind.JsonNode;
 
 final class PlanDocument {
 
-    private static final List<String> PLAN_FIELDS = List.of("key", "title", "project", "report", "decision", "capacity", "effort", "slices");
+    private static final List<String> PLAN_FIELDS = List.of("key", "title", "project", "report", "decision", "message", "capacity", "effort", "slices");
     private static final List<String> SLICE_FIELDS = List.of("number", "title", "category", "key", "body", "wait");
 
     private PlanDocument() {
     }
 
     static PlanDraft read(JsonNode plan) {
-        requireObject(plan, "The plan is one JSON object with key, title, project, report, decision, capacity, effort and slices.");
+        requireObject(plan, "The plan is one JSON object with key, title, project, report, decision, message, capacity, effort and slices.");
         refuseOtherFields(plan, PLAN_FIELDS, "The plan takes only " + String.join(", ", PLAN_FIELDS));
         return new PlanDraft(headingOf(plan), slicesOf(plan.get("slices")));
+    }
+
+    static Optional<Citation> goMessageOf(JsonNode plan) {
+        return isAbsent(plan.get("message")) ? Optional.empty() : Optional.of(new Citation.WholeMessage(number(plan, "message", "the plan")));
     }
 
     private static void requireObject(JsonNode node, String sentence) {
@@ -46,7 +53,7 @@ final class PlanDocument {
                 text(plan, "title", "the plan"),
                 parsed(plan, "project", "the plan", ProjectName::new),
                 text(plan, "report", "the plan"),
-                text(plan, "decision", "the plan"),
+                PlanGo.named(text(plan, "decision", "the plan")),
                 number(plan, "capacity", "the plan"),
                 isAbsent(plan.get("effort")) ? null : parsed(plan, "effort", "the plan", EffortLevel::named));
     }

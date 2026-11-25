@@ -24,6 +24,10 @@ public record DecisionsOfATask(List<Decision> decisions, Map<DecisionNumber, Ins
         return theOneRaisedFor(question).filter(not(Decision::isOpen));
     }
 
+    public boolean isTheOneRaisedFor(Decision decision, WorkerQuestion question) {
+        return theOneRaisedFor(question).filter(raised -> raised.number().equals(decision.number())).isPresent();
+    }
+
     public boolean escalates(WorkerQuestion question) {
         return theOneRaisedFor(question).filter(Decision::isOpen).isPresent();
     }

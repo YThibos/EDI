@@ -187,21 +187,23 @@ class ApiTest {
         assertThat(behindItsScout).contains(
                 "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  waits for plan-work-on-paint-the-harbour-lamp to land (queued)\n");
         assertThat(heldBack).contains("  3  oil-the-harbour-gate    HRN-43  queued  none            held (deferral, until your word): after the storm\n");
-        assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"");
+        assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"", "\"go\":\"D44\"");
         assertThat(get("/api/tasks/fit-the-harbour-lamp", TEXT).body()).contains("Use the brass fittings.", "slice planned");
     }
 
     @Test
-    void refusesASecondPlanOnTheSameKeyAndAWaitOnALaterSlice() throws Exception {
+    void refusesASecondPlanOnTheSameKeyAWaitOnALaterSliceAndAGoMessageThatIsNoNumber() throws Exception {
         String plan = """
                 {"key":"HRN-50","title":"Mend the pier","project":"harness","report":"docs/research/HRN-50-plan.md","decision":"D45","capacity":1,
                  "slices":[{"number":1,"title":"Mend the pier planks","category":"implementation","key":"HRN-51"%s}]}""";
 
         HttpResponse<String> onALaterSlice = post("/api/plans", plan.formatted(",\"wait\":\"after 2 landed\""), TEXT);
+        HttpResponse<String> withAWordForItsMessage = post("/api/plans", plan.formatted("").replace("\"capacity\":1", "\"message\":\"one\",\"capacity\":1"), TEXT);
         post("/api/plans", plan.formatted(""), TEXT);
         HttpResponse<String> again = post("/api/plans", plan.formatted(""), TEXT);
 
         assertRefusal(onALaterSlice, 400, "Slice 1 waits after 2 landed, and a slice waits only for an earlier slice of its plan.");
+        assertRefusal(withAWordForItsMessage, 400, "The message of the plan is a whole number.");
         assertRefusal(again, 409, "A plan is already known by HRN-50; edi plan show HRN-50 prints it.");
         assertRefusal(get("/api/plans/HRN-404", TEXT), 404, "No plan is known by HRN-404; edi plan add enters one.");
     }

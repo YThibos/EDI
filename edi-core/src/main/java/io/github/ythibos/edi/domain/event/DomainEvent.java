@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.branch.BranchName;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
@@ -16,6 +17,7 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.plan.SliceWait;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -60,6 +62,9 @@ public sealed interface DomainEvent {
     }
 
     record DecisionRoundClosed(TaskId task, DecisionNumber number, String title, Instant opened) implements DomainEvent {
+    }
+
+    record CallTicked(TaskId task, CallKey call) implements DomainEvent {
     }
 
     record TaskDone(TaskId task) implements DomainEvent {
@@ -233,6 +238,13 @@ public sealed interface DomainEvent {
         }
     }
 
+    record FollowUpHeldBack(TaskId task, List<BranchCommit> notLanded, String heldBy) implements DomainEvent {
+
+        public FollowUpHeldBack {
+            notLanded = List.copyOf(notLanded);
+        }
+    }
+
     record TaskCleanedUp(TaskId task) implements DomainEvent {
     }
 
@@ -311,6 +323,12 @@ public sealed interface DomainEvent {
     }
 
     record SlicePlanned(TaskId task, WorkKey plan, int number, SliceWait awaits) implements DomainEvent {
+    }
+
+    record SliceDispatched(TaskId task, WorkKey plan, int number, WorkerId worker) implements DomainEvent {
+    }
+
+    record SliceNotDispatched(TaskId task, WorkKey plan, int number, String because) implements DomainEvent {
     }
 
     record TaskDropped(TaskId task, String captainsWord, List<String> discarded) implements DomainEvent {

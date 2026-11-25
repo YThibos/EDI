@@ -58,7 +58,7 @@ class PresenceTextsTest {
         TestHome home = homeWithADecisionAndWork();
 
         String brief = PresenterFixtures.returnBriefText().text(new ReturnBrief(PRESENT.quiet(NOW), home.fleetSnapshot().snapshot().waiting(), List.of(),
-                List.of(), home.fleetSnapshot().snapshot().ongoing()));
+                List.of(), home.fleetSnapshot().snapshot().ongoing(), List.of()));
 
         assertThat(brief).isEqualTo("""
                 EDI return brief: show the captain the lines below verbatim, in one fenced block, before you answer their message.

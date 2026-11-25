@@ -18,6 +18,7 @@ import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkDiscarded;
+import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.task.CaptainsWord;
 
@@ -52,10 +53,10 @@ public class DiscardWork {
         CaptainsWord word = captainsWord.requireOnTask(calling, workplace.task().id(), CaptainWordAct.DISCARD_WORK);
         requireInFlight(workplace);
         retirement.requireNoWorkerAtWork(workplace, STOP_IT_FIRST);
-        List<String> discarded = landedWork.of(workplace).findings();
-        retirement.retireDiscarding(workplace);
-        recordDiscarded(workplace, word, discarded, actor);
-        return new DiscardedWork(workplace.task().id(), discarded);
+        LandedWork landed = landedWork.of(workplace);
+        retirement.retireDiscarding(workplace, word, landed);
+        recordDiscarded(workplace, word, landed.findings(), actor);
+        return new DiscardedWork(workplace.task().id(), landed.findings());
     }
 
     private static void requireInFlight(Workplace workplace) {

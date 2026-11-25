@@ -16,6 +16,7 @@ import io.github.ythibos.edi.domain.board.BoardAnswer;
 import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.board.BoardRound;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -25,6 +26,10 @@ public class BoardStore {
 
     private static final String SELECT_BOARDS = "select id, task_id, file, link, rounds, open_questions, armed_at, ended_at, retired_at from board ";
     private static final String LISTENING = "ended_at is null and retired_at is null";
+    private static final String WAITING_ON_THE_CAPTAIN = LISTENING + " and " + """
+            (open_questions > 0 or exists (
+                select 1 from board_decision join decision on decision.number = board_decision.decision_number
+                where board_decision.board_id = board.id and decision.answered_at is null))""";
     private static final String SELECT_ANSWERS = """
             select board_id, round, decision_number, verbatim, option_key, received_at, settled_at, refused_because
             from board_answer
@@ -67,6 +72,11 @@ public class BoardStore {
         bind(board);
     }
 
+    public void postRound(Board posted) {
+        update(posted);
+        store.sql("delete from call_tick where call = :call").param("call", new CallKey.OfABoard(posted.id()).toString()).update();
+    }
+
     public Optional<Board> get(BoardId id) {
         return boards(store.sql(SELECT_BOARDS + "where id = :id").param("id", id.value())).stream().findFirst();
     }
@@ -85,6 +95,13 @@ public class BoardStore {
 
     public List<Board> listeningOf(TaskId task) {
         return boards(store.sql(SELECT_BOARDS + "where task_id = :task and " + LISTENING + " order by id").param("task", task.value()));
+    }
+
+    public List<Board> dealtWithAwaitingTheirTick() {
+        return boards(store.sql(SELECT_BOARDS + """
+                        where (rounds > 0 or open_questions > 0 or exists (select 1 from board_decision where board_id = board.id))
+                          and not exists (select 1 from call_tick where call = :call || board.id)
+                          and not (""" + WAITING_ON_THE_CAPTAIN + ") order by id").param("call", CallKey.BOARD));
     }
 
     public void save(BoardAnswer answer) {

@@ -100,6 +100,8 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
             case DRAFT_CLOSED -> wake.task() + ": " + wake.detail() + " was closed without a merge; its work waits for the captain's word.";
             case DELIVERY_FAILED -> wake.task() + ": its delivery to the captain's checkout failed: " + wake.detail();
             case CLEANUP_REFUSED -> wake.task() + " was not cleaned up after its merge: " + wake.detail();
+            case FOLLOW_UP_HELD_BACK -> wake.task() + " was merged before these commits: " + wake.detail()
+                    + "; I raise the decision to deliver them through a follow-up task or discard them once nothing holds it.";
             case DECISION_RAISED -> wake.task() + ": you raised " + wake.detail() + "; put it before the captain.";
             case DECISION_ROUND -> wake.task() + ": " + wake.detail() + " is in the round of decisions due now.";
             case TASK_KEYED -> wake.task() + " now books its work on " + wake.detail() + ", so it can be dispatched.";
@@ -110,6 +112,10 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
                     + "; verify the latest state against reality, then close it with evidence or keep it open with a note.";
             case BOARD_ANSWERED -> wake.task() + ": the captain answered on " + wake.detail() + "; its worker has them in its inbox.";
             case BOARD_ANSWER_REFUSED -> wake.task() + ": a board answer to " + wake.detail();
+            case SLICE_DISPATCHED -> wake.task() + ": I dispatched it as slice " + wake.detail() + " under the plan's go, once its wait was met; "
+                    + whoTookUp(wake) + ", so you dispatch nothing for it.";
+            case SLICE_NOT_DISPATCHED -> wake.task() + ": I could not dispatch slice " + endingItsSentence(wake.detail())
+                    + " I try again each round, and tell you again only if the reason changes.";
         };
     }
 
@@ -126,6 +132,17 @@ class WakeDigestText implements TextPresenter<WakeDelivery> {
     private String stopMissedBy(String who, Wake wake) {
         return who + " ended its turn at " + moments.minute(wake.moment()) + " while you could not take its stop hook, so you sent it a message to carry on:"
                 + " message " + wake.detail();
+    }
+
+    private static String whoTookUp(Wake slice) {
+        if (slice.worker() == null) {
+            return "it waits for a place on its project";
+        }
+        return slice.worker().task().equals(slice.task()) ? slice.worker() + " works on it" : "its research goes first, as " + slice.worker();
+    }
+
+    private static String endingItsSentence(String text) {
+        return text.endsWith(".") ? text : text + ".";
     }
 
     private static String closingAdvice(WakeDelivery delivery) {
