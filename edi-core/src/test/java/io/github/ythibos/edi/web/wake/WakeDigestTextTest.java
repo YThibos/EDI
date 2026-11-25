@@ -13,9 +13,12 @@ import org.junit.jupiter.api.Test;
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
 import io.github.ythibos.edi.domain.presence.Presence;
 import io.github.ythibos.edi.domain.primary.RoleReturn;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.wake.Wake;
 import io.github.ythibos.edi.domain.wake.WakeKind;
@@ -131,18 +134,46 @@ class WakeDigestTextTest {
     }
 
     @Test
+    void tellsThePrimaryOfEachSliceDispatchedUnderItsPlansGoSoItDispatchesNothingForIt() {
+        WorkKey plan = WorkKey.parse("HRN-40");
+        WorkerId itsResearch = WorkerId.first(new TaskId("plan-work-on-fit-lamp"));
+        WakeDelivery delivery = new WakeDelivery(Optional.empty(), List.of(
+                queued(1, WakeRule.wakeFor(new SliceDispatched(LAMP, plan, 1, WorkerId.first(LAMP)), Actor.CORE).orElseThrow()),
+                queued(2, WakeRule.wakeFor(new SliceDispatched(LAMP, plan, 1, itsResearch), Actor.CORE).orElseThrow()),
+                queued(3, WakeRule.wakeFor(new SliceDispatched(LAMP, plan, 1, null), Actor.CORE).orElseThrow()),
+                queued(4, WakeRule.wakeFor(new SliceNotDispatched(PAINT, plan, 2, "harness takes no chore branches."), Actor.CORE).orElseThrow()),
+                queued(5, WakeRule.wakeFor(new SliceNotDispatched(PAINT, plan, 2, "java.lang.IllegalStateException: no pane"), Actor.CORE).orElseThrow())),
+                0, 1, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery))
+                .contains("1. fit-lamp: I dispatched it as slice 1 of the HRN-40 plan under the plan's go, once its wait was met; fit-lamp#1 works on it,"
+                        + " so you dispatch nothing for it.\n")
+                .contains("2. fit-lamp: I dispatched it as slice 1 of the HRN-40 plan under the plan's go, once its wait was met; its research goes first,"
+                        + " as plan-work-on-fit-lamp#1, so you dispatch nothing for it.\n")
+                .contains("3. fit-lamp: I dispatched it as slice 1 of the HRN-40 plan under the plan's go, once its wait was met; it waits for a place on"
+                        + " its project, so you dispatch nothing for it.\n")
+                .contains("4. paint-tower: I could not dispatch slice 2 of the HRN-40 plan: harness takes no chore branches. I try again each round, and"
+                        + " tell you again only if the reason changes.\n")
+                .contains("5. paint-tower: I could not dispatch slice 2 of the HRN-40 plan: java.lang.IllegalStateException: no pane. I try again each"
+                        + " round, and tell you again only if the reason changes.\n");
+    }
+
+    @Test
     void tellsThePrimaryWhatHappenedToADelivery() {
         WakeDelivery delivery = new WakeDelivery(Optional.empty(), List.of(
                 queued(1, new Wake(WakeKind.DRAFT_MERGED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(2, new Wake(WakeKind.DRAFT_CLOSED, LAMP, null, "https://github.com/example-owner/harness/pull/7", null)),
                 queued(3, new Wake(WakeKind.DELIVERY_FAILED, LAMP, null, "the captain's checkout has uncommitted work in lamp.txt", null)),
-                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null))), 0, 1, 0, PRESENT, true);
+                queued(4, new Wake(WakeKind.CLEANUP_REFUSED, LAMP, null, "notes.txt is not committed", null)),
+                queued(5, new Wake(WakeKind.FOLLOW_UP_HELD_BACK, LAMP, null, "b30e15a1c2d3 \"HRN-3 Fit the cap\", while it is held: decision D58 is open", null))),
+                0, 1, 0, PRESENT, true);
 
         assertThat(digest.text(delivery)).contains("""
                 1. fit-lamp: the captain merged https://github.com/example-owner/harness/pull/7; you refresh the clone and clean up.
                 2. fit-lamp: https://github.com/example-owner/harness/pull/7 was closed without a merge; its work waits for the captain's word.
                 3. fit-lamp: its delivery to the captain's checkout failed: the captain's checkout has uncommitted work in lamp.txt
                 4. fit-lamp was not cleaned up after its merge: notes.txt is not committed
+                5. fit-lamp was merged before these commits: b30e15a1c2d3 "HRN-3 Fit the cap", while it is held: decision D58 is open; I raise the decision to deliver them through a follow-up task or discard them once nothing holds it.
                 """);
     }
 

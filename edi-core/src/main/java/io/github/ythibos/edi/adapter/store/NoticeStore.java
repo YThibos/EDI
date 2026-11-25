@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.NoticeKind;
 import io.github.ythibos.edi.domain.worker.WorkerId;
@@ -48,18 +48,18 @@ public class NoticeStore {
                 .max(Instant::compareTo);
     }
 
-    public boolean wasNoticed(TaskId task, CaptainHold hold) {
+    public boolean wasNoticed(TaskId task, Hold hold) {
         return store.sql("select exists (select 1 from hold_notice where task_id = :task and set_at = :set)")
                 .param("task", task.value())
-                .param("set", Columns.text(hold.setAt()))
+                .param("set", Columns.text(hold.since()))
                 .query((row, _) -> row.getBoolean(1))
                 .single();
     }
 
-    public void notice(TaskId task, CaptainHold hold, Instant at) {
+    public void notice(TaskId task, Hold hold, Instant at) {
         store.sql("insert into hold_notice (task_id, set_at, noticed_at) values (:task, :set, :noticed)")
                 .param("task", task.value())
-                .param("set", Columns.text(hold.setAt()))
+                .param("set", Columns.text(hold.since()))
                 .param("noticed", Columns.text(at))
                 .update();
     }

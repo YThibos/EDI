@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.task;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -12,6 +13,7 @@ import io.github.ythibos.edi.adapter.store.PipelineRunStore;
 import io.github.ythibos.edi.adapter.store.TaskCostStore;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.task.Task;
 
@@ -47,7 +49,7 @@ public class TaskDetailQuery {
             return new TaskDetail(
                     task,
                     tasks.waitsOf(task),
-                    decisions.ofTask(task.id()).orElse(null),
+                    currentDecisionsOf(task),
                     deliveries.of(task.id()).orElse(null),
                     pipelineRuns.latestOf(task.id()).orElse(null),
                     costs.of(task.id()).orElse(null),
@@ -55,6 +57,15 @@ public class TaskDetailQuery {
                     events.stagesOf(task.id()),
                     events.timelineOf(task.id()));
         });
+    }
+
+    private List<Decision> currentDecisionsOf(Task task) {
+        List<Decision> every = decisions.everyOneOfTask(task.id());
+        List<Decision> open = every.stream().filter(Decision::isOpen).toList();
+        if (!open.isEmpty() || every.isEmpty()) {
+            return open;
+        }
+        return List.of(every.getLast());
     }
 
     private Instant measuredUntil(Task task) {

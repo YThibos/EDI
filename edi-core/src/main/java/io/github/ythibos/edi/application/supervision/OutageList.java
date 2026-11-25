@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore.CountedRecovery;
-import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.Task;
@@ -17,7 +16,7 @@ public record OutageList(List<Entry> entries, List<CountedRecovery> recoveries) 
         recoveries = List.copyOf(recoveries);
     }
 
-    public record Entry(OutageEntry entry, Task task, Worker worker, Route routeNow, DecisionNumber openDecision, int unreadMessages,
+    public record Entry(OutageEntry entry, Task task, Worker worker, Route routeNow, int unreadMessages,
             UnpushedWork unpushed, Path worktree) {
     }
 

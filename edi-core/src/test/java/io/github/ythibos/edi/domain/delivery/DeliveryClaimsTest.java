@@ -303,15 +303,14 @@ class DeliveryClaimsTest {
     }
 
     @Test
-    void triesTheCleanUpAfterARefreshOnlyOnceItIsVerified() {
+    void waitsForARefreshUntilItIsVerified() {
         Instant asked = Instant.parse("2026-10-16T09:00:00Z");
         CloneRefresh refresh = CloneRefresh.awaiting(new TaskId("fit-lamp"), new ProjectName("harness"), MAIN,
                 "3333", asked);
 
         assertThat(refresh.isPending()).isTrue();
         assertThat(refresh.baseRef()).isEqualTo("origin/main");
-        assertThatIllegalArgumentException().isThrownBy(() -> refresh.cleanUpTried(asked));
-        assertThat(refresh.verified(asked).cleanUpTried(asked).cleanUpTriedAt()).isEqualTo(asked);
+        assertThat(refresh.verified(asked).isPending()).isFalse();
     }
 
     private static Delivery request(boolean checksPassed) {

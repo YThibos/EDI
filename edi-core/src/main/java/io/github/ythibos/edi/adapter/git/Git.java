@@ -193,6 +193,10 @@ public class Git {
                 .toList();
     }
 
+    public Set<String> commitIdsBeyond(Path repository, String base, String head) {
+        return git(repository, "rev-list", head, "^" + base, "--").lines().collect(Collectors.toSet());
+    }
+
     public boolean holdsTheContentOf(Path repository, String base, String head) {
         ProgramRun merged = run(repository, "merge-tree", "--write-tree", base, head);
         return merged.succeeded() && merged.output().lines().findFirst().orElse("").equals(git(repository, "rev-parse", base + "^{tree}").strip());

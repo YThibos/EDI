@@ -137,7 +137,7 @@ class BeyondTheInvariantsTest {
         assertThat(plan.tasks().stream().collect(Collectors.groupingBy(task -> task.intake().kind(), Collectors.counting())))
                 .containsExactlyInAnyOrderEntriesOf(Map.of(TaskKind.SHIP, 10L, TaskKind.SCOUT, 2L, TaskKind.CAPTAIN, 5L));
         assertThat(plan.tasks().stream().filter(Task::isHeld))
-                .extracting(task -> task.id().value(), task -> task.hold().kind(), task -> task.hold().until())
+                .extracting(task -> task.id().value(), task -> task.holds().held().getFirst().kind(), task -> task.holds().held().getFirst().until())
                 .containsExactly(
                         tuple("tide-tables", HoldKind.DEFERRAL, HoldUntil.captainsWord()),
                         tuple("beacon-colour", HoldKind.DECISION, HoldUntil.captainsWord()),

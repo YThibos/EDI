@@ -3,12 +3,14 @@ package io.github.ythibos.edi.domain.landing;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public record LandedWork(
         String baseRef,
         List<String> uncommittedPaths,
         List<String> nestedRepositories,
         List<BranchCommit> commitsBeyondTheBase,
+        Set<String> commitsUpToTheMergedHead,
         boolean contentInTheBase,
         CaptainsCopy captainsCopy) {
 
@@ -17,6 +19,7 @@ public record LandedWork(
         uncommittedPaths = List.copyOf(uncommittedPaths);
         nestedRepositories = List.copyOf(nestedRepositories);
         commitsBeyondTheBase = List.copyOf(commitsBeyondTheBase);
+        commitsUpToTheMergedHead = Set.copyOf(commitsUpToTheMergedHead);
         Objects.requireNonNull(captainsCopy, "Landed work knows whether the captain's checkout must hold the branch.");
     }
 
@@ -31,7 +34,7 @@ public record LandedWork(
         if (contentInTheBase) {
             return List.of();
         }
-        return commitsBeyondTheBase.stream().filter(commit -> !commit.sameChangeInTheBase()).toList();
+        return commitsBeyondTheBase.stream().filter(commit -> !isInTheBase(commit)).toList();
     }
 
     public List<String> findings() {
@@ -43,5 +46,9 @@ public record LandedWork(
             findings.add("the captain's checkout does not hold the branch's head");
         }
         return List.copyOf(findings);
+    }
+
+    private boolean isInTheBase(BranchCommit commit) {
+        return commit.sameChangeInTheBase() || commitsUpToTheMergedHead.contains(commit.id());
     }
 }

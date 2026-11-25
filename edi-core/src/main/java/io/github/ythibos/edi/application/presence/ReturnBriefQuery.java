@@ -30,7 +30,8 @@ public class ReturnBriefQuery {
 
     public ReturnBrief since(Presence left) {
         FleetSnapshot snapshot = fleet.snapshot();
-        return new ReturnBrief(left, snapshot.waiting(), landedSince(snapshot, left.since()), setbacksSince(left.since()), snapshot.ongoing());
+        return new ReturnBrief(left, snapshot.waiting(), landedSince(snapshot, left.since()), setbacksSince(left.since()), snapshot.ongoing(),
+                snapshot.changing());
     }
 
     private static List<LandedTask> landedSince(FleetSnapshot snapshot, Instant since) {

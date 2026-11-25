@@ -12,6 +12,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.project.DeliveryMode;
 import io.github.ythibos.edi.domain.project.ProjectName;
 
@@ -19,9 +20,11 @@ class TaskTest {
 
     private static final Instant AT = Instant.parse("2026-10-15T09:00:00Z");
     private static final Instant LATER = Instant.parse("2026-10-16T09:00:00Z");
-    private static final CaptainHold DEFERRAL = new CaptainHold(HoldKind.DEFERRAL, "after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT);
+    private static final Hold.Deferral DEFERRAL = new Hold.Deferral("after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT);
     private static final CaptainsWord DROP = new CaptainsWord("Drop it, we fit no lamps this year.");
-    private static final CaptainHold DECISION = new CaptainHold(HoldKind.DECISION, "D58 Which lamp?", HoldUntil.captainsWord(), AT);
+    private static final DecisionNumber D58 = new DecisionNumber(58);
+    private static final DecisionNumber D59 = new DecisionNumber(59);
+    private static final Hold.OpenDecision DECISION = new Hold.OpenDecision(D58, "Which lamp?", AT);
     private static final StageTrigger.DoneReported DONE = new StageTrigger.DoneReported(List.of(), List.of(), List.of(), false, List.of(), true);
 
     @Test
@@ -47,35 +50,51 @@ class TaskTest {
     }
 
     @Test
-    void refusesASecondHold() {
+    void refusesASecondHoldOfTheSameKind() {
         Task held = ship().held(DEFERRAL);
 
-        assertThatThrownBy(() -> held.held(DEFERRAL)).isInstanceOf(Refusal.class).hasMessageContaining("already held: after the season");
+        assertThatThrownBy(() -> held.held(DEFERRAL)).isInstanceOf(Refusal.class).hasMessageContaining("already waits: deferred: after the season");
     }
 
     @Test
-    void takesADecisionHoldOnlyFromItsDecision() {
-        assertThatThrownBy(() -> ship().held(DECISION)).isInstanceOf(Refusal.class).hasMessageContaining("raised with its card");
+    void keepsADeferralBesideADecisionAndAfterItsAnswer() {
+        Task waiting = ship().held(DEFERRAL).held(DECISION);
+
+        assertThat(waiting.holds().held()).containsExactly(DEFERRAL, DECISION);
+        assertThat(waiting.decisionAnswered(D58).holds().held()).containsExactly(DEFERRAL);
     }
 
     @Test
-    void letsADecisionReplaceADeferral() {
-        assertThat(ship().held(DEFERRAL).heldForDecision(DECISION).hold()).isEqualTo(DECISION);
+    void waitsOnTwoDecisionsAndLetsEachAnswerReleaseOnlyItsOwn() {
+        Task waiting = ship().held(DECISION).held(new Hold.OpenDecision(D59, "Which bulb?", LATER));
+
+        assertThat(waiting.decisionAnswered(D58).holds().openDecisions()).containsExactly(D59);
+        assertThat(waiting.decisionAnswered(D58).reasonsItWaits()).isEqualTo("D59 waits for its answer");
     }
 
     @Test
     void releasesADecisionHoldOnlyThroughTheAnswer() {
-        Task waiting = ship().heldForDecision(DECISION);
+        Task waiting = ship().held(DECISION).held(new Hold.OpenDecision(D59, "Which bulb?", LATER));
 
-        assertThatThrownBy(waiting::released).isInstanceOf(Refusal.class).hasMessageContaining("answering the decision releases it");
-        assertThat(waiting.decisionAnswered().isHeld()).isFalse();
-        assertThat(waiting.decisionAnswered().stage()).isEqualTo(TaskStage.QUEUED);
-        assertThat(waiting.decisionAnswered().closesOnItsAnswer()).isFalse();
+        assertThatThrownBy(waiting::released).isInstanceOf(Refusal.class)
+                .hasMessage("fit-lamp waits only on D58 and D59; answering a decision releases it.");
+        assertThat(waiting.decisionAnswered(D58).decisionAnswered(D59).isHeld()).isFalse();
+        assertThat(waiting.decisionAnswered(D58).stage()).isEqualTo(TaskStage.QUEUED);
+        assertThat(waiting.closesOnItsAnswer()).isFalse();
+    }
+
+    @Test
+    void releasesEveryHoldButItsDecisionsOnTheCaptainsRelease() {
+        Hold.Outage lost = new Hold.Outage(2, "lost when the machine restarted", AT);
+        Task waiting = ship().held(DEFERRAL).held(DECISION).held(lost);
+
+        assertThat(waiting.released().holds().held()).containsExactly(DECISION);
+        assertThat(waiting.releasedFrom(lost).holds().held()).containsExactly(DEFERRAL, DECISION);
     }
 
     @Test
     void retiresACaptainItemThroughTheAnswerToItsDecision() {
-        Task item = captainItem().heldForDecision(DECISION).decisionAnswered();
+        Task item = captainItem().held(DECISION).decisionAnswered(D58);
 
         Task decided = moved(item, new StageTrigger.CaptainItemAnswered(Holds.none()));
 
@@ -88,19 +107,19 @@ class TaskTest {
 
     @Test
     void refusesToHoldOrReleaseWhatCannotWait() {
-        Task retired = moved(captainItem().heldForDecision(DECISION).decisionAnswered(), new StageTrigger.CaptainItemAnswered(Holds.none()));
+        Task retired = moved(captainItem().held(DECISION).decisionAnswered(D58), new StageTrigger.CaptainItemAnswered(Holds.none()));
 
         assertThatThrownBy(() -> retired.held(DEFERRAL)).isInstanceOf(Refusal.class).hasMessageContaining("is retired");
-        assertThatThrownBy(() -> retired.heldForDecision(DECISION)).isInstanceOf(Refusal.class).hasMessageContaining("is retired");
+        assertThatThrownBy(() -> retired.held(DECISION)).isInstanceOf(Refusal.class).hasMessageContaining("is retired");
         assertThatThrownBy(ship()::released).isInstanceOf(Refusal.class).hasMessageContaining("is not held");
-        assertThatThrownBy(() -> ship().decisionAnswered()).isInstanceOf(Refusal.class).hasMessageContaining("not held for a decision");
+        assertThatThrownBy(() -> ship().decisionAnswered(D58)).isInstanceOf(Refusal.class).hasMessage("The task does not wait: D58 waits for its answer.");
     }
 
     @Test
     void dropsFromEveryOpenStageOnTheCaptainsWord() {
         Task working = moved(ship(), dispatch());
 
-        for (Task task : List.of(ship(), ship().held(DEFERRAL), ship().heldForDecision(DECISION), working, working.held(DEFERRAL))) {
+        for (Task task : List.of(ship(), ship().held(DEFERRAL), ship().held(DECISION), working, working.held(DEFERRAL))) {
             Task dropped = moved(task, drop());
 
             assertThat(dropped.stage()).isEqualTo(TaskStage.DROPPED);
@@ -112,7 +131,7 @@ class TaskTest {
 
     @Test
     void neverDropsWhatIsRetired() {
-        Task retired = moved(captainItem().heldForDecision(DECISION).decisionAnswered(), new StageTrigger.CaptainItemAnswered(Holds.none()));
+        Task retired = moved(captainItem().held(DECISION).decisionAnswered(D58), new StageTrigger.CaptainItemAnswered(Holds.none()));
 
         assertThatThrownBy(() -> moved(retired, drop())).isInstanceOf(Refusal.class).hasMessageContaining("lamp-choice is retired");
     }
@@ -130,7 +149,7 @@ class TaskTest {
 
         assertThatThrownBy(() -> moved(dropped, drop())).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
         assertThatThrownBy(() -> dropped.held(DEFERRAL)).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
-        assertThatThrownBy(() -> dropped.heldForDecision(DECISION)).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
+        assertThatThrownBy(() -> dropped.held(DECISION)).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
     }
 
     @Test
@@ -154,7 +173,7 @@ class TaskTest {
         assertThatThrownBy(() -> ship().requireReadyForCleanUp()).isInstanceOf(Refusal.class)
                 .hasMessage("fit-lamp is queued, and only work in flight is cleaned up.");
         assertThatThrownBy(() -> working.held(DEFERRAL).requireReadyForCleanUp()).isInstanceOf(Refusal.class)
-                .hasMessage("fit-lamp is held: after the season. Release it before cleaning it up.");
+                .hasMessage("fit-lamp is held: deferred: after the season. Release it before cleaning it up.");
     }
 
     @Test
@@ -173,7 +192,7 @@ class TaskTest {
         assertThatThrownBy(() -> captainItem().requireFreeToWork()).isInstanceOf(Refusal.class)
                 .hasMessage("lamp-choice is a captain item; only ships and scouts get a worker.");
         assertThatThrownBy(() -> ship().held(DEFERRAL).requireFreeToWork()).isInstanceOf(Refusal.class)
-                .hasMessage("fit-lamp is held: after the season. Release it before dispatching it.");
+                .hasMessage("fit-lamp is held: deferred: after the season. Release it before dispatching it.");
         assertThatThrownBy(() -> moved(ship(), drop()).requireFreeToWork()).isInstanceOf(Refusal.class).hasMessageContaining("is dropped");
     }
 
@@ -195,14 +214,14 @@ class TaskTest {
         Intake intake = ship().intake();
         TaskId id = new TaskId("fit-lamp");
 
-        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.RETIRED, "", null, AT, null));
-        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.QUEUED, "", null, AT, LATER));
-        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.MERGED, "", null, AT, LATER));
-        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.RETIRED, "", DEFERRAL, AT, LATER));
-        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.DROPPED, "", null, AT, null));
-        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.DROPPED, "", DEFERRAL, AT, LATER));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.RETIRED, "", Holds.none(), AT, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.QUEUED, "", Holds.none(), AT, LATER));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.MERGED, "", Holds.none(), AT, LATER));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.RETIRED, "", Holds.none().with(DEFERRAL), AT, LATER));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.DROPPED, "", Holds.none(), AT, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Task(id, intake, TaskStage.DROPPED, "", Holds.none().with(DEFERRAL), AT, LATER));
         assertThatIllegalArgumentException().isThrownBy(() -> new Task(id,
-                new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id), null, null), TaskStage.QUEUED, "", null, AT, null));
+                new Intake(TaskKind.SHIP, "Fit", List.of(), null, null, List.of(id), null, null), TaskStage.QUEUED, "", Holds.none(), AT, null));
     }
 
     @Test

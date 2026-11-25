@@ -27,7 +27,8 @@ class DecisionTest {
 
         assertThat(decision.isOpen()).isTrue();
         assertThat(decision.holdOnItsTask().kind()).isEqualTo(HoldKind.DECISION);
-        assertThat(decision.holdOnItsTask().reason()).isEqualTo("D58 Which lamp?");
+        assertThat(decision.holdOnItsTask().reason()).isEqualTo("D58 waits for its answer");
+        assertThat(decision.holdOnItsTask().since()).isEqualTo(AT);
         assertThat(decision.holdOnItsTask().until()).isEqualTo(HoldUntil.captainsWord());
     }
 

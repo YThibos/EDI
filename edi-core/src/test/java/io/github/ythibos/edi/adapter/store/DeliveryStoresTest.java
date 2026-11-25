@@ -29,6 +29,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.task.BaseBranch;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
+import io.github.ythibos.edi.testing.Stages;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.WorkerFixtures;
 
@@ -97,19 +98,19 @@ class DeliveryStoresTest {
     }
 
     @Test
-    void keepsARefreshPendingUntilVerifiedAndItsCleanUpUntilTried() {
+    void keepsARefreshPendingUntilVerifiedAndItsCleanUpWhileItsTaskIsInFlight() {
         CloneRefresh refresh = CloneRefresh.awaiting(LAMP, new ProjectName("harness"), new BaseBranch("main"), "3333", TestHome.START);
         home.cloneRefreshStore().save(refresh);
 
         assertThat(home.cloneRefreshStore().pendingFor(new ProjectName("harness"))).containsExactly(refresh);
-        assertThat(home.cloneRefreshStore().verifiedAwaitingCleanUp()).isEmpty();
+        assertThat(home.cloneRefreshStore().verifiedOfTasksInFlight()).isEmpty();
 
         home.cloneRefreshStore().save(refresh.verified(TestHome.START));
         assertThat(home.cloneRefreshStore().pending()).isEmpty();
-        assertThat(home.cloneRefreshStore().verifiedAwaitingCleanUp()).containsExactly(refresh.verified(TestHome.START));
+        assertThat(home.cloneRefreshStore().verifiedOfTasksInFlight()).containsExactly(refresh.verified(TestHome.START));
 
-        home.cloneRefreshStore().save(refresh.verified(TestHome.START).cleanUpTried(TestHome.START));
-        assertThat(home.cloneRefreshStore().verifiedAwaitingCleanUp()).isEmpty();
+        home.tasks().update(Stages.retired(home.tasks().get(LAMP), TestHome.START));
+        assertThat(home.cloneRefreshStore().verifiedOfTasksInFlight()).isEmpty();
     }
 
     @Test

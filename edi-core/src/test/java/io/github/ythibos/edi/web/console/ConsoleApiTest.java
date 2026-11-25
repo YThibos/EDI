@@ -175,7 +175,26 @@ class ConsoleApiTest {
         assertThat(answered.statusCode()).isEqualTo(200);
         assertThat(answered.body()).isEqualTo("Recorded the answer to " + number + " (option A); console-lamp is done.\n");
         assertThat(recorded).contains("\"verbatim\":\"A, and keep \\\"one\\\" oil lamp\\non the bridge\"", "\"channel\":\"console\"");
-        assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body()).contains("\"answered\":[{\"number\":\"" + number + "\"");
+        assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body())
+                .contains("\"dealtWith\":{\"decisions\":[{\"call\":\"" + number + "\",\"number\":\"" + number + "\"");
+    }
+
+    @Test
+    void ticksAnAnsweredDecisionOffTheListFromTheConsoleOnlyWithTheConsolesHeader() throws Exception {
+        String cookie = signedInCookie();
+        String number = raisedDecision("console-bell");
+        send(withTheCookie("/api/decisions/" + number + "/answer", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString("{\"option\":\"A\",\"text\":\"A\"}")));
+
+        HttpResponse<String> withoutHeader = send(withTheCookie("/api/calls/" + number + "/tick", cookie).POST(BodyPublishers.noBody()));
+        HttpResponse<String> ticked = send(withTheCookie("/api/calls/" + number + "/tick", cookie).header(CONSOLE_HEADER, "1").POST(BodyPublishers.noBody()));
+        HttpResponse<String> again = send(withTheCookie("/api/calls/board:41/tick", cookie).header(CONSOLE_HEADER, "1").POST(BodyPublishers.noBody()));
+
+        assertThat(withoutHeader.statusCode()).isEqualTo(403);
+        assertThat(ticked.statusCode()).isEqualTo(200);
+        assertThat(ticked.body()).isEqualTo("Ticked " + number + " off the captain's list; it leaves the sitrep page and the reports.\n");
+        assertThat(again.statusCode()).isEqualTo(404);
+        assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body()).doesNotContain("\"call\":\"" + number + "\"");
     }
 
     @Test
@@ -222,10 +241,11 @@ class ConsoleApiTest {
         HttpResponse<String> signIn = send(HttpRequest.newBuilder(uri("/login")).GET());
         HttpResponse<String> fleet = send(HttpRequest.newBuilder(uri("/fleet")).GET());
         HttpResponse<String> week = send(HttpRequest.newBuilder(uri("/week")).GET());
+        HttpResponse<String> landed = send(HttpRequest.newBuilder(uri("/landed")).GET());
         HttpResponse<String> task = send(HttpRequest.newBuilder(uri("/task/fit-lamp")).GET());
 
-        assertThat(Stream.of(fleet, week, task).map(HttpResponse::body)).allSatisfy(body -> assertThat(body).contains("<app-root></app-root>"));
-        Stream.of(console, signIn, fleet, week, task).forEach(page -> {
+        assertThat(Stream.of(fleet, week, landed, task).map(HttpResponse::body)).allSatisfy(body -> assertThat(body).contains("<app-root></app-root>"));
+        Stream.of(console, signIn, fleet, week, landed, task).forEach(page -> {
             assertThat(page.statusCode()).isEqualTo(200);
             assertThat(page.headers().firstValue("Cache-Control")).contains("no-cache");
             assertThat(page.headers().firstValue("Last-Modified")).isEmpty();

@@ -8,6 +8,7 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
     machine: 'laptop',
     address: 'Commander',
     presence: { mode: 'quiet', demo: false, words: 'quiet since 2026-10-15 08:00 CEST, after a stretch without a typed message' },
+    usageLimit: null,
     decisions: [
       {
         number: 'D58',
@@ -22,26 +23,31 @@ export function sitrepFixture(changes: Partial<Sitrep> = {}): Sitrep {
         recommended: { key: 'A', why: 'it is enough' },
         urgent: false,
         raisedAt: '2026-10-15T06:00:00Z',
+        stops: null,
       },
     ],
     boards: [],
     reviews: [],
-    changing: [],
     workerQuestions: [],
-    answered: [
-      {
-        number: 'D57',
-        task: 'horn-choice',
-        projects: [],
-        title: 'Which horn?',
-        verbatim: 'B, and tune it lower',
-        option: 'B',
-        channel: 'console',
-        answeredAt: '2026-10-15T05:40:00Z',
-      },
-    ],
+    dealtWith: {
+      decisions: [
+        {
+          call: 'D57',
+          number: 'D57',
+          task: 'horn-choice',
+          projects: [],
+          title: 'Which horn?',
+          verbatim: 'B, and tune it lower',
+          option: 'B',
+          channel: 'console',
+          answeredAt: '2026-10-15T05:40:00Z',
+        },
+      ],
+      boards: [],
+      reviews: [],
+    },
     ongoing: [
-      { task: 'fit-lamp', key: 'EDI-31', title: 'Fit the lamp', kind: 'ship', projects: ['harness', 'garden'], state: 'working', doing: 'pipeline review', draft: null },
+      { task: 'fit-lamp', key: 'EDI-31', title: 'Fit the lamp', kind: 'ship', projects: ['harness', 'garden'], state: 'working', doing: 'pipeline review', draft: null, comingBack: null, limitResetsAt: null },
     ],
     landed: [
       {

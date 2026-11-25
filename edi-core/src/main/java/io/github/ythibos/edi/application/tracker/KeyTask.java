@@ -57,7 +57,7 @@ public class KeyTask {
         Task keyed = tasks.get(id).keyedOn(key);
         Optional<DecisionNumber> closed = ticketProposals.closeOnTheKey(id, key, captainsWords, actor, now);
         tasks.update(keyed);
-        Task released = closed.isPresent() ? releases.released(keyed, actor, now) : keyed;
+        Task released = closed.map(answered -> releases.released(keyed, answered, actor, now)).orElse(keyed);
         events.record(new TaskKeyed(id, key), actor, now);
         return new KeyedTask(released, closed.orElse(null));
     }

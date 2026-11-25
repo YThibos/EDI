@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.plan.Plan;
+import io.github.ythibos.edi.domain.plan.PlanGo;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.Slice;
 import io.github.ythibos.edi.domain.plan.SliceWait;
@@ -19,6 +21,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.TaskId;
+import io.github.ythibos.edi.domain.task.TaskStage;
 
 @Component
 public class PlanStore {
@@ -42,7 +45,7 @@ public class PlanStore {
     }
 
     public Plan get(WorkKey key) {
-        PlanHeading heading = store.sql("select work_key, title, project, report, go, capacity, effort from plan where work_key = :key")
+        PlanHeading heading = store.sql("select work_key, title, project, report, go, go_session, go_message, capacity, effort from plan where work_key = :key")
                 .param("key", key.toString())
                 .query((row, _) -> heading(row))
                 .optional()
@@ -50,14 +53,27 @@ public class PlanStore {
         return new Plan(heading, slicesOf(key));
     }
 
+    public List<WorkKey> withQueuedSlices() {
+        return store.sql("""
+                        select work_key from plan
+                        where exists (select 1 from plan_slice join task on task.id = plan_slice.task_id
+                                      where plan_slice.plan_key = plan.work_key and task.stage = :queued)
+                        order by added_at, work_key""")
+                .param("queued", TaskStage.QUEUED.word())
+                .query((row, _) -> WorkKey.parse(row.getString("work_key")))
+                .list();
+    }
+
     private void insertHeading(PlanHeading heading, Instant addedAt) {
-        store.sql("insert into plan (work_key, title, project, report, go, capacity, effort, added_at)"
-                        + " values (:key, :title, :project, :report, :go, :capacity, :effort, :addedAt)")
+        store.sql("insert into plan (work_key, title, project, report, go, go_session, go_message, capacity, effort, added_at)"
+                        + " values (:key, :title, :project, :report, :go, :goSession, :goMessage, :capacity, :effort, :addedAt)")
                 .param("key", heading.key().toString())
                 .param("title", heading.title())
                 .param("project", heading.project().value())
                 .param("report", heading.report())
-                .param("go", heading.go())
+                .param("go", heading.go().words())
+                .param("goSession", heading.go() instanceof PlanGo.CitedMessage typed ? typed.session().toString() : null)
+                .param("goMessage", heading.go() instanceof PlanGo.CitedMessage typed ? typed.message() : null)
                 .param("capacity", heading.capacity())
                 .param("effort", heading.effort() == null ? null : heading.effort().word())
                 .param("addedAt", Columns.text(addedAt))
@@ -87,7 +103,14 @@ public class PlanStore {
     private static PlanHeading heading(ResultSet row) throws SQLException {
         String effort = row.getString("effort");
         return new PlanHeading(WorkKey.parse(row.getString("work_key")), row.getString("title"), new ProjectName(row.getString("project")),
-                row.getString("report"), row.getString("go"), row.getInt("capacity"), effort == null ? null : EffortLevel.named(effort));
+                row.getString("report"), goOf(row), row.getInt("capacity"), effort == null ? null : EffortLevel.named(effort));
+    }
+
+    private static PlanGo goOf(ResultSet row) throws SQLException {
+        String session = row.getString("go_session");
+        return session == null
+                ? PlanGo.named(row.getString("go"))
+                : new PlanGo.CitedMessage(UUID.fromString(session), row.getInt("go_message"), row.getString("go"));
     }
 
     private static Slice slice(ResultSet row) throws SQLException {

@@ -24,20 +24,23 @@ A task can wait on the captain, be parked for the night and have a dead worker a
 | MERGED | LANDED | the core (`LandingObserved`) | the commit the merge landed is in the base and no commit follows the merged head; a commit after it keeps the task MERGED and is named |
 | LANDED | RETIRED | the core's cleanup, retried each delivery round until it holds (`CleanUp`) | the copy, branch, workers and boards are retired (`Leftover`) |
 | DELIVERED (a scout) | RETIRED | `edi cleanup` (`CleanUp`) | the report exists, and the copy, branch, workers and boards are retired |
-| QUEUED (a captain item) | RETIRED | the answer to its decision (`CaptainItemAnswered`) | nothing else holds it |
+| QUEUED (a captain item) | RETIRED | the answer to its decision, or `edi release` once one is answered (`CaptainItemAnswered`) | its question is answered and nothing else holds it |
 | any but RETIRED and DROPPED | DROPPED | `edi task drop` (`Drop`) | the captain's word, and the work landed unless discarding it is part of that word |
 
 Dependants and plan slices wait on a named stage of another task, MERGED or LANDED (`Wait`, `AwaitedStage`): a blocker named with `--blocked-by` until it has landed, and a slice as its plan names ([plans](plans.md)).
 `domain/task/Holds` is the set of reasons a task waits, beside its stage and never changing it: each open decision (`Hold.OpenDecision`), a deferral, an approval, an outage entry and, once parking for the night exists, a night's park.
 A hold added never replaces another, a hold of each kind is held once (a decision once per number), an answer removes only its own decision, and a decision is released only by its answer.
+`Task.holds` carries the set and `task_hold` stores it, one row per hold with its kind, its decision or outage entry number, why it holds, until when and since when; a decision's row references its decision, so no task waits on a decision that does not exist.
+`edi hold` adds a deferral or an approval (`Hold.setByTheCaptain`), `edi release` releases every hold but the open decisions, and the outage hold list adds and removes only its own entry's hold (`Hold.Outage`), whatever else holds the task.
+A captain item is retired once its question is answered and nothing else holds it, whichever comes last: by the answer that leaves it holding nothing, or by the release that frees it after its answer.
 `WorkerHealth` stays the worker's own condition, derived from the worker row as today; a stage transition may read it, but it is never a stage.
 `FleetSnapshotQuery` is to read the stage and the holds instead of combining the done check, the delivery and the run: Ongoing is WORKING and CHANGING (`TaskStage.isOngoing`), ready for review is READY, "report ready" is a delivered scout, and a MERGED task with a commit not landed shows in red with the commit named.
-A merge with commits after the merged head, whatever the stage before it (`StageChange.raisesAFollowUpDecision`), raises one decision on the task naming those commits: deliver them as a follow-up request from the same branch, or discard them, the option that authorises `discard-work`.
+A merge with commits after the merged head, whatever the stage before it (`StageChange.raisesAFollowUpDecision`), raises one decision on the task naming those commits, unless another decision or hold is on the task ([merge-following](merge-following.md)): deliver them through a follow-up task on a new branch, or discard them, both options authorising `discard-work`.
 The stored stage is the one answer: `TaskState` (queued, in flight, done, dropped) is only its coarse projection (`TaskStage.state`) for the readers that still ask it.
 Every application service that changes a task's stage moves it through `StageTransitions` and `TaskStages`, which records a `StageChanged` event with the stage before and after, the reason and any commit not landed, and `edi task show` prints the stages a task reached.
 `V26__the_stage_is_stored.sql` derived the stage of every task once from the facts stored before it, with a `StageDerived` event for each task in flight: merged when its request was merged, naming as not landed the heads its pipeline runs reached after the merged head; delivered when its latest worker's done stands; changing when an earlier done no longer does; working otherwise.
 A ship cleaned up without a followed merge, such as one delivered to the captain's checkout, is recorded merged at the branch head that landed before it becomes landed.
-Until the delivery guard, the triggers into CHANGING and READY arrive (EDI-86), a done the claims accept moves an ongoing task to DELIVERED and only its worker reporting working moves it to CHANGING; `CaptainHold` stays the one hold the services read until `Holds` replaces it (EDI-87).
+Until the delivery guard, the triggers into CHANGING and READY arrive (EDI-86), a done the claims accept moves an ongoing task to DELIVERED and only its worker reporting working moves it to CHANGING.
 
 ## Why
 
@@ -70,3 +73,6 @@ When a delivery mode appears whose work is neither merged nor reported, or when 
 - 12/11/2026: `task.stage` replaced `task.state`, derived once for every task; every service moved it through `StageTransitions` with a `StageChanged` event, and `ObservePipelines` and `FollowMerges` kept observing a delivered task's runs, head and draft flag (EDI-85).
 - 13/11/2026: waits read the stages: a blocker is waited for until it has landed and a plan's slice as its plan names, and the QUEUED to WORKING guard cites the `plans` record (EDI-88).
 - 24/11/2026: only a merge into the base branch moves a task to MERGED, so a request merged into a slice branch keeps its task in flight ([merge-following](merge-following.md), EDI-244).
+- 24/11/2026: MERGED to LANDED counts every commit up to the merged head as landed however the forge merged it, a merge with commits after its head raises the follow-up decision, and the core retries a refused clean-up every round; a follow-up after a merge is a new task, since EDI follows one request per task ([cleanup](cleanup.md), EDI-70).
+- 24/11/2026: `Holds` replaced the single `captain_hold` row: `V38__the_reasons_a_task_waits_are_a_set.sql` moved every hold into `task_hold`, gave each open decision of an open task its own hold and the outage hold its own kind instead of an approval recognised by its reason, so a decision no longer overwrites a deferral and an answer releases only its own decision (EDI-87).
+- 24/11/2026: `edi release` retires an answered captain item it leaves holding nothing, as the answer does, so a captain item deferred before its answer is not left queued for good (EDI-87).

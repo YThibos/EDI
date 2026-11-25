@@ -15,7 +15,7 @@ import io.github.ythibos.edi.domain.task.WorkedTime;
 public record TaskDetail(
         Task task,
         List<Wait> waits,
-        Decision decision,
+        List<Decision> decisions,
         Delivery delivery,
         PipelineRun pipelineRun,
         TaskCost cost,
@@ -25,6 +25,7 @@ public record TaskDetail(
 
     public TaskDetail {
         waits = List.copyOf(waits);
+        decisions = List.copyOf(decisions);
         stages = List.copyOf(stages);
         timeline = List.copyOf(timeline);
     }

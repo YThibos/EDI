@@ -5,7 +5,7 @@ import java.time.Duration;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.Worker;
 
-public record WorkerQuestion(Task task, Worker worker, Duration waited) {
+public record WorkerQuestion(Task task, Worker worker, Duration waited, boolean escalated) {
 
     public String question() {
         return worker.lastStatus().report().text();

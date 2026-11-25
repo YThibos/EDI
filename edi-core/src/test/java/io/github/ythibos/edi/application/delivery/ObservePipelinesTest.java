@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.ythibos.edi.adapter.pipeline.PipelineStatusFixtures;
 import io.github.ythibos.edi.application.dispatch.DispatchOutcome;
 import io.github.ythibos.edi.application.fleet.ChangingRequest;
+import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
 import io.github.ythibos.edi.domain.delivery.Delivery;
 import io.github.ythibos.edi.domain.delivery.HeadChecks;
@@ -87,17 +88,17 @@ class ObservePipelinesTest {
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         Worker handedOver = home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
-        WaitingOnTheCaptain changing = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot changing = home.fleetSnapshot().snapshot();
 
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "completed", null, false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
-        WaitingOnTheCaptain finished = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot finished = home.fleetSnapshot().snapshot();
 
         assertThat(handedOver.hadItsDoneAccepted()).isTrue();
         assertThat(changing.changing()).extracting(request -> request.task().id()).containsExactly(LAMP);
         assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::status).contains("completed");
         assertThat(finished.changing()).isEmpty();
-        assertThat(finished.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(finished.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test
@@ -127,24 +128,24 @@ class ObservePipelinesTest {
         home.pipeline().runs(dispatched.launched().branch(), watching);
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
-        WaitingOnTheCaptain pending = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot pending = home.fleetSnapshot().snapshot();
 
         home.pipeline().runs(dispatched.launched().branch(), watching.withChecksPassed(true));
         home.observePipelines().observe();
-        WaitingOnTheCaptain passed = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot passed = home.fleetSnapshot().snapshot();
         home.clock().advance(Duration.ofHours(1));
         home.observePipelines().observe();
-        WaitingOnTheCaptain reArmed = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot reArmed = home.fleetSnapshot().snapshot();
         home.pipeline().runs(dispatched.launched().branch(), watching);
         home.observePipelines().observe();
-        WaitingOnTheCaptain fixing = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot fixing = home.fleetSnapshot().snapshot();
 
         assertThat(pending.changing()).extracting(request -> request.task().id()).containsExactly(LAMP);
-        assertThat(passed.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(passed.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
         assertThat(passed.changing()).isEmpty();
-        assertThat(reArmed.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(reArmed.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
         assertThat(reArmed.changing()).isEmpty();
-        assertThat(fixing.reviews()).isEmpty();
+        assertThat(fixing.waiting().reviews()).isEmpty();
         assertThat(fixing.changing()).extracting(ChangingRequest::whyChanging).containsExactly("pipeline ci");
     }
 
@@ -157,15 +158,15 @@ class ObservePipelinesTest {
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "test", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
-        WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot failed = home.fleetSnapshot().snapshot();
 
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("02RUN", "running", "ci", false, "1111", draft.address().url(), true));
         home.observePipelines().observe();
-        WaitingOnTheCaptain reRun = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot reRun = home.fleetSnapshot().snapshot();
 
         assertThat(failed.changing()).extracting(ChangingRequest::whyChanging).containsExactly("pipeline failed in its test step");
         assertThat(reRun.changing()).isEmpty();
-        assertThat(reRun.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(reRun.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test
@@ -177,15 +178,15 @@ class ObservePipelinesTest {
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "running", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
-        WaitingOnTheCaptain waiting = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot waiting = home.fleetSnapshot().snapshot();
 
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "cancelled", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
-        WaitingOnTheCaptain cancelled = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot cancelled = home.fleetSnapshot().snapshot();
 
         assertThat(waiting.changing()).extracting(ChangingRequest::whyChanging).containsExactly("pipeline ci");
         assertThat(cancelled.changing()).isEmpty();
-        assertThat(cancelled.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(cancelled.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test
@@ -197,15 +198,15 @@ class ObservePipelinesTest {
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "review", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
-        WaitingOnTheCaptain failed = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot failed = home.fleetSnapshot().snapshot();
 
         home.forge().showsTheChecksOf(draft.address(), HeadChecks.PASSED);
         home.followMerges().watchTheOpenDrafts();
-        WaitingOnTheCaptain green = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot green = home.fleetSnapshot().snapshot();
 
         assertThat(failed.changing()).extracting(ChangingRequest::whyChanging).containsExactly("pipeline failed in its review step");
         assertThat(green.changing()).isEmpty();
-        assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(green.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test
@@ -224,10 +225,10 @@ class ObservePipelinesTest {
         home.pipeline().runs(dispatched.launched().branch(), new PipelineRun("01RUN", "failed", "ci", false, "1111", draft.address().url(), false));
         home.observePipelines().observe();
         home.followMerges().watchTheOpenDrafts();
-        WaitingOnTheCaptain red = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot red = home.fleetSnapshot().snapshot();
 
         assertThat(green.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
-        assertThat(red.reviews()).isEmpty();
+        assertThat(red.waiting().reviews()).isEmpty();
         assertThat(red.changing()).extracting(ChangingRequest::whyChanging).containsExactly("checks failing on its head");
     }
 
@@ -243,13 +244,13 @@ class ObservePipelinesTest {
         home.observePipelines().observe();
         home.recordStatus().report(dispatched.launched().worker().id(), StatusState.DONE, null, null, "Delivered.");
 
-        WaitingOnTheCaptain passed = home.fleetSnapshot().snapshot().waiting();
+        FleetSnapshot passed = home.fleetSnapshot().snapshot();
 
         assertThat(home.registry().entryOf(new ProjectName("harness")).skippedPipelineSteps()).contains(PipelineStep.CI);
         assertThat(home.pipelineRuns().latestOf(LAMP)).map(PipelineRun::status).contains("completed");
         assertThat(home.pipelineRuns().latestOf(LAMP).map(PipelineRun::step)).as("the step a run stopped in, never its skipped ci").isEmpty();
         assertThat(passed.changing()).isEmpty();
-        assertThat(passed.reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
+        assertThat(passed.waiting().reviews()).extracting(ready -> ready.task().id()).containsExactly(LAMP);
     }
 
     @Test

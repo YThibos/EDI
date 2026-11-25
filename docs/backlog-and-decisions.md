@@ -11,7 +11,7 @@ edi task add --kind ship --project EDI --title "Fit the lamp" --key EDI-14   # E
 edi backlog --ready                                 # the queue, or only what nothing holds or blocks
 edi task show fit-the-lamp                          # a task id, or the D number of its decision
 edi hold fit-the-lamp --kind deferral --reason "after the reports" --until 2026-11-01
-edi release fit-the-lamp
+edi release fit-the-lamp                            # every hold but its open decisions, which only their answers release
 edi task add --kind ship --project EDI --title "Paint the lamp" --key EDI-15 --blocked-by fit-the-lamp   # waits until that work lands
 edi task add --kind ship --project EDI --title "Oil the hinge" --key EDI-16 --size XS   # XS, S, M or L, or the Size row of a backlog item in --body
 ```
@@ -20,9 +20,11 @@ A task's size lets the dispatch rules route it, such as EDI's small implementati
 
 A plan is a titled set of slices, each a task with its own key, its number in the plan and one wait: "after N merged", the default on the slice before, "after N landed", or "none" ([plans](decisions/plans.md)).
 The primary enters it as JSON on standard input, and EDI shows each slice's stage, its wait and whether it is eligible to start.
+Once a plan is entered, EDI dispatches each slice itself as soon as its wait is met, while the plan, its project and the captain's presence have room, and tells the primary of each.
+It does so only under the captain's go: `decision` names a decision raised on a task keyed by the plan's umbrella key that the captain answered with an option that authorises promote, such as D44, or `message` cites the number of a message the captain typed in the primary session.
 
 ```sh
-edi plan add --from - < plan.json   # {key, title, project, report, decision, capacity, effort, slices: [{number, title, category, key, body, wait}]}
+edi plan add --from - < plan.json   # {key, title, project, report, decision, message, capacity, effort, slices: [{number, title, category, key, body, wait}]}
 edi plan show EDI-52                # the plan's slices, their stages and waits, and which are eligible
 ```
 
@@ -53,7 +55,9 @@ edi decision list --open
 ```
 
 A decision holds its task until the captain answers it ([captain-decisions](decisions/captain-decisions.md)), and its D number is assigned once and never reused.
-Raising a card again on a task updates its open decision under the same number; once the captain answered, the new card is a new decision with a new number, and the answered one stays as he left it ([captain-decisions](decisions/captain-decisions.md)).
+A task waits on as many decisions as it has questions, each under its own number, beside any deferral, approval or outage entry that also holds it.
+Raising the same card again, by its D number or with the same title, updates its open decision under that number; a card with a new title is a new decision, and once the captain answered, the new card is a new decision with a new number, and the answered one stays as he left it ([captain-decisions](decisions/captain-decisions.md)).
+An answer releases only its own decision, so a task waiting on two decisions is answered by D number.
 A card is `{"title", "context", "options": [{"key", "text", "authorises"}], "recommend": {"key", "why"}, "urgent"}`.
 An option's optional `"authorises"` is `"promote"`, `"drop"` or `"discard-work"`: choosing that option is the captain's word for that act on the task, and no other answer is.
 A running ship's decision waits in the console and reaches the captain in a round with the others raised within five minutes of the round's first; the optional `"urgent": true` is for a decision that blocks the captain's current work, which reaches him at once ([decision-rounds](decisions/decision-rounds.md)).

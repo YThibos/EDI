@@ -14,13 +14,13 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.application.fleet.ChangingRequest;
+import io.github.ythibos.edi.application.fleet.DealtWith;
 import io.github.ythibos.edi.application.fleet.FleetSnapshot;
 import io.github.ythibos.edi.application.fleet.LandedTask;
 import io.github.ythibos.edi.application.fleet.OngoingTask;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.application.fleet.ParkedTask;
 import io.github.ythibos.edi.application.fleet.ReadyForReview;
-import io.github.ythibos.edi.application.fleet.RecentAnswer;
 import io.github.ythibos.edi.application.fleet.TaskLinks;
 import io.github.ythibos.edi.application.fleet.WaitingBoard;
 import io.github.ythibos.edi.application.fleet.WaitingOnTheCaptain;
@@ -28,6 +28,7 @@ import io.github.ythibos.edi.application.fleet.WorkerQuestion;
 import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.board.BoardId;
 import io.github.ythibos.edi.domain.delivery.Delivery;
+import io.github.ythibos.edi.domain.delivery.DeliveryNote;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
 import io.github.ythibos.edi.domain.delivery.ForgeRepository;
 import io.github.ythibos.edi.domain.delivery.HeadChecks;
@@ -53,6 +54,7 @@ import io.github.ythibos.edi.domain.task.TaskKind;
 import io.github.ythibos.edi.domain.worker.BootId;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.LoginName;
+import io.github.ythibos.edi.domain.worker.UsageLimit;
 import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
@@ -67,14 +69,15 @@ class SitrepConsolePresenterTest {
     private static final Instant NOW = PresenterFixtures.AT.plusSeconds(3_600);
     private static final MergeRequestAddress DRAFT = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 12);
 
-    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of());
+    private static final WaitingOnTheCaptain NOTHING_WAITING = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(), List.of());
 
     private final SitrepConsolePresenter presenter = PresenterFixtures.sitrepConsolePresenter();
 
     @Test
-    void presentsTheDecisionDeckWithEachCardsOptionsAndRecommendation() {
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(theLampDecision(), List.of(), List.of(), List.of(), List.of(),
-                List.of(new RecentAnswer(PresenterFixtures.answeredDecision(), PresenterFixtures.captainItem()))));
+    void presentsEachDecisionWithItsOptionsAndRecommendationAndEachAnsweredOneUntilItIsTicked() {
+        DealtWith answered = new DealtWith(List.of(new DealtWith.Answered(PresenterFixtures.answeredDecision(), PresenterFixtures.captainItem())), List.of(),
+                List.of());
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(theLampDecision(), answered, List.of(), List.of(), List.of(), List.of(), List.of()));
 
         assertThat(sitrep.schema()).isEqualTo("edi-sitrep.v1");
         assertThat(sitrep.address()).isEqualTo("Commander");
@@ -86,8 +89,10 @@ class SitrepConsolePresenterTest {
             assertThat(card.options()).extracting(ConsoleSitrep.Option::key, ConsoleSitrep.Option::text)
                     .containsExactly(tuple("A", "The simple way"), tuple("B", "The thorough way"));
             assertThat(card.recommended()).isEqualTo(new ConsoleSitrep.Recommendation("A", "it is enough"));
+            assertThat(card.stops()).isNull();
         });
-        assertThat(sitrep.answered()).singleElement().satisfies(answer -> {
+        assertThat(sitrep.dealtWith().decisions()).singleElement().satisfies(answer -> {
+            assertThat(answer.call()).isEqualTo("D58");
             assertThat(answer.verbatim()).isEqualTo("D58, A\nand keep the old one");
             assertThat(answer.option()).isEqualTo("A");
             assertThat(answer.channel()).isEqualTo("chat");
@@ -102,7 +107,7 @@ class SitrepConsolePresenterTest {
         Worker reporting = workerOn(horn).reported(new StatusReport(StatusState.WORKING, null, null, "Fitting the brass."), NOW);
         PipelineRun reviewing = new PipelineRun("01RUN", "running", "review", false, "abc123", null, false);
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(
                 new OngoingTask(horn, reporting, null, delivery(horn)),
                 new OngoingTask(bell, workerOn(bell), reviewing, null),
                 new OngoingTask(mast, null, null, null)), List.of(), List.of(), List.of(), List.of()));
@@ -125,7 +130,7 @@ class SitrepConsolePresenterTest {
         Worker settled = workerOn(mast).reported(new StatusReport(StatusState.NEEDS_DECISION, reviewGate, null, "Fix or skip?"), NOW)
                 .settledBy(InboxMessage.sent(mast.id(), 1, "Fix it.", reviewGate, NOW), NOW);
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(
                 new OngoingTask(horn, gated, null, null),
                 new OngoingTask(bell, blocked, null, null),
                 new OngoingTask(mast, settled, null, null)), List.of(), List.of(), List.of(), List.of()));
@@ -143,7 +148,7 @@ class SitrepConsolePresenterTest {
         Task buoy = keyed(ship("buoy", "EDI-310 Paint the buoy"), "EDI-31");
         Task mast = ship("mast", "Paint the mast");
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(
                 new OngoingTask(horn, null, null, null),
                 new OngoingTask(bell, null, null, null),
                 new OngoingTask(buoy, null, null, null),
@@ -162,27 +167,101 @@ class SitrepConsolePresenterTest {
         Task lamp = ship("fit-lamp", "Fit the lamp");
         Board board = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 0, 2, NOW, null, null);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(new WaitingBoard(board, research, List.of())),
-                List.of(new ReadyForReview(lamp, delivery(lamp))), List.of());
+                List.of(new ReadyForReview(lamp, delivery(lamp))), List.of(), List.of());
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
-        assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("lamp-research", "Research the lamp", List.of("harness"), 2, BoardRounds.LINK,
-                List.of()));
-        assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(), null));
+        assertThat(sitrep.boards()).containsExactly(new ConsoleSitrep.Board("board:3", "lamp-research", "Research the lamp", List.of("harness"), 2,
+                BoardRounds.LINK, List.of()));
+        assertThat(sitrep.reviews()).containsExactly(new ConsoleSitrep.Review("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(), null,
+                new ConsoleSitrep.AfterLanding(List.of(), null)));
     }
 
     @Test
-    void presentsARequestStillChangingWithWhyInsteadOfAsReady() {
-        Task lamp = ship("fit-lamp", "Fit the lamp");
-        PipelineRun running = new PipelineRun("01RUN", "running", null, false, "abc123", DRAFT.url(), false);
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
-                List.of(new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2))));
+    void namesTheWorkADecisionStopsWhenItsWorkerWaitsForIt() {
+        Task horn = keyed(ship("horn", "EDI-31 Tune the horn"), "EDI-31");
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), horn, true)), List.of(),
+                List.of(), List.of(), List.of());
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
+
+        assertThat(sitrep.decisions()).extracting(ConsoleSitrep.Card::stops).containsExactly("EDI-31 Tune the horn");
+    }
+
+    @Test
+    void carriesTheStepsAfterLandingAndTheMergeOrderFromEachReviewsDeliveryNote() {
+        Task lamp = ship("fit-lamp", "Fit the lamp");
+        Task bell = ship("bell", "Polish the bell");
+        Delivery merged = new Delivery(bell.id(), DRAFT, false, "abc123", HeadChecks.PASSED, MergeRequestState.MERGED, "def456", null, NOW, NOW);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(new ReadyForReview(lamp, delivery(lamp))), List.of(), List.of());
+        DealtWith settled = new DealtWith(List.of(), List.of(), List.of(new DealtWith.SettledRequest(bell, merged)));
+        DeliveryNote note = new DeliveryNote(List.of("Run edi up."), "Merges after #329.");
+        List<TaskId> asked = new ArrayList<>();
+
+        ConsoleSitrep sitrep = presenter.present(new FleetSnapshot(waiting, settled, List.of(), List.of(), List.of(), List.of(), List.of()), NOW,
+                ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), _ -> Map.of(), tasks -> {
+                    asked.addAll(tasks);
+                    return Map.of(lamp.id(), note);
+                });
+
+        assertThat(asked).containsExactly(lamp.id(), bell.id());
+        assertThat(sitrep.reviews()).extracting(ConsoleSitrep.Review::afterLanding)
+                .containsExactly(new ConsoleSitrep.AfterLanding(List.of("Run edi up."), "Merges after #329."));
+        assertThat(sitrep.dealtWith().reviews()).containsExactly(new ConsoleSitrep.SettledReview("review:bell", "bell", "Polish the bell",
+                List.of("harness"), DRAFT.url(), "merged", new ConsoleSitrep.AfterLanding(List.of(), null)));
+    }
+
+    @Test
+    void listsAListeningBoardWithItsRoundAnsweredAndAnEndedBoardUnderTheirCallsUntilTheyAreTicked() {
+        Task research = ship("lamp-research", "Research the lamp");
+        Board listening = new Board(new BoardId(2), research.id(), "/tmp/listening.html", BoardRounds.LINK, List.of(), 1, 0, NOW, null, null);
+        Board ended = new Board(new BoardId(3), research.id(), "/tmp/board.html", BoardRounds.LINK, List.of(), 1, 0, NOW, NOW, null);
+
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, new DealtWith(List.of(),
+                List.of(new DealtWith.SettledBoard(listening, research), new DealtWith.SettledBoard(ended, research)), List.of()), List.of(), List.of(),
+                List.of(), List.of(), List.of()));
+
+        assertThat(sitrep.dealtWith().boards()).containsExactly(
+                new ConsoleSitrep.SettledBoard("board:2", "lamp-research", "Research the lamp", List.of("harness"), BoardRounds.LINK, "round answered"),
+                new ConsoleSitrep.SettledBoard("board:3", "lamp-research", "Research the lamp", List.of("harness"), BoardRounds.LINK, "the board ended"));
+    }
+
+    @Test
+    void marksARequestStillChangingAsOngoingAndComingBackWithWhyInsteadOfAsReady() {
+        Task lamp = ship("fit-lamp", "Fit the lamp");
+        Task horn = ship("horn", "Tune the horn");
+        PipelineRun running = new PipelineRun("01RUN", "running", null, false, "abc123", DRAFT.url(), false);
+        ChangingRequest changing = new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2));
+
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(
+                new OngoingTask(lamp, doneOn(lamp), running, delivery(lamp)), new OngoingTask(horn, doneOn(horn), null, null)),
+                List.of(changing), List.of(), List.of(), List.of()));
 
         assertThat(sitrep.reviews()).isEmpty();
-        assertThat(sitrep.changing()).containsExactly(new ConsoleSitrep.Changing("fit-lamp", "Fit the lamp", List.of("harness"), DRAFT.url(),
-                "still a draft; pipeline running; steer 2 not acknowledged", null));
+        assertThat(sitrep.ongoing()).extracting(ConsoleSitrep.Ongoing::task, ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::comingBack)
+                .containsExactly(tuple("fit-lamp", "changing", "still a draft; pipeline running; steer 2 not acknowledged"),
+                        tuple("horn", "done", null));
+    }
+
+    @Test
+    void saysTheFleetStandsStillOnTheUsageLimitUntilItsFirstResetAndOnlyWhileAWorkerIsParkedOnIt() {
+        Task horn = ship("horn", "Tune the horn");
+        Task bell = ship("bell", "Polish the bell");
+        Instant firstReset = NOW.plus(Duration.ofHours(1));
+        Worker parked = workerOn(horn).promptSubmitted(NOW).parkedOn(new UsageLimit("session limit", firstReset), NOW);
+        Worker alsoParked = workerOn(bell).promptSubmitted(NOW).parkedOn(new UsageLimit("session limit", firstReset.plus(Duration.ofHours(1))), NOW);
+
+        ConsoleSitrep stopped = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(new OngoingTask(horn, parked, null, null),
+                new OngoingTask(bell, alsoParked, null, null)), List.of(), List.of(), List.of(), List.of()));
+        ConsoleSitrep resumed = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(new OngoingTask(horn,
+                parked.promptSubmitted(firstReset), null, null)), List.of(), List.of(), List.of(), List.of()));
+
+        assertThat(stopped.usageLimit()).isEqualTo(new ConsoleSitrep.LimitStop(firstReset, List.of("horn", "bell")));
+        assertThat(stopped.ongoing()).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::doing, ConsoleSitrep.Ongoing::limitResetsAt)
+                .containsExactly(tuple("usage limit", "stopped on the session limit", firstReset),
+                        tuple("usage limit", "stopped on the session limit", firstReset.plus(Duration.ofHours(1))));
+        assertThat(resumed.usageLimit()).isNull();
+        assertThat(resumed.ongoing()).extracting(ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::limitResetsAt).containsExactly(tuple("busy", null));
     }
 
     @Test
@@ -190,10 +269,10 @@ class SitrepConsolePresenterTest {
         Task horn = ship("horn", "Tune the horn");
         Instant asked = NOW.minus(Duration.ofMinutes(20));
         Worker gated = workerOn(horn).reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("pitch"), null, "Which pitch?"), asked);
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(),
-                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20))));
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
+                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20), false)), List.of());
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, List.of(), List.of(), List.of(), List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
         assertThat(sitrep.workerQuestions()).containsExactly(new ConsoleSitrep.Question("horn", "Tune the horn", List.of("harness"), "Which pitch?", asked));
     }
@@ -204,12 +283,12 @@ class SitrepConsolePresenterTest {
                 .toList();
         ParkedTask parked = new ParkedTask(PresenterFixtures.heldHorn(), null, List.of());
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(), List.of(parked), queued, List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(), List.of(), List.of(parked), queued, List.of()));
 
         assertThat(sitrep.chartedTotal()).isEqualTo(23);
         assertThat(sitrep.charted()).hasSize(SitrepConsolePresenter.CHARTED_SHOWN);
         assertThat(sitrep.charted()).extracting(ConsoleSitrep.Charted::task).startsWith("fog-horn", "work-1", "work-2").endsWith("work-19");
-        assertThat(presented(new FleetSnapshot(NOTHING_WAITING, List.of(), List.of(parked), List.of(), List.of(), List.of())).charted())
+        assertThat(presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(), List.of(), List.of(parked), List.of(), List.of())).charted())
                 .singleElement()
                 .extracting(ConsoleSitrep.Charted::title, ConsoleSitrep.Charted::waiting)
                 .containsExactly("Tune the horn", "deferred until 2026-11-01");
@@ -219,7 +298,7 @@ class SitrepConsolePresenterTest {
     void listsRecentlyLandedWorkWithItsDraftAndCountsItAll() {
         List<LandedTask> landed = IntStream.rangeClosed(1, 12).mapToObj(index -> landed("landed-" + index)).toList();
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, List.of(), List.of(), List.of(), landed, List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), landed));
 
         assertThat(sitrep.landedTotal()).isEqualTo(12);
         assertThat(sitrep.landed()).hasSize(SitrepConsolePresenter.LANDED_SHOWN);
@@ -232,11 +311,11 @@ class SitrepConsolePresenterTest {
         TaskLinks hornLinks = new TaskLinks("SVC-7", "https://jira.example.org/browse/SVC-7", null, null, null, null, List.of("D58"));
         List<Task> asked = new ArrayList<>();
 
-        ConsoleSitrep sitrep = presenter.present(new FleetSnapshot(NOTHING_WAITING, List.of(new OngoingTask(horn, null, null, null)), List.of(), List.of(),
-                List.of(), List.of()), NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), tasks -> {
+        ConsoleSitrep sitrep = presenter.present(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(new OngoingTask(horn, null, null, null)), List.of(), List.of(), List.of(),
+                List.of()), NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), tasks -> {
                     asked.addAll(tasks);
                     return Map.of(horn.id(), hornLinks);
-                });
+                }, _ -> Map.of());
 
         assertThat(asked).extracting(Task::id).containsExactly(horn.id());
         assertThat(sitrep.links()).containsExactly(Map.entry("horn", hornLinks));
@@ -244,7 +323,7 @@ class SitrepConsolePresenterTest {
 
     @Test
     void writesTheDocumentTheConsoleReads() {
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(theLampDecision(), List.of(), List.of(), List.of(), List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(theLampDecision(), DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 
         String json = new JsonMapper().writeValueAsString(sitrep);
 
@@ -253,11 +332,11 @@ class SitrepConsolePresenterTest {
     }
 
     private static WaitingOnTheCaptain theLampDecision() {
-        return new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem())), List.of(), List.of(), List.of());
+        return new WaitingOnTheCaptain(List.of(new OpenDecision(PresenterFixtures.openDecision(), PresenterFixtures.captainItem(), false)), List.of(), List.of(), List.of(), List.of());
     }
 
     private ConsoleSitrep presented(FleetSnapshot fleet) {
-        return presenter.present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), _ -> Map.of());
+        return presenter.present(fleet, NOW, ManualClock.UTC, "laptop", CaptainAddress.DEFAULT, Presence.presentSince(NOW), _ -> Map.of(), _ -> Map.of());
     }
 
     private static Task ship(String id, String title) {
@@ -276,6 +355,10 @@ class SitrepConsolePresenterTest {
         return Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
                 new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
+    }
+
+    private static Worker doneOn(Task task) {
+        return workerOn(task).reported(new StatusReport(StatusState.DONE, null, null, "Delivered."), NOW);
     }
 
     private static Delivery delivery(Task task) {

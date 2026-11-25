@@ -17,10 +17,12 @@ import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.StopWorker;
 import io.github.ythibos.edi.domain.authority.Authorisation;
 import io.github.ythibos.edi.domain.board.Board;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.inbox.InboxMessage;
 import io.github.ythibos.edi.domain.plan.Plan;
+import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
@@ -34,7 +36,7 @@ public sealed interface Confirmation {
     record Noted(TaskId task) implements Confirmation {
     }
 
-    record Held(Task task) implements Confirmation {
+    record Held(Task task, HoldKind kind) implements Confirmation {
     }
 
     record Released(Task task) implements Confirmation {
@@ -86,6 +88,9 @@ public sealed interface Confirmation {
     }
 
     record RecheckAsked(DecisionNumber number) implements Confirmation {
+    }
+
+    record Ticked(CallKey call) implements Confirmation {
     }
 
     record CaptainHeard(Authorisation word) implements Confirmation {

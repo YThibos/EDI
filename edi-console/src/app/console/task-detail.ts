@@ -12,15 +12,22 @@ export interface TaskDetail {
     };
     stage: string;
     notes: string;
-    hold: { kind: string; reason: string; until: string | null; setAt: string } | null;
+    holds: TaskHold[];
     created: string;
   };
   waits: { task: string; awaited: 'merged' | 'landed'; stage: string; met: boolean }[];
-  decision: TaskDecision | null;
+  decisions: TaskDecision[];
   delivery: { address: { number: number }; draft: boolean; state: string } | null;
   worked: { active: string; wallClock: string } | null;
   cost: { workers: TokenUsage; pipeline: TokenUsage } | null;
   timeline: TimelineEvent[];
+}
+
+export interface TaskHold {
+  kind: string;
+  why: string;
+  until: string;
+  since: string;
 }
 
 export interface TaskDecision {

@@ -78,18 +78,17 @@ class TurnReportNamingTest {
     }
 
     @Test
-    void isNamedDespiteAWorkerQuestionOnlyWhenADecisionTheReplyNamesWasRaisedOnItsTaskSinceItWasAsked() {
+    void isNamedDespiteAWorkerQuestionOnlyWhenADecisionWasRaisedForIt() {
         Reply namingEveryItem = Reply.of("D41 is yours, and " + ADDRESS + " is ready for review.");
 
-        assertThat(report(Turn.NONE, List.of(questionOn(lamp, NOW))).isNamedIn(namingEveryItem)).isTrue();
-        assertThat(report(Turn.NONE, List.of(questionOn(fitting, NOW))).isNamedIn(namingEveryItem)).isFalse();
-        assertThat(report(Turn.NONE, List.of(questionOn(lamp, NOW.plusSeconds(60)))).isNamedIn(namingEveryItem)).isFalse();
+        assertThat(report(Turn.NONE, List.of(questionOn(lamp, true))).isNamedIn(namingEveryItem)).isTrue();
+        assertThat(report(Turn.NONE, List.of(questionOn(lamp, false))).isNamedIn(namingEveryItem)).isFalse();
     }
 
     @Test
     void isNamedOnlyWhenTheReplySaysEveryRecordedItemInItsOwnWords() {
         Turn turn = new Turn(List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")), List.of(new TurnItem(List.of(), "Choose the paint")), Map.of());
-        TurnReport report = new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of()), turn, WIDTH, null, null, null);
+        TurnReport report = new TurnReport(new WaitingOnTheCaptain(List.of(), List.of(), List.of(), List.of(), List.of()), turn, WIDTH, null, null, null);
 
         assertThat(report.isNamedIn(Reply.of("I **fitted the  lamp bracket**.\nNext: choose the paint."))).isTrue();
         assertThat(report.isNamedIn(Reply.of("I fitted the lamp bracket."))).isFalse();
@@ -102,16 +101,16 @@ class TurnReportNamingTest {
     private TurnReport report(Turn turn, List<WorkerQuestion> questions) {
         MergeRequestAddress request = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 14);
         ReadyForReview ready = new ReadyForReview(fitting, new Delivery(fitting.id(), request, true, "abc123", HeadChecks.UNDECIDED, MergeRequestState.OPEN, null, null, NOW, NOW));
-        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp), lamp)), List.of(), List.of(ready), List.of(), questions);
+        WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(new OpenDecision(raised(41, lamp), lamp, false)), List.of(), List.of(ready), questions, List.of());
         return new TurnReport(waiting, turn, WIDTH, null, null, null);
     }
 
-    private static WorkerQuestion questionOn(Task task, Instant askedAt) {
+    private static WorkerQuestion questionOn(Task task, boolean escalated) {
         Worker launched = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, NOW, "@1", 2L),
                 new WorkerLaunch(LaunchKind.DISPATCH, NOW, new BootId("boot"), LoginName.DEFAULT));
-        Worker asking = launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), askedAt);
-        return new WorkerQuestion(task, asking, Duration.ofMinutes(5));
+        Worker asking = launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), NOW);
+        return new WorkerQuestion(task, asking, Duration.ofMinutes(5), escalated);
     }
 
     private static Task task(String id) {

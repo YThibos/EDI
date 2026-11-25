@@ -37,22 +37,14 @@ public record TurnReport(WaitingOnTheCaptain waiting, Turn turn, ReportWidth wid
     }
 
     private boolean everyWorkerQuestionIsEscalated() {
-        return waiting.workerQuestions().stream().allMatch(this::isEscalated);
-    }
-
-    private boolean isEscalated(WorkerQuestion question) {
-        return question.worker().openQuestion().filter(asked -> openDecisions().anyMatch(open -> open.decision().isRaisedFor(asked))).isPresent();
-    }
-
-    private Stream<OpenDecision> openDecisions() {
-        return Stream.concat(waiting.decisions().stream(), waiting.boards().stream().flatMap(board -> board.decisions().stream()));
+        return waiting.workerQuestions().stream().allMatch(WorkerQuestion::escalated);
     }
 
     private boolean namesEveryWaitingEntry(Reply reply) {
         return waiting.decisions().stream().allMatch(open -> reply.namesTheDecision(open.decision().number()))
                 && waiting.boards().stream().allMatch(board -> namesTheBoard(board, reply))
                 && waiting.reviews().stream().allMatch(ready -> reply.namesTheAddress(ready.delivery().address().url()))
-                && waiting.changing().stream().allMatch(changing -> reply.namesTheAddress(changing.delivery().address().url()));
+                && waiting.changingAgain().stream().allMatch(changing -> reply.namesTheAddress(changing.delivery().address().url()));
     }
 
     private static boolean namesTheBoard(WaitingBoard board, Reply reply) {

@@ -46,8 +46,7 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.project.WorkKey;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
@@ -188,21 +187,23 @@ class ApiTest {
         assertThat(behindItsScout).contains(
                 "  2  paint-the-harbour-lamp  HRN-42  queued  after 1 merged  waits for plan-work-on-paint-the-harbour-lamp to land (queued)\n");
         assertThat(heldBack).contains("  3  oil-the-harbour-gate    HRN-43  queued  none            held (deferral, until your word): after the storm\n");
-        assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"");
+        assertThat(get("/api/plans/HRN-40", JSON).body()).contains("\"awaits\":\"after 1 merged\"", "\"awaited\":\"merged\"", "\"effort\":\"xhigh\"", "\"go\":\"D44\"");
         assertThat(get("/api/tasks/fit-the-harbour-lamp", TEXT).body()).contains("Use the brass fittings.", "slice planned");
     }
 
     @Test
-    void refusesASecondPlanOnTheSameKeyAndAWaitOnALaterSlice() throws Exception {
+    void refusesASecondPlanOnTheSameKeyAWaitOnALaterSliceAndAGoMessageThatIsNoNumber() throws Exception {
         String plan = """
                 {"key":"HRN-50","title":"Mend the pier","project":"harness","report":"docs/research/HRN-50-plan.md","decision":"D45","capacity":1,
                  "slices":[{"number":1,"title":"Mend the pier planks","category":"implementation","key":"HRN-51"%s}]}""";
 
         HttpResponse<String> onALaterSlice = post("/api/plans", plan.formatted(",\"wait\":\"after 2 landed\""), TEXT);
+        HttpResponse<String> withAWordForItsMessage = post("/api/plans", plan.formatted("").replace("\"capacity\":1", "\"message\":\"one\",\"capacity\":1"), TEXT);
         post("/api/plans", plan.formatted(""), TEXT);
         HttpResponse<String> again = post("/api/plans", plan.formatted(""), TEXT);
 
         assertRefusal(onALaterSlice, 400, "Slice 1 waits after 2 landed, and a slice waits only for an earlier slice of its plan.");
+        assertRefusal(withAWordForItsMessage, 400, "The message of the plan is a whole number.");
         assertRefusal(again, 409, "A plan is already known by HRN-50; edi plan show HRN-50 prints it.");
         assertRefusal(get("/api/plans/HRN-404", TEXT), 404, "No plan is known by HRN-404; edi plan add enters one.");
     }
@@ -230,6 +231,35 @@ class ApiTest {
         assertThat(answered.body()).isEqualTo("Recorded the answer to " + number + " (option A); api-lamp is done.\n");
         assertThat(get("/api/decisions?open=true", TEXT).body()).doesNotContain(number + "  api-lamp");
         assertThat(get("/api/decisions", JSON).body()).contains("\"verbatim\":\"" + number + " A\"", "\"channel\":\"chat\"");
+    }
+
+    @Test
+    void holdsATaskForEachReasonItWaitsAndReleasesOnlyTheDecisionAnswered() throws Exception {
+        post("/api/tasks", "{\"id\":\"api-mast\",\"kind\":\"ship\",\"projects\":[\"harness\"],\"title\":\"Raise the mast\"}", TEXT);
+        post("/api/tasks/api-mast/hold", "{\"kind\":\"deferral\",\"reason\":\"after the storm\",\"until\":\"2026-11-01\"}", TEXT);
+        String mast = post("/api/tasks/api-mast/decision", """
+                {"title":"Which mast?","context":"","options":[{"key":"A","text":"Oak"},{"key":"B","text":"Pine"}],"recommend":{"key":"A","why":"it lasts"}}""", TEXT)
+                .body().strip();
+        String sail = post("/api/tasks/api-mast/decision", """
+                {"title":"Which sail?","context":"","options":[{"key":"A","text":"Canvas"},{"key":"B","text":"Linen"}],"recommend":{"key":"A","why":"it holds"}}""", TEXT)
+                .body().strip();
+        String waitingOnBoth = get("/api/tasks/api-mast", TEXT).body();
+        UUID primary = UUID.randomUUID();
+        primaryHook(primary, "session-start", "{}");
+        primaryHook(primary, "user-prompt-submit", "{\"prompt\":\"" + mast + " A\"}");
+        HttpResponse<String> byTheTask = answerInSession(primary, "api-mast", "{\"option\":\"A\",\"message\":1}");
+        HttpResponse<String> answered = answerInSession(primary, mast, "{\"option\":\"A\",\"message\":1}");
+        primaryHook(primary, "session-end", "{\"reason\":\"prompt_input_exit\"}");
+        String afterTheAnswer = get("/api/tasks/api-mast", TEXT).body();
+
+        assertThat(sail).isNotEqualTo(mast);
+        assertThat(waitingOnBoth).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + mast + " Which mast?",
+                "Held (decision, until your word): " + sail + " Which sail?", mast + "  api-mast  Which mast?", sail + "  api-mast  Which sail?");
+        assertRefusal(byTheTask, 409, "api-mast waits on " + mast + " and " + sail + "; name one of them by its number.");
+        assertThat(answered.statusCode()).isEqualTo(200);
+        assertThat(afterTheAnswer).contains("Held (deferral, until 2026-11-01): after the storm", "Held (decision, until your word): " + sail + " Which sail?")
+                .doesNotContain("Held (decision, until your word): " + mast);
+        assertThat(get("/api/decisions?open=true", TEXT).body()).contains(sail + "  api-mast").doesNotContain(mast + "  api-mast");
     }
 
     @Test
@@ -980,12 +1010,12 @@ class ApiTest {
 
     private void holdBack(TaskId id, String reason) {
         Task task = tasks.get(id);
-        tasks.update(task.held(new CaptainHold(HoldKind.DEFERRAL, reason, HoldUntil.captainsWord(), task.created())));
+        tasks.update(task.held(new Hold.Deferral(reason, HoldUntil.captainsWord(), task.created())));
     }
 
     private void putAt(TaskId id, TaskStage stage) {
         Task task = tasks.get(id);
-        tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), task.hold(), task.created(), stage.isClosed() ? task.created() : null));
+        tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), task.holds(), task.created(), stage.isClosed() ? task.created() : null));
     }
 
     private static HttpResponse<String> captainSaidInSession(UUID session, String said) throws Exception {

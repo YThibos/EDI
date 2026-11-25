@@ -11,7 +11,6 @@ import io.github.ythibos.edi.adapter.store.EventLog;
 import io.github.ythibos.edi.adapter.store.TaskStore;
 import io.github.ythibos.edi.application.port.Clock;
 import io.github.ythibos.edi.application.task.DecisionReleases;
-import io.github.ythibos.edi.application.task.DependantTasks;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
 import io.github.ythibos.edi.application.worker.SteerWorker;
 import io.github.ythibos.edi.application.worker.SteerWorker.StoredSteer;
@@ -20,7 +19,6 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.decision.UnknownDecision;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.DecisionAnswered;
-import io.github.ythibos.edi.domain.event.DomainEvent.TaskDone;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 
@@ -31,19 +29,17 @@ public class AnswerDecision {
     private final DecisionStore decisions;
     private final EventLog events;
     private final TicketProposals proposals;
-    private final DependantTasks dependants;
     private final DecisionReleases releases;
     private final SteerWorker steering;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, TicketProposals proposals, DependantTasks dependants,
-            DecisionReleases releases, SteerWorker steering, Clock clock, TransactionTemplate transaction) {
+    public AnswerDecision(TaskStore tasks, DecisionStore decisions, EventLog events, TicketProposals proposals, DecisionReleases releases,
+            SteerWorker steering, Clock clock, TransactionTemplate transaction) {
         this.tasks = tasks;
         this.decisions = decisions;
         this.events = events;
         this.proposals = proposals;
-        this.dependants = dependants;
         this.releases = releases;
         this.steering = steering;
         this.clock = clock;
@@ -59,30 +55,18 @@ public class AnswerDecision {
     private RecordedAnswer recorded(TaskReference reference, GivenAnswer given, Actor actor) {
         Instant now = clock.now();
         Task task = tasks.get(reference);
-        proposals.requireAChoiceIn(task.id(), given.option());
-        Decision decided = decisionOf(reference, task).answered(given.recordedAt(now));
+        Decision decision = decisionOf(reference, task);
+        proposals.requireAChoiceIn(decision, given.option());
+        Decision decided = decision.answered(given.recordedAt(now));
         decisions.save(decided);
         events.record(new DecisionAnswered(task.id(), decided.number(), decided.answer()), actor, now);
-        Task released = releases.released(task, actor, now);
-        releaseTheDependantsOfADoneTask(released);
-        recordTheDone(released, actor, now);
+        Task released = releases.released(task, decided.number(), actor, now);
         return new RecordedAnswer(decided, released, steering.carryTheAnswerOf(decided, actor));
     }
 
     private Decision decisionOf(TaskReference reference, Task task) {
+        task.requireOneOpenDecisionNamedBy(reference);
         return decisions.namedBy(reference).orElseThrow(() -> new UnknownDecision(task.id()));
-    }
-
-    private void releaseTheDependantsOfADoneTask(Task released) {
-        if (released.isDone()) {
-            dependants.stopWaitingFor(released);
-        }
-    }
-
-    private void recordTheDone(Task released, Actor actor, Instant now) {
-        if (released.isDone()) {
-            events.record(new TaskDone(released.id()), actor, now);
-        }
     }
 
     private record RecordedAnswer(Decision decision, Task task, Optional<StoredSteer> carried) {

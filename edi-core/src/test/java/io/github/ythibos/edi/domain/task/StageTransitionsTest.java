@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -35,7 +36,8 @@ class StageTransitionsTest {
     private static final StageTransitions SCOUT = new StageTransitions(LAMP, TaskKind.SCOUT);
     private static final StageTransitions CAPTAIN_ITEM = new StageTransitions(LAMP, TaskKind.CAPTAIN);
     private static final DecisionNumber D59 = new DecisionNumber(59);
-    private static final Deferral AFTER_THE_SEASON = new Deferral("after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)));
+    private static final Instant RAISED = Instant.parse("2026-10-27T09:00:00Z");
+    private static final Deferral AFTER_THE_SEASON = new Deferral("after the season", HoldUntil.day(LocalDate.of(2026, 11, 1)), RAISED);
     private static final String OLD_HEAD = "7e23dd8";
     private static final BranchCommit THE_STEERS_COMMIT = new BranchCommit("b30e15a", "Apply the amendment", false);
     private static final CaptainsWord DROP_IT = new CaptainsWord("Drop it, we fit no lamps this year.");
@@ -290,7 +292,7 @@ class StageTransitionsTest {
 
         @Test
         void refusesWhileAnotherDecisionIsOpen() {
-            CaptainItemAnswered stillOpen = new CaptainItemAnswered(Holds.none().with(new OpenDecision(D59)));
+            CaptainItemAnswered stillOpen = new CaptainItemAnswered(Holds.none().with(new OpenDecision(D59, "Which lamp?", RAISED)));
 
             assertThatThrownBy(() -> CAPTAIN_ITEM.move(TaskStage.QUEUED, stillOpen)).isInstanceOf(Refusal.class)
                     .hasMessage("fit-the-lamp stays queued: D59 waits for its answer.");
@@ -362,7 +364,7 @@ class StageTransitionsTest {
         @Test
         void anAnswerToAFinishedScoutsDecisionLeavesItDeliveredAndNotOngoing() {
             TaskStage delivered = SCOUT.move(TaskStage.WORKING, new DoneReported(List.of(), List.of(), List.of(), false, List.of(), true)).to();
-            Holds waitingOnD38 = Holds.none().with(new OpenDecision(new DecisionNumber(38)));
+            Holds waitingOnD38 = Holds.none().with(new OpenDecision(new DecisionNumber(38), "Which lamp?", RAISED));
 
             Holds afterTheAnswer = waitingOnD38.answered(new DecisionNumber(38));
 

@@ -62,11 +62,7 @@ public class CloneRefreshes {
     }
 
     public List<CloneRefresh> awaitingCleanUp() {
-        return transaction.execute(_ -> refreshes.verifiedAwaitingCleanUp());
-    }
-
-    public void cleanUpTried(CloneRefresh refresh) {
-        transaction.executeWithoutResult(_ -> refreshes.save(refresh.cleanUpTried(clock.now())));
+        return transaction.execute(_ -> refreshes.verifiedOfTasksInFlight());
     }
 
     public boolean isFresh(ProjectName project) {

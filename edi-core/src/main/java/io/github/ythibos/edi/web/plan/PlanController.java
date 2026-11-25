@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ythibos.edi.application.plan.AddPlan;
 import io.github.ythibos.edi.application.plan.PlanQuery;
-import io.github.ythibos.edi.application.plan.PlanStandings;
+import io.github.ythibos.edi.domain.plan.PlanDraft;
+import io.github.ythibos.edi.domain.plan.PlanStandings;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.web.Confirmation;
 import io.github.ythibos.edi.web.access.Caller;
@@ -33,7 +34,10 @@ class PlanController {
     @ResponseStatus(HttpStatus.CREATED)
     Confirmation add(@RequestBody JsonNode plan, Caller caller) {
         caller.requirePrimary("edi plan add");
-        return new Confirmation.Planned(addPlan.add(PlanDocument.read(plan), caller.actor()));
+        PlanDraft draft = PlanDocument.read(plan);
+        return new Confirmation.Planned(PlanDocument.goMessageOf(plan)
+                .map(goMessage -> addPlan.add(draft, goMessage, caller.callingSession(), caller.actor()))
+                .orElseGet(() -> addPlan.add(draft, caller.actor())));
     }
 
     @GetMapping("/{key}")

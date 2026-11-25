@@ -2,7 +2,6 @@ package io.github.ythibos.edi.adapter.store;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,9 +92,15 @@ public class DecisionStore {
 
     public Optional<Decision> namedBy(TaskReference reference) {
         return switch (reference) {
-            case TaskReference.ById byId -> ofTask(byId.id());
+            case TaskReference.ById byId -> latestOpenOf(byId.id()).or(() -> ofTask(byId.id()));
             case TaskReference.ByDecision byDecision -> Optional.of(get(byDecision.number()));
         };
+    }
+
+    private Optional<Decision> latestOpenOf(TaskId task) {
+        return decisions(store.sql(SELECT_DECISIONS + "where task_id = :task and answered_at is null order by number desc limit 1").param("task", task.value()))
+                .stream()
+                .findFirst();
     }
 
     public List<Decision> everyOneOfTask(TaskId task) {
@@ -110,9 +115,12 @@ public class DecisionStore {
         return decisions(store.sql(SELECT_DECISIONS + "where answered_at is null order by number"));
     }
 
-    public List<Decision> answeredSince(Instant since) {
-        return decisions(store.sql(SELECT_DECISIONS + "where answered_at >= :since order by answered_at desc, number desc")
-                .param("since", Columns.text(since)));
+    public List<Decision> answeredAwaitingTheirTick() {
+        return decisions(store.sql(SELECT_DECISIONS + """
+                        where answered_at is not null
+                          and not (answer_channel = :board and number in (select decision_number from board_decision))
+                          and not exists (select 1 from call_tick where call = 'D' || decision.number)
+                        order by number""").param("board", AnswerChannel.BOARD.word()));
     }
 
     private void replaceOptions(Decision decision) {

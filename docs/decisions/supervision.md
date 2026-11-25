@@ -13,7 +13,7 @@ When a worker's conversation fills up with auto-compact off, Claude Code fires n
 
 ## Decision
 
-`SupervisionRound` runs every `edi.supervision.round` (30 seconds), each part guarded so one failing part does not stop the others: overdue steers, missed launches, full contexts, missed stops, judging workers, unanswered worker questions, usage-limit resets ([recovery](recovery.md)), due holds, deferred dispatches, mechanical checks, presence, the calendar ([presence](presence.md)) and heavy runs at once ([local-native-builds](local-native-builds.md)).
+`SupervisionRound` runs every `edi.supervision.round` (30 seconds), each part guarded so one failing part does not stop the others: overdue steers, missed launches, full contexts, missed stops, judging workers, unanswered worker questions, usage-limit resets ([recovery](recovery.md)), due holds, deferred dispatches, the eligible slices of plans ([plans](plans.md)), mechanical checks, presence, the calendar ([presence](presence.md)) and heavy runs at once ([local-native-builds](local-native-builds.md)).
 Each rule is a use case that tests call directly with a controllable clock.
 `NoticeMissedLaunches` records `WorkerLaunchFailed` once for a worker with no `SessionStart` or `UserPromptSubmit` hook two minutes after launch, with what the pane probe reads.
 `SupervisionRules` derives `WorkerHealth` afresh from the worker row, `WorkerRuntime.check` and the current `BootId`: stopped, failed to launch, finished, dead because the machine restarted, dead because its tmux server is gone or changed or its window closed, parked on a usage limit, starting, busy, idle, or waiting until a declared pause ends.
@@ -83,3 +83,4 @@ When the round's tmux calls show up in its time, Claude Code reports a pending p
 - 09/11/2026: the pipeline began counting cache reads and writes in its input on 2 November 2026, which EDI took as uncached input and so recorded every ship's pipeline cost several times too high, so an invocation's input is read less the cache tokens it holds (EDI-235).
 - 09/11/2026: a CI watch on passed checks read as a running pipeline, and a handed-off or interrupted run as still running, so EDI began reading the pipeline's recorded checks verdict beside the status and counts those two as finished ([fleet-snapshot](fleet-snapshot.md), EDI-238).
 - 17/11/2026: the record named the pipelines `ObservePipelines` read as those of unfinished work or of a run still changing the request, so it now names what EDI reads, the run of every ship a worker still serves, before and after its done (EDI-265).
+- 24/11/2026: the round began dispatching the eligible slices of plans after the deferred dispatches, so a plan dispatches itself ([plans](plans.md), EDI-89).

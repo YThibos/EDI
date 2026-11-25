@@ -52,6 +52,7 @@ It refuses a draft with a missing field or section, a spec that still holds a `T
 It opens the issue with its body, labels and milestone, titles it `EDI-<the issue's number> <title>`, makes it a sub-issue of its parent and marks it blocked by its blockers, and opens no pull request.
 It adds `captain-approved` only when the draft names the captain's word; add that field only on his word, never on your own judgement, since the pickup counts an issue only when the captain's account added the label.
 It queues the local task on the issue's key and with the item's size when none exists, so the dispatch rules can route it by its size, and holds it for a deferral whose reason names the issue, so this machine never dispatches it.
+A task already deferred has the issue added to its deferral's reason, unless `edi release` would also lift its approval or outage hold; then its deferral is kept as it is and the summary says why.
 A task that already carries a key keeps it, and its issue is titled with that key.
 It goes to GitHub, through `gh api` only, as the account the clone is pinned to with the gh-account-pin skill, or as the active gh account when the clone has no pin.
 

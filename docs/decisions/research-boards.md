@@ -14,7 +14,7 @@ Only the scout knows the board's link and how many questions a round asks, and a
 
 A scout runs `edi board arm <html> --task <id> --link <url> --questions <n> [--card <card.json>] [--bind D..]`; `ArmBoard` refuses a file outside the task's directory, another task's worker, a decision that is not open, and a round with neither a question, a card nor a bound decision; arming a listening board again posts a new round.
 `--card` is the decision card the round puts before the captain, in the card format of `edi decision raise` plus `question`, the board question that answers it; `ArmBoard` raises it on the board's own task as the arming worker through `RaiseDecision`, in the transaction that arms the round, checks it in the captain's voice, and binds the decision under that question (`BoardCard`, `BoardRound.withItsCardRaisedAs`, `BoardBinding`, `board_decision.question` from migration `V11__board_questions.sql`).
-A card is refused without a question, when an answered decision of its task already carries its title (`DecisionCard.asksTheSameAs`), whatever else the card changes, or when it differs from its task's open decision and that decision is not bound to this board under that question, so a scout never asks an answered question again or replaces a card the primary raised; each refusal names its fix.
+A card is refused without a question, when an answered decision of its task already carries its title (`DecisionCard.asksTheSameAs`), whatever else the card changes, or when it differs from every open decision of its task and none of them is bound to this board under that question, so a scout never asks an answered question again or replaces a card the primary raised; each refusal names its fix.
 Arming a listening board again keeps every binding of a still-open decision it already holds, under its question, even when the round leaves `--card` out or binds that decision again by number (`BoardRound.carryingForward`).
 The primary may post a new round on a listening board with `edi board post` (`PostBoardRound`), keeping its bindings.
 `LavishBoardHost`, behind the `ResearchBoardHost` port, owns the program `LAVISH` and runs `lavish-axi poll <file> --owner edi:<task>#<board> --takeover` through `ExternalPrograms.runUntilItEnds`.
@@ -54,11 +54,11 @@ The core raising the card makes raising and binding one step a scout can take, s
 - Good: a choice the captain makes on a scout's board is his word for the card it answers, promote included, and he never retypes it in chat.
 - Bad: one `lavish-axi poll` runs per listening board, a message starting with a bound decision's number answers it, and a scout that forgets to arm a new round leaves it out of the zone.
 - Bad: a follow-up question on a scout's task needs a title of its own.
-- Bad: a task has one open decision at a time, so a board raises at most one open card of its own task, and a decision drawn on a board without `--card` is a question EDI does not hold.
+- Bad: a board raises no new card beside an open decision of its task, so it raises at most one open card of its own task, and a decision drawn on a board without `--card` is a question EDI does not hold.
 
 ## When to revisit
 
-When Lavish offers JSON output, reports a board's unanswered prompts itself or marks a question's options, a task needs more than one open decision, or boards answer something other than decisions.
+When Lavish offers JSON output, reports a board's unanswered prompts itself or marks a question's options, a board needs to raise a new card beside an open decision of its task, or boards answer something other than decisions.
 
 ## How we got here
 
@@ -67,3 +67,4 @@ When Lavish offers JSON output, reports a board's unanswered prompts itself or m
 - 22/10/2026: a verification scout's close-out card, never raised or bound, made the captain retype his board choice in chat, so `edi board arm --card` raises and binds the card, the board's question answers it, and settlement tells the scout of every refused answer (EDI-40).
 - 26/10/2026: a scout re-armed its board with an answered card whose context it had extended, which raised a duplicate decision, so a card is answered when an answered decision of its task carries its title (EDI-51).
 - 03/11/2026: two steers had existed only to ask a scout whether every answer had arrived, since a round's full text lived only in its inbox, so `edi board show` reads the rounds without consuming them (EDI-66).
+- 24/11/2026: a task waits on several decisions at once, so a card is checked against each of its open decisions rather than its latest one (EDI-87).

@@ -37,6 +37,7 @@ import io.github.ythibos.edi.adapter.runtime.ClaudeLoginFiles;
 import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.CallTickStore;
 import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
@@ -86,6 +87,7 @@ import io.github.ythibos.edi.application.board.SettleBoardAnswers;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
+import io.github.ythibos.edi.application.call.TickACall;
 import io.github.ythibos.edi.application.decision.AskForARecheck;
 import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
@@ -103,6 +105,8 @@ import io.github.ythibos.edi.application.delivery.DiscardWork;
 import io.github.ythibos.edi.application.delivery.DoneClaims;
 import io.github.ythibos.edi.application.delivery.DropTask;
 import io.github.ythibos.edi.application.delivery.FollowMerges;
+import io.github.ythibos.edi.application.delivery.FollowUpCarriage;
+import io.github.ythibos.edi.application.delivery.FollowUpDecision;
 import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.application.delivery.LandedWorkCheck;
 import io.github.ythibos.edi.application.delivery.ObservePipelines;
@@ -119,8 +123,10 @@ import io.github.ythibos.edi.application.dispatch.ResearchBeforeImplementation;
 import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.dispatch.ResumeNotes;
 import io.github.ythibos.edi.application.dispatch.RewriteBrief;
+import io.github.ythibos.edi.application.dispatch.RoomForAWorker;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
+import io.github.ythibos.edi.application.fleet.DeliveryNotesQuery;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.fleet.TaskLinksQuery;
 import io.github.ythibos.edi.application.follow.EventFollowers;
@@ -139,6 +145,8 @@ import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.plan.AddPlan;
+import io.github.ythibos.edi.application.plan.CaptainsGo;
+import io.github.ythibos.edi.application.plan.DispatchEligibleSlices;
 import io.github.ythibos.edi.application.plan.PlanQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -184,7 +192,6 @@ import io.github.ythibos.edi.application.task.NoteTask;
 import io.github.ythibos.edi.application.task.PromoteScout;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.application.task.TaskDetailQuery;
-import io.github.ythibos.edi.application.task.TaskHolds;
 import io.github.ythibos.edi.application.task.TaskListQuery;
 import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.task.WeekOfWork;
@@ -221,6 +228,7 @@ import io.github.ythibos.edi.application.worker.WorkerInbox;
 import io.github.ythibos.edi.application.worker.WorkerListQuery;
 import io.github.ythibos.edi.application.worker.WorkerTokens;
 import io.github.ythibos.edi.domain.delivery.ForgeKind;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
@@ -274,6 +282,7 @@ public final class TestHome {
     private final UnplannedShipStore unplannedShips;
     private final PipelineReviewStore reviews;
     private final BoardStore boards;
+    private final CallTickStore callTicks;
     private final CaptainWordStore captainWords;
     private final CaptainMessageStore captainMessages;
     private final SparkStore sparks;
@@ -320,6 +329,7 @@ public final class TestHome {
         this.unplannedShips = new UnplannedShipStore(jdbc);
         this.reviews = new PipelineReviewStore(jdbc);
         this.boards = new BoardStore(jdbc);
+        this.callTicks = new CallTickStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
         this.captainMessages = new CaptainMessageStore(jdbc);
         this.sparks = new SparkStore(jdbc);
@@ -394,7 +404,7 @@ public final class TestHome {
     public void putAt(TaskId id, TaskStage stage) {
         transaction.executeWithoutResult(_ -> {
             Task task = tasks.get(id);
-            tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), stage.isClosed() ? null : task.hold(), task.created(),
+            tasks.update(new Task(task.id(), task.intake(), stage, task.notes(), stage.isClosed() ? Holds.none() : task.holds(), task.created(),
                     stage.isClosed() ? clock.now() : null));
         });
     }
@@ -461,11 +471,19 @@ public final class TestHome {
     }
 
     public AddPlan addPlan() {
-        return new AddPlan(addTask(), plans(), events, registry, clock, transaction);
+        return new AddPlan(addTask(), captainsGo(), plans(), events, registry, clock, transaction);
     }
 
     public PlanQuery planQuery() {
-        return new PlanQuery(plans(), tasks, transaction);
+        return new PlanQuery(plans(), tasks, dispatches, transaction);
+    }
+
+    public DispatchEligibleSlices dispatchEligibleSlices() {
+        return new DispatchEligibleSlices(plans(), planQuery(), captainsGo(), dispatchTask(), roomForAWorker(), events, clock, transaction);
+    }
+
+    public CaptainsGo captainsGo() {
+        return new CaptainsGo(decisions, tasks, captainsWord(), transaction);
     }
 
     public TaskLinksQuery taskLinks() {
@@ -528,7 +546,7 @@ public final class TestHome {
     }
 
     public ReleaseTask releaseTask() {
-        return new ReleaseTask(tasks, events, clock, transaction);
+        return new ReleaseTask(tasks, decisionReleases(), events, clock, transaction);
     }
 
     public RaiseDecision raiseDecision() {
@@ -544,15 +562,11 @@ public final class TestHome {
     }
 
     public AnswerDecision answerDecision() {
-        return new AnswerDecision(tasks, decisions, events, ticketProposals(), dependantTasks(), decisionReleases(), steerWorker(), clock, transaction);
+        return new AnswerDecision(tasks, decisions, events, ticketProposals(), decisionReleases(), steerWorker(), clock, transaction);
     }
 
     public DecisionReleases decisionReleases() {
-        return new DecisionReleases(tasks, taskHolds(), taskStages());
-    }
-
-    public TaskHolds taskHolds() {
-        return new TaskHolds(decisions);
+        return new DecisionReleases(tasks, decisions, taskStages(), dependantTasks(), events);
     }
 
     public TaskStages taskStages() {
@@ -757,7 +771,7 @@ public final class TestHome {
         return new LaunchWorker(home, tasks, dispatches, workers, adoptions, leaveTheOutageList(), events, registry, machineProfile(), dispatchRulesFile(),
                 isolatedCopies(), new WorkerPlaces(workers, tasks, pipelineRuns, workerRuntime, processes), new WorkerBriefs(), writtenBriefs(), gatherBriefFacts(),
                 resumeNotes(), new Handovers(git, resumeNotes(), pipelineRuns, researchBeforeImplementation(), transaction),
-                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskHolds(), taskStages(), meters, clock, transaction);
+                workerTokens(), workerRuntime, pipeline, processes, machineBoot(), taskStages(), meters, clock, transaction);
     }
 
     private ResumeNotes resumeNotes() {
@@ -774,8 +788,11 @@ public final class TestHome {
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), awayLimit(), launchWorker(), cloneRefreshes(), events, clock,
-                transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, roomForAWorker(), launchWorker(), events, clock, transaction);
+    }
+
+    public RoomForAWorker roomForAWorker() {
+        return new RoomForAWorker(registry, workerPlaces(), awayLimit(), cloneRefreshes(), transaction);
     }
 
     public AwayLimit awayLimit() {
@@ -829,7 +846,7 @@ public final class TestHome {
     }
 
     public LandedWorkCheck landedWork() {
-        return new LandedWorkCheck(git);
+        return new LandedWorkCheck(git, deliveries, transaction);
     }
 
     public CleanUpTask cleanUpTask() {
@@ -846,7 +863,7 @@ public final class TestHome {
     }
 
     public CopyRetirement copyRetirement() {
-        return new CopyRetirement(home, workers, boards, events, git, runtime, boardListeners(), transaction);
+        return new CopyRetirement(home, workers, boards, events, git, runtime, boardListeners(), followUpCarriage(), transaction);
     }
 
     public DropTask dropTask() {
@@ -860,6 +877,10 @@ public final class TestHome {
 
     public DiscardWork discardWork() {
         return new DiscardWork(tasks, events, workerContext(), landedWork(), copyRetirement(), captainsWord(), clock, transaction);
+    }
+
+    public FollowUpCarriage followUpCarriage() {
+        return new FollowUpCarriage(decisions, dispatches, landedWork(), transaction);
     }
 
     public DropFromOutage dropFromOutage() {
@@ -884,7 +905,11 @@ public final class TestHome {
 
     public FollowMerges followMerges() {
         return new FollowMerges(tasks, deliveries, events, registry, workerContext(), forges(), deliveryRecords(), cloneRefreshes(), cleanUpTask(),
-                landedWork(), taskStages(), clock, transaction);
+                landedWork(), taskStages(), followUpDecision(), clock, transaction);
+    }
+
+    public FollowUpDecision followUpDecision() {
+        return new FollowUpDecision(raiseDecision(), tasks, decisions, events, transaction);
     }
 
     public ObservePipelines observePipelines() {
@@ -944,7 +969,7 @@ public final class TestHome {
     }
 
     public SteerWorker steerWorker() {
-        return new SteerWorker(tasks, workers, inbox, events, new InboxNotice(runtime), clock, transaction);
+        return new SteerWorker(tasks, workers, decisions, inbox, events, new InboxNotice(runtime), clock, transaction);
     }
 
     public WorkerHooks workerHooks() {
@@ -1011,7 +1036,7 @@ public final class TestHome {
     }
 
     public UndeliveredAnswersQuery undeliveredAnswers() {
-        return new UndeliveredAnswersQuery(workers, decisions, inbox, transaction);
+        return new UndeliveredAnswersQuery(workers, decisions, inbox, events, transaction);
     }
 
     public RecordTurnItems recordTurnItems() {
@@ -1056,7 +1081,7 @@ public final class TestHome {
     }
 
     public OutageListQuery outageList() {
-        return new OutageListQuery(outages, tasks, workers, dispatches, decisions, inbox, recoveryCosts,
+        return new OutageListQuery(outages, tasks, workers, dispatches, inbox, recoveryCosts,
                 new CurrentRoutes(dispatchRulesFile(), machineProfile()), git, home, transaction);
     }
 
@@ -1167,6 +1192,14 @@ public final class TestHome {
 
     public AskForARecheck askForARecheck() {
         return new AskForARecheck(tasks, decisions, events, clock, transaction);
+    }
+
+    public TickACall tickACall() {
+        return new TickACall(decisions, boards, deliveries, callTicks, events, clock, transaction);
+    }
+
+    public DeliveryNotesQuery deliveryNotes() {
+        return new DeliveryNotesQuery(home);
     }
 
     public List<String> eventTypesOf(TaskId task) {

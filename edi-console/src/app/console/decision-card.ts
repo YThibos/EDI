@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import { refusalOf } from './answer-sentence';
 import { ConsoleApi } from './console-api';
-import { projectsOf } from './projects';
 import { DecisionCard, GivenAnswer, TaskLinks } from './sitrep';
 import { LinkChips } from './link-chips';
 
@@ -29,7 +28,6 @@ export class DecisionCardView {
   protected readonly sending = signal(false);
   protected readonly refusal = signal<string | null>(null);
   protected readonly recheckAsked = signal(false);
-  protected readonly projects = computed(() => projectsOf(this.card().projects, this.card().task));
   protected readonly canAnswer = computed(() => !this.sending() && (this.choice() !== null || this.words().trim().length > 0));
 
   protected answer(event: Event): void {
