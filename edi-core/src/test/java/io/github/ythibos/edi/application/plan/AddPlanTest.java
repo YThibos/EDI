@@ -6,20 +6,25 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.authority.CallingSession;
+import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.plan.PlanDraft;
+import io.github.ythibos.edi.domain.plan.PlanGo;
 import io.github.ythibos.edi.domain.plan.PlanHeading;
 import io.github.ythibos.edi.domain.plan.SliceDraft;
 import io.github.ythibos.edi.domain.plan.SliceStanding;
 import io.github.ythibos.edi.domain.plan.SliceWait;
+import io.github.ythibos.edi.domain.primary.SessionSource;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
@@ -102,9 +107,21 @@ class AddPlanTest {
         assertThat(home.tasks().ids()).containsExactly(FIT_LAMP, PAINT_LAMP, OIL_GATE);
     }
 
+    @Test
+    void refusesAGoCitingAMessageTheCaptainDidNotTypeAndQueuesNoSlice() throws IOException {
+        TestHome home = TestHome.in(directory).registering(REGISTRY);
+        UUID session = UUID.randomUUID();
+        home.primaryHooks().sessionStarted(session, null, SessionSource.LAUNCH);
+        home.primaryHooks().promptSubmitted(session, "Ship the harbour plan.");
+
+        assertThatThrownBy(() -> home.addPlan().add(threeSlices(2), new Citation.WholeMessage(2), new CallingSession(session), Actor.PRIMARY))
+                .isInstanceOf(Refusal.class).hasMessageContaining("The captain sent no message 2 in this session");
+        assertThat(home.tasks().ids()).isEmpty();
+    }
+
     private static PlanDraft threeSlices(int capacity) {
         PlanHeading heading = new PlanHeading(WorkKey.parse("HRN-40"), "Light the harbour", new ProjectName("harness"), "docs/research/HRN-40-plan.md",
-                "D44", capacity, null);
+                PlanGo.named("D44"), capacity, null);
         return new PlanDraft(heading, List.of(
                 new SliceDraft(1, "Fit the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-41"), "Use the brass fittings.", null),
                 new SliceDraft(2, "Paint the lamp", CategoryId.IMPLEMENTATION, WorkKey.parse("HRN-42"), "", null),

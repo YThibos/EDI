@@ -121,6 +121,7 @@ import io.github.ythibos.edi.application.dispatch.ResearchBeforeImplementation;
 import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.dispatch.ResumeNotes;
 import io.github.ythibos.edi.application.dispatch.RewriteBrief;
+import io.github.ythibos.edi.application.dispatch.RoomForAWorker;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
 import io.github.ythibos.edi.application.fleet.DeliveryNotesQuery;
@@ -142,6 +143,8 @@ import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.plan.AddPlan;
+import io.github.ythibos.edi.application.plan.CaptainsGo;
+import io.github.ythibos.edi.application.plan.DispatchEligibleSlices;
 import io.github.ythibos.edi.application.plan.PlanQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -463,11 +466,19 @@ public final class TestHome {
     }
 
     public AddPlan addPlan() {
-        return new AddPlan(addTask(), plans(), events, registry, clock, transaction);
+        return new AddPlan(addTask(), captainsGo(), plans(), events, registry, clock, transaction);
     }
 
     public PlanQuery planQuery() {
-        return new PlanQuery(plans(), tasks, transaction);
+        return new PlanQuery(plans(), tasks, dispatches, transaction);
+    }
+
+    public DispatchEligibleSlices dispatchEligibleSlices() {
+        return new DispatchEligibleSlices(plans(), planQuery(), captainsGo(), dispatchTask(), roomForAWorker(), events, clock, transaction);
+    }
+
+    public CaptainsGo captainsGo() {
+        return new CaptainsGo(decisions, tasks, captainsWord(), transaction);
     }
 
     public TaskLinksQuery taskLinks() {
@@ -768,8 +779,11 @@ public final class TestHome {
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), awayLimit(), launchWorker(), cloneRefreshes(), events, clock,
-                transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, roomForAWorker(), launchWorker(), events, clock, transaction);
+    }
+
+    public RoomForAWorker roomForAWorker() {
+        return new RoomForAWorker(registry, workerPlaces(), awayLimit(), cloneRefreshes(), transaction);
     }
 
     public AwayLimit awayLimit() {

@@ -47,6 +47,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ResearchQueuedFirst;
 import io.github.ythibos.edi.domain.event.DomainEvent.ReviewCounted;
 import io.github.ythibos.edi.domain.event.DomainEvent.ScoutPromoted;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.SlicePlanned;
 import io.github.ythibos.edi.domain.event.DomainEvent.StageChanged;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
@@ -91,6 +93,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopRequested;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStoppedOnAnError;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerTurnEnded;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 
@@ -140,6 +143,10 @@ public final class WakeRule {
             case RecheckAsked asked -> wake(WakeKind.RECHECK_ASKED, asked, null, recheckOf(asked));
             case BoardAnswered answered -> wake(WakeKind.BOARD_ANSWERED, answered, null, roundOf(answered));
             case BoardAnswerRefused refused -> wake(WakeKind.BOARD_ANSWER_REFUSED, refused, null, refused.number() + ": " + refused.because());
+            case SliceDispatched dispatched -> wake(WakeKind.SLICE_DISPATCHED, dispatched, dispatched.worker(),
+                    sliceOf(dispatched.number(), dispatched.plan()));
+            case SliceNotDispatched refused -> wake(WakeKind.SLICE_NOT_DISPATCHED, refused, null,
+                    sliceOf(refused.number(), refused.plan()) + ": " + refused.because());
             case TaskAdded _, TaskNoted _, TaskHeld _, TaskReleased _, CallTicked _, TaskDone _, StageChanged _, DispatchDeferred _,
                     TaskDispatched _, WorkerStarted _, WorkerRetired _, SteerSent _, SteerReceived _, SteerAcknowledged _, SteerNotReceived _,
                     ToolCallRefused _, MechanicalChangeAccepted _, MechanicalChangeRefused _, BranchDeliveredToCaptain _, WorkerRelaunched _,
@@ -170,6 +177,10 @@ public final class WakeRule {
         String ending = answered.sessionEnded() ? ", and the captain ended the session" : "";
         return "board " + answered.board() + " round " + answered.round() + ": " + answered.prompts() + " prompt" + (answered.prompts() == 1 ? "" : "s")
                 + ending;
+    }
+
+    private static String sliceOf(int number, WorkKey plan) {
+        return number + " of the " + plan + " plan";
     }
 
     private static Optional<Wake> statusWake(StatusReported reported) {

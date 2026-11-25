@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.adapter.health.CoreMeters;
 import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.dispatch.LaunchDeferredDispatches;
+import io.github.ythibos.edi.application.plan.DispatchEligibleSlices;
 import io.github.ythibos.edi.application.presence.FollowThePresence;
 import io.github.ythibos.edi.application.presence.NoticeTheUnreadableCalendar;
 import io.github.ythibos.edi.application.rule.TakeInSpooledFirings;
@@ -34,6 +35,7 @@ public class SupervisionRound implements AutoCloseable {
     private final NoticeOverdueSteers overdueSteers;
     private final NoticeMissedLaunches missedLaunches;
     private final LaunchDeferredDispatches deferredDispatches;
+    private final DispatchEligibleSlices eligibleSlices;
     private final CheckMechanicalChange mechanicalChanges;
     private final NoticeFullContexts fullContexts;
     private final NoticeMissedStops missedStops;
@@ -52,14 +54,16 @@ public class SupervisionRound implements AutoCloseable {
     private final Set<WorkerId> checking = ConcurrentHashMap.newKeySet();
 
     public SupervisionRound(NoticeOverdueSteers overdueSteers, NoticeMissedLaunches missedLaunches,
-            LaunchDeferredDispatches deferredDispatches, CheckMechanicalChange mechanicalChanges, NoticeFullContexts fullContexts,
-            NoticeMissedStops missedStops, JudgeWorkers judgeWorkers, ResumeAfterUsageLimits usageLimits, NoticeDueHolds dueHolds, TicketProposals ticketProposals,
+            LaunchDeferredDispatches deferredDispatches, DispatchEligibleSlices eligibleSlices, CheckMechanicalChange mechanicalChanges,
+            NoticeFullContexts fullContexts, NoticeMissedStops missedStops, JudgeWorkers judgeWorkers, ResumeAfterUsageLimits usageLimits,
+            NoticeDueHolds dueHolds, TicketProposals ticketProposals,
             FollowThePresence presence, NoticeTheUnreadableCalendar unreadableCalendar, NoticeHeavyRunsAtOnce heavyRuns,
             RemindOfUnansweredQuestions unansweredQuestions, CloseDecisionRounds decisionRounds, TakeInSpooledFirings spooledFirings,
             CoreMeters meters) {
         this.overdueSteers = overdueSteers;
         this.missedLaunches = missedLaunches;
         this.deferredDispatches = deferredDispatches;
+        this.eligibleSlices = eligibleSlices;
         this.mechanicalChanges = mechanicalChanges;
         this.fullContexts = fullContexts;
         this.missedStops = missedStops;
@@ -97,6 +101,7 @@ public class SupervisionRound implements AutoCloseable {
         attempt("resume a worker after its usage limit", usageLimits::resumeTheNextOneDue);
         attempt("notice holds whose date arrived", dueHolds::notice);
         attempt("launch deferred dispatches", deferredDispatches::launchWhereThereIsRoom);
+        attempt("dispatch the eligible slices of the plans", eligibleSlices::dispatchWhereThePlansHaveRoom);
         attempt("check mechanical changes", this::startTheMechanicalChecks);
         attempt("settle the tickets the captain chose", ticketProposals::settleEveryAnswered);
         attempt("follow the captain's presence", presence::follow);

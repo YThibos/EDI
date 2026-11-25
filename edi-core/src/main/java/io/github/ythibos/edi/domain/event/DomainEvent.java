@@ -317,6 +317,12 @@ public sealed interface DomainEvent {
     record SlicePlanned(TaskId task, WorkKey plan, int number, SliceWait awaits) implements DomainEvent {
     }
 
+    record SliceDispatched(TaskId task, WorkKey plan, int number, WorkerId worker) implements DomainEvent {
+    }
+
+    record SliceNotDispatched(TaskId task, WorkKey plan, int number, String because) implements DomainEvent {
+    }
+
     record TaskDropped(TaskId task, String captainsWord, List<String> discarded) implements DomainEvent {
 
         public TaskDropped {
