@@ -54,11 +54,11 @@ The core raising the card makes raising and binding one step a scout can take, s
 - Good: a choice the captain makes on a scout's board is his word for the card it answers, promote included, and he never retypes it in chat.
 - Bad: one `lavish-axi poll` runs per listening board, a message starting with a bound decision's number answers it, and a scout that forgets to arm a new round leaves it out of the zone.
 - Bad: a follow-up question on a scout's task needs a title of its own.
-- Bad: a task has one open decision at a time, so a board raises at most one open card of its own task, and a decision drawn on a board without `--card` is a question EDI does not hold.
+- Bad: a board raises no new card beside an open decision of its task, so it raises at most one open card of its own task, and a decision drawn on a board without `--card` is a question EDI does not hold.
 
 ## When to revisit
 
-When Lavish offers JSON output, reports a board's unanswered prompts itself or marks a question's options, a task needs more than one open decision, or boards answer something other than decisions.
+When Lavish offers JSON output, reports a board's unanswered prompts itself or marks a question's options, a board needs to raise a new card beside an open decision of its task, or boards answer something other than decisions.
 
 ## How we got here
 
