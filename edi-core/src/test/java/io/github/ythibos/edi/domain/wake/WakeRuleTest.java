@@ -140,8 +140,8 @@ class WakeRuleTest {
                 .contains("D58 (\"the lamp came in\")");
         assertThat(WakeRule.wakeFor(new BoardAnswered(TASK, board, 2, 1, true), Actor.CAPTAIN))
                 .contains(new Wake(WakeKind.BOARD_ANSWERED, TASK, null, "board 3 round 2: 1 prompt, and the captain ended the session", null));
-        assertThat(WakeRule.wakeFor(new BoardAnswerRefused(TASK, D58, board, "D58 is already answered"), Actor.CORE))
-                .map(Wake::kind).contains(WakeKind.BOARD_ANSWER_REFUSED);
+        assertThat(WakeRule.wakeFor(new BoardAnswerRefused(TASK, D58, board, 2, "D58 B, simpler", "D58 is already answered"), Actor.CORE))
+                .contains(new Wake(WakeKind.BOARD_ANSWER_REFUSED, TASK, null, "board 3 round 2: D58 (\"D58 B, simpler\"): D58 is already answered", null));
         assertThat(WakeRule.wakeFor(new BoardReceiptNotSent(TASK, board, "/tmp/board.html", 2, "the session is not open"), Actor.CORE))
                 .contains(new Wake(WakeKind.BOARD_RECEIPT_NOT_SENT, TASK, null, "board 3 at /tmp/board.html round 2: the session is not open", null));
         assertThat(WakeRule.wakeFor(new BoardClosed(TASK, board), Actor.CAPTAIN)).isEmpty();

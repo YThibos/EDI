@@ -118,7 +118,7 @@ class BoardReceiptEndToEndTest {
 
         String after = PrivateTmuxServer.awaitContent(home.resolve("board-state"), "Replied");
         assertThat(before).isEqualTo(WORKING);
-        assertThat(after).isEqualTo("Replied: Received 2 answers in round 1. None of them answers a decision.\n");
+        assertThat(after).isEqualTo("Replied: Received 2 answers in round 1. None of them names a decision. If I cannot record one of them, I tell you in the session.\n");
     }
 
     private void endTheScout() {

@@ -316,7 +316,7 @@ public sealed interface DomainEvent {
     record BoardRetired(TaskId task, BoardId board) implements DomainEvent {
     }
 
-    record BoardAnswerRefused(TaskId task, DecisionNumber number, BoardId board, String because) implements DomainEvent {
+    record BoardAnswerRefused(TaskId task, DecisionNumber number, BoardId board, int round, String verbatim, String because) implements DomainEvent {
     }
 
     record CaptainSaid(TaskId task, String verbatim) implements DomainEvent {

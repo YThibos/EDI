@@ -12,7 +12,10 @@ import org.junit.jupiter.api.Test;
 
 import io.github.ythibos.edi.adapter.store.WakeStore.QueuedWake;
 import io.github.ythibos.edi.application.wake.WakeDelivery;
+import io.github.ythibos.edi.domain.board.BoardId;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.event.Actor;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStopMissed;
@@ -184,6 +187,16 @@ class WakeDigestTextTest {
 
         assertThat(digest.text(delivery)).contains("1. fit-lamp: the captain answered D58 in the console: A: LED, keep one oil lamp;"
                 + " if the task has a worker, edi worker show fit-lamp lists its steers, so carry the answer to its work unless a steer quoting it is already there.\n");
+    }
+
+    @Test
+    void tellsThePrimaryWhichBoardAnswerCouldNotBeRecordedSoItPutsItBeforeTheCaptainOnceMore() {
+        WakeDelivery delivery = new WakeDelivery(Optional.empty(), List.of(queued(1, WakeRule.wakeFor(
+                new BoardAnswerRefused(LAMP, new DecisionNumber(58), new BoardId(3), 2, "D58 B, simpler", "D58 is already answered: \"D58 A\""), Actor.CORE)
+                .orElseThrow())), 0, 1, 0, PRESENT, true);
+
+        assertThat(digest.text(delivery)).contains("1. fit-lamp: I could not record the captain's answer on board 3 round 2: D58 (\"D58 B, simpler\"):"
+                + " D58 is already answered: \"D58 A\". Put it before the captain once more.\n");
     }
 
     @Test

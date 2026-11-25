@@ -186,8 +186,10 @@ class ResearchBoardsTest {
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Thank you.")), false));
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Warmer light."), typed("Fewer lamps.")), false));
 
-        assertThat(home.boardHost().replies()).containsExactly("Received 2 answers in round 1. 1 of them goes to " + decision + ".",
-                "Received 1 answer in round 2. It answers no decision.", "Received 2 answers in round 3. None of them answers a decision.");
+        assertThat(home.boardHost().replies()).containsExactly(
+                "Received 2 answers in round 1. 1 of them names " + decision + ". If I cannot record one of them, I tell you in the session.",
+                "Received 1 answer in round 2. It names no decision. If I cannot record it, I tell you in the session.",
+                "Received 2 answers in round 3. None of them names a decision. If I cannot record one of them, I tell you in the session.");
         assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).doesNotContain(WakeKind.BOARD_RECEIPT_NOT_SENT);
     }
 
@@ -199,7 +201,7 @@ class ResearchBoardsTest {
 
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(choice), false));
 
-        assertThat(home.boardHost().replies()).containsExactly("Received 1 answer in round 1. It goes to " + decision + ".");
+        assertThat(home.boardHost().replies()).containsExactly("Received 1 answer in round 1. It names " + decision + ". If I cannot record it, I tell you in the session.");
     }
 
     @Test
@@ -212,7 +214,8 @@ class ResearchBoardsTest {
                 new BoardFeedback.Answered(List.of(choice, typed("Brighter, please."), typed(decision + " B, simpler")), false));
 
         assertThat(home.boardHost().replies()).containsExactly(
-                "Received 3 answers in round 1. 2 of them go to " + decision + ". The last one counts for " + decision + ".");
+                "Received 3 answers in round 1. 2 of them name " + decision + ". The last one counts for " + decision + "."
+                        + " If I cannot record one of them, I tell you in the session.");
         assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('B'));
     }
 
@@ -514,7 +517,9 @@ class ResearchBoardsTest {
         assertThat(home.decisions().get(decision).answer().channel()).isEqualTo(AnswerChannel.CHAT);
         assertThat(home.boards().answersOf(board.id())).singleElement()
                 .satisfies(answer -> assertThat(answer.refusedBecause()).startsWith(decision + " is already answered"));
-        assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).contains(WakeKind.BOARD_ANSWER_REFUSED);
+        assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_ANSWER_REFUSED).singleElement()
+                .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board %s round 1: %s (\"%s B\"): %s is already answered: \"%s A\""
+                        .formatted(board.id(), decision, decision, decision, decision)));
     }
 
     @Test

@@ -407,6 +407,8 @@ public class EventLog {
             case BoardRetired retired -> payload.put("board", retired.board().value());
             case BoardAnswerRefused refused -> payload.put("number", refused.number().toString())
                     .put("board", refused.board().value())
+                    .put("round", refused.round())
+                    .put("verbatim", refused.verbatim())
                     .put("because", refused.because());
             case CaptainSaid said -> payload.put("verbatim", said.verbatim());
             case ScoutPromoted promoted -> payload.put("ship", promoted.ship().value());
