@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardReceiptNotSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRoundPosted;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
@@ -398,6 +399,10 @@ public class EventLog {
                     .put("round", answered.round())
                     .put("prompts", answered.prompts())
                     .put("sessionEnded", answered.sessionEnded());
+            case BoardReceiptNotSent unsent -> payload.put("board", unsent.board().value())
+                    .put("file", unsent.file())
+                    .put("round", unsent.round())
+                    .put("because", unsent.because());
             case BoardClosed closed -> payload.put("board", closed.board().value());
             case BoardRetired retired -> payload.put("board", retired.board().value());
             case BoardAnswerRefused refused -> payload.put("number", refused.number().toString())

@@ -176,6 +176,45 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void sendsTheBoardAReceiptNamingTheAnswersAndTheirDecisionsWhetherOrNotItsScoutIsStillThere() {
+        Board board = armQuietly(boardFile, decision);
+        home.workers().update(home.workers().get(scout.id()).orElseThrow().retired(TestHome.START));
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "B"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please."), choice), false));
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Thank you.")), false));
+
+        assertThat(home.boardHost().replies()).containsExactly("Received 2 answers in round 1. They go to " + decision + ".",
+                "Received 1 answer in round 2. None of them answers a decision.");
+        assertThat(home.wakes().unacknowledged()).extracting(wake -> wake.wake().kind()).doesNotContain(WakeKind.BOARD_RECEIPT_NOT_SENT);
+    }
+
+    @Test
+    void sendsNoReceiptToABoardWhoseSessionTheCaptainEnded() {
+        Board board = armQuietly(boardFile);
+
+        home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(farewell()), true));
+
+        assertThat(home.boardHost().replies()).isEmpty();
+    }
+
+    @Test
+    void tellsThePrimaryWhichBoardGotNoReceiptWhenTheReplyFailsAndStillDeliversTheRound() {
+        Board board = armQuietly(boardFile, decision);
+        home.boardHost().failsToReply("lavish-axi reply exited with 1: the session is not open");
+
+        boolean pollAgain = home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please.")), false));
+
+        assertThat(pollAgain).isTrue();
+        assertThat(message(1).body()).contains("Brighter, please.");
+        assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_RECEIPT_NOT_SENT).singleElement()
+                .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board " + board.id() + " at " + boardFile + " round 1: "
+                        + "lavish-axi reply exited with 1: the session is not open"));
+        assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardReceiptNotSent");
+    }
+
+    @Test
     void showsEachAnsweredRoundToThePrimaryWithoutDeliveringItToTheScout() {
         Board board = armQuietly(boardFile, decision);
         BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=B", decision + ": option=B", "section#s2 > form",

@@ -27,6 +27,8 @@ Research and design scouts talk with the captain on a Lavish board in the EDI sk
 ## Answers
 
 - Each round of feedback reaches the scout's inbox as one message.
+- Your core replies on the board in the same step, saying how many answers arrived and which decisions they go to, so the board stops showing Working... whoever listens; a reply of yours after it adds to the conversation and never replaces it.
+- A receipt your core could not send reaches the primary as a wake naming the board and its file; the primary replies on the board by hand with `lavish-axi reply <board.html> --agent-reply "<words>"`.
 - A prompt that names a bound decision, by its D number, in the board's `decision` field or by its card's `question`, answers that decision as the captain's own word, verbatim.
 - That answer authorises exactly the act its chosen option names, as an answer in the console does; nobody records it again with `edi captain said`.
 - A board answer arrives as a wake on the wake stream, `edi wait --follow`; carry it to the work, and never answer the same decision again in chat.

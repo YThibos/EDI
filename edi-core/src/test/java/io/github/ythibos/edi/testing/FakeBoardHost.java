@@ -10,12 +10,15 @@ import java.util.concurrent.TimeUnit;
 
 import io.github.ythibos.edi.application.port.ResearchBoardHost;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
+import io.github.ythibos.edi.domain.board.BoardReply;
 
 public final class FakeBoardHost implements ResearchBoardHost {
 
     private final Deque<BoardFeedback> rounds = new ArrayDeque<>();
     private final List<String> listeners = new ArrayList<>();
     private final List<Path> boards = new ArrayList<>();
+    private final List<String> replies = new ArrayList<>();
+    private String replyFailure;
     private boolean holding;
     private CountDownLatch polled = new CountDownLatch(1);
     private final CountDownLatch neverOpens = new CountDownLatch(1);
@@ -35,6 +38,23 @@ public final class FakeBoardHost implements ResearchBoardHost {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("The listener was stopped.", interrupted);
         }
+    }
+
+    @Override
+    public synchronized BoardReply reply(Path board, String words) {
+        if (replyFailure != null) {
+            return new BoardReply.NotSent(replyFailure);
+        }
+        replies.add(words);
+        return new BoardReply.Sent();
+    }
+
+    public synchronized void failsToReply(String because) {
+        replyFailure = because;
+    }
+
+    public synchronized List<String> replies() {
+        return List.copyOf(replies);
     }
 
     public synchronized void answers(BoardFeedback round) {

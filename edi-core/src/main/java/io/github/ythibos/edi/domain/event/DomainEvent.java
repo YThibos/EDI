@@ -307,6 +307,9 @@ public sealed interface DomainEvent {
     record BoardAnswered(TaskId task, BoardId board, int round, int prompts, boolean sessionEnded) implements DomainEvent {
     }
 
+    record BoardReceiptNotSent(TaskId task, BoardId board, String file, int round, String because) implements DomainEvent {
+    }
+
     record BoardClosed(TaskId task, BoardId board) implements DomainEvent {
     }
 

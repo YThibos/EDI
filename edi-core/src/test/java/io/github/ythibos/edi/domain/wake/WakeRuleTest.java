@@ -21,6 +21,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswerRefused;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardAnswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardArmed;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardClosed;
+import io.github.ythibos.edi.domain.event.DomainEvent.BoardReceiptNotSent;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveredToCaptain;
 import io.github.ythibos.edi.domain.event.DomainEvent.BranchDeliveryFailed;
 import io.github.ythibos.edi.domain.event.DomainEvent.ChangeNotApplied;
@@ -141,6 +142,8 @@ class WakeRuleTest {
                 .contains(new Wake(WakeKind.BOARD_ANSWERED, TASK, null, "board 3 round 2: 1 prompt, and the captain ended the session", null));
         assertThat(WakeRule.wakeFor(new BoardAnswerRefused(TASK, D58, board, "D58 is already answered"), Actor.CORE))
                 .map(Wake::kind).contains(WakeKind.BOARD_ANSWER_REFUSED);
+        assertThat(WakeRule.wakeFor(new BoardReceiptNotSent(TASK, board, "/tmp/board.html", 2, "the session is not open"), Actor.CORE))
+                .contains(new Wake(WakeKind.BOARD_RECEIPT_NOT_SENT, TASK, null, "board 3 at /tmp/board.html round 2: the session is not open", null));
         assertThat(WakeRule.wakeFor(new BoardClosed(TASK, board), Actor.CAPTAIN)).isEmpty();
         assertThat(WakeRule.wakeFor(new BoardArmed(TASK, board, "/tmp/board.html", List.of(D58)), THE_WORKER)).isEmpty();
     }
