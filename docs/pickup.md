@@ -48,7 +48,7 @@ A session takes one issue at a time, in this order.
 
 1. Fetch `origin/main` and run `node ops/backlog/pickup.mjs --next`, which asks the REST API, through `gh api` only, for the open issues that carry `captain-approved` added by the captain's account, carry `cloud-ok` and neither `held` nor `needs-captain-machine`, have no open blocker and no open pull request that closes them.
    It lists them in pickup order: an issue after its blockers, then by its priority, `priority-1-urgent` first, then by its milestone's due date, a milestone without a date after every dated one and an issue without a milestone last, then by issue number.
-   A blocker is ordered at the most urgent priority among the issues it blocks, which are open in the sense of being approved, cloud-ok and unheld, and the pull passes along a chain of blockers; its own label does not change, and the listing says it was pulled forward and by which issue, so a bump on a blocked issue gets its blockers picked up sooner.
+   A blocker is ordered at the most urgent priority among the issues it blocks whose state is open, carrying `captain-approved` and `cloud-ok` and neither `held` nor `needs-captain-machine`, and the pull passes along a chain of blockers; its own label does not change, and the listing says it was pulled forward and by which issue, so a bump on a blocked issue gets its blockers picked up sooner.
    `node ops/backlog/pickup.mjs` without `--next` prints every open backlog issue in that order, with its priority, its state, its open blockers and its claim.
 2. Take the first issue it lists that has no claim: no comment taking it that opens with the session marker and no pull request that closes it.
 3. Claim it before doing any work:
