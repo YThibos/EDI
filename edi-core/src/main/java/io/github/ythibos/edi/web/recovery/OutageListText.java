@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore.CountedRecovery;
 import io.github.ythibos.edi.application.supervision.OutageList;
 import io.github.ythibos.edi.application.supervision.OutageList.UnpushedWork;
+import io.github.ythibos.edi.domain.landing.CommitsOnTheForge.Counted;
+import io.github.ythibos.edi.domain.landing.CommitsOnTheForge.NotVerified;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.Hold;
@@ -79,15 +81,24 @@ class OutageListText implements TextPresenter<OutageList> {
     }
 
     private static String unpushed(UnpushedWork unpushed) {
-        if (!unpushed.verified()) {
-            return "not verified, because git could not read its copy";
+        return switch (unpushed.commits()) {
+            case NotVerified notVerified when !unpushed.uncommittedChanges() -> "not verified, because " + notVerified.reason();
+            case NotVerified notVerified -> "uncommitted changes, and commits not verified, because " + notVerified.reason();
+            case Counted counted when counted.areAllOnTheForge() && !unpushed.uncommittedChanges() -> "none" + staleness(counted);
+            case Counted counted when counted.areAllOnTheForge() ->
+                    "uncommitted changes, and no commits missing on " + counted.remote() + staleness(counted);
+            case Counted counted -> Words.quantity(counted.missing(), "commit") + " not on " + counted.remote() + staleness(counted)
+                    + (unpushed.uncommittedChanges() ? " and uncommitted changes" : "");
+        };
+    }
+
+    private static String staleness(Counted counted) {
+        if (!counted.mayBeOutOfDate()) {
+            return "";
         }
-        if (!unpushed.exists()) {
-            return "none";
-        }
-        String commits = unpushed.commits() == 0 ? "" : unpushed.commits() + " commits on no remote";
-        String changes = unpushed.uncommittedChanges() ? "uncommitted changes" : "";
-        return commits.isEmpty() || changes.isEmpty() ? commits + changes : commits + " and " + changes;
+        return counted.sinceTheLastFetch()
+                .map(age -> " (the copy last fetched from the forge " + Words.quantity((int) age.toDays(), "day") + " ago)")
+                .orElse(" (the copy records no fetch from the forge)");
     }
 
     private static String recoverySoFar(List<CountedRecovery> recoveries) {

@@ -5,6 +5,8 @@ import java.util.List;
 
 import io.github.ythibos.edi.adapter.store.RecoveryCostStore.CountedRecovery;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.landing.CommitsOnTheForge;
+import io.github.ythibos.edi.domain.landing.CommitsOnTheForge.NotVerified;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -20,12 +22,8 @@ public record OutageList(List<Entry> entries, List<CountedRecovery> recoveries) 
             UnpushedWork unpushed, Path worktree) {
     }
 
-    public record UnpushedWork(boolean verified, int commits, boolean uncommittedChanges) {
+    public record UnpushedWork(CommitsOnTheForge commits, boolean uncommittedChanges) {
 
-        static final UnpushedWork UNVERIFIED = new UnpushedWork(false, 0, false);
-
-        public boolean exists() {
-            return commits > 0 || uncommittedChanges;
-        }
+        static final UnpushedWork UNVERIFIED = new UnpushedWork(new NotVerified("git could not read its copy"), false);
     }
 }
