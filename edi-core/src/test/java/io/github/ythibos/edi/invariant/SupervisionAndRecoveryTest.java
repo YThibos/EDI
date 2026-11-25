@@ -321,7 +321,7 @@ class SupervisionAndRecoveryTest {
     }
 
     @Nested
-    @DisplayName("I-26 Judge workers by structured state")
+    @DisplayName("I-26 Judge workers by structured state, never by a pane alone")
     class JudgeWorkersByStructuredState {
 
         @Test

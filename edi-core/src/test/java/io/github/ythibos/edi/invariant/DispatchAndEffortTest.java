@@ -260,7 +260,7 @@ class DispatchAndEffortTest {
     }
 
     @Nested
-    @DisplayName("I-17 Quality is never traded for cost")
+    @DisplayName("I-17 Quality is never traded for cost: wait out a usage limit")
     class QualityIsNeverTradedForCost {
 
         @Test

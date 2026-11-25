@@ -28,7 +28,7 @@ description: >-
 2. `mechanical` only when the spec states the exact change; pass every file with `--files`.
 3. A bugfix with an unknown cause is research first: `--cause-unknown`.
 4. Review the brief with `edi brief <task> --category <id> --spec -` when it matters, then run `edi dispatch <task> --category <id> --spec -`.
-5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; lifting effort above high for one task (I-14) means recording their message first with `edi captain said --task <task> --for effort-above-high --message <n>`, unless they chose a dialog option that opens with `effort-above-high` and names the task and no other, then `--override-effort xhigh` or `max` with `--reason`; it never goes into the dispatch rules.
+5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; lifting effort above high for one task (I-14) means recording their message first with `edi captain said --task <task> --for effort-above-high --message <n>`, unless they chose a dialog option that opens with `effort-above-high` and names the task and no other, then `--override-effort xhigh` or `max` with `--reason`; it holds for that task and its relaunches alone, never goes into the dispatch rules and is never inferred from a task looking hard.
 6. Your core makes the isolated copy on the keyed branch (I-08, I-13), writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
 
 ## Supervision

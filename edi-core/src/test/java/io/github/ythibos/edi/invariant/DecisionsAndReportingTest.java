@@ -86,7 +86,7 @@ class DecisionsAndReportingTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-18 Decisions are durable and numbered")
+    @DisplayName("I-18 A decision number is assigned once, never reused")
     class DecisionsAreDurableAndNumbered {
 
         @Test
