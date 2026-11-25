@@ -119,6 +119,27 @@ class NativeRecoveryIT {
     }
 
     @Test
+    void aCopyPushedOnlyToAValidationRemoteIsNeverListedAsHavingNoUnpushedWork() throws Exception {
+        assumeTrue(answers("tmux", "-V"), "tmux is not installed");
+        dispatch("restart-gate", "HRN-17", "stub-run: edi status working -- the gate worker started");
+        dispatch("restart-gong", "HRN-18", "stub-run: edi status working -- the gong worker started");
+        awaitOutput(List.of("worker", "list"), "the gong worker started");
+        Path copy = home.resolve("worktrees/harness/restart-gate");
+        Path validation = Files.createDirectories(home.resolve("validation.git"));
+        git(validation, "init", "--quiet", "--bare");
+        Files.writeString(copy.resolve("gate.txt"), "latched\n");
+        git(copy, "add", "gate.txt");
+        git(copy, "commit", "--quiet", "--message", "HRN-17 Latch the gate");
+        git(copy, "remote", "add", "no-mistakes", validation.toString());
+        git(copy, "push", "--quiet", "--no-verify", "no-mistakes", "HEAD:refs/heads/restart-gate");
+
+        simulateAMachineRestart();
+        CommandRun listed = edi(Map.of(), "", "recover");
+
+        assertThat(listed.output()).contains("unpushed work: not verified, because harness registers no forge").doesNotContain("unpushed work: none");
+    }
+
+    @Test
     void aResumeOfASessionThatLeftNoTranscriptStartsAfreshWithAHandoverInstead() throws Exception {
         assumeTrue(answers("tmux", "-V"), "tmux is not installed");
         dispatch("restart-buoy", "HRN-16", "stub-run: edi status working -- the buoy worker started");

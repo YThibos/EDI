@@ -110,6 +110,7 @@ import io.github.ythibos.edi.application.delivery.FollowUpDecision;
 import io.github.ythibos.edi.application.delivery.Forges;
 import io.github.ythibos.edi.application.delivery.LandedWorkCheck;
 import io.github.ythibos.edi.application.delivery.ObservePipelines;
+import io.github.ythibos.edi.application.delivery.PushedWorkCheck;
 import io.github.ythibos.edi.application.delivery.RecountTaskCosts;
 import io.github.ythibos.edi.application.delivery.TaskCosts;
 import io.github.ythibos.edi.application.dispatch.AwayLimit;
@@ -1082,7 +1083,7 @@ public final class TestHome {
 
     public OutageListQuery outageList() {
         return new OutageListQuery(outages, tasks, workers, dispatches, inbox, recoveryCosts,
-                new CurrentRoutes(dispatchRulesFile(), machineProfile()), git, home, transaction);
+                new CurrentRoutes(dispatchRulesFile(), machineProfile()), registry, new PushedWorkCheck(git, clock), git, home, transaction);
     }
 
     public NoticeFullContexts noticeFullContexts() {

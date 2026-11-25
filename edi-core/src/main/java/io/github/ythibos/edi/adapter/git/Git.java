@@ -1,7 +1,11 @@
 package io.github.ythibos.edi.adapter.git;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -40,6 +44,7 @@ public class Git {
     private static final int CONFLICTS = 1;
     private static final int STATUS_MARKS = 3;
     private static final String LITERAL_PATH = ":(literal)";
+    private static final String FETCH_RECORD = "FETCH_HEAD";
 
     private final ExternalPrograms programs;
 
@@ -117,8 +122,19 @@ public class Git {
         return git(worktree, "log", "-1", "--format=%h %s").strip();
     }
 
-    public int commitsOnNoRemote(Path worktree) {
-        return Integer.parseInt(git(worktree, "rev-list", "--count", "HEAD", "--not", "--remotes").strip());
+    public int commitsNotOnRemote(Path worktree, String remote) {
+        return Integer.parseInt(git(worktree, "rev-list", "--count", "HEAD", "--not", "--remotes=" + remote).strip());
+    }
+
+    public List<String> remotesOf(Path repository) {
+        return git(repository, "remote").lines().toList();
+    }
+
+    public Optional<Instant> lastFetchOf(Path worktree) {
+        return Stream.of(Path.of(git(worktree, "rev-parse", "--path-format=absolute", "--git-path", FETCH_RECORD).strip()),
+                commonDirectory(worktree).resolve(FETCH_RECORD))
+                .flatMap(record -> modifiedAt(record).stream())
+                .max(Comparator.naturalOrder());
     }
 
     public boolean hasUncommittedChanges(Path worktree) {
@@ -290,6 +306,14 @@ public class Git {
 
     private ProgramRun withInput(Path repository, String input, String... arguments) {
         return programs.run(ProgramCall.of(Program.GIT, null, repository, commandLineOf(arguments)).withInput(input));
+    }
+
+    private static Optional<Instant> modifiedAt(Path file) {
+        try {
+            return Optional.of(Files.getLastModifiedTime(file).toInstant());
+        } catch (IOException unreadable) {
+            return Optional.empty();
+        }
     }
 
     private static Set<String> nulSeparated(String output) {
