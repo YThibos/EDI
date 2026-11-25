@@ -75,7 +75,7 @@ public class ReceiveBoardFeedback {
 
     private void acknowledged(RecordedRound round, BoardFeedback.Answered answered) {
         Board board = round.board();
-        if (receiptTo(board, BoardReceiptWords.of(board, answered, round.answers())) instanceof BoardReply.NotSent unsent) {
+        if (receiptTo(board, BoardReceiptWords.of(board, answered)) instanceof BoardReply.NotSent unsent) {
             receiptNotSent(board, unsent.reason());
         }
     }
@@ -109,7 +109,7 @@ public class ReceiveBoardFeedback {
         events.record(new SteerSent(saved.task(), message.number(), null), Actor.CORE, now);
         events.record(new BoardAnswered(saved.task(), saved.id(), saved.rounds(), answered.prompts().size(), answered.sessionEnded()), Actor.CAPTAIN,
                 now);
-        return new RecordedRound(saved, answers, message, workers.latestOf(saved.task()).filter(worker -> !worker.isRetired()).orElse(null));
+        return new RecordedRound(saved, message, workers.latestOf(saved.task()).filter(worker -> !worker.isRetired()).orElse(null));
     }
 
     private boolean closedWithoutNews(BoardId board) {
@@ -121,7 +121,7 @@ public class ReceiveBoardFeedback {
         return false;
     }
 
-    private record RecordedRound(Board board, List<BoardAnswer> answers, InboxMessage message, Worker worker) {
+    private record RecordedRound(Board board, InboxMessage message, Worker worker) {
 
         boolean reachesAWorker() {
             return worker != null;

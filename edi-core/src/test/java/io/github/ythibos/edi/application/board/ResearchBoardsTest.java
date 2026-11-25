@@ -203,6 +203,20 @@ class ResearchBoardsTest {
     }
 
     @Test
+    void countsEachAnswerToADecisionInTheReceiptAndSaysTheLastOneCountsWhenTheCaptainAnsweredItTwice() {
+        Board board = armQuietly(boardFile, decision);
+        BoardPrompt choice = new BoardPrompt("3", "choice", decision + ": option=A", decision + ": option=A", "section#s2 > form",
+                contextOf("decision", decision.toString(), "option", "A"), List.of());
+
+        home.receiveBoardFeedback().receive(board.id(),
+                new BoardFeedback.Answered(List.of(choice, typed("Brighter, please."), typed(decision + " B, simpler")), false));
+
+        assertThat(home.boardHost().replies()).containsExactly(
+                "Received 3 answers in round 1. 2 of them go to " + decision + ". The last one counts for " + decision + ".");
+        assertThat(home.decisions().get(decision).answer().option()).isEqualTo(new OptionKey('B'));
+    }
+
+    @Test
     void sendsNoReceiptToABoardWhoseSessionTheCaptainEnded() {
         Board board = armQuietly(boardFile);
 

@@ -1,6 +1,8 @@
 package io.github.ythibos.edi.domain.board;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,11 +68,17 @@ public record Board(BoardId id, TaskId task, String file, String link, List<Boar
     }
 
     public List<BoardAnswer> answersIn(BoardFeedback.Answered feedback, Function<DecisionNumber, DecisionCard> cardOf, Instant at) {
-        Map<DecisionNumber, BoardAnswer> latestWordPerDecision = new LinkedHashMap<>();
+        return promptsPerDecision(feedback).entrySet().stream()
+                .map(answered -> BoardAnswer.received(id, rounds, answered.getKey(), answered.getValue().getLast(), cardOf.apply(answered.getKey()), at))
+                .toList();
+    }
+
+    public Map<DecisionNumber, List<BoardPrompt>> promptsPerDecision(BoardFeedback.Answered feedback) {
+        Map<DecisionNumber, List<BoardPrompt>> promptsPerDecision = new LinkedHashMap<>();
         feedback.prompts().forEach(prompt -> bindingAnsweredBy(prompt)
                 .map(BoardBinding::decision)
-                .ifPresent(decision -> latestWordPerDecision.put(decision, BoardAnswer.received(id, rounds, decision, prompt, cardOf.apply(decision), at))));
-        return List.copyOf(latestWordPerDecision.values());
+                .ifPresent(decision -> promptsPerDecision.computeIfAbsent(decision, _ -> new ArrayList<>()).add(prompt)));
+        return Collections.unmodifiableMap(promptsPerDecision);
     }
 
     public String listener() {
