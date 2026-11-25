@@ -52,6 +52,24 @@ class LavishBoardHostReplyTest {
         assertThat(reply).isInstanceOfSatisfying(BoardReply.NotSent.class, notSent -> assertThat(notSent.reason()).contains("could not run"));
     }
 
+    @Test
+    void reportsAReplyInterruptedWhileItRunsAndLeavesTheInterruptStanding() throws IOException {
+        Path board = Files.writeString(directory.resolve("board.html"), "<!doctype html>\n");
+        Path lavish = StandInScripts.installed(directory.resolve("bin/lavish-axi"), "#!/bin/sh\nsleep 60\n");
+
+        Thread.currentThread().interrupt();
+        BoardReply reply;
+        boolean interruptStanding;
+        try {
+            reply = hostRunning(lavish).reply(board, "Received 1 answer in round 1. It answers no decision.");
+        } finally {
+            interruptStanding = Thread.interrupted();
+        }
+
+        assertThat(reply).isInstanceOfSatisfying(BoardReply.NotSent.class, notSent -> assertThat(notSent.reason()).contains("was interrupted"));
+        assertThat(interruptStanding).isTrue();
+    }
+
     private static LavishBoardHost hostRunning(Path lavish) {
         return new LavishBoardHost(new ExternalPrograms(), new JsonMapper(), lavish.toString());
     }

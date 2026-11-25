@@ -241,15 +241,15 @@ class ResearchBoardsTest {
     }
 
     @Test
-    void tellsThePrimaryWhichBoardGotNoReceiptWhenTheReplyIsStoppedHalfway() {
+    void tellsThePrimaryWhichBoardGotNoReceiptWhenTheBoardHostBreaksDownWhileReplying() {
         Board board = armQuietly(boardFile, decision);
-        home.boardHost().isStoppedWhileReplying("lavish-axi was interrupted.");
+        home.boardHost().breaksDownWhileReplying("the board host broke down");
 
         home.receiveBoardFeedback().receive(board.id(), new BoardFeedback.Answered(List.of(typed("Brighter, please.")), false));
 
         assertThat(home.wakes().unacknowledged()).filteredOn(wake -> wake.wake().kind() == WakeKind.BOARD_RECEIPT_NOT_SENT).singleElement()
                 .satisfies(wake -> assertThat(wake.wake().detail()).isEqualTo("board " + board.id() + " at " + boardFile + " round 1: "
-                        + "lavish-axi was interrupted."));
+                        + "the board host broke down"));
         assertThat(home.eventTypesOf(SCOUT)).endsWith("BoardAnswered", "BoardReceiptNotSent");
     }
 

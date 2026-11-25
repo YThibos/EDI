@@ -46,9 +46,6 @@ public class LavishBoardHost implements ResearchBoardHost {
         try {
             return replyIn(replied(board, words));
         } catch (ProgramFailure unable) {
-            if (Thread.currentThread().isInterrupted()) {
-                throw unable;
-            }
             return new BoardReply.NotSent(unable.getMessage());
         }
     }
