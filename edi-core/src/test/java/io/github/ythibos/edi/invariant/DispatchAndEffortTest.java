@@ -73,7 +73,7 @@ class DispatchAndEffortTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-14 Routing by written category, high is the ceiling, and only the captain's word lifts it for one task")
+    @DisplayName("I-14 Route by category; effort above high only on the captain's word")
     class RoutingByWrittenCategory {
 
         @Test
@@ -193,7 +193,7 @@ class DispatchAndEffortTest {
     }
 
     @Nested
-    @DisplayName("I-15 EDI's own research, and its implementation that is not small, run on Opus 5.5 high")
+    @DisplayName("I-15 Research on EDI, and its bigger builds, run on Opus 5.5 high")
     class EdiWorkRunsOnTheProjectOverride {
 
         @Test
@@ -235,7 +235,7 @@ class DispatchAndEffortTest {
     }
 
     @Nested
-    @DisplayName("I-16 A relaunch re-routes")
+    @DisplayName("I-16 A relaunch re-routes by category")
     class ARelaunchReRoutes {
 
         @Test
@@ -260,7 +260,7 @@ class DispatchAndEffortTest {
     }
 
     @Nested
-    @DisplayName("I-17 Quality is never traded for cost")
+    @DisplayName("I-17 Quality is never traded for cost: wait out a usage limit")
     class QualityIsNeverTradedForCost {
 
         @Test

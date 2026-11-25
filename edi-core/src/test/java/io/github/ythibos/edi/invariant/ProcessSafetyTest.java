@@ -73,7 +73,7 @@ class ProcessSafetyTest {
     }
 
     @Nested
-    @DisplayName("I-30 No broad process signals")
+    @DisplayName("I-30 No pkill, killall or kill by pattern")
     class NoBroadProcessSignals {
 
         @Test
@@ -114,7 +114,7 @@ class ProcessSafetyTest {
     }
 
     @Nested
-    @DisplayName("I-31 Workers live on EDI's private tmux socket, and nobody runs bare-socket tmux")
+    @DisplayName("I-31 Run tmux only with -L or -S; the edi socket is the core's")
     class WorkersLiveOnThePrivateSocket {
 
         @Test
@@ -140,7 +140,7 @@ class ProcessSafetyTest {
     }
 
     @Nested
-    @DisplayName("I-32 Secrets are read at call time and never printed")
+    @DisplayName("I-32 Never read or print a secret; adapters read it at call time")
     class SecretsAreNeverPrinted {
 
         @Test

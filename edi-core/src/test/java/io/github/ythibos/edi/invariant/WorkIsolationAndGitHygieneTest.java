@@ -74,7 +74,7 @@ class WorkIsolationAndGitHygieneTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-07 Workers never touch the primary copy or the captain's checkouts")
+    @DisplayName("I-07 Workers stay in their isolated copies")
     class WorkersStayInTheirWorktree {
 
         @Test
@@ -181,7 +181,7 @@ class WorkIsolationAndGitHygieneTest {
     }
 
     @Nested
-    @DisplayName("I-09 No co-author or agent trailer, ever")
+    @DisplayName("I-09 No co-author or agent trailer")
     class NoAgentTrailer {
 
         @Test
@@ -372,7 +372,7 @@ class WorkIsolationAndGitHygieneTest {
     }
 
     @Nested
-    @DisplayName("I-12 Never discard unlanded work")
+    @DisplayName("I-12 Never discard unlanded work without the captain's word")
     class NeverDiscardUnlandedWork {
 
         @Test
@@ -440,7 +440,7 @@ class WorkIsolationAndGitHygieneTest {
     }
 
     @Nested
-    @DisplayName("I-13 Base branches come from the origin ref")
+    @DisplayName("I-13 Work starts from the fresh origin base")
     class BaseBranchesComeFromOrigin {
 
         @Test

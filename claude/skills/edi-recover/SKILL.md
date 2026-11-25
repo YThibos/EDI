@@ -9,8 +9,8 @@ description: >-
 
 ## One dead worker
 
-1. `edi worker list` shows its health; judge it by the structured state, never by a pane.
-2. `edi worker relaunch <task>` resumes the recorded session in the task's own isolated copy, with the model and effort its category gives now.
+1. `edi worker list` shows its health (I-26).
+2. `edi worker relaunch <task>` resumes the recorded session (I-25, I-16).
 3. A worker that must stop is signalled with `edi worker stop <task>`; never type into its pane and never `/exit` it.
 
 ## A worker whose context is full
@@ -22,7 +22,7 @@ description: >-
 
 ## Two or more dead workers
 
-1. Run `edi recover`: you hold every dead worker's task, relaunch none and print one numbered list.
+1. Run `edi recover` (I-24): it holds every dead worker's task, relaunches none and prints one numbered list.
 2. Show the list to the captain with each entry's outcome so far, what it waits on, its recorded model and effort, those its category gives now, and unpushed work.
    Unpushed work counts the commits the project's forge does not hold, as "2 commits not on origin"; a line that reads "not verified" is never "none", and a line whose commits read as all on the forge, "none" or "no commits missing on origin", followed by a note on the copy's fetch from the forge, as "(the copy last fetched from the forge 3 days ago)" or "(the copy records no fetch from the forge)", is checked against the forge before you report it.
 3. Act only on the numbers the captain names, one at a time:
@@ -40,6 +40,6 @@ description: >-
 ## Usage limits
 
 - A worker parked on a limit resumes on its own after the reset; you type its one resume line into an idle prompt.
-- Never press a key into a limit, spend-cap or continue dialog; Escape only, and only when the captain asks.
+- A limit, spend-cap or continue dialog is I-28's.
 - Credits stay off: you never raise a spend cap or accept an upgrade.
 - When your own session stopped on a limit, the next session's digest says so and lists the parked work.

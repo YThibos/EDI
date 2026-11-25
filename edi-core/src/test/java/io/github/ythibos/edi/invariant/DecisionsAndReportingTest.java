@@ -86,7 +86,7 @@ class DecisionsAndReportingTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-18 Decisions are durable and numbered")
+    @DisplayName("I-18 A decision number is assigned once, never reused")
     class DecisionsAreDurableAndNumbered {
 
         @Test
@@ -120,8 +120,10 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-19 Every open decision appears in every captain report until answered")
-    class OpenDecisionsAlwaysAppear {
+    @DisplayName("I-19 Every open decision is in every report until answered")
+    class EverythingThatWaitsOnTheCaptainAppears {
+
+        private static final String REQUEST = "https://github.com/example-owner/harness/pull/7";
 
         @Test
         @Tag("adapter")
@@ -163,30 +165,6 @@ class DecisionsAndReportingTest {
             assertThat(laterTurn).isEqualTo(muchLaterTurn)
                     .contains("║  " + open + "   Which lamp? » Recommended: A - The simple way\n").doesNotContain("(A)", "it is enough");
         }
-
-        private static Turn aTurnAboutOtherWork() {
-            return new Turn(
-                    List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")),
-                    List.of(new TurnItem(List.of(), "Choose the paint colour")),
-                    Map.of("lamp-fitting", new TaskWording("Fit the brass lamp", "waiting for the ladder", null)));
-        }
-
-        private void turnsThatNeverMentionTheDecision(TestHome home) {
-            home.addTask().add(ship("lamp-fitting", "Fit the lamp"), Actor.PRIMARY);
-            home.clock().advance(Duration.ofHours(1));
-            home.noteTask().note(new TaskReference.ById(new TaskId("lamp-fitting")), "The ladder is ready.", Actor.PRIMARY);
-            home.clock().advance(Duration.ofDays(1));
-            home.addTask().add(captainItem("paint-choice", "Choose the paint"), Actor.PRIMARY);
-            raise(home, "paint-choice", "Which paint?");
-            answer(home, new DecisionNumber(59));
-        }
-    }
-
-    @Nested
-    @DisplayName("I-19 Everything that waits on the captain reaches the decision zone, and nothing else poses as waiting on him")
-    class EverythingThatWaitsOnTheCaptainAppears {
-
-        private static final String REQUEST = "https://github.com/example-owner/harness/pull/7";
 
         @Test
         @Tag("adapter")
@@ -523,6 +501,23 @@ class DecisionsAndReportingTest {
             assertThat(onTheConsole.ongoing()).extracting(ConsoleSitrep.Ongoing::comingBack).containsExactly("still a draft");
         }
 
+        private void turnsThatNeverMentionTheDecision(TestHome home) {
+            home.addTask().add(ship("lamp-fitting", "Fit the lamp"), Actor.PRIMARY);
+            home.clock().advance(Duration.ofHours(1));
+            home.noteTask().note(new TaskReference.ById(new TaskId("lamp-fitting")), "The ladder is ready.", Actor.PRIMARY);
+            home.clock().advance(Duration.ofDays(1));
+            home.addTask().add(captainItem("paint-choice", "Choose the paint"), Actor.PRIMARY);
+            raise(home, "paint-choice", "Which paint?");
+            answer(home, new DecisionNumber(59));
+        }
+
+        private static Turn aTurnAboutOtherWork() {
+            return new Turn(
+                    List.of(new TurnItem(List.of("harness"), "Fitted the lamp bracket")),
+                    List.of(new TurnItem(List.of(), "Choose the paint colour")),
+                    Map.of("lamp-fitting", new TaskWording("Fit the brass lamp", "waiting for the ladder", null)));
+        }
+
         private static String digestOf(TestHome home) {
             return PresenterFixtures.sessionStartDigestText().text(home.sessionStartDigest().digestFor(UUID.randomUUID(), home.home().root()));
         }
@@ -557,7 +552,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-20 The captain's answer is recorded verbatim with its interpretation")
+    @DisplayName("I-20 Record the captain's answer verbatim, with its interpretation")
     class AnswersAreRecordedVerbatim {
 
         private static final String VERBATIM = "  D58, A -- but keep the oil lamp\nin the store for a winter. ";
@@ -607,7 +602,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-21 A turn that changes something for the captain ends with the turn report, shown once")
+    @DisplayName("I-21 A turn that changes something ends with the turn report, once")
     class StateChangingTurnsEndWithTheReport {
 
         @Test
@@ -633,7 +628,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-22 Talk in outcomes")
+    @DisplayName("I-22 Talk in outcomes, with internal labels translated")
     class TalkInOutcomes {
 
         @Test
