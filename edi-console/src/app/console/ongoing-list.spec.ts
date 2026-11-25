@@ -35,9 +35,11 @@ describe('OngoingList', () => {
   });
 
   it('marks a request still changing as coming back to the captain when it is ready', async () => {
-    const list = await listed([{ ...KEYED_LAMP, state: 'working', comingBack: 'pipeline review; steer 2 not acknowledged' }]);
+    const list = await listed([{ ...KEYED_LAMP, state: 'changing', comingBack: 'pipeline review; steer 2 not acknowledged' }]);
 
     expect(texts(list, '.sr-row__back')).toEqual(['changing, back to you when it is ready: pipeline review; steer 2 not acknowledged']);
+    expect(texts(list, '.sr-badge')).toEqual(['changing']);
+    expect(list.querySelector('.sr-badge')?.classList).toContain('sr-badge--info');
   });
 
   it('marks a worker stopped on the usage limit as waiting for the reset at its local time', async () => {

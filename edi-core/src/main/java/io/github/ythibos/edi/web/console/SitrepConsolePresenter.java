@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,6 +73,7 @@ public class SitrepConsolePresenter {
     private static final String WITHOUT_A_WORKER = "waiting";
     private static final String WITH_ME = "with me";
     private static final String ON_THE_USAGE_LIMIT = "usage limit";
+    private static final String CHANGING = "changing";
     private static final String AFTER_A_LEADING_KEY = "\\b[\\s:|-]*";
 
     private final PresenceWords presenceWords;
@@ -228,9 +230,10 @@ public class SitrepConsolePresenter {
 
     private static Ongoing ongoing(OngoingTask ongoing, FleetSnapshot fleet) {
         Task task = ongoing.task();
+        Optional<ChangingRequest> comingBack = fleet.comingBackOf(task.id());
         return new Ongoing(task.id().value(), keyOf(task.intake()), titleAfterItsKey(task.intake()), task.intake().kind().word(), projectsOf(task),
-                stateOf(ongoing.worker()), doingOf(ongoing), draftOf(ongoing.delivery()),
-                fleet.comingBackOf(task.id()).map(ChangingRequest::whyChanging).orElse(null), limitResetOf(ongoing));
+                stateOf(ongoing.worker(), comingBack), doingOf(ongoing), draftOf(ongoing.delivery()),
+                comingBack.map(ChangingRequest::whyChanging).orElse(null), limitResetOf(ongoing));
     }
 
     private static Landed landed(LandedTask landed) {
@@ -267,6 +270,10 @@ public class SitrepConsolePresenter {
 
     private static Pattern leadingKey(WorkKey key) {
         return Pattern.compile(Pattern.quote(key.toString()) + AFTER_A_LEADING_KEY, Pattern.CASE_INSENSITIVE);
+    }
+
+    private static String stateOf(Worker worker, Optional<ChangingRequest> comingBack) {
+        return comingBack.isPresent() ? CHANGING : stateOf(worker);
     }
 
     private static String stateOf(Worker worker) {

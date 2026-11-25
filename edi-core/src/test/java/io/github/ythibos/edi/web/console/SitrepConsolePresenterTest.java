@@ -229,15 +229,18 @@ class SitrepConsolePresenterTest {
     @Test
     void marksARequestStillChangingAsOngoingAndComingBackWithWhyInsteadOfAsReady() {
         Task lamp = ship("fit-lamp", "Fit the lamp");
+        Task horn = ship("horn", "Tune the horn");
         PipelineRun running = new PipelineRun("01RUN", "running", null, false, "abc123", DRAFT.url(), false);
         ChangingRequest changing = new ChangingRequest(lamp, delivery(lamp), false, running, List.of(2));
 
-        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(new OngoingTask(lamp, workerOn(lamp), running,
-                delivery(lamp))), List.of(changing), List.of(), List.of(), List.of()));
+        ConsoleSitrep sitrep = presented(new FleetSnapshot(NOTHING_WAITING, DealtWith.NOTHING, List.of(
+                new OngoingTask(lamp, doneOn(lamp), running, delivery(lamp)), new OngoingTask(horn, doneOn(horn), null, null)),
+                List.of(changing), List.of(), List.of(), List.of()));
 
         assertThat(sitrep.reviews()).isEmpty();
-        assertThat(sitrep.ongoing()).extracting(ConsoleSitrep.Ongoing::task, ConsoleSitrep.Ongoing::comingBack)
-                .containsExactly(tuple("fit-lamp", "still a draft; pipeline running; steer 2 not acknowledged"));
+        assertThat(sitrep.ongoing()).extracting(ConsoleSitrep.Ongoing::task, ConsoleSitrep.Ongoing::state, ConsoleSitrep.Ongoing::comingBack)
+                .containsExactly(tuple("fit-lamp", "changing", "still a draft; pipeline running; steer 2 not acknowledged"),
+                        tuple("horn", "done", null));
     }
 
     @Test
@@ -352,6 +355,10 @@ class SitrepConsolePresenterTest {
         return Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, PresenterFixtures.AT, "@1", 2L),
                 new WorkerLaunch(LaunchKind.DISPATCH, PresenterFixtures.AT, new BootId("boot"), LoginName.DEFAULT));
+    }
+
+    private static Worker doneOn(Task task) {
+        return workerOn(task).reported(new StatusReport(StatusState.DONE, null, null, "Delivered."), NOW);
     }
 
     private static Delivery delivery(Task task) {
