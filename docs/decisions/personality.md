@@ -23,7 +23,7 @@ The session-start digest ([primary-startup-context](primary-startup-context.md))
 The console's sitrep page offers the same change: the header's Personality latch opens `PersonalityDesk`, the Balanced, Plain and Demo presets above nine sliders from 0 to 10, which reads `GET /api/personality` as a `PersonalityView` (the address word, whether a personality is chosen, whether a demo holds, the captain's own levels and the presets), takes whether a demo holds from the sitrep's presence, which the page reads again after every presence change, and keeps the levels through `ChangePersonality`, the path `edi personality` takes; `PersonalityController` admits the captain's console session there as it admits the primary, and serves the same path as text to the command.
 Beside the sliders a sample message (`sample-message.ts`) tells the EDI-25 board's invented good or bad news at the chosen levels, restating the bad-news rail and the address-word curve for the sample only, and names each level the rail moves.
 The `edi-personality` skill beside `edi-voice` holds what each level means, the guard rails and the presets, the anchor's Voice section keeps the register, and `edi-voice` the translation of internal labels ([captain-facing-voice](captain-facing-voice.md)).
-The anchor's Character section names the scales and the honesty no scale touches, and its voice rules defer to the personality.
+The anchor's Character section counts the scales and names the honesty no scale touches, `edi-personality` names the scales, and the anchor's voice rules defer to the personality.
 The captain report, boards, decision cards, worker statuses and everything others read carry no personality, which `ArchitectureRulesTest` holds; notifications stay plain, and the console greeting keeps the address word.
 
 ## Why
@@ -61,3 +61,4 @@ When the captain asks to collapse scales, a new preset ships, or the anchor near
 - 27/10/2026: the console's sitrep page gained the personality desk, modelled on the EDI-25 board's mixing desk (EDI-98).
 - 27/10/2026: the register moved from `edi-voice` into the anchor's Voice section (EDI-82).
 - 16/11/2026: the anchor reaches the primary as the `edi-primary` output style, which carries only the anchor, so the ruling against an output style reads as one with instructions of its own, as the captain confirmed (EDI-268).
+- 25/11/2026: the anchor became an index of rule numbers, so its Character section counts the nine scales and `edi-personality` names them (EDI-83).

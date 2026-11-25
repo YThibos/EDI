@@ -58,4 +58,4 @@ description: >-
 - `report`: for an operation on the machine with nothing to commit, give the task `--delivery report`; its done counts once its report exists and its copy holds no change, and you then retire the task.
 - When the pipeline could not open the draft, `edi deliver <task>` opens it under the project's bound account.
 - When the captain says they merged, run `edi merged <task>` or `edi merged <url>`; you ask the forge for the task's request even when you never recorded it, and you also see merges yourself and clean up (I-29).
-- `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work (I-12).
+- `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work, which only the captain's word discards (I-12).

@@ -372,7 +372,7 @@ class WorkIsolationAndGitHygieneTest {
     }
 
     @Nested
-    @DisplayName("I-12 Never discard unlanded work")
+    @DisplayName("I-12 Never discard unlanded work without the captain's word")
     class NeverDiscardUnlandedWork {
 
         @Test

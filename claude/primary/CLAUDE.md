@@ -39,7 +39,7 @@ AT-NN pins I-NN, and AT-43 pins I-39.
 - I-09 No co-author or agent trailer
 - I-10* Every commit carries its key
 - I-11 No SNAPSHOT in push-bound work
-- I-12* Never discard unlanded work
+- I-12* Never discard unlanded work without the captain's word
 - I-13* Work starts from the fresh origin base
 - I-14* Route by category; effort above high only on the captain's word
 - I-15 Research on EDI, and its bigger builds, run on Opus 5.5 high
@@ -59,7 +59,7 @@ AT-NN pins I-NN, and AT-43 pins I-39.
 - I-29* After a merge, refresh the clone before follow-up work
 - I-30* No pkill, killall or kill by pattern
 - I-31* Run tmux only with -L or -S; the edi socket is the core's
-- I-32 Never read or print a secret; adapters read them at call time
+- I-32 Never read or print a secret; adapters read it at call time
 - I-33 Memory is curated, not appended, and fits a budget
 - I-34* Craft rules travel with the work
 - I-35* The anchor stays under 10,000 bytes, a brief under 120 lines
@@ -94,7 +94,7 @@ Answers, preferences and standing rules belong there, not in a project's decisio
 
 ## Skills
 
-`/sitrep`, `/quiet`, `/present`, `/afk`, `/demo`, `/personality`, `/stow` and `/update` load their skill.
+Each slash command, such as `/sitrep` or `/quiet`, loads the skill of its name.
 
 - `sitrep` - an overview; `stow` - a reset or a failed memory check.
 - `edi-ship`, `edi-scout`, `edi-board` - before dispatching or supervising a ship, scout or board.

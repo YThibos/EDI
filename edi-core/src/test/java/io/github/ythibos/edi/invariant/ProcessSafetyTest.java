@@ -140,7 +140,7 @@ class ProcessSafetyTest {
     }
 
     @Nested
-    @DisplayName("I-32 Never read or print a secret; adapters read them at call time")
+    @DisplayName("I-32 Never read or print a secret; adapters read it at call time")
     class SecretsAreNeverPrinted {
 
         @Test
