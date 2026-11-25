@@ -62,6 +62,9 @@ class MachineProfileTest {
         assertThat(tracker.evergreenTicket("tooling")).contains(WorkKey.parse("EXAMPLE-2"));
         assertThat(tracker.evergreenTicket("travel")).isEmpty();
         assertThat(tracker.mergedStatus()).isEqualTo("In Test");
+        assertThat(tracker.reviewStatuses()).containsExactly("In Review");
+        assertThat(tracker.implementedStatuses()).containsExactly("In Test", "Done");
+        assertThat(tracker.doneStatus()).isEqualTo("Done");
         assertThat(profile.time()).isEqualTo(new TimeSettings(true, true));
     }
 
@@ -89,7 +92,10 @@ class MachineProfileTest {
 
         for (String broken : List.of(complete.replace("https://jira", "http://jira"), complete.replace("  credentials: { keysFile: /keys.yml, section: JIRA }\n", ""),
                 complete.replace("keysFile: /keys.yml", "keysFile: keys.yml"), complete.replace("mergedStatus: Done", "mergedStatus: Released"),
-                complete.replace("  issueType: Story\n", ""), complete.replace("kind: jira", "kind: edi"))) {
+                complete.replace("  issueType: Story\n", ""), complete.replace("kind: jira", "kind: edi"),
+                complete.replace("  issueType: Story\n", "  issueType: Story\n  reviewStatuses: [In Review]\n"),
+                complete.replace("  issueType: Story\n", "  issueType: Story\n  implementedStatuses: [Shipped]\n"),
+                complete.replace("  issueType: Story\n", "  issueType: Story\n  doneStatus: Shipped\n"))) {
             MachineProfile profile = profileOf(broken);
             assertThatThrownBy(profile::tracker).isInstanceOf(InvalidConfiguration.class);
         }

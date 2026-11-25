@@ -190,10 +190,13 @@ import io.github.ythibos.edi.application.task.TaskStages;
 import io.github.ythibos.edi.application.task.WeekOfWork;
 import io.github.ythibos.edi.application.task.WorkedTimes;
 import io.github.ythibos.edi.application.tracker.FollowTickets;
+import io.github.ythibos.edi.application.tracker.JiraProjects;
 import io.github.ythibos.edi.application.tracker.KeyTask;
 import io.github.ythibos.edi.application.tracker.TaskKeys;
 import io.github.ythibos.edi.application.tracker.TicketProposals;
+import io.github.ythibos.edi.application.tracker.TicketDrifts;
 import io.github.ythibos.edi.application.tracker.Trackers;
+import io.github.ythibos.edi.application.tracker.WalkTicket;
 import io.github.ythibos.edi.application.wake.WaitForWakes;
 import io.github.ythibos.edi.application.wake.WakeStreams;
 import io.github.ythibos.edi.application.worker.OpenWorkerQuestionsQuery;
@@ -484,6 +487,14 @@ public final class TestHome {
 
     public KeyTask keyTask() {
         return new KeyTask(tasks, events, taskKeys(), ticketProposals(), captainsWord(), decisionReleases(), clock, transaction);
+    }
+
+    public WalkTicket walkTicket() {
+        return new WalkTicket(new JiraProjects(registry), trackers());
+    }
+
+    public TicketDrifts ticketDrifts() {
+        return new TicketDrifts(new JiraProjects(registry), trackers(), forges(), git);
     }
 
     public FakeJira jira() {

@@ -19,6 +19,9 @@ tracker:
   mergedStatus: Testing
   issueType: Story
   epicLinkField: customfield_10008
+  reviewStatuses: [In Review]
+  implementedStatuses: [Testing, Done]
+  doneStatus: Done
 time:
   fleetLedger: true
   requireWorkedLine: true

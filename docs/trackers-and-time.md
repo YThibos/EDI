@@ -16,12 +16,26 @@ edi decision answer D59 --option B --text "D59 B"                              #
 
 A project's registry entry names its tracker, `tracker: { kind: jira|edi|github|none, projectKey: KEY }`, and the tracker port has an adapter for each kind ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
 A `github` project keys its work by its GitHub issue numbers: EDI never allocates a key there, and a ship or scout is added with `--key <KEY>-<the issue's number>` once its issue is open ([work-keys-and-branches](decisions/work-keys-and-branches.md)).
-The machine profile's `tracker` section says whether this machine reaches a JIRA instance (`kind: jira`, with its `baseUrl`, the keys file section holding the access token, the evergreen tickets, the workflow's statuses in their forward order, the `mergedStatus`, the `issueType` and the `epicLinkField`) or none (`kind: none`).
+The machine profile's `tracker` section says whether this machine reaches a JIRA instance (`kind: jira`, with its `baseUrl`, the keys file section holding the access token, the evergreen tickets, the workflow's statuses in their forward order, the `mergedStatus`, the `issueType`, the `epicLinkField`, and for the drift report the `reviewStatuses`, the `implementedStatuses` and the `doneStatus`) or none (`kind: none`).
 EDI reads the access token at the moment of each call and never shows it ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
 The evergreen tickets are named by their role, such as `coordination` and `tooling`; the console's Week view shows time on a project that is not on the machine's JIRA against the `tooling` ticket ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
 A JIRA ticket joins the active sprint when work starts, links the draft, and moves to the after-merge status once the merge is followed ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
 An evergreen ticket only gets worklogs: EDI never places it in a sprint, links a draft to it or moves it after a merge, and EDI knows a ticket as evergreen only while the machine profile lists it.
 [examples/edi-home/config/machine.yaml](../examples/edi-home/config/machine.yaml) shows a profile with JIRA; a machine without JIRA or time booking sets `tracker.kind: none` and leaves `time` out.
+
+## Walking a ticket and finding drift
+
+`edi tracker walk <KEY> "<state>"` moves a ticket to a state with one call, as the primary only.
+JIRA offers no direct move between distant states, so the walk takes the shortest path through the transitions the tracker offers, learning each issue type's workflow as it goes and keeping what it learnt in the store ([trackers-and-time-booking](decisions/trackers-and-time-booking.md)).
+A step the tracker refuses stops the walk, and the refusal names the steps taken.
+
+`edi tracker drift <project>` lists the tickets whose state disagrees with the repository: work merged while the ticket is before its merged state, a story or bug in Done before its work reached the project's `production` branch, a ticket in a review state with no open request, and a ticket in an implemented state with no commit on the base branch.
+A check the profile or the project's registry entry gives no means to make is listed under "Not checked", never passed in silence.
+
+```sh
+edi tracker walk EXAMPLE-7 "Ready For Prd"          # the shortest path, step by step, stopping with the steps taken if one fails
+edi tracker drift example-service                    # tickets that disagree with the repository, and the checks it could not make
+```
 
 ## Time
 

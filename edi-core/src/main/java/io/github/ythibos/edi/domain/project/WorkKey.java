@@ -10,7 +10,7 @@ public record WorkKey(ProjectKey project, int number) {
 
     private static final char SEPARATOR = '-';
     private static final int MOST_DIGITS = 9;
-    private static final Pattern LEADING_KEY = Pattern.compile("[A-Z][A-Z0-9]*-[0-9]{1," + MOST_DIGITS + "}(?![0-9])");
+    private static final Pattern LEADING_KEY = Pattern.compile("[A-Z][A-Z0-9]*-[0-9]{1," + MOST_DIGITS + "}(?![0-9A-Za-z])");
 
     public WorkKey {
         if (number < 1) {

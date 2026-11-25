@@ -11,11 +11,11 @@ import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.domain.tracker.TrackerKind;
 
 @Component
-class JiraProjects {
+public class JiraProjects {
 
     private final ProjectRegistry registry;
 
-    JiraProjects(ProjectRegistry registry) {
+    public JiraProjects(ProjectRegistry registry) {
         this.registry = registry;
     }
 

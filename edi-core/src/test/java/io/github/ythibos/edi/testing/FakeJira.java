@@ -30,6 +30,7 @@ public final class FakeJira implements Tracker {
     private final Map<WorkKey, TicketDraft> filled = new LinkedHashMap<>();
     private String activeSprint = "Sprint 7";
     private RuntimeException nextFailure;
+    private TicketWalk.Stopped nextWalkStop;
     private Refusal fieldsRefusal;
     private int lastNumber = 100;
 
@@ -105,6 +106,11 @@ public final class FakeJira implements Tracker {
     public synchronized TicketWalk walk(WorkKey key, String target) {
         failIfAsked();
         FakeTicket ticket = ticket(key);
+        if (nextWalkStop != null) {
+            TicketWalk.Stopped stopped = nextWalkStop;
+            nextWalkStop = null;
+            return stopped;
+        }
         int from = WORKFLOW.indexOf(ticket.status());
         int to = WORKFLOW.indexOf(target);
         List<String> through = from <= to ? WORKFLOW.subList(from + 1, to + 1) : WORKFLOW.subList(to, from).reversed();
@@ -154,6 +160,10 @@ public final class FakeJira implements Tracker {
 
     public synchronized void failsNextWith(RuntimeException failure) {
         nextFailure = failure;
+    }
+
+    public synchronized void stopsTheNextWalkWith(TicketWalk.Stopped stopped) {
+        nextWalkStop = stopped;
     }
 
     public synchronized void refusesTheFieldsWith(Refusal refusal) {

@@ -4,6 +4,7 @@ projects:
     captainCheckout: /path/to/checkouts/example-service
     forge: { kind: gitlab, host: gitlab.example.org, path: team/example-service, account: example-user }
     base: main
+    production: release
     delivery: draft-review
     tracker: { kind: jira, projectKey: EXAMPLE }
     branchKinds: [feature, chore, research]

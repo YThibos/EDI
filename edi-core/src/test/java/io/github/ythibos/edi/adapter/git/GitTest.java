@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.github.ythibos.edi.adapter.process.ExternalPrograms;
 import io.github.ythibos.edi.domain.branch.CheckedOutBranch;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.publish.AddedLine;
 import io.github.ythibos.edi.domain.publish.OutgoingChanges;
 import io.github.ythibos.edi.domain.publish.OutgoingCommit;
@@ -35,6 +36,18 @@ class GitTest {
         repository = FixtureRepository.initialise(directory)
                 .write("notes.txt", "first\nsecond\nthird\n")
                 .commit("Start the notes");
+    }
+
+    @Test
+    void readsTheWorkKeysThatOpenTheCommitSubjectsOfARef() throws IOException {
+        repository.write("a.txt", "a\n").commit("SVC-10 Fit the lamp")
+                .write("b.txt", "b\n").commit("SVC-100 Raise the flag\n\nSVC-11 is mentioned in the body only")
+                .write("c.txt", "c\n").commit("Merge SVC-12 into main")
+                .branch("work").write("d.txt", "d\n").commit("SVC-13 Mend the net")
+                .switchTo("main");
+
+        assertThat(git.workKeysOpeningCommitsOn(repository.root(), "main")).containsExactlyInAnyOrder(WorkKey.parse("SVC-10"), WorkKey.parse("SVC-100"));
+        assertThat(git.workKeysOpeningCommitsOn(repository.root(), "work")).contains(WorkKey.parse("SVC-13"));
     }
 
     @Test
