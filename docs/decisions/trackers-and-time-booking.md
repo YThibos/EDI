@@ -26,7 +26,7 @@ The captain's drop word on a task whose ticket decision is open drops it and ans
 `Tracker` also offers `walk` and `ticketsOf`: `edi tracker walk <KEY> "<state>"` moves a ticket of a JIRA project to a state, as the primary only, and `edi tracker drift <project>` compares the project's tickets with its repository.
 `JiraWalk` learns each issue type's workflow as a graph: JIRA offers a ticket's transitions only from its current status, so at every status the ticket reaches, the transitions offered there replace what the store tables `workflow_status` and `workflow_transition` held for that status, and the walk takes the first step of the shortest known path to the target.
 With no path known, it heads for the nearest status never seen, trying a status outside the profile's workflow only when no unseen status of the workflow is reachable, the profile's status order breaking a tie toward the target.
-A step the tracker refuses, or a status from which no path is known and no unexplored status is reachable, stops the walk, and `WalkTicket` refuses with the steps taken so far.
+A step the tracker refuses, a status from which no path is known and no unexplored status is reachable, or twice as many steps as the profile's workflow has statuses stops the walk, and `WalkTicket` refuses with the steps taken so far.
 `TicketDrifts` reports four kinds of drift on a project, each from `DriftRules`: work on the base branch, found by the work key that opens a commit subject, while the ticket is before the profile's `mergedStatus`; a story or bug in the profile's `doneStatus` whose key has not reached the project's `production` branch; a ticket in a profile `reviewStatuses` status with no open request, whose source branch carries its key; and a ticket in a profile `implementedStatuses` status with no commit on the base branch.
 Evergreen tickets are left out, and a check the profile or the registry entry gives no means to make is listed under "Not checked" in the report, never passed in silence.
 `FollowTickets` follows the event log for tickets that are not evergreen: the first dispatch adds the ticket to the one active sprint, a recorded draft is linked once under its address, and a followed merge walks the ticket to `mergedStatus`, never further, so a story stays open until the captain closes it.
@@ -49,7 +49,6 @@ Measuring from the event log, which already records every status with its time, 
 ## Alternatives rejected
 
 - Reading the whole workflow from the tracker in one call - JIRA's REST version 2 offers a ticket's transitions only from its current status, so the graph can only be learnt by visiting statuses.
-- A path per instance written into EDI - names an employer's workflow in tracked code.
 - Checking the tracker text at each use case that writes it - a later writer, such as a comment or a worklog, would have to remember the check.
 - JIRA's Java client library - a large dependency with reflection for the eight calls EDI makes.
 - A workflow walk hard-coded to one JIRA instance - would name an employer's workflow in tracked code.
@@ -66,7 +65,7 @@ Measuring from the event log, which already records every status with its time, 
 - Bad: a worker that wakes on its own background job's completion, with neither a message nor a status, books nothing until its next status.
 - Bad: a worker whose turn ends without EDI ever noticing it keeps its stretch open until its next mark, so that idle time counts as active.
 - Bad: intake on a JIRA project fails while JIRA cannot be reached, the profile must list the workflow's statuses, and a ledger record can repeat after a crash, which its reader tolerates.
-- Bad: a walk over a workflow it has not yet learnt can enter a dead-end status on its way and leave the ticket there, which the refusal says, and the profile's workflow keeps that rare by trying its statuses, nearest the target first, before any outside it.
+- Bad: a walk over a workflow it has not yet learnt can enter a dead-end status on its way and leave the ticket there, which the refusal says, and the profile's workflow keeps that rare by trying its statuses, the nearest first, before any outside it.
 - Good: a path learnt by one walk serves every later walk of the same issue type, and a status whose transitions change is relearnt the next time a ticket reaches it.
 - Bad: `edi tracker drift` fetches the project's clone and reads every ticket of the project, so it takes as long as the tracker pages take.
 
