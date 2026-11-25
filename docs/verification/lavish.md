@@ -1,7 +1,7 @@
 # Lavish: poll results and the board listener
 
 Verified on lavish-axi 0.1.88 (`lavish-axi --version`), whose results come from `@toon-format/toon` 2.3.1, on WSL2 Ubuntu 24.04, 17/10/2026.
-EDI drives one command of Lavish, `lavish-axi poll`, and reads what it prints.
+EDI drives two commands of Lavish: `lavish-axi poll`, whose printed result it reads, and `lavish-axi reply`, whose exit code it reads.
 
 ## Method
 
@@ -32,6 +32,16 @@ An end-to-end run used a scratch EDI home and a separate Lavish server (`LAVISH_
 
 Every captured result read as the round it was: 33 answered rounds with between one and ten prompts each, among them the list-form round of nine prompts and two attachments that the old harness had counted as none, 7 disconnects and 3 server errors.
 A prompt queued through the board's script with `window.lavish.queuePrompt(text, { data })` arrives with the data appended to its words as `\n\nContext data:\n` and the data as indented JSON; `LavishResult` separates the two and keeps the data's top-level fields in their order.
+
+## Reply
+
+Read from `lavish-axi reply --help` on lavish-axi 0.1.98, 25/11/2026.
+
+| Question | Result on 0.1.98 |
+|---|---|
+| How the words are passed | Exactly one of `--agent-reply "<words>"` or `--agent-reply-file <path>`; an empty reply is refused; EDI passes `--agent-reply`. |
+| When it exits | With 0 only once the server confirms the reply was sent, which is when the board stops showing Working...; non-zero with a timeout error when no confirmation arrives within 10 seconds. |
+| What else it does | It marks every note the poll delivered as Done in the reviewer's panel. |
 
 ## End to end
 
