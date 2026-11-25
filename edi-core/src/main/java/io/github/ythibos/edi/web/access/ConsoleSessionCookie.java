@@ -12,15 +12,19 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public final class ConsoleSessionCookie {
 
-    public static final String NAME = "EDI-Console";
     public static final String HEADER = "X-EDI-Console";
+    private static final String NAME_PREFIX = "EDI-Console-";
     private static final String HEADER_VALUE = "1";
 
     private ConsoleSessionCookie() {
     }
 
-    public static String issued(String session) {
-        return ResponseCookie.from(NAME, session).path("/").maxAge(ConsoleSession.LIFETIME).httpOnly(true).sameSite("Strict").build().toString();
+    public static String nameServedOn(int port) {
+        return NAME_PREFIX + port;
+    }
+
+    public static String issued(String session, int port) {
+        return ResponseCookie.from(nameServedOn(port), session).path("/").maxAge(ConsoleSession.LIFETIME).httpOnly(true).sameSite("Strict").build().toString();
     }
 
     public static boolean headerCarriedBy(HttpServletRequest request) {
@@ -29,8 +33,9 @@ public final class ConsoleSessionCookie {
 
     static Optional<String> presentedIn(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
+        String name = nameServedOn(request.getLocalPort());
         return cookies == null
                 ? Optional.empty()
-                : Arrays.stream(cookies).filter(cookie -> NAME.equals(cookie.getName())).map(Cookie::getValue).filter(value -> !value.isBlank()).findFirst();
+                : Arrays.stream(cookies).filter(cookie -> name.equals(cookie.getName())).map(Cookie::getValue).filter(value -> !value.isBlank()).findFirst();
     }
 }

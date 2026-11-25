@@ -64,6 +64,12 @@
             re-check asked
           </span>
         }
+        @if (answerStored()) {
+          <span class="sr-queued">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            answer stored
+          </span>
+        }
         @if (refusal(); as sentence) {
           <span class="sr-limit" role="alert">{{ sentence }}</span>
         }

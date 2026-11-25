@@ -4,8 +4,12 @@ const SIGNED_OUT = 401;
 
 export function refusalOf(response: HttpErrorResponse): string {
   if (response.status === SIGNED_OUT) {
-    return 'Your console session has ended: ask the primary session for the console to sign in again; edi up opens it first.';
+    return 'Your console session has ended, or a newer sign-in replaced it: run edi console in the primary session to sign in again.';
   }
   const sentence = typeof response.error === 'string' ? response.error.trim() : '';
   return sentence || 'I did not answer; my core may be restarting, so try again in a moment.';
+}
+
+export function notStoredBecause(response: HttpErrorResponse): string {
+  return `Not stored. ${refusalOf(response)}`;
 }

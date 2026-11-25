@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { refusalOf } from './answer-sentence';
+import { notStoredBecause } from './answer-sentence';
 import { ConsoleApi } from './console-api';
 import { DecisionCard, GivenAnswer, TaskLinks } from './sitrep';
 import { LinkChips } from './link-chips';
@@ -28,6 +28,7 @@ export class DecisionCardView {
   protected readonly sending = signal(false);
   protected readonly refusal = signal<string | null>(null);
   protected readonly recheckAsked = signal(false);
+  protected readonly answerStored = signal(false);
   protected readonly canAnswer = computed(() => !this.sending() && (this.choice() !== null || this.words().trim().length > 0));
 
   protected answer(event: Event): void {
@@ -36,6 +37,7 @@ export class DecisionCardView {
       return;
     }
     this.refusal.set(null);
+    this.answerStored.set(false);
     this.sending.set(true);
     const askingForARecheck = this.choice() === RECONCILE;
     this.sent(askingForARecheck).subscribe({
@@ -52,12 +54,13 @@ export class DecisionCardView {
   private landed(askingForARecheck: boolean): void {
     this.sending.set(false);
     this.recheckAsked.set(askingForARecheck);
+    this.answerStored.set(!askingForARecheck);
     this.settled.emit();
   }
 
   private refused(response: HttpErrorResponse): void {
     this.sending.set(false);
-    this.refusal.set(refusalOf(response));
+    this.refusal.set(notStoredBecause(response));
   }
 
   private givenAnswer(): GivenAnswer {

@@ -18,10 +18,12 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.github.ythibos.edi.domain.console.ConsoleSession;
 import io.github.ythibos.edi.domain.rule.Rule;
 import io.github.ythibos.edi.testing.TestHome;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 
 @Tag("adapter")
 class TurnedAwayCallersTest {
@@ -65,6 +67,43 @@ class TurnedAwayCallersTest {
 
         assertThat(burst).hasSize(BURST).containsOnly(421);
         assertThat(firingsOf(Rule.LOOPBACK_HOST)).isOne();
+    }
+
+    @Test
+    void tellsAConsoleSessionThatHasExpiredHowToSignInAgainAndAdmitsItBeforeThen() throws IOException, ServletException {
+        ApiTokenFilter filter = filterOverTheHome();
+        Cookie session = consoleSessionOpened();
+
+        MockHttpServletResponse whileOpen = answerFrom(filter, session);
+        home.clock().advance(ConsoleSession.LIFETIME.plusSeconds(1));
+        MockHttpServletResponse afterwards = answerFrom(filter, session);
+
+        assertThat(whileOpen.getStatus()).isEqualTo(200);
+        assertThat(afterwards.getStatus()).isEqualTo(401);
+        assertThat(afterwards.getContentAsString()).isEqualTo("This console session has ended, or a newer sign-in replaced it: "
+                + "run edi console in the primary session to sign in again.\n");
+    }
+
+    private ApiTokenFilter filterOverTheHome() throws IOException {
+        return new ApiTokenFilter(ApiToken.issuedInto(directory.resolve("core.token")), PrimaryLaunchKey.keptIn(directory.resolve("primary-launch.key")),
+                home.workerTokens(), home.primarySessions(), home.consoleAccess(), firings);
+    }
+
+    private Cookie consoleSessionOpened() {
+        String link = home.consoleAccess().issueSignInLink();
+        String session = home.consoleAccess().openSession(link).orElseThrow();
+        return new Cookie(ConsoleSessionCookie.nameServedOn(CORE_PORT), session);
+    }
+
+    private static MockHttpServletResponse answerFrom(ApiTokenFilter filter, Cookie session) throws IOException, ServletException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/decisions/D1/answer");
+        request.setServletPath("/api/decisions/D1/answer");
+        request.setLocalPort(CORE_PORT);
+        request.setCookies(session);
+        request.addHeader(ConsoleSessionCookie.HEADER, "1");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, new MockFilterChain());
+        return response;
     }
 
     private static List<Integer> statusesOf(OncePerRequestFilter filter, int calls, Supplier<MockHttpServletRequest> call)

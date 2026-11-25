@@ -42,7 +42,7 @@ class ConsoleController {
             return refused(HttpStatus.FORBIDDEN, HEADER_MISSING);
         }
         return signIn.presentedToken().flatMap(access::openSession)
-                .map(session -> ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, ConsoleSessionCookie.issued(session)).<String>build())
+                .map(session -> ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, ConsoleSessionCookie.issued(session, request.getLocalPort())).<String>build())
                 .orElseGet(() -> refused(HttpStatus.UNAUTHORIZED, SIGN_IN_REFUSED));
     }
 

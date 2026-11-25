@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 final class ApiTokenFilter extends OncePerRequestFilter {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ApiTokenFilter.class);
     private static final String API = "/api";
     private static final Set<String> OPEN_PATHS = Set.of("/api/health", "/api/console/session");
     private static final Set<String> READING_METHODS = Set.of("GET", "HEAD", "OPTIONS");
@@ -31,6 +34,8 @@ final class ApiTokenFilter extends OncePerRequestFilter {
     private static final String SESSION = "EDI-Session";
     private static final String REFUSAL = "This call needs the EDI token from state/core.token in the EDI home, the token a worker got at launch, "
             + "or a console session the primary session opened.";
+    private static final String CONSOLE_SESSION_REFUSAL = "This console session has ended, or a newer sign-in replaced it: "
+            + "run edi console in the primary session to sign in again.";
     private static final String CONSOLE_HEADER_REFUSAL = "A console request that changes the fleet carries the console's own header, "
             + ConsoleSessionCookie.HEADER + ".";
 
@@ -63,15 +68,20 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         String bearer = bearerTokenOf(request);
         Optional<Caller> caller = bearer == null ? captainSignedInBy(request) : callerHolding(bearer, request);
         if (caller.isEmpty()) {
-            firings.turnedAway(Rule.API_TOKEN, request, REFUSAL);
-            refuse(response, HttpStatus.UNAUTHORIZED, REFUSAL);
+            String refusal = refusalOfAnUnknownCaller(bearer, request);
+            firings.turnedAway(Rule.API_TOKEN, request, refusal);
+            refuse(request, response, HttpStatus.UNAUTHORIZED, refusal);
         } else if (isAConsoleChangeWithoutItsHeader(caller.get(), request)) {
             firings.turnedAway(Rule.CONSOLE_HEADER, caller.get(), CONSOLE_HEADER_REFUSAL);
-            refuse(response, HttpStatus.FORBIDDEN, CONSOLE_HEADER_REFUSAL);
+            refuse(request, response, HttpStatus.FORBIDDEN, CONSOLE_HEADER_REFUSAL);
         } else {
             request.setAttribute(Caller.ATTRIBUTE, caller.get());
             chain.doFilter(request, response);
         }
+    }
+
+    private static String refusalOfAnUnknownCaller(String bearer, HttpServletRequest request) {
+        return bearer == null && ConsoleSessionCookie.presentedIn(request).isPresent() ? CONSOLE_SESSION_REFUSAL : REFUSAL;
     }
 
     private Optional<Caller> callerHolding(String presented, HttpServletRequest request) {
@@ -123,7 +133,8 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         return authorization != null && authorization.startsWith(BEARER) ? authorization.substring(BEARER.length()) : null;
     }
 
-    private static void refuse(HttpServletResponse response, HttpStatus status, String refusal) throws IOException {
+    private static void refuse(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String refusal) throws IOException {
+        logTheRefusalOfAChange(request, status, refusal);
         response.setStatus(status.value());
         if (status == HttpStatus.UNAUTHORIZED) {
             response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
@@ -131,5 +142,11 @@ final class ApiTokenFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().println(refusal);
+    }
+
+    private static void logTheRefusalOfAChange(HttpServletRequest request, HttpStatus status, String refusal) {
+        if (!READING_METHODS.contains(request.getMethod())) {
+            LOG.warn("Turned away {} {} with {}: {}", request.getMethod(), decodedPathOf(request), status.value(), refusal);
+        }
     }
 }

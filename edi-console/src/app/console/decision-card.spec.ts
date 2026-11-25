@@ -50,7 +50,11 @@ describe('DecisionCardView', () => {
     expect(answer.request.headers.get('X-EDI-Console')).toBe('1');
     expect(answer.request.body).toEqual({ option: 'A', text: 'A: The simple way' });
     answer.flush('Recorded the answer to D58 (option A); lamp-choice is done.\n');
+    await fixture.whenStable();
+
     expect(settled).toBe(1);
+    expect(card.querySelector('.sr-queued')?.textContent?.trim()).toBe('answer stored');
+    expect(card.querySelector('.sr-limit')).toBeNull();
   });
 
   it('records the captain’s own words verbatim', async () => {
@@ -73,14 +77,48 @@ describe('DecisionCardView', () => {
     expect(card.querySelector('.sr-queued')?.textContent?.trim()).toBe('re-check asked');
   });
 
-  it('shows the sentence EDI refused an answer with', async () => {
+  it('shows on the card why the core did not store the answer, and keeps the card open', async () => {
     await choose(0);
     submit();
 
     http.expectOne('/api/decisions/D58/answer').flush('D58 is already answered: D58 B\n', { status: 409, statusText: 'Conflict' });
     await fixture.whenStable();
 
-    expect(card.querySelector('.sr-limit')?.textContent).toBe('D58 is already answered: D58 B');
+    expect(card.querySelector('.sr-limit')?.textContent).toBe('Not stored. D58 is already answered: D58 B');
+    expect(card.querySelector('.sr-queued')).toBeNull();
+    expect(card.querySelector('form')).not.toBeNull();
+    expect(button().disabled).toBe(false);
+    expect(settled).toBe(0);
+  });
+
+  it('tells an expired or replaced console session how to sign in again, and keeps the card open', async () => {
+    await choose(0);
+    submit();
+
+    http
+      .expectOne('/api/decisions/D58/answer')
+      .flush('This console session has ended, or a newer sign-in replaced it: run edi console in the primary session to sign in again.\n', {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
+    await fixture.whenStable();
+
+    expect(card.querySelector('.sr-limit')?.textContent).toBe(
+      'Not stored. Your console session has ended, or a newer sign-in replaced it: run edi console in the primary session to sign in again.',
+    );
+    expect(card.querySelector('.sr-queued')).toBeNull();
+    expect(button().disabled).toBe(false);
+    expect(settled).toBe(0);
+  });
+
+  it('says the answer was not stored when the core does not answer at all', async () => {
+    await choose(0);
+    submit();
+
+    http.expectOne('/api/decisions/D58/answer').error(new ProgressEvent('error'));
+    await fixture.whenStable();
+
+    expect(card.querySelector('.sr-limit')?.textContent).toBe('Not stored. I did not answer; my core may be restarting, so try again in a moment.');
     expect(settled).toBe(0);
   });
 

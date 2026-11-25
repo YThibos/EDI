@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.web.decision;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +19,8 @@ import io.github.ythibos.edi.application.decision.DecisionList;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
 import io.github.ythibos.edi.application.decision.RaiseDecision;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
+import io.github.ythibos.edi.domain.decision.CaptainAnswer;
+import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.voice.CaptainVoice;
@@ -25,6 +29,8 @@ import io.github.ythibos.edi.web.access.Caller;
 
 @RestController
 class DecisionController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DecisionController.class);
 
     private final DecisionListQuery list;
     private final RaiseDecision raiseDecision;
@@ -57,10 +63,31 @@ class DecisionController {
 
     @PostMapping("/api/decisions/{reference}/answer")
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
+        LOG.info("Received an answer to {} from the {}{}", reference, caller.actor(), optionNamed(request.option()));
+        try {
+            Confirmation.Answered stored = answered(reference, request, caller);
+            logStored(stored.decision());
+            return stored;
+        } catch (RuntimeException refused) {
+            LOG.warn("Refused the answer to {} from the {}: {}", reference, caller.actor(), refused.getMessage());
+            throw refused;
+        }
+    }
+
+    private static String optionNamed(Object option) {
+        return option == null ? "" : ", option " + option;
+    }
+
+    private Confirmation.Answered answered(String reference, AnswerRequest request, Caller caller) {
         AnswerChannel channel = caller.answeringChannel("edi decision answer");
         String verbatim = channel == AnswerChannel.CHAT ? captainsWord.requireCited(caller.callingSession(), request.citation()) : request.verbatim();
         AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel, verbatim), caller.actor());
         return new Confirmation.Answered(answered.decision(), answered.task(), answered.ticket(), answered.carriedToItsWorker());
+    }
+
+    private static void logStored(Decision decision) {
+        CaptainAnswer answer = decision.answer();
+        LOG.info("Stored the answer to {} through the {}{}", decision.number(), answer.channel().word(), optionNamed(answer.option()));
     }
 
     @PostMapping("/api/decisions/{reference}/recheck")

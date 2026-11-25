@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -56,7 +57,9 @@ import io.github.ythibos.edi.domain.worker.Worker;
 import io.github.ythibos.edi.domain.worker.WorkerId;
 import io.github.ythibos.edi.domain.worker.WorkerLaunch;
 import io.github.ythibos.edi.domain.worker.WorkerWindow;
+import io.github.ythibos.edi.web.access.ConsoleSessionCookie;
 import io.github.ythibos.edi.testing.BoardRounds;
+import io.github.ythibos.edi.testing.CapturedLogs;
 import io.github.ythibos.edi.testing.Intakes;
 import io.github.ythibos.edi.testing.Patience;
 import io.github.ythibos.edi.testing.RecordingBrowser;
@@ -113,6 +116,7 @@ class ConsoleApiTest {
         HttpResponse<String> opened = post(withTheHomeToken("/api/console/open", TEXT), "{}");
         String link = signInLinkHandedOff();
 
+        String sessionCookieName = ConsoleSessionCookie.nameServedOn(port());
         HttpResponse<String> signedIn = signIn(tokenOf(link));
         HttpResponse<String> usedAgain = signIn(tokenOf(link));
 
@@ -121,7 +125,7 @@ class ConsoleApiTest {
         assertThat(link).startsWith(console() + "login#");
         assertThat(signedIn.statusCode()).isEqualTo(204);
         assertThat(signedIn.headers().firstValue("Set-Cookie")).hasValueSatisfying(cookie -> assertThat(cookie)
-                .startsWith("EDI-Console=").contains("Path=/", "Max-Age=43200", "HttpOnly", "SameSite=Strict"));
+                .startsWith(sessionCookieName + "=").contains("Path=/", "Max-Age=43200", "HttpOnly", "SameSite=Strict"));
         assertThat(usedAgain.statusCode()).isEqualTo(401);
         assertThat(usedAgain.body()).isEqualTo("This sign-in link was used already or has expired: ask the primary session for the console for a new one; edi up opens it first.\n");
     }
@@ -149,7 +153,7 @@ class ConsoleApiTest {
         String cookie = signedInCookie();
 
         HttpResponse<String> sitrep = send(withTheCookie("/api/sitrep", cookie, JSON).GET());
-        HttpResponse<String> forged = send(withTheCookie("/api/sitrep", "EDI-Console=forged", JSON).GET());
+        HttpResponse<String> forged = send(withTheCookie("/api/sitrep", ConsoleSessionCookie.nameServedOn(port()) + "=forged", JSON).GET());
         HttpResponse<String> wrongTokenWithACookie = send(withTheCookie("/api/sitrep", cookie, JSON).header("Authorization", "Bearer not-a-token").GET());
 
         assertThat(sitrep.statusCode()).isEqualTo(200);
@@ -176,7 +180,75 @@ class ConsoleApiTest {
         assertThat(answered.body()).isEqualTo("Recorded the answer to " + number + " (option A); console-lamp is done.\n");
         assertThat(recorded).contains("\"verbatim\":\"A, and keep \\\"one\\\" oil lamp\\non the bridge\"", "\"channel\":\"console\"");
         assertThat(send(withTheCookie("/api/sitrep", cookie, JSON).GET()).body())
-                .contains("\"dealtWith\":{\"decisions\":[{\"call\":\"" + number + "\",\"number\":\"" + number + "\"");
+                .contains("{\"call\":\"" + number + "\",\"number\":\"" + number + "\"");
+    }
+
+    @Test
+    void refusesAnAnswerFromASessionTheCoreDoesNotKnowTellsHowToSignInAgainAndLeavesTheDecisionOpen() throws Exception {
+        String number = raisedDecision("console-replaced");
+        String replaced = ConsoleSessionCookie.nameServedOn(port()) + "=replaced";
+
+        HttpResponse<String> answered;
+        List<String> logged;
+        try (CapturedLogs logs = CapturedLogs.ofEveryLogger()) {
+            answered = send(withTheCookie("/api/decisions/" + number + "/answer", replaced).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                    .POST(BodyPublishers.ofString("{\"option\":\"A\",\"text\":\"A: LED\"}")));
+            logged = logs.lines();
+        }
+
+        assertThat(answered.statusCode()).isEqualTo(401);
+        assertThat(answered.body()).isEqualTo("This console session has ended, or a newer sign-in replaced it: run edi console in the primary session to sign in again.\n");
+        assertThat(logged).contains("Turned away POST /api/decisions/" + number + "/answer with 401: This console session has ended, "
+                + "or a newer sign-in replaced it: run edi console in the primary session to sign in again.");
+        assertThat(send(withTheHomeToken("/api/decisions?open=true", JSON).GET()).body()).contains("\"number\":\"" + number + "\"");
+    }
+
+    @Test
+    void keepsTheSessionOfOneCoreOnTheHostFromReplacingTheSessionOfAnotherCore() throws Exception {
+        String cookie = signedInCookie();
+        String ofAnotherCore = ConsoleSessionCookie.nameServedOn(port() + 1) + "=" + cookie.substring(cookie.indexOf('=') + 1);
+
+        HttpResponse<String> withBothCookies = send(withTheCookie("/api/sitrep", ofAnotherCore + "; " + cookie, JSON).GET());
+        HttpResponse<String> withOnlyTheOtherCoresCookie = send(withTheCookie("/api/sitrep", ofAnotherCore, JSON).GET());
+
+        assertThat(cookie).startsWith(ConsoleSessionCookie.nameServedOn(port()) + "=");
+        assertThat(withBothCookies.statusCode()).isEqualTo(200);
+        assertThat(withOnlyTheOtherCoresCookie.statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void logsEachAnswerItReceivesAndEachOneItRefusesWithTheReason() throws Exception {
+        String cookie = signedInCookie();
+        String number = raisedDecision("console-logged");
+        String answer = "{\"option\":\"A\",\"text\":\"A: LED\"}";
+
+        List<String> logged;
+        try (CapturedLogs logs = CapturedLogs.ofEveryLogger()) {
+            sendAnswer(number, cookie, answer);
+            sendAnswer(number, cookie, answer);
+            logged = logs.lines();
+        }
+
+        assertThat(logged).contains(
+                "Received an answer to " + number + " from the captain, option A",
+                "Stored the answer to " + number + " through the console, option A");
+        assertThat(logged).anyMatch(line -> line.startsWith("Refused the answer to " + number + " from the captain: " + number + " is already answered"));
+    }
+
+    @Test
+    void logsAnAnswerInTheCaptainsOwnWordsWithoutAnOption() throws Exception {
+        String cookie = signedInCookie();
+        String number = raisedDecision("console-logged-words");
+
+        List<String> logged;
+        try (CapturedLogs logs = CapturedLogs.ofEveryLogger()) {
+            sendAnswer(number, cookie, "{\"option\":null,\"text\":\"Neither, keep the old lamp\"}");
+            logged = logs.lines();
+        }
+
+        assertThat(logged).contains(
+                "Received an answer to " + number + " from the captain",
+                "Stored the answer to " + number + " through the console");
     }
 
     @Test
@@ -475,6 +547,11 @@ class ConsoleApiTest {
                 .body().strip();
     }
 
+    private HttpResponse<String> sendAnswer(String number, String cookie, String answer) throws Exception {
+        return send(withTheCookie("/api/decisions/" + number + "/answer", cookie).header(CONSOLE_HEADER, "1").header("Content-Type", JSON)
+                .POST(BodyPublishers.ofString(answer)));
+    }
+
     private String signedInCookie() throws Exception {
         post(withTheHomeToken("/api/console/open", TEXT), "{}");
         String link = signInLinkHandedOff();
@@ -543,6 +620,10 @@ class ConsoleApiTest {
 
     private static int widthOf(byte[] png) {
         return ByteBuffer.wrap(png, PNG_WIDTH_OFFSET, Integer.BYTES).getInt();
+    }
+
+    private static int port() throws IOException {
+        return Integer.parseInt(Files.readString(home.resolve("state/core.port")).strip());
     }
 
     private static String console() throws IOException {
