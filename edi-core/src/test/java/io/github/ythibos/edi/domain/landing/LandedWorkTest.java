@@ -3,6 +3,7 @@ package io.github.ythibos.edi.domain.landing;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +31,20 @@ class LandedWorkTest {
                 "the captain's checkout does not hold the branch's head");
     }
 
+    @Test
+    void landsEveryCommitUpToTheMergedHeadAndNamesOneAfterIt() {
+        BranchCommit glazed = new BranchCommit("3333333333333333", "HRN-3 Glaze the lamp", false);
+        BranchCommit late = new BranchCommit("4444444444444444", "HRN-3 Fit the cap", false);
+
+        LandedWork merged = new LandedWork("origin/main", List.of(), List.of(), List.of(UNLANDED, glazed, late), Set.of(UNLANDED.id(), glazed.id()), false,
+                CaptainsCopy.NOT_DELIVERED_THERE);
+
+        assertThat(merged.isLanded()).isFalse();
+        assertThat(merged.unlandedCommits()).containsExactly(late);
+        assertThat(merged.findings()).containsExactly("commit 444444444444 \"HRN-3 Fit the cap\" is not in origin/main");
+    }
+
     private static LandedWork work(List<String> uncommitted, List<String> nested, List<BranchCommit> commits, boolean content, CaptainsCopy copy) {
-        return new LandedWork("origin/main", uncommitted, nested, commits, content, copy);
+        return new LandedWork("origin/main", uncommitted, nested, commits, Set.of(), content, copy);
     }
 }

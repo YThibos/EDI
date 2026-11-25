@@ -17,6 +17,7 @@ import io.github.ythibos.edi.domain.delivery.PipelineRun;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.dispatch.Route;
+import io.github.ythibos.edi.domain.landing.BranchCommit;
 import io.github.ythibos.edi.domain.plan.SliceWait;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
@@ -234,6 +235,13 @@ public sealed interface DomainEvent {
 
         public CleanupRefused {
             findings = List.copyOf(findings);
+        }
+    }
+
+    record FollowUpHeldBack(TaskId task, List<BranchCommit> notLanded, String heldBy) implements DomainEvent {
+
+        public FollowUpHeldBack {
+            notLanded = List.copyOf(notLanded);
         }
     }
 

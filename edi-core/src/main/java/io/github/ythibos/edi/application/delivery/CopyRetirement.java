@@ -27,7 +27,9 @@ import io.github.ythibos.edi.domain.board.Board;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.BoardRetired;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerRetired;
+import io.github.ythibos.edi.domain.landing.LandedWork;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.task.CaptainsWord;
 import io.github.ythibos.edi.domain.task.Leftover;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.worker.Worker;
@@ -44,10 +46,11 @@ public class CopyRetirement {
     private final Git git;
     private final WorkerRuntime runtime;
     private final BoardListeners boardListeners;
+    private final FollowUpCarriage followUps;
     private final TransactionTemplate transaction;
 
     public CopyRetirement(EdiHome home, WorkerStore workers, BoardStore boards, EventLog events, Git git, WorkerRuntime runtime,
-            BoardListeners boardListeners, TransactionTemplate transaction) {
+            BoardListeners boardListeners, FollowUpCarriage followUps, TransactionTemplate transaction) {
         this.home = home;
         this.workers = workers;
         this.boards = boards;
@@ -55,6 +58,7 @@ public class CopyRetirement {
         this.git = git;
         this.runtime = runtime;
         this.boardListeners = boardListeners;
+        this.followUps = followUps;
         this.transaction = transaction;
     }
 
@@ -76,7 +80,8 @@ public class CopyRetirement {
         retire(workplace, false);
     }
 
-    public void retireDiscarding(Workplace workplace) {
+    public void retireDiscarding(Workplace workplace, CaptainsWord word, LandedWork landed) {
+        followUps.requireCarriedWhenFollowedUp(workplace, word, landed);
         retire(workplace, true);
     }
 

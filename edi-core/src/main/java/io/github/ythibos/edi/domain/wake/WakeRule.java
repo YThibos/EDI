@@ -31,6 +31,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.DraftClosed;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftMerged;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftOpened;
 import io.github.ythibos.edi.domain.event.DomainEvent.DraftRecorded;
+import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.event.DomainEvent.HeavyRunsAtOnce;
 import io.github.ythibos.edi.domain.event.DomainEvent.HoldDateArrived;
 import io.github.ythibos.edi.domain.event.DomainEvent.LimitResumeHeldBack;
@@ -133,6 +134,7 @@ public final class WakeRule {
             case BranchDeliveryFailed failed -> wake(WakeKind.DELIVERY_FAILED, failed, null, failed.because());
             case ChangeNotApplied notApplied -> wake(WakeKind.DELIVERY_FAILED, notApplied, null, notApplied.because());
             case CleanupRefused refused -> wake(WakeKind.CLEANUP_REFUSED, refused, null, String.join("; ", refused.findings()));
+            case FollowUpHeldBack heldBack -> wake(WakeKind.FOLLOW_UP_HELD_BACK, heldBack, null, heldBackOf(heldBack));
             case DecisionRaised raised -> wake(WakeKind.DECISION_RAISED, raised, null, raised.number() + " " + raised.card().title());
             case DecisionRoundClosed closed -> wake(WakeKind.DECISION_ROUND, closed, null, closed.number() + " " + closed.title());
             case TicketUpdateRefused refused -> wake(WakeKind.TICKET_REFUSED, refused, null,
@@ -167,6 +169,11 @@ public final class WakeRule {
         return "a " + atOnce.run().words() + " while " + atOnce.beside().stream()
                 .map(other -> other.worker() + " runs a " + other.run().words())
                 .collect(Collectors.joining(" and "));
+    }
+
+    private static String heldBackOf(FollowUpHeldBack heldBack) {
+        return heldBack.notLanded().stream().map(commit -> commit.shortId() + " \"" + commit.subject() + "\"").collect(Collectors.joining(", "))
+                + ", while it is held: " + heldBack.heldBy();
     }
 
     private static String recheckOf(RecheckAsked asked) {

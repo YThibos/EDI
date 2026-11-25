@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.dispatch.EffortLevel;
 import io.github.ythibos.edi.domain.dispatch.ModelId;
 import io.github.ythibos.edi.domain.dispatch.Route;
 import io.github.ythibos.edi.domain.mechanical.ExpectedChange;
+import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.TaskId;
 
@@ -89,6 +90,12 @@ public class DispatchStore {
                 .param("key", key.toString())
                 .query((row, _) -> BranchName.parse(row.getString(1)))
                 .list();
+    }
+
+    public List<Dispatch> ofOtherTasksIn(ProjectName project, TaskId besides) {
+        return dispatches(store.sql(SELECT_DISPATCHES + "where task_id != :besides and task_id in (select task_id from task_project where project = :project)")
+                .param("besides", besides.value())
+                .param("project", project.value()));
     }
 
     public List<Dispatch> deferred() {
