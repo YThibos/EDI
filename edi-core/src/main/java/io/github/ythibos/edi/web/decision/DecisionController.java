@@ -1,5 +1,7 @@
 package io.github.ythibos.edi.web.decision;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +27,8 @@ import io.github.ythibos.edi.web.access.Caller;
 
 @RestController
 class DecisionController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DecisionController.class);
 
     private final DecisionListQuery list;
     private final RaiseDecision raiseDecision;
@@ -57,6 +61,18 @@ class DecisionController {
 
     @PostMapping("/api/decisions/{reference}/answer")
     Confirmation answer(@PathVariable String reference, @RequestBody AnswerRequest request, Caller caller) {
+        LOG.info("Received an answer to {} from the {}, option {}", reference, caller.actor(), request.option());
+        try {
+            Confirmation.Answered stored = answered(reference, request, caller);
+            LOG.info("Stored the answer to {}, option {}, through the {}", stored.decision().number(), request.option(), stored.decision().answer().channel().word());
+            return stored;
+        } catch (RuntimeException refused) {
+            LOG.warn("Refused the answer to {} from the {}: {}", reference, caller.actor(), refused.getMessage());
+            throw refused;
+        }
+    }
+
+    private Confirmation.Answered answered(String reference, AnswerRequest request, Caller caller) {
         AnswerChannel channel = caller.answeringChannel("edi decision answer");
         String verbatim = channel == AnswerChannel.CHAT ? captainsWord.requireCited(caller.callingSession(), request.citation()) : request.verbatim();
         AnsweredDecision answered = answerDecision.answer(TaskReference.parse(reference), request.givenThrough(channel, verbatim), caller.actor());
