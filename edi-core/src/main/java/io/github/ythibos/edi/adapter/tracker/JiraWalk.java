@@ -66,9 +66,8 @@ final class JiraWalk {
     }
 
     private Optional<String> nextStatus(Walk walk, WorkflowGraph graph, String status) {
-        Workflow workflow = walk.settings().workflow();
         return graph.pathBetween(status, walk.target())
-                .or(() -> graph.pathToNearestUnseen(status, unseen -> workflow.separation(unseen, walk.target())))
+                .or(() -> graph.pathToNearestUnseen(status, walk.settings().workflow(), walk.target()))
                 .map(List::getFirst);
     }
 

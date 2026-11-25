@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 class WorkflowGraphTest {
 
+    private static final Workflow FORWARD = new Workflow(List.of("Open", "Doing", "Review", "Done"));
+
     private static final WorkflowGraph CHAIN = WorkflowGraph.of(Map.of(
             "Open", List.of("Doing"),
             "Doing", List.of("Review", "Open"),
@@ -46,19 +48,30 @@ class WorkflowGraphTest {
     @Test
     void headsForTheNearestStatusNeverSeen() {
         WorkflowGraph partial = WorkflowGraph.of(Map.of(
-                "Open", List.of("Cancelled", "Doing"),
-                "Doing", List.of("Review")));
+                "Open", List.of("Doing"),
+                "Doing", List.of("Review", "Done")));
 
-        assertThat(partial.pathToNearestUnseen("Open", status -> 0)).contains(List.of("Cancelled"));
-        assertThat(partial.pathToNearestUnseen("Doing", status -> 0)).contains(List.of("Review"));
+        assertThat(partial.pathToNearestUnseen("Open", FORWARD, "Done")).contains(List.of("Doing", "Done"));
+        assertThat(partial.pathToNearestUnseen("Doing", FORWARD, "Review")).contains(List.of("Review"));
     }
 
     @Test
-    void breaksATieBetweenNearUnseenStatusesByTheirCloseness() {
-        WorkflowGraph partial = WorkflowGraph.of(Map.of("Open", List.of("Cancelled", "Doing")));
+    void exploresAStatusOutsideTheWorkflowOnlyAfterEveryReachableOneInsideIt() {
+        WorkflowGraph partial = WorkflowGraph.of(Map.of(
+                "Open", List.of("Cancelled", "Doing"),
+                "Doing", List.of("Review")));
+        WorkflowGraph cornered = WorkflowGraph.of(Map.of("Open", List.of("Cancelled")));
 
-        assertThat(partial.pathToNearestUnseen("Open", status -> status.equals("Doing") ? 1 : 5)).contains(List.of("Doing"));
-        assertThat(partial.pathToNearestUnseen("Open", status -> status.equals("Cancelled") ? 1 : 5)).contains(List.of("Cancelled"));
+        assertThat(partial.pathToNearestUnseen("Open", FORWARD, "Done")).contains(List.of("Doing", "Review"));
+        assertThat(cornered.pathToNearestUnseen("Open", FORWARD, "Done")).contains(List.of("Cancelled"));
+    }
+
+    @Test
+    void breaksATieBetweenNearUnseenStatusesByTheirClosenessToTheTarget() {
+        WorkflowGraph partial = WorkflowGraph.of(Map.of("Open", List.of("Review", "Doing")));
+
+        assertThat(partial.pathToNearestUnseen("Open", FORWARD, "Doing")).contains(List.of("Doing"));
+        assertThat(partial.pathToNearestUnseen("Open", FORWARD, "Done")).contains(List.of("Review"));
     }
 
     @Test
@@ -66,6 +79,6 @@ class WorkflowGraphTest {
         WorkflowGraph deadEnd = WorkflowGraph.of(Map.of("Open", List.of("Cancelled"), "Cancelled", List.of()));
 
         assertThat(deadEnd.hasSeen("Cancelled")).isTrue();
-        assertThat(deadEnd.pathToNearestUnseen("Open", status -> 0)).isEmpty();
+        assertThat(deadEnd.pathToNearestUnseen("Open", FORWARD, "Done")).isEmpty();
     }
 }

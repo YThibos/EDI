@@ -12,7 +12,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.ToIntFunction;
 
 public final class WorkflowGraph {
 
@@ -40,11 +39,12 @@ public final class WorkflowGraph {
         return pathsFrom(from).stream().filter(path -> path.getLast().equalsIgnoreCase(to)).findFirst();
     }
 
-    public Optional<List<String>> pathToNearestUnseen(String from, ToIntFunction<String> separationFromTheTarget) {
+    public Optional<List<String>> pathToNearestUnseen(String from, Workflow workflow, String target) {
         return pathsFrom(from).stream()
                 .filter(path -> !hasSeen(path.getLast()))
-                .min(Comparator.<List<String>>comparingInt(List::size)
-                        .thenComparingInt(path -> separationFromTheTarget.applyAsInt(path.getLast()))
+                .min(Comparator.<List<String>, Boolean>comparing(path -> !workflow.lists(path.getLast()))
+                        .thenComparingInt(List::size)
+                        .thenComparingInt(path -> workflow.separation(path.getLast(), target))
                         .thenComparing(List::getLast, String.CASE_INSENSITIVE_ORDER));
     }
 

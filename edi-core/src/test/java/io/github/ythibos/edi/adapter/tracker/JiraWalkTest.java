@@ -102,6 +102,16 @@ class JiraWalkTest {
     }
 
     @Test
+    void passesByAStatusOutsideTheWorkflowWhenItExploresBeyondTheLearntPath() {
+        tracker.walk(BELL, "Merged");
+
+        TicketWalk walk = tracker.walk(LAMP, "Ready For Prd");
+
+        assertThat(walk).isEqualTo(new TicketWalk.Arrived("Done", NINE_STEPS));
+        assertThat(jira.statusOf("SVC-40")).isEqualTo("Ready For Prd");
+    }
+
+    @Test
     void leavesATicketAlreadyInTheStateWhereItIs() {
         assertThat(tracker.walk(BELL, "Done")).isEqualTo(new TicketWalk.Arrived("Done", List.of()));
         assertThat(transitionsTaken()).isEmpty();
