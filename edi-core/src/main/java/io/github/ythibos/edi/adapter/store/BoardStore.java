@@ -26,6 +26,10 @@ public class BoardStore {
 
     private static final String SELECT_BOARDS = "select id, task_id, file, link, rounds, open_questions, armed_at, ended_at, retired_at from board ";
     private static final String LISTENING = "ended_at is null and retired_at is null";
+    private static final String WAITING_ON_THE_CAPTAIN = LISTENING + " and " + """
+            (open_questions > 0 or exists (
+                select 1 from board_decision join decision on decision.number = board_decision.decision_number
+                where board_decision.board_id = board.id and decision.answered_at is null))""";
     private static final String SELECT_ANSWERS = """
             select board_id, round, decision_number, verbatim, option_key, received_at, settled_at, refused_because
             from board_answer
@@ -96,11 +100,8 @@ public class BoardStore {
     public List<Board> dealtWithAwaitingTheirTick() {
         return boards(store.sql(SELECT_BOARDS + """
                         where (rounds > 0 or open_questions > 0 or exists (select 1 from board_decision where board_id = board.id))
-                          and not (%s and (open_questions > 0 or exists (
-                                  select 1 from board_decision join decision on decision.number = board_decision.decision_number
-                                  where board_decision.board_id = board.id and decision.answered_at is null)))
                           and not exists (select 1 from call_tick where call = :call || board.id)
-                        order by id""".formatted(LISTENING)).param("call", CallKey.BOARD));
+                          and not (""" + WAITING_ON_THE_CAPTAIN + ") order by id").param("call", CallKey.BOARD));
     }
 
     public void save(BoardAnswer answer) {

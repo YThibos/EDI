@@ -10,10 +10,11 @@ public record DeliveryNote(List<String> stepsAfterLanding, String landingOrder) 
 
     public static final DeliveryNote BLANK = new DeliveryNote(List.of(), null);
 
-    private static final Pattern HEADING = Pattern.compile("^(#{1,6})\\s+(.*?)\\s*#*\\s*$");
-    private static final Pattern LIST_ITEM = Pattern.compile("^\\s{0,3}(?:[-*+]|\\d{1,3}[.)])\\s+(.*)$");
+    private static final Pattern HEADING = Pattern.compile("^(#{1,6})\\s(.*)$");
+    private static final Pattern LIST_ITEM = Pattern.compile("^\\s{0,3}(?:[-*+]|\\d{1,3}[.)])\\s(.*)$");
     private static final Pattern FENCE = Pattern.compile("^\\s*(?:```|~~~).*$");
-    private static final Pattern WORKED_LINE = Pattern.compile("^worked:\\s.*->.*$");
+    private static final Pattern WORKED_LINE_START = Pattern.compile("^worked:\\s");
+    private static final String WORKED_ARROW = "->";
     private static final String STEPS_HEADING = "after the merge";
     private static final String ORDER_HEADING = "merge order";
 
@@ -66,7 +67,8 @@ public record DeliveryNote(List<String> stepsAfterLanding, String landingOrder) 
     }
 
     private static boolean isTheWorkedLine(String line) {
-        return WORKED_LINE.matcher(line.strip()).matches();
+        String stripped = line.strip();
+        return WORKED_LINE_START.matcher(stripped).lookingAt() && stripped.contains(WORKED_ARROW);
     }
 
     private static List<String> stepsIn(List<String> body) {
