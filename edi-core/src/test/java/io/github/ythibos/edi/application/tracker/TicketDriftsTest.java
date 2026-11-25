@@ -103,8 +103,8 @@ class TicketDriftsTest {
         DriftReport report = home.ticketDrifts().of(SERVICE);
 
         assertThat(report.unchecked()).containsExactly(
-                "a story or bug in Done before its work reached production: not checked, because the project's registry entry names no production branch",
-                "in a review state with no open request: not checked, because the project's registry entry names no forge");
+                "a story or bug in Done before its work reached production, because the project's registry entry names no production branch",
+                "in a review state with no open request, because the project's registry entry names no forge");
         assertThat(report.drifts()).extracting(TicketDrift::kind)
                 .containsExactlyInAnyOrder(DriftKind.MERGED_BEFORE_ITS_MERGED_STATE, DriftKind.IMPLEMENTED_WITHOUT_A_COMMIT);
     }

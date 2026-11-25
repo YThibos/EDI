@@ -140,7 +140,7 @@ class TrackerApiTest {
 
         assertThat(drift.statusCode()).isEqualTo(200);
         assertThat(drift.body()).contains("Ticket drift in service", "SVC-10", "Backlog", "work merged, but the ticket is before its merged state",
-                "Not checked: a story or bug in Done before its work reached production: not checked, because the project's registry entry names no production branch.");
+                "Not checked: a story or bug in Done before its work reached production, because the project's registry entry names no production branch.");
     }
 
     @Test

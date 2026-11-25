@@ -41,11 +41,14 @@ final class JiraWalk {
     private TicketWalk walked(Walk walk) {
         String status = walk.start().status();
         int mostSteps = walk.settings().workflow().forward().size() * MOST_STEPS_PER_STATUS;
-        for (int taken = 0; taken <= mostSteps; taken++) {
+        while (true) {
             List<AvailableTransition> offered = transitions.offeredTo(walk.settings(), walk.key());
             WorkflowGraph graph = learned(walk, status, offered);
             if (status.equalsIgnoreCase(walk.target())) {
                 return new TicketWalk.Arrived(walk.start().status(), walk.through());
+            }
+            if (walk.through().size() == mostSteps) {
+                return new TicketWalk.Stopped(walk.start().status(), walk.through(), "it took " + mostSteps + " steps without arriving at " + walk.target());
             }
             Optional<String> next = nextStatus(walk, graph, status);
             if (next.isEmpty()) {
@@ -54,7 +57,6 @@ final class JiraWalk {
             status = transitions.statusAfter(walk.settings(), walk.key(), transitionTo(offered, next.get()));
             walk.through().add(status);
         }
-        return new TicketWalk.Stopped(walk.start().status(), walk.through(), "it took more than " + mostSteps + " steps without arriving at " + walk.target());
     }
 
     private WorkflowGraph learned(Walk walk, String status, List<AvailableTransition> offered) {

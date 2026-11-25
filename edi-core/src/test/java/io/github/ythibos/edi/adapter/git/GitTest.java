@@ -43,6 +43,8 @@ class GitTest {
         repository.write("a.txt", "a\n").commit("SVC-10 Fit the lamp")
                 .write("b.txt", "b\n").commit("SVC-100 Raise the flag\n\nSVC-11 is mentioned in the body only")
                 .write("c.txt", "c\n").commit("Merge SVC-12 into main")
+                .write("e.txt", "e\n").commit("REL-0 Prepare the release")
+                .write("f.txt", "f\n").commit("ABCDEFGHIJKLMNOPQ-1 Name a key too long for any project")
                 .branch("work").write("d.txt", "d\n").commit("SVC-13 Mend the net")
                 .switchTo("main");
 

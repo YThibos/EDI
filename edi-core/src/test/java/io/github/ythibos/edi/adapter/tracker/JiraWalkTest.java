@@ -41,6 +41,7 @@ class JiraWalkTest {
 
     private StubJiraServer jira;
     private JiraCalls calls;
+    private WorkflowCache cache;
     private JiraTracker tracker;
 
     @BeforeEach
@@ -59,20 +60,10 @@ class JiraWalkTest {
                 .offeringFrom("On Test", "Verified")
                 .offeringFrom("Verified", "Ready For Prd")
                 .offeringFrom("Ready For Prd", "Done");
-        Path keys = Files.writeString(home.resolve("keys.yml"), "TRACKER:\n  domain: tracker.example.org\n  API-key: " + TOKEN + "\n");
-        Files.createDirectories(home.resolve("config"));
-        Files.writeString(home.resolve("config/machine.yaml"), """
-                tracker:
-                  kind: jira
-                  baseUrl: %s
-                  credentials: { keysFile: %s, section: TRACKER }
-                  workflow: [Reopened, Backlog, Selected, Doing, Peer Review, Merged, On Test, Verified, Ready For Prd, Done]
-                  mergedStatus: Merged
-                  issueType: Story
-                """.formatted(jira.address(), keys));
         calls = new JiraCalls(new JsonMapper());
         TestHome store = TestHome.in(storeHome);
-        tracker = new JiraTracker(new MachineProfile(new EdiHome(home)), calls, new JsonMapper(), new WorkflowCache(store.jdbc(), store.transaction()));
+        cache = new WorkflowCache(store.jdbc(), store.transaction());
+        tracker = trackerFollowing("[Reopened, Backlog, Selected, Doing, Peer Review, Merged, On Test, Verified, Ready For Prd, Done]");
     }
 
     @AfterEach
@@ -143,10 +134,40 @@ class JiraWalkTest {
     }
 
     @Test
+    void stopsAtItsStepLimitWithoutTakingAStepBeyondIt() throws IOException {
+        JiraTracker shortProfile = trackerFollowing("[Selected, Merged, Ready For Prd, Done]");
+
+        TicketWalk walk = shortProfile.walk(BELL, "Ready For Prd");
+
+        assertThat(walk).isInstanceOfSatisfying(TicketWalk.Stopped.class, stopped -> {
+            assertThat(stopped.through()).containsExactlyElementsOf(NINE_STEPS.subList(0, 8));
+            assertThat(stopped.because()).isEqualTo("it took 8 steps without arriving at Ready For Prd");
+        });
+        assertThat(jira.statusOf("SVC-41")).isEqualTo("Verified");
+        assertThat(transitionsTaken()).hasSize(8);
+    }
+
+    @Test
     void refusesATargetThatIsNotAStatusOfTheWorkflowBeforeCallingAnything() {
         assertThatThrownBy(() -> tracker.walk(BELL, "Shipped")).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageStartingWith("Shipped is not a status of the workflow");
         assertThat(jira.exchanges()).isEmpty();
+    }
+
+    private JiraTracker trackerFollowing(String workflow) throws IOException {
+        Path profileHome = Files.createTempDirectory(home, "home");
+        Path keys = Files.writeString(profileHome.resolve("keys.yml"), "TRACKER:\n  domain: tracker.example.org\n  API-key: " + TOKEN + "\n");
+        Files.createDirectories(profileHome.resolve("config"));
+        Files.writeString(profileHome.resolve("config/machine.yaml"), """
+                tracker:
+                  kind: jira
+                  baseUrl: %s
+                  credentials: { keysFile: %s, section: TRACKER }
+                  workflow: %s
+                  mergedStatus: Merged
+                  issueType: Story
+                """.formatted(jira.address(), keys, workflow));
+        return new JiraTracker(new MachineProfile(new EdiHome(profileHome)), calls, new JsonMapper(), cache);
     }
 
     private List<Exchange> transitionsTaken() {

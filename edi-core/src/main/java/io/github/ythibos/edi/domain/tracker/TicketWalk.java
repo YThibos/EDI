@@ -13,10 +13,6 @@ public sealed interface TicketWalk {
         public Arrived {
             through = List.copyOf(through);
         }
-
-        public boolean wasAlreadyThere() {
-            return through.isEmpty();
-        }
     }
 
     record Stopped(String from, List<String> through, String because) implements TicketWalk {

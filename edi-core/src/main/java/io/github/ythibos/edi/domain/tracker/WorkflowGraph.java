@@ -22,21 +22,10 @@ public final class WorkflowGraph {
         this.offeredFrom = offeredFrom;
     }
 
-    public static WorkflowGraph unknown() {
-        return new WorkflowGraph(statusMap());
-    }
-
     public static WorkflowGraph of(Map<String, ? extends Collection<String>> offeredFrom) {
         Map<String, Set<String>> graph = statusMap();
         offeredFrom.forEach((status, offered) -> graph.put(status, statusSet(offered)));
         return new WorkflowGraph(graph);
-    }
-
-    public WorkflowGraph learning(String status, Collection<String> offeredTo) {
-        Map<String, Set<String>> learned = statusMap();
-        learned.putAll(offeredFrom);
-        learned.put(status, statusSet(offeredTo));
-        return new WorkflowGraph(learned);
     }
 
     public boolean hasSeen(String status) {
@@ -45,10 +34,6 @@ public final class WorkflowGraph {
 
     public Set<String> seenStatuses() {
         return Collections.unmodifiableSet(offeredFrom.keySet());
-    }
-
-    public Set<String> offeredFrom(String status) {
-        return Collections.unmodifiableSet(offeredFrom.getOrDefault(status, Set.of()));
     }
 
     public Optional<List<String>> pathBetween(String from, String to) {
@@ -79,6 +64,10 @@ public final class WorkflowGraph {
             }
         }
         return paths;
+    }
+
+    private Set<String> offeredFrom(String status) {
+        return offeredFrom.getOrDefault(status, Set.of());
     }
 
     private static Map<String, Set<String>> statusMap() {

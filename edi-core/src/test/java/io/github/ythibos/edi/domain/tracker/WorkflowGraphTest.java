@@ -35,25 +35,19 @@ class WorkflowGraphTest {
 
     @Test
     void prefersTheShorterOfTwoPaths() {
-        WorkflowGraph shortcut = CHAIN.learning("Doing", List.of("Review", "Open", "Done"));
+        WorkflowGraph shortcut = WorkflowGraph.of(Map.of(
+                "Open", List.of("Doing"),
+                "Doing", List.of("Review", "Open", "Done"),
+                "Review", List.of("Done", "Doing")));
 
         assertThat(shortcut.pathBetween("Open", "Done")).contains(List.of("Doing", "Done"));
     }
 
     @Test
-    void replacesWhatAStatusOffersWhenItIsSeenAgain() {
-        WorkflowGraph narrowed = CHAIN.learning("Review", List.of("Doing"));
-
-        assertThat(narrowed.offeredFrom("Review")).containsExactly("Doing");
-        assertThat(narrowed.pathBetween("Open", "Done")).isEmpty();
-        assertThat(CHAIN.offeredFrom("Review")).containsExactlyInAnyOrder("Done", "Doing");
-    }
-
-    @Test
     void headsForTheNearestStatusNeverSeen() {
-        WorkflowGraph partial = WorkflowGraph.unknown()
-                .learning("Open", List.of("Cancelled", "Doing"))
-                .learning("Doing", List.of("Review"));
+        WorkflowGraph partial = WorkflowGraph.of(Map.of(
+                "Open", List.of("Cancelled", "Doing"),
+                "Doing", List.of("Review")));
 
         assertThat(partial.pathToNearestUnseen("Open", status -> 0)).contains(List.of("Cancelled"));
         assertThat(partial.pathToNearestUnseen("Doing", status -> 0)).contains(List.of("Review"));
@@ -61,7 +55,7 @@ class WorkflowGraphTest {
 
     @Test
     void breaksATieBetweenNearUnseenStatusesByTheirCloseness() {
-        WorkflowGraph partial = WorkflowGraph.unknown().learning("Open", List.of("Cancelled", "Doing"));
+        WorkflowGraph partial = WorkflowGraph.of(Map.of("Open", List.of("Cancelled", "Doing")));
 
         assertThat(partial.pathToNearestUnseen("Open", status -> status.equals("Doing") ? 1 : 5)).contains(List.of("Doing"));
         assertThat(partial.pathToNearestUnseen("Open", status -> status.equals("Cancelled") ? 1 : 5)).contains(List.of("Cancelled"));
@@ -69,7 +63,7 @@ class WorkflowGraphTest {
 
     @Test
     void knowsAStatusSeenWithNothingOfferedAsSeenAllTheSame() {
-        WorkflowGraph deadEnd = WorkflowGraph.unknown().learning("Open", List.of("Cancelled")).learning("Cancelled", List.of());
+        WorkflowGraph deadEnd = WorkflowGraph.of(Map.of("Open", List.of("Cancelled"), "Cancelled", List.of()));
 
         assertThat(deadEnd.hasSeen("Cancelled")).isTrue();
         assertThat(deadEnd.pathToNearestUnseen("Open", status -> 0)).isEmpty();

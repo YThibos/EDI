@@ -77,7 +77,7 @@ public record DriftRules(
     }
 
     private static Optional<String> notChecked(DriftKind kind, Optional<String> because) {
-        return because.map(reason -> kind.sentence() + ": not checked, because " + reason);
+        return because.map(reason -> kind.sentence() + ", because " + reason);
     }
 
     private static boolean isIn(List<String> statuses, String status) {

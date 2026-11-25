@@ -70,9 +70,9 @@ class DriftRulesTest {
 
         assertThat(report.drifts()).isEmpty();
         assertThat(report.unchecked()).containsExactly(
-                "in an implemented state with no commit on the base branch: not checked, because the machine profile names no tracker.implementedStatuses",
-                "a story or bug in Done before its work reached production: not checked, because the machine profile names no tracker.doneStatus",
-                "in a review state with no open request: not checked, because the machine profile names no tracker.reviewStatuses");
+                "in an implemented state with no commit on the base branch, because the machine profile names no tracker.implementedStatuses",
+                "a story or bug in Done before its work reached production, because the machine profile names no tracker.doneStatus",
+                "in a review state with no open request, because the machine profile names no tracker.reviewStatuses");
     }
 
     @Test
@@ -84,8 +84,8 @@ class DriftRulesTest {
 
         assertThat(report.drifts()).extracting(TicketDrift::kind).doesNotContain(DriftKind.DONE_BEFORE_PRODUCTION, DriftKind.IN_REVIEW_WITHOUT_AN_OPEN_REQUEST);
         assertThat(report.unchecked()).containsExactly(
-                "a story or bug in Done before its work reached production: not checked, because the project's registry entry names no production branch",
-                "in a review state with no open request: not checked, because the project's registry entry names no forge");
+                "a story or bug in Done before its work reached production, because the project's registry entry names no production branch",
+                "in a review state with no open request, because the project's registry entry names no forge");
     }
 
     @Test

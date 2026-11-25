@@ -30,8 +30,14 @@ class WorkKeyTest {
         assertThat(WorkKey.opening(text)).contains(WorkKey.parse("EDI-13"));
     }
 
+    @Test
+    void readsTheKeyOfTheLongestProjectKeyThatOpensAText() {
+        assertThat(WorkKey.opening("ABCDEFGHIJKLMNOP-1 fit")).contains(WorkKey.parse("ABCDEFGHIJKLMNOP-1"));
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {"", "Fit the lamp", "Merge EDI-13", "edi-13 fit", "EDI-1234567890 fit", "EDI-130x", "EDI-13a", "EDI- 13"})
+    @ValueSource(strings = {"", "Fit the lamp", "Merge EDI-13", "edi-13 fit", "EDI-1234567890 fit", "EDI-130x", "EDI-13a", "EDI- 13",
+        "REL-0 prepare", "REL-00 prepare", "ABCDEFGHIJKLMNOPQ-1 fit"})
     void readsNoKeyFromATextThatDoesNotOpenWithOne(String text) {
         assertThat(WorkKey.opening(text)).isEmpty();
     }

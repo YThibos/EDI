@@ -2,7 +2,9 @@ package io.github.ythibos.edi.application.tracker;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -70,10 +72,10 @@ public class TicketDrifts {
         return git.workKeysOpeningCommitsOn(clone, "origin/" + branch);
     }
 
-    private static java.util.Optional<WorkKey> keyOf(String sourceBranch) {
-        return java.util.Optional.ofNullable(sourceBranch)
+    private static Optional<WorkKey> keyOf(String sourceBranch) {
+        return Optional.ofNullable(sourceBranch)
                 .map(BranchName.workKeyCapture()::matcher)
-                .filter(java.util.regex.Matcher::matches)
-                .map(matched -> WorkKey.parse(matched.group(1)));
+                .filter(Matcher::matches)
+                .flatMap(matched -> WorkKey.opening(matched.group(1)));
     }
 }
