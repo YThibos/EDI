@@ -96,8 +96,8 @@ class OutageListText implements TextPresenter<OutageList> {
             return "";
         }
         return counted.sinceTheLastFetch()
-                .map(age -> " (the copy last fetched " + Words.quantity((int) age.toDays(), "day") + " ago)")
-                .orElse(" (the copy records no fetch)");
+                .map(age -> " (the copy last fetched from the forge " + Words.quantity((int) age.toDays(), "day") + " ago)")
+                .orElse(" (the copy records no fetch from the forge)");
     }
 
     private static String recoverySoFar(List<CountedRecovery> recoveries) {

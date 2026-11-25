@@ -24,7 +24,7 @@ description: >-
 
 1. Run `edi recover`: you hold every dead worker's task, relaunch none and print one numbered list.
 2. Show the list to the captain with each entry's outcome so far, what it waits on, its recorded model and effort, those its category gives now, and unpushed work.
-   Unpushed work counts the commits the project's forge does not hold, as "2 commits not on origin"; a line that reads "not verified" is never "none", and "none" with a last fetch older than a day is checked against the forge before you report it.
+   Unpushed work counts the commits the project's forge does not hold, as "2 commits not on origin"; a line that reads "not verified" is never "none", and "none" followed by a note on the copy's fetch from the forge, as "(the copy last fetched from the forge 3 days ago)" or "(the copy records no fetch from the forge)", is checked against the forge before you report it.
 3. Act only on the numbers the captain names, one at a time:
    - `edi recover <n> resume` resumes the recorded session;
    - `edi recover <n> fresh [--model <model>] [--effort <effort>]` starts a new one;

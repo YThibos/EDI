@@ -139,8 +139,8 @@ class NativeRecoveryIT {
         simulateAMachineRestart();
         CommandRun listed = edi(Map.of(), "", "recover");
 
-        assertThat(listed.output()).contains("unpushed work: 1 commit not on origin (the copy records no fetch)",
-                "unpushed work: none (the copy records no fetch)");
+        assertThat(listed.output()).contains("unpushed work: 1 commit not on origin (the copy records no fetch from the forge)",
+                "unpushed work: none (the copy records no fetch from the forge)");
     }
 
     @Test

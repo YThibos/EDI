@@ -99,9 +99,9 @@ class OutageListTextTest {
     @Test
     void saysHowOldTheCopysKnowledgeIsWhenItMayBeOutOfDate() {
         assertThat(unpushedLine(new UnpushedWork(new Counted("origin", 0, Optional.of(Duration.ofDays(3))), false)))
-                .isEqualTo("none (the copy last fetched 3 days ago)");
+                .isEqualTo("none (the copy last fetched from the forge 3 days ago)");
         assertThat(unpushedLine(new UnpushedWork(new Counted("origin", 2, Optional.empty()), false)))
-                .isEqualTo("2 commits not on origin (the copy records no fetch)");
+                .isEqualTo("2 commits not on origin (the copy records no fetch from the forge)");
     }
 
     @Test
