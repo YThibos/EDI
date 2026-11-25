@@ -26,6 +26,7 @@ import io.github.ythibos.edi.domain.board.BoardCard;
 import io.github.ythibos.edi.domain.board.BoardFeedback;
 import io.github.ythibos.edi.domain.board.BoardPrompt;
 import io.github.ythibos.edi.domain.board.BoardRound;
+import io.github.ythibos.edi.domain.call.CallKey;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.CaptainAnswer;
 import io.github.ythibos.edi.domain.decision.DecisionCard;
@@ -333,6 +334,19 @@ class ResearchBoardsTest {
         assertThat(again.bindings()).containsExactly(new BoardBinding(raised, CLOSE_OUT));
         assertThat(home.decisions().get(raised).answer().option()).isEqualTo(new OptionKey('B'));
         assertThat(home.decisions().get(raised).answer().channel()).isEqualTo(AnswerChannel.BOARD);
+    }
+
+    @Test
+    void keepsTheCardAnsweredOnATickedBoardOffTheCaptainsListOnceTheBoardIsArmedAgain() {
+        Board armed = armQuietlyCarrying(CLOSE_OUT_CARD);
+        DecisionNumber raised = armed.bound().getFirst();
+        home.receiveBoardFeedback().receive(armed.id(), new BoardFeedback.Answered(List.of(closeOutChosen("A")), false));
+        home.tickACall().tick(new CallKey.OfABoard(armed.id()), Actor.CAPTAIN);
+
+        Board again = home.armBoard().arm(scout.id(), new TaskReference.ById(SCOUT), boardFile, BoardRounds.asking(2));
+
+        assertThat(again.bound()).doesNotContain(raised);
+        assertThat(home.fleetSnapshot().snapshot().dealtWith().decisions()).extracting(answered -> answered.decision().number()).doesNotContain(raised);
     }
 
     @Test

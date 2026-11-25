@@ -23,6 +23,10 @@ public record PlanDraft(PlanHeading heading, List<SliceDraft> slices) {
         requireWaitsOnEarlierSlices(slices);
     }
 
+    public PlanDraft goingBy(PlanGo given) {
+        return new PlanDraft(heading.goingBy(given), slices);
+    }
+
     public Plan planned(List<TaskId> tasks) {
         if (tasks.size() != slices.size()) {
             throw new IllegalArgumentException("Each of the " + slices.size() + " slices of " + heading.key() + " is one task.");

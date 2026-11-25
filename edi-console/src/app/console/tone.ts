@@ -9,6 +9,7 @@ const TONES: Record<string, Tone> = {
   failed: 'danger',
   starting: 'info',
   'with me': 'info',
+  'usage limit': 'neutral',
   busy: 'online',
   idle: 'neutral',
   delivered: 'warn',

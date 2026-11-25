@@ -49,6 +49,7 @@ import io.github.ythibos.edi.web.Confirmation.RecheckAsked;
 import io.github.ythibos.edi.web.Confirmation.Relaunched;
 import io.github.ythibos.edi.web.Confirmation.Released;
 import io.github.ythibos.edi.web.Confirmation.StatusRecorded;
+import io.github.ythibos.edi.web.Confirmation.Ticked;
 import io.github.ythibos.edi.web.Confirmation.Steered;
 import io.github.ythibos.edi.web.Confirmation.StopRequested;
 import io.github.ythibos.edi.web.Confirmation.WorkDiscarded;
@@ -95,6 +96,7 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case BoardRoundPosted posted -> "Posted a new round on the research board " + posted.board().file() + " for " + posted.board().task() + ";"
                     + whatTheSitrepPutsBeforeTheCaptain(posted.board());
             case RecheckAsked asked -> "You asked for a re-check of " + asked.number() + " against reality; it stays open until it is answered.";
+            case Ticked ticked -> "Ticked " + ticked.call() + " off the captain's list; it leaves the sitrep page and the reports.";
             case CaptainHeard heard -> captainHeard(heard);
             case Promoted promoted -> "Promoted the scout " + promoted.promoted().scout() + " to the ship " + promoted.promoted().ship().id()
                     + ", queued on the captain's word.";

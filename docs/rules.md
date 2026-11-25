@@ -39,7 +39,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `access.primary-session` | `Caller` | Only the session edi up opened starts or feeds a primary session and changes the fleet; the home token alone keeps edi up, edi health, edi down and the reads. |
 | `access.worker-token-file` | `Edi` | A worker's window calls the core with its own token, never the home token. |
 | `request.valid` | `ApiRefusals` | A request to the core carries every value it needs, well formed. |
-| `authority.captains-word` | `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
+| `authority.captains-word` | `CaptainsGo`, `CaptainsWordEvidence` | Destructive and irreversible acts wait for the captain's word (I-06). |
 | `authority.typed-words` | `CaptainMessages`, `CaptainsWordEvidence` | Only words the captain typed in a known primary session count as the captain's word. |
 | `task.stage` | `AddTask`, `DiscardWork`, `PromoteScout`, `StageTransitions`, `Task` | A task moves only along the stages its kind allows. |
 | `task.hold` | `DropTask`, `Holds`, `RecoverFromOutage`, `RelaunchWorker`, `Task` | A held task stays held until its hold is released or its decision answered. |
@@ -50,6 +50,7 @@ A refusal cannot be written without its rule, because `Refusal` takes one, and a
 | `decision.answered-once` | `ArmBoard`, `Decision` | A decision is answered once, and a new question is a new decision. |
 | `decision.captain-voice` | `CaptainVoice` | What reaches the captain speaks in outcomes, not in internal labels (I-22). |
 | `decision.ticket-choice` | `TicketProposal`, `TicketProposals` | The captain's ticket choice is one of the options offered. |
+| `decision.ticked-when-dealt-with` | `TickACall` | An entry leaves the captain's list only when ticked, and is ticked only once it no longer waits. |
 | `dispatch.waits-met` | `DispatchTask` | A task is dispatched only once each task it waits for is merged or landed, as its wait names. |
 | `dispatch.one-project` | `AdoptForkTask`, `DispatchTask` | A worker works in the isolated copy of exactly one project. |
 | `dispatch.category` | `DispatchTask` | A dispatch names a category from the dispatch rules. |

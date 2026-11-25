@@ -18,6 +18,7 @@ export class ConsoleHeader {
   readonly presence = input<PresenceShown | null>(null);
   readonly personalityOpen = input(false);
   readonly waiting = input(0);
+  readonly landed = input(0);
   readonly showsPersonality = input(true);
   readonly presenceChosen = output<PresenceChoice>();
   readonly awayChosen = output<string>();

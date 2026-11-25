@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { LandedView } from './landed/landed-view';
 import { SignInPage } from './sign-in/sign-in-page';
 import { SitrepPage } from './sitrep/sitrep-page';
 import { TaskPanel } from './task/task-panel';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   },
   { path: 'fleet', component: EmptyView, title: 'FLEET · EDI', data: { view: 'Fleet', shows: 'the workers, my health and the usage' } },
   { path: 'week', component: WeekView, title: 'WEEK · EDI' },
+  { path: 'landed', component: LandedView, title: 'LANDED · EDI' },
   { path: 'login', component: SignInPage, title: 'Sign in · EDI' },
   { path: '**', redirectTo: '' },
 ];

@@ -8,7 +8,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.Wait;
 
-public record SliceStanding(Slice slice, Task task, List<Wait> waits) {
+public record SliceStanding(Slice slice, Task task, List<Wait> waits, boolean dispatched) {
 
     public SliceStanding {
         waits = List.copyOf(waits);
@@ -16,6 +16,10 @@ public record SliceStanding(Slice slice, Task task, List<Wait> waits) {
 
     public boolean isEligible() {
         return task.stage() == TaskStage.QUEUED && !task.isHeld() && waits.stream().allMatch(Wait::isMet);
+    }
+
+    public boolean takesAPlace() {
+        return task.stage().isOngoing() || dispatched && task.stage() == TaskStage.QUEUED && !isEligible();
     }
 
     public List<Wait> unmetWaitsOutside(Plan plan) {

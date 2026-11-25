@@ -37,6 +37,7 @@ import io.github.ythibos.edi.adapter.runtime.ClaudeLoginFiles;
 import io.github.ythibos.edi.adapter.runtime.ClaudeSessions;
 import io.github.ythibos.edi.adapter.store.AdoptionStore;
 import io.github.ythibos.edi.adapter.store.BoardStore;
+import io.github.ythibos.edi.adapter.store.CallTickStore;
 import io.github.ythibos.edi.adapter.store.CaptainMessageStore;
 import io.github.ythibos.edi.adapter.store.CaptainWordStore;
 import io.github.ythibos.edi.adapter.store.CloneRefreshStore;
@@ -86,6 +87,7 @@ import io.github.ythibos.edi.application.board.SettleBoardAnswers;
 import io.github.ythibos.edi.application.brief.WorkerBriefs;
 import io.github.ythibos.edi.application.brief.WrittenBriefs;
 import io.github.ythibos.edi.application.decision.AnswerDecision;
+import io.github.ythibos.edi.application.call.TickACall;
 import io.github.ythibos.edi.application.decision.AskForARecheck;
 import io.github.ythibos.edi.application.decision.CloseDecisionRounds;
 import io.github.ythibos.edi.application.decision.DecisionListQuery;
@@ -121,8 +123,10 @@ import io.github.ythibos.edi.application.dispatch.ResearchBeforeImplementation;
 import io.github.ythibos.edi.application.dispatch.ResearchFirstPilot;
 import io.github.ythibos.edi.application.dispatch.ResumeNotes;
 import io.github.ythibos.edi.application.dispatch.RewriteBrief;
+import io.github.ythibos.edi.application.dispatch.RoomForAWorker;
 import io.github.ythibos.edi.application.dispatch.WorkerPlaces;
 import io.github.ythibos.edi.application.dispatch.WorktreeHooks;
+import io.github.ythibos.edi.application.fleet.DeliveryNotesQuery;
 import io.github.ythibos.edi.application.fleet.FleetSnapshotQuery;
 import io.github.ythibos.edi.application.fleet.TaskLinksQuery;
 import io.github.ythibos.edi.application.follow.EventFollowers;
@@ -141,6 +145,8 @@ import io.github.ythibos.edi.application.migration.MigrateFirstofficer;
 import io.github.ythibos.edi.application.personality.ChangePersonality;
 import io.github.ythibos.edi.application.personality.PersonalityQuery;
 import io.github.ythibos.edi.application.plan.AddPlan;
+import io.github.ythibos.edi.application.plan.CaptainsGo;
+import io.github.ythibos.edi.application.plan.DispatchEligibleSlices;
 import io.github.ythibos.edi.application.plan.PlanQuery;
 import io.github.ythibos.edi.application.port.Tracker;
 import io.github.ythibos.edi.application.port.WorkerRuntime;
@@ -273,6 +279,7 @@ public final class TestHome {
     private final UnplannedShipStore unplannedShips;
     private final PipelineReviewStore reviews;
     private final BoardStore boards;
+    private final CallTickStore callTicks;
     private final CaptainWordStore captainWords;
     private final CaptainMessageStore captainMessages;
     private final SparkStore sparks;
@@ -319,6 +326,7 @@ public final class TestHome {
         this.unplannedShips = new UnplannedShipStore(jdbc);
         this.reviews = new PipelineReviewStore(jdbc);
         this.boards = new BoardStore(jdbc);
+        this.callTicks = new CallTickStore(jdbc);
         this.captainWords = new CaptainWordStore(jdbc);
         this.captainMessages = new CaptainMessageStore(jdbc);
         this.sparks = new SparkStore(jdbc);
@@ -460,11 +468,19 @@ public final class TestHome {
     }
 
     public AddPlan addPlan() {
-        return new AddPlan(addTask(), plans(), events, registry, clock, transaction);
+        return new AddPlan(addTask(), captainsGo(), plans(), events, registry, clock, transaction);
     }
 
     public PlanQuery planQuery() {
-        return new PlanQuery(plans(), tasks, transaction);
+        return new PlanQuery(plans(), tasks, dispatches, transaction);
+    }
+
+    public DispatchEligibleSlices dispatchEligibleSlices() {
+        return new DispatchEligibleSlices(plans(), planQuery(), captainsGo(), dispatchTask(), roomForAWorker(), events, clock, transaction);
+    }
+
+    public CaptainsGo captainsGo() {
+        return new CaptainsGo(decisions, tasks, captainsWord(), transaction);
     }
 
     public TaskLinksQuery taskLinks() {
@@ -765,8 +781,11 @@ public final class TestHome {
     }
 
     public LaunchDeferredDispatches launchDeferredDispatches() {
-        return new LaunchDeferredDispatches(dispatches, tasks, registry, workerPlaces(), awayLimit(), launchWorker(), cloneRefreshes(), events, clock,
-                transaction);
+        return new LaunchDeferredDispatches(dispatches, tasks, roomForAWorker(), launchWorker(), events, clock, transaction);
+    }
+
+    public RoomForAWorker roomForAWorker() {
+        return new RoomForAWorker(registry, workerPlaces(), awayLimit(), cloneRefreshes(), transaction);
     }
 
     public AwayLimit awayLimit() {
@@ -1166,6 +1185,14 @@ public final class TestHome {
 
     public AskForARecheck askForARecheck() {
         return new AskForARecheck(tasks, decisions, events, clock, transaction);
+    }
+
+    public TickACall tickACall() {
+        return new TickACall(decisions, boards, deliveries, callTicks, events, clock, transaction);
+    }
+
+    public DeliveryNotesQuery deliveryNotes() {
+        return new DeliveryNotesQuery(home);
     }
 
     public List<String> eventTypesOf(TaskId task) {

@@ -36,6 +36,8 @@ import io.github.ythibos.edi.domain.event.DomainEvent.LostInOutage;
 import io.github.ythibos.edi.domain.event.DomainEvent.MechanicalChangeAccepted;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecheckAsked;
 import io.github.ythibos.edi.domain.event.DomainEvent.RecoveryFailed;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceDispatched;
+import io.github.ythibos.edi.domain.event.DomainEvent.SliceNotDispatched;
 import io.github.ythibos.edi.domain.event.DomainEvent.StatusReported;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerNotReceived;
 import io.github.ythibos.edi.domain.event.DomainEvent.SteerReceived;
@@ -46,6 +48,7 @@ import io.github.ythibos.edi.domain.event.DomainEvent.WorkerDied;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerQuestionUnanswered;
 import io.github.ythibos.edi.domain.event.DomainEvent.WorkerStale;
 import io.github.ythibos.edi.domain.landing.BranchCommit;
+import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusReport;
 import io.github.ythibos.edi.domain.status.StatusState;
@@ -111,6 +114,16 @@ class WakeRuleTest {
     void wakesThePrimaryForEveryDecisionInARoundThatCloses() {
         assertThat(WakeRule.wakeFor(new DecisionRoundClosed(TASK, D58, "Which lamp?", RESET), Actor.CORE))
                 .contains(new Wake(WakeKind.DECISION_ROUND, TASK, null, "D58 Which lamp?", null));
+    }
+
+    @Test
+    void wakesThePrimaryOnceForEachSliceTheCoreDispatchedOrCouldNotDispatch() {
+        WorkKey plan = WorkKey.parse("HRN-40");
+
+        assertThat(WakeRule.wakeFor(new SliceDispatched(TASK, plan, 2, WORKER), Actor.CORE))
+                .contains(new Wake(WakeKind.SLICE_DISPATCHED, TASK, WORKER, "2 of the HRN-40 plan", null));
+        assertThat(WakeRule.wakeFor(new SliceNotDispatched(TASK, plan, 2, "The lamp has no brief."), Actor.CORE))
+                .contains(new Wake(WakeKind.SLICE_NOT_DISPATCHED, TASK, null, "2 of the HRN-40 plan: The lamp has no brief.", null));
     }
 
     @Test

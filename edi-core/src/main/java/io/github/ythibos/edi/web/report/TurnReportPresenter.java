@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
+import io.github.ythibos.edi.application.fleet.ChangingRequest;
 import io.github.ythibos.edi.application.fleet.OpenDecision;
 import io.github.ythibos.edi.domain.report.Turn;
 import io.github.ythibos.edi.web.presence.PresenceWords;
@@ -52,7 +53,10 @@ public class TurnReportPresenter implements TextPresenter<TurnReport> {
         if (report.waiting().hasNothingWaiting()) {
             return List.of();
         }
-        return DecisionZone.lines(WaitingEntries.of(report.waiting(), new TurnWording(report.turn()), open -> showingOf(open, report)), width);
+        TurnWording wording = new TurnWording(report.turn());
+        List<DecisionZone.Entry> entries = Stream.concat(WaitingEntries.of(report.waiting(), wording, open -> showingOf(open, report)).stream(),
+                report.waiting().changingAgain().stream().map(changing -> changingAgain(changing, wording))).toList();
+        return DecisionZone.lines(entries, width);
     }
 
     private DecisionShowing showingOf(OpenDecision open, TurnReport report) {
@@ -60,6 +64,11 @@ public class TurnReportPresenter implements TextPresenter<TurnReport> {
             return new DecisionShowing.InTheRound(moments.clockTime(report.gatheringRound().closes()));
         }
         return report.showsTheCardOf(open) ? DecisionShowing.IN_FULL : DecisionShowing.AS_A_REMINDER;
+    }
+
+    private static DecisionZone.Entry changingAgain(ChangingRequest changing, TurnWording wording) {
+        return new DecisionZone.ChangingAgain(wording.projectsOf(changing.task()), wording.textOf(changing.task()), changing.delivery().address().url(),
+                changing.whyChanging(), changing.delivery().stackedOn());
     }
 
     private static List<String> doneOf(Turn turn, int width) {
