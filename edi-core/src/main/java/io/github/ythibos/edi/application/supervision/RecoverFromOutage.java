@@ -1,7 +1,9 @@
 package io.github.ythibos.edi.application.supervision;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ import io.github.ythibos.edi.domain.primary.PrimarySession;
 import io.github.ythibos.edi.domain.recovery.OutageEntry;
 import io.github.ythibos.edi.domain.recovery.RecoveryAction;
 import io.github.ythibos.edi.domain.rule.Rule;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.worker.LaunchKind;
 import io.github.ythibos.edi.domain.worker.UsageLimit;
@@ -93,8 +96,10 @@ public class RecoverFromOutage {
 
     private CaptainOverride chosen(OutageEntry entry, RecoveryAction action, RouteChange change, Actor actor) {
         Task task = tasks.get(entry.task());
-        if (task.isHeld() && !entry.holds(task.hold())) {
-            throw new Refusal(Rule.TASK_HOLD, task.id() + " is also held: " + task.hold().reason() + ". Settle that first.");
+        List<Hold> otherHolds = entry.otherHoldsOf(task);
+        if (!otherHolds.isEmpty()) {
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " is also held: " + otherHolds.stream().map(Hold::reason).collect(Collectors.joining("; "))
+                    + ". Settle that first.");
         }
         events.record(new RecoveryChosen(task.id(), entry.number(), action), actor, clock.now());
         return captainsOverrideOf(task, entry.number(), change);

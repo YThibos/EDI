@@ -19,6 +19,7 @@ import io.github.ythibos.edi.domain.authority.CallingSession;
 import io.github.ythibos.edi.domain.authority.Citation;
 import io.github.ythibos.edi.domain.decision.AnswerChannel;
 import io.github.ythibos.edi.domain.decision.Decision;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
 import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
@@ -29,6 +30,7 @@ import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskState;
 import io.github.ythibos.edi.domain.tracker.TicketDetails;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
+import io.github.ythibos.edi.testing.Cards;
 import io.github.ythibos.edi.testing.TestHome;
 import io.github.ythibos.edi.testing.TrackerFixtures;
 
@@ -136,6 +138,48 @@ class ClosingATicketDecisionTest {
 
         assertThat(keyed.task().intake().workKey()).isEqualTo(WorkKey.parse("GDN-3"));
         assertThat(keyed.closedDecision()).isNull();
+    }
+
+    @Test
+    void carriesOutTheTicketChoiceOnlyFromTheAnswerToTheTicketDecision() {
+        DecisionNumber ticket = home.decisions().ofTask(LAMPS).orElseThrow().number();
+        DecisionNumber bulb = home.raiseDecision().raise(THE_LAMPS, Cards.card("Which bulb?"), Actor.PRIMARY);
+
+        AnsweredDecision bulbAnswered = home.answerDecision().answer(new TaskReference.ByDecision(bulb),
+                new GivenAnswer("A", new OptionKey('A'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+        AnsweredDecision ticketAnswered = home.answerDecision().answer(new TaskReference.ByDecision(ticket),
+                new GivenAnswer("C, drop it", new OptionKey('C'), "", AnswerChannel.CHAT), Actor.PRIMARY);
+
+        assertThat(bulbAnswered.ticket()).isEqualTo(TicketSettlement.none());
+        assertThat(bulbAnswered.task().holds().openDecisions()).containsExactly(ticket);
+        assertThat(ticketAnswered.ticket()).isEqualTo(new TicketSettlement.DropChosen());
+        assertThat(home.tasks().get(LAMPS).intake().workKey()).isNull();
+    }
+
+    @Test
+    void refusesTheDropWhileAnotherDecisionWaitsBesideTheTicketDecision() {
+        CallingSession session = session("Drop the lamps.");
+        home.captainsWord().record(session, new Citation.Verbatim("Drop the lamps."), THE_LAMPS, null, Actor.PRIMARY);
+        DecisionNumber ticket = home.decisions().ofTask(LAMPS).orElseThrow().number();
+        DecisionNumber bulb = home.raiseDecision().raise(THE_LAMPS, Cards.card("Which bulb?"), Actor.PRIMARY);
+
+        assertThatThrownBy(() -> home.dropTask().drop(THE_LAMPS, false, session, Actor.PRIMARY)).isInstanceOf(Refusal.class)
+                .hasMessage("fix-lamps waits on " + ticket + " and " + bulb + "; it is dropped once those decisions are answered.");
+        assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(ticket, bulb);
+        assertThat(home.tasks().get(LAMPS).state()).isEqualTo(TaskState.QUEUED);
+    }
+
+    @Test
+    void keyingClosesTheTicketDecisionAndLeavesALaterQuestionOpen() {
+        CallingSession session = session("It books on SVC-2.");
+        DecisionNumber ticket = home.decisions().ofTask(LAMPS).orElseThrow().number();
+        DecisionNumber bulb = home.raiseDecision().raise(THE_LAMPS, Cards.card("Which bulb?"), Actor.PRIMARY);
+
+        KeyedTask keyed = home.keyTask().key(THE_LAMPS, WorkKey.parse("SVC-2"), new Citation.Verbatim("It books on SVC-2."), session, Actor.PRIMARY);
+
+        assertThat(keyed.closedDecision()).isEqualTo(ticket);
+        assertThat(keyed.task().holds().openDecisions()).containsExactly(bulb);
+        assertThat(home.decisions().open()).extracting(Decision::number).containsExactly(bulb);
     }
 
     private CallingSession session(String typed) {

@@ -81,11 +81,8 @@ public class OutageHoldList {
     }
 
     private void holdTheTask(OutageEntry entry, Instant now) {
-        Task task = tasks.get(entry.task());
-        if (!task.isHeld()) {
-            Task held = task.held(entry.hold());
-            tasks.update(held);
-            events.record(new TaskHeld(held.id(), held.hold()), Actor.CORE, now);
-        }
+        Task held = tasks.get(entry.task()).held(entry.hold());
+        tasks.update(held);
+        events.record(new TaskHeld(held.id(), entry.hold()), Actor.CORE, now);
     }
 }

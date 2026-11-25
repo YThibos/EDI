@@ -99,7 +99,7 @@ class DecisionsAndReportingTest {
             home.addTask().add(captainItem("paint-choice", "Choose the paint"), Actor.PRIMARY);
 
             DecisionNumber assigned = raise(home, "lamp-choice", "Which lamp?");
-            DecisionNumber reheld = raise(home, "lamp-choice", "Which lamp, now that oil is scarce?");
+            DecisionNumber reheld = raiseAgain(home, assigned, "Which lamp, now that oil is scarce?");
             answer(home, assigned);
             DecisionNumber afterArchiving = raise(home, "lamp-fitting", "Fit it today?");
             assertThatThrownBy(() -> raise(home, "lamp-choice", "Which lamp, once more?")).isInstanceOf(Refusal.class);
@@ -728,6 +728,10 @@ class DecisionsAndReportingTest {
 
     private static DecisionNumber raise(TestHome home, String task, String title) {
         return home.raiseDecision().raise(new TaskReference.ById(new TaskId(task)), card(title), Actor.PRIMARY);
+    }
+
+    private static DecisionNumber raiseAgain(TestHome home, DecisionNumber number, String title) {
+        return home.raiseDecision().raise(new TaskReference.ByDecision(number), card(title), Actor.PRIMARY);
     }
 
     private static void answer(TestHome home, DecisionNumber number) {

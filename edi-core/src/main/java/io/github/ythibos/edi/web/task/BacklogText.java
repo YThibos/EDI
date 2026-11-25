@@ -30,9 +30,7 @@ class BacklogText implements TextPresenter<Backlog> {
 
     private static void describe(BacklogEntry entry, Table table) {
         table.row(TaskCells.of(entry.task()));
-        if (entry.task().isHeld()) {
-            table.line(DETAIL_INDENT + Words.hold(entry.task().hold()));
-        }
+        entry.task().holds().held().forEach(hold -> table.line(DETAIL_INDENT + Words.hold(hold)));
         List<Wait> unmet = Wait.unmet(entry.waits());
         if (!unmet.isEmpty()) {
             table.line(DETAIL_INDENT + Words.waits(unmet));

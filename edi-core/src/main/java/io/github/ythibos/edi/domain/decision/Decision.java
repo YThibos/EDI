@@ -7,11 +7,8 @@ import java.util.List;
 import io.github.ythibos.edi.domain.Refusal;
 import io.github.ythibos.edi.domain.authority.CaptainWordAct;
 import io.github.ythibos.edi.domain.rule.Rule;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
-import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.TaskId;
-import io.github.ythibos.edi.domain.worker.WorkerQuestion;
 
 public record Decision(DecisionNumber number, TaskId task, DecisionCard card, Instant raisedAt, CaptainAnswer answer) {
 
@@ -51,14 +48,6 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
         return answer == null;
     }
 
-    public boolean answers(WorkerQuestion question) {
-        return !isOpen() && isRaisedFor(question);
-    }
-
-    public boolean isRaisedFor(WorkerQuestion question) {
-        return task.equals(question.task()) && !question.askedAt().isAfter(raisedAt);
-    }
-
     public String answerForItsWorker() {
         List<String> lines = new ArrayList<>(List.of("Answer to " + number + " " + card.title()));
         if (answer.choosesAnOption()) {
@@ -71,8 +60,8 @@ public record Decision(DecisionNumber number, TaskId task, DecisionCard card, In
         return String.join("\n", lines);
     }
 
-    public CaptainHold holdOnItsTask() {
-        return new CaptainHold(HoldKind.DECISION, number + " " + card.title(), HoldUntil.captainsWord(), raisedAt);
+    public Hold.OpenDecision holdOnItsTask() {
+        return new Hold.OpenDecision(number, card.title(), raisedAt);
     }
 
     private String alreadyAnswered() {

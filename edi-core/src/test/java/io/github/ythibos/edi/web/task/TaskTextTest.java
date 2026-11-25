@@ -25,6 +25,7 @@ import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.StageReached;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -72,8 +73,8 @@ class TaskTextTest {
     @Test
     void namesOnlyTheWaitsOfATaskThatAreNotMetYet() {
         TaskDetail waiting = new TaskDetail(PresenterFixtures.lantern(), List.of(new Wait(new TaskId("mast"), AwaitedStage.MERGED, TaskStage.RETIRED),
-                Wait.afterLanded(new TaskId("quay"), TaskStage.MERGED)), null, null, null, null, null, List.of(), List.of());
-        TaskDetail metOnly = new TaskDetail(PresenterFixtures.lantern(), List.of(Wait.afterLanded(new TaskId("quay"), TaskStage.LANDED)), null, null,
+                Wait.afterLanded(new TaskId("quay"), TaskStage.MERGED)), List.of(), null, null, null, null, List.of(), List.of());
+        TaskDetail metOnly = new TaskDetail(PresenterFixtures.lantern(), List.of(Wait.afterLanded(new TaskId("quay"), TaskStage.LANDED)), List.of(), null,
                 null, null, null, List.of(), List.of());
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(waiting))
@@ -86,7 +87,7 @@ class TaskTextTest {
         MergeRequestAddress address = new MergeRequestAddress(ForgeRepository.registered(ForgeKind.GITHUB, null, "example-owner/harness"), 7);
         Delivery draft = Delivery.of(PresenterFixtures.lantern().id(),
                 new MergeRequestView(address, MergeRequestState.OPEN, true, "feature/HRN-3", "main", "1111", HeadChecks.UNDECIDED, null, null), new BaseBranch("main"), AT);
-        TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), null, draft, new PipelineRun("01RUN", "running", "ci", false, "1111", null, false),
+        TaskDetail detail = new TaskDetail(PresenterFixtures.lantern(), List.of(), List.of(), draft, new PipelineRun("01RUN", "running", "ci", false, "1111", null, false),
                 new TaskCost(PresenterFixtures.lantern().id(), null, new TokenUsage(1, 20, 3, 4), null, AT),
                 new WorkedTime(Duration.ofMinutes(139), Duration.ofMinutes(191)), List.of(), List.of());
 
@@ -103,8 +104,8 @@ class TaskTextTest {
     void showsATaskWithItsDecisionNotesAndTimeline() {
         Task item = PresenterFixtures.captainItem()
                 .noted("Ask before the season.")
-                .heldForDecision(PresenterFixtures.openDecision().holdOnItsTask());
-        TaskDetail detail = new TaskDetail(item, List.of(), PresenterFixtures.openDecision(), null, null, null, null, List.of(),
+                .held(PresenterFixtures.openDecision().holdOnItsTask());
+        TaskDetail detail = new TaskDetail(item, List.of(), List.of(PresenterFixtures.openDecision()), null, null, null, null, List.of(),
                 List.of(new RecordedEvent(1, AT, Actor.PRIMARY, "TaskAdded", item.id()), new RecordedEvent(2, AT, Actor.PRIMARY, "DecisionRaised", item.id())));
 
         assertThat(new TaskDetailText(PresenterFixtures.moments(), PresenterFixtures.decisionLines()).text(detail)).isEqualTo("""
@@ -131,8 +132,8 @@ class TaskTextTest {
 
     @Test
     void showsTheStageATaskIsAtAndEveryStageItReached() {
-        Task merged = new Task(new TaskId("lantern"), PresenterFixtures.lantern().intake(), TaskStage.MERGED, "", null, AT, null);
-        TaskDetail detail = new TaskDetail(merged, List.of(), null, null, null, null, null, List.of(
+        Task merged = new Task(new TaskId("lantern"), PresenterFixtures.lantern().intake(), TaskStage.MERGED, "", Holds.none(), AT, null);
+        TaskDetail detail = new TaskDetail(merged, List.of(), List.of(), null, null, null, null, List.of(
                 new StageReached(AT, TaskStage.WORKING, "dispatched"),
                 new StageReached(AT.plus(Duration.ofMinutes(90)), TaskStage.DELIVERED, "its worker reported done"),
                 new StageReached(AT.plus(Duration.ofMinutes(95)), TaskStage.CHANGING, "its worker reported working"),

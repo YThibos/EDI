@@ -21,7 +21,7 @@ public record ParkedTask(Task task, Decision decision, List<Task> blockers) {
         if (isBlocked()) {
             return "blocked by " + blockers.stream().map(blocker -> blocker.intake().title()).collect(Collectors.joining(", "));
         }
-        return switch (task.hold().until()) {
+        return switch (task.holds().releasable().getFirst().until()) {
             case HoldUntil.Day day -> "deferred until " + day.date();
             case HoldUntil.CaptainsWord _ -> "on hold";
         };

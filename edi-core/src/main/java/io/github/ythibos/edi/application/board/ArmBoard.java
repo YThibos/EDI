@@ -112,8 +112,8 @@ public class ArmBoard {
 
     private DecisionNumber raised(BoardCard card, Task task, WorkerId worker, Optional<Board> listening) {
         requireNotYetAnswered(card, task);
-        decisions.ofTask(task.id()).filter(Decision::isOpen).ifPresent(open -> requireRaisedAgainOnlyFromItsOwnBoard(open, card, listening));
-        return raiseDecision.raise(new TaskReference.ById(task.id()), card.card(), Actor.worker(worker));
+        requireRaisedAgainOnlyFromItsOwnBoard(card, task, listening);
+        return raiseDecision.raise(raisedAgainOrNew(card, task, listening), card.card(), Actor.worker(worker));
     }
 
     private void requireNotYetAnswered(BoardCard card, Task task) {
@@ -134,12 +134,31 @@ public class ArmBoard {
                 + "title.");
     }
 
-    private static void requireRaisedAgainOnlyFromItsOwnBoard(Decision open, BoardCard card, Optional<Board> listening) {
-        if (!open.card().equals(card.card()) && listening.filter(board -> board.bindings().contains(card.raisedAs(open.number()))).isEmpty()) {
-            throw new Refusal(Rule.OPEN_CARD, open.number() + " already waits on the captain on " + open.task() + " (\"" + open.card().title()
-                    + "\"); if the board answers it, arm the round with that very card under --card, or report the new question to EDI with "
-                    + "edi status needs-decision --key <question>.");
+    private void requireRaisedAgainOnlyFromItsOwnBoard(BoardCard card, Task task, Optional<Board> listening) {
+        List<Decision> open = task.holds().openDecisions().stream().map(decisions::get).toList();
+        if (open.stream().noneMatch(waiting -> raisesAgain(card, waiting, listening))) {
+            open.stream().reduce((_, latest) -> latest).ifPresent(ArmBoard::refuseANewCardBeside);
         }
+    }
+
+    private static boolean raisesAgain(BoardCard card, Decision open, Optional<Board> listening) {
+        return open.card().equals(card.card()) || listening.filter(board -> board.bindings().contains(card.raisedAs(open.number()))).isPresent();
+    }
+
+    private static void refuseANewCardBeside(Decision open) {
+        throw new Refusal(Rule.OPEN_CARD, open.number() + " already waits on the captain on " + open.task() + " (\"" + open.card().title()
+                + "\"); if the board answers it, arm the round with that very card under --card, or report the new question to EDI with "
+                + "edi status needs-decision --key <question>.");
+    }
+
+    private static TaskReference raisedAgainOrNew(BoardCard card, Task task, Optional<Board> listening) {
+        return listening.flatMap(board -> openDecisionItBinds(board, card, task))
+                .<TaskReference>map(TaskReference.ByDecision::new)
+                .orElseGet(() -> new TaskReference.ById(task.id()));
+    }
+
+    private static Optional<DecisionNumber> openDecisionItBinds(Board board, BoardCard card, Task task) {
+        return task.holds().openDecisions().stream().filter(open -> board.bindings().contains(card.raisedAs(open))).findFirst();
     }
 
     private Board postedAgain(Board listening, Task task, BoardRound round) {

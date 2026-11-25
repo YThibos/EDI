@@ -29,7 +29,9 @@ import io.github.ythibos.edi.domain.status.StatusKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
 import io.github.ythibos.edi.domain.task.BaseBranch;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -89,7 +91,9 @@ class JsonConfiguration {
                 .addSerializer(AnswerChannel.class, new AsText<>(AnswerChannel.class, AnswerChannel::word))
                 .addSerializer(SparkAuthor.class, new AsText<>(SparkAuthor.class, SparkAuthor::word))
                 .addSerializer(SparkOutcome.class, new AsText<>(SparkOutcome.class, SparkOutcome::word))
-                .addSerializer(HoldUntil.class, new AsText<>(HoldUntil.class, JsonConfiguration::dayOrCaptainsWord));
+                .addSerializer(HoldUntil.class, new AsText<>(HoldUntil.class, JsonConfiguration::dayOrCaptainsWord))
+                .addSerializer(Hold.class, new HoldInWords())
+                .addSerializer(Holds.class, new HoldsAsTheirList());
     }
 
     private static String dayOrCaptainsWord(HoldUntil until) {
@@ -111,6 +115,35 @@ class JsonConfiguration {
         @Override
         public void serialize(T value, JsonGenerator generator, SerializationContext context) {
             generator.writeString(text.apply(value));
+        }
+    }
+
+    private static final class HoldInWords extends StdSerializer<Hold> {
+
+        HoldInWords() {
+            super(Hold.class);
+        }
+
+        @Override
+        public void serialize(Hold hold, JsonGenerator generator, SerializationContext context) {
+            generator.writeStartObject();
+            generator.writeStringProperty("kind", hold.kind().word());
+            generator.writeStringProperty("why", hold.why());
+            generator.writeStringProperty("until", dayOrCaptainsWord(hold.until()));
+            generator.writePOJOProperty("since", hold.since());
+            generator.writeEndObject();
+        }
+    }
+
+    private static final class HoldsAsTheirList extends StdSerializer<Holds> {
+
+        HoldsAsTheirList() {
+            super(Holds.class);
+        }
+
+        @Override
+        public void serialize(Holds holds, JsonGenerator generator, SerializationContext context) {
+            generator.writePOJO(holds.held());
         }
     }
 }

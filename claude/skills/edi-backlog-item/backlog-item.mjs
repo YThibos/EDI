@@ -303,18 +303,23 @@ function holdLocally(run, item, issue) {
     const task = item.task ?? queuedTask(run, item, issue);
     const note = `backlogged upstream as ${issue.url}; it is taken from there, never from the local queue`;
     const name = task?.id ?? `the new task "${item.title}"`;
-    if (!task?.hold) {
+    const deferral = deferralOf(task);
+    if (!deferral) {
         const reason = `${note[0].toUpperCase()}${note.slice(1)}`;
         act(run, `hold ${name} for a deferral: ${reason}`, () => command('edi', ['hold', name, '--kind', 'deferral', '--reason', reason]));
         return reason;
     }
-    if (task.hold.reason.includes(issue.url)) {
-        return task.hold.reason;
+    if (deferral.why.includes(issue.url)) {
+        return deferral.why;
     }
-    const reason = `${task.hold.reason}; ${note}`;
-    act(run, `release ${name} and hold it again with its reason updated: ${reason}`, () => {
+    const lifted = liftedBesides(task, deferral);
+    if (lifted.length > 0) {
+        return `${deferral.why} (kept as it is, without ${issue.url}: edi release would also lift ${lifted.map(hold => hold.why).join('; ')})`;
+    }
+    const reason = `${deferral.why}; ${note}`;
+    act(run, `release ${name} and defer it again with its reason updated: ${reason}`, () => {
         command('edi', ['release', name]);
-        command('edi', ['hold', name, '--kind', task.hold.kind, '--reason', reason, ...untilOf(task.hold)]);
+        command('edi', ['hold', name, '--kind', 'deferral', '--reason', reason, ...untilOf(deferral)]);
     });
     return reason;
 }
@@ -332,6 +337,14 @@ function queuedTaskIn(answer) {
         throw new Refusal(`edi task add answered "${answer.trim()}", which names no task queued on an ${PROJECT}-<n> key.`);
     }
     return queued[1];
+}
+
+function deferralOf(task) {
+    return task?.holds.find(hold => hold.kind === 'deferral') ?? null;
+}
+
+function liftedBesides(task, deferral) {
+    return task.holds.filter(hold => hold !== deferral && hold.kind !== 'decision');
 }
 
 function untilOf(hold) {

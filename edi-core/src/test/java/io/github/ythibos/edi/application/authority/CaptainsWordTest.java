@@ -64,7 +64,7 @@ class CaptainsWordTest {
         home.captainsWord().record(session, new Citation.Verbatim("Drop the lamp choice."), TaskReference.parse("choose-lamp"), null, Actor.PRIMARY);
 
         assertThatThrownBy(() -> home.dropTask().drop(TaskReference.parse("choose-lamp"), false, session, Actor.PRIMARY))
-                .isInstanceOf(Refusal.class).hasMessageContaining("waits on D1 Which lamp?");
+                .isInstanceOf(Refusal.class).hasMessage("choose-lamp waits on D1; it is dropped once that decision is answered.");
     }
 
     @Test

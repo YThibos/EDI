@@ -77,10 +77,12 @@ class BacklogItemSkillTest {
             case "$1 $2" in
               "task list") if [ -f "$STATE/task" ]; then echo '{"tasks":[{"id":"harbour-lamps","intake":{"title":"Harbour lamps light themselves at dusk","projects":["EDI"]}}]}'; else echo '{"tasks":[]}'; fi ;;
               "task add") cat > "$STATE/task"; if [ -f "$STATE/added" ]; then cat "$STATE/added"; else echo "Queued harbour-lamps on $(echo "$*" | sed 's/.*--key \\([^ ]*\\).*/\\1/')."; fi ;;
-              "task show") hold=null; if [ -f "$STATE/hold" ]; then hold=$(printf '{"kind":"deferral","reason":"%s","until":null}' "$(cat "$STATE/hold")"); fi
-                printf '{"task":{"id":"harbour-lamps","intake":{"kind":"ship","title":"Harbour lamps light themselves at dusk","projects":["EDI"],"workKey":"EDI-9"},"notes":"","hold":%s}}' "$hold" ;;
+              "task show") holds=""; if [ -f "$STATE/hold" ]; then holds=$(printf '{"kind":"deferral","why":"%s","until":"2026-12-01","since":"2026-11-01T09:00:00Z"}' "$(cat "$STATE/hold")"); fi
+                if [ -f "$STATE/approval" ]; then holds="${holds:+$holds,}$(printf '{"kind":"approval","why":"%s","until":"2026-12-01","since":"2026-11-01T09:00:00Z"}' "$(cat "$STATE/approval")")"; fi
+                printf '{"task":{"id":"harbour-lamps","intake":{"kind":"ship","title":"Harbour lamps light themselves at dusk","projects":["EDI"],"workKey":"EDI-9"},"notes":"","holds":[%s]}}' "$holds" ;;
             esac
             if [ "$1" = hold ]; then printf '%s' "$6" > "$STATE/hold"; fi
+            if [ "$1" = release ]; then rm -f "$STATE/hold" "$STATE/approval"; fi
             """;
 
     @RegisterExtension
@@ -194,6 +196,36 @@ class BacklogItemSkillTest {
         assertThat(github.writes()).isEmpty();
         assertThat(ediCalls()).noneMatch(call -> call.startsWith("edi task add") || call.startsWith("edi hold") || call.startsWith("edi release"));
         assertThat(rerun.output()).contains("issue: https://github.com/example/edi/issues/9");
+    }
+
+    @Test
+    void aRunOnATaskDeferredForAnotherReasonDefersItAgainWithTheIssueNamed() throws IOException, InterruptedException {
+        Files.createDirectories(state);
+        Files.writeString(state.resolve("task"), "");
+        Files.writeString(state.resolve("hold"), "Waits for the new lens");
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(ediCalls()).noneMatch(call -> call.startsWith("edi task add")).contains(
+                "edi release harbour-lamps",
+                "edi hold harbour-lamps --kind deferral --reason Waits for the new lens; backlogged upstream as https://github.com/example/edi/issues/9;"
+                        + " it is taken from there, never from the local queue --until 2026-12-01");
+    }
+
+    @Test
+    void aRunKeepsTheDeferralOfATaskThatAlsoWaitsForTheCaptainsApproval() throws IOException, InterruptedException {
+        Files.createDirectories(state);
+        Files.writeString(state.resolve("task"), "");
+        Files.writeString(state.resolve("hold"), "Waits for the new lens");
+        Files.writeString(state.resolve("approval"), "the lens budget");
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(ediCalls()).noneMatch(call -> call.startsWith("edi release") || call.startsWith("edi hold"));
+        assertThat(run.output()).contains("Waits for the new lens (kept as it is, without https://github.com/example/edi/issues/9:"
+                + " edi release would also lift the lens budget)");
     }
 
     @Test

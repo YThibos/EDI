@@ -270,7 +270,7 @@ class SitrepConsolePresenterTest {
         Instant asked = NOW.minus(Duration.ofMinutes(20));
         Worker gated = workerOn(horn).reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("pitch"), null, "Which pitch?"), asked);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
-                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20))), List.of());
+                List.of(new WorkerQuestion(horn, gated, Duration.ofMinutes(20), false)), List.of());
 
         ConsoleSitrep sitrep = presented(new FleetSnapshot(waiting, DealtWith.NOTHING, List.of(), List.of(), List.of(), List.of(), List.of()));
 

@@ -20,8 +20,7 @@ import io.github.ythibos.edi.domain.decision.OptionKey;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent;
 import io.github.ythibos.edi.domain.event.RecordedEvent;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
@@ -46,7 +45,7 @@ class EventLogTest {
         EventLog events = home.events();
 
         events.record(new DomainEvent.TaskAdded(LAMP, intake), Actor.PRIMARY, AT);
-        events.record(new DomainEvent.TaskHeld(LAMP, new CaptainHold(HoldKind.DEFERRAL, "later", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT)),
+        events.record(new DomainEvent.TaskHeld(LAMP, new Hold.Deferral("later", HoldUntil.day(LocalDate.of(2026, 11, 1)), AT)),
                 Actor.PRIMARY, AT.plusSeconds(1));
         events.record(new DomainEvent.DecisionAnswered(LAMP, new DecisionNumber(3),
                 new CaptainAnswer("D3 A", new OptionKey('A'), "the LED", AT, AnswerChannel.CHAT)), Actor.PRIMARY, AT.plusSeconds(2));

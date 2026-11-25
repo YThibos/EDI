@@ -35,8 +35,7 @@ import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.status.StatusState;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.task.TaskKind;
@@ -84,7 +83,7 @@ class DispatchEligibleSlicesTest {
     void dispatchesNeitherAHeldSliceNorOneWhoseWaitIsNotMet() throws IOException {
         TestHome home = WorkerFixtures.homeWithProjects(directory);
         home.addPlan().add(threeSlices(2, promoteChosen(home), new SliceWait.After(1, AwaitedStage.MERGED), NONE, CategoryId.IMPLEMENTATION), Actor.PRIMARY);
-        home.tasks().update(home.tasks().get(OIL_GATE).held(new CaptainHold(HoldKind.APPROVAL, "the gate needs a yes", HoldUntil.captainsWord(),
+        home.tasks().update(home.tasks().get(OIL_GATE).held(new Hold.Approval("the gate needs a yes", HoldUntil.captainsWord(),
                 TestHome.START)));
 
         List<SliceDispatched> dispatched = home.dispatchEligibleSlices().dispatchWhereThePlansHaveRoom();

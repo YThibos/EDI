@@ -6,13 +6,14 @@ import java.util.Locale;
 public enum HoldKind {
     DECISION,
     DEFERRAL,
-    APPROVAL;
+    APPROVAL,
+    OUTAGE;
 
     public static HoldKind named(String word) {
         return Arrays.stream(values())
                 .filter(kind -> kind.word().equals(word))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("A hold is a decision, deferral or approval, not " + word + "."));
+                .orElseThrow(() -> new IllegalArgumentException("A hold is a decision, deferral, approval or outage, not " + word + "."));
     }
 
     public String word() {

@@ -75,13 +75,15 @@ public class DropTask {
     }
 
     private void requireNoDecisionButItsTicketWaiting(Task task) {
-        if (task.isHeld() && task.hold().awaitsADecision() && !awaitsItsTicket(task)) {
-            throw new Refusal(Rule.TASK_HOLD, task.id() + " waits on " + task.hold().reason() + "; it is dropped once that decision is answered.");
+        List<DecisionNumber> open = task.holds().openDecisions();
+        if (!open.isEmpty() && !waitsOnlyOnItsTicket(task, open)) {
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " waits on " + task.holds().openDecisionsInWords()
+                    + "; it is dropped once " + (open.size() == 1 ? "that decision is" : "those decisions are") + " answered.");
         }
     }
 
-    private boolean awaitsItsTicket(Task task) {
-        return Boolean.TRUE.equals(transaction.execute(_ -> ticketProposals.awaitsItsTicket(task.id())));
+    private boolean waitsOnlyOnItsTicket(Task task, List<DecisionNumber> open) {
+        return open.size() == 1 && Boolean.TRUE.equals(transaction.execute(_ -> ticketProposals.awaitsItsTicket(task.id())));
     }
 
     private boolean wasDispatched(Task task) {

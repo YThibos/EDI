@@ -1,6 +1,7 @@
 package io.github.ythibos.edi.application.supervision;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -52,11 +53,12 @@ public class LeaveTheOutageList {
     }
 
     private Task releasedFromItsHold(OutageEntry entry, Task task, Actor actor, Instant at) {
-        Task released = entry.withoutItsHold(task);
-        if (task.isHeld() && !released.isHeld()) {
-            tasks.update(released);
-            events.record(new TaskReleased(released.id()), actor, at);
+        if (!entry.holds(task)) {
+            return task;
         }
+        Task released = task.releasedFrom(entry.hold());
+        tasks.update(released);
+        events.record(new TaskReleased(released.id(), List.of(entry.hold())), actor, at);
         return released;
     }
 }

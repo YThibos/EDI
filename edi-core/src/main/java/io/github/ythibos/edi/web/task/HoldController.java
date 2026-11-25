@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.ythibos.edi.application.task.HoldTask;
 import io.github.ythibos.edi.application.task.ReleaseTask;
 import io.github.ythibos.edi.domain.decision.TaskReference;
+import io.github.ythibos.edi.domain.task.HoldKind;
 import io.github.ythibos.edi.web.Confirmation;
 import io.github.ythibos.edi.web.access.Caller;
 
@@ -27,7 +28,8 @@ class HoldController {
     @PostMapping("/hold")
     Confirmation hold(@PathVariable String reference, @RequestBody HoldRequest request, Caller caller) {
         caller.requirePrimary("edi hold");
-        return new Confirmation.Held(holdTask.hold(TaskReference.parse(reference), request.holdKind(), request.why(), request.holdUntil(), caller.actor()));
+        HoldKind kind = request.holdKind();
+        return new Confirmation.Held(holdTask.hold(TaskReference.parse(reference), kind, request.why(), request.holdUntil(), caller.actor()), kind);
     }
 
     @PostMapping("/release")

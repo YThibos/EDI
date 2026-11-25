@@ -41,6 +41,7 @@ public class AskForARecheck {
     }
 
     private Decision openDecisionOf(TaskReference reference, Task task) {
+        task.requireOneOpenDecisionNamedBy(reference);
         Decision decision = decisions.namedBy(reference).orElseThrow(() -> new UnknownDecision(task.id()));
         decision.requireOpen();
         return decision;

@@ -15,7 +15,7 @@ The core runs as a native image, where Spring's `@Transactional` proxies are gen
 The store is one SQLite file per home, `$EDI_HOME/data/edi.db`, in WAL mode with foreign keys on and a busy timeout of 5,000 ms, migrated by Flyway (`StoreConfiguration`, `StoreFile`).
 The core is the only writer; the command never opens the database.
 Tables hold the current state and the `event` table holds the history: each event row carries its time, actor, type and a JSON payload written by `EventLog`, in the same transaction as the change ([events-and-followers](events-and-followers.md)).
-A current row keeps only what is true now, such as a task's one hold or a decision's current card, and the event log keeps what came before, such as an earlier answer verbatim in its `DecisionAnswered` event.
+A current row keeps only what is true now, such as the reasons a task waits now or a decision's current card, and the event log keeps what came before, such as an earlier answer verbatim in its `DecisionAnswered` event.
 Columns are strict SQLite types; times are ISO-8601 instants in UTC and days ISO dates, both stored as text; kinds and states are stored as the words the command uses.
 Each slice adds the tables it writes in its own migration once it knows their columns, and each table has one store class that reads and writes it, such as `TaskStore`, `WorkerStore` or `DeliveryStore`.
 Derived facts are not stored twice: a worker's health and a worktree's path are computed, never kept.
@@ -56,3 +56,4 @@ When EDI needs concurrent writers from more than one process, long-running reade
 - 21/10/2026: `V9__waiting_on_the_captain.sql` added board links and dropped dependencies on closed tasks.
 - 10/11/2026: transactions take their turn in `OneTransactionAtATime` before they reach SQLite, after waiters pinned in the busy handler starved the transaction holding the write lock and refused web requests with a server error.
 - 12/11/2026: `V26__the_stage_is_stored.sql` rebuilt `task` with `stage` in place of `state` and derived each task's stage once from the stored facts ([task-lifecycle](task-lifecycle.md), EDI-85).
+- 24/11/2026: `V38__the_reasons_a_task_waits_are_a_set.sql` replaced `captain_hold` with `task_hold`, one row per reason a task waits ([task-lifecycle](task-lifecycle.md), EDI-87).

@@ -51,7 +51,7 @@ function directoriesIn(parent) {
 }
 
 function longHolds(store, now) {
-    return store.prepare('select task_id, reason, until, set_at from captain_hold').all()
+    return store.prepare("select task_id, why as reason, until, set_at from task_hold where kind <> 'decision'").all()
         .filter(hold => hold.until === null && now - Date.parse(hold.set_at) > HELD_DAYS * DAY && !WHAT_LIFTS_A_HOLD.test(hold.reason))
         .map(hold => finding('long-hold', hold.task_id, false,
             `${hold.task_id} has been held since ${iso(Date.parse(hold.set_at)).slice(0, 10)} with no date and nothing named that lifts the hold: "${hold.reason}"`));

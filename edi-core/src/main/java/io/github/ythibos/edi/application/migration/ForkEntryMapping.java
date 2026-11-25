@@ -18,8 +18,8 @@ import io.github.ythibos.edi.adapter.fork.ForkTags;
 import io.github.ythibos.edi.domain.decision.Decision;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.HoldUntil;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
@@ -99,7 +99,7 @@ final class ForkEntryMapping {
                 intakeOf(entry, id),
                 stage,
                 String.join("\n", entry.body()),
-                stage.isClosed() ? null : holdOf(entry, id, decision),
+                stage.isClosed() ? Holds.none() : holdsOf(entry, id, decision),
                 createdAt(entry),
                 stage.isClosed() ? closedAt(entry) : null);
     }
@@ -131,20 +131,20 @@ final class ForkEntryMapping {
                 null, null);
     }
 
-    private CaptainHold holdOf(ForkEntry entry, TaskId id, Decision decision) {
+    private Holds holdsOf(ForkEntry entry, TaskId id, Decision decision) {
         ForkHold hold = entry.tags().hold();
         if (hold == null) {
-            return null;
+            return Holds.none();
         }
         if (decision != null && decision.isOpen()) {
-            return decision.holdOnItsTask();
+            return Holds.none().with(decision.holdOnItsTask());
         }
         if (!hold.isForTheCaptain()) {
             notes.add(id.value(), "waits" + untilWords(hold) + " on something outside me (\"" + shortened(hold.reason())
                     + "\"); I hold a task only for the captain, so the wait is not carried");
-            return null;
+            return Holds.none();
         }
-        return new CaptainHold(HoldKind.DEFERRAL, hold.reason(), untilOf(hold), heldSince(entry));
+        return Holds.none().with(new Hold.Deferral(hold.reason(), untilOf(hold), heldSince(entry)));
     }
 
     private Instant createdAt(ForkEntry entry) {

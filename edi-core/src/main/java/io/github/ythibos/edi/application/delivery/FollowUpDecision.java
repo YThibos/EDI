@@ -16,7 +16,6 @@ import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.event.Actor;
 import io.github.ythibos.edi.domain.event.DomainEvent.FollowUpHeldBack;
 import io.github.ythibos.edi.domain.landing.WorkAfterTheMergedHead;
-import io.github.ythibos.edi.domain.task.CaptainHold;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskStage;
 import io.github.ythibos.edi.domain.task.TaskState;
@@ -62,6 +61,6 @@ public class FollowUpDecision {
 
     private Optional<String> whatHolds(Task task) {
         return decisions.ofTask(task.id()).filter(Decision::isOpen).map(open -> "decision " + open.number() + " is open")
-                .or(() -> Optional.ofNullable(task.hold()).map(CaptainHold::reason));
+                .or(() -> Optional.of(task).filter(Task::isHeld).map(Task::reasonsItWaits));
     }
 }

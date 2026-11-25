@@ -78,12 +78,11 @@ class TurnReportNamingTest {
     }
 
     @Test
-    void isNamedDespiteAWorkerQuestionOnlyWhenADecisionTheReplyNamesWasRaisedOnItsTaskSinceItWasAsked() {
+    void isNamedDespiteAWorkerQuestionOnlyWhenADecisionWasRaisedForIt() {
         Reply namingEveryItem = Reply.of("D41 is yours, and " + ADDRESS + " is ready for review.");
 
-        assertThat(report(Turn.NONE, List.of(questionOn(lamp, NOW))).isNamedIn(namingEveryItem)).isTrue();
-        assertThat(report(Turn.NONE, List.of(questionOn(fitting, NOW))).isNamedIn(namingEveryItem)).isFalse();
-        assertThat(report(Turn.NONE, List.of(questionOn(lamp, NOW.plusSeconds(60)))).isNamedIn(namingEveryItem)).isFalse();
+        assertThat(report(Turn.NONE, List.of(questionOn(lamp, true))).isNamedIn(namingEveryItem)).isTrue();
+        assertThat(report(Turn.NONE, List.of(questionOn(lamp, false))).isNamedIn(namingEveryItem)).isFalse();
     }
 
     @Test
@@ -106,12 +105,12 @@ class TurnReportNamingTest {
         return new TurnReport(waiting, turn, WIDTH, null, null, null);
     }
 
-    private static WorkerQuestion questionOn(Task task, Instant askedAt) {
+    private static WorkerQuestion questionOn(Task task, boolean escalated) {
         Worker launched = Worker.launched(WorkerId.first(task.id()), UUID.randomUUID(), CategoryId.IMPLEMENTATION,
                 new Route(new ModelId("claude-opus-5-5"), EffortLevel.HIGH), new WorkerWindow("edi", 1L, NOW, "@1", 2L),
                 new WorkerLaunch(LaunchKind.DISPATCH, NOW, new BootId("boot"), LoginName.DEFAULT));
-        Worker asking = launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), askedAt);
-        return new WorkerQuestion(task, asking, Duration.ofMinutes(5));
+        Worker asking = launched.reported(new StatusReport(StatusState.NEEDS_DECISION, new StatusKey("lamp"), null, "Which lamp?"), NOW);
+        return new WorkerQuestion(task, asking, Duration.ofMinutes(5), escalated);
     }
 
     private static Task task(String id) {

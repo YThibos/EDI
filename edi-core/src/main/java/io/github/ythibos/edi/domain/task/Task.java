@@ -2,20 +2,24 @@ package io.github.ythibos.edi.domain.task;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 import io.github.ythibos.edi.domain.Refusal;
+import io.github.ythibos.edi.domain.decision.DecisionNumber;
+import io.github.ythibos.edi.domain.decision.TaskReference;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.rule.Rule;
 
-public record Task(TaskId id, Intake intake, TaskStage stage, String notes, CaptainHold hold, Instant created, Instant closed) {
+public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Holds holds, Instant created, Instant closed) {
 
     private static final String PARAGRAPH_BREAK = "\n\n";
 
     public Task {
+        Objects.requireNonNull(holds, () -> id + " knows the reasons it waits, if only that there are none.");
         if (stage.isClosed() != (closed != null)) {
             throw new IllegalArgumentException(id + " carries a closing time exactly when it is retired or dropped.");
         }
-        if (stage.isClosed() && hold != null) {
+        if (stage.isClosed() && !holds.isEmpty()) {
             throw new IllegalArgumentException(id + " is " + stage.word() + ", so it waits for nobody.");
         }
         if (intake.blockedBy().contains(id)) {
@@ -24,7 +28,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
     }
 
     public static Task queued(TaskId id, Intake intake, String notes, Instant at) {
-        return new Task(id, intake, TaskStage.QUEUED, notes.strip(), null, at, null);
+        return new Task(id, intake, TaskStage.QUEUED, notes.strip(), Holds.none(), at, null);
     }
 
     public TaskState state() {
@@ -44,8 +48,8 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
                     + change.to().word() + ".");
         }
         return change.to().isClosed()
-                ? new Task(id, intake, change.to(), notes, null, created, at)
-                : new Task(id, intake, change.to(), notes, hold, created, closed);
+                ? new Task(id, intake, change.to(), notes, Holds.none(), created, at)
+                : new Task(id, intake, change.to(), notes, holds, created, closed);
     }
 
     public Task noted(String note) {
@@ -53,40 +57,36 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
         if (paragraph.isEmpty()) {
             throw new IllegalArgumentException("A note on " + id + " says something.");
         }
-        return new Task(id, intake, stage, notes.isEmpty() ? paragraph : notes + PARAGRAPH_BREAK + paragraph, hold, created, closed);
+        return new Task(id, intake, stage, notes.isEmpty() ? paragraph : notes + PARAGRAPH_BREAK + paragraph, holds, created, closed);
     }
 
-    public Task held(CaptainHold newHold) {
+    public Task held(Hold hold) {
         refuseWhenClosed();
-        if (newHold.awaitsADecision()) {
-            throw new Refusal(Rule.TASK_HOLD, "A decision holds " + id + " when it is raised with its card.");
-        }
-        if (isHeld()) {
-            throw new Refusal(Rule.TASK_HOLD, id + " is already held: " + hold.reason() + ". Release it first.");
-        }
-        return withHold(newHold);
-    }
-
-    public Task heldForDecision(CaptainHold decisionHold) {
-        refuseWhenClosed();
-        return withHold(decisionHold);
+        return withHolds(holds.with(hold));
     }
 
     public Task released() {
         if (!isHeld()) {
             throw new Refusal(Rule.TASK_HOLD, id + " is not held.");
         }
-        if (hold.awaitsADecision()) {
-            throw new Refusal(Rule.TASK_HOLD, id + " waits on its decision; answering the decision releases it.");
+        if (holds.holdsOnlyOpenDecisions()) {
+            throw new Refusal(Rule.TASK_HOLD, id + " waits only on " + holds.openDecisionsInWords() + "; answering a decision releases it.");
         }
-        return withHold(null);
+        return withHolds(holds.released());
     }
 
-    public Task decisionAnswered() {
-        if (!isHeld() || !hold.awaitsADecision()) {
-            throw new Refusal(Rule.TASK_HOLD, id + " is not held for a decision.");
+    public Task releasedFrom(Hold hold) {
+        return withHolds(holds.released(hold));
+    }
+
+    public Task decisionAnswered(DecisionNumber number) {
+        return withHolds(holds.answered(number));
+    }
+
+    public void requireOneOpenDecisionNamedBy(TaskReference reference) {
+        if (reference instanceof TaskReference.ById && holds.openDecisions().size() > 1) {
+            throw new Refusal(Rule.TASK_HOLD, id + " waits on " + holds.openDecisionsInWords() + "; name one of them by its number.");
         }
-        return withHold(null);
     }
 
     public boolean closesOnItsAnswer() {
@@ -98,7 +98,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
         if (intake.workKey() != null) {
             throw new Refusal(Rule.WORK_KEY, id + " already books its work on " + intake.workKey() + ".");
         }
-        return new Task(id, intake.keyedOn(key), stage, notes, hold, created, closed);
+        return new Task(id, intake.keyedOn(key), stage, notes, holds, created, closed);
     }
 
     public Task waitingFor(TaskId blocker) {
@@ -106,7 +106,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
         if (stage != TaskStage.QUEUED) {
             throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + ", so it no longer waits for another task.");
         }
-        return new Task(id, intake.blockedAlsoBy(blocker), stage, notes, hold, created, closed);
+        return new Task(id, intake.blockedAlsoBy(blocker), stage, notes, holds, created, closed);
     }
 
     public Task noLongerWaitingFor(TaskId closedTask) {
@@ -114,7 +114,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
     }
 
     public Task blockedOnlyBy(List<TaskId> blockers) {
-        return new Task(id, intake.blockedOnlyBy(blockers), stage, notes, hold, created, closed);
+        return new Task(id, intake.blockedOnlyBy(blockers), stage, notes, holds, created, closed);
     }
 
     public void requireFreeToWork() {
@@ -123,7 +123,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
             throw new Refusal(Rule.TASK_STAGE, id + " is a captain item; only ships and scouts get a worker.");
         }
         if (isHeld()) {
-            throw new Refusal(Rule.TASK_HOLD, id + " is held: " + hold.reason() + ". Release it before dispatching it.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is held: " + reasonsItWaits() + ". Release it before dispatching it.");
         }
     }
 
@@ -132,12 +132,16 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
             throw new Refusal(Rule.TASK_STAGE, id + " is " + stage.word() + ", and only work in flight is cleaned up.");
         }
         if (isHeld()) {
-            throw new Refusal(Rule.TASK_HOLD, id + " is held: " + hold.reason() + ". Release it before cleaning it up.");
+            throw new Refusal(Rule.TASK_HOLD, id + " is held: " + reasonsItWaits() + ". Release it before cleaning it up.");
         }
     }
 
     public boolean isHeld() {
-        return hold != null;
+        return !holds.isEmpty();
+    }
+
+    public String reasonsItWaits() {
+        return String.join("; ", holds.reasons());
     }
 
     public boolean isDone() {
@@ -162,7 +166,7 @@ public record Task(TaskId id, Intake intake, TaskStage stage, String notes, Capt
         }
     }
 
-    private Task withHold(CaptainHold newHold) {
-        return new Task(id, intake, stage, notes, newHold, created, closed);
+    private Task withHolds(Holds newHolds) {
+        return new Task(id, intake, stage, notes, newHolds, created, closed);
     }
 }

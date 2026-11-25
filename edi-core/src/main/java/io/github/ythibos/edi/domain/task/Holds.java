@@ -1,7 +1,10 @@
 package io.github.ythibos.edi.domain.task;
 
+import static java.util.function.Predicate.not;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import io.github.ythibos.edi.domain.Refusal;
@@ -25,22 +28,48 @@ public record Holds(List<Hold> held) {
     }
 
     public Holds answered(DecisionNumber number) {
-        return without(new OpenDecision(number));
+        if (!openDecisions().contains(number)) {
+            throw new Refusal(Rule.TASK_HOLD, "The task does not wait: " + number + " waits for its answer.");
+        }
+        return without(hold -> hold instanceof OpenDecision decision && decision.number().equals(number));
     }
 
     public Holds released(Hold hold) {
         if (hold instanceof OpenDecision decision) {
             throw new Refusal(Rule.TASK_HOLD, decision.number() + " holds the task until it is answered; answering it releases it.");
         }
-        return without(hold);
+        if (held.stream().noneMatch(hold::repeats)) {
+            throw new Refusal(Rule.TASK_HOLD, "The task does not wait: " + hold.reason() + ".");
+        }
+        return without(hold::repeats);
+    }
+
+    public Holds released() {
+        return without(not(Hold::isReleasedByItsAnswer));
     }
 
     public boolean isEmpty() {
         return held.isEmpty();
     }
 
+    public boolean holdsOnlyOpenDecisions() {
+        return held.stream().allMatch(Hold::isReleasedByItsAnswer);
+    }
+
     public List<DecisionNumber> openDecisions() {
         return held.stream().filter(OpenDecision.class::isInstance).map(OpenDecision.class::cast).map(OpenDecision::number).toList();
+    }
+
+    public String openDecisionsInWords() {
+        return String.join(" and ", openDecisions().stream().map(DecisionNumber::toString).toList());
+    }
+
+    public List<Hold> releasable() {
+        return held.stream().filter(not(Hold::isReleasedByItsAnswer)).toList();
+    }
+
+    public Optional<Hold> ofKind(HoldKind kind) {
+        return held.stream().filter(hold -> hold.kind() == kind).findFirst();
     }
 
     public List<String> reasons() {
@@ -54,10 +83,7 @@ public record Holds(List<Hold> held) {
         }
     }
 
-    private Holds without(Hold hold) {
-        if (!held.contains(hold)) {
-            throw new Refusal(Rule.TASK_HOLD, "The task does not wait: " + hold.reason() + ".");
-        }
-        return new Holds(held.stream().filter(other -> !other.equals(hold)).toList());
+    private Holds without(Predicate<Hold> leaving) {
+        return new Holds(held.stream().filter(not(leaving)).toList());
     }
 }

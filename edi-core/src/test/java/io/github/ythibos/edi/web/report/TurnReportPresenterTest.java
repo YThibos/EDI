@@ -208,7 +208,7 @@ class TurnReportPresenterTest {
                 "", NOW);
         WaitingOnTheCaptain waiting = new WaitingOnTheCaptain(List.of(), List.of(), List.of(),
                 List.of(new WorkerQuestion(lamp, asking(lamp, "Which socket does the lamp take, the bayonet one or the screw one the old lamp used?"),
-                        Duration.ofMinutes(65))), List.of());
+                        Duration.ofMinutes(65), false)), List.of());
 
         String report = presenter.text(new TurnReport(waiting, Turn.NONE, WIDTH, null, PREVIOUS_REPORT, null));
 

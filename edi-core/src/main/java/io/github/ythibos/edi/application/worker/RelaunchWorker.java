@@ -73,7 +73,7 @@ public class RelaunchWorker {
 
     private static void requireNoHold(Task task) {
         if (task.isHeld()) {
-            throw new Refusal(Rule.TASK_HOLD, task.id() + " is held: " + task.hold().reason() + ".");
+            throw new Refusal(Rule.TASK_HOLD, task.id() + " is held: " + task.reasonsItWaits() + ".");
         }
     }
 

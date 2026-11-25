@@ -11,9 +11,9 @@ import io.github.ythibos.edi.domain.dispatch.CategoryId;
 import io.github.ythibos.edi.domain.project.ProjectName;
 import io.github.ythibos.edi.domain.project.WorkKey;
 import io.github.ythibos.edi.domain.task.AwaitedStage;
-import io.github.ythibos.edi.domain.task.CaptainHold;
-import io.github.ythibos.edi.domain.task.HoldKind;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.HoldUntil;
+import io.github.ythibos.edi.domain.task.Holds;
 import io.github.ythibos.edi.domain.task.Intake;
 import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
@@ -59,7 +59,7 @@ class PlanStandingsTest {
     @Test
     void namesTheEligibleSlicesInTheirOrderAndNeverAHeldSliceOrOneWhoseWaitIsNotMet() {
         SliceStanding held = new SliceStanding(sliceNumbered(1), task(1, TaskStage.QUEUED)
-                .held(new CaptainHold(HoldKind.APPROVAL, "needs a yes", HoldUntil.captainsWord(), AT)), List.of(), false);
+                .held(new Hold.Approval("needs a yes", HoldUntil.captainsWord(), AT)), List.of(), false);
         SliceStanding waiting = new SliceStanding(sliceNumbered(2), task(2, TaskStage.QUEUED),
                 List.of(new Wait(new TaskId("slice-1"), AwaitedStage.MERGED, TaskStage.QUEUED)), false);
 
@@ -87,7 +87,7 @@ class PlanStandingsTest {
 
     private static Task task(int number, TaskStage stage) {
         Intake intake = new Intake(TaskKind.SHIP, "Slice " + number, List.of(new ProjectName("harness")), null, null, List.of(), null, null);
-        return new Task(new TaskId("slice-" + number), intake, stage, "", null, AT, null);
+        return new Task(new TaskId("slice-" + number), intake, stage, "", Holds.none(), AT, null);
     }
 
     private static List<Integer> numbers(List<SliceStanding> standings) {

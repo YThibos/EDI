@@ -19,6 +19,8 @@ import io.github.ythibos.edi.domain.board.BoardBinding;
 import io.github.ythibos.edi.domain.delivery.TaskCost;
 import io.github.ythibos.edi.domain.plan.Plan;
 import io.github.ythibos.edi.domain.status.StatusKey;
+import io.github.ythibos.edi.domain.task.Hold;
+import io.github.ythibos.edi.domain.task.Task;
 import io.github.ythibos.edi.domain.task.TaskId;
 import io.github.ythibos.edi.domain.tracker.TicketSettlement;
 import io.github.ythibos.edi.domain.worker.TokenUsage;
@@ -76,9 +78,8 @@ class ConfirmationText implements TextPresenter<Confirmation> {
             case Queued queued -> queued(queued.added());
             case Planned planned -> planned(planned.plan());
             case Noted noted -> "Noted on " + noted.task() + ".";
-            case Held held -> "Held " + held.task().id() + " (" + held.task().hold().kind().word() + ", "
-                    + Moments.until(held.task().hold().until()) + "): " + held.task().hold().reason();
-            case Released released -> "Released " + released.task().id() + "; it is " + released.task().state().word() + " again.";
+            case Held held -> held(held);
+            case Released released -> released(released.task());
             case Raised raised -> raised.number().toString();
             case Answered answered -> answerRecorded(answered);
             case Dispatched dispatched -> WorkerSentences.dispatched(dispatched.launched());
@@ -224,11 +225,32 @@ class ConfirmationText implements TextPresenter<Confirmation> {
                 + " prints their stages and waits.";
     }
 
+    private static String held(Held held) {
+        Hold hold = held.task().holds().ofKind(held.kind()).orElseThrow();
+        return "Held " + held.task().id() + " (" + hold.kind().word() + ", " + Moments.until(hold.until()) + "): " + hold.why();
+    }
+
+    private static String released(Task task) {
+        if (task.isHeld()) {
+            return "Released " + task.id() + "; it still waits: " + task.reasonsItWaits() + ".";
+        }
+        if (task.isDone()) {
+            return "Released " + task.id() + "; its question is answered, so it is done.";
+        }
+        return "Released " + task.id() + "; it is " + task.state().word() + " again.";
+    }
+
     private static String answerRecorded(Answered answered) {
         String option = answered.decision().answer().choosesAnOption() ? " (option " + answered.decision().answer().option() + ")" : "";
-        String outcome = answered.task().isDone() ? " is done." : " is " + answered.task().state().word() + " again.";
-        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcome + ticketOf(answered)
-                + carriedOf(answered);
+        return "Recorded the answer to " + answered.decision().number() + option + "; " + answered.task().id() + outcomeFor(answered.task())
+                + ticketOf(answered) + carriedOf(answered);
+    }
+
+    private static String outcomeFor(Task answered) {
+        if (answered.isHeld()) {
+            return " still waits: " + answered.reasonsItWaits() + ".";
+        }
+        return answered.isDone() ? " is done." : " is " + answered.state().word() + " again.";
     }
 
     private static String ticketOf(Answered answered) {

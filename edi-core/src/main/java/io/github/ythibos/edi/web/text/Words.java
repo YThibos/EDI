@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 import io.github.ythibos.edi.domain.AsciiCharacters;
-import io.github.ythibos.edi.domain.task.CaptainHold;
+import io.github.ythibos.edi.domain.task.Hold;
 import io.github.ythibos.edi.domain.task.Wait;
 
 public final class Words {
@@ -34,8 +34,8 @@ public final class Words {
         return text.lines().map(line -> line.isBlank() ? "" : indent + line).collect(Collectors.joining("\n"));
     }
 
-    public static String hold(CaptainHold hold) {
-        return "held (" + hold.kind().word() + ", " + Moments.until(hold.until()) + "): " + hold.reason();
+    public static String hold(Hold hold) {
+        return "held (" + hold.kind().word() + ", " + Moments.until(hold.until()) + "): " + hold.why();
     }
 
     public static String waits(List<Wait> waits) {
