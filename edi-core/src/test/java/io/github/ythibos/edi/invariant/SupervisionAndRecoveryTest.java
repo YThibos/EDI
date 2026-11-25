@@ -69,7 +69,7 @@ class SupervisionAndRecoveryTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-23 A restart is a non-event")
+    @DisplayName("I-23 After a restart, rebuild from the digest and the store")
     class ARestartIsANonEvent {
 
         @RegisterExtension
@@ -146,7 +146,7 @@ class SupervisionAndRecoveryTest {
     }
 
     @Nested
-    @DisplayName("I-24 An outage is a numbered list")
+    @DisplayName("I-24 Two or more dead workers become a numbered outage list")
     class AnOutageIsANumberedList {
 
         @Test
@@ -294,7 +294,7 @@ class SupervisionAndRecoveryTest {
     }
 
     @Nested
-    @DisplayName("I-25 Relaunch reuses the task's own worktree and session")
+    @DisplayName("I-25 A relaunch reuses the task's own copy and session")
     class RelaunchReusesWorktreeAndSession {
 
         @Test
@@ -345,7 +345,7 @@ class SupervisionAndRecoveryTest {
     }
 
     @Nested
-    @DisplayName("I-27 A steer is verified as landed")
+    @DisplayName("I-27 A steer counts once its worker acknowledges it")
     class ASteerIsVerified {
 
         @Test
@@ -375,7 +375,7 @@ class SupervisionAndRecoveryTest {
     }
 
     @Nested
-    @DisplayName("I-28 Never press a key into a dialog blind")
+    @DisplayName("I-28 Never press a key into a dialog; Escape only, if the captain asks")
     class NeverPressAKeyBlind {
 
         @RegisterExtension
@@ -414,7 +414,7 @@ class SupervisionAndRecoveryTest {
     }
 
     @Nested
-    @DisplayName("I-29 A captain-side merge refreshes the clone before follow-up work")
+    @DisplayName("I-29 After a merge, refresh the clone before follow-up work")
     class AMergeRefreshesTheClone {
 
         @Test

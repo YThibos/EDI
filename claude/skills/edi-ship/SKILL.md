@@ -28,14 +28,14 @@ description: >-
 2. `mechanical` only when the spec states the exact change; pass every file with `--files`.
 3. A bugfix with an unknown cause is research first: `--cause-unknown`.
 4. Review the brief with `edi brief <task> --category <id> --spec -` when it matters, then run `edi dispatch <task> --category <id> --spec -`.
-5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; effort is never above high, unless the captain explicitly asks it for this one task: record their message with `edi captain said --task <task> --for effort-above-high --message <n>` first, unless they chose a dialog option that opens with `effort-above-high` and names the task and no other, then `--override-effort xhigh` or `max` with `--reason`; it never goes into the dispatch rules.
-6. Your core makes the isolated copy on the keyed branch from the fresh origin base, writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
+5. A model or effort the captain names goes with `--override-model`, `--override-effort` and `--reason`; lifting effort above high for one task (I-14) means recording their message first with `edi captain said --task <task> --for effort-above-high --message <n>`, unless they chose a dialog option that opens with `effort-above-high` and names the task and no other, then `--override-effort xhigh` or `max` with `--reason`; it never goes into the dispatch rules.
+6. Your core makes the isolated copy on the keyed branch (I-08, I-13), writes the brief and launches the worker; a task whose key and branch kind another task already holds gets the next follow-up number, such as `chore/EDI-5-1`.
 
 ## Supervision
 
-- Keep the one wake stream live: the Monitor tool running `edi wait --follow` alone; act on each wake it prints, and start it again when it ends.
-- `edi worker list`, `edi worker show <task>` (its whole last status and open question, from the store) and `edi worker peek <task>` (its pane) show a worker; `edi steer <task> [--resolves <key>]` sends it a message on standard input.
-- The worker runs the validation pipeline and answers its gates; you never answer a worker's gate.
+- Keep the wake stream live as your anchor's Ending a turn section says, and act on each wake.
+- `edi worker list`, `edi worker show <task>` (its whole last status and open question, from the store) and `edi worker peek <task>` (its pane) show a worker; `edi steer <task> [--resolves <key>]` sends it a message on standard input, and the steer counts once it acknowledges it (I-27).
+- The worker runs the validation pipeline and answers its gates; you never answer a worker's gate (I-01).
 - A finding that is unambiguous towards the accepted intent you settle and steer; an ambiguous, expanding or destructive one becomes a decision: `edi decision raise <task> --card -`.
 - Such a decision waits in the console for its round of decisions, and the core wakes you when the round is due: never put it to the captain on its own before then.
 - Only a decision that blocks the captain's current work gets `"urgent": true` on its card, which puts it before them at once.
@@ -50,12 +50,12 @@ description: >-
 
 ## Done, delivery and landing
 
-- A ship's done counts once its merge request is open, as a draft or ready for review, or already merged, at the copy's head, and its branch adds no SNAPSHOT version.
-- `draft-review`: the pipeline opens the merge request as a draft and the worker marks it ready for review once its checks are green, or once the pipeline passes on a project whose CI does not run, with the local verification as the evidence; report its full address to the captain, who merges it, and until then it waits in the decision zone of every report; while its pipeline still runs, a steer waits unacknowledged, or its worker is back at work after a done, it is listed as ongoing work coming back to the captain when it is ready, and once it merges or closes it stays on the captain's list until the captain ticks it, on the page or with `edi tick review:<task>` on the captain's cited word.
+- A ship's done counts once its merge request is open, as a draft or ready for review, or already merged, at the copy's head, and its branch adds no SNAPSHOT version (I-11).
+- `draft-review`: I-04 governs, with the pipeline's pass as the evidence on a project whose CI does not run; report the request to the captain, who merges it (I-03), and until then it waits in the decision zone of every report; while its pipeline still runs, a steer waits unacknowledged, or its worker is back at work after a done, it is listed as ongoing work coming back to the captain when it is ready, and once it merges or closes it stays on the captain's list until the captain ticks it, on the page or with `edi tick review:<task>` on the captain's cited word.
 - You record a task's merge request as soon as a pipeline run or a status report finds it on the forge, so a request marked ready or merged before the done is still followed.
 - `local-branch`: you fetch the ready branch into the captain's checkout by ref only.
 - `local-apply`: on the captain's request only, you apply the change to the captain's checkout without a commit.
 - `report`: for an operation on the machine with nothing to commit, give the task `--delivery report`; its done counts once its report exists and its copy holds no change, and you then retire the task.
 - When the pipeline could not open the draft, `edi deliver <task>` opens it under the project's bound account.
-- When the captain says they merged, run `edi merged <task>` or `edi merged <url>`; you ask the forge for the task's request even when you never recorded it, and you also see merges yourself, refresh the clone and clean up.
-- `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work, and nothing is discarded without the captain's word.
+- When the captain says they merged, run `edi merged <task>` or `edi merged <url>`; you ask the forge for the task's request even when you never recorded it, and you also see merges yourself and clean up (I-29).
+- `edi cleanup <task>` retires a landed task; a refusal lists the unlanded work (I-12).

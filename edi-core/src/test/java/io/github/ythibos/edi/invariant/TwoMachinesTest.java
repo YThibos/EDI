@@ -82,7 +82,7 @@ class TwoMachinesTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-37 One codebase, per-machine choices")
+    @DisplayName("I-37 Machine differences come from the profile and the registry")
     class OneCodebasePerMachineChoices {
 
         @Test
@@ -110,7 +110,7 @@ class TwoMachinesTest {
     }
 
     @Nested
-    @DisplayName("I-38 No secret and no personal material is ever published")
+    @DisplayName("I-38 Nothing secret or personal is ever published")
     class NothingPersonalIsPublished {
 
         @RegisterExtension

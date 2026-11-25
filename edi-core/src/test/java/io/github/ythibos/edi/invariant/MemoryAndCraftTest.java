@@ -132,7 +132,7 @@ class MemoryAndCraftTest {
     }
 
     @Nested
-    @DisplayName("I-35 The always-loaded anchor stays small")
+    @DisplayName("I-35 The anchor stays under 10,000 bytes, a brief under 120 lines")
     class TheAnchorStaysSmall {
 
         private static final long ANCHOR_BUDGET_BYTES = 10_000;
@@ -217,7 +217,7 @@ class MemoryAndCraftTest {
     }
 
     @Nested
-    @DisplayName("I-36 Fleet-sized data never travels as a command-line argument")
+    @DisplayName("I-36 Fleet-sized data goes on standard input, never as an argument")
     class FleetSizedDataNeverTravelsAsAnArgument {
 
         private static final long TWO_MEGABYTES = 2_000_000;

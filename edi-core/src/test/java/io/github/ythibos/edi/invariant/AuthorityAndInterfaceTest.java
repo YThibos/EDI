@@ -105,7 +105,7 @@ class AuthorityAndInterfaceTest {
     private Path directory;
 
     @Nested
-    @DisplayName("I-01 One interface")
+    @DisplayName("I-01 Only the primary talks to the captain")
     class OneInterface {
 
         @Test
@@ -142,7 +142,7 @@ class AuthorityAndInterfaceTest {
     }
 
     @Nested
-    @DisplayName("I-02 The captain's current session is primary")
+    @DisplayName("I-02 The captain's session is primary")
     class TheCaptainsSessionIsPrimary {
 
         @Test
@@ -180,7 +180,7 @@ class AuthorityAndInterfaceTest {
     }
 
     @Nested
-    @DisplayName("I-03 No merge capability")
+    @DisplayName("I-03 Never merge, arm a merge or push to a base branch")
     class NoMergeCapability {
 
         private static final JavaClasses CORE = new ClassFileImporter()
@@ -251,7 +251,7 @@ class AuthorityAndInterfaceTest {
     }
 
     @Nested
-    @DisplayName("I-04 Drafts only")
+    @DisplayName("I-04 Drafts only; ready when green; the captain merges")
     class DraftsOnly {
 
         private static final TaskId LAMP = new TaskId("fit-lamp");
@@ -434,7 +434,7 @@ class AuthorityAndInterfaceTest {
     }
 
     @Nested
-    @DisplayName("I-06 Destructive, irreversible and security-sensitive actions need the captain's word in the current exchange")
+    @DisplayName("I-06 Destructive or security-sensitive acts need the captain's word this session")
     class DestructiveActionsNeedTheCaptainsWord {
 
         @Test

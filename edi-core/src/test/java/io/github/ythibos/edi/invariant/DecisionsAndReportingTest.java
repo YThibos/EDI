@@ -120,7 +120,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-19 Every open decision appears in every captain report until answered")
+    @DisplayName("I-19 Every open decision is in every report until answered")
     class OpenDecisionsAlwaysAppear {
 
         @Test
@@ -557,7 +557,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-20 The captain's answer is recorded verbatim with its interpretation")
+    @DisplayName("I-20 Record the captain's answer verbatim, with its interpretation")
     class AnswersAreRecordedVerbatim {
 
         private static final String VERBATIM = "  D58, A -- but keep the oil lamp\nin the store for a winter. ";
@@ -607,7 +607,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-21 A turn that changes something for the captain ends with the turn report, shown once")
+    @DisplayName("I-21 A turn that changes something ends with the turn report, once")
     class StateChangingTurnsEndWithTheReport {
 
         @Test
@@ -633,7 +633,7 @@ class DecisionsAndReportingTest {
     }
 
     @Nested
-    @DisplayName("I-22 Talk in outcomes")
+    @DisplayName("I-22 Talk in outcomes, with internal labels translated")
     class TalkInOutcomes {
 
         @Test

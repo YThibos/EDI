@@ -28,7 +28,7 @@ All live in `$EDI_HOME/memory/`:
 6. Delete an expired workaround: the ticket it waited on has landed.
 7. Give an unticketed workaround a ticket and end it with "until" and that key, or turn it into a fact dated today.
 8. Keep each fact in one place: what the registry, the machine profile or a decision record already holds does not belong in memory.
-9. Run `edi memory check` until it passes: within the budget and without a repeated rule heading.
+9. Run `edi memory check` until it passes (I-33): within the budget and without a repeated rule heading.
 
 ## Afterwards
 
