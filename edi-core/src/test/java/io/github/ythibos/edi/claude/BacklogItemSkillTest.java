@@ -112,7 +112,7 @@ class BacklogItemSkillTest {
         assertThat(run.exitCode()).as(run.all()).isZero();
         assertThat(github.issue(9).get("title").asString()).isEqualTo("EDI-9 Harbour lamps light themselves at dusk");
         assertThat(github.issue(9).get("milestone").asInt()).isEqualTo(1);
-        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\"]");
+        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\",\"priority-4-low\"]");
         assertThat(github.issue(9).get("body").asString()).startsWith("""
                 | Field | Value |
                 |---|---|
@@ -158,13 +158,48 @@ class BacklogItemSkillTest {
     }
 
     @Test
+    void aDraftsPriorityFieldSetsTheLabelAndCreatesIt() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("size: S", "size: S\npriority: priority-2-high"));
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\",\"priority-2-high\"]");
+        assertThat(github.world().get("labels").toString()).contains(
+                "{\"name\":\"priority-2-high\",\"description\":\"Costs the captain or the fleet daily: a repeated slip, a daily annoyance or a bug with a workaround\"}");
+    }
+
+    @Test
+    void anUnknownPriorityIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("size: S", "size: S\npriority: priority-6-never"));
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("priority is one of priority-1-urgent, priority-2-high, priority-3-normal, priority-4-low, priority-5-someday, not \"priority-6-never\".");
+        assertThat(github.writes()).isEmpty();
+        assertThat(ediCalls()).containsExactly("edi task list --json");
+    }
+
+    @Test
+    void aPriorityGivenAmongTheLabelsIsRefusedBeforeAnyChange() throws IOException, InterruptedException {
+        Files.writeString(draft, DRAFT.replace("size: S", "size: S\nlabels: security, priority-3-normal"));
+
+        StandInGitHub.Run run = backlogItem(draft.toString());
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.errors()).contains("priority-3-normal is a priority; give it in the field \"priority\", not in \"labels\".");
+        assertThat(github.writes()).isEmpty();
+    }
+
+    @Test
     void aHeldItemCarriesTheHeldLabelAndItsReason() throws IOException, InterruptedException {
         Files.writeString(draft, DRAFT.replace("status: open", "status: held: until the captain's word"));
 
         StandInGitHub.Run run = backlogItem(draft.toString());
 
         assertThat(run.exitCode()).as(run.all()).isZero();
-        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\",\"held\"]");
+        assertThat(github.issue(9).get("labels").toString()).isEqualTo("[\"cloud-ok\",\"held\",\"priority-4-low\"]");
         assertThat(github.issue(9).get("body").asString()).endsWith("\n## Held\n\nuntil the captain's word\n");
     }
 
@@ -174,7 +209,7 @@ class BacklogItemSkillTest {
 
         assertThat(run.exitCode()).as(run.all()).isZero();
         assertThat(run.output()).contains(
-                "would open the issue \"Harbour lamps light themselves at dusk\" labelled cloud-ok in the milestone \"The lighthouse\":",
+                "would open the issue \"Harbour lamps light themselves at dusk\" labelled cloud-ok, priority-4-low in the milestone \"The lighthouse\":",
                 "    ## Acceptance criteria",
                 "would make EDI-<the new issue's number> a sub-issue of #5",
                 "would mark EDI-<the new issue's number> blocked by #3",

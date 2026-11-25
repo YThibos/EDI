@@ -70,6 +70,11 @@ public final class StandInGitHub {
     }
 
     public Run run(TestProcesses processes, Path directory, Map<String, String> environment, List<String> command) throws IOException, InterruptedException {
+        return run(processes, directory, environment, command, "");
+    }
+
+    public Run run(TestProcesses processes, Path directory, Map<String, String> environment, List<String> command, String input)
+            throws IOException, InterruptedException {
         ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile());
         Path errors = Files.createTempFile(directory, "stderr", ".txt");
         builder.redirectError(errors.toFile());
@@ -79,7 +84,9 @@ public final class StandInGitHub {
         isolated.put("STATE", state.toString());
         builder.environment().putAll(isolated);
         Process process = processes.register(builder.start());
-        process.getOutputStream().close();
+        try (var standardInput = process.getOutputStream()) {
+            standardInput.write(input.getBytes(StandardCharsets.UTF_8));
+        }
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (!process.waitFor(Patience.FOR_REAL_WORK.toSeconds(), TimeUnit.SECONDS)) {
             process.destroyForcibly();

@@ -117,6 +117,112 @@ class PickupScriptTest {
     }
 
     @Test
+    void nextOrdersByPriorityBeforeTheMilestoneAndTheIssueNumber() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s, %s, %s, %s, %s],
+                "events": {%s}""".formatted(
+                issue(70, "EDI-70 The idea is kept", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(71, "EDI-71 The low one, later milestone", "open", 1, "captain-approved", "cloud-ok", "priority-4-low"),
+                issue(72, "EDI-72 The unlabelled one, earlier milestone", "open", 2, "captain-approved", "cloud-ok"),
+                issue(73, "EDI-73 The normal one", "open", null, "captain-approved", "cloud-ok", "priority-3-normal"),
+                issue(74, "EDI-74 The high one", "open", 3, "captain-approved", "cloud-ok", "priority-2-high"),
+                issue(75, "EDI-75 The urgent one", "open", null, "captain-approved", "cloud-ok", "priority-1-urgent"),
+                issue(76, "EDI-76 The low one, no milestone", "open", null, "captain-approved", "cloud-ok", "priority-4-low"),
+                approvals(70, 71, 72, 73, 74, 75, 76)));
+
+        StandInGitHub.Run run = pickup(github, "--next");
+
+        assertThat(run.exitCode()).as(run.all()).isZero();
+        assertThat(run.output().lines()).extracting(line -> line.split(" ")[0]).containsExactly("#75", "#74", "#73", "#72", "#71", "#76", "#70");
+    }
+
+    @Test
+    void anIssueWithTwoPriorityLabelsIsReadAtTheMoreUrgentOne() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s],
+                "events": {%s}""".formatted(
+                issue(77, "EDI-77 The doubly labelled", "open", null, "captain-approved", "cloud-ok", "priority-5-someday", "priority-2-high"),
+                issue(78, "EDI-78 The normal one", "open", null, "captain-approved", "cloud-ok", "priority-3-normal"),
+                approvals(77, 78)));
+
+        StandInGitHub.Run run = pickup(github);
+
+        assertThat(run.output().lines().skip(2)).extracting(row -> row.split(" \\| ")[0] + " " + row.split(" \\| ")[3]).containsExactly("| #77 priority-2-high", "| #78 priority-3-normal");
+    }
+
+    @Test
+    void aBlockerIsOrderedAtTheMostUrgentPriorityAmongTheOpenIssuesItBlocks() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s, %s],
+                "blockedBy": {"80": [81], "83": [81]},
+                "events": {%s}""".formatted(
+                issue(80, "EDI-80 The urgent roof", "open", null, "captain-approved", "cloud-ok", "priority-1-urgent"),
+                issue(81, "EDI-81 The someday walls", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(82, "EDI-82 The high door", "open", null, "captain-approved", "cloud-ok", "priority-2-high"),
+                issue(83, "EDI-83 The normal floor", "open", null, "captain-approved", "cloud-ok", "priority-3-normal"),
+                approvals(80, 81, 82, 83)));
+
+        StandInGitHub.Run run = pickup(github);
+
+        assertThat(run.output().lines().skip(2)).extracting(row -> row.split(" \\| ")[0]).containsExactly("| #81", "| #80", "| #82", "| #83");
+        assertThat(run.output()).contains("| #81 | EDI-81 | The someday walls | priority-5-someday, pulled to priority-1-urgent by #80 |");
+        assertThat(run.output()).contains("| #80 | EDI-80 | The urgent roof | priority-1-urgent |");
+    }
+
+    @Test
+    void nextListsAPulledBlockerWithTheIssueThatPulledItForward() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s],
+                "blockedBy": {"84": [85]},
+                "events": {%s}""".formatted(
+                issue(84, "EDI-84 The urgent mast", "open", null, "captain-approved", "cloud-ok", "priority-1-urgent"),
+                issue(85, "EDI-85 The someday rope", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(86, "EDI-86 The high flag", "open", null, "captain-approved", "cloud-ok", "priority-2-high"),
+                approvals(84, 85, 86)));
+
+        StandInGitHub.Run run = pickup(github, "--next");
+
+        assertThat(run.output().lines()).containsExactly(
+                "#85 EDI-85 The someday rope (no milestone) https://github.com/example/edi/issues/85 [pulled forward to priority-1-urgent by #84]",
+                "#86 EDI-86 The high flag (no milestone) https://github.com/example/edi/issues/86");
+    }
+
+    @Test
+    void thePullPassesAlongAChainOfBlockers() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s, %s],
+                "blockedBy": {"90": [91], "91": [92]},
+                "events": {%s}""".formatted(
+                issue(90, "EDI-90 The urgent lamp", "open", null, "captain-approved", "cloud-ok", "priority-1-urgent"),
+                issue(91, "EDI-91 The someday wick", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(92, "EDI-92 The someday wax", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(93, "EDI-93 The high shutter", "open", null, "captain-approved", "cloud-ok", "priority-2-high"),
+                approvals(90, 91, 92, 93)));
+
+        StandInGitHub.Run run = pickup(github);
+
+        assertThat(run.output().lines().skip(2)).extracting(row -> row.split(" \\| ")[0]).containsExactly("| #92", "| #91", "| #90", "| #93");
+        assertThat(run.output()).contains("| #92 | EDI-92 | The someday wax | priority-5-someday, pulled to priority-1-urgent by #90 |");
+    }
+
+    @Test
+    void aHeldIssuePullsNoBlockerForward() throws IOException, InterruptedException {
+        StandInGitHub github = serving("""
+                "issues": [%s, %s, %s],
+                "blockedBy": {"94": [95]},
+                "events": {%s}""".formatted(
+                issue(94, "EDI-94 The held mast", "open", null, "captain-approved", "cloud-ok", "held", "priority-1-urgent"),
+                issue(95, "EDI-95 The someday rope", "open", null, "captain-approved", "cloud-ok", "priority-5-someday"),
+                issue(96, "EDI-96 The high flag", "open", null, "captain-approved", "cloud-ok", "priority-2-high"),
+                approvals(94, 95, 96)));
+
+        StandInGitHub.Run run = pickup(github);
+
+        assertThat(run.output().lines().skip(2)).extracting(row -> row.split(" \\| ")[0]).containsExactly("| #96", "| #95", "| #94");
+        assertThat(run.output()).doesNotContain("pulled");
+    }
+
+    @Test
     void theBoardPutsAnIssueAfterItsOpenBlockersAndOnlyReads() throws IOException, InterruptedException {
         StandInGitHub github = serving("""
                 "issues": [%s, %s, %s],
@@ -131,9 +237,9 @@ class PickupScriptTest {
 
         assertThat(run.exitCode()).as(run.all()).isZero();
         assertThat(run.output().lines().skip(2)).containsExactly(
-                "| #62 | EDI-62 | The door is hung | The lighthouse, due 2026-12-18 | held | - | - |",
-                "| #63 | EDI-63 | The walls stand | The lighthouse, due 2026-12-18 | open | - | - |",
-                "| #61 | EDI-61 | The roof is tiled | The harbour wall, due 2026-11-13 | open | #63 | - |");
+                "| #62 | EDI-62 | The door is hung | priority-4-low | The lighthouse, due 2026-12-18 | held | - | - |",
+                "| #63 | EDI-63 | The walls stand | priority-4-low | The lighthouse, due 2026-12-18 | open | - | - |",
+                "| #61 | EDI-61 | The roof is tiled | priority-4-low | The harbour wall, due 2026-11-13 | open | #63 | - |");
         assertThat(github.writes()).isEmpty();
     }
 

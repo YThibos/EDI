@@ -1,12 +1,27 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
+export const PROJECT = 'EDI';
+
+export const SESSION_MARKER = '[EDI session]';
 export const PRIMARY_MARKER = '[EDI primary]';
 export const APPROVED = 'captain-approved';
 export const CLOUD = 'cloud-ok';
 export const MACHINE = 'needs-captain-machine';
 export const HELD = 'held';
 export const SECURITY = 'security';
+export const PRIORITIES = [
+    { name: 'priority-1-urgent', description: 'Broken now, or a hard rule of the captain is broken, and work is harmed until it is fixed' },
+    { name: 'priority-2-high', description: 'Costs the captain or the fleet daily: a repeated slip, a daily annoyance or a bug with a workaround' },
+    { name: 'priority-3-normal', description: 'A clear gain in efficiency or quality, with no daily cost while it waits' },
+    { name: 'priority-4-low', description: 'Worth doing, with no cost while it waits' },
+    { name: 'priority-5-someday', description: 'An idea kept for later' },
+];
+export const DEFAULT_PRIORITY = PRIORITIES[3];
 export const LABEL_DESCRIPTIONS = {
+    ...Object.fromEntries(PRIORITIES.map(priority => [priority.name, priority.description])),
     [APPROVED]: "Approved on the captain's word; only the captain's account adds it",
     [CLOUD]: 'A cloud session may take it',
     [MACHINE]: "Needs the captain's machine",
@@ -46,6 +61,11 @@ export class GitHub {
         return new GitHub(named ?? process.env.GH_REPO ?? repositoryOfTheRemote(directory));
     }
 
+    static ofTheEdiClone() {
+        const clone = existingEdiClone();
+        return new GitHub(repositoryOfTheRemote(clone), ghEnvironment(clone, hostOfTheRemote(clone)));
+    }
+
     get(path) {
         return this.call('GET', path);
     }
@@ -81,6 +101,14 @@ export class GitHub {
     }
 }
 
+function existingEdiClone() {
+    const clone = join(process.env.EDI_HOME ?? join(homedir(), '.edi'), 'projects', PROJECT);
+    if (!existsSync(clone)) {
+        throw new Refusal(`There is no EDI clone at ${clone} to name the EDI upstream: set EDI_HOME to the EDI home that holds it, or name the repository with --repo OWNER/NAME where the script takes one.`);
+    }
+    return clone;
+}
+
 export function repositoryOfTheRemote(directory) {
     const origin = command('git', ['-C', directory, 'remote', 'get-url', 'origin']).trim();
     const path = /([^/:]+)\/([^/]+?)(?:\.git)?\/?$/.exec(origin);
@@ -88,6 +116,24 @@ export function repositoryOfTheRemote(directory) {
         throw new Refusal(`The origin ${origin} names no owner and repository; pass --repo OWNER/NAME.`);
     }
     return `${path[1]}/${path[2]}`;
+}
+
+function ghEnvironment(clone, host) {
+    const account = pinnedAccount(clone, host);
+    const prompts = { GH_PROMPT_DISABLED: '1' };
+    return account ? { ...prompts, GH_TOKEN: command('gh', ['auth', 'token', '--hostname', host, '--user', account]).trim() } : prompts;
+}
+
+function hostOfTheRemote(clone) {
+    return /^(?:https?:\/\/|git@)([^/:]+)/.exec(command('git', ['-C', clone, 'remote', 'get-url', 'origin']).trim())?.[1] ?? 'github.com';
+}
+
+function pinnedAccount(clone, host) {
+    try {
+        return command('git', ['-C', clone, 'config', '--local', '--get', `credential.https://${host}.ghPinUser`]).trim();
+    } catch {
+        return null;
+    }
 }
 
 export function command(program, args, input, environment = {}) {
@@ -116,6 +162,20 @@ export function plainTitleOf(title) {
 
 export function labelsOf(issue) {
     return issue.labels.map(label => (typeof label === 'string' ? label : label.name));
+}
+
+export function priorityLabelsOf(issue) {
+    return labelsOf(issue).filter(label => PRIORITIES.some(priority => priority.name === label));
+}
+
+export function priorityOf(issue) {
+    const held = priorityLabelsOf(issue).map(label => PRIORITIES.findIndex(priority => priority.name === label));
+    return held.length === 0 ? DEFAULT_PRIORITY : PRIORITIES[Math.min(...held)];
+}
+
+export function nextHigherPriorityOf(issue) {
+    const level = PRIORITIES.indexOf(priorityOf(issue));
+    return level === 0 ? null : PRIORITIES[level - 1];
 }
 
 export function approverOf(events) {
@@ -155,7 +215,7 @@ export function inPickupOrder(issues, blockersOf = {}) {
     const listed = new Set(issues.map(issue => issue.number));
     const waiting = new Map(issues.map(issue => [issue.number, new Set((blockersOf[issue.number] ?? []).filter(number => listed.has(number)))]));
     const ordered = [];
-    let left = [...issues].sort(byDueDateThenNumber);
+    let left = [...issues].sort(byPriorityThenDueDateThenNumber(effectivePriorities(issues, blockersOf)));
     while (left.length > 0) {
         const free = left.find(issue => waiting.get(issue.number).size === 0) ?? left[0];
         ordered.push(free);
@@ -165,8 +225,49 @@ export function inPickupOrder(issues, blockersOf = {}) {
     return ordered;
 }
 
-function byDueDateThenNumber(one, other) {
-    return dueOf(one) - dueOf(other) || one.number - other.number;
+export function effectivePriorities(issues, blockersOf = {}) {
+    const pulls = pullsOf(issues, blockersOf);
+    return new Map(issues.map(issue => {
+        const own = levelOf(issue);
+        const pull = pulls.get(issue.number);
+        return [issue.number, pull.level < own ? { priority: PRIORITIES[pull.level], by: pull.by } : { priority: PRIORITIES[own], by: null }];
+    }));
+}
+
+function pullsOf(issues, blockersOf) {
+    const pulls = new Map(issues.map(issue => [issue.number, stateOf(issue) === 'open' ? { level: levelOf(issue), by: issue.number } : { level: PRIORITIES.length, by: null }]));
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const issue of issues) {
+            changed = pulledForward(pulls, blockersOf[issue.number] ?? [], pulls.get(issue.number)) || changed;
+        }
+    }
+    return pulls;
+}
+
+function pulledForward(pulls, blockers, pull) {
+    let changed = false;
+    for (const blocker of blockers.filter(number => pulls.has(number))) {
+        if (isMoreUrgent(pull, pulls.get(blocker))) {
+            pulls.set(blocker, pull);
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+function isMoreUrgent(pull, other) {
+    return pull.level < other.level || (pull.level === other.level && other.by !== null && pull.by < other.by);
+}
+
+function levelOf(issue) {
+    return PRIORITIES.indexOf(priorityOf(issue));
+}
+
+function byPriorityThenDueDateThenNumber(effective) {
+    return (one, other) => PRIORITIES.indexOf(effective.get(one.number).priority) - PRIORITIES.indexOf(effective.get(other.number).priority)
+        || dueOf(one) - dueOf(other) || one.number - other.number;
 }
 
 function dueOf(issue) {

@@ -1,23 +1,20 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 
 import {
-    APPROVED, CLOUD, GitHub, HELD, LABEL_DESCRIPTIONS, MACHINE, Refusal, command, keyOf, labelsOf, missingSectionsOf, plainTitleOf, refusalsReported,
-    repositoryOfTheRemote,
+    APPROVED, CLOUD, DEFAULT_PRIORITY, GitHub, HELD, LABEL_DESCRIPTIONS, MACHINE, PRIORITIES, PROJECT, Refusal, command, keyOf, labelsOf, missingSectionsOf, plainTitleOf,
+    refusalsReported,
 } from '../../../ops/backlog/backlog.mjs';
 
 const USAGE = 'Usage: backlog-item.mjs [--dry-run] DRAFT...';
-const PROJECT = 'EDI';
-const DRAFT_FIELDS = ['task', 'title', 'kind', 'branch', 'source', 'size', 'milestone', 'parent', 'blocked-by', 'status', 'labels', 'captain-approved'];
+const DRAFT_FIELDS = ['task', 'title', 'kind', 'branch', 'source', 'size', 'priority', 'milestone', 'parent', 'blocked-by', 'status', 'labels', 'captain-approved'];
 const SIZES = ['XS', 'S', 'M', 'L'];
 const STATUSES = /^(open|(held|needs-captain-machine): \S.*)$/;
 const REFERENCE = /^(EDI-\d+|#\d+)$/;
 
 function backlog(run) {
     const drafts = run.draftPaths.map(draftAt);
-    const github = upstreamOf(ediClone());
+    const github = GitHub.ofTheEdiClone();
     const known = new KnownIssues(github);
     const items = drafts.map(draft => specifiedItem(draft, known));
     for (const item of items) {
@@ -67,30 +64,6 @@ function fieldsOf(path, block) {
     return fields;
 }
 
-function ediClone() {
-    return join(process.env.EDI_HOME ?? join(homedir(), '.edi'), 'projects', PROJECT);
-}
-
-function upstreamOf(clone) {
-    const repository = repositoryOfTheRemote(clone);
-    const host = /^(?:https?:\/\/|git@)([^/:]+)/.exec(command('git', ['-C', clone, 'remote', 'get-url', 'origin']).trim())?.[1] ?? 'github.com';
-    return new GitHub(repository, ghEnvironment(clone, host));
-}
-
-function ghEnvironment(clone, host) {
-    const account = pinnedAccount(clone, host);
-    const prompts = { GH_PROMPT_DISABLED: '1' };
-    return account ? { ...prompts, GH_TOKEN: command('gh', ['auth', 'token', '--hostname', host, '--user', account]).trim() } : prompts;
-}
-
-function pinnedAccount(clone, host) {
-    try {
-        return command('git', ['-C', clone, 'config', '--local', '--get', `credential.https://${host}.ghPinUser`]).trim();
-    } catch {
-        return null;
-    }
-}
-
 function specifiedItem(draft, known) {
     const { fields, path } = draft;
     const task = fields.task ? taskNamed(fields.task) : taskTitled(fields.title);
@@ -99,6 +72,7 @@ function specifiedItem(draft, known) {
     requireOneOf(path, 'branch', fields.branch ?? branchKindOf(kind), ['feature', 'chore', 'research']);
     requireOneOf(path, 'size', fields.size, SIZES);
     requireStatus(path, fields.status);
+    const priority = priorityOf(path, fields.priority);
     return {
         path,
         task,
@@ -107,11 +81,12 @@ function specifiedItem(draft, known) {
         branch: fields.branch ?? branchKindOf(kind),
         source: requiredField(path, 'source', fields.source),
         size: fields.size,
+        priority,
         milestone: milestoneOf(path, known, fields.milestone),
         parent: fields.parent ? referencedIssue(path, known, fields.parent) : null,
         blockers: listOf(fields['blocked-by']).filter(entry => entry !== '-').map(entry => referencedIssue(path, known, entry)),
         status: fields.status,
-        labels: listOf(fields.labels),
+        labels: extraLabelsOf(path, fields.labels),
         approval: fields['captain-approved'] ?? null,
         spec: specOf(path, draft.spec || task?.notes || ''),
     };
@@ -174,6 +149,23 @@ function referencedIssue(path, known, reference) {
         throw new Refusal(`${path}: ${reference} names no issue upstream.`);
     }
     return issue;
+}
+
+function priorityOf(path, name) {
+    if (name === undefined) {
+        return DEFAULT_PRIORITY.name;
+    }
+    requireOneOf(path, 'priority', name, PRIORITIES.map(priority => priority.name));
+    return name;
+}
+
+function extraLabelsOf(path, field) {
+    const labels = listOf(field);
+    const priorities = labels.filter(label => PRIORITIES.some(priority => priority.name === label));
+    if (priorities.length > 0) {
+        throw new Refusal(`${path}: ${priorities.join(', ')} is a priority; give it in the field "priority", not in "labels".`);
+    }
+    return labels;
 }
 
 function listOf(field) {
@@ -243,7 +235,7 @@ function keyed(run, github, opened) {
 function labelsFor(item) {
     const machine = item.status.startsWith('needs-captain-machine') ? MACHINE : CLOUD;
     const held = item.status.startsWith('held') ? [HELD] : [];
-    return [...new Set([machine, ...held, ...item.labels])].filter(label => label !== APPROVED);
+    return [...new Set([machine, ...held, item.priority, ...item.labels])].filter(label => label !== APPROVED);
 }
 
 function ensureLabels(run, github, known, labels) {
