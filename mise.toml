@@ -3,7 +3,7 @@ node = "26.13.1"
 "aqua:gitleaks/gitleaks" = "8.30.1"
 
 [tools."github:graalvm/graalvm-ce-builds"]
-version = "25.5.5.0.3"
+version = "25.6.5.1"
 version_prefix = "graal-"
 
 [tools."github:graalvm/graalvm-ce-builds".platforms]
